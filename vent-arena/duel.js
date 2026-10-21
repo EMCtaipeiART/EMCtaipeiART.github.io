@@ -10,12 +10,18 @@
  const PEER_SRC='https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js',PREFIX='emcvent-',ALPHABET='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
  const $=s=>document.querySelector(s),bridge=()=>window.ArenaDuelBridge;
  let root,peer,conn,isHost=false,code='',me=0,G=null,snap=null,snapAt=0,timer=0,lastSnapSent=0,foeWants=false,iWant=false,closed=true,inMatch=false,foe={name:'對手',char:4},self={name:'',char:3},toastTimer=0,lastAct=0,overShown=false;
+ /* 連線日誌：記在記憶體與 localStorage（最近 300 行，重新整理後仍在），並寫到 console；畫面右下角「複製連線日誌」可一鍵複製回報 */
+ const LOGKEY='emcVentDuelLogV1';let logs=[];try{logs=JSON.parse(localStorage.getItem(LOGKEY)||'[]');if(!Array.isArray(logs))logs=[];}catch{logs=[];}
+ function dlog(tag,msg){const t=new Date(),p=(n,l=2)=>String(n).padStart(l,'0'),line=`${p(t.getHours())}:${p(t.getMinutes())}:${p(t.getSeconds())}.${p(t.getMilliseconds(),3)} [${isHost?'房主':'對手'}] ${tag} ${msg===undefined?'':msg}`;logs.push(line);if(logs.length>300)logs=logs.slice(-300);try{localStorage.setItem(LOGKEY,JSON.stringify(logs));}catch{}try{console.info('[duel]',tag,msg===undefined?'':msg);}catch{}}
+ function logHeader(){const c=navigator.connection||{};return `出氣擂台連線日誌 ${new Date().toLocaleString()}\n頁面 ${location.origin}${location.pathname}${window.parent!==window?'（內嵌）':''}\n瀏覽器 ${navigator.userAgent}\n網路 online=${navigator.onLine} type=${c.effectiveType||'?'} rtt=${c.rtt??'?'} downlink=${c.downlink??'?'}\n身份 ${self.name||'?'}\n----\n`;}
+ async function copyLog(){const text=logHeader()+(logs.length?logs.join('\n'):'（尚無紀錄）');try{await navigator.clipboard.writeText(text);}catch{const t=el('textarea');t.value=text;document.body.appendChild(t);t.select();try{document.execCommand('copy');}catch{}t.remove();}toast('已複製連線日誌，貼給管理員即可追蹤');}
  const info=()=>window.ArenaDuelInfo?window.ArenaDuelInfo():{name:'',char:3};
  function el(tag,cls,html){const e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e;}
  function build(){
   root=el('div','duel');root.id='duel';root.hidden=true;root.setAttribute('role','dialog');root.setAttribute('aria-modal','true');root.setAttribute('aria-label','一對一對戰');
   root.innerHTML=`<div class="duel-card">
    <button class="duel-x" data-act="close" aria-label="關閉">✕</button>
+   <button class="duel-log" data-act="log" type="button">複製連線日誌</button>
    <section class="duel-menu" data-view="menu"><p class="duel-eyebrow">1 VS 1 · ONLINE</p><h2>一對一對戰</h2><p class="duel-sub">邀請同事，在擂台上正面對決。60 秒一回合，血量多的人獲勝！</p>
     <div class="duel-entries"><button data-act="host"><span>⚔</span><b>新開戰場<small>產生序號，等朋友加入</small></b></button><button data-act="joinview"><span>⌨</span><b>輸入序號<small>加入朋友的戰場</small></b></button></div>
     <ul class="duel-rules"><li>每個攻擊道具傷害相同：<b>-${D.hit}</b></li><li>🛡 格擋成功不扣血，並 <b>+${D.block}</b> 怒氣</li><li>打擊成功 <b>+${D.rageHit}</b> 怒氣，滿 100% 可使用「重擊」</li><li>連擊越高越痛：每 ${D.comboStep} 連擊傷害 +1（最高 +${D.maxBonus}）</li><li>重擊無視格擋 <b>-${D.heavy}</b> 血，並暈眩對手 3 秒</li></ul></section>
@@ -23,33 +29,33 @@
    <section class="duel-join" data-view="join"><p class="duel-eyebrow">JOIN A BATTLE</p><h2>輸入戰場序號</h2><p class="duel-sub">貼上序號或整段邀請文字都可以。</p><input id="duel-input" class="duel-input" maxlength="200" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="例如 K7Q3MD"><div class="duel-row"><button class="duel-main" data-act="join">加入戰場</button><button data-act="back">返回</button></div><p class="duel-status" id="duel-join-status"></p></section>
   </div>`;
   document.body.appendChild(root);
-  root.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;({host:openHost,joinview:()=>{show('join');setTimeout(()=>$('#duel-input').focus(),30);},back:backToMenu,copy:copyInvite,copycode:copyCode,join:()=>joinFrom($('#duel-input').value),close:()=>{leave();}})[b.dataset.act]?.();});
+  root.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;({host:openHost,joinview:()=>{show('join');setTimeout(()=>$('#duel-input').focus(),30);},back:backToMenu,copy:copyInvite,copycode:copyCode,join:()=>joinFrom($('#duel-input').value),close:()=>{leave();},log:copyLog})[b.dataset.act]?.();});
   $('#duel-input').addEventListener('keydown',e=>{if(e.key==='Enter')joinFrom(e.target.value);});
   document.addEventListener('keydown',e=>{if(!root.hidden){e.stopImmediatePropagation();if(e.key==='Escape')leave();}},true);
   document.addEventListener('keyup',e=>{if(!root.hidden)e.stopImmediatePropagation();},true);
  }
  function show(v){root.querySelectorAll('[data-view]').forEach(s=>s.classList.toggle('on',s.dataset.view===v));}
- function open(){if(!root)build();if(inMatch)return;closed=false;root.hidden=false;document.body.classList.add('duel-open');const i=info();self={name:i.name||names[i.char]||'玩家',char:i.char};show('menu');}
+ function open(){if(!root)build();if(inMatch)return;closed=false;dlog('開啟','一對一對戰視窗');root.hidden=false;document.body.classList.add('duel-open');const i=info();self={name:i.name||names[i.char]||'玩家',char:i.char};show('menu');}
  function say(sel,text,bad){const e=$(sel);if(e){e.textContent=text;e.classList.toggle('bad',!!bad);}}
  function loadPeer(){return window.Peer?Promise.resolve():new Promise((ok,no)=>{const s=document.createElement('script'),to=setTimeout(()=>no(new Error('timeout')),10000);s.src=PEER_SRC;s.onload=()=>{clearTimeout(to);ok();};s.onerror=()=>{clearTimeout(to);no(new Error('load'));};document.head.appendChild(s);});}
  const OFFLINE='目前沒有網路連線，請檢查 Wi‑Fi／網路後再試。',NOLIB='無法載入連線元件（unpkg.com 可能被公司網路或防火牆擋住），請換個網路再試。',NOBROKER='無法連上配對伺服器（0.peerjs.com 可能被網路擋住），請換個網路（例如手機熱點）再試。';
  window.addEventListener('offline',()=>{if(!closed)toast('網路已中斷');});
  function teardown(){clearInterval(hb);clearInterval(timer);timer=0;try{conn&&conn.close();}catch{}try{peer&&peer.destroy();}catch{}conn=peer=null;G=snap=null;foeWants=iWant=overShown=false;if(inMatch){inMatch=false;bridge().leave();}}
  function backToMenu(){teardown();show('menu');}
- function leave(){try{conn&&conn.open&&conn.send({t:'bye'});}catch{}teardown();closed=true;if(root){root.hidden=true;}document.body.classList.remove('duel-open');}
+ function leave(){dlog('離開','本機結束');try{conn&&conn.open&&conn.send({t:'bye'});}catch{}teardown();closed=true;if(root){root.hidden=true;}document.body.classList.remove('duel-open');}
 
  /* ---------- 房主 ---------- */
  function newCode(){let s='';for(let i=0;i<6;i++)s+=ALPHABET[Math.floor(Math.random()*ALPHABET.length)];return s;}
  async function openHost(){
-  show('host');isHost=true;me=0;say('#duel-wait-status','連線中…');$('#duel-code').textContent='······';
+  show('host');isHost=true;me=0;dlog('開戰場','開始建立');say('#duel-wait-status','連線中…');$('#duel-code').textContent='······';
   if(navigator.onLine===false){say('#duel-wait-status',OFFLINE,true);return;}
   try{await loadPeer();}catch{say('#duel-wait-status',NOLIB,true);return;}
   const tryOpen=n=>{if(closed||n>5){say('#duel-wait-status','無法建立戰場，請稍後再試。',true);return;}const c=newCode(),p=new window.Peer(PREFIX+c,{config:ICE});
-   const bto=setTimeout(()=>{if(!closed&&peer!==p&&!p.destroyed){say('#duel-wait-status',NOBROKER,true);try{p.destroy();}catch{}}},10000);
-   p.on('open',()=>{clearTimeout(bto);peer=p;code=c;$('#duel-code').textContent=c;say('#duel-wait-status','等待對手加入…（請保持這個分頁在前景，切到別的分頁序號可能失效）');});
+   const bto=setTimeout(()=>{if(!closed&&peer!==p&&!p.destroyed){dlog('配對伺服器','10 秒內沒有回應');say('#duel-wait-status',NOBROKER,true);try{p.destroy();}catch{}}},10000);
+   p.on('open',()=>{clearTimeout(bto);dlog('配對伺服器','已連上，序號 '+c+'，peerId '+p.id);peer=p;code=c;$('#duel-code').textContent=c;say('#duel-wait-status','等待對手加入…（請保持這個分頁在前景，切到別的分頁序號可能失效）');});
    p.on('disconnected',()=>{/* 與配對伺服器斷線（網路切換、分頁休眠）：序號會失效，別人就會看到「找不到戰場」，所以自動重連 */if(!closed&&!conn&&peer===p){let k=0;const again=()=>{if(closed||conn||peer!==p||p.destroyed||!p.disconnected)return;try{p.reconnect();}catch{}if(++k<8)setTimeout(again,2000*k);};setTimeout(again,500);}});
-   p.on('error',err=>{if(err.type==='unavailable-id'){p.destroy();tryOpen(n+1);}else if(!conn)say('#duel-wait-status','連線失敗（'+err.type+'），請重試。',true);});
-   p.on('connection',c2=>{if(conn&&conn.open){c2.on('open',()=>{c2.send({t:'full'});setTimeout(()=>c2.close(),300);});return;}setupConn(c2);});};
+   p.on('error',err=>{dlog('房主錯誤',err.type+' '+(err.message||''));if(err.type==='unavailable-id'){p.destroy();tryOpen(n+1);}else if(!conn)say('#duel-wait-status','連線失敗（'+err.type+'），請重試。',true);});
+   p.on('connection',c2=>{dlog('收到連入','對手 peer '+c2.peer);if(conn&&conn.open){c2.on('open',()=>{c2.send({t:'full'});setTimeout(()=>c2.close(),300);});return;}setupConn(c2);});};
   tryOpen(0);
   /* 分頁開太多時瀏覽器會把背景分頁凍結／回收，房主與配對伺服器的連線就斷了（對方會看到「找不到戰場」）。切回這個分頁時立刻重連。 */
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!closed&&isHost&&!conn&&peer&&peer.disconnected&&!peer.destroyed){try{peer.reconnect();}catch{}}});
@@ -64,62 +70,66 @@
  async function joinFrom(raw){
   const text=String(raw||'').toUpperCase(),m=text.match(/ROOM=([A-Z0-9]{6})/)||text.match(/序號[:：\s]*([A-Z0-9]{6})/)||text.match(/\b([A-Z0-9]{6})\b/);
   if(!m){say('#duel-join-status','請輸入 6 碼戰場序號。',true);return;}
-  joinGen++;const gen=joinGen;teardown();isHost=false;me=1;code=m[1];say('#duel-join-status','連線中…');
+  joinGen++;const gen=joinGen;teardown();isHost=false;me=1;code=m[1];dlog('加入戰場','序號 '+code+' 來源 '+(raw&&String(raw).length>12?'整段文字／連結':'輸入'));say('#duel-join-status','連線中…');
   if(navigator.onLine===false){say('#duel-join-status',OFFLINE,true);return;}
   try{await loadPeer();}catch{say('#duel-join-status',NOLIB,true);return;}
   let tries=0;
   const attempt=()=>{
-   const p=new window.Peer(undefined,{config:ICE});peer=p;let settled=false;
-   const fail=(msg,retry)=>{if(settled||gen!==joinGen)return;settled=true;try{p.destroy();}catch{}if(peer===p)peer=conn=null;if(retry&&++tries<3&&!closed){say('#duel-join-status','連線中…（第 '+(tries+1)+' 次嘗試）');setTimeout(()=>{if(gen===joinGen)attempt();},1200);}else say('#duel-join-status',msg,true);};
-   p.on('error',err=>fail(err.type==='peer-unavailable'?'找不到這個戰場，請確認序號，或請對方重新開一個戰場。':'連線失敗（'+err.type+'）。',err.type==='peer-unavailable'||err.type==='network'||err.type==='server-error'||err.type==='socket-error'));
+   dlog('嘗試連線','第 '+(tries+1)+' 次');const p=new window.Peer(undefined,{config:ICE});peer=p;let settled=false;
+   const fail=(msg,retry)=>{if(settled||gen!==joinGen)return;settled=true;dlog('連線失敗',msg+(retry?'（將重試）':''));try{p.destroy();}catch{}if(peer===p)peer=conn=null;if(retry&&++tries<3&&!closed){say('#duel-join-status','連線中…（第 '+(tries+1)+' 次嘗試）');setTimeout(()=>{if(gen===joinGen)attempt();},1200);}else say('#duel-join-status',msg,true);};
+   p.on('error',err=>{dlog('對手錯誤',err.type+' '+(err.message||''));fail(err.type==='peer-unavailable'?'找不到這個戰場，請確認序號，或請對方重新開一個戰場。':'連線失敗（'+err.type+'）。',err.type==='peer-unavailable'||err.type==='network'||err.type==='server-error'||err.type==='socket-error');});
    let brokerOk=false;const bto=setTimeout(()=>{if(!brokerOk)fail(NOBROKER,true);},10000);
-   p.on('open',()=>{brokerOk=true;clearTimeout(bto);const c=p.connect(PREFIX+code,{reliable:true});const to=setTimeout(()=>{if(!c.open)fail('已連上配對伺服器，但無法和對方直連（可能被防火牆／公司網路擋住，或對方分頁已休眠），請對方保持分頁在前景，或換個網路（例如手機熱點）再試。',true);},15000);c.on('open',()=>{settled=true;clearTimeout(to);setupConn(c);});c.on('error',()=>fail('連線失敗，請重試。',true));});
+   p.on('open',()=>{brokerOk=true;clearTimeout(bto);dlog('配對伺服器','已連上，自己 peerId '+p.id+'，呼叫 '+PREFIX+code);const c=p.connect(PREFIX+code,{reliable:true});const to=setTimeout(()=>{if(!c.open)fail('已連上配對伺服器，但無法和對方直連（可能被防火牆／公司網路擋住，或對方分頁已休眠），請對方保持分頁在前景，或換個網路（例如手機熱點）再試。',true);},15000);c.on('open',()=>{settled=true;clearTimeout(to);dlog('直連','已建立');setupConn(c);});c.on('error',e=>{dlog('直連錯誤',(e&&e.type)||String(e));fail('連線失敗，請重試。',true);});});
   };
   attempt();
  }
 
  /* ---------- 共用連線 ---------- */
  function setupConn(c){
-  conn=c;c.on('data',onMsg);
+  conn=c;c.on('data',onMsg);dlog('連線物件','建立 open='+c.open);
+  const watch=()=>{const pc=c.peerConnection;if(!pc){setTimeout(watch,300);return;}const rep=()=>dlog('ICE',pc.iceConnectionState+' / '+pc.connectionState);rep();pc.addEventListener('iceconnectionstatechange',rep);pc.addEventListener('connectionstatechange',rep);};watch();
+  c.on('error',e=>dlog('連線錯誤',(e&&e.type)||String(e)));
   c.on('open',hello);if(c.open)hello();
-  c.on('close',()=>{if(closed||conn!==c)return;peerGone();});
+  c.on('close',()=>{dlog('連線關閉',closed?'本機已離開':'');if(closed||conn!==c)return;peerGone();});
  }
  function hello(){try{conn.send({t:'hello',name:self.name,char:self.char});}catch{}}
  function toast(t){const e=$('#toast');if(!e)return;e.textContent=t;e.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.classList.remove('visible'),2500);}
  function peerGone(){
+  dlog('對方離開',inMatch?'對戰中':'對戰前');
   clearInterval(timer);timer=0;if(G)G.phase='over';conn=null;
   if(inMatch){bridge().result('對手已離開','','');bridge().noRematch();toast('對方已離開');}else{backToMenu();toast('對方已離開');}
  }
  function onMsg(d){
   if(!d||typeof d!=='object')return;lastRx=performance.now();if(d.t==='p')return;
-  if(d.t==='hello'){foe={name:String(d.name||'對手').slice(0,16),char:names[d.char]?d.char:4};if(foe.name===self.name)foe.name+='（對手）';if(isHost)beginMatch();else enter();}
-  else if(d.t==='full'){say('#duel-join-status','這個戰場已經有人了。',true);teardown();}
+  if(d.t==='hello'){dlog('收到 hello',JSON.stringify({name:d.name,char:d.char}));foe={name:String(d.name||'對手').slice(0,16),char:names[d.char]?d.char:4};if(foe.name===self.name)foe.name+='（對手）';if(isHost)beginMatch();else enter();}
+  else if(d.t==='full'){dlog('戰場已滿','被房主拒絕');say('#duel-join-status','這個戰場已經有人了。',true);teardown();}
   else if(d.t==='snap'){snap=d;snapAt=performance.now();if(!timer)timer=setInterval(render,80);render();}
   else if(d.t==='ev')bridge().fx(d,me);
   else if(d.t==='act'&&isHost)apply(1,d);
-  else if(d.t==='rematch'){foeWants=true;if(isHost&&iWant)beginMatch();else bridge().hint('對方想再來一場！');}
-  else if(d.t==='bye'){conn=null;if(!closed)peerGone();}
+  else if(d.t==='rematch'){dlog('再一場','對方想再來一場');foeWants=true;if(isHost&&iWant)beginMatch();else bridge().hint('對方想再來一場！');}
+  else if(d.t==='bye'){dlog('收到 bye','對方主動離開');conn=null;if(!closed)peerGone();}
  }
  let hb=0,lastRx=0;
- function startBeat(){clearInterval(hb);lastRx=performance.now();hb=setInterval(()=>{if(!inMatch||closed){clearInterval(hb);return;}send({t:'p'});if(performance.now()-lastRx>7000){clearInterval(hb);if(G&&G.phase!=='over'||snap&&snap.phase!=='over'){const was=conn;conn=null;try{was&&was.close();}catch{}toast('連線中斷');bridge().result('連線中斷','超過 7 秒沒有收到對方的訊息，可能是網路中斷或對方關閉了頁面。','');bridge().noRematch();clearInterval(timer);timer=0;}}},2000);}
- function enter(){inMatch=true;startBeat();root.hidden=true;document.body.classList.remove('duel-open');bridge().enter({me:{char:self.char,name:self.name},foe});}
+ function startBeat(){clearInterval(hb);lastRx=performance.now();hb=setInterval(()=>{if(!inMatch||closed){clearInterval(hb);return;}send({t:'p'});if(performance.now()-lastRx>7000){clearInterval(hb);dlog('心跳逾時','超過 7 秒沒有收到對方訊息');if(G&&G.phase!=='over'||snap&&snap.phase!=='over'){const was=conn;conn=null;try{was&&was.close();}catch{}toast('連線中斷');bridge().result('連線中斷','超過 7 秒沒有收到對方的訊息，可能是網路中斷或對方關閉了頁面。','');bridge().noRematch();clearInterval(timer);timer=0;}}},2000);}
+ function enter(){inMatch=true;startBeat();dlog('進場','對手 '+foe.name+'，我是 '+self.name);root.hidden=true;document.body.classList.remove('duel-open');bridge().enter({me:{char:self.char,name:self.name},foe});}
 
  /* ---------- 房主裁判 ---------- */
  const mk=()=>({combo:0,lastHit:0,hp:D.hp,rage:0,guardUntil:0,guardReady:0,stunUntil:0,next:0});
  function beginMatch(){
+  dlog('開局','倒數 3 秒');
   const now=performance.now();G={phase:'count',countEnd:now+D.count,endAt:0,P:[mk(),mk()],winner:-2};iWant=foeWants=overShown=false;
   enter();clearInterval(timer);timer=setInterval(tick,50);tick(true);
  }
  function tick(force){
   const now=performance.now();if(!G)return;
-  if(G.phase==='count'&&now>=G.countEnd){G.phase='fight';G.endAt=now+D.round;}
+  if(G.phase==='count'&&now>=G.countEnd){G.phase='fight';G.endAt=now+D.round;dlog('開打','60 秒');}
   if(G.phase==='fight'&&now>=G.endAt)finish();
   if(force||now-lastSnapSent>=100){lastSnapSent=now;send(snapOf(now));}
   render();
  }
  function snapOf(now){return {t:'snap',phase:G.phase,count:Math.max(0,G.countEnd-now),left:G.phase==='count'?D.round:Math.max(0,G.endAt-now),hp:G.P.map(p=>p.hp),rage:G.P.map(p=>p.rage),guard:G.P.map(p=>Math.max(0,p.guardUntil-now)),gcd:G.P.map(p=>Math.max(0,p.guardReady-now)),stun:G.P.map(p=>Math.max(0,p.stunUntil-now)),winner:G.winner};}
  function send(m){try{conn&&conn.open&&conn.send(m);}catch{}}
- function finish(){const [a,b]=G.P;G.phase='over';G.winner=a.hp>b.hp?0:b.hp>a.hp?1:-1;send(snapOf(performance.now()));}
+ function finish(){const [a,b]=G.P;G.phase='over';dlog('結束','房主 '+a.hp+' 血 / 對手 '+b.hp+' 血');G.winner=a.hp>b.hp?0:b.hp>a.hp?1:-1;send(snapOf(performance.now()));}
  function emit(e){e.t='ev';send(e);bridge().fx(e,me);}
  function apply(by,d){
   if(!G||G.phase!=='fight')return;const now=performance.now(),s=G.P[by],o=G.P[1-by];
@@ -144,9 +154,9 @@
   if(v.phase==='over'&&!overShown){overShown=true;const w=v.winner;bridge().result(w===-1?'平手！勢均力敵':w===me?'你贏了！':'你輸了…',`${self.name} ${v.hp[me]} 血 vs ${foe.name} ${v.hp[1-me]} 血`,v.hp[me]);}
   if(v.phase!=='over')overShown=false;
  }
- function rematch(){iWant=true;if(isHost){if(foeWants)beginMatch();else send({t:'rematch'});}else send({t:'rematch'});}
+ function rematch(){dlog('再一場','我按了再一場');iWant=true;if(isHost){if(foeWants)beginMatch();else send({t:'rematch'});}else send({t:'rematch'});}
 
- window.ArenaDuel={open,act,leave,rematch,openJoin:text=>{open();show('join');$('#duel-input').value=text;joinFrom(text);}};
+ window.ArenaDuel={open,act,leave,rematch,copyLog,openJoin:text=>{open();show('join');$('#duel-input').value=text;joinFrom(text);}};
  const btn=$('#duel-open');if(btn)btn.onclick=open;
  const room=new URLSearchParams(location.search).get('room');
  if(room&&/^[A-Za-z0-9]{6}$/.test(room))setTimeout(()=>window.ArenaDuel.openJoin(room),400);

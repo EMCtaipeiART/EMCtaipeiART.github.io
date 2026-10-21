@@ -149,7 +149,7 @@
     Object.assign(state,{player:me.char,target:foe.char,mode:'duel',running:true,hp:HP,rage:0,combo:0,knockUntil:0,ultUntil:0,hitUntil:0,attackUntil:0,selfDamage:0,hurtUntil:0});
     particles=[];texts=[];combatFX.reset();stopHold();
     $('#arena').classList.add('in-duel');$('#stage-message').textContent='';$('#start').textContent='離開對戰 ↗';$('#mode-label').textContent='一對一對戰';$('#timer-hint').textContent='1–8 換道具，空白鍵／點擊出招，B 格擋，E 重擊';
-    $('#ultimate .ultimate-label').textContent='💥 重擊';$('#heal').disabled=true;$('#ultimate').dataset.hotkey='E';$('#ultimate').setAttribute('aria-keyshortcuts','E');
+    $('#ultimate .ultimate-label').textContent='💥 重擊';$('#heal').disabled=true;$('#duel-copy-log').hidden=false;$('#duel-copy-log').onclick=()=>window.ArenaDuel.copyLog();$('#ultimate').dataset.hotkey='E';$('#ultimate').setAttribute('aria-keyshortcuts','E');
     put('#target-name',foe.name);put('#foe-name',foe.name);put('#player-name',me.name);put('#self-name',me.name);
     if($('#result').open)$('#result').close();roster();wake();
    },
@@ -192,7 +192,7 @@
    leave(){
     if(!duel)return;duel=null;const s=duelSaved;duelSaved=null;const {r,h2,p,span}=pr();if(r.open)r.close();
     h2.textContent=orig.h2;p.textContent=orig.p;span.textContent=orig.span;$('#again').textContent=orig.again;$('#again').disabled=false;$('#close-result').textContent=orig.close;
-    $('#arena').classList.remove('in-duel','me-stun','low-hp','low-hp-critical','duel-shake','duel-shake-heavy');$('#ultimate .ultimate-label').textContent='✦ 下班衝擊波';$('#heal').disabled=false;$('#ultimate').dataset.hotkey='F';$('#ultimate').setAttribute('aria-keyshortcuts','F');$('#stage-message').textContent='';
+    $('#arena').classList.remove('in-duel','me-stun','low-hp','low-hp-critical','duel-shake','duel-shake-heavy');$('#ultimate .ultimate-label').textContent='✦ 下班衝擊波';$('#heal').disabled=false;$('#duel-copy-log').hidden=true;$('#ultimate').dataset.hotkey='F';$('#ultimate').setAttribute('aria-keyshortcuts','F');$('#stage-message').textContent='';
     Object.assign(state,{player:s.player,target:s.target,mode:s.mode,selfDamage:0,hurtUntil:0});uiKey='';reset();roster();
    }
   };
