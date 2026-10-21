@@ -1,8 +1,9 @@
 import type { ApiPayload, ApiResult, RequestContext } from './types';
 import { DatabaseCoordinator, isQuietHours } from './database-coordinator';
+import { DuelRoom } from './duel-room';
 import { text } from './model';
 
-export { DatabaseCoordinator };
+export { DatabaseCoordinator, DuelRoom };
 
 // 前端 Gmail 編輯器允許最多 18 MiB 原始圖片；轉成 Base64 放進 JSON 後會膨脹到約 24 MiB。
 // 舊的 2 MiB 上限會讓一張普通的貼上截圖還沒進入 sendCaseMail 就被拒絕。
@@ -195,6 +196,11 @@ export default {
     if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket' && new URL(request.url).pathname === '/ws') {
       const stub = env.DATABASE_COORDINATOR.getByName('primary', { locationHint: 'apac' }) as DurableObjectStub<DatabaseCoordinator>;
       return stub.fetch(request);
+    }
+    if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket' && new URL(request.url).pathname === '/duel') {
+      const room = text(new URL(request.url).searchParams.get('room')).toUpperCase();
+      if (!/^[A-Z0-9]{6}$/.test(room)) return new Response('Bad room', { status: 400 });
+      return env.DUEL_ROOM.getByName(room, { locationHint: 'apac' }).fetch(request);
     }
     if (request.method === 'OPTIONS') {
       const headers = corsHeaders(request, env);

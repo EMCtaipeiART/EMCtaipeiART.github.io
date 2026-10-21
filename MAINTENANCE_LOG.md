@@ -653,3 +653,8 @@
 ## 2026-10-21 出氣擂台一對一對戰連線日誌
 - 連線失敗原因會顯示在畫面上（沒網路、元件載入失敗、配對伺服器無回應、找不到戰場、無法直連、戰場已滿），對戰中每 2 秒心跳、7 秒沒收到訊息顯示「連線中斷」。
 - 新增連線日誌：記在 localStorage `emcVentDuelLogV1`（最近 300 行）與 console，對戰視窗與結果視窗都有「複製連線日誌」按鈕（vent-arena/duel.js）。
+
+## 2026-10-21 出氣擂台對戰改走 Worker 中繼
+- 原因：使用者連線日誌顯示「已連上配對伺服器、但 WebRTC 直連 15 秒失敗」（公司／NAT 網路擋 P2P，公用 TURN 不可靠）。
+- 改法：新增 Durable Object `DuelRoom`（worker/src/duel-room.ts，migration v2，路由 `/duel`），雙方都連到 Worker、由房間轉送；關閉碼 4404 找不到戰場、4409 已滿／序號重複。前台 vent-arena/duel.js 移除 PeerJS，改 WebSocket，含斷線重連（房主）、重試（對手）、心跳。
+- 驗證：worker vitest 172/172（含 test/duel-room.test.ts）、tsc 通過；已部署；本機（允許的來源 127.0.0.1:8787）兩分頁走真實 Worker 完成配對、出招同步、錯誤序號提示、對方離開偵測。

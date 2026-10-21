@@ -1,15 +1,14 @@
 'use strict';
 /* 出氣擂台 · 一對一對戰。房主（host）負責裁判運算，對手（guest）只送操作、接收快照。
-   連線用 PeerJS（WebRTC 點對點），戰場序號 = 房主的 peer id 尾碼。
+   連線走 Cloudflare Worker 的中繼房間（WebSocket，戰場序號 = 房間名），不需要 WebRTC 直連。
    對戰畫面沿用原本的擂台（arena.js 的 ArenaDuelBridge）；這裡只負責開戰場／輸入序號的小視窗與連線、規則運算。 */
 (() => {
  const D={hp:200,hit:3,block:10,rageHit:4,comboStep:5,maxBonus:9,comboGap:1200,heavy:50,stun:3000,round:60000,count:3000,cd:220,guard:600,guardCd:1100};
  const names=['Amber','Anna','Leona','Machi','Noise','余采馨','吳冠賢','李明庭','廖秦葦','鄭筱舢','黎子瑄','未登入使用者'];
- /* 連線設定：除了 Google STUN，另外加上公用 TURN 中繼（雙方在公司網路／行動網路、無法點對點直連時改走中繼，避免「連線逾時」） */
- const ICE={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:global.stun.twilio.com:3478'},{urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},{urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},{urls:'turns:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}],iceCandidatePoolSize:4};
- const PEER_SRC='https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js',PREFIX='emcvent-',ALPHABET='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+ /* 連線：不再用 WebRTC 直連（公司網路／NAT 常連不上），雙方都連到自家 Cloudflare Worker 的中繼房間（/duel），由房間轉送訊息 */
+ const WS_BASE='wss://machi-design-api.machi-chen.workers.dev/duel',ALPHABET='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
  const $=s=>document.querySelector(s),bridge=()=>window.ArenaDuelBridge;
- let root,peer,conn,isHost=false,code='',me=0,G=null,snap=null,snapAt=0,timer=0,lastSnapSent=0,foeWants=false,iWant=false,closed=true,inMatch=false,foe={name:'對手',char:4},self={name:'',char:3},toastTimer=0,lastAct=0,overShown=false;
+ let root,conn,paired=false,isHost=false,code='',me=0,G=null,snap=null,snapAt=0,timer=0,lastSnapSent=0,foeWants=false,iWant=false,closed=true,inMatch=false,foe={name:'對手',char:4},self={name:'',char:3},toastTimer=0,lastAct=0,overShown=false;
  /* 連線日誌：記在記憶體與 localStorage（最近 300 行，重新整理後仍在），並寫到 console；畫面右下角「複製連線日誌」可一鍵複製回報 */
  const LOGKEY='emcVentDuelLogV1';let logs=[];try{logs=JSON.parse(localStorage.getItem(LOGKEY)||'[]');if(!Array.isArray(logs))logs=[];}catch{logs=[];}
  function dlog(tag,msg){const t=new Date(),p=(n,l=2)=>String(n).padStart(l,'0'),line=`${p(t.getHours())}:${p(t.getMinutes())}:${p(t.getSeconds())}.${p(t.getMilliseconds(),3)} [${isHost?'房主':'對手'}] ${tag} ${msg===undefined?'':msg}`;logs.push(line);if(logs.length>300)logs=logs.slice(-300);try{localStorage.setItem(LOGKEY,JSON.stringify(logs));}catch{}try{console.info('[duel]',tag,msg===undefined?'':msg);}catch{}}
@@ -37,28 +36,37 @@
  function show(v){root.querySelectorAll('[data-view]').forEach(s=>s.classList.toggle('on',s.dataset.view===v));}
  function open(){if(!root)build();if(inMatch)return;closed=false;dlog('開啟','一對一對戰視窗');root.hidden=false;document.body.classList.add('duel-open');const i=info();self={name:i.name||names[i.char]||'玩家',char:i.char};show('menu');}
  function say(sel,text,bad){const e=$(sel);if(e){e.textContent=text;e.classList.toggle('bad',!!bad);}}
- function loadPeer(){return window.Peer?Promise.resolve():new Promise((ok,no)=>{const s=document.createElement('script'),to=setTimeout(()=>no(new Error('timeout')),10000);s.src=PEER_SRC;s.onload=()=>{clearTimeout(to);ok();};s.onerror=()=>{clearTimeout(to);no(new Error('load'));};document.head.appendChild(s);});}
- const OFFLINE='目前沒有網路連線，請檢查 Wi‑Fi／網路後再試。',NOLIB='無法載入連線元件（unpkg.com 可能被公司網路或防火牆擋住），請換個網路再試。',NOBROKER='無法連上配對伺服器（0.peerjs.com 可能被網路擋住），請換個網路（例如手機熱點）再試。';
- window.addEventListener('offline',()=>{if(!closed)toast('網路已中斷');});
- function teardown(){clearInterval(hb);clearInterval(timer);timer=0;try{conn&&conn.close();}catch{}try{peer&&peer.destroy();}catch{}conn=peer=null;G=snap=null;foeWants=iWant=overShown=false;if(inMatch){inMatch=false;bridge().leave();}}
+ function teardown(){clearInterval(hb);clearInterval(timer);timer=0;try{conn&&conn.close();}catch{}conn=null;paired=false;G=snap=null;foeWants=iWant=overShown=false;if(inMatch){inMatch=false;bridge().leave();}}
  function backToMenu(){teardown();show('menu');}
  function leave(){dlog('離開','本機結束');try{conn&&conn.open&&conn.send({t:'bye'});}catch{}teardown();closed=true;if(root){root.hidden=true;}document.body.classList.remove('duel-open');}
 
  /* ---------- 房主 ---------- */
  function newCode(){let s='';for(let i=0;i<6;i++)s+=ALPHABET[Math.floor(Math.random()*ALPHABET.length)];return s;}
+ const OFFLINE='目前沒有網路連線，請檢查 Wi‑Fi／網路後再試。',NOSERVER='無法連上對戰伺服器（machi-design-api.machi-chen.workers.dev 可能被網路擋住），請換個網路（例如手機熱點）再試。';
+ window.addEventListener('offline',()=>{if(!closed)toast('網路已中斷');});
+ /* 房間連線的薄包裝：send 送 JSON、close 結束；控制訊息（hosted／ready／gone）與一般訊息在 onRoomMsg 分流 */
+ function mkLink(ws){return {ws,get open(){return ws.readyState===1;},send(m){try{ws.send(JSON.stringify(m));}catch{}},close(){try{ws.close(1000);}catch{}}};}
  async function openHost(){
   show('host');isHost=true;me=0;dlog('開戰場','開始建立');say('#duel-wait-status','連線中…');$('#duel-code').textContent='······';
   if(navigator.onLine===false){say('#duel-wait-status',OFFLINE,true);return;}
-  try{await loadPeer();}catch{say('#duel-wait-status',NOLIB,true);return;}
-  const tryOpen=n=>{if(closed||n>5){say('#duel-wait-status','無法建立戰場，請稍後再試。',true);return;}const c=newCode(),p=new window.Peer(PREFIX+c,{config:ICE});
-   const bto=setTimeout(()=>{if(!closed&&peer!==p&&!p.destroyed){dlog('配對伺服器','10 秒內沒有回應');say('#duel-wait-status',NOBROKER,true);try{p.destroy();}catch{}}},10000);
-   p.on('open',()=>{clearTimeout(bto);dlog('配對伺服器','已連上，序號 '+c+'，peerId '+p.id);peer=p;code=c;$('#duel-code').textContent=c;say('#duel-wait-status','等待對手加入…（請保持這個分頁在前景，切到別的分頁序號可能失效）');});
-   p.on('disconnected',()=>{/* 與配對伺服器斷線（網路切換、分頁休眠）：序號會失效，別人就會看到「找不到戰場」，所以自動重連 */if(!closed&&!conn&&peer===p){let k=0;const again=()=>{if(closed||conn||peer!==p||p.destroyed||!p.disconnected)return;try{p.reconnect();}catch{}if(++k<8)setTimeout(again,2000*k);};setTimeout(again,500);}});
-   p.on('error',err=>{dlog('房主錯誤',err.type+' '+(err.message||''));if(err.type==='unavailable-id'){p.destroy();tryOpen(n+1);}else if(!conn)say('#duel-wait-status','連線失敗（'+err.type+'），請重試。',true);});
-   p.on('connection',c2=>{dlog('收到連入','對手 peer '+c2.peer);if(conn&&conn.open){c2.on('open',()=>{c2.send({t:'full'});setTimeout(()=>c2.close(),300);});return;}setupConn(c2);});};
-  tryOpen(0);
-  /* 分頁開太多時瀏覽器會把背景分頁凍結／回收，房主與配對伺服器的連線就斷了（對方會看到「找不到戰場」）。切回這個分頁時立刻重連。 */
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!closed&&isHost&&!conn&&peer&&peer.disconnected&&!peer.destroyed){try{peer.reconnect();}catch{}}});
+  hostAttempt(0,'',0);
+ }
+ /* n：換序號重試次數（序號撞到）；c：固定序號（斷線重連用）；k：重連次數 */
+ function hostAttempt(n,c,k){
+  if(closed)return;if(n>5||k>3){say('#duel-wait-status','無法建立戰場，請稍後再試。',true);return;}
+  code=c||newCode();const myCode=code,ws=new WebSocket(`${WS_BASE}?room=${myCode}&role=host`),link=mkLink(ws);conn=link;paired=false;let opened=false,hosted=false;
+  const to=setTimeout(()=>{if(!opened){dlog('中繼伺服器','10 秒內沒有回應');say('#duel-wait-status',NOSERVER,true);try{ws.close();}catch{}}},10000);
+  const ping=setInterval(()=>{if(ws.readyState===1&&!paired)link.send({t:'p'});},20000);
+  ws.onopen=()=>{opened=true;clearTimeout(to);dlog('中繼伺服器','已連上');};
+  ws.onmessage=ev=>{let m;try{m=JSON.parse(ev.data);}catch{return;}
+   if(m.t==='hosted'){hosted=true;$('#duel-code').textContent=myCode;dlog('戰場開啟','序號 '+myCode);say('#duel-wait-status','等待對手加入…');}
+   else onRoomMsg(m,link);};
+  ws.onclose=ev=>{clearTimeout(to);clearInterval(ping);dlog('中繼連線關閉','code '+ev.code+' '+(ev.reason||''));if(closed||conn!==link)return;
+   if(ev.code===4409&&!hosted){hostAttempt(n+1,'',0);return;}
+   if(paired){peerGone();return;}
+   if(hosted||opened){say('#duel-wait-status','與對戰伺服器斷線，重新連線中…');setTimeout(()=>hostAttempt(n,myCode,k+1),1500);}
+   else say('#duel-wait-status',NOSERVER,true);};
+  ws.onerror=()=>dlog('中繼連線錯誤','');
  }
  function inviteText(){const link=location.origin+location.pathname+'?room='+code;return `${self.name} 邀請您一同參加「EMC 出氣擂台」一對一對戰！\n戰場序號：${code}\n點此直接加入：${link}\n（開啟出氣擂台 → 遊戲模式 → 一對一對戰 → 輸入序號 也可以）`;}
  async function copyText(text){try{await navigator.clipboard.writeText(text);}catch{const t=el('textarea');t.value=text;document.body.appendChild(t);t.select();try{document.execCommand('copy');}catch{}t.remove();}}
@@ -72,25 +80,29 @@
   if(!m){say('#duel-join-status','請輸入 6 碼戰場序號。',true);return;}
   joinGen++;const gen=joinGen;teardown();isHost=false;me=1;code=m[1];dlog('加入戰場','序號 '+code+' 來源 '+(raw&&String(raw).length>12?'整段文字／連結':'輸入'));say('#duel-join-status','連線中…');
   if(navigator.onLine===false){say('#duel-join-status',OFFLINE,true);return;}
-  try{await loadPeer();}catch{say('#duel-join-status',NOLIB,true);return;}
   let tries=0;
   const attempt=()=>{
-   dlog('嘗試連線','第 '+(tries+1)+' 次');const p=new window.Peer(undefined,{config:ICE});peer=p;let settled=false;
-   const fail=(msg,retry)=>{if(settled||gen!==joinGen)return;settled=true;dlog('連線失敗',msg+(retry?'（將重試）':''));try{p.destroy();}catch{}if(peer===p)peer=conn=null;if(retry&&++tries<3&&!closed){say('#duel-join-status','連線中…（第 '+(tries+1)+' 次嘗試）');setTimeout(()=>{if(gen===joinGen)attempt();},1200);}else say('#duel-join-status',msg,true);};
-   p.on('error',err=>{dlog('對手錯誤',err.type+' '+(err.message||''));fail(err.type==='peer-unavailable'?'找不到這個戰場，請確認序號，或請對方重新開一個戰場。':'連線失敗（'+err.type+'）。',err.type==='peer-unavailable'||err.type==='network'||err.type==='server-error'||err.type==='socket-error');});
-   let brokerOk=false;const bto=setTimeout(()=>{if(!brokerOk)fail(NOBROKER,true);},10000);
-   p.on('open',()=>{brokerOk=true;clearTimeout(bto);dlog('配對伺服器','已連上，自己 peerId '+p.id+'，呼叫 '+PREFIX+code);const c=p.connect(PREFIX+code,{reliable:true});const to=setTimeout(()=>{if(!c.open)fail('已連上配對伺服器，但無法和對方直連（可能被防火牆／公司網路擋住，或對方分頁已休眠），請對方保持分頁在前景，或換個網路（例如手機熱點）再試。',true);},15000);c.on('open',()=>{settled=true;clearTimeout(to);dlog('直連','已建立');setupConn(c);});c.on('error',e=>{dlog('直連錯誤',(e&&e.type)||String(e));fail('連線失敗，請重試。',true);});});
+   dlog('嘗試連線','第 '+(tries+1)+' 次');const ws=new WebSocket(`${WS_BASE}?room=${code}&role=guest`),link=mkLink(ws);conn=link;paired=false;let opened=false,settled=false;
+   const fail=(msg,retry)=>{if(settled||gen!==joinGen)return;settled=true;dlog('連線失敗',msg+(retry?'（將重試）':''));try{ws.close();}catch{}if(conn===link)conn=null;if(retry&&++tries<3&&!closed){say('#duel-join-status','連線中…（第 '+(tries+1)+' 次嘗試）');setTimeout(()=>{if(gen===joinGen)attempt();},1200);}else say('#duel-join-status',msg,true);};
+   const to=setTimeout(()=>{if(!opened)fail(NOSERVER,true);},10000);
+   ws.onopen=()=>{opened=true;clearTimeout(to);dlog('中繼伺服器','已連上');};
+   ws.onmessage=ev=>{let d;try{d=JSON.parse(ev.data);}catch{return;}onRoomMsg(d,link);};
+   ws.onclose=ev=>{clearTimeout(to);dlog('中繼連線關閉','code '+ev.code+' '+(ev.reason||''));if(gen!==joinGen||closed)return;
+    if(paired&&conn===link){peerGone();return;}
+    if(ev.code===4404)fail('找不到這個戰場，請確認序號，或請對方重新開一個戰場。',false);
+    else if(ev.code===4409)fail('這個戰場已經有人了。',false);
+    else fail(opened?'與對戰伺服器的連線中斷，請重試。':NOSERVER,true);};
+   ws.onerror=()=>dlog('中繼連線錯誤','');
   };
   attempt();
  }
 
  /* ---------- 共用連線 ---------- */
- function setupConn(c){
-  conn=c;c.on('data',onMsg);dlog('連線物件','建立 open='+c.open);
-  const watch=()=>{const pc=c.peerConnection;if(!pc){setTimeout(watch,300);return;}const rep=()=>dlog('ICE',pc.iceConnectionState+' / '+pc.connectionState);rep();pc.addEventListener('iceconnectionstatechange',rep);pc.addEventListener('connectionstatechange',rep);};watch();
-  c.on('error',e=>dlog('連線錯誤',(e&&e.type)||String(e)));
-  c.on('open',hello);if(c.open)hello();
-  c.on('close',()=>{dlog('連線關閉',closed?'本機已離開':'');if(closed||conn!==c)return;peerGone();});
+ /* 房間控制訊息：hosted（房主就位）、ready（雙方到齊，各自送 hello）、gone（對方離開）；其餘交給 onMsg */
+ function onRoomMsg(m,link){
+  if(m.t==='ready'){paired=true;conn=link;dlog('雙方到齊','送出 hello');hello();}
+  else if(m.t==='gone'){dlog('對方離開房間','');if(inMatch||paired&&!isHost){paired=false;peerGone();}else{paired=false;dlog('等待新對手','');say('#duel-wait-status','對手已離開，等待新的對手…');}}
+  else if(m.t!=='hosted')onMsg(m);
  }
  function hello(){try{conn.send({t:'hello',name:self.name,char:self.char});}catch{}}
  function toast(t){const e=$('#toast');if(!e)return;e.textContent=t;e.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.classList.remove('visible'),2500);}

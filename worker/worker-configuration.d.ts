@@ -24,6 +24,7 @@ interface __BaseEnv_Env {
 	COIN_SERVICE_KEY: string;
 	GMAIL_OAUTH_CLIENT_SECRET: string;
 	DATABASE_COORDINATOR: DurableObjectNamespace<import("./src/index").DatabaseCoordinator>;
+	DUEL_ROOM: DurableObjectNamespace<import("./src/index").DuelRoom>;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {

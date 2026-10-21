@@ -34,6 +34,10 @@
       {
         "name": "DATABASE_COORDINATOR",
         "class_name": "DatabaseCoordinator"
+      },
+      {
+        "name": "DUEL_ROOM",
+        "class_name": "DuelRoom"
       }
     ]
   },
@@ -41,6 +45,10 @@
     {
       "tag": "v1",
       "new_sqlite_classes": ["DatabaseCoordinator"]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["DuelRoom"]
     }
   ],
   "triggers": {
