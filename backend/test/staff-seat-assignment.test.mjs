@@ -36,3 +36,11 @@ test('layout 2026-10-19: seats 6 and 9 move 110 left (between the groups), left 
   assert.match(app, /office-extras-v2\.webp\?v=1/);
   assert.match(app, /white_desk_row:\[0,0,832,357\]/);
 });
+
+test('work hours come from the back-office setting (state.hours); overtime mask is overtimeStart..06:00', async () => {
+  const app = await readFile(new URL('../../EMC-ART-Pixel-Office/dist/app.js', import.meta.url), 'utf8');
+  assert.match(app, /let officeHours=\{dayStart:9,workEnd:19,overtimeStart:19\};/);
+  assert.match(app, /clock\.hour>=officeHours\.overtimeStart\|\|clock\.hour<6/);
+  assert.match(app, /c\.hour>=officeHours\.dayStart&&c\.hour<officeHours\.workEnd/);
+  assert.match(source, /hours: \{ dayStart: pixelHours\.dayStart, workEnd: pixelHours\.workEnd, overtimeStart: pixelHours\.overtimeStart \}/);
+});

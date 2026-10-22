@@ -307,10 +307,10 @@ test('換上新的桌子素材，左中右三種形狀各就各位', async () =>
 
 test('左下角空位依時段轉灰階，週末與國定假日整天灰階，電腦留著', async () => {
   const js = await officeJs();
-  assert.match(js, /const VACANT_DESK_ON_HOUR=9,VACANT_DESK_OFF_HOUR=19;/);
+  assert.match(js, /const VACANT_DESK_ON_HOUR=\(\)=>officeHours\.dayStart,VACANT_DESK_OFF_HOUR=\(\)=>officeHours\.workEnd;/);
   assert.match(js, /const stationVacant=s=>!s\.name;/);
   // 平日 09:00–19:00 正常，其餘時間連椅子一起暗下來。
-  assert.match(js, /return clock\.hour<VACANT_DESK_ON_HOUR\|\|clock\.hour>=VACANT_DESK_OFF_HOUR;/);
+  assert.match(js, /return clock\.hour<VACANT_DESK_ON_HOUR\(\)\|\|clock\.hour>=VACANT_DESK_OFF_HOUR\(\);/);
   // 週末與國定假日整天灰階，不必等到 18:00（2026-09-29 使用者要求）。workday 已經同時涵蓋
   // 週六日與 TAIWAN_HOLIDAYS，跟加班濾鏡用同一份假日表。
   const fn = js.slice(js.indexOf('function stationDimmed(s){'), js.indexOf('\nconst furnitureFor='));

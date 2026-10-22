@@ -34,7 +34,10 @@ const statuses=[{id:'present',symbol:'person',label:'在座',text:'在座工作�
 // 在座與加班都是「人還坐在位子上工作」（人物、椅子、電腦都要畫，也能走動）；其餘狀態才是離席（灰階空桌）。
 const workingStatusIds=['present','overtime'];
 // 企劃部、專案部：上班時間平日 09:00–19:00，其餘時間一律下班（人物與椅子隱藏、桌子灰階）；沒有電腦心跳，所以用時間規則。
-function statusOf(p){if(p.staff&&p.status==='present'){const c=currentTaipeiClock();if(!(c.workday&&c.hour>=9&&c.hour<19))return 'offwork';}return p.status;}
+/* 上下班時段：以後台「上下班時段設定」為準（後端 pixelOfficeState 帶 hours）；還沒讀到之前用預設。加班與加班遮罩是 overtimeStart 到隔天 06:00。 */
+let officeHours={dayStart:9,workEnd:19,overtimeStart:19};
+function applyHours(data){const h=data&&data.hours;if(!h)return;const n=v=>Number.isFinite(Number(v))?Number(v):null,d=n(h.dayStart),w=n(h.workEnd),o=n(h.overtimeStart);if(d===null||w===null||o===null)return;if(d!==officeHours.dayStart||w!==officeHours.workEnd||o!==officeHours.overtimeStart){officeHours={dayStart:d,workEnd:w,overtimeStart:o};markDirty();}}
+function statusOf(p){if(p.staff&&p.status==='present'){const c=currentTaipeiClock();if(!(c.workday&&c.hour>=officeHours.dayStart&&c.hour<officeHours.workEnd))return 'offwork';}return p.status;}
 const isAway=p=>!workingStatusIds.includes(statusOf(p));
 const overtimePreview=new URLSearchParams(location.search).get('overtime')==='1';
 // 嵌入版不能走動，畫面多數時間是完全靜止的（只有心情動畫會動），沒必要每秒重畫 60 次。
@@ -225,7 +228,7 @@ function currentTaipeiClock(){const now=Date.now();if(now-taipeiClockCheckedAt>3
 const currentTaipeiHour=()=>currentTaipeiClock().hour;
 // 加班濾鏡只是畫面的「有效狀態」，不寫回後端；實際出勤狀態仍由電腦心跳與手動指定決定。
 // 週末與國定假日不套用（那幾天電腦開著也算下班，不是加班）。
-function isOvertime(p){if(p.status==='overtime')return true;if(p.staff||p.status!=='present')return false;if(overtimePreview)return true;const clock=currentTaipeiClock();return clock.workday&&(clock.hour>=19||clock.hour<9);}
+function isOvertime(p){if(p.status==='overtime')return true;if(p.staff||p.status!=='present')return false;if(overtimePreview)return true;const clock=currentTaipeiClock();return clock.workday&&(clock.hour>=officeHours.overtimeStart||clock.hour<6);}
 const effectiveStatusId=p=>isOvertime(p)?'overtime':statusOf(p);
 let people=names.map((name,i)=>({name,x:starts[i][0],y:starts[i][1],dir:'down',mood:'',status:'present',message:'',photo:''})), selected=null,ready=false, keys=new Set(), last=0, saveTimer, photoImages=new Map(), hits=[];
 /* 進站就用上次存的造型，不要先畫預設衣服、等後端回來才換（造型資料到了會照常覆蓋） */
@@ -616,7 +619,7 @@ function saveLevelTitle(group,index,value){
   next[index]=String(value||'').trim().slice(0,12);
   if(next[index]===levelTitles[group][index])return;
   syncCall({action:'pixelOfficeLevelTitlesUpdate',titles:{[group]:next}})
-    .then(data=>{applyLevelTitles(data);toast('已更新稱號');})
+    .then(data=>{applyLevelTitles(data);applyHours(data);toast('已更新稱號');})
     .catch(err=>{toast('稱號沒改成：'+err.message);renderLevelTable();});
 }
 /** 套用後端來的稱號，並把每個人的稱號重算一次（分數沒變，只有文字換了）。 */
@@ -1268,10 +1271,10 @@ function applyRemote(list){markDirty();let lookChanged=false;
 }
 {const _applyRemote=applyRemote;applyRemote=function(list){const r=_applyRemote(list);try{const c={};people.forEach(p=>{if(p.look&&typeof p.look==='object')c[p.name]=p.look;});localStorage.setItem('pixelLooksV1',JSON.stringify(c));}catch{}return r;};}
 let pushOpen=false;// 後端推送連線正常時，輪詢只當備援（60 秒）；沒連上就維持原本每 3 秒
-async function pollSync(){try{const early=window.__pixelP&&window.__pixelP.state;if(window.__pixelP)window.__pixelP.state=null;let data=early?await early:null;if(!data||!data.ok)data=await syncCall({action:'pixelOfficeState',since:syncVersion});setSyncStatus(true);if(!data.unchanged){(applyStaff(data.staff),applyRemote(data.people));applyLevelTitles(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}catch{setSyncStatus(false);}finally{setTimeout(pollSync,pushOpen?60000:(document.hidden?15000:3000));}}
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncCall({action:'pixelOfficeState',since:syncVersion}).then(data=>{if(!data.unchanged){(applyStaff(data.staff),applyRemote(data.people));applyLevelTitles(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}).catch(()=>{});});
+async function pollSync(){try{const early=window.__pixelP&&window.__pixelP.state;if(window.__pixelP)window.__pixelP.state=null;let data=early?await early:null;if(!data||!data.ok)data=await syncCall({action:'pixelOfficeState',since:syncVersion});setSyncStatus(true);if(!data.unchanged){(applyStaff(data.staff),applyRemote(data.people));applyLevelTitles(data);applyHours(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}catch{setSyncStatus(false);}finally{setTimeout(pollSync,pushOpen?60000:(document.hidden?15000:3000));}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncCall({action:'pixelOfficeState',since:syncVersion}).then(data=>{if(!data.unchanged){(applyStaff(data.staff),applyRemote(data.people));applyLevelTitles(data);applyHours(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}).catch(()=>{});});
 // 即時推送：後端（Durable Object）有人改狀態／對話框／音樂／造型／限時動態就通知這裡，馬上重讀，不必等輪詢。
-function syncNow(){return syncCall({action:'pixelOfficeState',since:syncVersion}).then(data=>{if(!data.unchanged){(applyStaff(data.staff),applyRemote(data.people));applyLevelTitles(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}).catch(()=>{});}
+function syncNow(){return syncCall({action:'pixelOfficeState',since:syncVersion}).then(data=>{if(!data.unchanged){(applyStaff(data.staff),applyRemote(data.people));applyLevelTitles(data);applyHours(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}).catch(()=>{});}
 (function pushConnect(){
   if(!('WebSocket' in window)||typeof SYNC_API!=='string')return;
   let ws=null,pingTimer=0,retry=0;
@@ -1414,17 +1417,17 @@ function ensureFurnitureGray(){
 // 週六、週日與國定假日則整天都是灰階（使用者 2026-09-29 要求）：那幾天不會有人來坐，
 // 早上九點到六點還亮著反而奇怪。假日表用的是 TAIWAN_HOLIDAYS，跟加班濾鏡同一份。
 // 中午 12–14 點也一樣收掉（使用者 2026-09-30 要求）：大家都去吃飯了，只有那張空桌亮著很突兀。
-const VACANT_DESK_ON_HOUR=9,VACANT_DESK_OFF_HOUR=19;
+const VACANT_DESK_ON_HOUR=()=>officeHours.dayStart,VACANT_DESK_OFF_HOUR=()=>officeHours.workEnd;
 const VACANT_DESK_LUNCH_START=12,VACANT_DESK_LUNCH_END=14;
 const stationVacant=s=>!s.name;
 function stationDimmed(s){
   if(s.lg)return false;/* 左側新增的桌子群是固定擺設：不隨上下班／午休轉灰階，保持原本顏色（蜜桃米、白色） */
-  if(s.grp){const c=currentTaipeiClock();return !(c.workday&&c.hour>=9&&c.hour<19)||Boolean(stationAway(s));}// 企劃部、專案部的桌子：非上班時間（平日 10:00–19:00 以外）整張灰階、椅子收起來
+  if(s.grp){const c=currentTaipeiClock();return !(c.workday&&c.hour>=officeHours.dayStart&&c.hour<officeHours.workEnd)||Boolean(stationAway(s));}// 企劃部、專案部的桌子：非上班時間（平日 10:00–19:00 以外）整張灰階、椅子收起來
   if(stationAway(s))return true;
   if(!stationVacant(s))return false;
   const clock=currentTaipeiClock();
   if(!clock.workday)return true;
-  return clock.hour<VACANT_DESK_ON_HOUR||clock.hour>=VACANT_DESK_OFF_HOUR;
+  return clock.hour<VACANT_DESK_ON_HOUR()||clock.hour>=VACANT_DESK_OFF_HOUR();
 }
 const furnitureFor=s=>stationDimmed(s)?(ensureFurnitureGray()||furniture):furniture;
 // 嵌入時不填底色，讓外層卡片的顏色透進來（深色模式才不會卡著一塊白）。獨立開遊戲頁時仍是白底。

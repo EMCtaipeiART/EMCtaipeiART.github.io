@@ -2420,7 +2420,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     // 稱號跟著狀態一起回：前端不必為了它多打一次 API，改了也會隨輪詢傳到每個人的畫面。
     const avatars: Record<string, number> = {};
     for (const row of this.ctx.storage.sql.exec<{ name: string; updated_at: number }>('SELECT name, updated_at FROM pixel_office_avatar_current').toArray()) avatars[row.name] = Number(row.updated_at) || 0;
-    return { ok: true, action: 'pixelOfficeState', version, people, staff: this.pixelOfficeStaff().map(item => ({ seat: item.seat, name: item.name })), levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories(), avatars };
+    return { ok: true, action: 'pixelOfficeState', version, people, staff: this.pixelOfficeStaff().map(item => ({ seat: item.seat, name: item.name })), levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories(), avatars, hours: { dayStart: pixelHours.dayStart, workEnd: pixelHours.workEnd, overtimeStart: pixelHours.overtimeStart } };
   }
 
   private pixelOfficeUpdate(payload: ApiPayload): ApiResult {
@@ -5208,6 +5208,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const config = cleanPixelHours({ enabled: payload.enabled !== false, dayStart: payload.dayStart as number, lunchStart: payload.lunchStart as number, lunchEnd: payload.lunchEnd as number, workEnd: payload.workEnd as number, overtimeStart: payload.overtimeStart as number });
         await this.ctx.storage.put('pixelHours', config);
         setPixelHours(config);
+        // 讓所有開著的畫面重新讀一次狀態（上下班時段變了，人物與桌子的亮暗、加班遮罩要跟著變）
+        this.ctx.storage.sql.exec('UPDATE pixel_office_people SET updated_at = ? WHERE name = (SELECT name FROM pixel_office_people ORDER BY updated_at DESC LIMIT 1)', Math.max(Date.now(), this.pixelOfficeVersion() + 1));
         this.pixelVersionMemo = null;
         await this.queueAudit([{ t: new Date().toISOString(), kind: '欄位修改', actor: auditActor(who), caseId: '上下班時段', field: config.enabled ? '時間規則開啟' : '時間規則關閉', to: JSON.stringify(config) }]);
         return { ok: true, action, config };

@@ -538,8 +538,8 @@
     /* 管理者與 Machi 進元宇宙（編輯）時，順便把「快照與目前造型不一致」的人更新（請遊戲算每個人的頭像，再逐一問後端） */
     let snapAllBusy=false;
     function snapshotEveryone(tries){
-      const fr=$('uniFrame');if(!fr||snapAllBusy||!state.uniEdit||!loggedIn()||!(isAdminUser()||isMachiUser()||(typeof ownDesignerName==='function'&&ownDesignerName()==='Machi')))return;
-      snapAllBusy=true;let fin=false;
+      const fr=$('uniFrame');if(!fr||snapAllBusy||(!tries&&Date.now()-(state.snapAllAt||0)<30000)||!state.uniEdit||!loggedIn()||!(isAdminUser()||isMachiUser()||(typeof ownDesignerName==='function'&&ownDesignerName()==='Machi')))return;
+      snapAllBusy=true;state.snapAllAt=Date.now();let fin=false;
       const done=list=>{if(fin)return;fin=true;snapAllBusy=false;window.removeEventListener('message',onMsg);clearTimeout(t);
         if(!list){if((tries||0)<4)setTimeout(()=>snapshotEveryone((tries||0)+1),4000);else toast('頭像快照核對：遊戲畫面還沒準備好（造型圖沒載完），稍後再進一次元宇宙',true);return}
         (async()=>{const res={saved:[],same:[],fail:[]};for(const item of list){if(!item||!item.who||!item.lookKey)continue;let r='fail:未知';try{r=await uploadAvatarSnapshot({who:item.who,lookKey:item.lookKey,png:item.png,target:item.who})}catch(err){r='fail:'+err}if(r==='saved')res.saved.push(item.who);else if(r==='same')res.same.push(item.who);else res.fail.push(item.who+'（'+String(r||'').replace(/^fail:/,'')+'）');}
@@ -575,7 +575,7 @@
     window.addEventListener('message',e=>{const fr=$('uniFrame');if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeLookChanged'||!fr||e.source!==fr.contentWindow||!loggedIn())return;
       clearTimeout(lookSnapTimer);lookSnapTimer=setTimeout(()=>{let fin=false;const finish=p=>{if(fin)return;fin=true;window.removeEventListener('message',onMsg);clearTimeout(t);if(p&&p.lookKey&&p.png)uploadAvatarSnapshot(p)},onMsg=ev=>{if(ev.origin===location.origin&&ev.data&&ev.data.type==='pixelOfficeSnapshotDone')finish(ev.data)},t=setTimeout(finish,2500);window.addEventListener('message',onMsg);try{fr.contentWindow.postMessage({type:'pixelOfficeSnapshot'},location.origin)}catch(err){finish()}},600)});
     window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;
-      if(e.data.type==='pixelOfficeViewerRequest'){try{e.source.postMessage(viewerPayload(),location.origin)}catch(err){}}
+      if(e.data.type==='pixelOfficeViewerRequest'){setTimeout(()=>{try{snapshotEveryone(0)}catch(err){}},5000);try{e.source.postMessage(viewerPayload(),location.origin)}catch(err){}}
       if(e.data.type==='pixelOfficeThemeRequest'){try{e.source.postMessage({type:'pixelOfficeTheme',theme:document.documentElement.dataset.theme==='dark'?'dark':'light'},location.origin)}catch(err){}}});
     $('universeClose').addEventListener('click',closeUniverse);
     $('universe').addEventListener('click',e=>{if(e.target.id==='universe')closeUniverse()});
