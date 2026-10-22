@@ -541,8 +541,10 @@
       const fr=$('uniFrame');if(!fr||snapAllBusy||!state.uniEdit||!loggedIn()||!(isAdminUser()||isMachiUser()))return;
       snapAllBusy=true;let fin=false;
       const done=list=>{if(fin)return;fin=true;snapAllBusy=false;window.removeEventListener('message',onMsg);clearTimeout(t);
-        if(!list){if((tries||0)<4)setTimeout(()=>snapshotEveryone((tries||0)+1),4000);return}
-        (async()=>{for(const item of list){if(!item||!item.who||!item.lookKey)continue;try{await uploadAvatarSnapshot({who:item.who,lookKey:item.lookKey,png:item.png,target:item.who})}catch(err){}}})();};
+        if(!list){if((tries||0)<4)setTimeout(()=>snapshotEveryone((tries||0)+1),4000);else toast('頭像快照核對：遊戲畫面還沒準備好（造型圖沒載完），稍後再進一次元宇宙',true);return}
+        (async()=>{const res={saved:[],same:[],fail:[]};for(const item of list){if(!item||!item.who||!item.lookKey)continue;let r='fail:未知';try{r=await uploadAvatarSnapshot({who:item.who,lookKey:item.lookKey,png:item.png,target:item.who})}catch(err){r='fail:'+err}if(r==='saved')res.saved.push(item.who);else if(r==='same')res.same.push(item.who);else res.fail.push(item.who+'（'+String(r||'').replace(/^fail:/,'')+'）');}
+          try{console.info('頭像快照核對',res)}catch(err){}
+          toast('頭像快照核對：更新 '+res.saved.length+' 位'+(res.saved.length?'（'+res.saved.join('、')+'）':'')+'，原本一致 '+res.same.length+' 位'+(res.fail.length?'，失敗 '+res.fail.length+' 位：'+res.fail.join('；'):''),res.fail.length>0);})();};
       const onMsg=e=>{if(e.origin===location.origin&&e.data&&e.data.type==='pixelOfficeSnapshotAllDone'&&e.source===fr.contentWindow)done(e.data.list||null)};
       const t=setTimeout(()=>done(null),6000);window.addEventListener('message',onMsg);
       try{fr.contentWindow.postMessage({type:'pixelOfficeSnapshotAll'},location.origin)}catch(err){done(null)}
@@ -555,11 +557,12 @@
       try{
         const token=session().token,post=body=>fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(body),cache:'no-store'}).then(r=>r.json());
         const base={action:'pixelOfficeAvatarSnapshot',token,lookKey:p.lookKey};if(p.target){base.target=p.target;try{const raw=String(p.png||'').replace(/^data:image\/png;base64,/,''),buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(raw));base.hash=[...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('')}catch(err){}}
-        const r=await post(base);if(!r||!r.ok)return;
-        if(r.need){const r2=await post({...base,png:p.png});if(!r2||!r2.ok)return}
+        const r=await post(base);if(!r||!r.ok)return 'fail:'+((r&&r.error)||'無回應');
+        let saved=false;if(r.need){const r2=await post({...base,png:p.png});if(!r2||!r2.ok)return 'fail:'+((r2&&r2.error)||'無回應');saved=true}
         if(!p.target){try{localStorage.setItem('pixelSnap:'+p.who,p.lookKey)}catch(err){}}
-        if(typeof refreshAvatarSnapshots==='function')refreshAvatarSnapshots()
-      }catch(err){}
+        if(typeof refreshAvatarSnapshots==='function')refreshAvatarSnapshots();
+        return saved?'saved':'same'
+      }catch(err){return 'fail:'+(err&&err.message||err)}
     }
     document.addEventListener('click',e=>{if(e.target.closest?.('[data-uni-close]')){
       const go=()=>{state.uniEdit=false;state.home='board';show('board')},fr=$('uniFrame');
