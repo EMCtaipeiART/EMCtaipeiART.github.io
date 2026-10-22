@@ -296,7 +296,7 @@ test('換上新的桌子素材，左中右三種形狀各就各位', async () =>
   // 繪製寬度要讓素材的分隔線對齊座位間距，相鄰兩張才接得平整。
   assert.match(js, /const DESK_SRC_FACE=221,DESK_SRC_FOOT=70,DESK_SRC_UNIT=517,DESK_SEAT_GAP=220;/);
   assert.match(js, /const DESK_DRAW_SCALE=DESK_SEAT_GAP\/DESK_SRC_UNIT;/);
-  assert.match(js, /const drawW=Math\.round\(sw\*DESK_DRAW_SCALE\)/);
+  assert.match(js, /const drawW=Math\.round\(sw\*SC\)/);
   assert.match(js, /if\(upper>0\)ctx\.drawImage\(art,sx,sy,sw,upper,left,deskTop-upperDraw,drawW,upperDraw\);/,
     'upper 為 0 時不能畫高度 0 的來源矩形');
   // 舊的寫死偏移與固定 250 寬都要消失。
