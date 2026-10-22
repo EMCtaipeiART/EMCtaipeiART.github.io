@@ -24,3 +24,9 @@ test('設計師手動回覆（選擇器立即備份）會用 refresh 重抓 NAS 
   assert.match(lib, /'nas-refresh'/);
   assert.match(lib, /refreshNames\.has/);
 });
+
+test('回覆時重抓：備份後又改過的同名圖（本機紀錄 pendingAfterRound）一律取代，不只靠整輪共用的備份時間', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const lib = await readFile(new URL('../../scripts/nas_design_image_lib.mjs', import.meta.url), 'utf8');
+  assert.match(lib, /trackedRound\(entry\.pendingAfterRound\) !== null \|\| isNewerThanRecorded\(item\)/);
+});

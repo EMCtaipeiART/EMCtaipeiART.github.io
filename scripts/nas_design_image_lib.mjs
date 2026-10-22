@@ -1340,6 +1340,8 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
   // 封存標記本身不夠，這一輪要真的交付過才擋（見 roundDelivered 的說明）。
   const currentRoundDelivered = roundDelivered({ dbData, caseId, round, stateFiles });
   let staleSealClearedCount = 0;
+  // 判斷「這張在備份之後又改過」：本機同步紀錄標了 pendingAfterRound（備份後檔案又變動）就算，不必靠時間比較——
+  // 資料庫的備份時間是整輪共用一個（別張圖後來又備份過就會被更新），單靠時間會漏掉先備份、後來又改的那張。
   // refresh（設計師手動按「沿用路徑／選資料夾」回覆）：NAS 上存檔時間比這一輪資料庫備份晚的同名檔，是這輪回覆前才改好的新版，
   // 直接取代這一輪原本那張，不再被「封存／等下一輪」擋掉。
   const refreshRecordedTimes = refresh ? recordedTimesByBaseName(dbData, caseId) : null;
@@ -1376,7 +1378,7 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
       }
     }
 
-    if (refresh && entry && refreshRecordedThisRound.has(designImageBaseName(path.basename(item.relPath))) && isNewerThanRecorded(item)) {
+    if (refresh && entry && refreshRecordedThisRound.has(designImageBaseName(path.basename(item.relPath))) && (trackedRound(entry.pendingAfterRound) !== null || isNewerThanRecorded(item))) {
       entry.pendingAfterRound = null;
       refreshNames.add(path.basename(item.relPath));
       eligiblePreviews.push(item);
