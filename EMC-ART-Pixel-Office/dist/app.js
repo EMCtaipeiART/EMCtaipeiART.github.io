@@ -1827,7 +1827,7 @@ function avatarImageOf(i){
   if(eyeC===null)eyeC=chin-24;
   // 所有人的「眼睛」放在框裡同一個高度、臉大小一致（以前對下巴、再改對頭頂，男生臉會被放太大）
   const size=AV_CROP.w;
-  const sy=eyeC-size*AV_EYE,ax=cx+AV_DX[i];// AV_DX：Leona、Anna 的頭在框裡偏左，裁切窗往左移讓頭回到正中
+  const sy=eyeC-size*AV_EYE,ax=cx+(AV_DX[i]||0);/* 同仁（編號 5 起）沒有 AV_DX，以前會變 NaN、頭像畫成空白 */// AV_DX：Leona、Anna 的頭在框裡偏左，裁切窗往左移讓頭回到正中
   o.getContext('2d').drawImage(c,ax-size/2,sy,size,size,0,0,160,160);
   return o.toDataURL('image/png');
 }
@@ -1940,7 +1940,7 @@ window.addEventListener('message',event=>{
   try{
     if(!ready||!accessoriesReady()||!customState().loaded){loadAccessories();reply(null);return;}
     const list=[];
-    people.forEach((p,i)=>{if(!(i<5||(p.staff&&staffLookReady(i))))return;if(!bodyLookReady(i))return;/* 造型圖還沒載好就畫會得到空白頭像，不要送 */const png=avatarImageOf(i);if(String(png||'').length<3000)return;list.push({who:p.name,lookKey:lookKeyOf(i),png});});
+    people.forEach((p,i)=>{if(!(i<5||(p.staff&&staffLookReady(i))))return;{const lk=effectiveLook(i);if((typeof lk.outfit==='string'&&!customOutfitView(lk.outfit,0))||(typeof lk.head==='string'&&lk.head&&!customHeadView(lk.head,0)))return;}/* 造型圖還沒載好就畫會得到空白頭像，不要送 */const png=avatarImageOf(i);if(String(png||'').length<3000)return;list.push({who:p.name,lookKey:lookKeyOf(i),png});});
     reply(list);
   }catch{reply(null);}
 });
