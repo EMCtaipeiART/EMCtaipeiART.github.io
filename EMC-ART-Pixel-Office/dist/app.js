@@ -261,7 +261,7 @@ function assetBase(){return (new URLSearchParams(location.search).get('assetBase
 /* 首頁隱藏的頭像視窗（?avatars=1）只畫頭像，不需要家具、圖示、桌上設備；首頁小框（?embed=1）不畫同仁桌的設備與新擺設。
    這些圖不載入，改用 1×1 的透明圖頂著（load 事件照常觸發），省下約 15MB 解碼後記憶體與約 500KB 下載。 */
 const LEAN_AVATARS=/[?&]avatars=1/.test(location.search),LEAN_EMBED=/[?&]embed=1/.test(location.search),TINY_IMG='data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
-function leanAsset(img,path){if((LEAN_AVATARS&&/furniture-|icons-|staff-gear|office-extras|office-rooms|bottom-/.test(path))||(LEAN_EMBED&&/staff-gear|office-extras|office-rooms/.test(path))){img.crossOrigin=null;img.src=TINY_IMG;return true;}return false;}
+function leanAsset(img,path){if((LEAN_AVATARS&&/furniture-|icons-|staff-gear|office-extras|office-rooms|office-props|bottom-/.test(path))||(LEAN_EMBED&&/staff-gear|office-extras|office-rooms|office-props/.test(path))){img.crossOrigin=null;img.src=TINY_IMG;return true;}return false;}
 function setAsset(img,path){img.crossOrigin='anonymous';img.__fb=path;if(typeof leanAsset==='function'&&leanAsset(img,path))return;img.src=assetBase()+path;}
 const furniture=new Image(),iconSheet=new Image(),extraSheet=new Image();// 進站加速（2026-09-18）：只保留實際用到的區塊並改存 WebP。
 setAsset(furniture,'assets/furniture-v5.webp?v=1');setAsset(iconSheet,'assets/icons-v3.webp?v=3');setAsset(extraSheet,'assets/icons-status-v4.webp?v=2');
@@ -1302,8 +1302,9 @@ const RM={table_black_left:[8,8,55,130],table_black_mid:[71,8,85,130],table_blac
 const RT=24,ROOM_DOOR=120,ROOM_MARGIN=130,SIDE_GAP=80;// 玻璃牆厚度；門寬；會議室牆內緣到桌子四邊的距離（四邊相同，椅子與人走動都放得下）；D 室牆到椅子的距離
 // 房間外框：[名稱, x, y, w, h, 門所在的邊（t/b/l/r）, 門中心座標]。會議室外框＝桌子＋四邊相同的間距＋牆。茶水間不隔間。
 const tableW=m=>110+85*m,meetW=m=>tableW(m)+2*ROOM_MARGIN+2*RT,meetH=130+2*ROOM_MARGIN+2*RT;
+const BC_MX=70,BC_W=tableW(2)+2*BC_MX+2*RT;// 會議室 B、C：桌子短一點、左右留 70，不要太寬
 const D_W=144+760+40+SIDE_GAP+RT,D_H=150+400+SIDE_GAP+RT;
-const ROOMS=[['男廁',330,-1366,316,384,'b',330+237],['女廁',670,-1366,316,384,'b',670+237],['會議室 A',1260,-982-meetH,meetW(5),meetH,'l',-982-meetH/2],['會議室 B',60,730,meetW(3),meetH,'r',730+meetH/2],['會議室 C',60,730+meetH+RT,meetW(3),meetH,'r',730+meetH+RT+meetH/2],['會議室 D',1240,730,D_W,D_H,'t',1240+D_W/2]];
+const ROOMS=[['男廁',330,-982-meetH,316,meetH,'b',330+237],['女廁',670,-982-meetH,316,meetH,'b',670+237],['會議室 A',1260,-982-meetH,meetW(5),meetH,'l',-982-meetH/2],['會議室 B',60,730,BC_W,meetH,'r',730+meetH/2],['會議室 C',60,730+meetH+RT,BC_W,meetH,'r',730+meetH+RT+meetH/2],['會議室 D',1240,730,D_W,D_H,'t',1240+D_W/2]];
 const viewToLogical=v=>{let lo=-3000,hi=4000;for(let i=0;i<40;i++){const m=(lo+hi)/2;if(viewY(m)<v)lo=m;else hi=m;}return (lo+hi)/2;};
 const ROOM_MIN_Y=LX?viewToLogical(-1500):180-2*GP,ROOM_MAX_Y=LX?viewToLogical(1680):H0-20;
 const roomWallList=[],roomCornerList=[];
@@ -1317,25 +1318,25 @@ for(const [,x,y,w,h,side,c] of ROOMS){
 }
 // 家具：一份清單同時決定怎麼畫、哪裡不能穿過。[畫法, x, y, w, h, 排序深度, 是否擋路, 參數]
 const roomItems=[];
-const addTable=(kind,x,y,mids)=>roomItems.push(['table',x,y,tableW(mids),kind==='wood'?90:130,y+(kind==='wood'?70:110),true,{kind,mids}]);
+const addTable=(kind,x,y,mids)=>roomItems.push(['table',x,y,tableW(mids),kind==='wood'||kind==='whitewood'?90:130,y+(kind==='wood'||kind==='whitewood'?70:110),true,{kind,mids}]);
 const addSprite=(name,x,y,depth,solid)=>{const r=RM[name];roomItems.push(['sprite',x,y,r[2],r[3],depth,solid,{name}]);};
 {
   // 會議室 A、B、C：長桌置中，上下各一排椅子，桌上一台白色投影機
-  const meet=(room,mids,n,proj)=>{const [,rx,ry]=room,tx=rx+RT+ROOM_MARGIN,ty=ry+RT+ROOM_MARGIN,tw=tableW(mids);addTable('black',tx,ty,mids);roomItems.push(['label',tx,ty,tw,130,99999,false,{text:room[0]}]);
-    addSprite(proj,proj==='projector_right'?tx+60:tx+tw-60-64,ty+26,ty+125,false);
+  const meet=(room,mids,n,proj,mx=ROOM_MARGIN)=>{const [,rx,ry]=room,tx=rx+RT+mx,ty=ry+RT+ROOM_MARGIN,tw=tableW(mids);addTable('black',tx,ty,mids);roomItems.push(['label',tx,ty,tw,130,99999,false,{text:room[0]}]);
+    addSprite(proj,proj==='projector_right'?tx+tw-60-64:tx+tw-84,ty+26,ty+125,false);
     for(let k=0;k<n;k++){const cx=tx+tw*(2*k+1)/(2*n);addSprite('chair_front',cx-26,ty-46,ty-1,false);addSprite('chair_back',cx-26,ty+120,ty+130+40,false);}};
-  meet(ROOMS[2],5,3,'projector_right');meet(ROOMS[3],3,2,'projector_left');meet(ROOMS[4],3,2,'projector_left');
+  meet(ROOMS[2],5,3,'projector_right');meet(ROOMS[3],2,2,'projector_left',BC_MX);meet(ROOMS[4],2,2,'projector_left',BC_MX);
   // 廁所：馬桶（朝右）→白隔間→馬桶（朝右）→洗手台（朝右），男女廁相同；右側留走道
-  for(const room of [ROOMS[0],ROOMS[1]]){const lx=room[1]+RT+8;let ty=room[2]+RT+12;
-    addSprite('toilet_side_r',lx,ty,ty+78,true);ty+=92;addSprite('partition_white_h',lx,ty,ty+22,true);ty+=36;addSprite('toilet_side_r',lx,ty,ty+78,true);ty+=96;addSprite('sink_side_r',lx,ty,ty+84,true);
+  for(const room of [ROOMS[0],ROOMS[1]]){const lx=room[1]+RT+8;let ty=room[2]+RT+14;
+    addSprite('toilet_side_r',lx,ty,ty+78,true);ty+=110;addSprite('partition_white_h',lx,ty,ty+22,true);ty+=54;addSprite('toilet_side_r',lx,ty,ty+78,true);ty+=110;addSprite('sink_side_r',lx,ty,ty+84,true);
     roomItems.push(['label',room[1],room[2]-22,room[3],20,99999,false,{text:room[0],above:true}]);}
   // 電梯（比人大一圈）
   addSprite('elevator',130,-1182,-1182+200,true);roomItems.push(['label',130,-974,150,20,99999,false,{text:'電梯 ↓ 往樓下',above:true}]);
-  // 茶水間（不隔間）：木紋扁長桌（桌上零食）＋兩台冰箱＋盆栽
-  {const tx=765,ty=790;addTable('wood',tx,ty,2);roomItems.push(['label',tx,ty-26,280,20,99999,false,{text:'茶水間',above:true}]);
+  // 茶水間（不隔間）：白色木紋扁長桌（桌上零食）＋兩台冰箱＋盆栽；各物件之間留走道
+  {const fx=620,fy=740,tx=860,ty=800;addSprite('fridge_dark',fx,fy,fy+170,true);addSprite('fridge_dark',fx+82,fy,fy+170,true);
+   addTable('whitewood',tx,ty,2);roomItems.push(['label',tx,ty-26,280,20,99999,false,{text:'茶水間',above:true}]);
    [['snack_chips_red',30],['snack_chips_yellow',66],['snack_chips_blue',102],['snack_box',150],['snack_candy',215]].forEach(([n,dx])=>{const r=RM[n];addSprite(n,tx+dx,ty+58-r[3],ty+85,false);});
-   addSprite('fridge_dark',tx+285,ty-60,ty+110,true);addSprite('fridge_dark',tx+285+82,ty-60,ty+110,true);
-   addSprite('plant_small',tx-30,ty+120,ty+200,false);}
+   addSprite('plant_small',1150,960,1040,false);}
   // 會議室 D：ㄇ字型 6 張白桌（左 2 直式、中 2 橫式、右 2 直式），椅子在外圍；白色投影機在上排桌面中央、向下投射
   {const room=ROOMS[5],xL=room[1]+144,y0=room[2]+150,xC=xL+100,xR=xC+560,vt=(x,y)=>roomItems.push(['sprite',x,y,100,200,y+180,true,{name:'table_white_v'}]);
    vt(xL,y0);vt(xL,y0+200);vt(xR,y0);vt(xR,y0+200);addTable('white',xC,y0,2);addTable('white',xC+280,y0,2);
@@ -1551,8 +1552,8 @@ function drawLongDeskChair(){if(!LX||!stations.some(t=>t.big))return;const st=st
 function drawProp(name,x,w,h,band,dimmed){
   /* 照使用者畫的樣子：書櫃＝黑色方塊（下 30% 是矮櫃，中間一條分隔線）；方柱＝白色方塊（上 23% 是柱頭，一條分隔線）。 */
   const y=Math.round(bandFeet()-band*GPV-h);x=Math.round(x);w=Math.round(w);h=Math.round(h);
-  const PM={white_pillar:'prop_pillar',black_bookshelf:'prop_bookshelf_tall',black_bookshelf_narrow:'prop_shelf_low',red_box:'prop_cabinet_red'};
-  if(roomsReady()&&PM[name]){const r=RM[PM[name]];ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(roomsImg,r[0],r[1],r[2],r[3],x+Math.round((w-r[2])/2),Math.round(bandFeet()-band*GPV-r[3]),r[2],r[3]);ctx.restore();return;}
+  const PM={white_pillar:'prop_pillar',black_bookshelf:'prop_bookshelf_side',black_bookshelf_narrow:'prop_shelf_side',red_box:'prop_cabinet_side'};
+  if(roomsReady()&&propsImg.complete&&propsImg.naturalWidth>1&&PM[name]){const r=RM[PM[name]]||RM4[PM[name]],img=RM[PM[name]]?roomsImg:propsImg;ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(img,r[0],r[1],r[2],r[3],x+Math.round((w-r[2])/2),Math.round(bandFeet()-band*GPV-r[3]),r[2],r[3]);ctx.restore();return;}
   ctx.save();ctx.imageSmoothingEnabled=false;
   const box=(c,bx,by,bw,bh)=>{ctx.fillStyle=c;ctx.fillRect(bx,by,bw,bh);};
   if(name==='white_pillar'){
@@ -1573,17 +1574,19 @@ function drawProps(){
     drawProp('black_bookshelf',DL-92,88,220,b,false);/* 左側桌子群與設計部之間 */
     if(b===1){drawProp('black_bookshelf_narrow',DR-6,59,196,b,false);drawProp('black_bookshelf_narrow',DR+268,61,196,b,false);}/* 中排：搬進間隙的兩張桌子兩側 */
     else drawProp('white_pillar',DR+11,86,bandFeet()-315,b,false);
-    if(b===2){drawProp('red_box',1534,120,196,b,false);drawProp('black_bookshelf_narrow',1668,61,196,b,false);}/* 最上排原同仁桌第一行的位置：紅箱＋窄書櫃 *//* 高度＝上排桌沿（y 315）到桌腳落地線 *//* 設計部與同仁桌之間 */
+    if(b===2){drawProp('red_box',1550,56,150,b,false);drawProp('black_bookshelf_narrow',1676,44,150,b,false);}/* 最上排原同仁桌第一行的位置：紅箱＋窄書櫃 *//* 高度＝上排桌沿（y 315）到桌腳落地線 *//* 設計部與同仁桌之間 */
   }
 }
 
 /* ===== 場地大更新：房間與家具 ===== */
+const RM4={prop_bookshelf_side:[8,8,46,220],prop_shelf_side:[62,8,44,150],prop_cabinet_side:[114,8,56,150],table_whitewood_left:[178,8,55,90],table_whitewood_mid:[241,8,85,90],table_whitewood_right:[334,8,55,90]};
+const propsImg=new Image();setAsset(propsImg,'assets/office-props-v4.webp?v=1');load(propsImg).then(()=>markDirty()).catch(()=>{});
 const roomsImg=new Image();setAsset(roomsImg,'assets/office-rooms-v3.webp?v=1');load(roomsImg).then(()=>markDirty()).catch(()=>{});
 const roomsReady=()=>roomsImg.complete&&roomsImg.naturalWidth>1;
 function rm(name,x,y){const r=RM[name];if(!r||!roomsReady())return;ctx.imageSmoothingEnabled=false;ctx.drawImage(roomsImg,r[0],r[1],r[2],r[3],Math.round(x),Math.round(y),r[2],r[3]);}
 function roomTable(kind,x,y,mids){
   if(!roomsReady())return;ctx.imageSmoothingEnabled=false;
-  const piece=(part,dx)=>{const r=RM['table_'+kind+'_'+part];ctx.drawImage(roomsImg,r[0],r[1],r[2],r[3],Math.round(x+dx),Math.round(y),r[2],r[3]);};
+  const piece=(part,dx)=>{const key='table_'+kind+'_'+part,r=RM[key]||RM4[key],img=RM[key]?roomsImg:propsImg;ctx.drawImage(img,r[0],r[1],r[2],r[3],Math.round(x+dx),Math.round(y),r[2],r[3]);};
   piece('left',0);for(let i=0;i<mids;i++)piece('mid',55+i*85);piece('right',55+mids*85);
 }
 const roomLabel=(text,x,y,w,above)=>{ctx.save();ctx.font='700 13px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';const tw=Math.round(ctx.measureText(text).width)+16,lx=Math.round(x+w/2-tw/2);ctx.fillStyle='#0c0c0c';ctx.fillRect(lx-2,y-2,tw+4,24);ctx.fillStyle='#2f3640';ctx.fillRect(lx,y,tw,20);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,x+w/2,y+10.5);ctx.restore();};

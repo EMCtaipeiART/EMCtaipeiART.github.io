@@ -1,0 +1,43 @@
+{
+  "image": "office-props-v4.webp",
+  "width": 397,
+  "height": 236,
+  "sprites": {
+    "prop_bookshelf_side": {
+      "x": 8,
+      "y": 8,
+      "w": 46,
+      "h": 220
+    },
+    "prop_shelf_side": {
+      "x": 62,
+      "y": 8,
+      "w": 44,
+      "h": 150
+    },
+    "prop_cabinet_side": {
+      "x": 114,
+      "y": 8,
+      "w": 56,
+      "h": 150
+    },
+    "table_whitewood_left": {
+      "x": 178,
+      "y": 8,
+      "w": 55,
+      "h": 90
+    },
+    "table_whitewood_mid": {
+      "x": 241,
+      "y": 8,
+      "w": 85,
+      "h": 90
+    },
+    "table_whitewood_right": {
+      "x": 334,
+      "y": 8,
+      "w": 55,
+      "h": 90
+    }
+  }
+}
