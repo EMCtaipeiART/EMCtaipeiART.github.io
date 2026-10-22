@@ -2743,7 +2743,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     }
     if (!name) throw new Error('只有設計師或已入座的同仁本人可以更新自己的頭像快照');
     const lookKey = text(payload.lookKey);
-    if (!/^[\w:|.-]{1,140}$/.test(lookKey)) throw new Error('造型代碼不正確');
+    // 自訂頭像的造型代碼帶「@更新時間」（例如 c:uuid||h:uuid@20261015092147|c4，約 96 字），以前不允許 @ 又只收 140 字，自訂頭像的人快照從來存不進去
+    if (!/^[\w:|.@-]{1,200}$/.test(lookKey)) throw new Error('造型代碼不正確');
     const now = Date.now();
     const png = text(payload.png);
     const sql = this.ctx.storage.sql;

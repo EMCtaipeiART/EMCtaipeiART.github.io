@@ -5300,6 +5300,7 @@ describe('平台幣', () => {
     const hash = [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
     expect(await api({ action: 'pixelOfficeAvatarSnapshot', target: 'Anna', lookKey: 'k-anna-1', hash }, admin)).toMatchObject({ ok: true, unchanged: true });   // 圖一樣
     expect(await api({ action: 'pixelOfficeAvatarSnapshot', target: 'Anna', lookKey: 'k-anna-1', hash: 'a'.repeat(64) }, admin)).toMatchObject({ ok: true, need: true });   // 同一個造型代碼、圖不一樣 → 要求補傳
+    expect(await api({ action: 'pixelOfficeAvatarSnapshot', target: 'Anna', lookKey: 'c:84d5152c-abc3-4bee-808e-dadd48519311||h:95bbe5f3-ffc5-4f9d-864d-a327e38028ba@20261015092029|c4', png }, admin)).toMatchObject({ ok: true, saved: true });   // 自訂頭像的造型代碼含 @
     expect(await api({ action: 'pixelOfficeAvatarSnapshot', target: 'Anna', lookKey: 'k-anna-2', png }, leona)).toMatchObject({ ok: false });   // 一般人不能代別人更新
     expect(await api({ action: 'pixelOfficeAvatarSnapshot', target: '路人甲', lookKey: 'k-x', png }, admin)).toMatchObject({ ok: false });   // 不認識的名字
   });
