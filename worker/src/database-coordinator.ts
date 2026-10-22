@@ -2743,7 +2743,24 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return list.slice(0, 10).map(item => ({ name: item.name, score: item.score, mode: item.mode, kos: item.kos, at: item.at }));
   }
 
+  /** 頭像快照的每個環節都留一筆紀錄（後台「異動紀錄」可查）：誰、替誰、哪個造型、結果（已存／相同／要求補圖／被拒原因） */
+  private async snapshotAudit(session: SessionRecord | null, name: string, lookKey: string, outcome: string): Promise<void> {
+    try {
+      await this.queueAudit([{ t: new Date().toISOString(), kind: '欄位修改', actor: auditActor(session), caseId: `頭像快照:${name}`, field: outcome, to: lookKey.slice(0, 60) }]);
+    } catch { /* 紀錄失敗不影響更新 */ }
+  }
+
   private async pixelOfficeAvatarSnapshot(payload: ApiPayload): Promise<ApiResult> {
+    try {
+      return await this.pixelOfficeAvatarSnapshotCore(payload);
+    } catch (error) {
+      const session = await this.sessionFor(payload).catch(() => null);
+      await this.snapshotAudit(session, text(payload.target) || '本人', text(payload.lookKey), '被拒：' + (error instanceof Error ? error.message : String(error)));
+      throw error;
+    }
+  }
+
+  private async pixelOfficeAvatarSnapshotCore(payload: ApiPayload): Promise<ApiResult> {
     const session = await this.sessionFor(payload);
     const viewer = text(session?.user || session?.account?.split('@')[0]);
     let name = PIXEL_OFFICE_NAMES.find(item => item.toLowerCase() === viewer.toLowerCase())
@@ -2775,19 +2792,22 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       // 每個人最多留 16 個造型的快照，超過的丟掉最久沒用的
       sql.exec('DELETE FROM pixel_office_avatars WHERE name = ? AND look_key NOT IN (SELECT look_key FROM pixel_office_avatars WHERE name = ? ORDER BY updated_at DESC LIMIT 16)', name, name);
     } else if (!sql.exec('SELECT 1 FROM pixel_office_avatars WHERE name = ? AND look_key = ?', name, lookKey).toArray().length) {
+      await this.snapshotAudit(session, name, lookKey, '要求補圖（沒存過這個造型）');
       return { ok: true, action: 'pixelOfficeAvatarSnapshot', need: true };
     } else if (target && /^[0-9a-f]{64}$/.test(text(payload.hash)) && (await this.ctx.storage.get<string>(hashKey)) !== text(payload.hash)) {
       // 管理者幫別人更新：造型代碼相同、但存著的圖跟管理者畫面上算出來的不一樣（例如以前在造型圖沒載完時存到舊衣服）→ 要求補傳圖片覆蓋
+      await this.snapshotAudit(session, name, lookKey, '要求補圖（圖的指紋不同）');
       return { ok: true, action: 'pixelOfficeAvatarSnapshot', need: true };
     } else {
       sql.exec('UPDATE pixel_office_avatars SET updated_at = ? WHERE name = ? AND look_key = ?', now, name, lookKey);
     }
     // 目前指向的造型已經是這個了：不必再寫入、也不要推動版本號（每次關閉元宇宙都會帶著造型代碼來問，不該讓所有人的畫面跟著重讀）。
     const currentRow = sql.exec<{ look_key: string }>('SELECT look_key FROM pixel_office_avatar_current WHERE name = ?', name).toArray()[0];
-    if (!png && currentRow?.look_key === lookKey) return { ok: true, action: 'pixelOfficeAvatarSnapshot', saved: false, unchanged: true };
+    if (!png && currentRow?.look_key === lookKey) return { ok: true, action: 'pixelOfficeAvatarSnapshot', saved: false, unchanged: true };   // 沒有變動就不留紀錄（每次進元宇宙都會問，會洗版）
     sql.exec('INSERT INTO pixel_office_avatar_current (name, look_key, updated_at) VALUES (?, ?, ?) ON CONFLICT(name) DO UPDATE SET look_key = excluded.look_key, updated_at = excluded.updated_at', name, lookKey, now);
     // 讓大家的畫面重新讀一次狀態，首頁才會拿到新的快照版本
     sql.exec('UPDATE pixel_office_people SET updated_at = ? WHERE name = ?', Math.max(now, this.pixelOfficeVersion() + 1), name);
+    await this.snapshotAudit(session, name, lookKey, png ? '已更新（收到圖片 ' + png.length + ' 字）' : '已切換到既有快照');
     return { ok: true, action: 'pixelOfficeAvatarSnapshot', saved: Boolean(png), version: now };
   }
 

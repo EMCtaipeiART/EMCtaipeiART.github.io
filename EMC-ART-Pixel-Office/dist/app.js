@@ -1938,9 +1938,10 @@ window.addEventListener('message',event=>{
   if(event.origin!==location.origin||event.source!==window.parent||!event.data||event.data.type!=='pixelOfficeSnapshotAll')return;
   const reply=list=>{try{window.parent.postMessage({type:'pixelOfficeSnapshotAllDone',list},location.origin)}catch{}};
   try{
-    if(!ready||!accessoriesReady()||!customState().loaded){loadAccessories();reply(null);return;}
-    const list=[];
-    people.forEach((p,i)=>{if(!(i<5||(p.staff&&staffLookReady(i))))return;{const lk=effectiveLook(i);if((typeof lk.outfit==='string'&&!customOutfitView(lk.outfit,0))||(typeof lk.head==='string'&&lk.head&&!customHeadView(lk.head,0)))return;}/* 造型圖還沒載好就畫會得到空白頭像，不要送 */const png=avatarImageOf(i);if(String(png||'').length<3000)return;list.push({who:p.name,lookKey:lookKeyOf(i),png});});
+    if(!ready||!accessoriesReady()||!customState().loaded){loadAccessories();try{console.info('[頭像快照] 遊戲還沒準備好',{ready,acc:accessoriesReady(),customLoaded:customState().loaded})}catch{}reply(null);return;}
+    const list=[],skipped=[];
+    people.forEach((p,i)=>{if(!(i<5||(p.staff&&staffLookReady(i)))){skipped.push(p.name+'：造型資料未就緒');return;}{const lk=effectiveLook(i);if((typeof lk.outfit==='string'&&!customOutfitView(lk.outfit,0))||(typeof lk.head==='string'&&lk.head&&!customHeadView(lk.head,0))){skipped.push(p.name+'：造型圖還沒載好');return;}}/* 造型圖還沒載好就畫會得到空白頭像，不要送 */const png=avatarImageOf(i);if(String(png||'').length<3000){skipped.push(p.name+'：畫出來是空白');return;}list.push({who:p.name,lookKey:lookKeyOf(i),png});});
+    try{console.info('[頭像快照] 遊戲端算好',list.length,'位',skipped.length?'；略過：'+skipped.join('、'):'')}catch{}
     reply(list);
   }catch{reply(null);}
 });

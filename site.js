@@ -536,14 +536,24 @@
       const iv=setInterval(()=>{if(state.view!=='universe'||!document.body.contains(ov)){done=true;clearInterval(iv);return}const age=Date.now()-t0;if((ready()&&age>700)||age>10000)setTimeout(finish,250)},150);
     }
     /* 管理者與 Machi 進元宇宙（編輯）時，順便把「快照與目前造型不一致」的人更新（請遊戲算每個人的頭像，再逐一問後端） */
+    /* 頭像快照核對的日誌：console 看得到，也留在瀏覽器（localStorage 'pixelSnapLog'，最近 80 筆），哪個環節出問題一看就知道 */
+    function snapLog(step,info){
+      const row={t:new Date().toLocaleTimeString('zh-TW',{hour12:false}),step,...(info&&typeof info==='object'?info:{v:info})};
+      try{console.info('[頭像快照]',step,info||'')}catch(err){}
+      try{const a=JSON.parse(localStorage.getItem('pixelSnapLog')||'[]');a.push(row);localStorage.setItem('pixelSnapLog',JSON.stringify(a.slice(-80)))}catch(err){}
+    }
+    window.pixelSnapLog=()=>{try{return JSON.parse(localStorage.getItem('pixelSnapLog')||'[]')}catch(err){return []}};
     let snapAllBusy=false;
     function snapshotEveryone(tries){
-      const fr=$('uniFrame');if(!fr||snapAllBusy||(!tries&&Date.now()-(state.snapAllAt||0)<30000)||!state.uniEdit||!loggedIn()||!(isAdminUser()||isMachiUser()||(typeof ownDesignerName==='function'&&ownDesignerName()==='Machi')))return;
+      const fr=$('uniFrame'),isMgr=loggedIn()&&(isAdminUser()||isMachiUser()||(typeof ownDesignerName==='function'&&ownDesignerName()==='Machi'));
+      if(!fr||snapAllBusy||(!tries&&Date.now()-(state.snapAllAt||0)<30000)||!state.uniEdit||!isMgr){if(isMgr||tries)snapLog('略過核對',{frame:Boolean(fr),busy:snapAllBusy,edit:Boolean(state.uniEdit),manager:isMgr,throttled:!tries&&Date.now()-(state.snapAllAt||0)<30000});return}
+      snapLog('開始核對',{tries:tries||0});
       snapAllBusy=true;state.snapAllAt=Date.now();let fin=false;
       const done=list=>{if(fin)return;fin=true;snapAllBusy=false;window.removeEventListener('message',onMsg);clearTimeout(t);
+        snapLog('遊戲回報',{count:list?list.length:null,names:list?list.map(x=>x.who).join('、'):''});
         if(!list){if((tries||0)<4)setTimeout(()=>snapshotEveryone((tries||0)+1),4000);else toast('頭像快照核對：遊戲畫面還沒準備好（造型圖沒載完），稍後再進一次元宇宙',true);return}
-        (async()=>{const res={saved:[],same:[],fail:[]};for(const item of list){if(!item||!item.who||!item.lookKey)continue;let r='fail:未知';try{r=await uploadAvatarSnapshot({who:item.who,lookKey:item.lookKey,png:item.png,target:item.who})}catch(err){r='fail:'+err}if(r==='saved')res.saved.push(item.who);else if(r==='same')res.same.push(item.who);else res.fail.push(item.who+'（'+String(r||'').replace(/^fail:/,'')+'）');}
-          try{console.info('頭像快照核對',res)}catch(err){}
+        (async()=>{const res={saved:[],same:[],fail:[]};for(const item of list){if(!item||!item.who||!item.lookKey)continue;let r='fail:未知';try{r=await uploadAvatarSnapshot({who:item.who,lookKey:item.lookKey,png:item.png,target:item.who})}catch(err){r='fail:'+err}snapLog('上傳結果',{who:item.who,result:r,key:String(item.lookKey).slice(0,30),png:String(item.png||'').length});if(r==='saved')res.saved.push(item.who);else if(r==='same')res.same.push(item.who);else res.fail.push(item.who+'（'+String(r||'').replace(/^fail:/,'')+'）');}
+          snapLog('核對完成',{saved:res.saved.length,same:res.same.length,fail:res.fail.length});
           toast('頭像快照核對：更新 '+res.saved.length+' 位'+(res.saved.length?'（'+res.saved.join('、')+'）':'')+'，原本一致 '+res.same.length+' 位'+(res.fail.length?'，失敗 '+res.fail.length+' 位：'+res.fail.join('；'):''),res.fail.length>0);})();};
       const onMsg=e=>{if(e.origin===location.origin&&e.data&&e.data.type==='pixelOfficeSnapshotAllDone'&&e.source===fr.contentWindow)done(e.data.list||null)};
       const t=setTimeout(()=>done(null),6000);window.addEventListener('message',onMsg);
