@@ -2,6 +2,10 @@
 
 > 每次修改網站後在最上面補一筆（新的在上）。AGENT.md 要求的修改紀錄放這裡。
 
+## 2026-10-23
+
+- 新增部門「呈鈺顧問」（外部顧問公司，Google 信箱網域 `jadeit.cc`），運作方式比照專案部：①Worker `model.ts` 新增 `ALLOWED_LOGIN_DOMAINS`／`isAllowedLoginAccount()`（`@emctaipei.com`、`@jadeit.cc`）、`PROJECT_LIKE_DEPARTMENTS=['專案部','呈鈺顧問']`；Google 登入、後台新增帳號、匯入帳號改用這個網域判斷（ERP 登入仍只限公司）；②寫死「企劃部|專案部」的地方（平台幣、元宇宙座位／服裝、客戶設定、刪除申請、前台 `site.js`）都加上呈鈺顧問；平台幣餘額多一個「呈鈺顧問」組；③資料庫後台新增帳號的網域檢查放行 jadeit.cc；④新增人員 Carrie Yeh（`carrieyeh@jadeit.cc`，部門／組別「呈鈺顧問」，一般使用者權限同專案部）。測試 `worker/test/login-domains.test.ts`。注意：Google OAuth 若是「僅限組織內部」，外部網域帳號會被 Google 擋下（需在 Google Cloud 主控台改外部或加測試使用者）。
+
 ## 2026-10-22
 
 - v5.0 修改紀錄的刪除：移除剛加的「卡牌右下角刪除整個案件」圖示（使用者要的是刪除修改紀錄，不是整案）；改成在展開卡牌／案件詳情的「修改紀錄」每一輪標頭加刪除（純圖示的紅色圓形垃圾桶，無文字）（`site.js` 的 `data-rev-del`，設計師與管理者、含 Machi），只刪那一輪的文字與圖片關聯，案件本身不動、其他輪次編號不變；修改紀錄視窗裡同樣有。已 stamp。

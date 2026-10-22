@@ -1218,7 +1218,7 @@
       const creating=editor.dataset.accountCreating==='1',lookup=editor.dataset.permissionEditor,model=creating?{...newAccountModel(),_creating:true}:permissionModelsCache.find(row=>row['帳號']===lookup);if(!model)throw new Error('找不到帳號');
       const loginMethod=editor.querySelector('[data-account-login-method]')?.value||model['登入方式']||'公司信箱',loginPassword=String(editor.querySelector('[data-account-login-password]')?.value||'').trim();
       let account=creating?(loginMethod==='密碼'?`local:${crypto.randomUUID()}`:MachiAccess.canonicalAccount(accountFieldValue(editor,'帳號'))):model['帳號'];account=MachiAccess.canonicalAccount(account);
-      if(loginMethod==='公司信箱'&&(!account||!account.endsWith('@emctaipei.com')))throw new Error('帳號必須使用 @emctaipei.com 公司信箱');
+      if(loginMethod==='公司信箱'&&(!account||!/@(emctaipei\.com|jadeit\.cc)$/i.test(account)))throw new Error('帳號必須使用 @emctaipei.com 公司信箱（呈鈺顧問為 @jadeit.cc）');
       if(loginMethod==='密碼'&&creating&&loginPassword.length<4)throw new Error('請輸入至少 4 個字的登入密碼');
       const settingsHeaders=metadata['設定']?.headers||[],settingsRow=Object.fromEntries(settingsHeaders.map(header=>[header,String(model._settingsRow?.[header]||'')]));
       ['部門','組別','名字','顯示名','帳號','頭像連結','深淺模式'].forEach(header=>{settingsRow[header]=header==='帳號'?account:accountFieldValue(editor,header,settingsRow[header])});if(!settingsRow['名字'])throw new Error('請填寫姓名');settingsRow['顯示名']||=settingsRow['名字'];

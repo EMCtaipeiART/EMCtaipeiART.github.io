@@ -230,7 +230,7 @@
     }
     /* 企劃／專案同仁完成「個人形象」後的頭像快照（設計師用像素大頭，不走這裡） */
     /* 企劃／專案同仁在元宇宙裡的名字是設定表的「名字」（登入顯示名可能不同） */
-    function staffCanonicalName(){try{const s=session(),me=[s.account,s.user,s.name].map(v=>String(v||'').trim().toLowerCase()).filter(Boolean);const row=(state.settings||[]).find(r=>/^(企劃部|專案部)$/.test(String(r['部門']||'').replace(/^凱曜/,'').trim())&&me.some(v=>v===String(r['帳號']||'').toLowerCase()||v===String(r['名字']||'').toLowerCase()||v===String(r['顯示名']||'').toLowerCase()));return row?String(row['名字']||''):''}catch(err){return ''}}
+    function staffCanonicalName(){try{const s=session(),me=[s.account,s.user,s.name].map(v=>String(v||'').trim().toLowerCase()).filter(Boolean);const row=(state.settings||[]).find(r=>/^(企劃部|專案部|呈鈺顧問)$/.test(String(r['部門']||'').replace(/^凱曜/,'').trim())&&me.some(v=>v===String(r['帳號']||'').toLowerCase()||v===String(r['名字']||'').toLowerCase()||v===String(r['顯示名']||'').toLowerCase()));return row?String(row['名字']||''):''}catch(err){return ''}}
     function personaSnapAvatar(name){try{const snap=state.avatarSnap||{},want=new Set([norm(name)].filter(Boolean));if(!want.size)return '';/* 顯示名與設定表的「名字」可能不同（例如 Jerry Chang／張鈞皓）：把同一列設定的名字、顯示名都當成可比對的名字 */const row=(state.settings||[]).find(r=>[r['名字'],r['顯示名'],String(r['帳號']||'').split('@')[0]].some(v=>norm(v)===norm(name)));if(row)[row['名字'],row['顯示名']].forEach(v=>{if(norm(v))want.add(norm(v))});const key=Object.keys(snap).find(k=>want.has(norm(k))&&!['leona','amber','noise','anna','machi'].includes(norm(k)));return key?snapUrl(key):''}catch(err){return ''}}
     function personAvatar(name){const email=(String(name||'').match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i)||[''])[0].toLowerCase();return personaSnapAvatar(name)||state.avatars.get(norm(name))||(email&&state.avatars.get(email))||''}
     function initial(name){const text=String(name||'').replace(/<[^>]*>/g,'').trim();return text?[...text][0].toUpperCase():'?'}
@@ -440,7 +440,7 @@
     window.addEventListener('scroll',()=>{if(!autoMoreBusy)autoMore()},{passive:true});
     /* 手機：畫面太小，多元宇宙改開新分頁（全螢幕）；新分頁用 window.opener 跟本頁要登入身分。被擋住就退回站內顯示。 */
     function designerCanonicalName(){try{const s=session(),vals=[s.user,s.account,s.name].map(v=>norm(v)).filter(Boolean);return DESIGNERS.find(d=>vals.some(x=>x===norm(d)||x.startsWith(norm(d)+' ')||x.split(/[@\s._-]/)[0]===norm(d)))||''}catch(err){return ''}}
-    function viewerPayload(){return {type:'pixelOfficeViewer',aliases:loggedIn()?[session().name,session().user,session().account].filter(Boolean):[],name:loggedIn()?(staffCanonicalName()||designerCanonicalName()||session().name||session().user):'',token:loggedIn()?session().token:'',staff:loggedIn()&&!isDesignerByName()&&!isAdminUser()&&!isMachiUser()&&/^(企劃部|專案部)$/.test(String(sessionDept()||'').trim()),monitor:loggedIn()&&(isAdminUser()||isMachiUser())}}
+    function viewerPayload(){return {type:'pixelOfficeViewer',aliases:loggedIn()?[session().name,session().user,session().account].filter(Boolean):[],name:loggedIn()?(staffCanonicalName()||designerCanonicalName()||session().name||session().user):'',token:loggedIn()?session().token:'',staff:loggedIn()&&!isDesignerByName()&&!isAdminUser()&&!isMachiUser()&&/^(企劃部|專案部|呈鈺顧問)$/.test(String(sessionDept()||'').trim()),monitor:loggedIn()&&(isAdminUser()||isMachiUser())}}
     /* 登入交接資料常保持新鮮：登入狀態下每次載入與每 20 分鐘寫一次（手機重新整理多元宇宙分頁時才還認得出自己） */
     /* 手機：左右滑動切換主要頁面（首頁→專案→行事曆…，順序同底部選單）。避開輸入框、橫向可捲動區域（看板欄、表格）、地圖／iframe、彈出視窗與螢幕邊緣（系統返回手勢） */
     (function(){
@@ -474,7 +474,7 @@
     function openUniverse(){if(openUniverseTab())return;state.uniEdit=canEditUniverse();state.form=null;state.mail=null;state.editing=false;show('universe')}
     function closeUniverse(){const u=$('universe');if(u&&!u.hidden)u.hidden=true}
     const UNI_URL='EMC-ART-Pixel-Office/dist/';
-    const canEditUniverse=()=>loggedIn()&&(isDesignerSession()||isAdminUser()||isMachiUser()||/^(企劃部|專案部)$/.test(String(sessionDept()||'').trim()));/* 企劃部、專案部同仁有自己的座位，也能進編輯版 */
+    const canEditUniverse=()=>loggedIn()&&(isDesignerSession()||isAdminUser()||isMachiUser()||/^(企劃部|專案部|呈鈺顧問)$/.test(String(sessionDept()||'').trim()));/* 企劃部、專案部同仁有自己的座位，也能進編輯版 */
     /* 上下班時段設定（管理者與 Machi）：可整組關閉時間規則（假日／下班／加班／沒心跳自動下班都不套用），方便測試手動狀態 */
     async function openHoursEditor(){
       if(document.getElementById('hoursModal')||!(loggedIn()&&(isAdminUser()||isMachiUser())))return;
@@ -1074,7 +1074,7 @@
     updateThemeBtn();
     /* 服裝生成器（另一個網站）內嵌在右側：登入 token 與目前的深淺模式放在網址 # 後面（不會送到伺服器），之後切換深淺模式用 postMessage 同步 */
     /* 服裝生成器只開放設計部同仁（平台幣也只發給設計師） */
-    const outfitAllowed=()=>loggedIn()&&(isDesignerByName()||/^(設計部|企劃部|專案部)$/.test(String(sessionDept()||'').trim())||isAdminAcct());
+    const outfitAllowed=()=>loggedIn()&&(isDesignerByName()||/^(設計部|企劃部|專案部|呈鈺顧問)$/.test(String(sessionDept()||'').trim())||isAdminAcct());
     const OUTFIT_ORIGIN='https://emc-ai-stage-classifier.machi-chen.workers.dev';
     function renderOutfitPage(){
       const t=session().token;if(!t||!outfitAllowed()){show(state.home||'board');return}
@@ -1366,7 +1366,7 @@
     }
     const canEditRow=r=>{if(!isEditableYear(r))return false;const c=customerEditAllowed(r);return c!==null?c:acc('request.edit',hasDesignerRole())};
     /* 專案部、企劃部的同仁（不是設計師）也能申請刪除案件；實際刪除仍要管理者在「進度」頁確認 */
-    const plannerDeleteUser=()=>loggedIn()&&/專案|企劃/.test(String(sessionDept()||'')+' '+String(sessionRawGroup()||''));
+    const plannerDeleteUser=()=>loggedIn()&&/專案|企劃|呈鈺/.test(String(sessionDept()||'')+' '+String(sessionRawGroup()||''));
     const canDeleteRow=r=>{if(!isEditableYear(r))return false;const c=customerEditAllowed(r);return c!==null?c:acc('request.delete',false)};
     const canMailRow=r=>{const c=customerEditAllowed(r);return c!==null?c:acc('request.mail',true)};
     /* 專案部／企劃部（或案件的專案負責人、管理者）在網格與列表直接「填寫修改」：沿用「填寫修改需求信」流程（記錄進修改紀錄並寄給設計師） */
@@ -1854,7 +1854,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     function permissionRole(){const acc=selfAccount();const row=(state.permissions||[]).find(r=>canonAcc(r['帳號'])===acc);return String(row?.['角色範本']||'').trim()}
     const isAdminUser=()=>permissionRole()==='管理者';
     const isMachiUser=()=>String(session().user||'').trim()==='Machi'||norm(session().name)==='machi';
-    const canUseCustomerSettings=()=>isAdminUser()||isMachiUser()||/企劃部|專案部/.test(sessionDept());
+    const canUseCustomerSettings=()=>isAdminUser()||isMachiUser()||/企劃部|專案部|呈鈺顧問/.test(sessionDept());
     /* 五位設計師（含 Machi）：頭像固定綁像素辦公室的像素大頭、顯示名固定，避免與像素辦公室、案件、信件聯絡人聯動出錯 */
     const ownDesignerName=()=>{const s=session();if(!loggedIn())return '';return DESIGNERS.find(n=>[s.name,s.user].some(v=>norm(v)===norm(n)||norm(v).split(/[@\s]/)[0]===norm(n)))||''};
     const nameLocked=()=>Boolean(ownDesignerName())||(!isAdminUser()&&!isMachiUser()&&(SET_LOCKED_DEPT.test(sessionDept())||isDesignerSession()));
@@ -3708,7 +3708,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       setTimeout(mountGoogle,0);
       $('stage').innerHTML=`<div class="login-page">
         <img class="lp-logo" src="assets/EMC_design_logo.svg" alt="EMC 設計部">
-        <h2>登入設計需求系統</h2><p class="lp-sub">請使用 @emctaipei.com 公司帳號登入</p>
+        <h2>登入設計需求系統</h2><p class="lp-sub">請使用公司帳號登入（@emctaipei.com；呈鈺顧問用 @jadeit.cc）</p>
         ${isStandaloneApp()?(login.busy?'<div class="gsi-slot" id="gsiBtn"><div class="lp-note">登入中…</div></div>':'<button type="button" class="lp-google" data-lp="google">使用 Google 帳號登入</button><div id="gsiBtn" hidden></div>'):`<div class="gsi-slot" id="gsiBtn">${login.busy?'<div class="lp-note">登入中…</div>':''}</div>`}
         <button type="button" class="lp-toggle" data-lp="google">Google 按鈕沒反應？改用彈出視窗登入</button>
         <button type="button" class="lp-toggle" data-lp="toggle">${login.showPw?'收起密碼登入':'改用密碼登入'}</button>

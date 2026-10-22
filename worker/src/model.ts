@@ -4,6 +4,12 @@ import type { ApiPayload, DatabaseSnapshot, Row, SessionRecord } from './types';
 
 export const VERSION = 'cloudflare-worker-edit-scheduled-mail-2026-08-21-10';
 export const LOGIN_DOMAIN = '@emctaipei.com';
+/** 可以用 Google 公司信箱登入的網域：公司本身，加上外部顧問公司（呈鈺顧問的信箱網域是 jadeit.cc）。其他網域一律拒絕。 */
+export const ALLOWED_LOGIN_DOMAINS = ['@emctaipei.com', '@jadeit.cc'];
+export function isAllowedLoginAccount(account: string): boolean {
+  const value = text(account).toLowerCase();
+  return ALLOWED_LOGIN_DOMAINS.some(domain => value.endsWith(domain));
+}
 export const ISSUE_STATUSES = ['回報中', '評估中', '處理中', '已完成', '已否決'];
 export const ACCESS_PAGES = ['request', 'dashboard', 'archive', 'database_admin', 'media_admin', 'avatar_upload'];
 export const ACCESS_CAPABILITIES = [
@@ -409,9 +415,12 @@ export function matchesCustomerEditRule(database: DatabaseSnapshot, session: Ses
 /** 每一個新客戶別都會拿到的三個部門（使用者指定）。 */
 export const NEW_CUSTOMER_DEFAULT_DEPARTMENTS = ['測試員', '設計部', '企劃部'];
 
+/** 跟專案部同樣運作方式的部門（以「組」為單位的客戶別權限、平台幣、元宇宙座位…）：專案部、外部顧問公司「呈鈺顧問」。 */
+export const PROJECT_LIKE_DEPARTMENTS = ['專案部', '呈鈺顧問'];
+
 /** 建立者是不是「專案同仁」——凱曜專案部就是專案部（見 normalizeDepartmentName），他們的權限是以「組」為單位運作的。 */
 function isProjectDepartment(department: string): boolean {
-  return normalizeDepartmentName(department) === '專案部';
+  return PROJECT_LIKE_DEPARTMENTS.includes(normalizeDepartmentName(department));
 }
 
 /**
