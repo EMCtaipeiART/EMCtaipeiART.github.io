@@ -538,7 +538,7 @@
     /* 管理者與 Machi 進元宇宙（編輯）時，順便把「快照與目前造型不一致」的人更新（請遊戲算每個人的頭像，再逐一問後端） */
     let snapAllBusy=false;
     function snapshotEveryone(tries){
-      const fr=$('uniFrame');if(!fr||snapAllBusy||!state.uniEdit||!loggedIn()||!(isAdminUser()||isMachiUser()))return;
+      const fr=$('uniFrame');if(!fr||snapAllBusy||!state.uniEdit||!loggedIn()||!(isAdminUser()||isMachiUser()||(typeof ownDesignerName==='function'&&ownDesignerName()==='Machi')))return;
       snapAllBusy=true;let fin=false;
       const done=list=>{if(fin)return;fin=true;snapAllBusy=false;window.removeEventListener('message',onMsg);clearTimeout(t);
         if(!list){if((tries||0)<4)setTimeout(()=>snapshotEveryone((tries||0)+1),4000);else toast('頭像快照核對：遊戲畫面還沒準備好（造型圖沒載完），稍後再進一次元宇宙',true);return}
