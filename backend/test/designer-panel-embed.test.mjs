@@ -183,7 +183,7 @@ test('六個座位收攏並在框裡置中，不裁切', async () => {
   assert.match(js, /const viewY0=y=>y>EMBED_ROW_TOP\?EMBED_ROW_TOP\+\(y-EMBED_ROW_TOP\)\*EMBED_ROW_SQUEEZE:y;/);
   // 上緣是「動」的：照上排現在真的有多少對話框去留，沒人講話就只留到頭頂，場景才不會被
   // 一直空著的四行保留區白白縮小（2026-09-24 使用者回報）。
-  assert.match(js, /const SCENE_TOP_MIN=EMBED_ROW_TOP-158,TOP_BASE=OY\?-1400:SCENE_TOP_MIN;/);
+  assert.match(js, /const SCENE_TOP_MIN=EMBED_ROW_TOP-158,TOP_BASE=OY\?-1500:SCENE_TOP_MIN;/);
   assert.match(js, /function sceneTopExtent\(\)\{/);
   assert.match(js, /top=Math\.min\(top,layout\.tipY-BUBBLE_TAIL-layout\.h-8\)/);
   assert.match(js, /function syncSceneTop\(\)\{[\s\S]*?EMBED_CONTENT\.y0=top;EMBED_CONTENT\.y1=bottom;\s*fitEmbedView\(\);/,

@@ -1,5 +1,5 @@
 'use strict';
-const $=id=>document.getElementById(id), game=$('game'), ctx=game.getContext('2d'), LX=/[?&]embed=1/.test(location.search)?0:320/* 往左多出來、放新桌子群的寬度（首頁小框不用） */,W=/[?&]embed=1/.test(location.search)?1536:2050+LX,H0=1024,GP=604/* 往上複製的桌子群：邏輯座標間距 */,GPV=497/* 畫面上的間距：群高 403 + 一張桌子的深度 94 */,OY=/[?&]embed=1/.test(location.search)?0:1440/* 畫布往上多留的高度（放新增的兩組桌子） */,VB=/[?&]embed=1/.test(location.search)?H0:1540/* 場景下緣：新增的會議室／茶水間在最下面 */,H=VB+OY;// 首頁小框（embed）只看設計部，畫布維持 1536；整頁／編輯版含六張同仁桌，加寬到 2160
+const $=id=>document.getElementById(id), game=$('game'), ctx=game.getContext('2d'), LX=/[?&]embed=1/.test(location.search)?0:320/* 往左多出來、放新桌子群的寬度（首頁小框不用） */,W=/[?&]embed=1/.test(location.search)?1536:2050+LX,H0=1024,GP=604/* 往上複製的桌子群：邏輯座標間距 */,GPV=497/* 畫面上的間距：群高 403 + 一張桌子的深度 94 */,OY=/[?&]embed=1/.test(location.search)?0:1560/* 畫布往上多留的高度（放新增的兩組桌子） */,VB=/[?&]embed=1/.test(location.search)?H0:1700/* 場景下緣：新增的會議室／茶水間在最下面 */,H=VB+OY;// 首頁小框（embed）只看設計部，畫布維持 1536；整頁／編輯版含六張同仁桌，加寬到 2160
 const names=['Leona','Amber','Noise','Anna','Machi'], descriptions=['黑髮・時髦日常','暖色・樸素自在','短髮・專注模式','長髮・粉色靈感','挑染・街頭風格'];
 const starts=[[548+LX,355],[768+LX,355],[988+LX,355],[768+LX,695],[988+LX,695]];
 const fallbackScores={Machi:10832,Anna:4749.5,Amber:2905,Leona:1907,Noise:1404.5};
@@ -84,7 +84,7 @@ let viewPeople=[],viewStations=[];
 // （2026-09-24 使用者回報）。y0 由 sceneTopExtent() 每次重排時算，變了就重新 fit 一次。
 const EMBED_CONTENT={x0:424,x1:1112,y0:EMBED_ROW_TOP-158,y1:BOTTOM_FEET+40};
 // 上緣的下限：頭頂（-150）再往上 8，順便包住照片卡（-151）與心情圖示（-152）的上緣。
-const SCENE_TOP_MIN=EMBED_ROW_TOP-158,TOP_BASE=OY?-1400:SCENE_TOP_MIN;/* 整頁／編輯版要把最上面那組桌子也算進來 */
+const SCENE_TOP_MIN=EMBED_ROW_TOP-158,TOP_BASE=OY?-1500:SCENE_TOP_MIN;/* 整頁／編輯版要把最上面那組桌子也算進來 */
 const EMBED_FIT_PADDING=Math.min(1,Math.max(.4,Number(new URLSearchParams(location.search).get('pad'))||.94)); // 外層可用 ?pad= 縮小場景（預設 .94）
 let fitting=false;
 // 外層（多元宇宙頁的編輯模式）用 ?clean=1 開完整版：不要邊框與標題文字，並把六張桌子放大到佔滿寬度。
@@ -1297,14 +1297,15 @@ function syncNow(){return syncCall({action:'pixelOfficeState',since:syncVersion}
 })();
 // 下排桌子在畫面上接在上排正下方（見 drawDeskBottom），邏輯座標 431～650 是桌面與桌腳，人坐在 695（桌子下側）。
 // ===== 場地大更新（2026-10-22）：電梯、廁所、會議室、茶水間。座標都是「畫面座標」（view），碰撞牆再換回邏輯座標。 =====
-// 房間素材（Codex 畫，assets/office-rooms-v2.json）已是最終遊戲像素大小，1:1 貼上，3 px 黑外框。
-const RM={table_black_left:[8,8,55,130],table_black_mid:[71,8,85,130],table_black_right:[164,8,55,130],table_white_left:[227,8,55,130],table_white_mid:[290,8,85,130],table_white_right:[383,8,55,130],table_wood_left:[8,146,55,90],table_wood_mid:[71,146,85,90],table_wood_right:[164,146,55,90],table_white_v:[227,146,100,200],elevator:[335,146,150,200],fridge_dark:[493,146,82,170],chair_front:[8,354,52,56],chair_back:[68,354,52,56],chair_side_l:[128,354,48,52],chair_side_r:[184,354,48,52],toilet_side_r:[240,354,84,78],sink_side_r:[332,354,70,84],projector:[410,354,90,84],plant_small:[508,354,40,80],partition_white_h:[8,446,150,22],glass_h:[166,446,64,24],glass_v:[238,446,24,64],glass_corner:[270,446,24,24]};
-const RT=24,ROOM_DOOR=120,ROOM_MARGIN=90;// 玻璃牆厚度；門寬；會議室牆內緣到桌子四邊的距離（四邊相同）
-// 房間外框：[名稱, x, y, w, h, 門所在的邊（t/b/l/r）, 門中心座標]。會議室外框＝桌子＋四邊相同的間距＋牆。
+// 房間素材（Codex 畫，assets/office-rooms-v3.json）已是最終遊戲像素大小，1:1 貼上，3 px 黑外框。
+const RM={table_black_left:[8,8,55,130],table_black_mid:[71,8,85,130],table_black_right:[164,8,55,130],table_white_left:[227,8,55,130],table_white_mid:[290,8,85,130],table_white_right:[383,8,55,130],table_wood_left:[446,8,55,90],table_wood_mid:[509,8,85,90],table_wood_right:[602,8,55,90],table_white_v:[8,146,100,200],chair_front:[116,146,52,56],chair_back:[176,146,52,56],chair_side_l:[236,146,48,52],chair_side_r:[292,146,48,52],toilet_side_r:[348,146,84,78],sink_side_r:[440,146,70,84],partition_white_h:[518,146,150,22],elevator:[8,354,150,200],fridge_dark:[166,354,82,170],plant_small:[256,354,40,80],projector_right:[304,354,64,52],projector_left:[376,354,64,52],projector_down:[448,354,56,60],snack_chips_red:[512,354,24,32],snack_chips_yellow:[544,354,24,32],snack_chips_blue:[576,354,24,32],snack_box:[608,354,30,22],snack_candy:[646,354,20,14],prop_pillar:[674,354,86,218],prop_bookshelf_tall:[8,580,88,220],prop_shelf_low:[104,580,60,196],prop_cabinet_red:[172,580,120,196]};
+const RT=24,ROOM_DOOR=120,ROOM_MARGIN=130,SIDE_GAP=80;// 玻璃牆厚度；門寬；會議室牆內緣到桌子四邊的距離（四邊相同，椅子與人走動都放得下）；D 室牆到椅子的距離
+// 房間外框：[名稱, x, y, w, h, 門所在的邊（t/b/l/r）, 門中心座標]。會議室外框＝桌子＋四邊相同的間距＋牆。茶水間不隔間。
 const tableW=m=>110+85*m,meetW=m=>tableW(m)+2*ROOM_MARGIN+2*RT,meetH=130+2*ROOM_MARGIN+2*RT;
-const ROOMS=[['男廁',330,-1326,214,344,'b',330+155],['女廁',568,-1326,214,344,'b',568+155],['會議室 A',1260,-1340,meetW(5),meetH,'b',1260+meetW(5)/2],['會議室 B',60,730,meetW(3),meetH,'r',730+meetH/2],['會議室 C',60,730+meetH+RT,meetW(3),meetH,'r',730+meetH+RT+meetH/2],['茶水間',770,730,530,meetH,'t',770+265],['會議室 D',1380,730,798,554,'b',1380+399]];
+const D_W=144+760+40+SIDE_GAP+RT,D_H=150+400+SIDE_GAP+RT;
+const ROOMS=[['男廁',330,-1366,316,384,'b',330+237],['女廁',670,-1366,316,384,'b',670+237],['會議室 A',1260,-982-meetH,meetW(5),meetH,'l',-982-meetH/2],['會議室 B',60,730,meetW(3),meetH,'r',730+meetH/2],['會議室 C',60,730+meetH+RT,meetW(3),meetH,'r',730+meetH+RT+meetH/2],['會議室 D',1240,730,D_W,D_H,'t',1240+D_W/2]];
 const viewToLogical=v=>{let lo=-3000,hi=4000;for(let i=0;i<40;i++){const m=(lo+hi)/2;if(viewY(m)<v)lo=m;else hi=m;}return (lo+hi)/2;};
-const ROOM_MIN_Y=LX?viewToLogical(-1330):180-2*GP,ROOM_MAX_Y=LX?viewToLogical(1500):H0-20;
+const ROOM_MIN_Y=LX?viewToLogical(-1500):180-2*GP,ROOM_MAX_Y=LX?viewToLogical(1680):H0-20;
 const roomWallList=[],roomCornerList=[];
 for(const [,x,y,w,h,side,c] of ROOMS){
   const d=ROOM_DOOR/2,seg=(sx,sy,sw,sh)=>{if(sw>0&&sh>0)roomWallList.push([sx,sy,sw,sh]);},x0=x+RT,x1=x+w-RT,y0=y+RT,y1=y+h-RT;
@@ -1319,26 +1320,29 @@ const roomItems=[];
 const addTable=(kind,x,y,mids)=>roomItems.push(['table',x,y,tableW(mids),kind==='wood'?90:130,y+(kind==='wood'?70:110),true,{kind,mids}]);
 const addSprite=(name,x,y,depth,solid)=>{const r=RM[name];roomItems.push(['sprite',x,y,r[2],r[3],depth,solid,{name}]);};
 {
-  // 會議室 A、B、C：長桌置中，上下各一排椅子（椅子不擋路）
-  const meet=(room,mids,n)=>{const [,rx,ry]=room,tx=rx+RT+ROOM_MARGIN,ty=ry+RT+ROOM_MARGIN,tw=tableW(mids);addTable('black',tx,ty,mids);roomItems.push(['label',tx,ty,tw,130,99999,false,{text:room[0]}]);for(let k=0;k<n;k++){const cx=tx+tw*(2*k+1)/(2*n);addSprite('chair_front',cx-26,ty-46,ty-1,false);addSprite('chair_back',cx-26,ty+120,ty+130+40,false);}};
-  meet(ROOMS[2],5,3);meet(ROOMS[3],3,2);meet(ROOMS[4],3,2);
-  // 廁所：馬桶（朝右）→白隔間→馬桶（朝右）→洗手台（朝右），男女廁相同
-  for(const room of [ROOMS[0],ROOMS[1]]){const lx=room[1]+RT+8;let ty=room[2]+RT+10;
-    addSprite('toilet_side_r',lx,ty,ty+78,true);ty+=82;addSprite('partition_white_h',lx,ty,ty+22,true);ty+=26;addSprite('toilet_side_r',lx,ty,ty+78,true);ty+=82;addSprite('sink_side_r',lx,ty,ty+84,true);
+  // 會議室 A、B、C：長桌置中，上下各一排椅子，桌上一台白色投影機
+  const meet=(room,mids,n,proj)=>{const [,rx,ry]=room,tx=rx+RT+ROOM_MARGIN,ty=ry+RT+ROOM_MARGIN,tw=tableW(mids);addTable('black',tx,ty,mids);roomItems.push(['label',tx,ty,tw,130,99999,false,{text:room[0]}]);
+    addSprite(proj,proj==='projector_right'?tx+60:tx+tw-60-64,ty+26,ty+125,false);
+    for(let k=0;k<n;k++){const cx=tx+tw*(2*k+1)/(2*n);addSprite('chair_front',cx-26,ty-46,ty-1,false);addSprite('chair_back',cx-26,ty+120,ty+130+40,false);}};
+  meet(ROOMS[2],5,3,'projector_right');meet(ROOMS[3],3,2,'projector_left');meet(ROOMS[4],3,2,'projector_left');
+  // 廁所：馬桶（朝右）→白隔間→馬桶（朝右）→洗手台（朝右），男女廁相同；右側留走道
+  for(const room of [ROOMS[0],ROOMS[1]]){const lx=room[1]+RT+8;let ty=room[2]+RT+12;
+    addSprite('toilet_side_r',lx,ty,ty+78,true);ty+=92;addSprite('partition_white_h',lx,ty,ty+22,true);ty+=36;addSprite('toilet_side_r',lx,ty,ty+78,true);ty+=96;addSprite('sink_side_r',lx,ty,ty+84,true);
     roomItems.push(['label',room[1],room[2]-22,room[3],20,99999,false,{text:room[0],above:true}]);}
   // 電梯（比人大一圈）
   addSprite('elevator',130,-1182,-1182+200,true);roomItems.push(['label',130,-974,150,20,99999,false,{text:'電梯 ↓ 往樓下',above:true}]);
-  // 茶水間：木紋扁長桌＋兩台冰箱＋盆栽
-  {const room=ROOMS[5],tx=room[1]+RT+10,ty=room[2]+RT+70;addTable('wood',tx,ty,2);roomItems.push(['label',tx,ty,tableW(2),90,99999,false,{text:'茶水間'}]);
-   const fx=room[1]+room[3]-RT-12-164,fy=room[2]+RT+8;addSprite('fridge_dark',fx,fy,fy+170,true);addSprite('fridge_dark',fx+82,fy,fy+170,true);
-   addSprite('plant_small',room[1]+RT+14,room[2]+room[4]-RT-90,room[2]+room[4]-RT-10,false);}
-  // 會議室 D：ㄇ字型 6 張白桌（左 2 直式、中 2 橫式、右 2 直式），椅子在外圍，ㄇ中間放投影機
-  {const room=ROOMS[6],xL=room[1]+94,y0=room[2]+100,xC=xL+100,xR=xC+390,vt=(x,y)=>roomItems.push(['sprite',x,y,100,200,y+180,true,{name:'table_white_v'}]);
-   vt(xL,y0);vt(xL,y0+200);vt(xR,y0);vt(xR,y0+200);addTable('white',xC,y0,1);addTable('white',xC+195,y0,1);
+  // 茶水間（不隔間）：木紋扁長桌（桌上零食）＋兩台冰箱＋盆栽
+  {const tx=765,ty=790;addTable('wood',tx,ty,2);roomItems.push(['label',tx,ty-26,280,20,99999,false,{text:'茶水間',above:true}]);
+   [['snack_chips_red',30],['snack_chips_yellow',66],['snack_chips_blue',102],['snack_box',150],['snack_candy',215]].forEach(([n,dx])=>{const r=RM[n];addSprite(n,tx+dx,ty+58-r[3],ty+85,false);});
+   addSprite('fridge_dark',tx+285,ty-60,ty+110,true);addSprite('fridge_dark',tx+285+82,ty-60,ty+110,true);
+   addSprite('plant_small',tx-30,ty+120,ty+200,false);}
+  // 會議室 D：ㄇ字型 6 張白桌（左 2 直式、中 2 橫式、右 2 直式），椅子在外圍；白色投影機在上排桌面中央、向下投射
+  {const room=ROOMS[5],xL=room[1]+144,y0=room[2]+150,xC=xL+100,xR=xC+560,vt=(x,y)=>roomItems.push(['sprite',x,y,100,200,y+180,true,{name:'table_white_v'}]);
+   vt(xL,y0);vt(xL,y0+200);vt(xR,y0);vt(xR,y0+200);addTable('white',xC,y0,2);addTable('white',xC+280,y0,2);
    for(const ty of [y0,y0+200])for(const dy of [50,150]){addSprite('chair_side_r',xL-40,ty+dy-26,ty+dy+26,false);addSprite('chair_side_l',xR+100-8,ty+dy-26,ty+dy+26,false);}
-   for(const tx of [xC,xC+195])for(const dx of [48,146])addSprite('chair_front',tx+dx-26,y0-46,y0-1,false);
-   addSprite('projector',xC+195-45,y0+265-42,y0+265+42,true);
-   roomItems.push(['label',xC,y0+150,390,20,99999,false,{text:room[0]}]);}
+   for(const tx of [xC,xC+280])for(const dx of [70,210])addSprite('chair_front',tx+dx-26,y0-46,y0-1,false);
+   addSprite('projector_down',xC+280-28,y0+20,y0+125,false);
+   roomItems.push(['label',xC,y0+250,560,20,99999,false,{text:room[0]}]);}
 }
 const roomBlockers=!LX?[]:[...roomWallList,...roomCornerList.map(([x,y])=>[x,y,RT,RT]),...roomItems.filter(it=>it[6]).map(it=>[it[1],it[2]+(it[0]==='sprite'&&/chair/.test(it[7].name)?0:it[4]*.35),it[3],it[4]*(it[0]==='table'||it[0]==='sprite'?.65:1)])].map(([x,y,w,h])=>{const t=viewToLogical(y),b=viewToLogical(y+h);return [x,t,w,b-t];});
 const walls0=stations.filter(s=>!s.big&&!s.gone).map(s=>s.row?[s.x-122,431+(s.y-695),244,219]:[s.x-122,s.y+18,244,80]);
@@ -1547,6 +1551,8 @@ function drawLongDeskChair(){if(!LX||!stations.some(t=>t.big))return;const st=st
 function drawProp(name,x,w,h,band,dimmed){
   /* 照使用者畫的樣子：書櫃＝黑色方塊（下 30% 是矮櫃，中間一條分隔線）；方柱＝白色方塊（上 23% 是柱頭，一條分隔線）。 */
   const y=Math.round(bandFeet()-band*GPV-h);x=Math.round(x);w=Math.round(w);h=Math.round(h);
+  const PM={white_pillar:'prop_pillar',black_bookshelf:'prop_bookshelf_tall',black_bookshelf_narrow:'prop_shelf_low',red_box:'prop_cabinet_red'};
+  if(roomsReady()&&PM[name]){const r=RM[PM[name]];ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(roomsImg,r[0],r[1],r[2],r[3],x+Math.round((w-r[2])/2),Math.round(bandFeet()-band*GPV-r[3]),r[2],r[3]);ctx.restore();return;}
   ctx.save();ctx.imageSmoothingEnabled=false;
   const box=(c,bx,by,bw,bh)=>{ctx.fillStyle=c;ctx.fillRect(bx,by,bw,bh);};
   if(name==='white_pillar'){
@@ -1572,7 +1578,7 @@ function drawProps(){
 }
 
 /* ===== 場地大更新：房間與家具 ===== */
-const roomsImg=new Image();setAsset(roomsImg,'assets/office-rooms-v2.webp?v=1');load(roomsImg).then(()=>markDirty()).catch(()=>{});
+const roomsImg=new Image();setAsset(roomsImg,'assets/office-rooms-v3.webp?v=1');load(roomsImg).then(()=>markDirty()).catch(()=>{});
 const roomsReady=()=>roomsImg.complete&&roomsImg.naturalWidth>1;
 function rm(name,x,y){const r=RM[name];if(!r||!roomsReady())return;ctx.imageSmoothingEnabled=false;ctx.drawImage(roomsImg,r[0],r[1],r[2],r[3],Math.round(x),Math.round(y),r[2],r[3]);}
 function roomTable(kind,x,y,mids){
@@ -1582,10 +1588,24 @@ function roomTable(kind,x,y,mids){
 }
 const roomLabel=(text,x,y,w,above)=>{ctx.save();ctx.font='700 13px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';const tw=Math.round(ctx.measureText(text).width)+16,lx=Math.round(x+w/2-tw/2);ctx.fillStyle='#0c0c0c';ctx.fillRect(lx-2,y-2,tw+4,24);ctx.fillStyle='#2f3640';ctx.fillRect(lx,y,tw,20);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,x+w/2,y+10.5);ctx.restore();};
 function drawRoomsBase(){
-  if(!roomsReady())return;ctx.imageSmoothingEnabled=false;
-  const tile=(r,x,y,w,h,horiz)=>{if(horiz){for(let dx=0;dx<w;dx+=r[2]){const cw=Math.min(r[2],w-dx);ctx.drawImage(roomsImg,r[0],r[1],cw,r[3],x+dx,y,cw,r[3]);}}else{for(let dy=0;dy<h;dy+=r[3]){const ch=Math.min(r[3],h-dy);ctx.drawImage(roomsImg,r[0],r[1],r[2],ch,x,y+dy,r[2],ch);}}};
-  for(const [x,y,w,h] of roomWallList)if(h===RT)tile(RM.glass_h,x,y,w,h,true);else tile(RM.glass_v,x,y,w,h,false);
-  for(const [x,y] of roomCornerList)rm('glass_corner',x,y);
+  const K='#0c0c0c',B=3,d=ROOM_DOOR/2;
+  ctx.save();ctx.imageSmoothingEnabled=false;
+  for(const [,x,y,w,h,side,c] of ROOMS){
+    // 玻璃：整圈半透明淡藍，黑線只畫在外緣與內緣（沒有拼接線）；門口兩端各收一道黑線
+    ctx.fillStyle='rgba(186,222,234,.42)';
+    ctx.fillRect(x,y,w,RT);ctx.fillRect(x,y+h-RT,w,RT);ctx.fillRect(x,y+RT,RT,h-2*RT);ctx.fillRect(x+w-RT,y+RT,RT,h-2*RT);
+    const hl=(x1,x2,yy,gap)=>{if(gap){const g0=c-d,g1=c+d;if(x1<g0)ctx.fillRect(x1,yy,Math.min(x2,g0)-x1,B);if(x2>g1)ctx.fillRect(Math.max(x1,g1),yy,x2-Math.max(x1,g1),B);}else ctx.fillRect(x1,yy,x2-x1,B);};
+    const vl=(y1,y2,xx,gap)=>{if(gap){const g0=c-d,g1=c+d;if(y1<g0)ctx.fillRect(xx,y1,B,Math.min(y2,g0)-y1);if(y2>g1)ctx.fillRect(xx,Math.max(y1,g1),B,y2-Math.max(y1,g1));}else ctx.fillRect(xx,y1,B,y2-y1);};
+    ctx.fillStyle=K;
+    hl(x,x+w,y,side==='t');hl(x,x+w,y+h-B,side==='b');vl(y,y+h,x,side==='l');vl(y,y+h,x+w-B,side==='r');
+    hl(x+RT-B,x+w-RT+B,y+RT-B,side==='t');hl(x+RT-B,x+w-RT+B,y+h-RT,side==='b');vl(y+RT-B,y+h-RT+B,x+RT-B,side==='l');vl(y+RT-B,y+h-RT+B,x+w-RT,side==='r');
+    if(side==='t'||side==='b'){const yy=side==='t'?y:y+h-RT;ctx.fillRect(c-d-B,yy,B,RT);ctx.fillRect(c+d,yy,B,RT);}
+    else{const xx=side==='l'?x:x+w-RT;ctx.fillRect(xx,c-d-B,RT,B);ctx.fillRect(xx,c+d,RT,B);}
+    // 玻璃反光：每隔一段畫一道短斜線
+    ctx.fillStyle='rgba(255,255,255,.85)';
+    for(const [sx,sy,sw,sh] of roomWallList)if(sx>=x&&sy>=y&&sx+sw<=x+w&&sy+sh<=y+h){if(sh===RT){for(let px=sx+14;px<sx+sw-14;px+=72){ctx.fillRect(px,sy+14,3,3);ctx.fillRect(px+3,sy+11,3,3);ctx.fillRect(px+6,sy+8,3,3);}}else{for(let py=sy+14;py<sy+sh-14;py+=72){ctx.fillRect(sx+14,py,3,3);ctx.fillRect(sx+11,py+3,3,3);ctx.fillRect(sx+8,py+6,3,3);}}}
+  }
+  ctx.restore();
 }
 function pushRoomFurniture(layers){
   layers.push({depth:-99997,draw:drawRoomsBase});

@@ -19,7 +19,7 @@ test('final seating (migration 21): 3 鄭筱舢, 5 余采馨, 6 黎子瑄 reserv
 
 test('three desk groups per side: 18 staff seats, extra groups shifted up by 604 (view 497), canvas keeps 900px of headroom', async () => {
   assert.match(source, /PIXEL_OFFICE_STAFF_SEATS = 18/);
-  assert.match(source, /PIXEL_OFFICE_MIN_Y = -1600/);
+  assert.match(source, /PIXEL_OFFICE_MIN_Y = -1900/);
   assert.match(source, /Math\.floor\(seat \/ 6\) \* 604/);
   const app = await readFile(new URL('../../EMC-ART-Pixel-Office/dist/app.js', import.meta.url), 'utf8');
   assert.match(app, /GP=604[^,]*,GPV=497/);
