@@ -692,7 +692,7 @@
         ${isDoing&&!inColumn?`<div class="progress${s.late?' is-late':''}"><div class="progress-label"><span>進度</span><span>${s.percent}%</span></div><div class="progress-track"><span style="${barStyle(s.percent)}"></span></div></div>`:''}
         <div class="card-foot">
           <span class="faces card-people">${cardPeopleHtml(row)}</span>
-          <span class="card-qtywrap">${(status==='過稿中'&&revisionCount(row)>=0)?`<button type="button" class="lt-rev lt-edit${revisionCount(row)===0?' is-draft':''}${revisionCount(row)>0&&hasPendingMod(row)?' revision-pending':''}" data-rev-open="${esc(id)}" title="快速查看修改紀錄">${revisionCount(row)===0?'初稿':`${revisionCount(row)<=10?NUM_ZH[revisionCount(row)]:revisionCount(row)}修`}</button>`:''}<span class="card-qty">數量 ${esc(qty||'-')}</span></span>${modBtnHtml(row,'card-mod')}
+          <span class="card-qtywrap">${(status==='過稿中'&&revisionCount(row)>=0)?`<button type="button" class="lt-rev lt-edit${revisionCount(row)===0?' is-draft':''}${revisionCount(row)>0&&hasPendingMod(row)?' revision-pending':''}" data-rev-open="${esc(id)}" title="快速查看修改紀錄">${revisionCount(row)===0?'初稿':`${revisionCount(row)<=10?NUM_ZH[revisionCount(row)]:revisionCount(row)}修`}</button>`:''}<span class="card-qty">數量 ${esc(qty||'-')}</span></span>${modBtnHtml(row,'card-mod')}${cardDelBtnHtml(row)}
         </div>
       </div>`;
     }
@@ -1373,6 +1373,8 @@
     const canDirectMod=()=>loggedIn()&&(isDesignerSession()||isAdminUser()||isMachiUser())&&acc('modification.create',true);
     const canFileMod=r=>loggedIn()&&['過稿中','修改中'].includes(String(r['狀態']||'').trim())&&(canDirectMod()||acc('request.mail',true));
     let noModBtn=false;/* 卡片展開區（cardActsHtml）不再重複放修改按鈕：卡片右下已經有一顆 */
+    /* 卡牌右下角的刪除（圖示）：設計師、管理者（含 Machi）、企劃刪除帳號；權限與列表的「刪除」同一套（canDeleteRow），管理者直接刪、其他人送刪除申請 */
+    const cardDelBtnHtml=r=>(loggedIn()&&(isDesignerSession()||isAdminUser()||isMachiUser()||plannerDeleteUser())&&canDeleteRow(r))?`<button type="button" class="card-del" data-row-act="delete" data-id="${esc(idKey(r))}" title="刪除案件" aria-label="刪除案件">${ICON_TRASH}</button>`:'';
     const modBtnHtml=(r,cls)=>canFileMod(r)&&!noModBtn?(canDirectMod()?`<button type="button" class="${cls}" data-row-act="modify-direct" data-id="${esc(idKey(r))}" title="直接記錄進修改紀錄（不寄信）">新增修改</button>`:`<button type="button" class="${cls}" data-row-act="modify" data-id="${esc(idKey(r))}" title="填寫修改需求（會記錄進修改紀錄並寄信給設計師）">填寫修改</button>`):'';
     const canListEditRow=r=>acc('request.status',hasDesignerRole())&&isEditableYear(r);
     function canViewCustomerCases(name){

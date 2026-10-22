@@ -4,6 +4,8 @@
 
 ## 2026-10-22
 
+- v5.0 卡牌右下角加回「刪除」圖示（紅色圓形垃圾桶，`site.js` 的 `cardDelBtnHtml()`、`site.css` 的 `.card-del`）：設計師、管理者（含 Machi）、企劃／專案刪除帳號看得到，權限沿用列表的 `canDeleteRow`，點了走原本的 `deleteCase`（管理者直接刪、其他人送刪除申請）；首頁網格與專案頁卡牌都有。已 stamp。
+
 - v5.0 修改紀錄視窗：設計師與管理者（含 Machi）都可以新增修改紀錄、補圖、移動／刪除圖片，並新增每一輪的「刪除」按鈕（`site.js` 的 `canModEdit()`、`data-rev-del`，呼叫 Worker 的 `deleteModificationRecord`，權限 media.manage；刪除後其他輪次編號不變，Drive 原始檔不動）。「確認修正完成」仍只有設計師。`site.css` 補 `.rev-del`。已 stamp。
 
 - 修正展開卡牌跑版：補充資料裡很長的路徑／網址（例如參考範例的 NAS 長路徑）沒有換行，把「補充資料」那幾列撐出卡牌右緣。`site.css` 讓補充資料文字欄可縮（min-width:0）並任意位置換行、卡牌詳情不超出卡牌寬度。已 stamp。
