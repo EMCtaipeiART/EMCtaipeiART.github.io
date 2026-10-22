@@ -261,7 +261,7 @@ function assetBase(){return (new URLSearchParams(location.search).get('assetBase
 /* 首頁隱藏的頭像視窗（?avatars=1）只畫頭像，不需要家具、圖示、桌上設備；首頁小框（?embed=1）不畫同仁桌的設備與新擺設。
    這些圖不載入，改用 1×1 的透明圖頂著（load 事件照常觸發），省下約 15MB 解碼後記憶體與約 500KB 下載。 */
 const LEAN_AVATARS=/[?&]avatars=1/.test(location.search),LEAN_EMBED=/[?&]embed=1/.test(location.search),TINY_IMG='data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
-function leanAsset(img,path){if((LEAN_AVATARS&&/furniture-|icons-|staff-gear|office-extras|office-rooms|office-props|office-toilet|bottom-/.test(path))||(LEAN_EMBED&&/staff-gear|office-extras|office-rooms|office-props|office-toilet/.test(path))){img.crossOrigin=null;img.src=TINY_IMG;return true;}return false;}
+function leanAsset(img,path){if((LEAN_AVATARS&&/furniture-|icons-|staff-gear|office-extras|office-rooms|office-props|office-toilet|office-desks|bottom-/.test(path))||(LEAN_EMBED&&/staff-gear|office-extras|office-rooms|office-props|office-toilet|office-desks/.test(path))){img.crossOrigin=null;img.src=TINY_IMG;return true;}return false;}
 function setAsset(img,path){img.crossOrigin='anonymous';img.__fb=path;if(typeof leanAsset==='function'&&leanAsset(img,path))return;img.src=assetBase()+path;}
 const furniture=new Image(),iconSheet=new Image(),extraSheet=new Image();// 進站加速（2026-09-18）：只保留實際用到的區塊並改存 WebP。
 setAsset(furniture,'assets/furniture-v5.webp?v=1');setAsset(iconSheet,'assets/icons-v3.webp?v=3');setAsset(extraSheet,'assets/icons-status-v4.webp?v=2');
@@ -1533,7 +1533,11 @@ function drawStaffGear(s,baseY,dimmed){
 const officeExtras=new Image();setAsset(officeExtras,'assets/office-extras-v2.webp?v=1');load(officeExtras).then(()=>{markDirty();}).catch(()=>{});
 const EX={peach_desk:[0,365,517,291],white_desk_row:[0,0,832,357],white_small_desk_v:[525,365,258,512],black_bookshelf:[791,365,207,517],black_bookshelf_narrow:[1006,365,130,460],white_pillar:[1144,0,202,691]};/* 座標見 assets/office-extras-v2.json */
 const exReady=()=>officeExtras.complete&&officeExtras.naturalWidth&&EX.peach_desk;
+const desksImg=new Image();setAsset(desksImg,'assets/office-desks-v6.webp?v=1');load(desksImg).then(()=>markDirty()).catch(()=>{});
+const RMD={desk_beige:[8,8,220,124],desk_white_row:[236,8,354,152],desk_white_v:[598,8,110,218]};/* assets/office-desks-v6.json：最終像素大小、3 px 黑外框 */
+const desksReady=()=>desksImg.complete&&desksImg.naturalWidth>1;
 function deskSourceOf(s,type){
+  if(s.beige&&desksReady()){const r=RMD.desk_beige;return {art:stationDimmed(s)?grayOfImage(desksImg):desksImg,rect:[r[0],r[1],r[2],r[3],0],fin:true};}
   if(s.beige&&exReady()){const r=EX.peach_desk;return {art:stationDimmed(s)?grayOfImage(officeExtras):officeExtras,rect:[r[0],r[1],r[2],r[3],0]};}
   return {art:furnitureFor(s),rect:furnitureRects[type]};
 }
@@ -1548,6 +1552,7 @@ const bandFeet=()=>BD_TOP+BD_FACE+Math.round(DESK_SRC_FOOT*DESK_DRAW_SCALE);
 function drawLongDesk(){
   if(!LX||!stations.some(t=>t.big))return;
   const dim=stationDimmed(stations.find(t=>t.big));
+  if(desksReady()){const art=dim?grayOfImage(desksImg):desksImg;ctx.imageSmoothingEnabled=false;for(const [n,x] of [['desk_white_row',LONG_DESK.x],['desk_white_v',LONG_DESK.smallX]]){const r=RMD[n];ctx.drawImage(art,r[0],r[1],r[2],r[3],Math.round(x),LONG_DESK.y,r[2],r[3]);}return;}
   exDraw('white_desk_row',LONG_DESK.x,LONG_DESK.y,LONG_DESK.w,LONG_DESK.h,dim);
   exDraw('white_small_desk_v',LONG_DESK.smallX,LONG_DESK.y,LONG_DESK.smallW,LONG_DESK.smallH,dim);
 }
@@ -1630,14 +1635,15 @@ function pushRoomFurniture(layers){
 function drawDesk(s){
   if(s.big)return;/* 左下那組：改成一張白色長桌，另外畫（drawLongDesk） */
   const type=stationAway(s)||s.grp||s.ext?s.empty:s.type,deskArt=deskSourceOf(s,type),art=deskArt.art,[sx,sy,sw,sh,upper]=deskArt.rect;
-  const drawW=Math.round(sw*DESK_DRAW_SCALE),faceDraw=Math.round(DESK_SRC_FACE*DESK_DRAW_SCALE);
-  const footDraw=Math.round(DESK_SRC_FOOT*DESK_DRAW_SCALE),upperDraw=Math.round(upper*DESK_DRAW_SCALE);
-  const faceTop=sy+upper,footTop=faceTop+DESK_SRC_FACE,left=Math.round(s.x-drawW/2),deskTop=s.y-40;
+  const SC=deskArt.fin?1:DESK_DRAW_SCALE,FACE=deskArt.fin?94:DESK_SRC_FACE,FOOT=deskArt.fin?30:DESK_SRC_FOOT;/* fin：素材已是最終大小（新米色桌），不再縮放 */
+  const drawW=Math.round(sw*SC),faceDraw=Math.round(FACE*SC);
+  const footDraw=Math.round(FOOT*SC),upperDraw=Math.round(upper*SC);
+  const faceTop=sy+upper,footTop=faceTop+FACE,left=Math.round(s.x-drawW/2),deskTop=s.y-40;
   ctx.imageSmoothingEnabled=false;
   // 螢幕、桌面、桌腳分三段畫：桌面與桌腳一路相接，螢幕才能換一種桌子就換一個高度。
   if(upper>0)ctx.drawImage(art,sx,sy,sw,upper,left,deskTop-upperDraw,drawW,upperDraw);
-  ctx.drawImage(art,sx,faceTop,sw,DESK_SRC_FACE,left,deskTop,drawW,faceDraw);
-  ctx.drawImage(art,sx,footTop,sw,DESK_SRC_FOOT,left,deskTop+faceDraw,drawW,footDraw);
+  ctx.drawImage(art,sx,faceTop,sw,FACE,left,deskTop,drawW,faceDraw);
+  ctx.drawImage(art,sx,footTop,sw,FOOT,left,deskTop+faceDraw,drawW,footDraw);
   if(s.grp||s.ext)drawStaffGear(s,deskTop+faceDraw-22,stationDimmed(s));
 }
 // 下排桌面：接在上排桌面正下方（BD_TOP 起），電腦用正面圖放在桌面上，椅子是背面圖（蓋在人物前面）。
@@ -1654,10 +1660,11 @@ function grayOfImage(img){
 function drawDeskBottom(s){
   const oy=s.y-BOTTOM_FEET;/* 往上複製的那幾組，下排桌面跟著上移 */
   const dimmed=stationDimmed(s);if(s.big)return;const deskArt=deskSourceOf(s,s.empty),art=deskArt.art,[sx,sy,sw]=deskArt.rect;
-  const drawW=Math.round(sw*DESK_DRAW_SCALE),left=Math.round(s.x-drawW/2),footDraw=Math.round(DESK_SRC_FOOT*DESK_DRAW_SCALE);
+  const SC=deskArt.fin?1:DESK_DRAW_SCALE,FACE=deskArt.fin?94:DESK_SRC_FACE,FOOT=deskArt.fin?30:DESK_SRC_FOOT,TRIM=deskArt.fin?0:3;
+  const drawW=Math.round(sw*SC),left=Math.round(s.x-drawW/2),footDraw=Math.round(FOOT*SC);
   ctx.imageSmoothingEnabled=false;
-  ctx.drawImage(art,sx,sy,sw,DESK_SRC_FACE,left,BD_TOP+oy,drawW,BD_FACE);
-  ctx.drawImage(art,sx,sy+DESK_SRC_FACE,sw,DESK_SRC_FOOT-3,left,BD_TOP+BD_FACE+oy,drawW,Math.round(footDraw*(DESK_SRC_FOOT-3)/DESK_SRC_FOOT));// 少取 3 px：素材最底下接著下一張圖的邊，縮放時會滲出一條黑線
+  ctx.drawImage(art,sx,sy,sw,FACE,left,BD_TOP+oy,drawW,BD_FACE);
+  ctx.drawImage(art,sx,sy+FACE,sw,FOOT-TRIM,left,BD_TOP+BD_FACE+oy,drawW,Math.round(footDraw*(FOOT-TRIM)/FOOT));// 少取 3 px：素材最底下接著下一張圖的邊，縮放時會滲出一條黑線
   if(s.grp||s.ext){drawStaffGear(s,BD_TOP+BD_FACE-22+oy,dimmed);return;}
   const mini=!s.name,img=mini?bottomArt.minimon:bottomArt.imac;
   if(!stationAway(s)&&img.complete&&img.naturalWidth){const w=mini?165:104,h=Math.round(w*img.naturalHeight/img.naturalWidth);ctx.drawImage(dimmed?grayOfImage(img):img,Math.round(s.x-w/2),BD_CENTER+oy-Math.round(h/2),w,h);}

@@ -1,0 +1,25 @@
+{
+  "image": "office-desks-v6.webp",
+  "width": 716,
+  "height": 234,
+  "sprites": {
+    "desk_beige": {
+      "x": 8,
+      "y": 8,
+      "w": 220,
+      "h": 124
+    },
+    "desk_white_row": {
+      "x": 236,
+      "y": 8,
+      "w": 354,
+      "h": 152
+    },
+    "desk_white_v": {
+      "x": 598,
+      "y": 8,
+      "w": 110,
+      "h": 218
+    }
+  }
+}
