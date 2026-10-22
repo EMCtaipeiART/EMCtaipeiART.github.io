@@ -2783,6 +2783,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const png = text(payload.png);
     const sql = this.ctx.storage.sql;
     const hashKey = `snapHash:${name}:${lookKey}`;
+    let storedHash: string | undefined;
     if (png) {
       const match = png.match(/^data:image\/png;base64,([A-Za-z0-9+/=]+)$/);
       if (!match || match[1].length > 150_000) throw new Error('頭像圖片不正確或太大');
@@ -2793,11 +2794,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       sql.exec('DELETE FROM pixel_office_avatars WHERE name = ? AND look_key NOT IN (SELECT look_key FROM pixel_office_avatars WHERE name = ? ORDER BY updated_at DESC LIMIT 16)', name, name);
     } else if (!sql.exec('SELECT 1 FROM pixel_office_avatars WHERE name = ? AND look_key = ?', name, lookKey).toArray().length) {
       await this.snapshotAudit(session, name, lookKey, '要求補圖（沒存過這個造型）');
-      return { ok: true, action: 'pixelOfficeAvatarSnapshot', need: true };
-    } else if (target && /^[0-9a-f]{64}$/.test(text(payload.hash)) && (await this.ctx.storage.get<string>(hashKey)) !== text(payload.hash)) {
+      return { ok: true, action: 'pixelOfficeAvatarSnapshot', need: true, why: 'no-row' };
+    } else if (target && /^[0-9a-f]{64}$/.test(text(payload.hash)) && (storedHash = await this.ctx.storage.get<string>(hashKey)) !== text(payload.hash)) {
       // 管理者幫別人更新：造型代碼相同、但存著的圖跟管理者畫面上算出來的不一樣（例如以前在造型圖沒載完時存到舊衣服）→ 要求補傳圖片覆蓋
       await this.snapshotAudit(session, name, lookKey, '要求補圖（圖的指紋不同）');
-      return { ok: true, action: 'pixelOfficeAvatarSnapshot', need: true };
+      return { ok: true, action: 'pixelOfficeAvatarSnapshot', need: true, why: 'hash', stored: (storedHash || '無').slice(0, 8), got: text(payload.hash).slice(0, 8) };
     } else {
       sql.exec('UPDATE pixel_office_avatars SET updated_at = ? WHERE name = ? AND look_key = ?', now, name, lookKey);
     }

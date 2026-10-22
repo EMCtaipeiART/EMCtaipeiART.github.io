@@ -568,7 +568,7 @@
         const token=session().token,post=body=>fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(body),cache:'no-store'}).then(r=>r.json());
         const base={action:'pixelOfficeAvatarSnapshot',token,lookKey:p.lookKey};if(p.target){base.target=p.target;try{const raw=String(p.png||'').replace(/^data:image\/png;base64,/,''),buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(raw));base.hash=[...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('')}catch(err){}}
         const r=await post(base);if(!r||!r.ok)return 'fail:'+((r&&r.error)||'無回應');
-        let saved=false;if(r.need){const r2=await post({...base,png:p.png});if(!r2||!r2.ok)return 'fail:'+((r2&&r2.error)||'無回應');saved=true}
+        let saved=false;if(r.need){if(p.target)snapLog('伺服器要求補圖',{who:p.target,why:r.why,stored:r.stored,got:r.got});const r2=await post({...base,png:p.png});if(!r2||!r2.ok)return 'fail:'+((r2&&r2.error)||'無回應');saved=true}
         if(!p.target){try{localStorage.setItem('pixelSnap:'+p.who,p.lookKey)}catch(err){}}
         if(typeof refreshAvatarSnapshots==='function')refreshAvatarSnapshots();
         return saved?'saved':'same'
