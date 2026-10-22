@@ -1556,7 +1556,14 @@ function drawProp(name,x,w,h,band,dimmed){
   /* 照使用者畫的樣子：書櫃＝黑色方塊（下 30% 是矮櫃，中間一條分隔線）；方柱＝白色方塊（上 23% 是柱頭，一條分隔線）。 */
   const y=Math.round(bandFeet()-band*GPV-h);x=Math.round(x);w=Math.round(w);h=Math.round(h);
   const PM={white_pillar:'prop_pillar',black_bookshelf:'prop_bookshelf_side',black_bookshelf_narrow:'prop_shelf_side',red_box:'prop_cabinet_side'};
-  if(roomsReady()&&propsImg.complete&&propsImg.naturalWidth>1&&PM[name]){const r=RM[PM[name]]||RM4[PM[name]],img=RM[PM[name]]?roomsImg:propsImg;ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(img,r[0],r[1],r[2],r[3],x+Math.round((w-r[2])/2),Math.round(bandFeet()-band*GPV-r[3]),r[2],r[3]);ctx.restore();return;}
+  if(roomsReady()&&propsImg.complete&&propsImg.naturalWidth>1&&PM[name]){const r=RM[PM[name]]||RM4[PM[name]],img=RM[PM[name]]?roomsImg:propsImg;ctx.save();ctx.imageSmoothingEnabled=false;const py=Math.round(bandFeet()-band*GPV-r[3]);
+    if(w>r[2]){/* 比素材寬（兩張桌子之間的縫）：三段式把中間拉寬，兩端黑框維持原本粗細，剛好銜接兩側桌子、不留縫 */
+      const cut=Math.floor(r[2]/2),mid=4,L=cut-Math.floor(mid/2);
+      ctx.drawImage(img,r[0],r[1],L,r[3],x,py,L,r[3]);
+      ctx.drawImage(img,r[0]+L,r[1],mid,r[3],x+L,py,w-(r[2]-mid),r[3]);
+      ctx.drawImage(img,r[0]+L+mid,r[1],r[2]-L-mid,r[3],x+w-(r[2]-L-mid),py,r[2]-L-mid,r[3]);
+    }else ctx.drawImage(img,r[0],r[1],r[2],r[3],x+Math.round((w-r[2])/2),py,r[2],r[3]);
+    ctx.restore();return;}
   ctx.save();ctx.imageSmoothingEnabled=false;
   const box=(c,bx,by,bw,bh)=>{ctx.fillStyle=c;ctx.fillRect(bx,by,bw,bh);};
   if(name==='white_pillar'){
@@ -1575,7 +1582,7 @@ function drawProps(){
   if(!LX)return;
   for(let b=0;b<3;b++){
     drawProp('black_bookshelf',DL-46,46,220,b,false);/* 左側桌子群與設計部之間 */
-    if(b===1){drawProp('black_bookshelf_narrow',DR-6,59,196,b,false);drawProp('black_bookshelf_narrow',DR+268,61,196,b,false);}/* 中排：搬進間隙的兩張桌子兩側 */
+    if(b===1){drawProp('black_bookshelf_narrow',DR-10,68,196,b,false);drawProp('black_bookshelf_narrow',DR+264,70,196,b,false);}/* 中排：搬進間隙的兩張桌子兩側 */
     else drawProp('white_pillar',DR+11,86,bandFeet()-315,b,false);
     if(b===2){drawProp('red_box',1515,56,150,b,false);drawProp('black_bookshelf_narrow',1726,44,150,b,false);}/* 最上排原同仁桌第一行的位置：紅箱＋窄書櫃 *//* 高度＝上排桌沿（y 315）到桌腳落地線 *//* 設計部與同仁桌之間 */
   }
