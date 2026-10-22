@@ -1306,8 +1306,9 @@ const tableW=m=>110+85*m,meetW=m=>tableW(m)+2*ROOM_MARGIN+2*RT,meetH=130+2*ROOM_
 const BC_MX=70,BC_W=tableW(2)+2*BC_MX+2*RT;// 會議室 B、C：桌子短一點、左右留 70，不要太寬
 const D_W=144+760+40+SIDE_GAP+RT,D_H=2*meetH+RT;// 會議室 D 與 B＋C 上下等高，桌椅置中
 const T_W=24+8+170+120+24,CORR=110;// 廁所寬度；走道寬度（電梯—廁所、廁所—會議室 A 一致）
-const A_X=130+150+CORR+2*T_W-RT+CORR;
-const ROOMS=[['男廁',130+150+CORR,-982-meetH,T_W,meetH,'b',130+150+CORR+262],['女廁',130+150+CORR+T_W-RT,-982-meetH,T_W,meetH,'b',130+150+CORR+T_W-RT+262],['會議室 A',130+150+CORR+2*T_W-RT+CORR,-982-meetH,meetW(5),meetH,'l',-982-meetH/2],['會議室 B',60,730,BC_W,meetH,'r',730+meetH/2],['會議室 C',60,730+meetH+RT,BC_W,meetH,'r',730+meetH+RT+meetH/2],['會議室 D',1240,730,D_W,D_H,'t',1240+D_W/2]];
+const TX0=130+115,TB=-882;// 上排（電梯、廁所、會議室 A）整組：水平置中、離桌子群近一點
+const A_X=TX0+150+CORR+2*T_W-RT+CORR;
+const ROOMS=[['男廁',TX0+150+CORR,TB-meetH,T_W,meetH,'b',TX0+150+CORR+262],['女廁',TX0+150+CORR+T_W-RT,TB-meetH,T_W,meetH,'b',TX0+150+CORR+T_W-RT+262],['會議室 A',TX0+150+CORR+2*T_W-RT+CORR,TB-meetH,meetW(5),meetH,'l',TB-meetH/2],['會議室 B',60,730,BC_W,meetH,'r',730+meetH/2],['會議室 C',60,730+meetH+RT,BC_W,meetH,'r',730+meetH+RT+meetH/2],['會議室 D',1240,730,D_W,D_H,'t',1240+D_W/2]];
 const viewToLogical=v=>{let lo=-3000,hi=4000;for(let i=0;i<40;i++){const m=(lo+hi)/2;if(viewY(m)<v)lo=m;else hi=m;}return (lo+hi)/2;};
 const ROOM_MIN_Y=LX?viewToLogical(-1500):180-2*GP,ROOM_MAX_Y=LX?viewToLogical(1680):H0-20;
 const roomWallList=[],roomCornerList=[];
@@ -1334,7 +1335,7 @@ const addSprite=(name,x,y,depth,solid)=>{const r=RM[name];roomItems.push(['sprit
     for(const n of ['toilet_side_r','partition_white_h','toilet_side_r','sink_side_r']){addSprite(n,lx,ty,ty+RM[n][3],true);ty+=RM[n][3]+gap;}
     roomItems.push(['label',room[1],room[2]-22,room[3],20,99999,false,{text:room[0],above:true}]);}
   // 電梯（比人大一圈）
-  addSprite('elevator',130,-1182,-1182+200,true);roomItems.push(['label',130,-974,150,20,99999,false,{text:'電梯 ↓ 往樓下',above:true}]);
+  addSprite('elevator',TX0,TB-200,TB,true);roomItems.push(['label',TX0,TB+8,150,20,99999,false,{text:'電梯 ↓ 往樓下',above:true}]);
   // 茶水間（不隔間）：對齊 B、C 兩間會議室的中間；白色木紋扁長桌（桌上零食）在左、兩台冰箱在右
   {const tx=620,ty=1140,fx=940,fy=1095;addTable('whitewood',tx,ty,2);roomItems.push(['label',tx,ty-26,280,20,99999,false,{text:'茶水間',above:true}]);
    [['snack_chips_red',30],['snack_chips_yellow',66],['snack_chips_blue',102],['snack_box',150],['snack_candy',215]].forEach(([n,dx])=>{const r=RM[n];addSprite(n,tx+dx,ty+58-r[3],ty+85,false);});
