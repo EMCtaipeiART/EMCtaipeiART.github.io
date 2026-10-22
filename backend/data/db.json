@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 9155,
+  "revision": 9156,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-22T03:33:31.453Z",
+  "updatedAt": "2026-10-22T03:34:01.852Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -2135,7 +2135,9 @@
         "案件摘要"
       ],
       "primaryKey": "案件編號",
-      "rows": []
+      "rows": [
+        {"案件編號":"26100154","申請人帳號":"sasa.cheng@emctaipei.com","申請人":"鄭筱舢","申請時間":"2026-10-22T03:34:01.852Z","案件摘要":"soundcore_「11.2 正式上市」「愛不釋耳 通話從容」｜Anna｜未開始"}
+      ]
     },
     "短連結": {
       "headers": [
