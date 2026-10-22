@@ -61,3 +61,11 @@ test('v5 batch add: every new row inherits the previous row\'s values (including
   assert.match(html, /if\(f\.batch&&!f\.extra\.length\)f\.extra\.push\(inheritRow\(f\)\)/);
   assert.match(html, /if\(act==='batch-add'\)\{readRowsSafe\(\);const f=state\.form;f\.extra\.push\(inheritRow\(f\.extra\.length\?f\.extra\[f\.extra\.length-1\]:f\)\)/, '「新增空白一筆」要沿用最後一筆，不是第一筆');
 });
+
+test('合併寄信：每一筆案件的補充資料都帶進信裡（相同的合併）', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const src = await readFile(new URL('../../site.js', import.meta.url), 'utf8');
+  assert.match(src, /function mailBodyHtml\(row,srcRows\)/);
+  assert.match(src, /mailBodyHtml\(row,sel\.map\(x=>x\.row\)\)/);
+  assert.match(src, /suppOf\(nk,uk\)/);
+});

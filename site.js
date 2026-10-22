@@ -1769,12 +1769,14 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
 
     /* ---------- 新增後：信件編輯（不用彈窗） ---------- */
     function supplementHtml(note,url){const label=String(note||url||'').trim(),href=String(url||'').trim();if(!label)return '';return /^https?:\/\//i.test(href)?`<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`:esc(label)}
-    function mailBodyHtml(row){
+    function mailBodyHtml(row,srcRows){
       const platforms=String(row['使用平台']||'').split(/\s*,\s*/).filter(Boolean),specs=platforms.map(p=>PLATFORM_SPECS[p]).filter(Boolean).join('；');
       const info=[['大標',''],['數量',row['數量']],['尺寸規格',specs],['是否印刷','是/否'],['使用平台',platforms.join(', ')],['交件日期',row['結束日期']]];
-      const supp=[['A','設計簡報',row['設計簡報說明'],row['設計簡報連結']],['B','客戶素材',row['客戶素材說明'],row['客戶素材連結']],['C','參考範例',row['參考範例說明'],row['參考範例連結']],['D','其他',row['其他說明'],row['其他連結']]];
+      /* 合併寄信時（srcRows＝被合併的每一筆案件）：每一筆的補充資料都要帶進信裡，相同的合併成一個 */
+      const suppOf=(nk,uk)=>{const rs=srcRows&&srcRows.length?srcRows:[row],seen=new Set(),out=[];for(const r of rs){const n=String(r[nk]||'').trim(),u=String(r[uk]||'').trim(),k=n+'|'+u;if((!n&&!u)||seen.has(k))continue;seen.add(k);out.push(supplementHtml(n,u))}return out.join('、')};
+      const supp=[['A','設計簡報','設計簡報說明','設計簡報連結'],['B','客戶素材','客戶素材說明','客戶素材連結'],['C','參考範例','參考範例說明','參考範例連結'],['D','其他','其他說明','其他連結']];
       return [`Hi ${esc(row['設計負責人']||'設計負責人')},`,'','來信提供此篇貼文下方資訊列，設計需求如下。','',' ・ 設計項目：',` ・ 需求描述：${esc(row['專案名稱'])}`,' ・ 相關資訊：',
-        ...info.map(([label,value],i)=>`　　　${i+1}. ${label}：${esc(value)}`),'',' ・ 補充資料：',...supp.map(([k,label,note,url])=>`　　　${k}. ${label}：${supplementHtml(note,url)}`)].join('<br>');
+        ...info.map(([label,value],i)=>`　　　${i+1}. ${label}：${esc(value)}`),'',' ・ 補充資料：',...supp.map(([k,label,nk,uk])=>`　　　${k}. ${label}：${suppOf(nk,uk)}`)].join('<br>');
     }
     function startRowMail(id,reply){
       const row=allRows().find(r=>idKey(r)===id);if(!row)return;
@@ -2732,7 +2734,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const m=state.mail;
       const names=[...new Set(sel.map(x=>String(x.row['專案名稱']||'').trim()).filter(Boolean))],qty=sel.reduce((n,x)=>n+(+x.row['數量']||0),0),ids=sel.map(x=>x.id);
       const row={...sel[0].row,'專案名稱':names.join('、'),'數量':String(qty)};
-      const merged={id:ids[0],ids,row,to:sel[0].to,cc:sel[0].cc,subject:`【${ids.join('、')}】${row['客戶別']}_${names.join('、')}`,body:mailBodyHtml(row),sent:false,merged:sel};
+      const merged={id:ids[0],ids,row,to:sel[0].to,cc:sel[0].cc,subject:`【${ids.join('、')}】${row['客戶別']}_${names.join('、')}`,body:mailBodyHtml(row,sel.map(x=>x.row)),sent:false,merged:sel};
       const at=m.drafts.indexOf(sel[0]);m.drafts=m.drafts.filter(x=>!sel.includes(x));m.drafts.splice(at,0,merged);m.index=at;renderMail();toast(`已合併 ${ids.length} 筆案件為一封信`);
     }
     function unmergeCurrent(){
