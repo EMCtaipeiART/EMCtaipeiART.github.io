@@ -705,6 +705,10 @@
     .supp-row{display:flex;gap:10px;align-items:baseline;padding:10px 14px;border-radius:12px;background:var(--bg);font-size:14px;font-weight:600}
     .supp-row b{flex:0 0 auto;min-width:64px;color:var(--muted);font-weight:800}
     .supp-row a{color:#2563eb;overflow-wrap:anywhere}
+    /* 補充資料的長路徑／網址不可把卡牌撐寬：文字欄位可縮、任意位置換行 */
+    .supp-list,.supp-row>span,.detail-sec{min-width:0}
+    .supp-row>span{flex:1 1 auto;overflow-wrap:anywhere;word-break:break-word}
+    .card-detail,.card-detail .detail-sec{min-width:0;max-width:100%}
     .rev{padding:14px 16px;border:1px solid var(--line);border-radius:16px;margin-bottom:12px}
     .rev-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
     .rev-no{font-weight:900;font-size:14px}
