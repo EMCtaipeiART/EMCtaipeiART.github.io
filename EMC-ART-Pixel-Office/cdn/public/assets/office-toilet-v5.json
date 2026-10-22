@@ -1,0 +1,25 @@
+{
+  "image": "office-toilet-v5.webp",
+  "width": 382,
+  "height": 112,
+  "sprites": {
+    "toilet_side_r": {
+      "x": 8,
+      "y": 8,
+      "w": 96,
+      "h": 92
+    },
+    "sink_side_r": {
+      "x": 112,
+      "y": 8,
+      "w": 84,
+      "h": 96
+    },
+    "partition_white_h": {
+      "x": 204,
+      "y": 8,
+      "w": 170,
+      "h": 26
+    }
+  }
+}
