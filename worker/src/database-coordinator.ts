@@ -26,9 +26,9 @@ import type {
 const STATE_KEY = 'primary';
 import { COIN_KIND_LABEL, COIN_SPEND_PER_GENERATION, COIN_SPEND_PER_REGENERATION, COIN_START_DATE, coinHash, coinsToTenths, endedOnOrAfterStart, safeEqual, tenthsToCoins, verifyCoinChain, type CoinEntry, type CoinKind } from './coins';
 const PIXEL_OFFICE_NAMES = ['Leona', 'Amber', 'Noise', 'Anna', 'Machi'];
-const PIXEL_OFFICE_STAFF_EMPTY_SEATS: number[] = [];   // 要固定空著的座位（2026-10-16 曾指定 3 號空著，後來改成鄭筱舢坐 3 號，現在六個座位都可用）
+const PIXEL_OFFICE_STAFF_EMPTY_SEATS: number[] = [12, 15];   // 要固定空著的座位（2026-10-16 曾指定 3 號空著，後來改成鄭筱舢坐 3 號，現在六個座位都可用）
 const PIXEL_OFFICE_STAFF_SEATS = 18;   // 企劃部、專案部同仁的座位（設計部六張桌子右側再六張，完成「建立你的角色」的人依序入座）
-const PIXEL_OFFICE_MAX_X = 2160, PIXEL_OFFICE_MAX_Y = 1024, PIXEL_OFFICE_MIN_Y = -1300;   // 往上複製的兩組桌子在畫面上方，邏輯 y 是負的
+const PIXEL_OFFICE_MAX_X = 2305, PIXEL_OFFICE_MAX_Y = 2100, PIXEL_OFFICE_MIN_Y = -1600;   // 往上複製的兩組桌子在畫面上方，邏輯 y 是負的
 // 座位（場景座標）：班長處罰時把人放回自己的座位。設計部五位 + 企劃／專案同仁六席（座位 0–2 上排、3–5 下排）。
 const PIXEL_OFFICE_DESIGNER_SEATS: Record<string, [number, number]> = { Leona: [548, 355], Amber: [768, 355], Noise: [988, 355], Anna: [768, 695], Machi: [988, 695] };
 const PIXEL_OFFICE_STAFF_SEAT_POS: Array<[number, number]> = Array.from({ length: 18 }, (_, seat) => {   // 座位 0–5 原本那組，6–11、12–17 往上複製的兩組（每組 y 差 604）
