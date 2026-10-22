@@ -1764,7 +1764,7 @@ function render(time){try{updateCamera()}catch(error){}if(avatarOnly&&!(typeof v
   // 嵌入首頁時：畫面不在可視範圍就不重畫；持續動畫（心情／未讀動態）限制在約 30fps，避免整張場景每幀全畫拖慢首頁。
   if(embedMode&&!needsRedraw){if(!embedVisible||time-embedLastDraw<40){requestAnimationFrame(render);return;}}
   if(!embedMode&&!needsRedraw&&!walk&&!sceneAnimating()&&!(performance.now()<fxWakeUntil&&people.some((p,i)=>!isAway(p)&&isOvertime(p)))){if(keys.size||embedMode)requestAnimationFrame(render);else idleTimer=setTimeout(()=>{idleTimer=0;requestAnimationFrame(render);},250);return;}// 全版／編輯：場景靜止（沒人走動、沒有心情／音樂／動作／動態）就完全不重畫，手機才不會發燙
-  if(!embedMode&&!needsRedraw){const gap=!walk&&!sceneAnimating()?100:(walk?8:30);if(time-embedLastDraw<gap){if(gap>30)setTimeout(()=>requestAnimationFrame(render),Math.max(8,gap-(time-embedLastDraw)));else requestAnimationFrame(render);return;}}
+  if(!embedMode&&!needsRedraw){const anim=!walk&&sceneAnimating(),gap=walk?8:!anim?100:(people.some((p,i)=>!isAway(p)&&actionOf(i))?30:66);/* 動作動畫約 30fps；心情／音樂／未讀動態只是慢慢跳的小圖示，約 15fps 就夠（整張場景重畫不必每幀都做） */if(time-embedLastDraw<gap){if(gap>30)setTimeout(()=>requestAnimationFrame(render),Math.max(8,gap-(time-embedLastDraw)));else requestAnimationFrame(render);return;}}
   if(!embedMode&&needsRedraw&&time-embedLastDraw<(walk?7:15)){requestAnimationFrame(render);return;}// 走路／操作時最多約 60fps（120Hz 螢幕不要每幀都全畫）// 編輯／全版：最多約 30fps，整張大畫布不必每幀都重畫
   embedLastDraw=time;
   needsRedraw=false;syncViewLayout();try{followOwn()}catch(error){}if(cam.on&&cam.w){const k=cam.pr*cam.s;ctx.setTransform(k,0,0,k,-cam.left*k,-cam.top*k);ctx.clearRect(cam.left,cam.top,cam.w/cam.s+2,cam.h/cam.s+2);}else ctx.clearRect(0,-OY,W,H);drawOffice();if(ready){hits=[];const layers=[];viewStations.forEach(s=>{if(embedMode&&(s.grp||s.ext))return;/* 首頁小框只看設計部 */if(!inView(s.y))return;if(s.row){layers.push({depth:EMBED_ROW_TOP+115+(s.y-BOTTOM_FEET),draw:()=>drawDeskBottom(s)});layers.push({depth:s.y-20,draw:()=>drawChair(s)});}else{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});}layers.push({depth:s.row?s.y-1:99999,draw:()=>drawDeskPlate(s)});/* 下排名牌排在人物之前畫：頭會壓在膠囊上 */});viewPeople.forEach((p,i)=>{if(embedMode&&p.staff)return;if(!inView(p.y))return;if(p.staff&&!staffLookReady(i))return;/* 自己的頭像與服裝載好才畫，避免先閃出一個內建（Machi）的人 */layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)});});if(LX&&!embedMode){layers.push({depth:-99999,draw:drawProps});layers.push({depth:-99998,draw:drawLongDesk});layers.push({depth:LONG_DESK.chairY-20,draw:drawLongDeskChair});}layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>{if(!(embedMode&&p.staff)&&inView(viewY(p.y)))drawOverlay(i,time);});people.forEach((p,i)=>{if(!(embedMode&&p.staff)&&inView(viewY(p.y)))drawActionLabel(i);});viewStations.forEach(s=>{if(!(embedMode&&(s.grp||s.ext))&&inView(s.y))drawStatusMarker(s.row?{...s,y:BD_MARK_Y+(s.y-BOTTOM_FEET)}:s);});positionPersonCard();if(window.radialPlace)window.radialPlace();}requestAnimationFrame(render);}
@@ -1855,7 +1855,9 @@ if(new URLSearchParams(location.search).get('avatars')==='1'){
         if(!memo||memo.key!==ak)avatarMemo.set(p.name,{key:ak,img});
         list[p.name]={img,message:p.message||'',music:p.music&&p.music.url?{url:p.music.url,title:p.music.title||''}:null,status:p.status||'',story:{count:storiesOf(p.name).length,unread:storyUnread(p.name)}};
       });
-      window.parent.postMessage({type:'pixelOfficeAvatars',list},location.origin);
+      /* 內容（頭像圖、對話、音樂、狀態、動態）跟上次一樣就不再傳一整包（圖檔約 200KB），最多每 60 秒補送一次 */
+      const sig=JSON.stringify(Object.keys(list).map(k=>{const v=list[k];return [k,(v.img||'').length,String(v.img||'').slice(-16),v.message,v.music&&v.music.url,v.status,v.story&&v.story.count,v.story&&v.story.unread];})),nowMs=Date.now();
+      if(sig===sendAvatars.lastSig&&nowMs-(sendAvatars.lastAt||0)<60000){}else{sendAvatars.lastSig=sig;sendAvatars.lastAt=nowMs;window.parent.postMessage({type:'pixelOfficeAvatars',list},location.origin);}
       /* 全身正面快照（出氣擂台等小遊戲用）：每個人目前造型的正面全身圖，只在造型變了才重畫、才送出 */
       try{
         let changed=false;
@@ -1882,7 +1884,7 @@ if(new URLSearchParams(location.search).get('avatars')==='1'){
     const key=(real?'p:':active?'l:':'')+p;
     if(key===lastPlaying)return;lastPlaying=key;
     try{window.parent.postMessage({type:'pixelOfficeMusicState',playing:real?p:'',loading:active&&!real?p:''},location.origin)}catch(error){}
-  },400);
+  },1000);
 }
 const AV_CROP={w:112,chin:.74},AV_DX=[-3,0,0,-1.5,0],AV_EYE=.528;// 裁切邊長（原圖像素）與下巴在框內的高度比例（所有人一致）
 
@@ -1894,7 +1896,7 @@ window.addEventListener('message',event=>{
 });
 
 // 首頁直接顯示限時動態：隱藏視窗被外層放大成全螢幕後，動態看完（或關閉）要通知外層縮回去。
-{let wasOpen=false;setInterval(()=>{if(document.hidden&&!wasOpen)return;const now=Boolean(viewer&&viewer.open);if(wasOpen&&!now){try{if(window.parent!==window)window.parent.postMessage({type:'pixelOfficeStoryClosed'},location.origin)}catch(error){}}if(now!==wasOpen&&document.documentElement.classList.contains('clean')){try{if(window.parent!==window)window.parent.postMessage({type:'pixelOfficeStoryState',open:now},location.origin)}catch(error){}}wasOpen=now;},250);}
+{let wasOpen=false;setInterval(()=>{if(document.hidden&&!wasOpen)return;const now=Boolean(viewer&&viewer.open);if(wasOpen&&!now){try{if(window.parent!==window)window.parent.postMessage({type:'pixelOfficeStoryClosed'},location.origin)}catch(error){}}if(now!==wasOpen&&document.documentElement.classList.contains('clean')){try{if(window.parent!==window)window.parent.postMessage({type:'pixelOfficeStoryState',open:now},location.origin)}catch(error){}}wasOpen=now;},500);}
 
 // 右側人物工具欄：目前狀態、造型、動作、音樂、限時動態、想說一句話預設收合；滑鼠移過去自動展開並捲到看得到、移開自動收合
 //（手機沒有滑鼠，改成點標題展開／收合）。正在輸入文字或展開著音樂欄時不收，免得打字打到一半被收起來。
