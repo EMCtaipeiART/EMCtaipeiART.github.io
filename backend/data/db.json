@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 9248,
+  "revision": 9249,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-22T11:01:28.519Z",
+  "updatedAt": "2026-10-22T11:01:33.909Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -2157,7 +2157,9 @@
         "案件摘要"
       ],
       "primaryKey": "案件編號",
-      "rows": []
+      "rows": [
+        {"案件編號":"26100158","申請人帳號":"carrieyeh@jadeit.cc","申請人":"Carrie Yeh","申請時間":"2026-10-22T11:01:33.909Z","案件摘要":"Epson_11月_雙11_CPAS廣告素材｜Machi｜未開始"}
+      ]
     },
     "短連結": {
       "headers": [
