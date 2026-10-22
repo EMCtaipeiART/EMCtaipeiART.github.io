@@ -257,7 +257,11 @@ function toast(message){$('toast').textContent=message;$('toast').classList.add(
 function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem('kaiyao-office-v1',JSON.stringify(people));localStorage.setItem('kaiyao-office-layout','6');}catch{toast('瀏覽器空間不足，這次變更尚未保存。請移除部分照片。');}},200);}
 // 圖片放在 Cloudflare（emc-pixel-assets），避開 GitHub Pages 每次推送後的冷快取；載入失敗會自動退回同站的 assets/。
 function assetBase(){return (new URLSearchParams(location.search).get('assetBase')||'https://emc-pixel-assets.machi-chen.workers.dev/').replace(/\/?$/,'/');}
-function setAsset(img,path){img.crossOrigin='anonymous';img.__fb=path;img.src=assetBase()+path;}
+/* 首頁隱藏的頭像視窗（?avatars=1）只畫頭像，不需要家具、圖示、桌上設備；首頁小框（?embed=1）不畫同仁桌的設備與新擺設。
+   這些圖不載入，改用 1×1 的透明圖頂著（load 事件照常觸發），省下約 15MB 解碼後記憶體與約 500KB 下載。 */
+const LEAN_AVATARS=/[?&]avatars=1/.test(location.search),LEAN_EMBED=/[?&]embed=1/.test(location.search),TINY_IMG='data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+function leanAsset(img,path){if((LEAN_AVATARS&&/furniture-|icons-|staff-gear|office-extras|bottom-/.test(path))||(LEAN_EMBED&&/staff-gear|office-extras/.test(path))){img.crossOrigin=null;img.src=TINY_IMG;return true;}return false;}
+function setAsset(img,path){img.crossOrigin='anonymous';img.__fb=path;if(typeof leanAsset==='function'&&leanAsset(img,path))return;img.src=assetBase()+path;}
 const furniture=new Image(),iconSheet=new Image(),extraSheet=new Image();// 進站加速（2026-09-18）：只保留實際用到的區塊並改存 WebP。
 setAsset(furniture,'assets/furniture-v5.webp?v=1');setAsset(iconSheet,'assets/icons-v3.webp?v=3');setAsset(extraSheet,'assets/icons-status-v4.webp?v=2');
 function resizeCanvas(){markDirty();if(/[?&]avatars=1/.test(location.search)){/* 首頁隱藏的頭像視窗從來不顯示畫布（body 是 hidden），畫布縮成 2×2，省下約 18MB 記憶體 */game.width=2;game.height=2;ctx.setTransform(1,0,0,1,0,0);return;}if(cam.on&&cam.w){const pr=Math.min(1.5,window.devicePixelRatio||1);cam.pr=pr;game.width=Math.round(cam.w*pr);game.height=Math.round(cam.h*pr);ctx.setTransform(pr*cam.s,0,0,pr*cam.s,-cam.left*pr*cam.s,-cam.top*pr*cam.s);ctx.imageSmoothingEnabled=false;return;}const scale=Math.max(1,Math.min(embedMode?(matchMedia("(hover:none)").matches?1.25:1.5):(matchMedia("(hover:none)").matches?1.25:2),(window.devicePixelRatio||1)*game.getBoundingClientRect().width/W));game.width=Math.round(W*scale);game.height=Math.round(H*scale);ctx.setTransform(game.width/W,0,0,game.height/H,0,OY*game.height/H);ctx.imageSmoothingEnabled=false;}
