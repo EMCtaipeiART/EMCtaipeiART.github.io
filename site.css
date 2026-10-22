@@ -1048,6 +1048,10 @@
     .rev-addimg{margin-left:auto;min-height:26px;padding:0 10px;border-radius:999px;border:1px dashed var(--line);background:transparent;color:var(--muted);font-size:12px;font-weight:800;cursor:pointer}
     .rev-addimg:hover{background:var(--brand-soft);color:var(--brand-deep,#0f5138);border-color:var(--brand)}
     .rev-addimg+.rev-confirm{margin-left:6px}
+    .rev-del{display:inline-flex;align-items:center;gap:4px;margin-left:6px;min-height:26px;padding:0 10px;border-radius:999px;border:1px solid var(--st-todo-line);background:var(--st-todo-bg);color:var(--st-todo-ink);font-size:12px;font-weight:800;cursor:pointer}
+    .rev-del svg{width:13px;height:13px;stroke:currentColor;stroke-width:1.5}
+    .rev-del:hover{filter:brightness(.96)}.rev-del:disabled{opacity:.5;cursor:wait}
+    .rev-head:not(:has(.rev-addimg)) .rev-del{margin-left:auto}
     .rev-confirm svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8}
     .rev-confirm:hover{background:#e8f6ec;color:#0f8f61;border-color:#bfe3cb}
     .rev-confirm.is-done{background:#0f8f61;border-color:#0f8f61;color:#fff}

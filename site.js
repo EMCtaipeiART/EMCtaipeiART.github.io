@@ -1507,18 +1507,20 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(cross)loadDatabase(true,true).catch(()=>{});
       }catch(err){toast(`移動圖片失敗：${err.message}`,true)}
     }
+    /* 修改紀錄的新增／刪除／補圖／刪圖：設計師與管理者（含 Machi）都可以 */
+    const canModEdit=()=>loggedIn()&&(isDesignerSession()||isAdminUser()||isMachiUser());
     function modListHtml(id){
       const mods=(state.mods.get(id)||[]).slice().sort((a,b)=>(+b['修改次數']||0)-(+a['修改次數']||0));
-      const canImg=loggedIn()&&isDesignerSession()&&mods.some(m=>imageList(m).length);
+      const canImg=canModEdit()&&mods.some(m=>imageList(m).length);
       const bar=canImg?`<div class="mm-selbar" id="mmSelBar"${state.selImg.size?'':' hidden'}><label class="mm-selall"><input type="checkbox" id="mmSelAll"><span>全選</span></label><span id="mmSelCount"></span><button type="button" class="btn" id="mmSelMove" data-sel="move">移動到…</button><button type="button" class="btn mm-seldel" id="mmSelDel" data-sel="delete">刪除已選取</button></div>`:'';
-      return bar+(mods.length?mods.map(m=>{const n=+m['修改次數']||0,done=Boolean(String(m['確認修正日']||'').trim()),cb=(n>0&&isDesignerSession()&&acc('modification.confirm',true))?`<button type="button" class="rev-confirm${done?' is-done':''}" data-rev-confirm="${n}" title="${done?'取消確認修正日':'確認修正完成'}" aria-label="${done?'取消確認修正':'確認修正完成'}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3.2 8.2 3 3L12.8 4.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`:'';const ab=(loggedIn()&&isDesignerSession())?`<button type="button" class="rev-addimg" data-rev-addimg="${n}" title="手動補上這一輪的設計圖">＋ 補圖</button>`:'';return `<div class="rev"><div class="rev-head"><span class="lt-rev${n===0?' is-draft':''}">${n===0?'初稿':`${n<=10?NUM_ZH[n]:n}修`}</span><span class="rev-meta${done?' is-ok':''}">${esc(m['修改日期']||'')}${m['修改人']?`｜${esc(m['修改人'])}（填寫）`:''}</span>${m['確認修正日']&&n>0?`<span class="rev-confirmed" title="設計師確認這一輪已修正完成">✓ 設計師已確認修正 ${esc(m['確認修正日'])}</span>`:''}${ab}${cb}</div><div class="rev-text">${linkify(stripSig(m['修改內容']||''),m['修改內容連結'])}</div>${(()=>{const imgs=imageList(m);return imgs.length?`<div class="thumbs">${imgs.slice(0,60).map(i=>{const a=`<a class="design-image-preview-link" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer" title="${esc(i.fileName||'設計圖')}｜停留可放大預覽，點擊開啟原圖" data-design-image-hover-preview data-preview-label="${esc(i.fileName||'設計圖')}"><img src="${esc(thumbUrl(i.url))}" alt="${esc(i.fileName||'設計圖')}" loading="lazy" referrerpolicy="no-referrer"><span class="design-image-expand-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6 3H3v3M10 3h3v3M6 13H3v-3M10 13h3v-3"/></svg></span></a>`;if(!canImg)return a;const key=selKey(n,i.url);return `<span class="tw"><input type="checkbox" class="rev-sel" data-sel-key="${esc(key)}"${state.selImg.has(key)?' checked':''} aria-label="選取這張圖片">${a}</span>`}).join('')}</div>`:''})()}</div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>');
+      return bar+(mods.length?mods.map(m=>{const n=+m['修改次數']||0,done=Boolean(String(m['確認修正日']||'').trim()),cb=(n>0&&isDesignerSession()&&acc('modification.confirm',true))?`<button type="button" class="rev-confirm${done?' is-done':''}" data-rev-confirm="${n}" title="${done?'取消確認修正日':'確認修正完成'}" aria-label="${done?'取消確認修正':'確認修正完成'}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3.2 8.2 3 3L12.8 4.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`:'';const ab=canModEdit()?`<button type="button" class="rev-addimg" data-rev-addimg="${n}" title="手動補上這一輪的設計圖">＋ 補圖</button>`:'',dl=canModEdit()?`<button type="button" class="rev-del" data-rev-del="${n}" title="刪除這一輪修改紀錄" aria-label="刪除這一輪修改紀錄"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M5 4.5l.5 8h5l.5-8M7 7v3.5M9 7v3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>刪除</button>`:'';return `<div class="rev"><div class="rev-head"><span class="lt-rev${n===0?' is-draft':''}">${n===0?'初稿':`${n<=10?NUM_ZH[n]:n}修`}</span><span class="rev-meta${done?' is-ok':''}">${esc(m['修改日期']||'')}${m['修改人']?`｜${esc(m['修改人'])}（填寫）`:''}</span>${m['確認修正日']&&n>0?`<span class="rev-confirmed" title="設計師確認這一輪已修正完成">✓ 設計師已確認修正 ${esc(m['確認修正日'])}</span>`:''}${ab}${cb}${dl}</div><div class="rev-text">${linkify(stripSig(m['修改內容']||''),m['修改內容連結'])}</div>${(()=>{const imgs=imageList(m);return imgs.length?`<div class="thumbs">${imgs.slice(0,60).map(i=>{const a=`<a class="design-image-preview-link" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer" title="${esc(i.fileName||'設計圖')}｜停留可放大預覽，點擊開啟原圖" data-design-image-hover-preview data-preview-label="${esc(i.fileName||'設計圖')}"><img src="${esc(thumbUrl(i.url))}" alt="${esc(i.fileName||'設計圖')}" loading="lazy" referrerpolicy="no-referrer"><span class="design-image-expand-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6 3H3v3M10 3h3v3M6 13H3v-3M10 13h3v-3"/></svg></span></a>`;if(!canImg)return a;const key=selKey(n,i.url);return `<span class="tw"><input type="checkbox" class="rev-sel" data-sel-key="${esc(key)}"${state.selImg.has(key)?' checked':''} aria-label="選取這張圖片">${a}</span>`}).join('')}</div>`:''})()}</div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>');
     }
     function openModModal(id){
       const row=allRows().find(r=>idKey(r)===id);if(!row)return;
       if(state.modId!==id)state.selImg.clear();state.modId=id;const mods=(state.mods.get(id)||[]).slice().sort((a,b)=>(+b['修改次數']||0)-(+a['修改次數']||0));
       $('mmSub').textContent=`${id}｜${row['專案名稱']||''}`;
       $('mmList').innerHTML=modListHtml(id);
-      const f=$('mmForm');f.elements.modifyDate.value=todayInput();f.elements.content.value='';f.hidden=true;$('mmToggle').hidden=!(isDesignerSession()&&acc('modification.create',true)&&(()=>{const r0=allRows().find(r=>idKey(r)===id);return r0?canEditRow(r0):true})());$('modModal').hidden=false;
+      const f=$('mmForm');f.elements.modifyDate.value=todayInput();f.elements.content.value='';f.hidden=true;$('mmToggle').hidden=!(canModEdit()&&acc('modification.create',true)&&(()=>{const r0=allRows().find(r=>idKey(r)===id);return r0?canEditRow(r0):true})());$('modModal').hidden=false;
     }
     function closeModModal(){$('modModal').hidden=true;state.modId=''}
     async function submitMod(){
@@ -3108,6 +3110,14 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const mvr=t.closest?.('[data-mv-round]');if(mvr){moveSelectedImages(Number(mvr.dataset.mvRound)||0);return}
       if(t.closest?.('[data-mv-case]')){const v=String($('mvCase')&&$('mvCase').value||'').trim();if(v)moveSelectedImages(state.mvCtx?state.mvCtx.crossRound:0,v);return}
       const ra=t.closest?.('[data-rev-addimg]');if(ra){openDrChooser(state.modId,+ra.dataset.revAddimg);return}
+      const rd=t.closest?.('[data-rev-del]');
+      if(rd){
+        const id=state.modId,n=+rd.dataset.revDel;if(!id)return;
+        if(!confirm(`確定要刪除 ${id} 的「${roundLabel(n)}」修改紀錄嗎？\n（這一輪的文字與圖片關聯都會移除；Google Drive 原始檔案不會被刪除，其他輪次的編號不變）`))return;
+        rd.disabled=true;
+        api('deleteModificationRecord',{record:{caseId:id,count:n}}).then(()=>{state.mods.set(id,(state.mods.get(id)||[]).filter(m=>(+m['修改次數']||0)!==n));const ml=$('mmList');if(ml)ml.innerHTML=modListHtml(id);refreshView();loadDatabase(true,true).catch(()=>{});toast(`已刪除 ${id} 的${roundLabel(n)}修改紀錄`)}).catch(err=>{rd.disabled=false;toast(`刪除失敗：${err.message}`,true)});
+        return;
+      }
       const rc=t.closest?.('[data-rev-confirm]');
       if(rc){
         const id=state.modId,n=+rc.dataset.revConfirm,done=rc.classList.contains('is-done');rc.disabled=true;
