@@ -1964,7 +1964,9 @@ test('a new 客戶別 is created with its 部門／組別 and 權限設定 alrea
   const defaults = model.match(/export function newCustomerDefaults\([\s\S]*?\n\}/)?.[0];
   assert.ok(defaults, 'could not locate newCustomerDefaults');
   // 專案同仁：整組加進來。「凱曜」是公司名稱，凱曜專案部先去掉前綴再比對。
-  assert.match(model, /function isProjectDepartment\(department: string\): boolean \{\s*\n\s*return normalizeDepartmentName\(department\) === '專案部';/);
+  // 2026-10-23 起「呈鈺顧問」（外部顧問公司）比照專案部：判斷改成「是否在專案部同類部門清單裡」。
+  assert.match(model, /export const PROJECT_LIKE_DEPARTMENTS = \['專案部', '呈鈺顧問'\];/);
+  assert.match(model, /function isProjectDepartment\(department: string\): boolean \{\s*\n\s*return PROJECT_LIKE_DEPARTMENTS\.includes\(normalizeDepartmentName\(department\)\);/);
   assert.match(model, /return text\(value\)\.replace\(\/\^凱曜\(\?=\.\)\/, ''\)\.trim\(\);/);
   assert.match(defaults, /if \(isProjectDepartment\(department\) && group\) groups\.push\(group\);/);
   // 建立者不屬於任何預設單位時要把他自己加進去，否則他會在建立當下就失去自己這個客戶別的編輯／發信權限。
