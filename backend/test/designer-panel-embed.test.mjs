@@ -844,7 +844,7 @@ test('頭像快照：關閉元宇宙時存本人目前造型的頭像（存過�
   ]);
   assert.match(js, /function avatarImageOf\(i\)/);
   assert.match(js, /type!=='pixelOfficeSnapshot'/);
-  assert.match(parent, /if\(r\.need\)\{const r2=await post/, '沒存過的造型才送圖（背景上傳）');
+  assert.match(parent, /if\(r\.need\)\{if\(p\.target\)snapLog\([^;]*;const r2=await post/, '沒存過的造型才送圖（背景上傳）');
   assert.match(parent, /type:'pixelOfficeSnapshot'/);
   assert.match(parent, /pixelOfficeSnapshotDone/);
   assert.match(parent, /applySnapshots\(\)/);
