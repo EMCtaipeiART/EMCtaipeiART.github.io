@@ -11,6 +11,7 @@ import {
   rowYear, settingsResponse, settingsRow, splitNames, syncSupplementLinks, tableNames,
   text, toApiRow, toSheetRow, unique, updateSettingsRow, weightRules,
   normalizeSignaturePresetsValue, normalizeSignaturePresetDefaultValue, normalizeDepartmentName, normalizeSettingsDepartments, normalizeCaseStatuses,
+  isAllowedLoginAccount,
 } from './model';
 import { commitGitHubDatabase, loadGitHubDatabase, appendAuditFile, loadAuditFile, loadBackupFile, saveBackupFile } from './github-store';
 import { auditActor, diffAudit, maskRecipients, type AuditEntry } from './audit';
@@ -2890,7 +2891,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   /** 企劃部、專案部同仁（2026-10-15 起也有平台幣）：帳本的持有人就是設定表的「名字」。 */
   private coinStaffRows(database: DatabaseSnapshot): Row[] {
-    return (database.tables['設定']?.rows || []).filter(row => /^(企劃部|專案部)$/.test(normalizeDepartmentName(row['部門'])) && text(row['名字']) && !PIXEL_OFFICE_NAMES.includes(text(row['名字'])));
+    return (database.tables['設定']?.rows || []).filter(row => /^(企劃部|專案部|呈鈺顧問)$/.test(normalizeDepartmentName(row['部門'])) && text(row['名字']) && !PIXEL_OFFICE_NAMES.includes(text(row['名字'])));
   }
 
   /** 這個登入者在帳本裡的持有人：設計師用 Pixel Office 的名字，企劃／專案同仁用設定表的名字；沒有錢包回傳空字串。 */
@@ -2899,7 +2900,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (designer || !session) return designer;
     const row = settingsRow(database, session.account || session.user);
     const name = text(row?.['名字']);
-    return row && /^(企劃部|專案部)$/.test(normalizeDepartmentName(row['部門'])) && name ? name : '';
+    return row && /^(企劃部|專案部|呈鈺顧問)$/.test(normalizeDepartmentName(row['部門'])) && name ? name : '';
   }
 
   /** 專案負責人欄位寫的可能是名字、顯示名或帳號：對到企劃／專案同仁的持有人名字。 */
@@ -2991,7 +2992,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const current = this.requireSession(session);
     const row = settingsRow(database, current.account || current.user);
     const department = normalizeDepartmentName(row?.['部門']);
-    if (!/^(企劃部|專案部)$/.test(department) && !hasCapability(database, current, 'database.manage')) throw new Error('只有企劃部、專案部同仁可以建立個人形象');
+    if (!/^(企劃部|專案部|呈鈺顧問)$/.test(department) && !hasCapability(database, current, 'database.manage')) throw new Error('只有企劃部、專案部同仁可以建立個人形象');
     const name = text(row?.['名字']) || text(current.user) || text(current.account);
     if (!name || PIXEL_OFFICE_NAMES.includes(name)) throw new Error('設計師請使用元宇宙的頭像快照');
     const lookKey = text(payload.lookKey) || 'persona';
@@ -3005,7 +3006,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     // 元宇宙座位：完成角色的企劃／專案同仁依序入座，造型用剛做好的頭像與身體（之後可以在元宇宙裡自己換）
     const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
     let seat = -1;
-    if (/^(企劃部|專案部)$/.test(department) && uuid.test(text(payload.headId)) && uuid.test(text(payload.outfitId))) {
+    if (/^(企劃部|專案部|呈鈺顧問)$/.test(department) && uuid.test(text(payload.headId)) && uuid.test(text(payload.outfitId))) {
       seat = this.pixelOfficeAssignSeat(name, current.account);
       if (seat >= 0) {
         const look = { outfit: `c:${text(payload.outfitId)}`, cap: '', glasses: '', head: `h:${text(payload.headId)}` };
@@ -3116,7 +3117,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const groups = [
       { label: '設計部', names: [...PIXEL_OFFICE_NAMES] },
       { label: '企劃部', names: staff.filter(row => normalizeDepartmentName(row['部門']) === '企劃部').map(row => text(row['名字'])) },
-      { label: '專案部', names: staff.filter(row => normalizeDepartmentName(row['部門']) === '專案部').map(row => text(row['名字'])) }
+      { label: '專案部', names: staff.filter(row => normalizeDepartmentName(row['部門']) === '專案部').map(row => text(row['名字'])) },
+      { label: '呈鈺顧問', names: staff.filter(row => normalizeDepartmentName(row['部門']) === '呈鈺顧問').map(row => text(row['名字'])) }
     ];
     for (const group of groups) for (const name of group.names) balances[name] = tenthsToCoins(this.coinBalance(name));   // 企劃部、專案部同仁（沒有紀錄的也列出，餘額 0）
     for (const entry of all) if (!(entry.holder in balances)) balances[entry.holder] = tenthsToCoins(this.coinBalance(entry.holder));   // 已離開或改部門但還有紀錄的人
@@ -3437,7 +3439,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (!['true', '1'].includes(text(profile.email_verified).toLowerCase())) return { ok: false, action: 'googleLogin', error: 'Google 信箱尚未通過驗證', reason: 'EMAIL_NOT_VERIFIED' };
     if (Number(profile.exp) * 1000 <= Date.now()) return { ok: false, action: 'googleLogin', error: 'Google 登入憑證已過期', reason: 'TOKEN_EXPIRED' };
     const account = canonicalAccount(profile.email);
-    if (!account.endsWith('@emctaipei.com')) return { ok: false, action: 'googleLogin', error: '請使用 @emctaipei.com 公司信箱登入', reason: 'DOMAIN_NOT_ALLOWED' };
+    if (!isAllowedLoginAccount(account)) return { ok: false, action: 'googleLogin', error: '請使用公司信箱（@emctaipei.com，或呈鈺顧問的 @jadeit.cc）登入', reason: 'DOMAIN_NOT_ALLOWED' };
     const { database } = await this.snapshot();
     const row = settingsRow(database, account);
     if (!row) return { ok: false, action: 'googleLogin', error: '此帳號尚未加入 JSON 資料庫「設定」，請聯絡管理者新增人員', reason: 'JSON_USER_NOT_REGISTERED' };
@@ -6435,7 +6437,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (!['公司信箱', '密碼'].includes(loginMethod)) throw new Error('登入方式格式不正確');
     const requestedAccount = text(payload.account || requestedSettings['帳號'] || requestedPermission['帳號']);
     const account = canonicalAccount(requestedAccount || (loginMethod === '密碼' ? `local:${crypto.randomUUID()}` : ''));
-    if (loginMethod === '公司信箱' && (!account || !account.endsWith('@emctaipei.com'))) throw new Error('帳號必須使用 @emctaipei.com 公司信箱');
+    if (loginMethod === '公司信箱' && (!account || !isAllowedLoginAccount(account))) throw new Error('帳號必須使用 @emctaipei.com 公司信箱（呈鈺顧問為 @jadeit.cc）');
     if (loginMethod === '密碼' && !account) throw new Error('無法建立密碼登入帳號');
     const loginPassword = text(payload.loginPassword);
     if (loginPassword && (loginPassword.length < 4 || loginPassword.length > 128)) throw new Error('登入密碼長度必須是 4–128 個字');
@@ -6584,7 +6586,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const name = text(item['名字'] ?? item.name);
         const rawAccount = text(item['帳號'] ?? item.account ?? item.email);
         const account = canonicalAccount(rawAccount);
-        if (!account || !account.endsWith('@emctaipei.com')) { skipped.push({ account: rawAccount, name, reason: '帳號必須使用 @emctaipei.com 公司信箱' }); continue; }
+        if (!account || !isAllowedLoginAccount(account)) { skipped.push({ account: rawAccount, name, reason: '帳號必須使用 @emctaipei.com 公司信箱（呈鈺顧問為 @jadeit.cc）' }); continue; }
         if (!name) { skipped.push({ account, name, reason: '缺少姓名' }); continue; }
         if (name.length > 60) { skipped.push({ account, name, reason: '姓名不得超過 60 個字' }); continue; }
         if (existing.has(account)) { skipped.push({ account, name, reason: '帳號已存在，略過' }); continue; }
