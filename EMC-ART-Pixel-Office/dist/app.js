@@ -1940,7 +1940,7 @@ window.addEventListener('message',event=>{
   try{
     if(!ready||!accessoriesReady()||!customState().loaded){loadAccessories();reply(null);return;}
     const list=[];
-    people.forEach((p,i)=>{if(i<5||(p.staff&&staffLookReady(i)))list.push({who:p.name,lookKey:lookKeyOf(i),png:avatarImageOf(i)});});
+    people.forEach((p,i)=>{if(!(i<5||(p.staff&&staffLookReady(i))))return;if(!bodyLookReady(i))return;/* 造型圖還沒載好就畫會得到空白頭像，不要送 */const png=avatarImageOf(i);if(String(png||'').length<3000)return;list.push({who:p.name,lookKey:lookKeyOf(i),png});});
     reply(list);
   }catch{reply(null);}
 });

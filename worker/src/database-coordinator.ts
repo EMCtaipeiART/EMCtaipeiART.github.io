@@ -1872,6 +1872,23 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           sql.exec('INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)', 24, new Date().toISOString());
         });
       }
+      if (!applied.has(25)) {
+        this.ctx.storage.transactionSync(() => {
+          // 2026-10-22：管理者核對頭像快照時，同仁的造型圖還沒載好，存進了空白頭像（約 600 字的透明圖）。把空白的快照刪掉，
+          // 「目前頭像」退回該人上一個正常的快照；沒有正常的就清掉，等下次正確更新。
+          const sql = this.ctx.storage.sql;
+          sql.exec('DELETE FROM pixel_office_avatars WHERE length(png) < 1500');
+          const stamp = Math.max(Date.now(), this.pixelOfficeVersion() + 1);
+          for (const row of sql.exec<{ name: string; look_key: string }>('SELECT name, look_key FROM pixel_office_avatar_current').toArray()) {
+            if (sql.exec('SELECT 1 FROM pixel_office_avatars WHERE name = ? AND look_key = ?', row.name, row.look_key).toArray().length) continue;
+            const prev = sql.exec<{ look_key: string }>('SELECT look_key FROM pixel_office_avatars WHERE name = ? ORDER BY updated_at DESC LIMIT 1', row.name).toArray()[0];
+            if (prev) sql.exec('UPDATE pixel_office_avatar_current SET look_key = ?, updated_at = ? WHERE name = ?', prev.look_key, stamp, row.name);
+            else sql.exec('DELETE FROM pixel_office_avatar_current WHERE name = ?', row.name);
+            sql.exec('UPDATE pixel_office_people SET updated_at = ? WHERE name = ?', stamp, row.name);
+          }
+          sql.exec('INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)', 25, new Date().toISOString());
+        });
+      }
     });
   }
 
@@ -2752,6 +2769,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (png) {
       const match = png.match(/^data:image\/png;base64,([A-Za-z0-9+/=]+)$/);
       if (!match || match[1].length > 150_000) throw new Error('頭像圖片不正確或太大');
+      if (match[1].length < 1500) throw new Error('頭像圖片是空白的（造型圖還沒載好），請稍後再試');   // 空白圖約 600 字，正常頭像 3 萬字以上；擋下才不會把正常快照蓋成空白
       await this.ctx.storage.put(hashKey, await sha256Hex(match[1]));   // 記下存進去的圖的指紋，管理者之後可以比對「同一個造型代碼、圖卻不一樣」的舊快照
       sql.exec('INSERT INTO pixel_office_avatars (name, look_key, png, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(name, look_key) DO UPDATE SET png = excluded.png, updated_at = excluded.updated_at', name, lookKey, match[1], now);
       // 每個人最多留 16 個造型的快照，超過的丟掉最久沒用的

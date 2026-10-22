@@ -355,7 +355,7 @@ describe('Machi Design API Worker', () => {
     }));
     expect(stored.plainTokenRows).toBe(0);
     expect(stored.sessionRows).toBe(1);
-    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }, { version: 6 }, { version: 7 }, { version: 8 }, { version: 9 }, { version: 10 }, { version: 11 }, { version: 12 }, { version: 13 }, { version: 14 }, { version: 15 }, { version: 16 }, { version: 17 }, { version: 18 }, { version: 19 }, { version: 20 }, { version: 21 }, { version: 22 }, { version: 23 }, { version: 24 }]);
+    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }, { version: 6 }, { version: 7 }, { version: 8 }, { version: 9 }, { version: 10 }, { version: 11 }, { version: 12 }, { version: 13 }, { version: 14 }, { version: 15 }, { version: 16 }, { version: 17 }, { version: 18 }, { version: 19 }, { version: 20 }, { version: 21 }, { version: 22 }, { version: 23 }, { version: 24 }, { version: 25 }]);
   });
 
   it('issues real sessions for the tester and admin shortcut passwords', async () => {
@@ -5293,10 +5293,11 @@ describe('平台幣', () => {
   it('lets the monitor refresh someone else\'s avatar snapshot (target), but nobody else', async () => {
     const admin = await login();
     const leona = await seedDesigner('leona@emctaipei.test', 'Leona');
-    const png = 'data:image/png;base64,iVBORw0KGgo=';
+    const png = 'data:image/png;base64,' + 'iVBORw0KGgo='.repeat(200);   // 空白圖太短會被拒絕，這裡用夠長的假資料
+    expect(await api({ action: 'pixelOfficeAvatarSnapshot', target: 'Anna', lookKey: 'k-blank', png: 'data:image/png;base64,iVBORw0KGgo=' }, admin)).toMatchObject({ ok: false });   // 空白圖不收
     expect(await api({ action: 'pixelOfficeAvatarSnapshot', target: 'Anna', lookKey: 'k-anna-1', png }, admin)).toMatchObject({ ok: true, saved: true });
     expect(await api({ action: 'pixelOfficeAvatarSnapshot', target: 'Anna', lookKey: 'k-anna-1' }, admin)).toMatchObject({ ok: true, unchanged: true });   // 已經是這個造型：什麼都不做
-    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('iVBORw0KGgo='));
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('iVBORw0KGgo='.repeat(200)));
     const hash = [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
     expect(await api({ action: 'pixelOfficeAvatarSnapshot', target: 'Anna', lookKey: 'k-anna-1', hash }, admin)).toMatchObject({ ok: true, unchanged: true });   // 圖一樣
     expect(await api({ action: 'pixelOfficeAvatarSnapshot', target: 'Anna', lookKey: 'k-anna-1', hash: 'a'.repeat(64) }, admin)).toMatchObject({ ok: true, need: true });   // 同一個造型代碼、圖不一樣 → 要求補傳
