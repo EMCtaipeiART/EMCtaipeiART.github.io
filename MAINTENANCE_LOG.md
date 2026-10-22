@@ -4,7 +4,7 @@
 
 ## 2026-10-22
 
-- v5.0 卡牌右下角加回「刪除」圖示（紅色圓形垃圾桶，`site.js` 的 `cardDelBtnHtml()`、`site.css` 的 `.card-del`）：設計師、管理者（含 Machi）、企劃／專案刪除帳號看得到，權限沿用列表的 `canDeleteRow`，點了走原本的 `deleteCase`（管理者直接刪、其他人送刪除申請）；首頁網格與專案頁卡牌都有。已 stamp。
+- v5.0 修改紀錄的刪除：移除剛加的「卡牌右下角刪除整個案件」圖示（使用者要的是刪除修改紀錄，不是整案）；改成在展開卡牌／案件詳情的「修改紀錄」每一輪標頭加「刪除這輪」（`site.js` 的 `data-rev-del`，設計師與管理者、含 Machi），只刪那一輪的文字與圖片關聯，案件本身不動、其他輪次編號不變；修改紀錄視窗裡同樣有。已 stamp。
 
 - v5.0 修改紀錄視窗：設計師與管理者（含 Machi）都可以新增修改紀錄、補圖、移動／刪除圖片，並新增每一輪的「刪除」按鈕（`site.js` 的 `canModEdit()`、`data-rev-del`，呼叫 Worker 的 `deleteModificationRecord`，權限 media.manage；刪除後其他輪次編號不變，Drive 原始檔不動）。「確認修正完成」仍只有設計師。`site.css` 補 `.rev-del`。已 stamp。
 

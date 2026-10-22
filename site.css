@@ -1456,9 +1456,6 @@ html[data-hero-fest="midautumn"] .hero{--hf-light:#ffe5af;--hf-cool:#8bb8ff}
 
 .card-mod,.lt-act-mod{border:1px solid var(--line,#d6dde6);background:#fff;color:#0f8f4a;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
 .card-mod:hover,.lt-act-mod:hover{background:#eaf7ef}.card-foot .card-mod{margin-left:8px}
-.card-del{flex:0 0 auto;display:inline-grid;place-items:center;width:28px;height:28px;margin-left:6px;padding:0;border-radius:50%;border:1px solid var(--st-todo-line,#f0c4cb);background:var(--st-todo-bg,#fdeaed);color:var(--st-todo-ink,#a31d2e);cursor:pointer}
-.card-del svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.card-del:hover{filter:brightness(.95)}.card-del:focus-visible{outline:2px solid var(--st-todo-ink,#a31d2e);outline-offset:1px}.lt-act-mod{margin-left:6px;min-height:28px}
 .rev-confirmed{margin-left:10px;color:#0f8f4a;font-weight:700;font-size:12px;white-space:nowrap}
 
 .lt-act.lt-act-mod{background:#fff;color:#0f8f4a;border:1px solid #bfe5cd;margin-left:0;padding:0 12px}.lt-act.lt-act-mod:hover{background:#eaf7ef}
