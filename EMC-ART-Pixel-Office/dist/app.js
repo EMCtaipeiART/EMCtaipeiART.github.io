@@ -1359,7 +1359,7 @@ function typing(){const el=document.activeElement;return el&&(['INPUT','TEXTAREA
 /* 方向鍵或 W／A／S／D（遊戲熱鍵）都能走路；W 上、S 下、A 左、D 右 */
 const WASD={w:'ArrowUp',s:'ArrowDown',a:'ArrowLeft',d:'ArrowRight'};
 const moveKeyOf=e=>e.key.startsWith('Arrow')?e.key:(e.ctrlKey||e.metaKey||e.altKey?null:(WASD[String(e.key).toLowerCase()]||(e.code&&/^Key[WASD]$/.test(e.code)?WASD[e.code.slice(3).toLowerCase()]:null)));
-window.addEventListener('keydown',e=>{if(embedMode||roMode||typing()||storyOpen())return;const k=moveKeyOf(e);if(!k)return;e.preventDefault();if(ready){const oi=ownIndex();if(oi>=0&&selected!==oi)select(oi);}keys.add(k);});window.addEventListener('keyup',e=>{const k=moveKeyOf(e);if(k)keys.delete(k);});window.addEventListener('blur',()=>keys.clear());document.addEventListener('visibilitychange',()=>keys.clear());
+window.addEventListener('keydown',e=>{if(embedMode||roMode||typing()||storyOpen())return;const k=moveKeyOf(e);if(!k)return;e.preventDefault();if(ready&&selected==null){const oi=ownIndex();if(oi>=0)select(oi);}keys.add(k);});window.addEventListener('keyup',e=>{const k=moveKeyOf(e);if(k)keys.delete(k);});window.addEventListener('blur',()=>keys.clear());document.addEventListener('visibilitychange',()=>keys.clear());
 // 搖桿：按住拖曳，依拖曳方向換算成 8 個方向（沿用鍵盤的 keys 集合），放開就停。
 {const _keyAdd=keys.add.bind(keys);keys.add=k=>{const r=_keyAdd(k);markDirty();return r;};}
 const joystick=$('joystick'),joystickKnob=joystick?.querySelector('.joystick-knob'),arrowKeys=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];let joystickPointer=null;
@@ -1419,7 +1419,7 @@ game.addEventListener('pointerdown',e=>{
   if(ownI>=0&&!roMode){
     const ox=e.clientX,oy=e.clientY;let dragged=false;
     const setKeys=(dx,dy)=>{arrowKeys.forEach(k=>keys.delete(k));const len=Math.hypot(dx,dy);if(len<5)return;const ax=dx/len,ay=dy/len;if(ax>.3)keys.add('ArrowRight');if(ax<-.3)keys.add('ArrowLeft');if(ay>.3)keys.add('ArrowDown');if(ay<-.3)keys.add('ArrowUp');};
-    const mv=m=>{if(pinching){arrowKeys.forEach(k=>keys.delete(k));m.preventDefault();return;}const dx=m.clientX-ox,dy=m.clientY-oy;if(!dragged){if(Math.hypot(dx,dy)<4)return;dragged=true;if(selected!==ownI)select(ownI);if(window.radialClose)window.radialClose();cam.free=false;}setKeys(dx,dy);m.preventDefault();};
+    const mv=m=>{if(pinching){arrowKeys.forEach(k=>keys.delete(k));m.preventDefault();return;}const dx=m.clientX-ox,dy=m.clientY-oy;if(!dragged){if(Math.hypot(dx,dy)<4)return;dragged=true;if(selected==null)select(ownI);if(window.radialClose)window.radialClose();cam.free=false;}setKeys(dx,dy);m.preventDefault();};
     const end=u=>{window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',end);arrowKeys.forEach(k=>keys.delete(k));if(!dragged&&!pinching&&u.type==='pointerup')onGamePress(u);};
     window.addEventListener('pointermove',mv,{passive:false});window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
     return;
