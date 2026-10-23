@@ -2,7 +2,7 @@ import { env } from 'cloudflare:workers';
 import { reset, runInDurableObject, SELF } from 'cloudflare:test';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_CUSTOMER_NAMES, emptyDatabase } from '../../backend/schema.mjs';
-import { pixelOfficeBusyMeetingNow, pixelOfficeCalendarEventState, pixelOfficeOfflineStatus, pixelOfficeIsWorkday, setPixelAllWorkUntil } from '../src/database-coordinator';
+import { pixelOfficeBusyMeetingNow, pixelOfficeCalendarEventState, pixelOfficeMeetingRoomOf, pixelOfficeOfflineStatus, pixelOfficeIsWorkday, setPixelAllWorkUntil } from '../src/database-coordinator';
 import { pruneIdempotency } from '../src/model';
 import type { DatabaseCoordinator } from '../src/database-coordinator';
 import { hasRowCapability, matchesCustomerEditRule, normalizeDepartmentName, normalizeSettingsDepartments } from '../src/model';
@@ -5691,5 +5691,17 @@ describe('pixel office status diagnostic', () => {
     expect(diag.offlineAfterSeconds).toBe(300);
     const noise = diag.people?.find(person => person.name === 'Noise');
     if (noise?.heartbeat) { expect(noise.heartbeat.online).toBe(true); expect(typeof noise.ruleStatus).toBe('string'); }
+  });
+});
+
+describe('會議室（行事曆會議 → 人物入座會議室）', () => {
+  it('reads the room letter from location, then title, then description, and ignores everything else', () => {
+    expect(pixelOfficeMeetingRoomOf({ location: '會議室 B', summary: '週會' })).toBe('B');
+    expect(pixelOfficeMeetingRoomOf({ location: '', summary: 'A會議室 設計週會' })).toBe('A');
+    expect(pixelOfficeMeetingRoomOf({ summary: '提案討論（會議室d）' })).toBe('D');
+    expect(pixelOfficeMeetingRoomOf({ summary: '客戶 Meeting Room C 對稿' })).toBe('C');
+    expect(pixelOfficeMeetingRoomOf({ summary: '週會', description: '地點：會議室 A，請準時' })).toBe('A');
+    expect(pixelOfficeMeetingRoomOf({ summary: 'ABC 提案', location: 'Google Meet' })).toBe('');
+    expect(pixelOfficeMeetingRoomOf({ summary: '會議室 E' })).toBe('');
   });
 });

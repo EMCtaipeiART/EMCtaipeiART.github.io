@@ -89,14 +89,14 @@ export function pixelOfficeLevelTitles(stored: unknown): Record<string, string[]
 
 /** 上下班時段設定（後台管理者與 Machi 可改，存在 DO 的 pixelHours）。enabled=false 就完全不套用時間規則：
  * 假日不強制下班、晚上不算加班、沒心跳也不自動下班——方便測試手動狀態。數字都是台北時間的整點。 */
-export interface PixelHours { enabled: boolean; dayStart: number; lunchStart: number; lunchEnd: number; workEnd: number; overtimeStart: number }
+export interface PixelHours { enabled: boolean; dayStart: number; lunchStart: number; lunchEnd: number; workEnd: number; overtimeStart: number; meetingRooms: boolean }
 /** 加班（及加班遮罩）固定是 19:00 到隔天 06:00（使用者 2026-10-20 指定），不隨「上班開始」設定移動。 */
 export const PIXEL_OVERTIME_END_HOUR = 6;
 async function sha256Hex(value: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
   return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
-export const PIXEL_HOURS_DEFAULT: PixelHours = { enabled: true, dayStart: 9, lunchStart: 12, lunchEnd: 14, workEnd: 19, overtimeStart: 19 };
+export const PIXEL_HOURS_DEFAULT: PixelHours = { enabled: true, dayStart: 9, lunchStart: 12, lunchEnd: 14, workEnd: 19, overtimeStart: 19, meetingRooms: true };
 let pixelHours: PixelHours = { ...PIXEL_HOURS_DEFAULT };
 /** 「全員上班」之後到台北時間當天結束為止，時間規則（假日、下班、沒心跳自動下班）暫時不套用，不然按完馬上又被改回下班。 */
 let pixelAllWorkUntil = 0;
@@ -108,10 +108,11 @@ export function cleanPixelHours(config: Partial<PixelHours> | null | undefined):
   const next: PixelHours = {
     enabled: c.enabled !== false,
     dayStart: hour(c.dayStart, PIXEL_HOURS_DEFAULT.dayStart), lunchStart: hour(c.lunchStart, PIXEL_HOURS_DEFAULT.lunchStart),
-    lunchEnd: hour(c.lunchEnd, PIXEL_HOURS_DEFAULT.lunchEnd), workEnd: hour(c.workEnd, PIXEL_HOURS_DEFAULT.workEnd), overtimeStart: hour(c.overtimeStart, PIXEL_HOURS_DEFAULT.overtimeStart)
+    lunchEnd: hour(c.lunchEnd, PIXEL_HOURS_DEFAULT.lunchEnd), workEnd: hour(c.workEnd, PIXEL_HOURS_DEFAULT.workEnd), overtimeStart: hour(c.overtimeStart, PIXEL_HOURS_DEFAULT.overtimeStart),
+    meetingRooms: c.meetingRooms !== false
   };
   // 順序要合理：上班 < 午休開始 < 午休結束 ≤ 下班 ≤ 加班開始；亂填就整組回預設，避免狀態判斷錯亂
-  if (!(next.dayStart < next.lunchStart && next.lunchStart < next.lunchEnd && next.lunchEnd <= next.workEnd && next.workEnd <= next.overtimeStart)) return { ...PIXEL_HOURS_DEFAULT, enabled: next.enabled };
+  if (!(next.dayStart < next.lunchStart && next.lunchStart < next.lunchEnd && next.lunchEnd <= next.workEnd && next.workEnd <= next.overtimeStart)) return { ...PIXEL_HOURS_DEFAULT, enabled: next.enabled, meetingRooms: next.meetingRooms };
   return next;
 }
 // 台灣的國定假日與補假（台北時間 YYYYMMDD）。週六日不用列，程式自己判斷。
@@ -281,6 +282,26 @@ export function pixelOfficeCalendarEventState(event: Row, calendarEmail = '', ca
   const end = Date.parse(text(endRow.dateTime || endRow.date));
   if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return '';
   return end - start <= PIXEL_OFFICE_CALENDAR_MAX_MEETING_MS ? 'meeting' : '';
+}
+
+/** 會議活動寫的是哪一間會議室（A～D）：依序看地點、標題、說明（只取前 300 字）。只回傳字母，不留存任何活動內容。 */
+export function pixelOfficeMeetingRoomOf(event: Row): string {
+  const pattern = /(?:會議室|meeting\s*room|conference\s*room|room)\s*([A-Da-d])(?![A-Za-z])|(?<![A-Za-z])([A-Da-d])\s*(?:會議室|室)/i;
+  for (const part of [text(event.location), text(event.summary), text(event.description).slice(0, 300)]) {
+    const match = part.match(pattern);
+    const letter = match ? (match[1] || match[2] || '') : '';
+    if (letter) return letter.toUpperCase();
+  }
+  return '';
+}
+
+function pixelOfficeCalendarEventsRoom(events: unknown, calendarEmail = '', calendarName = ''): string {
+  for (const event of Array.isArray(events) ? events as Row[] : []) {
+    if (pixelOfficeCalendarEventState(event, calendarEmail, calendarName) !== 'meeting') continue;
+    const room = pixelOfficeMeetingRoomOf(event);
+    if (room) return room;
+  }
+  return '';
 }
 
 function pixelOfficeCalendarEventsState(events: unknown, calendarEmail = '', calendarName = ''): PixelOfficeCalendarState {
@@ -2085,7 +2106,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   /** 行事曆同步：把某位設計師改成「會議／休假」，或事件結束後交還給電腦自動判斷。
    * 不碰使用者手動指定的狀態（使用者的選擇優先），也不碰後端還沒有資料的人。 */
-  private pixelOfficeApplyCalendar(name: string, desired: PixelOfficeCalendarState, nowMs: number): 'meeting' | 'leave' | 'released' | 'unchanged' | 'manual' | 'at-desk' {
+  private pixelOfficeApplyCalendar(name: string, desired: PixelOfficeCalendarState, nowMs: number, room = ''): 'meeting' | 'leave' | 'released' | 'unchanged' | 'manual' | 'at-desk' {
     const row = this.ctx.storage.sql.exec<{ state: string; last_seen: number }>(
       'SELECT state, last_seen FROM pixel_office_people WHERE name = ?', name
     ).toArray()[0];
@@ -2095,7 +2116,15 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const status = text(state.status) || 'present';
     const source = text(state.statusSource);
     if (desired) {
-      if (status === desired && source === 'calendar') return 'unchanged';
+      if (status === desired && source === 'calendar') {
+        // 會議室換了（或剛查到）：只更新會議室，不動其他狀態
+        if (text(state.meetingRoom) !== room) {
+          if (room) state.meetingRoom = room; else delete state.meetingRoom;
+          const version = Math.max(nowMs, this.pixelOfficeVersion() + 1);
+          this.ctx.storage.sql.exec('UPDATE pixel_office_people SET state = ?, updated_at = ? WHERE name = ?', JSON.stringify(state), version, name);
+        }
+        return 'unchanged';
+      }
       // 手動指定的狀態只有「電腦自己也判斷得出來」的那幾種（在座／加班／用餐／廁所／下班）可以被行事曆蓋掉——
       // 那些本來就是自動維護的，手動點過之後卻會把行事曆卡住（2026-09-22 使用者回報「行事曆有會議但狀態沒更新」）。
       // 公出、出國、以及自己點的會議／休假是電腦看不出來的，手動指定就一定保留。
@@ -2107,6 +2136,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (desired === 'meeting' && pixelOfficeBackAtDesk(state, Number(row.last_seen) || 0, nowMs)) return 'at-desk';
       state.status = desired;
       state.statusSource = 'calendar';
+      if (desired === 'meeting' && room) state.meetingRoom = room; else delete state.meetingRoom;
       // 會議剛開始時同樣重新起算，否則開會前一直在電腦前的人會在第一次心跳就被收回成在座。
       delete state.activeSince;
     } else {
@@ -2114,6 +2144,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (!['meeting', 'leave'].includes(status) || source !== 'calendar') return 'unchanged';
       state.status = pixelOfficeWorkStatus(nowMs);
       state.statusSource = 'auto';
+      delete state.meetingRoom;
     }
     state.statusAt = nowMs;
     const version = Math.max(nowMs, this.pixelOfficeVersion() + 1);
@@ -2165,13 +2196,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     }
     const calendars = (data.calendars || {}) as Record<string, Row>;
     const detailStates = new Map<string, PixelOfficeCalendarState>();
+    const detailRooms = new Map<string, string>();
     const detailUnreadable: string[] = [];
     if (canReadDetails) {
       await Promise.all(Object.entries(PIXEL_OFFICE_CALENDARS).map(async ([name, email]) => {
         try {
           const params = new URLSearchParams({
             timeMin, timeMax, singleEvents: 'true', maxResults: '20', timeZone: 'Asia/Taipei',
-            fields: 'items(status,summary,eventType,start,end,transparency,organizer(email,self),attendees(self,responseStatus))'
+            fields: 'items(status,summary,location,description,eventType,start,end,transparency,organizer(email,self),attendees(self,responseStatus))'
           });
           const detailsResponse = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(email)}/events?${params.toString()}`, {
             headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' }
@@ -2179,6 +2211,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           const details = await detailsResponse.json().catch(() => ({})) as Row;
           if (!detailsResponse.ok) { detailUnreadable.push(name); return; }
           detailStates.set(name, pixelOfficeCalendarEventsState(details.items, email, name));
+          detailRooms.set(name, pixelOfficeCalendarEventsRoom(details.items, email, name));
         } catch {
           detailUnreadable.push(name);
         }
@@ -2213,7 +2246,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       // 先記下「行事曆說這個人現在應該是什麼」，再記實際套用的結果——兩者分開才查得出問題出在哪一段。
       if (desired) detected[name] = desired;
       else if (busy.length) detected[name] = 'busy-ignored';
-      const result = this.pixelOfficeApplyCalendar(name, desired, nowMs);
+      const result = this.pixelOfficeApplyCalendar(name, desired, nowMs, desired === 'meeting' && pixelHours.meetingRooms ? detailRooms.get(name) || '' : '');
       if (result === 'meeting') meeting.push(name);
       else if (result === 'leave') leave.push(name);
       else if (result === 'released') released.push(name);
@@ -5247,7 +5280,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'savePixelHours') {
         // 上下班時段設定：只有後台管理者（含 Machi）能改；enabled=false 代表整個時間規則關閉（測試用）
         const who = this.requireAccess(database, session, 'database.manage');
-        const config = cleanPixelHours({ enabled: payload.enabled !== false, dayStart: payload.dayStart as number, lunchStart: payload.lunchStart as number, lunchEnd: payload.lunchEnd as number, workEnd: payload.workEnd as number, overtimeStart: payload.overtimeStart as number });
+        const config = cleanPixelHours({ enabled: payload.enabled !== false, dayStart: payload.dayStart as number, lunchStart: payload.lunchStart as number, lunchEnd: payload.lunchEnd as number, workEnd: payload.workEnd as number, overtimeStart: payload.overtimeStart as number, meetingRooms: payload.meetingRooms !== false });
         await this.ctx.storage.put('pixelHours', config);
         setPixelHours(config);
         // 讓所有開著的畫面重新讀一次狀態（上下班時段變了，人物與桌子的亮暗、加班遮罩要跟著變）
