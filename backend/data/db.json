@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 9328,
+  "revision": 9329,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-23T07:39:04.424Z",
+  "updatedAt": "2026-10-23T08:00:13.354Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -2194,7 +2194,10 @@
         {"短碼":"4Y5cSr","原始網址":"https://docs.google.com/spreadsheets/d/1U6eER90mRFKCiRITwfFT_bNDcN5XrzWkL0nTSbGW2d4/edit?gid=1533175779#gid=1533175779","名稱":"蝦皮","專案":"DJI","可見範圍":"僅自己","建立者帳號":"machi.chen@emctaipei.com","建立者":"Machi","建立時間":"2026/10/16 18:31:16","更新時間":"2026/10/16 18:31:16"},
         {"短碼":"QdRF2P","原始網址":"https://emc-art.com/4Y5cSr","名稱":"蝦皮","專案":"DJI","可見範圍":"僅自己","建立者帳號":"machi.chen@emctaipei.com","建立者":"Machi","建立時間":"2026/10/18 20:19:11","更新時間":"2026/10/18 20:19:11"},
         {"短碼":"PSzFJi","原始網址":"https://emc-art.com/tCuLC8","名稱":"PChome","專案":"DJI","可見範圍":"僅自己","建立者帳號":"machi.chen@emctaipei.com","建立者":"Machi","建立時間":"2026/10/18 20:19:11","更新時間":"2026/10/18 20:19:11"},
-        {"短碼":"Uem9fN","原始網址":"https://emc-art.com/7hjFaP","名稱":"momo","專案":"DJI","可見範圍":"僅自己","建立者帳號":"machi.chen@emctaipei.com","建立者":"Machi","建立時間":"2026/10/18 20:19:11","更新時間":"2026/10/18 20:19:11"}
+        {"短碼":"Uem9fN","原始網址":"https://emc-art.com/7hjFaP","名稱":"momo","專案":"DJI","可見範圍":"僅自己","建立者帳號":"machi.chen@emctaipei.com","建立者":"Machi","建立時間":"2026/10/18 20:19:11","更新時間":"2026/10/18 20:19:11"},
+        {"短碼":"K2SSQp","原始網址":"https://drive.google.com/file/d/16W-d8jRCsKWeieJDLmeO7m3_z5Bj4TYb/view?usp=sharing","名稱":"","專案":"Soundcore","可見範圍":"同組","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/10/23 16:00:13","更新時間":"2026/10/23 16:00:13"},
+        {"短碼":"oy7LMx","原始網址":"https://drive.google.com/file/d/1AymsEhHg2_FVmJCtJqTBGSsptIlVy--S/view?usp=sharing","名稱":"","專案":"Soundcore","可見範圍":"同組","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/10/23 16:00:13","更新時間":"2026/10/23 16:00:13"},
+        {"短碼":"Zv75cV","原始網址":"https://drive.google.com/file/d/1IPmLnesnW-GhNOz85z-cNly3_CdLvjG2/view?usp=sharing","名稱":"","專案":"Soundcore","可見範圍":"同組","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/10/23 16:00:13","更新時間":"2026/10/23 16:00:13"}
       ]
     }
   },
