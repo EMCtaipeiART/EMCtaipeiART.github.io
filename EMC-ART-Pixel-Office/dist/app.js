@@ -1516,9 +1516,38 @@ function drawGhostAt(x,y,img){
   if(!img.complete||!img.naturalWidth)return;
   const w=122,h=180;ctx.save();ctx.drawImage(img,x-w/2,y-166,w,h);ctx.restore();
 }
-function drawGhost(s){if(ghostSeated(s))drawGhostAt(s.x,s.y,s.row?GHOST_IMG:GHOST_FRONT);}
+function drawGhost(s){if(ghostSeated(s)&&(!s.gm||s.gm.mode==='sit'))drawGhostAt(s.x,s.y,s.row?GHOST_IMG:GHOST_FRONT);}
 /* 左下角白色長桌：背對畫面坐在長桌前 */
 function drawLongDeskGhost(){const st=stations.find(t=>t.big);if(LX&&st&&ghostSeated({...st,nochair:false}))drawGhostAt(LONG_DESK.chairX,LONG_DESK.chairY,GHOST_IMG);}
+/* 未登入人物偶爾起身走動（2026-10-23）：約四分之一的空位會隨機起身，走到附近空地站一會兒或再走一段，然後回座位；同時最多 3 位。
+ * 每個瀏覽器各自隨機，不同步到後端；走動只用 blocked() 擋牆與家具。 */
+const ghostWalkers=()=>stations.filter(s=>s.gm&&s.gm.mode!=='sit'&&ghostSeated(s)).length;
+function ghostBusy(){return !embedMode&&ghostWalkers()>0;}
+function ghostRand(a,b){return a+Math.random()*(b-a);}
+function ghostPick(s){const g=s.gm;for(let n=0;n<14;n++){const tx=s.x+ghostRand(-380,380),ty=s.y+ghostRand(-200,300);if(blocked(tx,ty))continue;let ok=true;const dx=tx-g.x,dy=ty-g.y,len=Math.hypot(dx,dy);for(let k=1;k<=len/20;k++){if(blocked(g.x+dx*k*20/len,g.y+dy*k*20/len)){ok=false;break;}}if(ok){g.tx=tx;g.ty=ty;return true;}}return false;}
+function ghostTick(now){
+  if(embedMode||!LX)return;
+  const open=stations.filter(t=>t.wander===undefined?(t.wander=((t.x*7+t.y*13)>>0)%4===0):t.wander);
+  let busy=ghostWalkers();
+  for(const s of open){
+    if(!ghostSeated(s)){if(s.gm)s.gm=null;continue;}
+    const g=s.gm||(s.gm={mode:'sit',until:now+ghostRand(6000,40000),x:s.x,y:s.y,hops:0,last:now});
+    const dt=Math.min((now-g.last)/1000,.1);g.last=now;
+    if(g.mode==='sit'){if(now>g.until&&busy<3){g.x=s.x;g.y=s.y;g.hops=0;if(ghostPick(s)){g.mode='walk';busy++;markDirty();}else g.until=now+ghostRand(8000,20000);}continue;}
+    if(g.mode==='walk'||g.mode==='back'){
+      const dx=g.tx-g.x,dy=g.ty-g.y,len=Math.hypot(dx,dy),step=70*dt;g.dir=Math.abs(dy)>Math.abs(dx)&&dy<0?'up':'down';
+      if(len<=step+1){g.x=g.tx;g.y=g.ty;if(g.mode==='back'){g.mode='sit';g.until=now+ghostRand(15000,60000);}else{g.mode='pause';g.until=now+ghostRand(3000,12000);}}
+      else{const nx=g.x+dx/len*step,ny=g.y+dy/len*step;if(blocked(nx,ny)&&len>40){g.mode='pause';g.until=now+ghostRand(2000,6000);}else{g.x=nx;g.y=ny;}}
+      markDirty();continue;
+    }
+    if(g.mode==='pause'&&now>g.until){if(g.hops<2&&Math.random()<.5&&ghostPick(s)){g.hops++;g.mode='walk';}else{g.tx=s.x;g.ty=s.y;g.mode='back';}markDirty();}
+  }
+}
+function drawGhostWalker(s){
+  const g=s.gm;if(!g||g.mode==='sit')return;const img=g.dir==='up'?GHOST_IMG:GHOST_FRONT;if(!img.complete||!img.naturalWidth)return;
+  const h=290,w=h*img.naturalWidth/img.naturalHeight,bob=g.mode==='pause'?0:Math.abs(Math.sin(performance.now()/130))*4;
+  ctx.save();ctx.globalAlpha=.92;ctx.drawImage(img,g.x-w/2,viewY(g.y)-h-bob,w,h);ctx.restore();
+}
 function drawChair(s){if(s.nochair||stationDimmed(s))return;furnitureObject(CHAIR_RECT,s.x-CHAIR_WIDTH/2,s.y-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor(s));}
 /* 專案部／企劃部桌上設備：透明像素圖集；座標與尺寸另見 assets/staff-gear-v1.json。 */
 const staffGearSheet=new Image();
@@ -1706,8 +1735,8 @@ function scaledFont(base,screenTarget,max){
 }
 /** 名牌：貼在桌子前緣，只有名字。 */
 function drawDeskPlate(s){
-  if(!s.name)return;
-  const p=stationPerson(s),st=p&&statuses.find(item=>item.id===effectiveStatusId(p)),name=st&&st.id!=='present'?s.name+' ('+st.text+')':s.name;
+  if(!s.name&&!ghostSeated(s))return;
+  const p=stationPerson(s),st=p&&statuses.find(item=>item.id===effectiveStatusId(p)),name=s.name?(st&&st.id!=='present'?s.name+' ('+st.text+')':s.name):'未登入';
   const seated=!st||st.id==='present'||st.id==='overtime';
   const col=PLATE_COLORS[(st&&st.id)||'present']||PLATE_COLORS.present;
   ctx.save();
@@ -1893,15 +1922,15 @@ const sceneAnimating=()=>people.some((p,i)=>!isAway(p)&&(p.mood||musicOf(p)||act
 let embedVisible=true,embedLastDraw=0;
 if(embedMode&&'IntersectionObserver' in window)new IntersectionObserver(entries=>{embedVisible=entries[entries.length-1].isIntersecting;if(embedVisible)markDirty()}).observe(document.documentElement);
 const avatarOnly=new URLSearchParams(location.search).get('avatars')==='1';
-function render(time){try{updateCamera()}catch(error){}if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&viewer.open)){setTimeout(()=>requestAnimationFrame(render),400);return;}const dt=Math.min((time-last)/1000||0,.04);last=time;const walk=moving(dt);
+function render(time){try{updateCamera()}catch(error){}if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&viewer.open)){setTimeout(()=>requestAnimationFrame(render),400);return;}const dt=Math.min((time-last)/1000||0,.04);last=time;const walk=moving(dt);try{ghostTick(performance.now())}catch(error){}
   if(embedMode&&!needsRedraw&&!sceneAnimating()){requestAnimationFrame(render);return;}
   // 嵌入首頁時：畫面不在可視範圍就不重畫；持續動畫（心情／未讀動態）限制在約 30fps，避免整張場景每幀全畫拖慢首頁。
   if(embedMode&&!needsRedraw){if(!embedVisible||time-embedLastDraw<40){requestAnimationFrame(render);return;}}
-  if(!embedMode&&!needsRedraw&&!walk&&!sceneAnimating()&&!(performance.now()<fxWakeUntil&&people.some((p,i)=>!isAway(p)&&isOvertime(p)))){if(keys.size||embedMode)requestAnimationFrame(render);else idleTimer=setTimeout(()=>{idleTimer=0;requestAnimationFrame(render);},250);return;}// 全版／編輯：場景靜止（沒人走動、沒有心情／音樂／動作／動態）就完全不重畫，手機才不會發燙
+  if(!embedMode&&!needsRedraw&&!walk&&!sceneAnimating()&&!ghostBusy()&&!(performance.now()<fxWakeUntil&&people.some((p,i)=>!isAway(p)&&isOvertime(p)))){if(keys.size||embedMode)requestAnimationFrame(render);else idleTimer=setTimeout(()=>{idleTimer=0;requestAnimationFrame(render);},250);return;}// 全版／編輯：場景靜止（沒人走動、沒有心情／音樂／動作／動態）就完全不重畫，手機才不會發燙
   if(!embedMode&&!needsRedraw){const anim=!walk&&sceneAnimating(),gap=walk?8:!anim?100:(people.some((p,i)=>!isAway(p)&&actionOf(i))?30:66);/* 動作動畫約 30fps；心情／音樂／未讀動態只是慢慢跳的小圖示，約 15fps 就夠（整張場景重畫不必每幀都做） */if(time-embedLastDraw<gap){if(gap>30)setTimeout(()=>requestAnimationFrame(render),Math.max(8,gap-(time-embedLastDraw)));else requestAnimationFrame(render);return;}}
   if(!embedMode&&needsRedraw&&time-embedLastDraw<(walk?7:15)){requestAnimationFrame(render);return;}// 走路／操作時最多約 60fps（120Hz 螢幕不要每幀都全畫）// 編輯／全版：最多約 30fps，整張大畫布不必每幀都重畫
   embedLastDraw=time;
-  needsRedraw=false;syncViewLayout();try{followOwn()}catch(error){}if(cam.on&&cam.w){const k=cam.pr*cam.s;ctx.setTransform(k,0,0,k,-cam.left*k,-cam.top*k);ctx.clearRect(cam.left,cam.top,cam.w/cam.s+2,cam.h/cam.s+2);}else ctx.clearRect(0,-OY,W,H);drawOffice();if(ready){hits=[];const layers=[];viewStations.forEach(s=>{if(s.gone)return;if(embedMode&&(s.grp||s.ext))return;/* 首頁小框只看設計部 */if(!inView(s.y))return;if(s.row){layers.push({depth:EMBED_ROW_TOP+115+(s.y-BOTTOM_FEET),draw:()=>drawDeskBottom(s)});layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y-21,draw:()=>drawGhost(s)});}else{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y-19,draw:()=>drawGhost(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});}layers.push({depth:s.row?s.y-1:99999,draw:()=>drawDeskPlate(s)});/* 下排名牌排在人物之前畫：頭會壓在膠囊上 */});viewPeople.forEach((p,i)=>{if(embedMode&&p.staff)return;if(!inView(p.y))return;if(p.staff&&!staffLookReady(i))return;/* 自己的頭像與服裝載好才畫，避免先閃出一個內建（Machi）的人 */layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)});});if(LX&&!embedMode){layers.push({depth:-99999,draw:drawProps});layers.push({depth:-99998,draw:drawLongDesk});pushRoomFurniture(layers);layers.push({depth:LONG_DESK.chairY-20,draw:drawLongDeskChair});layers.push({depth:LONG_DESK.chairY-21,draw:drawLongDeskGhost});}layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>{if(!(embedMode&&p.staff)&&inView(viewY(p.y)))drawOverlay(i,time);});people.forEach((p,i)=>{if(!(embedMode&&p.staff)&&inView(viewY(p.y)))drawActionLabel(i);});viewStations.forEach(s=>{if(!s.gone&&!(embedMode&&(s.grp||s.ext))&&inView(s.y))drawStatusMarker(s.row?{...s,y:BD_MARK_Y+(s.y-BOTTOM_FEET)}:s);});positionPersonCard();if(window.radialPlace)window.radialPlace();}requestAnimationFrame(render);}
+  needsRedraw=false;syncViewLayout();try{followOwn()}catch(error){}if(cam.on&&cam.w){const k=cam.pr*cam.s;ctx.setTransform(k,0,0,k,-cam.left*k,-cam.top*k);ctx.clearRect(cam.left,cam.top,cam.w/cam.s+2,cam.h/cam.s+2);}else ctx.clearRect(0,-OY,W,H);drawOffice();if(ready){hits=[];const layers=[];viewStations.forEach(s=>{if(s.gone)return;if(embedMode&&(s.grp||s.ext))return;/* 首頁小框只看設計部 */if(!inView(s.y))return;if(s.row){layers.push({depth:EMBED_ROW_TOP+115+(s.y-BOTTOM_FEET),draw:()=>drawDeskBottom(s)});layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y-21,draw:()=>drawGhost(s)});}else{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y-19,draw:()=>drawGhost(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});}layers.push({depth:s.row?s.y-1:99999,draw:()=>drawDeskPlate(s)});/* 下排名牌排在人物之前畫：頭會壓在膠囊上 */});stations.forEach(s=>{if(s.gm&&s.gm.mode!=='sit'&&ghostSeated(s)&&inView(viewY(s.gm.y)))layers.push({depth:viewY(s.gm.y),draw:()=>drawGhostWalker(s)});});viewPeople.forEach((p,i)=>{if(embedMode&&p.staff)return;if(!inView(p.y))return;if(p.staff&&!staffLookReady(i))return;/* 自己的頭像與服裝載好才畫，避免先閃出一個內建（Machi）的人 */layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)});});if(LX&&!embedMode){layers.push({depth:-99999,draw:drawProps});layers.push({depth:-99998,draw:drawLongDesk});pushRoomFurniture(layers);layers.push({depth:LONG_DESK.chairY-20,draw:drawLongDeskChair});layers.push({depth:LONG_DESK.chairY-21,draw:drawLongDeskGhost});}layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>{if(!(embedMode&&p.staff)&&inView(viewY(p.y)))drawOverlay(i,time);});people.forEach((p,i)=>{if(!(embedMode&&p.staff)&&inView(viewY(p.y)))drawActionLabel(i);});viewStations.forEach(s=>{if(!s.gone&&!(embedMode&&(s.grp||s.ext))&&inView(s.y))drawStatusMarker(s.row?{...s,y:BD_MARK_Y+(s.y-BOTTOM_FEET)}:s);});positionPersonCard();if(window.radialPlace)window.radialPlace();}requestAnimationFrame(render);}
 // 圖示不擋進站：人物與家具載好就開始畫，圖示載入前先用內建的像素小圖。
 load(iconSheet).then(refreshIconCanvases).catch(()=>{});load(extraSheet).then(refreshIconCanvases).catch(()=>{});
 restoreCustomCache();Promise.all([load(wardrobeSheets.heads),load(wardrobeSheets.outfits),load(furniture)]).then(()=>{ready=true;try{applyViewerRole();}catch(e){}loadAccessories();loadCustomList();setInterval(loadCustomList,120000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadCustomList();});fitEmbedView();setTimeout(fitEmbedView,300);setTimeout(fitEmbedView,1200);markDirty();$('loading').hidden=true;refreshIconCanvases();select(null);document.querySelectorAll('.roster-button canvas:not([data-symbol])').forEach((canvas,i)=>portrait(canvas.getContext('2d'),i,false));}).catch(()=>{$('loading').textContent='場景圖片載入失敗，請重新整理頁面。';});select(null);if(!embedMode)ensureLevels();syncDesigners();pollSync();renderLevelTable();requestAnimationFrame(render);
