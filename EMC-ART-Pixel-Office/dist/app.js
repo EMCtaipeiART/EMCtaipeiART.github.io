@@ -1545,7 +1545,7 @@ function ghostTick(now){
 }
 function drawGhostWalker(s){
   const g=s.gm;if(!g||g.mode==='sit')return;const img=g.dir==='up'?GHOST_IMG:GHOST_FRONT;if(!img.complete||!img.naturalWidth)return;
-  const h=290,w=h*img.naturalWidth/img.naturalHeight,bob=g.mode==='pause'?0:Math.abs(Math.sin(performance.now()/130))*4;
+  const h=180,w=h*img.naturalWidth/img.naturalHeight,bob=g.mode==='pause'?0:Math.abs(Math.sin(performance.now()/130))*4;
   ctx.save();ctx.globalAlpha=.92;ctx.drawImage(img,g.x-w/2,viewY(g.y)-h-bob,w,h);ctx.restore();
 }
 function drawChair(s){if(s.nochair||stationDimmed(s))return;furnitureObject(CHAIR_RECT,s.x-CHAIR_WIDTH/2,s.y-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor(s));}
