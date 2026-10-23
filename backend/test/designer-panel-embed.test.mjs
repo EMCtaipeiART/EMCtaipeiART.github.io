@@ -454,7 +454,7 @@ test('名牌只放名字與狀態（名字後面附括號），對話不再擠�
   assert.ok(plate, '要有 drawDeskPlate()');
   assert.doesNotMatch(plate, /message|wrapText|ellipsize/, '名牌上不該再有對話');
   // 在座（present）只顯示名字；其他狀態是「名字 (狀態)」，同一個膠囊，不再另外畫狀態膠囊。
-  assert.match(plate, /name=st&&st\.id!=='present'\?s\.name\+' \('\+st\.text\+'\)':s\.name/);
+  assert.ok(plate.includes("name=s.name?(st&&st.id!=='present'?s.name+' ('+st.text+')':s.name):'未登入'"));
   assert.match(plate, /ctx\.fillText\(name,s\.x,y\+h\/2\+\.5\);/);
 });
 

@@ -326,7 +326,7 @@ const wardrobeReady=()=>[wardrobeSheets.heads,wardrobeSheets.outfits].every(img=
 // Machi 全黑連帽衫長褲、Anna 藍色 T 恤。只有 Anna 可以在藍色（1）與黃色（0）兩套之間換；其他人的衣服固定，帽子與眼鏡大家都可以換。
 // 用函式而不是常數：腳本最前面的版面計算（sceneTopExtent）就會用到，那時下面的 const 還沒宣告。
 /** 衣服、頭、眼鏡的幾何用哪個設計師的原頭像格子：設計師是自己，企劃／專案同仁是他們頭像對位時選的那一個（短髮 Machi＝4、長髮 Leona＝0）。 */
-function geoIdx(i,look){if(i<5)return i;const h=look&&typeof look.head==='string'?look.head:'';const e=h?customState().hmap.get(h.slice(2)):null,hi=e&&e.meta&&e.meta.game&&e.meta.game.headIndex;return Number.isInteger(hi)&&hi>=0&&hi<5?hi:4;}
+function geoIdx(i,look){const h=look&&typeof look.head==='string'?look.head:'';if(i<5&&!h)return i;/* 設計師穿自訂頭像時，也照那顆頭對位時選的原頭像格子（頭像生成器的 headIndex）排，才不會錯位 */const e=h?customState().hmap.get(h.slice(2)):null,hi=e&&e.meta&&e.meta.game&&e.meta.game.headIndex;return Number.isInteger(hi)&&hi>=0&&hi<5?hi:(i<5?i:4);}
 function baseLookDefault(i){return [{outfit:2,cap:'',glasses:'',head:''},{outfit:3,cap:'',glasses:'',head:''},{outfit:4,cap:'blue',glasses:'',head:''},{outfit:1,cap:'',glasses:'',head:''},{outfit:5,cap:'',glasses:'',head:''}][i]||{outfit:2,cap:'',glasses:'',head:''};}
 // ───────── 自訂服裝（服裝生成器做好並發佈的）─────────
 // 資料在服裝生成器的公開 API；每件服裝是三個角度（正面、朝右側面、背面）裁好的透明身體圖，高度是遊戲服裝的兩倍（336），
@@ -346,7 +346,7 @@ function customOutfitView(id,view){
 }
 // 自訂頭像（頭像生成器做好並發佈的）：三張透明圖，大小是原頭像格子的 2 倍、已經依對位放好，所以只要換掉頭那層的圖，
 // 其餘（眼鏡、帽子、耳機、下巴接點）全部沿用原本那顆頭的數值。
-function customHeadIdsOf(i){return customState().hlist.filter(x=>x.owner===names[i]&&customHeadReady(x.id)&&x.game&&(i>=5||x.game.headIndex===i)).map(x=>'h:'+x.id);}
+function customHeadIdsOf(i){return customState().hlist.filter(x=>x.owner===names[i]&&customHeadReady(x.id)&&x.game).map(x=>'h:'+x.id);}
 function customHeadReady(id){const e=customState().hmap.get(id);return !!(e&&e.ready);}
 function customHeadName(id){const x=customState().hlist.find(y=>'h:'+y.id===id);return x?x.name:'自訂頭像';}
 function customHeadView(id,view){
