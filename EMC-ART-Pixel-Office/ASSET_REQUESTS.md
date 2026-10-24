@@ -24,9 +24,11 @@
 - 需要：**2 個馬桶各一格完全隔開的隔間**＋1～2 個洗手台。男廁女廁相同。
 
 ### 交付
-- 放 `assets/office-toilet-v6.webp` ＋ `assets/office-toilet-v6.json`（格式同 v5：`image`、`width`、`height`、`sprites{ name:{x,y,w,h} }`）。
+- 放 `assets/office-toilet-v7.webp` ＋ `assets/office-toilet-v7.json`（格式同 v5：`image`、`width`、`height`、`sprites{ name:{x,y,w,h} }`）。
 - 交付後告訴我（或直接改 `app.js` 廁所那段 `for(const room of [ROOMS[0],ROOMS[1]])`），我會接版面與碰撞。
 
 ### 狀態（2026-10-24 更新）
-使用者要求直接重畫，所以我先用程式產生了一版像素素材放進去：`assets/office-toilet-v6.webp/.json`（toilet_front、sink_front、partition_v、stall_door，低解析像素圖放大 3 倍、3 px 黑外框）。
-版面：後排兩格隔間（三片隔板＋兩片前門）＋前面兩個洗手台。Codex 之後要重畫，只要依同樣的檔名與 sprite 名稱、尺寸替換 `office-toilet-v6.webp/.json` 即可，程式不用改。
+使用者要求直接重畫，所以我先用程式產生了一版像素素材放進去：`assets/office-toilet-v7.webp/.json`（toilet_r、sink_r、stall_wall_h、stall_door_v，低解析像素圖放大 3 倍、3 px 黑外框）。
+版面：後排兩格隔間（三片隔板＋兩片前門）＋前面兩個洗手台。Codex 之後要重畫，只要依同樣的檔名與 sprite 名稱、尺寸替換 `office-toilet-v7.webp/.json` 即可，程式不用改。
+
+版面（v7，2026-10-24）：由上而下 馬桶 > 馬桶 > 洗手台，全部朝右；橫向隔板（stall_wall_h）把三者隔開，馬桶隔間右端各一片門（stall_door_v）。素材用 sprite 名稱 toilet_r、sink_r、stall_wall_h、stall_door_v。
