@@ -1322,7 +1322,6 @@ for(const [,x,y,w,h,side,c] of ROOMS){
   if(side==='r'){seg(x1,y0,RT,c-d-y0);seg(x1,c+d,RT,y1-c-d);}else seg(x1,y0,RT,y1-y0);
 }
 // 家具：一份清單同時決定怎麼畫、哪裡不能穿過。[畫法, x, y, w, h, 排序深度, 是否擋路, 參數]
-const TOILET_STALL_W=134,TOILET_STALL_H=150;
 const roomItems=[];
 const addTable=(kind,x,y,mids)=>roomItems.push(['table',x,y,tableW(mids),kind==='wood'||kind==='whitewood'?90:130,y+(kind==='wood'||kind==='whitewood'?70:110),true,{kind,mids}]);
 const addSprite=(name,x,y,depth,solid)=>{const r=RM[name];roomItems.push(['sprite',x,y,r[2],r[3],depth,solid,{name}]);};
@@ -1333,10 +1332,10 @@ const addSprite=(name,x,y,depth,solid)=>{const r=RM[name];roomItems.push(['sprit
     for(let k=0;k<n;k++){const cx=tx+tw*(2*k+1)/(2*n);addSprite('chair_front',cx-26,ty-46,ty-1,false);addSprite('chair_back',cx-26,ty+120,ty+130+40,false);}};
   meet(ROOMS[2],5,3,'projector_right');meet(ROOMS[3],2,2,'projector_left',BC_MX);meet(ROOMS[4],2,2,'projector_left',BC_MX);
   // 廁所：馬桶（朝右）→白隔間→馬桶（朝右）→洗手台（朝右），男女廁相同；右側留走道
-  // 2026-10-24 改版：斜視角。後排兩格隔間（各一個馬桶，隔板＋前門），前面兩個洗手台；男女廁相同，右側留走道。
-  for(const room of [ROOMS[0],ROOMS[1]]){const lx=room[1]+RT+8,y0=room[2]+RT+14;
-    for(let k=0;k<2;k++)roomItems.push(['toiletstall',lx+k*TOILET_STALL_W,y0,TOILET_STALL_W,TOILET_STALL_H,y0+TOILET_STALL_H,true,{}]);
-    for(let k=0;k<2;k++)roomItems.push(['sinkunit',lx+k*TOILET_STALL_W+TOILET_STALL_W/2-36,y0+TOILET_STALL_H+34,72,92,y0+TOILET_STALL_H+34+92,true,{}]);
+  // 廁所：馬桶（朝右）→白隔間→馬桶（朝右）→洗手台（朝右），男女廁相同；右側留走道
+  // （2026-10-24：使用者要求馬桶／洗手台改斜視角、請 Codex 重畫素材；新素材到之前先維持 Codex 原本的側面圖。需求見 EMC-ART-Pixel-Office/ASSET_REQUESTS.md）
+  for(const room of [ROOMS[0],ROOMS[1]]){const lx=room[1]+RT+8,gap=Math.round((meetH-2*RT-(RM.toilet_side_r[3]*2+RM.partition_white_h[3]+RM.sink_side_r[3]))/4);let ty=room[2]+RT+gap;
+    for(const n of ['toilet_side_r','partition_white_h','toilet_side_r','sink_side_r']){addSprite(n,lx,ty,ty+RM[n][3],true);ty+=RM[n][3]+gap;}
     roomItems.push(['label',room[1],room[2]-22,room[3],20,99999,false,{text:room[0],above:true}]);}
   // 電梯（比人大一圈）
   addSprite('elevator',TX0,TB-200,TB,true);roomItems.push(['label',TX0,TB+8,150,20,99999,false,{text:'電梯 ↓ 往樓下',above:true}]);
@@ -1669,11 +1668,11 @@ function roomTable(kind,x,y,mids){
 }
 const roomLabel=(text,x,y,w,above)=>{ctx.save();ctx.font='700 13px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';const tw=Math.round(ctx.measureText(text).width)+16,lx=Math.round(x+w/2-tw/2);ctx.fillStyle='#0c0c0c';ctx.fillRect(lx-2,y-2,tw+4,24);ctx.fillStyle='#2f3640';ctx.fillRect(lx,y,tw,20);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,x+w/2,y+10.5);ctx.restore();};
 function drawRoomsBase(){
-  const K='#2f394a',B=2,d=ROOM_DOOR/2;
+  const K='#0c0c0c',B=3,d=ROOM_DOOR/2;
   ctx.save();ctx.imageSmoothingEnabled=false;
   for(const [,x,y,w,h,side,c] of ROOMS){
     // 玻璃（2026-10-24 斜視角）：牆頂（整圈 RT 寬）＋後牆／前牆的正面（高 WH，跟桌子椅子一樣的短斜視角）。
-    // 輪廓改 2 px 深灰藍；門口兩端各收一道線，門口內不畫牆頂與正面。
+    // 輪廓維持 3 px 純黑（像素遊戲感，2026-10-24 使用者要求）；門口兩端各收一道線，門口內不畫牆頂與正面。
     const WH=30,seg=(x1,x2,gap)=>{if(!gap)return [[x1,x2]];const g0=c-d,g1=c+d,out=[];if(x1<g0)out.push([x1,Math.min(x2,g0)]);if(x2>g1)out.push([Math.max(x1,g1),x2]);return out;};
     ctx.fillStyle='rgba(186,222,234,.55)';
     for(const [x1,x2] of seg(x,x+w,side==='t'))ctx.fillRect(x1,y,x2-x1,RT);
@@ -1697,42 +1696,10 @@ function drawRoomsBase(){
   }
   ctx.restore();
 }
-/* 廁所（2026-10-24 斜視角）：隔間＝地面＋兩側隔板＋前門＋馬桶（正面略俯視）；洗手台＝臉盆＋水龍頭＋白色台座。
- * 全部用程式畫，輪廓 2 px 深灰藍（不再是 3 px 純黑），陰影與高光各一階，跟房間其他素材的像素風一致。 */
-const TL_LINE='#3b4454',TL_WHITE='#f7f8f6',TL_SHADE='#dfe3e1',TL_DEEP='#c3cac9',TL_WATER='#bfe0ee';
-function tlRect(x,y,w,h,fill){ctx.fillStyle=fill;ctx.fillRect(x,y,w,h);ctx.lineWidth=2;ctx.strokeStyle=TL_LINE;ctx.strokeRect(x+1,y+1,w-2,h-2);}
-function roomToiletStall(x,y,w,h){
-  ctx.save();ctx.lineJoin='round';
-  ctx.fillStyle='#e9eff1';ctx.fillRect(x+6,y,w-12,h);// 隔間地面
-  // 兩側隔板：頂面（長條）＋前端立面（有高度）
-  for(const px of [x,x+w-8]){ctx.fillStyle=TL_WHITE;ctx.fillRect(px,y,8,h-26);ctx.lineWidth=2;ctx.strokeStyle=TL_LINE;ctx.strokeRect(px+1,y+1,6,h-28);
-    tlRect(px,y+h-28,8,28,TL_SHADE);}
-  // 馬桶：水箱（頂面＋正面）、座圈（橢圓）、水面、碗身
-  const cx=x+w/2;
-  tlRect(cx-24,y+14,48,10,TL_WHITE);tlRect(cx-24,y+24,48,26,TL_SHADE);
-  ctx.fillStyle=TL_SHADE;ctx.beginPath();ctx.ellipse(cx,y+88,24,16,0,0,Math.PI);ctx.fill();ctx.lineWidth=2;ctx.strokeStyle=TL_LINE;ctx.stroke();
-  ctx.fillStyle=TL_WHITE;ctx.beginPath();ctx.ellipse(cx,y+74,26,22,0,0,Math.PI*2);ctx.fill();ctx.stroke();
-  ctx.fillStyle=TL_WATER;ctx.beginPath();ctx.ellipse(cx,y+76,16,13,0,0,Math.PI*2);ctx.fill();ctx.lineWidth=1.5;ctx.stroke();
-  ctx.fillStyle=TL_DEEP;ctx.fillRect(cx+14,y+30,8,4);// 沖水鈕
-  // 前門：只擋住下半（馬桶還看得到），門板上緣有頂面
-  const dx=x+10,dw=w-20,dy=y+h-34;
-  ctx.fillStyle=TL_WHITE;ctx.fillRect(dx,dy-6,dw,6);ctx.lineWidth=2;ctx.strokeStyle=TL_LINE;ctx.strokeRect(dx+1,dy-5,dw-2,4);
-  tlRect(dx,dy,dw,34,TL_SHADE);ctx.fillStyle=TL_LINE;ctx.fillRect(dx+dw/2-3,dy+10,6,8);
-  ctx.restore();
-}
-function roomSinkUnit(x,y,w,h){
-  const cx=x+w/2;ctx.save();ctx.lineJoin='round';
-  tlRect(cx-14,y+46,28,h-46,TL_SHADE);// 台座
-  ctx.fillStyle=TL_WHITE;ctx.beginPath();ctx.ellipse(cx,y+36,34,24,0,0,Math.PI*2);ctx.fill();ctx.lineWidth=2;ctx.strokeStyle=TL_LINE;ctx.stroke();
-  ctx.fillStyle=TL_WATER;ctx.beginPath();ctx.ellipse(cx,y+38,22,15,0,0,Math.PI*2);ctx.fill();ctx.lineWidth=1.5;ctx.stroke();
-  ctx.fillStyle=TL_DEEP;ctx.beginPath();ctx.arc(cx,y+40,3,0,Math.PI*2);ctx.fill();// 排水孔
-  tlRect(cx-4,y+8,8,14,TL_DEEP);ctx.fillStyle=TL_LINE;ctx.fillRect(cx-8,y+10,16,4);// 水龍頭
-  ctx.restore();
-}
 function pushRoomFurniture(layers){
   layers.push({depth:-99997,draw:drawRoomsBase});
   for(const it of roomItems){const [kind,x,y,w,h,depth,,p]=it;
-    layers.push({depth,draw:kind==='toiletstall'?()=>roomToiletStall(x,y,w,h):kind==='sinkunit'?()=>roomSinkUnit(x,y,w,h):kind==='table'?()=>roomTable(p.kind,x,y,p.mids):kind==='label'?()=>roomLabel(p.text,x,y+(p.above?0:Math.round(h/2)-10),w,p.above):()=>rm(p.name,x,y)});}
+    layers.push({depth,draw:kind==='table'?()=>roomTable(p.kind,x,y,p.mids):kind==='label'?()=>roomLabel(p.text,x,y+(p.above?0:Math.round(h/2)-10),w,p.above):()=>rm(p.name,x,y)});}
 }
 function drawDesk(s){
   if(s.big)return;/* 左下那組：改成一張白色長桌，另外畫（drawLongDesk） */
