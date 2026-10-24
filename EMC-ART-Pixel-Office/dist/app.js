@@ -1725,7 +1725,7 @@ function drawDeskBottom(s){
   ctx.drawImage(art,sx,sy+FACE,sw,FOOT-TRIM,left,BD_TOP+BD_FACE+oy,drawW,Math.round(footDraw*(FOOT-TRIM)/FOOT));// 少取 3 px：素材最底下接著下一張圖的邊，縮放時會滲出一條黑線
   if(s.grp||s.ext){drawStaffGear(s,BD_TOP+BD_FACE-22+oy,dimmed);return;}
   const mini=!s.name,img=mini?bottomArt.minimon:bottomArt.imac;
-  if(!stationAway(s)&&img.complete&&img.naturalWidth){const w=mini?165:104,h=Math.round(w*img.naturalHeight/img.naturalWidth);ctx.drawImage(dimmed?grayOfImage(img):img,Math.round(s.x-w/2),BD_CENTER+oy-Math.round(h/2),w,h);}
+  if(!stationAway(s)&&!(mini&&dimmed)/* 左下角沒人坐的 Mac mini 桌：下班（桌面轉灰階時）電腦一起收掉（2026-10-24） */&&img.complete&&img.naturalWidth){const w=mini?165:104,h=Math.round(w*img.naturalHeight/img.naturalWidth);ctx.drawImage(dimmed?grayOfImage(img):img,Math.round(s.x-w/2),BD_CENTER+oy-Math.round(h/2),w,h);}
 }
 /** 把一段文字折成不超過 maxWidth 的幾行（呼叫前要先設好 ctx.font）。 */
 function wrapText(text,maxWidth){
