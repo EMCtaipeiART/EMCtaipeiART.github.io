@@ -26,3 +26,7 @@
 ### 交付
 - 放 `assets/office-toilet-v6.webp` ＋ `assets/office-toilet-v6.json`（格式同 v5：`image`、`width`、`height`、`sprites{ name:{x,y,w,h} }`）。
 - 交付後告訴我（或直接改 `app.js` 廁所那段 `for(const room of [ROOMS[0],ROOMS[1]])`），我會接版面與碰撞。
+
+### 狀態（2026-10-24 更新）
+使用者要求直接重畫，所以我先用程式產生了一版像素素材放進去：`assets/office-toilet-v6.webp/.json`（toilet_front、sink_front、partition_v、stall_door，低解析像素圖放大 3 倍、3 px 黑外框）。
+版面：後排兩格隔間（三片隔板＋兩片前門）＋前面兩個洗手台。Codex 之後要重畫，只要依同樣的檔名與 sprite 名稱、尺寸替換 `office-toilet-v6.webp/.json` 即可，程式不用改。

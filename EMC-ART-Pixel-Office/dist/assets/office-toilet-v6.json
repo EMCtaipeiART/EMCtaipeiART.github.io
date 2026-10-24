@@ -1,0 +1,31 @@
+{
+  "image": "office-toilet-v6.webp",
+  "width": 352,
+  "height": 166,
+  "sprites": {
+    "toilet_front": {
+      "x": 8,
+      "y": 8,
+      "w": 90,
+      "h": 90
+    },
+    "sink_front": {
+      "x": 106,
+      "y": 8,
+      "w": 84,
+      "h": 90
+    },
+    "partition_v": {
+      "x": 198,
+      "y": 8,
+      "w": 18,
+      "h": 150
+    },
+    "stall_door": {
+      "x": 224,
+      "y": 8,
+      "w": 120,
+      "h": 48
+    }
+  }
+}
