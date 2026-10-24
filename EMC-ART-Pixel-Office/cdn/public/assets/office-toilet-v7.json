@@ -1,7 +1,7 @@
 {
   "image": "office-toilet-v7.webp",
-  "width": 448,
-  "height": 118,
+  "width": 454,
+  "height": 112,
   "sprites": {
     "toilet_r": {
       "x": 8,
@@ -12,17 +12,17 @@
     "sink_r": {
       "x": 130,
       "y": 8,
-      "w": 96,
-      "h": 102
+      "w": 102,
+      "h": 96
     },
     "stall_wall_h": {
-      "x": 234,
+      "x": 240,
       "y": 8,
       "w": 180,
       "h": 30
     },
     "stall_door_v": {
-      "x": 422,
+      "x": 428,
       "y": 8,
       "w": 18,
       "h": 72

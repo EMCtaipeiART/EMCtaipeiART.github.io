@@ -1300,7 +1300,7 @@ function syncNow(){return syncCall({action:'pixelOfficeState',since:syncVersion}
 // ===== 場地大更新（2026-10-22）：電梯、廁所、會議室、茶水間。座標都是「畫面座標」（view），碰撞牆再換回邏輯座標。 =====
 // 房間素材（Codex 畫，assets/office-rooms-v3.json）已是最終遊戲像素大小，1:1 貼上，3 px 黑外框。
 const RM={table_black_left:[8,8,55,130],table_black_mid:[71,8,85,130],table_black_right:[164,8,55,130],table_white_left:[227,8,55,130],table_white_mid:[290,8,85,130],table_white_right:[383,8,55,130],table_wood_left:[446,8,55,90],table_wood_mid:[509,8,85,90],table_wood_right:[602,8,55,90],table_white_v:[8,146,100,200],chair_front:[116,146,52,56],chair_back:[176,146,52,56],chair_side_l:[236,146,48,52],chair_side_r:[292,146,48,52],toilet_side_r:[348,146,84,78],sink_side_r:[440,146,70,84],partition_white_h:[518,146,150,22],elevator:[8,354,150,200],fridge_dark:[166,354,82,170],plant_small:[256,354,40,80],projector_right:[304,354,64,52],projector_left:[376,354,64,52],projector_down:[448,354,56,60],snack_chips_red:[512,354,24,32],snack_chips_yellow:[544,354,24,32],snack_chips_blue:[576,354,24,32],snack_box:[608,354,30,22],snack_candy:[646,354,20,14],prop_pillar:[674,354,86,218],prop_bookshelf_tall:[8,580,88,220],prop_shelf_low:[104,580,60,196],prop_cabinet_red:[172,580,120,196]};
-Object.assign(RM,{toilet_side_r:[8,8,96,92,'t'],sink_side_r:[112,8,84,96,'t'],partition_white_h:[204,8,170,26,'t'],toilet_r:[8,8,114,96,'t6'],sink_r:[130,8,96,102,'t6'],stall_wall_h:[234,8,180,30,'t6'],stall_door_v:[422,8,18,72,'t6']});/* 2026-10-24 斜視角廁所素材（assets/office-toilet-v7.json，由上而下 馬桶、馬桶、洗手台，全部朝右）：低解析像素圖放大 3 倍，3 px 黑外框 *//* 廁所素材（assets/office-toilet-v5.json）另一張圖 */
+Object.assign(RM,{toilet_side_r:[8,8,96,92,'t'],sink_side_r:[112,8,84,96,'t'],partition_white_h:[204,8,170,26,'t'],toilet_r:[8,8,114,96,'t6'],sink_r:[130,8,102,96,'t6'],stall_wall_h:[240,8,180,30,'t6'],stall_door_v:[428,8,18,72,'t6']});/* 2026-10-24 斜視角廁所素材（assets/office-toilet-v7.json，由上而下 馬桶、馬桶、洗手台，全部朝右）：低解析像素圖放大 3 倍，3 px 黑外框 *//* 廁所素材（assets/office-toilet-v5.json）另一張圖 */
 const RT=24,ROOM_DOOR=120,ROOM_MARGIN=130,SIDE_GAP=80;// 玻璃牆厚度；門寬；會議室牆內緣到桌子四邊的距離（四邊相同，椅子與人走動都放得下）；D 室牆到椅子的距離
 // 房間外框：[名稱, x, y, w, h, 門所在的邊（t/b/l/r）, 門中心座標]。會議室外框＝桌子＋四邊相同的間距＋牆。茶水間不隔間。
 const tableW=m=>110+85*m,meetW=m=>tableW(m)+2*ROOM_MARGIN+2*RT,meetH=130+2*ROOM_MARGIN+2*RT;
@@ -1335,7 +1335,7 @@ const addSprite=(name,x,y,depth,solid)=>{const r=RM[name];roomItems.push(['sprit
   for(const room of [ROOMS[0],ROOMS[1]]){const lx=room[1]+RT+8,y0=room[2]+RT+6,WALLS=[0,124,248];
     for(const dy of WALLS)addSprite('stall_wall_h',lx,y0+dy,y0+dy+30,true);
     [26,150].forEach((dy,k)=>{addSprite('toilet_r',lx+14,y0+dy,y0+dy+96,true);addSprite('stall_door_v',lx+160,y0+WALLS[k]+30,y0+WALLS[k]+104,true);});
-    addSprite('sink_r',lx+22,y0+274,y0+376,true);
+    addSprite('sink_r',lx+20,y0+274,y0+370,true);
     roomItems.push(['label',room[1],room[2]-22,room[3],20,99999,false,{text:room[0],above:true}]);}
   // 電梯（比人大一圈）
   addSprite('elevator',TX0,TB-200,TB,true);roomItems.push(['label',TX0,TB+8,150,20,99999,false,{text:'電梯 ↓ 往樓下',above:true}]);
@@ -1618,7 +1618,18 @@ function drawLongDesk(){
 }
 function drawLongDeskChair(){if(!LX||!stations.some(t=>t.big))return;const st=stations.find(t=>t.big);if(stationDimmed(st))return;furnitureObject(CHAIR_RECT,LONG_DESK.chairX-CHAIR_WIDTH/2,LONG_DESK.chairY-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor(st));}
 /** 書櫃與方柱：底部對齊桌腳落地線；band＝第幾組（0 最下面） */
+/* 書櫃、窄書櫃、深紅工具箱（2026-10-24 斜視角重畫，assets/office-props-v8）：頂面＋正面，3 px 黑外框，低解析像素圖放大 3 倍 */
+const props8Img=new Image();setAsset(props8Img,'assets/office-props-v8.webp?v=1');load(props8Img).then(()=>markDirty()).catch(()=>{});
+const RM8={prop_bookshelf:[8,8,48,222],prop_shelf:[64,8,45,150],prop_cabinet:[117,8,57,150]},P8={black_bookshelf:'prop_bookshelf',black_bookshelf_narrow:'prop_shelf',red_box:'prop_cabinet'};
 function drawProp(name,x,w,h,band,dimmed){
+  if(P8[name]&&props8Img.complete&&props8Img.naturalWidth>1){const r=RM8[P8[name]];x=Math.round(x);w=Math.round(w);ctx.save();ctx.imageSmoothingEnabled=false;const py=Math.round(bandFeet()-band*GPV-r[3]);
+    if(w>r[2]){const cut=Math.floor(r[2]/2),mid=4,Lw=cut-Math.floor(mid/2);
+      ctx.drawImage(props8Img,r[0],r[1],Lw,r[3],x,py,Lw,r[3]);
+      ctx.drawImage(props8Img,r[0]+Lw,r[1],mid,r[3],x+Lw,py,w-(r[2]-mid),r[3]);
+      ctx.drawImage(props8Img,r[0]+Lw+mid,r[1],r[2]-Lw-mid,r[3],x+w-(r[2]-Lw-mid),py,r[2]-Lw-mid,r[3]);
+    }else ctx.drawImage(props8Img,r[0],r[1],r[2],r[3],x+Math.round((w-r[2])/2),py,r[2],r[3]);
+    ctx.restore();return;}
+
   /* 照使用者畫的樣子：書櫃＝黑色方塊（下 30% 是矮櫃，中間一條分隔線）；方柱＝白色方塊（上 23% 是柱頭，一條分隔線）。 */
   const y=Math.round(bandFeet()-band*GPV-h);x=Math.round(x);w=Math.round(w);h=Math.round(h);
   const PM={white_pillar:'prop_pillar',black_bookshelf:'prop_bookshelf_side',black_bookshelf_narrow:'prop_shelf_side',red_box:'prop_cabinet_side'};
@@ -1657,7 +1668,7 @@ function drawProps(){
 /* ===== 場地大更新：房間與家具 ===== */
 const RM4={prop_bookshelf_side:[8,8,46,220],prop_shelf_side:[62,8,44,150],prop_cabinet_side:[114,8,56,150],table_whitewood_left:[178,8,55,90],table_whitewood_mid:[241,8,85,90],table_whitewood_right:[334,8,55,90]};
 const propsImg=new Image();setAsset(propsImg,'assets/office-props-v4.webp?v=1');load(propsImg).then(()=>markDirty()).catch(()=>{});
-const toilet6Img=new Image();setAsset(toilet6Img,'assets/office-toilet-v7.webp?v=1');load(toilet6Img).then(()=>markDirty()).catch(()=>{});
+const toilet6Img=new Image();setAsset(toilet6Img,'assets/office-toilet-v7.webp?v=2');load(toilet6Img).then(()=>markDirty()).catch(()=>{});
 const toiletImg=new Image();setAsset(toiletImg,'assets/office-toilet-v5.webp?v=1');load(toiletImg).then(()=>markDirty()).catch(()=>{});
 const roomsImg=new Image();setAsset(roomsImg,'assets/office-rooms-v3.webp?v=1');load(roomsImg).then(()=>markDirty()).catch(()=>{});
 const roomsReady=()=>roomsImg.complete&&roomsImg.naturalWidth>1;

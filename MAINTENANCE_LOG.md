@@ -730,3 +730,7 @@
 ## 2026-10-24 廁所改版 v7：由上而下 馬桶 > 馬桶 > 洗手台，全部朝右
 - 素材 assets/office-toilet-v7（取代 v6）：toilet_r、sink_r（含鏡子、龍頭、台座陰影）、stall_wall_h（有頂面、正面、端面的橫隔板）、stall_door_v；多階陰影與高光，3 px 黑外框。
 - 版面：橫隔板把馬桶與馬桶、馬桶與洗手台隔開，每個馬桶隔間右端一片門，右側留走道。
+
+## 2026-10-24 書櫃與深紅工具箱改斜視角、洗手台改成洗手檯
+- 新素材 assets/office-props-v8：prop_bookshelf（大黑書櫃）、prop_shelf（窄黑書櫃）、prop_cabinet（深紅工具箱，四層抽屜），都有頂面與正面、3 px 黑外框；drawProp 改用新圖（原 Codex 側面圖保留作備援）。
+- 洗手台（office-toilet-v7 的 sink_r）改成洗手檯：白色檯面＋長方形水槽＋龍頭＋下方雙門櫃＋左側鏡子，不再像馬桶。

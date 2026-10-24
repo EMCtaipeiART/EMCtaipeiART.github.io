@@ -1,0 +1,25 @@
+{
+  "image": "office-props-v8.webp",
+  "width": 182,
+  "height": 238,
+  "sprites": {
+    "prop_bookshelf": {
+      "x": 8,
+      "y": 8,
+      "w": 48,
+      "h": 222
+    },
+    "prop_shelf": {
+      "x": 64,
+      "y": 8,
+      "w": 45,
+      "h": 150
+    },
+    "prop_cabinet": {
+      "x": 117,
+      "y": 8,
+      "w": 57,
+      "h": 150
+    }
+  }
+}
