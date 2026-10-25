@@ -1335,8 +1335,10 @@ const addSprite=(name,x,y,depth,solid)=>{const r=RM[name];roomItems.push(['sprit
   // 廁所（2026-10-25）：直接貼使用者提供的圖（地面＋兩格馬桶隔間＋洗手台，由上而下 馬桶、馬桶、洗手台，全部朝右），再放兩塊看不見的擋路區（隔間組、洗手台）。
   for(const room of [ROOMS[0],ROOMS[1]]){const lx=room[1]+RT,y0=room[2]+RT;
     roomItems.push(['toiletroom',lx,y0,298,390,-99996,false,{}]);
-    roomItems.push(['sprite',lx+14,y0+10,168,258,y0+268,true,{name:'blk'}]);
-    roomItems.push(['sprite',lx+14,y0+282,67,94,y0+376,true,{name:'blk'}]);
+    /* 擋路區（2026-10-25 起手動操控也能走進隔間）：只擋左側水箱柱、兩片灰色後牆、最下面的前板與洗手台，隔間中間留空、從右側走進去。
+       'blocker' 的碰撞框會被算成 [x, y+h*.35, w, h]，所以 y 先往上補回 .35h。 */
+    const blk=(bx,by,bw,bh)=>roomItems.push(['blocker',bx,by-Math.round(bh*.35),bw,bh,by+bh,true,{}]);
+    blk(lx+12,y0+8,44,264);blk(lx+12,y0+8,164,44);blk(lx+12,y0+120,164,44);blk(lx+12,y0+236,164,36);blk(lx+14,y0+282,67,94);
     roomItems.push(['label',room[1],room[2]-22,room[3],20,99999,false,{text:room[0],above:true}]);}
   // 電梯（比人大一圈）
   addSprite('elevator',TX0,TB-200,TB,true);roomItems.push(['label',TX0,TB+8,150,20,99999,false,{text:'5F 電梯 ↓ 往樓下',above:true}]);
