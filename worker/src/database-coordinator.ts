@@ -287,8 +287,11 @@ export function pixelOfficeCalendarEventState(event: Row, calendarEmail = '', ca
 
 /** 會議活動寫的是哪一間會議室（A～D）：依序看地點、標題、說明（只取前 300 字）。只回傳字母，不留存任何活動內容。 */
 export function pixelOfficeMeetingRoomOf(event: Row): string {
-  const pattern = /(?:會議室|meeting\s*room|conference\s*room|room)\s*([A-Da-d])(?![A-Za-z])|(?<![A-Za-z])([A-Da-d])\s*(?:會議室|室)/i;
-  for (const part of [text(event.location), text(event.summary), text(event.description).slice(0, 300)]) {
+  // 「會議室 A」「會議室-A」「會議室（A）」「A會議室」「A 室」「Meeting Room B」「Room-C」；行事曆預約的會議室資源（attendees 裡 resource=true）也算
+  const sep = '[\\s:：\\-－_()（）【】\\[\\]]*';
+  const pattern = new RegExp('(?:會議室|會議廳|meeting' + sep + 'room|conference' + sep + 'room|room)' + sep + '([A-Da-d])(?![A-Za-z])|(?<![A-Za-z])([A-Da-d])' + sep + '(?:會議室|會議廳|室|廳)', 'i');
+  const resources = (Array.isArray(event.attendees) ? event.attendees as Row[] : []).filter(item => item.resource === true).map(item => text(item.displayName));
+  for (const part of [...resources, text(event.location), text(event.summary), text(event.description).slice(0, 300)]) {
     const match = part.match(pattern);
     const letter = match ? (match[1] || match[2] || '') : '';
     if (letter) return letter.toUpperCase();
@@ -2205,7 +2208,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         try {
           const params = new URLSearchParams({
             timeMin, timeMax, singleEvents: 'true', maxResults: '20', timeZone: 'Asia/Taipei',
-            fields: 'items(status,summary,location,description,eventType,start,end,transparency,organizer(email,self),attendees(self,responseStatus))'
+            fields: 'items(status,summary,location,description,eventType,start,end,transparency,organizer(email,self),attendees(self,responseStatus,resource,displayName))'
           });
           const detailsResponse = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(email)}/events?${params.toString()}`, {
             headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' }
@@ -2256,7 +2259,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       else if (result === 'at-desk') atDesk.push(name);
     }
     detailUnreadable.sort((a, b) => PIXEL_OFFICE_NAMES.indexOf(a) - PIXEL_OFFICE_NAMES.indexOf(b));
-    const result = { ok: true, detected, meeting, leave, released, manualHeld, atDesk, unreadable, detailUnreadable, femas: { ok: femas.ok, events: femas.events, onLeave: [...femas.names], ...(femas.error ? { error: femas.error } : {}) } };
+    const rooms: Row = {};for (const name of meeting) rooms[name] = detailStates.has(name) ? (detailRooms.get(name) || '(會議沒寫會議室)') : '(讀不到活動詳細內容)';
+    const result = { ok: true, detected, rooms, meeting, leave, released, manualHeld, atDesk, unreadable, detailUnreadable, femas: { ok: femas.ok, events: femas.events, onLeave: [...femas.names], ...(femas.error ? { error: femas.error } : {}) } };
     await this.rememberCalendarSync(result, nowMs);
     return result;
   }
