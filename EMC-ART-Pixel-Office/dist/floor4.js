@@ -80,19 +80,20 @@
       label(name, rx, TY - 22, TW);
     });
   }
+  const WOOD = { tx: 0, ty: 0, tw: 0 };
   // ---- 右側：木長桌（10 人：上下各 5 張椅子）
   {
-    const tx = TX0 + 150 + CORR + 2 * T_W - RT + CORR + RT + ROOM_MARGIN, ty = TY + RT + ROOM_MARGIN, tw = tableW(5); table('wood', tx, ty, 5, ty + 70); block(tx, ty + 20, tw, 80); label('木長桌（10 人）', tx, ty - 90, tw);
+    const tx = TX0 + 150 + CORR + 2 * T_W - RT + CORR + RT + ROOM_MARGIN - 2 * 64, ty = TY + RT + ROOM_MARGIN + 2 * 64, tw = tableW(5); WOOD.tx = tx; WOOD.ty = ty; WOOD.tw = tw; table('wood', tx, ty, 5, ty + 70); block(tx, ty + 20, tw, 80); label('木長桌（10 人）', tx, ty - 90, tw);
     for (let k = 0; k < 5; k++) { const cx = tx + tw * (2 * k + 1) / 10; sprite('chair_front', cx - 26, ty - 46, ty - 1); sprite('chair_back', cx - 26, ty + 60, ty + 130); }
   }
   // ---- 茶水間（木長桌旁）
   {
-    const tx = TX0 + 150 + CORR + 2 * T_W - RT + CORR + RT + ROOM_MARGIN + tableW(5) + 110, ty = TY + RT + ROOM_MARGIN, fx = tx + 300, fy = ty - 40; table('whitewood', tx, ty, 2, ty + 70); block(tx, ty + 20, tableW(2), 70); block(fx, fy + 60, 164, 110); label('茶水間', tx, ty - 60, tableW(2));
+    const tx = Math.round(WOOD.tx + WOOD.tw / 2 - 250), ty = WOOD.ty - 190, fx = tx + 300, fy = ty - 40; table('whitewood', tx, ty, 2, ty + 70); block(tx, ty + 20, tableW(2), 70); block(fx, fy + 60, 164, 110); label('茶水間', tx, ty - 60, tableW(2));
     [['snack_chips_red', 30], ['snack_chips_yellow', 66], ['snack_chips_blue', 102], ['snack_box', 150], ['snack_candy', 215]].forEach(([n, dx]) => { const r = RM[n]; sprite(n, tx + dx, ty + 58 - r[3], ty + 85); });
     sprite('fridge_dark', fx, fy, fy + 170); sprite('fridge_dark', fx + 82, fy, fy + 170); sprite('plant_small', fx + 190, fy + 90, fy + 170);
   }
   // ---- 左側：五個米白桌子群（每群上排 4 張、下排 4 張，椅子在最外側）
-  const GX = 78, GY0 = TY + T_H + 136 + 67, GP = GPV;/* 左緣 78、離廁所下緣 136（五樓：左側桌子群左緣 78、廁所下緣到第一排椅頭 136） */
+  const GX = 78, GY0 = TY + T_H + 136 + 2 * 64 + 67, GP = GPV - 64;/* 左緣 78、離廁所下緣 136（五樓：左側桌子群左緣 78、廁所下緣到第一排椅頭 136） */
   for (let g = 0; g < 5; g++) {
     const gy = GY0 + g * GP; block(GX, gy + 20, 880, 200);
     for (let k = 0; k < 4; k++) {
@@ -103,9 +104,10 @@
       chairBig(cx, gy + 94 + 72, gy + 420); // 下排椅子（在桌子前面；椅頭在下排桌上緣下方 72）
     }
   }
+  const HROOM = { x: 0, bottom: 0 };
   // ---- 右側：大會議室 H（玻璃，上下兩個出口；投影機往右；六張白桌排成「C」，一桌兩椅）
   {
-    const rx = GX + 880 + CORR, ry = GY0 - 67 - RT, xL = rx + RT + 130, y0 = ry + RT + 150, rw = RT + 130 + 100 + 2 * 195 + 130 + RT, rh = RT + 150 + 400 + 90 + RT;
+    const rx = GX + 880 + CORR + 2 * 64, ry = GY0 - 67 - RT + 64, xL = rx + RT + 130, y0 = ry + RT + 150, rw = RT + 130 + 100 + 2 * 195 + 130 + RT, rh = RT + 150 + 400 + 90 + RT;
     glass(rx, ry, rw, rh, [{ side: 't', c: rx + rw / 2 }, { side: 'b', c: rx + rw / 2 }]);
     block(xL + 100, y0, 390, 130); block(xL + 100, y0 + 270, 390, 130); block(xL, y0, 100, 400);
     const xC = xL + 100;
@@ -116,6 +118,7 @@
     for (const k of [0, 1]) { const ty = y0 + k * 200; add(ty + 180, c => spr(c, 'table_white_v', xL, ty)); for (const dy of [50, 150]) sprite('chair_side_r', xL - 40, ty + dy - 26, ty + dy + 26); }
     sprite('projector_right', xL + 18, y0 + 170, y0 + 230);
     label('會議室 H', rx, ry + rh + WH + 8, rw);
+    HROOM.x = rx; HROOM.bottom = ry + rh;
   }
   // ---- 桌子群下方：會議室 F、G（同 B、C）＋右側兩間大玻璃屋（各六張桌椅）
   const BY = GY0 + 4 * GP + 166 + 135 + 114,/* 最後一群下排椅腳到 F 會議室 114（五樓：下排椅腳到 B 會議室 114） */ BC_MX = 70, BC_W = tableW(2) + 2 * BC_MX + 2 * RT, meetH = 130 + 2 * ROOM_MARGIN + 2 * RT;
@@ -127,13 +130,13 @@
   };
   small('會議室 F', 60, BY); small('會議室 G', 60, BY + meetH + RT);
   const big = (name, rx, ry) => {
-    const rw = RT + 40 + 3 * 220 + 40 + RT, rh = RT + 130 + 2 * 124 + 190 + 60 + RT;
+    const rw = RT + 40 + 4 * 220 + 40 + RT, rh = RT + 130 + 94 + 72 + 135 + 50 + RT;
     glass(rx, ry, rw, rh, [{ side: 't', c: rx + rw / 2 }, { side: 'l', c: ry + rh / 2 }]);
-    const dx0 = rx + RT + 40, dy0 = ry + RT + 130; block(dx0, dy0 + 20, 660, 200);
-    for (let k = 0; k < 3; k++) { const dx = dx0 + k * 220, cx = dx + 110; chairBig(cx, dy0 - 70, dy0 + 10); deskBeige(dx, dy0, dy0 + 100); deskBeige(dx, dy0 + 94, dy0 + 200); chairBig(cx, dy0 + 190, dy0 + 420); }
-    label(name, rx, ry + rh + WH + 8, rw); return rw;
+    const dx0 = rx + RT + 40, dy0 = ry + RT + 130; block(dx0, dy0 + 20, 880, 200);
+    for (let k = 0; k < 4; k++) { const dx = dx0 + k * 220, cx = dx + 110; chairBig(cx, dy0 - 67, dy0 + 10); deskBeige(dx, dy0, dy0 + 100); deskBeige(dx, dy0 + 94, dy0 + 200); chairBig(cx, dy0 + 94 + 72, dy0 + 420); }
+    label(name, rx, ry + rh + WH + 8, rw); return rh;
   };
-  const bx = 60 + BC_W + 92; const w1 = big('玻璃辦公室 1', bx, BY); big('玻璃辦公室 2', bx + w1 + 60, BY);
+  const oy1 = HROOM.bottom + WH + 70, h1 = big('玻璃辦公室 1', HROOM.x, oy1); big('玻璃辦公室 2', HROOM.x, oy1 + h1 + WH + 70);
 
   const load = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(i); i.src = src; });
   const scene = {
