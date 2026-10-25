@@ -1452,7 +1452,7 @@ game.addEventListener('pointerleave',()=>{setHoverStory(-1);if(embedMode&&!cardP
 function softPanel(context,x,y,w,h,{radius=12,fill='#fffdf7',stroke='#c9d3e0',lineWidth=1.5,shadow=true}={}){context.save();const path=()=>{context.beginPath();context.roundRect(x,y,w,h,radius);};if(shadow){context.shadowColor='rgba(20,41,68,.18)';context.shadowBlur=shadowBlurFor(14);context.shadowOffsetY=4;path();context.fillStyle=fill;context.fill();context.shadowColor='transparent';}path();context.fillStyle=fill;context.fill();context.strokeStyle=stroke;context.lineWidth=lineWidth;context.stroke();context.restore();}
 /** 點選人物時，頭上顯示等級與稱號。 */
 function stationPerson(s){return s.name?people.find(person=>person.name===s.name):null;}
-function stationAway(s){const person=stationPerson(s);return person&&isAway(person);}
+function stationAway(s){const person=stationPerson(s);return person&&!workingStatusIds.includes(statusOf(person));}/* 看狀態而不是「畫不畫人」：人在會議室（inRoom）時，原本的桌子仍是離席——桌面灰階、椅子與電腦清空 */
 // 離席的空桌要畫成灰階。原本用 ctx.filter='grayscale(1) brightness(1.9) contrast(.85)'，但 Safari 的
 // canvas 不支援 filter，桌子就維持原本的藍色（使用者回報「下班或出國桌子沒有灰階」）。改成在圖集載入後
 // 先做一張灰階版本快取起來，離席時換那張畫——每個瀏覽器結果都一樣，而且只算一次。
