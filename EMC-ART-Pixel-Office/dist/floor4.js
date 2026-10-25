@@ -6,7 +6,7 @@
  * 右側大會議室 H（上下兩個出口，投影機往右，六張白桌排成「C」，一桌兩椅）；桌子群下方會議室 F、G（同 B、C）；
  * 它們右側兩間大玻璃屋，各六張桌椅。素材全部沿用五樓的圖集。 */
 (function () {
-  const OFFY = 200, W = 2560, H = 4400;
+  const OFFY = 200, W = 2560, H = 3500;
   const TX0 = 245, CORR = 110, T_W = 346, T_H = 438, TY = 60, GPV = 497;
   /* 會議室 H 的桌椅往右靠齊（房間比原本寬 398）；廁所、木長桌、茶水間（電梯除外）跟著往右同樣 398 */
   const HSHIFT = (2 * (24 + 40 + 2 * 220 + 40 + 24) + 60) - (24 + 130 + 100 + 2 * 195 + 130 + 24);/* 都是五樓的數字 */
@@ -96,7 +96,7 @@
     sprite('fridge_dark', fx, fy, fy + 170); sprite('fridge_dark', fx + 82, fy, fy + 170); sprite('plant_small', fx + 190, fy + 90, fy + 170);
   }
   // ---- 左側：五個米白桌子群（每群上排 4 張、下排 4 張，椅子在最外側）
-  const GX = 78, GY0 = TY + T_H + 136 + 64 + 67, GP = GPV - 64;/* 左緣 78、離廁所下緣 136（五樓：左側桌子群左緣 78、廁所下緣到第一排椅頭 136） */
+  const GX = 78, GY0 = TY + T_H + 136 + 64 + 67, GP = GPV - 64 + 32;/* 左緣 78、離廁所下緣 136（五樓：左側桌子群左緣 78、廁所下緣到第一排椅頭 136） */
   for (let g = 0; g < 5; g++) {
     const gy = GY0 + g * GP; block(GX, gy + 20, 880, 200);
     for (let k = 0; k < 4; k++) {
@@ -131,21 +131,23 @@
     sprite('projector_left', tx + tw - 84, ty + 26, ty + 125);
     for (let k = 0; k < 2; k++) { const cx = tx + tw * (2 * k + 1) / 4; sprite('chair_front', cx - 26, ty - 46, ty - 1); sprite('chair_back', cx - 26, ty + 120, ty + 170); }
   };
-  small('會議室 F', 60 + 64, BY); small('會議室 G', 60 + 64, BY + meetH + RT);
   // 玻璃辦公室（2026-10-26）：窄長、往下延伸；每間上下兩個座位群，每群 2×2 共四張桌（上排 2＋下排 2，跟桌子群同一種接法），椅子在最外側。
   const big = (name, rx, ry, doors) => {
-    const GP2 = GPV - 64, rw = RT + 40 + 2 * 220 + 40 + RT, rh = RT + 90 + 67 + GP2 + 94 + 72 + 135 + 50 + RT;
+    const GP2 = GP, rw = RT + 40 + 2 * 220 + 40 + RT, rh = RT + 90 + 67 + GP2 + 94 + 72 + 135 + 50 + RT;
     glass(rx, ry, rw, rh, doors(rx, ry, rw, rh));
     const dx0 = rx + RT + 40;
     for (let g = 0; g < 2; g++) {
       const gy = ry + RT + 90 + 67 + g * GP2; block(dx0, gy + 20, 440, 200);
       for (let k = 0; k < 2; k++) { const dx = dx0 + k * 220, cx = dx + 110; seatOf(cx, gy); chairBig(cx, gy - 67, gy + 10); deskBeige(dx, gy, gy + 100); deskBeige(dx, gy + 94, gy + 200); chairBig(cx, gy + 94 + 72, gy + 94 + 179 - 20); }
     }
-    return rw;
+    OFF.h = rh; return rw;
   };
+  const OFF = { h: 0 };
   const oy1 = HROOM.bottom + WH + 70;
   const w1 = big('office1', HROOM.x, oy1, (rx, ry, rw, rh) => [{ side: 't', c: rx + rw / 2 }, { side: 'l', c: ry + rh / 2 }]);
   big('office2', HROOM.x + w1 + 60, oy1, (rx, ry, rw, rh) => [{ side: 't', c: rx + rw / 2 }, { side: 'r', c: ry + rh / 2 }]);
+  const fgY = oy1 + OFF.h + WH + 70;
+  small('會議室 F', HROOM.x, fgY); small('會議室 G', HROOM.x + w1 + 60, fgY);
 
   const load = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(i); i.src = src; });
   const scene = {

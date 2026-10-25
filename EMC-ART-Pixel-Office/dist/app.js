@@ -1,5 +1,5 @@
 'use strict';
-const FLOOR4=/[?&]floor=4/.test(location.search),F4_H=4600;/* 四樓（?floor=4）：同一份遊戲、換一張場景（floor4.js），人物與功能鍵全部沿用 */
+const FLOOR4=/[?&]floor=4/.test(location.search),F4_H=3500;/* 四樓（?floor=4）：同一份遊戲、換一張場景（floor4.js），人物與功能鍵全部沿用 */
 const $=id=>document.getElementById(id), game=$('game'), ctx=game.getContext('2d'), LX=FLOOR4||/[?&]embed=1/.test(location.search)?0:320/* 往左多出來、放新桌子群的寬度（首頁小框不用） */,W=FLOOR4?2560:/[?&]embed=1/.test(location.search)?1536:2050+LX,H0=1024,GP=604/* 往上複製的桌子群：邏輯座標間距 */,GPV=497/* 畫面上的間距：群高 403 + 一張桌子的深度 94 */,OY=FLOOR4||/[?&]embed=1/.test(location.search)?0:1560/* 畫布往上多留的高度（放新增的兩組桌子） */,VB=FLOOR4?F4_H:/[?&]embed=1/.test(location.search)?H0:1700/* 場景下緣：新增的會議室／茶水間在最下面 */,H=VB+OY;// 首頁小框（embed）只看設計部，畫布維持 1536；整頁／編輯版含六張同仁桌，加寬到 2160
 const names=['Leona','Amber','Noise','Anna','Machi'], descriptions=['黑髮・時髦日常','暖色・樸素自在','短髮・專注模式','長髮・粉色靈感','挑染・街頭風格'];
 const starts=[[548+LX,355],[768+LX,355],[988+LX,355],[768+LX,695],[988+LX,695]];
