@@ -1300,7 +1300,7 @@ function syncNow(){return syncCall({action:'pixelOfficeState',since:syncVersion}
 // ===== 場地大更新（2026-10-22）：電梯、廁所、會議室、茶水間。座標都是「畫面座標」（view），碰撞牆再換回邏輯座標。 =====
 // 房間素材（Codex 畫，assets/office-rooms-v3.json）已是最終遊戲像素大小，1:1 貼上，3 px 黑外框。
 const RM={table_black_left:[8,8,55,130],table_black_mid:[71,8,85,130],table_black_right:[164,8,55,130],table_white_left:[227,8,55,130],table_white_mid:[290,8,85,130],table_white_right:[383,8,55,130],table_wood_left:[446,8,55,90],table_wood_mid:[509,8,85,90],table_wood_right:[602,8,55,90],table_white_v:[8,146,100,200],chair_front:[116,146,52,56],chair_back:[176,146,52,56],chair_side_l:[236,146,48,52],chair_side_r:[292,146,48,52],toilet_side_r:[348,146,84,78],sink_side_r:[440,146,70,84],partition_white_h:[518,146,150,22],elevator:[8,354,150,200],fridge_dark:[166,354,82,170],plant_small:[256,354,40,80],projector_right:[304,354,64,52],projector_left:[376,354,64,52],projector_down:[448,354,56,60],snack_chips_red:[512,354,24,32],snack_chips_yellow:[544,354,24,32],snack_chips_blue:[576,354,24,32],snack_box:[608,354,30,22],snack_candy:[646,354,20,14],prop_pillar:[674,354,86,218],prop_bookshelf_tall:[8,580,88,220],prop_shelf_low:[104,580,60,196],prop_cabinet_red:[172,580,120,196]};
-Object.assign(RM,{toilet_side_r:[8,8,96,92,'t'],sink_side_r:[112,8,84,96,'t'],partition_white_h:[204,8,170,26,'t'],stall_unit:[8,8,171,120,'t6'],stall_band:[187,8,171,36,'t6'],sink_r:[366,8,72,90,'t6']});/* 2026-10-25 廁所素材（assets/office-toilet-v8.json，照使用者畫的圖：隔間框＋灰色後牆＋朝右的馬桶，下面一個洗手台）：低解析像素圖放大 3 倍，3 px 黑外框 *//* 廁所素材（assets/office-toilet-v5.json）另一張圖 */
+Object.assign(RM,{toilet_side_r:[8,8,96,92,'t'],sink_side_r:[112,8,84,96,'t'],partition_white_h:[204,8,170,26,'t'],});/* 2026-10-25 廁所：直接用使用者提供的圖（assets/office-toilet-v9.webp，276×390，含白磁磚地面、兩格隔間與洗手台），男女廁共用 *//* 廁所素材（assets/office-toilet-v5.json）另一張圖 */
 const RT=24,ROOM_DOOR=120,ROOM_MARGIN=130,SIDE_GAP=80;// 玻璃牆厚度；門寬；會議室牆內緣到桌子四邊的距離（四邊相同，椅子與人走動都放得下）；D 室牆到椅子的距離
 // 房間外框：[名稱, x, y, w, h, 門所在的邊（t/b/l/r）, 門中心座標]。會議室外框＝桌子＋四邊相同的間距＋牆。茶水間不隔間。
 const tableW=m=>110+85*m,meetW=m=>tableW(m)+2*ROOM_MARGIN+2*RT,meetH=130+2*ROOM_MARGIN+2*RT;
@@ -1331,10 +1331,11 @@ const addSprite=(name,x,y,depth,solid)=>{const r=RM[name];roomItems.push(['sprit
     addSprite(proj,proj==='projector_right'?tx+tw-60-64:tx+tw-84,ty+26,ty+125,false);
     for(let k=0;k<n;k++){const cx=tx+tw*(2*k+1)/(2*n);addSprite('chair_front',cx-26,ty-46,ty-1,false);addSprite('chair_back',cx-26,ty+120,ty+130+40,false);}};
   meet(ROOMS[2],5,3,'projector_right');meet(ROOMS[3],2,2,'projector_left',BC_MX);meet(ROOMS[4],2,2,'projector_left',BC_MX);
-  // 廁所（2026-10-25，照使用者畫的圖）：由上而下 馬桶隔間 > 馬桶隔間 > 洗手台，全部朝右；隔間有兩側立柱、灰色後牆與前緣橫桿，最後一格前面多一片灰色前板；地面白磁磚。
-  for(const room of [ROOMS[0],ROOMS[1]]){const lx=room[1]+RT+12,y0=room[2]+RT+14;
-    addSprite('stall_unit',lx,y0,y0+120,true);addSprite('stall_unit',lx,y0+118,y0+238,true);addSprite('stall_band',lx,y0+236,y0+272,true);
-    addSprite('sink_r',lx+10,y0+292,y0+382,true);
+  // 廁所（2026-10-25）：直接貼使用者提供的圖（地面＋兩格馬桶隔間＋洗手台，由上而下 馬桶、馬桶、洗手台，全部朝右），再放兩塊看不見的擋路區（隔間組、洗手台）。
+  for(const room of [ROOMS[0],ROOMS[1]]){const lx=room[1]+RT,y0=room[2]+RT;
+    roomItems.push(['toiletroom',lx,y0,298,390,-99996,false,{}]);
+    roomItems.push(['sprite',lx+14,y0+10,168,258,y0+268,true,{name:'blk'}]);
+    roomItems.push(['sprite',lx+14,y0+282,67,94,y0+376,true,{name:'blk'}]);
     roomItems.push(['label',room[1],room[2]-22,room[3],20,99999,false,{text:room[0],above:true}]);}
   // 電梯（比人大一圈）
   addSprite('elevator',TX0,TB-200,TB,true);roomItems.push(['label',TX0,TB+8,150,20,99999,false,{text:'電梯 ↓ 往樓下',above:true}]);
@@ -1667,7 +1668,7 @@ function drawProps(){
 /* ===== 場地大更新：房間與家具 ===== */
 const RM4={prop_bookshelf_side:[8,8,46,220],prop_shelf_side:[62,8,44,150],prop_cabinet_side:[114,8,56,150],table_whitewood_left:[178,8,55,90],table_whitewood_mid:[241,8,85,90],table_whitewood_right:[334,8,55,90]};
 const propsImg=new Image();setAsset(propsImg,'assets/office-props-v4.webp?v=1');load(propsImg).then(()=>markDirty()).catch(()=>{});
-const toilet6Img=new Image();setAsset(toilet6Img,'assets/office-toilet-v8.webp?v=1');load(toilet6Img).then(()=>markDirty()).catch(()=>{});
+const toilet6Img=new Image();setAsset(toilet6Img,'assets/office-toilet-v9.webp?v=1');load(toilet6Img).then(()=>markDirty()).catch(()=>{});
 const toiletImg=new Image();setAsset(toiletImg,'assets/office-toilet-v5.webp?v=1');load(toiletImg).then(()=>markDirty()).catch(()=>{});
 const roomsImg=new Image();setAsset(roomsImg,'assets/office-rooms-v3.webp?v=1');load(roomsImg).then(()=>markDirty()).catch(()=>{});
 const roomsReady=()=>roomsImg.complete&&roomsImg.naturalWidth>1;
@@ -1682,7 +1683,6 @@ function drawRoomsBase(){
   const K='#0c0c0c',B=3,d=ROOM_DOOR/2;
   ctx.save();ctx.imageSmoothingEnabled=false;
   for(const [rn,x,y,w,h,side,c] of ROOMS){
-    if(/廁/.test(rn)){/* 廁所地面：白磁磚＋淡灰格線 */ctx.fillStyle='#f6f6f3';ctx.fillRect(x+RT,y+RT,w-2*RT,h-2*RT);ctx.fillStyle='#e2e3de';for(let gx=x+RT+64;gx<x+w-RT;gx+=64)ctx.fillRect(gx,y+RT,2,h-2*RT);for(let gy=y+RT+64;gy<y+h-RT;gy+=64)ctx.fillRect(x+RT,gy,w-2*RT,2);}
     // 玻璃（2026-10-24 斜視角）：牆頂（整圈 RT 寬）＋後牆／前牆的正面（高 WH，跟桌子椅子一樣的短斜視角）。
     // 輪廓維持 3 px 純黑（像素遊戲感，2026-10-24 使用者要求）；門口兩端各收一道線，門口內不畫牆頂與正面。
     const WH=30,seg=(x1,x2,gap)=>{if(!gap)return [[x1,x2]];const g0=c-d,g1=c+d,out=[];if(x1<g0)out.push([x1,Math.min(x2,g0)]);if(x2>g1)out.push([Math.max(x1,g1),x2]);return out;};
@@ -1711,7 +1711,7 @@ function drawRoomsBase(){
 function pushRoomFurniture(layers){
   layers.push({depth:-99997,draw:drawRoomsBase});
   for(const it of roomItems){const [kind,x,y,w,h,depth,,p]=it;
-    layers.push({depth,draw:kind==='table'?()=>roomTable(p.kind,x,y,p.mids):kind==='label'?()=>roomLabel(p.text,x,y+(p.above?0:Math.round(h/2)-10),w,p.above):()=>rm(p.name,x,y)});}
+    layers.push({depth,draw:kind==='toiletroom'?()=>{if(!toilet6Img.complete||!toilet6Img.naturalWidth)return;ctx.save();ctx.imageSmoothingEnabled=true;ctx.drawImage(toilet6Img,x,y,w,h);ctx.restore();}:kind==='table'?()=>roomTable(p.kind,x,y,p.mids):kind==='label'?()=>roomLabel(p.text,x,y+(p.above?0:Math.round(h/2)-10),w,p.above):()=>rm(p.name,x,y)});}
 }
 function drawDesk(s){
   if(s.big)return;/* 左下那組：改成一張白色長桌，另外畫（drawLongDesk） */
