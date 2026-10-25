@@ -1371,11 +1371,13 @@ let elevatorCooldown=0;
 function initFloor4(){
   const want=new URLSearchParams(location.search).get('hero')||'';let hi=names.indexOf(want);if(hi<0){try{hi=ownIndex()}catch(e){hi=-1}}
   people.forEach((q,i)=>{q.f4hide=i!==hi;});
-  if(hi>=0){const q=people[hi],st=(window.FLOOR4_SCENE&&FLOOR4_SCENE.heroStart)||{x:115,y:502,dir:'down'};q.x=st.x;q.y=st.y;q.dir=st.dir||'down';select(hi);}
+  if(hi>=0){const q=people[hi],st=(window.FLOOR4_SCENE&&FLOOR4_SCENE.heroStart)||{x:115,y:502,dir:'down'};q.x=st.x;q.y=st.y;q.dir=st.dir||'down';try{const sv=JSON.parse(sessionStorage.getItem('f4pos')||'null');if(sv&&sv.n===q.name&&Number.isFinite(sv.x)&&Number.isFinite(sv.y)&&!blocked(sv.x,sv.y)){q.x=sv.x;q.y=sv.y;q.dir=sv.d||q.dir;}}catch(e){}select(hi);}/* 重新整理後回到離開時的位置 */
   if(window.FLOOR4_SCENE){FLOOR4_SCENE.onReady=()=>markDirty();if(FLOOR4_SCENE.ready)markDirty();}
   markDirty();
 }
+let f4SaveAt=0;
 function checkElevator(){
+  if(FLOOR4&&window.__f4init&&selected!==null&&Date.now()-f4SaveAt>800){f4SaveAt=Date.now();try{const q=people[selected];if(q&&q.f4hide===false)sessionStorage.setItem('f4pos',JSON.stringify({n:q.name,x:Math.round(q.x),y:Math.round(q.y),d:q.dir}))}catch(e){}}
   if(embedMode||(!LX&&!FLOOR4)||selected===null||!keys.has('ArrowUp')||Date.now()<elevatorCooldown)return;
   const p=people[selected];if(!p||p.inRoom)return;const vy=viewY(p.y);
   const f4=FLOOR4&&window.FLOOR4_SCENE?FLOOR4_SCENE.elevator:null,hit=f4?(p.x>=f4.x0&&p.x<=f4.x1&&p.y>=f4.y0&&p.y<=f4.y1):(p.x>=TX0+10&&p.x<=TX0+140&&vy>=TB-6&&vy<=TB+34);
