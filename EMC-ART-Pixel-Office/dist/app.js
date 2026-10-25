@@ -1494,7 +1494,15 @@ function stationDimmed(s){
 }
 const furnitureFor=s=>stationDimmed(s)?(ensureFurnitureGray()||furniture):furniture;
 // 嵌入時不填底色，讓外層卡片的顏色透進來（深色模式才不會卡著一塊白）。獨立開遊戲頁時仍是白底。
-function drawOffice(){if(embedMode){ctx.clearRect(0,-OY,W,H);return;}ctx.fillStyle='#fff';if(document.documentElement.classList.contains('clean')){ctx.clearRect(0,-OY,W,H);return;}ctx.fillRect(0,-OY,W,H);}
+/* 地板灰色格線（2026-10-25）：整個元宇宙比照廁所的白磁磚，每 64 px 一條淡灰線，從世界座標 0 對齊，捲動、縮放都不會漂移。 */
+const FLOOR_GRID=64;
+function drawFloorGrid(){
+  ctx.save();ctx.fillStyle='rgba(120,128,136,.16)';
+  for(let gx=Math.ceil(0/FLOOR_GRID)*FLOOR_GRID;gx<W;gx+=FLOOR_GRID)ctx.fillRect(gx,-OY,2,H+OY);
+  for(let gy=Math.ceil(-OY/FLOOR_GRID)*FLOOR_GRID;gy<H;gy+=FLOOR_GRID)ctx.fillRect(0,gy,W,2);
+  ctx.restore();
+}
+function drawOffice(){if(embedMode){ctx.clearRect(0,-OY,W,H);return;}ctx.fillStyle='#fff';if(document.documentElement.classList.contains('clean')){ctx.clearRect(0,-OY,W,H);drawFloorGrid();return;}ctx.fillRect(0,-OY,W,H);drawFloorGrid();}
 // furniture-v3.webp：桌子分「左端／中間／右端」三種形狀（素材裡本來就是這樣畫的），
 // 0 一般桌左、1 一般桌中、2 一般桌右、3 副螢幕桌右、4 Mac mini 桌左、5 椅子、6-8 對應三種空桌。
 // 每筆是 [x, y, 寬, 高, 螢幕露出桌面的高度]。桌子本體一律是「桌面 221 + 桌腳 70」，
