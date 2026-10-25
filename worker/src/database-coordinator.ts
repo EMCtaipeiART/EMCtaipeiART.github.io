@@ -157,6 +157,7 @@ export function pixelOfficeWorkStatus(nowMs: number, idleSeconds?: number): 'pre
   if (Number.isFinite(idle) && idle >= PIXEL_OFFICE_AWAY_IDLE_SECONDS) {
     return hour >= pixelHours.lunchStart && hour < pixelHours.lunchEnd ? 'lunch' : 'toilet';
   }
+  if (nowMs < pixelAllWorkUntil) return 'present';// 全員上班期間：電腦開著也算正常在座，不套加班
   if (pixelHours.enabled && (hour >= pixelHours.overtimeStart || hour < PIXEL_OVERTIME_END_HOUR)) return 'overtime';
   return 'present';
 }
@@ -2010,7 +2011,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   private pixelOfficeAllWork(nowMs: number): { changed: string[]; skipped: string[] } {
     const changed: string[] = [], skipped: string[] = [];
     const hour = taipeiClock(nowMs).hour;
-    const status = pixelHours.enabled && (hour >= pixelHours.overtimeStart || hour < PIXEL_OVERTIME_END_HOUR) ? 'overtime' : 'present';
+    // 全員上班＝回到「正常上班」的在座（不是加班），之後可以自由切換狀態；到今天 24:00 為止時間規則暫停
+    const status = 'present';
     const rows = this.ctx.storage.sql.exec<{ name: string; state: string }>('SELECT name, state FROM pixel_office_people').toArray();
     const version = Math.max(nowMs, this.pixelOfficeVersion() + 1);
     for (const name of Object.keys(PIXEL_OFFICE_CALENDARS)) {
@@ -2471,7 +2473,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     // 稱號跟著狀態一起回：前端不必為了它多打一次 API，改了也會隨輪詢傳到每個人的畫面。
     const avatars: Record<string, number> = {};
     for (const row of this.ctx.storage.sql.exec<{ name: string; updated_at: number }>('SELECT name, updated_at FROM pixel_office_avatar_current').toArray()) avatars[row.name] = Number(row.updated_at) || 0;
-    return { ok: true, action: 'pixelOfficeState', version, people, staff: this.pixelOfficeStaff().map(item => ({ seat: item.seat, name: item.name })), levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories(), avatars, hours: { dayStart: pixelHours.dayStart, workEnd: pixelHours.workEnd, overtimeStart: pixelHours.overtimeStart } };
+    return { ok: true, action: 'pixelOfficeState', version, people, staff: this.pixelOfficeStaff().map(item => ({ seat: item.seat, name: item.name })), levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories(), avatars, hours: { dayStart: pixelHours.dayStart, workEnd: pixelHours.workEnd, overtimeStart: pixelHours.overtimeStart, allWorkUntil: pixelAllWorkUntil > Date.now() ? pixelAllWorkUntil : 0 } };
   }
 
   private pixelOfficeUpdate(payload: ApiPayload): ApiResult {

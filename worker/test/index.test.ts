@@ -5659,6 +5659,8 @@ describe('全員上班', () => {
     expect(res.changed).toEqual(expect.arrayContaining(['Machi', 'Anna']));
     const state = await api({ action: 'pixelOfficeState', since: 0 }) as { people?: Record<string, { status?: string }> };
     expect(JSON.stringify(state)).toContain('present');
+    expect(JSON.stringify(state)).not.toContain('"overtime"');// 全員上班是正常在座，不是加班
+    expect(Number((state as { hours?: { allWorkUntil?: number } }).hours?.allWorkUntil)).toBeGreaterThan(Date.now());// 前端靠這個把整個畫面當成上班時段
     const outsider = await seedSession('anna.hsu@emctaipei.com', 'Anna');
     expect(await api({ action: 'pixelOfficeAllWork' }, outsider)).toMatchObject({ ok: false });
   });
