@@ -93,7 +93,7 @@
     sprite('fridge_dark', fx, fy, fy + 170); sprite('fridge_dark', fx + 82, fy, fy + 170); sprite('plant_small', fx + 190, fy + 90, fy + 170);
   }
   // ---- 左側：五個米白桌子群（每群上排 4 張、下排 4 張，椅子在最外側）
-  const GX = 78, GY0 = TY + T_H + 136 + 2 * 64 + 67, GP = GPV - 64;/* 左緣 78、離廁所下緣 136（五樓：左側桌子群左緣 78、廁所下緣到第一排椅頭 136） */
+  const GX = 78, GY0 = TY + T_H + 136 + 64 + 67, GP = GPV - 64;/* 左緣 78、離廁所下緣 136（五樓：左側桌子群左緣 78、廁所下緣到第一排椅頭 136） */
   for (let g = 0; g < 5; g++) {
     const gy = GY0 + g * GP; block(GX, gy + 20, 880, 200);
     for (let k = 0; k < 4; k++) {
@@ -128,13 +128,17 @@
     sprite('projector_left', tx + tw - 84, ty + 26, ty + 125);
     for (let k = 0; k < 2; k++) { const cx = tx + tw * (2 * k + 1) / 4; sprite('chair_front', cx - 26, ty - 46, ty - 1); sprite('chair_back', cx - 26, ty + 120, ty + 170); }
   };
-  small('會議室 F', 60, BY); small('會議室 G', 60, BY + meetH + RT);
+  small('會議室 F', 60 + 64, BY); small('會議室 G', 60 + 64, BY + meetH + RT);
+  // 玻璃辦公室：上下兩個座位群，每群四張桌（一排）＋椅子，不再標文字
   const big = (name, rx, ry) => {
-    const rw = RT + 40 + 4 * 220 + 40 + RT, rh = RT + 130 + 94 + 72 + 135 + 50 + RT;
+    const grpH = 67 + 124 + 20, rw = RT + 40 + 4 * 220 + 40 + RT, rh = RT + 90 + 2 * grpH + 70 + 30 + RT;
     glass(rx, ry, rw, rh, [{ side: 't', c: rx + rw / 2 }, { side: 'l', c: ry + rh / 2 }]);
-    const dx0 = rx + RT + 40, dy0 = ry + RT + 130; block(dx0, dy0 + 20, 880, 200);
-    for (let k = 0; k < 4; k++) { const dx = dx0 + k * 220, cx = dx + 110; chairBig(cx, dy0 - 67, dy0 + 10); deskBeige(dx, dy0, dy0 + 100); deskBeige(dx, dy0 + 94, dy0 + 200); chairBig(cx, dy0 + 94 + 72, dy0 + 420); }
-    label(name, rx, ry + rh + WH + 8, rw); return rh;
+    const dx0 = rx + RT + 40;
+    for (let g = 0; g < 2; g++) {
+      const dy = ry + RT + 90 + 67 + g * (grpH + 70); block(dx0, dy + 20, 880, 104);
+      for (let k = 0; k < 4; k++) { const dx = dx0 + k * 220, cx = dx + 110; chairBig(cx, dy - 67, dy + 10 + g * 0); deskBeige(dx, dy, dy + 100); }
+    }
+    return rh;
   };
   const oy1 = HROOM.bottom + WH + 70, h1 = big('玻璃辦公室 1', HROOM.x, oy1); big('玻璃辦公室 2', HROOM.x, oy1 + h1 + WH + 70);
 
