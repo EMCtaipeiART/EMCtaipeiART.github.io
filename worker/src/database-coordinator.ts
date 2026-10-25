@@ -290,6 +290,11 @@ export function pixelOfficeMeetingRoomOf(event: Row): string {
   // 「會議室 A」「會議室-A」「會議室（A）」「A會議室」「A 室」「Meeting Room B」「Room-C」；行事曆預約的會議室資源（attendees 裡 resource=true）也算
   const sep = '[\\s:：\\-－_()（）【】\\[\\]]*';
   const pattern = new RegExp('(?:會議室|會議廳|meeting' + sep + 'room|conference' + sep + 'room|room)' + sep + '([A-Da-d])(?![A-Za-z])|(?<![A-Za-z])([A-Da-d])' + sep + '(?:會議室|會議廳|室|廳)', 'i');
+  // 受邀者信箱 meetingroom{a-d}.emc@gmail.com 就是會議室 A～D（使用者 2026-10-25 指定）；對方拒絕的不算
+  for (const item of Array.isArray(event.attendees) ? event.attendees as Row[] : []) {
+    const match = text(item.email).toLowerCase().match(/^meetingroom([a-d])\.emc@gmail\.com$/);
+    if (match && text(item.responseStatus) !== 'declined') return match[1].toUpperCase();
+  }
   const resources = (Array.isArray(event.attendees) ? event.attendees as Row[] : []).filter(item => item.resource === true).map(item => text(item.displayName));
   for (const part of [...resources, text(event.location), text(event.summary), text(event.description).slice(0, 300)]) {
     const match = part.match(pattern);
@@ -2208,7 +2213,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         try {
           const params = new URLSearchParams({
             timeMin, timeMax, singleEvents: 'true', maxResults: '20', timeZone: 'Asia/Taipei',
-            fields: 'items(status,summary,location,description,eventType,start,end,transparency,organizer(email,self),attendees(self,responseStatus,resource,displayName))'
+            fields: 'items(status,summary,location,description,eventType,start,end,transparency,organizer(email,self),attendees(self,responseStatus,resource,displayName,email))'
           });
           const detailsResponse = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(email)}/events?${params.toString()}`, {
             headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' }

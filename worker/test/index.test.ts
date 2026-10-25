@@ -5705,6 +5705,9 @@ describe('會議室（行事曆會議 → 人物入座會議室）', () => {
     expect(pixelOfficeMeetingRoomOf({ summary: '週會', description: '地點：會議室 A，請準時' })).toBe('A');
     expect(pixelOfficeMeetingRoomOf({ summary: 'ABC 提案', location: 'Google Meet' })).toBe('');
     expect(pixelOfficeMeetingRoomOf({ summary: '會議室 E' })).toBe('');
+    expect(pixelOfficeMeetingRoomOf({ summary: '私人開會', attendees: [{ email: 'chen@example.com', self: true }, { email: 'meetingrooma.emc@gmail.com', responseStatus: 'accepted' }] })).toBe('A');
+    expect(pixelOfficeMeetingRoomOf({ summary: '開會', attendees: [{ email: 'MeetingRoomD.emc@gmail.com', responseStatus: 'needsAction' }] })).toBe('D');
+    expect(pixelOfficeMeetingRoomOf({ summary: '開會', attendees: [{ email: 'meetingroomb.emc@gmail.com', responseStatus: 'declined' }] })).toBe('');
     expect(pixelOfficeMeetingRoomOf({ summary: '週會', location: '凱曜 會議室（A）' })).toBe('A');
     expect(pixelOfficeMeetingRoomOf({ summary: '提案', location: 'A-會議室' })).toBe('A');
     expect(pixelOfficeMeetingRoomOf({ summary: '會議', attendees: [{ resource: true, displayName: '台北-會議室 C' }] })).toBe('C');
