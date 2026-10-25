@@ -1339,7 +1339,7 @@ const addSprite=(name,x,y,depth,solid)=>{const r=RM[name];roomItems.push(['sprit
     roomItems.push(['sprite',lx+14,y0+282,67,94,y0+376,true,{name:'blk'}]);
     roomItems.push(['label',room[1],room[2]-22,room[3],20,99999,false,{text:room[0],above:true}]);}
   // 電梯（比人大一圈）
-  addSprite('elevator',TX0,TB-200,TB,true);roomItems.push(['label',TX0,TB+8,150,20,99999,false,{text:'電梯 ↓ 往樓下',above:true}]);
+  addSprite('elevator',TX0,TB-200,TB,true);roomItems.push(['label',TX0,TB+8,150,20,99999,false,{text:'5F 電梯 ↓ 往樓下',above:true}]);
   // 茶水間（不隔間）：對齊 B、C 兩間會議室的中間；白色木紋扁長桌（桌上零食）在左、兩台冰箱在右
   {const tx=620,ty=1140,fx=940,fy=1095;addTable('whitewood',tx,ty,2);roomItems.push(['label',tx,ty-26,280,20,99999,false,{text:'茶水間',above:true}]);
    [['snack_chips_red',30],['snack_chips_yellow',66],['snack_chips_blue',102],['snack_box',150],['snack_candy',215]].forEach(([n,dx])=>{const r=RM[n];addSprite(n,tx+dx,ty+58-r[3],ty+85,false);});
@@ -1684,7 +1684,13 @@ const toilet6Img=new Image();setAsset(toilet6Img,'assets/office-toilet-v10.webp?
 const toiletImg=new Image();setAsset(toiletImg,'assets/office-toilet-v5.webp?v=1');load(toiletImg).then(()=>markDirty()).catch(()=>{});
 const roomsImg=new Image();setAsset(roomsImg,'assets/office-rooms-v3.webp?v=1');load(roomsImg).then(()=>markDirty()).catch(()=>{});
 const roomsReady=()=>roomsImg.complete&&roomsImg.naturalWidth>1;
-function rm(name,x,y){const r=RM[name];if(!r||!roomsReady())return;ctx.imageSmoothingEnabled=false;ctx.drawImage(r[4]==='t'?toiletImg:r[4]==='t6'?toilet6Img:roomsImg,r[0],r[1],r[2],r[3],Math.round(x),Math.round(y),r[2],r[3]);}
+function rm(name,x,y){const r=RM[name];if(!r||!roomsReady())return;ctx.imageSmoothingEnabled=false;ctx.drawImage(r[4]==='t'?toiletImg:r[4]==='t6'?toilet6Img:roomsImg,r[0],r[1],r[2],r[3],Math.round(x),Math.round(y),r[2],r[3]);if(name==='elevator')elevatorDisplay(Math.round(x),Math.round(y));}
+/* 電梯樓層顯示（2026-10-25）：這層是 5 樓、只往下——蓋掉原圖的「▲ 08 ▼」，改成「5F ▼」。座標是電梯素材（150×200）內的像素。 */
+function elevatorDisplay(x,y){
+  const G={'5':['YYYYYY','YY....','YY....','YYYYY.','....YY','....YY','....YY','YY..YY','.YYYY.'],'F':['YYYYYY','YY....','YY....','YYYYY.','YY....','YY....','YY....','YY....','YY....']};
+  ctx.fillStyle='#1b2027';ctx.fillRect(x+52,y+14,24,11);ctx.fillRect(x+76,y+14,8,11);ctx.fillStyle='#e7bd60';
+  [['5',58],['F',68]].forEach(([ch,gx])=>G[ch].forEach((row,j)=>{for(let i=0;i<row.length;i++)if(row[i]==='Y')ctx.fillRect(x+gx+i,y+15+j,1,1);}));
+}
 function roomTable(kind,x,y,mids){
   if(!roomsReady())return;ctx.imageSmoothingEnabled=false;
   const piece=(part,dx)=>{const key='table_'+kind+'_'+part,r=RM[key]||RM4[key],img=RM[key]?roomsImg:propsImg;ctx.drawImage(img,r[0],r[1],r[2],r[3],Math.round(x+dx),Math.round(y),r[2],r[3]);};
