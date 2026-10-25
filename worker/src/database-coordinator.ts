@@ -2560,6 +2560,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     // 班長罰坐中：坐在自己的位置上，不能移動、不能變裝、不能做動作（到期前一律擋下）
     const punish = asRow(state.punish);
     if (Number(punish.until) > Date.now() && ['x', 'y', 'dir', 'look', 'action'].some(key => key in patch)) throw new Error('罰坐中：' + text(punish.reason) + '，不能移動或變裝');
+    // 行事曆會議正在會議室裡：畫面上的位置是前端依會議室排的，不能把它當成真的座標存回來（否則散會後人會留在會議室）
+    if (text(state.status) === 'meeting' && text(state.statusSource) === 'calendar' && text(state.meetingRoom)) { delete patch.x; delete patch.y; delete patch.dir; }
     if ('message' in patch) {
       const message = String(patch.message ?? '');
       if (message.length > 60) throw new Error('對話最多 60 個字');
