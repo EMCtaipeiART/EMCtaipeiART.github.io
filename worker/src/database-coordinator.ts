@@ -2383,7 +2383,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         try {
           const params = new URLSearchParams({
             timeMin, timeMax, singleEvents: 'true', orderBy: 'startTime', maxResults: '250', timeZone: 'Asia/Taipei',
-            fields: 'items(id,status,summary,eventType,visibility,start,end,transparency,organizer(email),attendees(self,responseStatus))'
+            fields: 'items(id,iCalUID,status,summary,location,eventType,visibility,start,end,transparency,organizer(email),attendees(self,responseStatus,email,resource,displayName))'
           });
           const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(email)}/events?${params.toString()}`, {
             headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' }
@@ -2405,12 +2405,19 @@ export class DatabaseCoordinator extends DurableObject<Env> {
               const namesOwner = text(item.summary).toLowerCase().includes(name.toLowerCase()) || text(item.summary).toLowerCase().includes(email.split('@')[0].toLowerCase());
               if (organizerEmail !== email.toLowerCase() && !namesOwner) continue;
             }
-            events.push({ who: name, title, start, end, allDay: Boolean((item.start as Row | undefined)?.date), kind: leave ? 'leave' : 'event', free: text(item.transparency) === 'transparent', src: 'google' });
+            const room = leave ? '' : pixelOfficeMeetingRoomOf(item);
+            events.push({ who: name, title, start, end, allDay: Boolean((item.start as Row | undefined)?.date), kind: leave ? 'leave' : 'event', free: text(item.transparency) === 'transparent', src: 'google', ...(room ? { room } : {}), ...(text(item.iCalUID) ? { uid: text(item.iCalUID) } : {}) });
           }
         } catch { unreadable.push(name); }
       }));
     } else {
       unreadable.push(...Object.keys(PIXEL_OFFICE_CALENDARS));
+    }
+    // 同一場會議（相同 iCalUID）：有人的行事曆看得到會議室，其他被邀的人就算同一間（有些人看得到活動卻看不到受邀者名單）。
+    {
+      const uidRoom = new Map<string, string>();
+      for (const item of events) if (item.uid && item.room) uidRoom.set(text(item.uid), text(item.room));
+      for (const item of events) { if (item.uid) { if (!item.room && uidRoom.has(text(item.uid))) item.room = uidRoom.get(text(item.uid)); delete item.uid; } }
     }
     // 人資系統假單：同一個人同一段時間，Google 上也有休假事件就只留人資這一筆。
     let femasOk = false;
