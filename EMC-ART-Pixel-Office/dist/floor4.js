@@ -17,16 +17,22 @@
   const RT = 24, ROOM_DOOR = 120, ROOM_MARGIN = 130, B = 3, WH = 30;
   const tableW = m => 110 + 85 * m;
   const items = [], blocks = [], dyn = [], seats = [];
+  /* 會議室 F、G、H 的座位：行事曆會議在這幾間時，人物從五樓消失、坐進這裡（位置規則跟五樓 meetingSeats 一樣：椅子素材左上角 → 腳底） */
+  const roomSeats = { F: [], G: [], H: [] };
+  const addRoomSeat = (letter, kind, x, y) => { const seat = kind === 'front' ? { x: x + 26, y: y + 82, dir: 'down', o: 0 } : kind === 'back' ? { x: x + 26, y: y + 55, dir: 'up', o: 1 } : { x: x + 24, y: y + 60, dir: 'right', o: 2 }; roomSeats[letter].push(seat); };
   const seatOf = (cx, gy) => { seats.push({ x: cx, y: gy + 40, row: false }); seats.push({ x: cx, y: gy + 94 + 179, row: true }); };
-  const add = (depth, draw) => items.push({ depth, draw });
+  const addStatic = (depth, draw) => items.push({ depth, draw });/* 固定背景：地板格線、玻璃牆、廁所圖 */
+  const add = (depth, draw) => dyn.push({ depth, draw: c => { if (imgs) draw(c); } });/* 其餘（桌、椅、電梯、標籤、小物）都是動態圖層，跟人物依深度排序 */
   const block = (x, y, w, h) => blocks.push([x, y + OFFY, w, h]);
   let imgs = null; // { rooms, props, furn, desks, toiletPic }
   const spr = (c, name, x, y) => { const r = RM[name]; c.drawImage(imgs.rooms, r[0], r[1], r[2], r[3], Math.round(x), Math.round(y), r[2], r[3]); };
   const sprite = (name, x, y, depth) => add(depth, c => spr(c, name, x, y));
-  const table = (kind, x, y, mids, depth) => add(depth, c => {
+  /* 桌子是動態圖層（跟人物依深度排序）：人坐在桌後，下半身被桌子擋住 */
+  const table = (kind, x, y, mids, depth) => dyn.push({ depth, draw: c => {
+    if (!imgs) return;
     const piece = (part, dx) => { const key = 'table_' + kind + '_' + part, r = RM[key] || RM4[key], im = RM[key] ? imgs.rooms : imgs.props; c.drawImage(im, r[0], r[1], r[2], r[3], Math.round(x + dx), Math.round(y), r[2], r[3]); };
     piece('left', 0); for (let i = 0; i < mids; i++) piece('mid', 55 + i * 85); piece('right', 55 + mids * 85);
-  });
+  } });
   const label = (text, x, y, w) => add(99999, c => {
     c.save(); c.font = '700 13px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';
     const tw = Math.round(c.measureText(text).width) + 16, lx = Math.round(x + w / 2 - tw / 2);
@@ -43,7 +49,7 @@
     for (const [a, b] of seg(x, x + w, gap('b'))) block(a, y + h - RT, b - a, RT);
     for (const [a, b] of seg(y + RT, y + h - RT, gap('l'))) block(x, a, RT, b - a);
     for (const [a, b] of seg(y + RT, y + h - RT, gap('r'))) block(x + w - RT, a, RT, b - a);
-    add(-9000, c => {
+    addStatic(-9000, c => {
       c.save(); c.imageSmoothingEnabled = false;
       c.fillStyle = 'rgba(186,222,234,.55)';
       for (const [a, b] of seg(x, x + w, gap('t'))) c.fillRect(a, y, b - a, RT);
@@ -79,7 +85,7 @@
     [['男廁', TX0 + 150 + CORR + HSHIFT], ['女廁', TX0 + 150 + CORR + T_W - RT + HSHIFT]].forEach(([name, rx]) => {
       glass(rx, TY, TW, TH, [{ side: 'b', c: rx + 262 }]);
       { const lx = rx + RT, y0 = TY + RT; block(lx + 12, y0 + 8, 44, 264); block(lx + 12, y0 + 8, 164, 44); block(lx + 12, y0 + 120, 164, 44); block(lx + 12, y0 + 236, 164, 36); block(lx + 14, y0 + 282, 67, 94); }
-      add(-8990, c => { if (imgs.toiletPic.naturalWidth) { c.save(); c.imageSmoothingEnabled = true; c.drawImage(imgs.toiletPic, rx + RT, TY + RT, TW - 2 * RT, TH - 2 * RT); c.restore(); } });
+      addStatic(-8990, c => { if (imgs.toiletPic.naturalWidth) { c.save(); c.imageSmoothingEnabled = true; c.drawImage(imgs.toiletPic, rx + RT, TY + RT, TW - 2 * RT, TH - 2 * RT); c.restore(); } });
       label(name, rx, TY - 22, TW);
     });
   }
@@ -116,9 +122,9 @@
     const xC = xL + 100;
     for (const k of [0, 1]) {
       const tx = xC + k * 195; table('white', tx, y0, 1, y0 + 110); table('white', tx, y0 + 270, 1, y0 + 380);
-      for (const f of [.25, .75]) { const cx = tx + 195 * f; sprite('chair_front', cx - 26, y0 - 46, y0 - 1); sprite('chair_back', cx - 26, y0 + 270 + 120, y0 + 270 + 170); }
+      for (const f of [.25, .75]) { const cx = tx + 195 * f; sprite('chair_front', cx - 26, y0 - 46, y0 - 1); sprite('chair_back', cx - 26, y0 + 270 + 120, y0 + 270 + 170); addRoomSeat('H', 'front', cx - 26, y0 - 46); addRoomSeat('H', 'back', cx - 26, y0 + 270 + 120); }
     }
-    for (const k of [0, 1]) { const ty = y0 + k * 200; add(ty + 180, c => spr(c, 'table_white_v', xL, ty)); for (const dy of [50, 150]) sprite('chair_side_r', xL - 40, ty + dy - 26, ty + dy + 26); }
+    for (const k of [0, 1]) { const ty = y0 + k * 200; dyn.push({ depth: ty + 180, draw: c => imgs && spr(c, 'table_white_v', xL, ty) }); for (const dy of [50, 150]) { sprite('chair_side_r', xL - 40, ty + dy - 26, ty + dy + 26); addRoomSeat('H', 'side', xL - 40, ty + dy - 26); } }
     sprite('projector_right', xC + 2 * 195 + 24, y0 + 174, y0 + 230);/* 投影機放在桌子群右側、機身朝右 */
     label('會議室 H', rx, ry + rh + WH + 8, rw);
     HROOM.x = rx; HROOM.bottom = ry + rh;
@@ -129,7 +135,7 @@
     glass(rx, ry, BC_W, meetH, [{ side: doorSide, c: ry + meetH / 2 }]);
     const tx = rx + RT + BC_MX, ty = ry + RT + ROOM_MARGIN, tw = tableW(2); table('black', tx, ty, 2, ty + 110); block(tx, ty, tw, 130); label(name, tx, ty + 55, tw);
     sprite('projector_left', tx + tw - 84, ty + 26, ty + 125);
-    for (let k = 0; k < 2; k++) { const cx = tx + tw * (2 * k + 1) / 4; sprite('chair_front', cx - 26, ty - 46, ty - 1); sprite('chair_back', cx - 26, ty + 120, ty + 170); }
+    for (let k = 0; k < 2; k++) { const cx = tx + tw * (2 * k + 1) / 4; sprite('chair_front', cx - 26, ty - 46, ty - 1); sprite('chair_back', cx - 26, ty + 120, ty + 170); addRoomSeat(name.slice(-1), 'front', cx - 26, ty - 46); addRoomSeat(name.slice(-1), 'back', cx - 26, ty + 120); }
   };
   // 玻璃辦公室（2026-10-26）：窄長、往下延伸；每間上下兩個座位群，每群 2×2 共四張桌（上排 2＋下排 2，跟桌子群同一種接法），椅子在最外側。
   const big = (name, rx, ry, doors) => {
@@ -157,6 +163,7 @@
     canvas: null, ready: false, onReady: null,
     dynamic: dyn.map(it => ({ depth: it.depth + OFFY, draw: it.draw })),
     seats: seats.map(t => ({ x: t.x, y: t.y + OFFY, row: t.row })),
+    roomSeats: Object.fromEntries(Object.entries(roomSeats).map(([k, v]) => [k, v.slice().sort((a, b) => a.o - b.o || a.y - b.y || a.x - b.x).map(t => ({ x: t.x, y: t.y + OFFY, dir: t.dir }))])),
     /* 桌子群 g（0＝最上面）的座位 1～8：1～4＝上排由左到右、5～8＝下排由左到右；回傳人物腳底位置與朝向 */
     seatPos(g, seat) { const gy = GY0 + g * GP, k = (seat - 1) % 4, cx = GX + k * 220 + 110, bottom = seat > 4; return bottom ? { x: cx, y: gy + 94 + 179 + OFFY, dir: 'up', row: true } : { x: cx, y: gy + 40 + OFFY, dir: 'down', row: false }; },
     draw(ctx) { if (scene.canvas) ctx.drawImage(scene.canvas, 0, 0); },

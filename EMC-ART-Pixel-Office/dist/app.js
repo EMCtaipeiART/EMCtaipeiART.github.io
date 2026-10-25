@@ -1373,10 +1373,12 @@ let elevatorCooldown=0;
 /* 四樓：搬到四樓的同仁坐進自己的座位（人物＋桌位名牌）；每格都重設位置，名單晚到也會補上 */
 /* 四樓的空座位（沒有同仁坐的）比照五樓：上班時間坐一個「未登入」透明人物、桌上有「未登入」名牌 */
 function addF4Vacancies(){const sc=window.FLOOR4_SCENE;if(!sc||!sc.seats||window.__f4vac)return;window.__f4vac=1;const taken=Object.keys(STAFF_F4).map(nm=>sc.seatPos(STAFF_F4[nm].g,STAFF_F4[nm].seat));for(const t of sc.seats){if(taken.some(q=>Math.abs(q.x-t.x)<2&&Math.abs(q.y-t.y)<2))continue;stations.push({x:t.x,y:t.y,name:'',row:t.row?1:0,grp:1,empty:6,type:0,f4:true,f4ghost:true});}markDirty();}
-function syncF4Staff(){const sc=window.FLOOR4_SCENE;if(!sc||!sc.seatPos)return;addF4Vacancies();for(const nm in STAFF_F4){const i=names.indexOf(nm);if(i<0)continue;const q=people[i],pos=sc.seatPos(STAFF_F4[nm].g,STAFF_F4[nm].seat);q.f4hide=false;q.x=pos.x;q.y=pos.y;q.dir=STAFF_F4[nm].face||pos.dir;if(!stations.some(t=>t.f4&&t.name===nm)){stations.push({x:pos.x,y:pos.y,name:nm,row:pos.row?1:0,grp:1,empty:6,type:0,f4:true});markDirty();}}}
+/* 四樓會議室 F、G、H：行事曆會議在這幾間時，那位同仁（設計師或同仁、本人除外）從五樓離席、坐進四樓會議室；散會就消失 */
+function syncF4Meetings(){const sc=window.FLOOR4_SCENE;if(!sc||!sc.roomSeats)return;const used={},hero=window.__f4hero;people.forEach((q,i)=>{if(i===hero)return;const room=(q.status==='meeting'&&/^[F-H]$/.test(q.meetingRoom||''))?q.meetingRoom:'';if(room){const list=sc.roomSeats[room]||[],n=used[room]||0;if(n<list.length){used[room]=n+1;const s=list[n];q.f4hide=false;q.x=s.x;q.y=s.y;q.dir=s.dir;q.f4room=room;return;}}if(q.f4room){q.f4hide=true;q.f4room='';}});}
+function syncF4Staff(){const sc=window.FLOOR4_SCENE;if(!sc||!sc.seatPos)return;addF4Vacancies();try{syncF4Meetings()}catch(e){}for(const nm in STAFF_F4){const i=names.indexOf(nm);if(i<0)continue;const q=people[i];if(q.f4room)continue;const pos=sc.seatPos(STAFF_F4[nm].g,STAFF_F4[nm].seat);q.f4hide=workingStatusIds.includes(statusOf(q))?false:true;q.x=pos.x;q.y=pos.y;q.dir=STAFF_F4[nm].face||pos.dir;if(!stations.some(t=>t.f4&&t.name===nm)){stations.push({x:pos.x,y:pos.y,name:nm,row:pos.row?1:0,grp:1,empty:6,type:0,f4:true});markDirty();}}}
 function initFloor4(){
   const want=new URLSearchParams(location.search).get('hero')||'';let hi=names.indexOf(want);if(hi<0){try{hi=ownIndex()}catch(e){hi=-1}}
-  people.forEach((q,i)=>{q.f4hide=i!==hi;});
+  window.__f4hero=hi;people.forEach((q,i)=>{q.f4hide=i!==hi;});
   if(hi>=0){const q=people[hi],st=(window.FLOOR4_SCENE&&FLOOR4_SCENE.heroStart)||{x:115,y:502,dir:'down'};q.x=st.x;q.y=st.y;q.dir=st.dir||'down';try{const sv=JSON.parse(sessionStorage.getItem('f4pos')||'null');if(sv&&sv.n===q.name&&Number.isFinite(sv.x)&&Number.isFinite(sv.y)&&!blocked(sv.x,sv.y)){q.x=sv.x;q.y=sv.y;q.dir=sv.d||q.dir;}}catch(e){}select(hi);}/* 重新整理後回到離開時的位置 */
   if(window.FLOOR4_SCENE){FLOOR4_SCENE.onReady=()=>markDirty();if(FLOOR4_SCENE.ready)markDirty();}
   markDirty();
