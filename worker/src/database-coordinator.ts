@@ -295,14 +295,14 @@ export function pixelOfficeCalendarEventState(event: Row, calendarEmail = '', ca
   return end - start <= PIXEL_OFFICE_CALENDAR_MAX_MEETING_MS ? 'meeting' : '';
 }
 
-/** 會議活動寫的是哪一間會議室（A～D）：依序看地點、標題、說明（只取前 300 字）。只回傳字母，不留存任何活動內容。 */
+/** 會議活動寫的是哪一間會議室（A～H；五樓 A～D、四樓 F～H）：依序看地點、標題、說明（只取前 300 字）。只回傳字母，不留存任何活動內容。 */
 export function pixelOfficeMeetingRoomOf(event: Row): string {
   // 「會議室 A」「會議室-A」「會議室（A）」「A會議室」「A 室」「Meeting Room B」「Room-C」；行事曆預約的會議室資源（attendees 裡 resource=true）也算
   const sep = '[\\s:：\\-－_()（）【】\\[\\]]*';
-  const pattern = new RegExp('(?:會議室|會議廳|meeting' + sep + 'room|conference' + sep + 'room|room)' + sep + '([A-Da-d])(?![A-Za-z])|(?<![A-Za-z])([A-Da-d])' + sep + '(?:會議室|會議廳|室|廳)', 'i');
+  const pattern = new RegExp('(?:會議室|會議廳|meeting' + sep + 'room|conference' + sep + 'room|room)' + sep + '([A-Ha-h])(?![A-Za-z])|(?<![A-Za-z])([A-Ha-h])' + sep + '(?:會議室|會議廳|室|廳)', 'i');
   // 受邀者信箱 meetingroom{a-d}.emc@gmail.com 就是會議室 A～D（使用者 2026-10-25 指定）；對方拒絕的不算
   for (const item of Array.isArray(event.attendees) ? event.attendees as Row[] : []) {
-    const match = text(item.email).toLowerCase().match(/^meetingroom([a-d])\.emc@gmail\.com$/);
+    const match = text(item.email).toLowerCase().match(/^meetingroom([a-h])\.emc@gmail\.com$/);
     if (match && text(item.responseStatus) !== 'declined') return match[1].toUpperCase();
   }
   const resources = (Array.isArray(event.attendees) ? event.attendees as Row[] : []).filter(item => item.resource === true).map(item => text(item.displayName));
