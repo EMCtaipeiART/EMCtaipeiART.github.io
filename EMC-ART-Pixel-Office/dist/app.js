@@ -93,13 +93,15 @@ let cleanTop=null,cleanBottom=BOTTOM_FEET+40,cleanStaff=false,cleanScrolled=fals
 /* 手機（窄螢幕）：不縮成一整張小圖，而是用固定的可讀倍率，鏡頭跟著自己的角色移動（沒有角色就跟選取的人，再沒有就看原本那組） */
 /* 桌機整頁模式的縮放：＋／－ 按鈕，每次 0.1，範圍鎖在 DZ_MIN～DZ_MAX（再大也不會超出視窗寬度），偏好記在 localStorage。 */
 const DZ_MIN=.7,DZ_MAX=1.6;let deskZoom=1,deskCapped=false,dzSync=()=>{};try{localStorage.removeItem('pixelZoomDesk')}catch(error){}/* 縮放只在這次進入期間有效，每次進來都是預設大小 */
+/* 畫面鎖定的人物（2026-10-25）：預設是自己；管理者／Machi 正在操控別人（選了別人並剛走動過）時，改鎖定被操控的那位，畫面才會跟著走、不用手動滾動。 */
+function focusIndex(){try{if(selected!==null&&selected!==undefined&&people[selected]&&(typeof localMoveAt!=='undefined'&&Date.now()-(localMoveAt.get(selected)||0)<4000||keys.size))return selected;}catch(error){}try{return ownIndex();}catch(error){return -1;}}
 let zoomFactor=1;try{localStorage.removeItem('pixelZoom')}catch(error){}/* 縮放只在這次進入期間有效，每次進來都回到預設大小 */
 const ZOOM_MIN=.3,ZOOM_MAX=.95;
 let pinching=false;
 const cam={on:false,s:.5,w:0,h:0,x:0,y:0,tx:0,ty:0,init:false,free:false,fx:0,fy:0,ox:null,oy:null,left:0,top:0,pr:1};
 function updateCamera(){
   if(!cam.on||!cam.w)return;
-  let p=null;try{const oi=ownIndex();p=oi>=0?viewPeople[oi]:null;if(!p&&selected!==null)p=viewPeople[selected];}catch(error){}
+  let p=null;try{const oi=focusIndex();p=oi>=0?viewPeople[oi]:null;if(!p&&selected!==null)p=viewPeople[selected];}catch(error){}
   let px=p?p.x:1100,py=p?p.y-60:BOTTOM_FEET-110;
   if(p){if(cam.ox!==null&&(Math.abs(p.x-cam.ox)>1||Math.abs(p.y-cam.oy)>1))cam.free=false;cam.ox=p.x;cam.oy=p.y;}/* 自己的角色走動：回到跟隨 */
   if(cam.free){px=cam.fx;py=cam.fy;}
@@ -148,7 +150,7 @@ window.addEventListener('scroll',()=>{if(cleanScale)markDirty();},{passive:true}
 /** 編輯版：畫面鎖定在自己的角色，走動時跟著捲（只在位置真的變了才捲，不跟手動捲動打架）。 */
 function followOwn(){
   if(!cleanScale||embedMode||roMode)return;
-  const oi=ownIndex();if(oi<0||!viewPeople[oi])return;
+  const oi=focusIndex();if(oi<0||!viewPeople[oi])return;
   const p=viewPeople[oi],key=Math.round(p.y)+':'+oi;
   if(followPrev===key)return;
   const first=followPrev===null||!followPrev.endsWith(':'+oi);followPrev=key;
