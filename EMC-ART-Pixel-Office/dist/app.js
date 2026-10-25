@@ -1567,7 +1567,7 @@ function meetingSeats(){
   if(meetingSeatList)return meetingSeatList;const out={};
   for(const room of ROOMS){const m=/^會議室 ([A-D])$/.exec(room[0]);if(!m)continue;const rx=room[1],ry=room[2],rw=room[3],rh=room[4],list=[];
     for(const it of roomItems){if(it[0]!=='sprite')continue;const x=it[1],y=it[2],w=it[3],n=it[7]&&it[7].name;if(!/^chair_(front|back|side_r|side_l)$/.test(n)||x<rx||x>rx+rw||y<ry||y>ry+rh)continue;const cx=x+w/2;
-      list.push(n==='chair_front'?{x:cx,y:y+66,dir:'down',o:0}:n==='chair_back'?{x:cx,y:y+55,dir:'up',o:1}:{x:cx,y:y+60,dir:n==='chair_side_r'?'right':'left',o:2});}
+      list.push(n==='chair_front'?{x:cx,y:y+82,dir:'down',o:0}:n==='chair_back'?{x:cx,y:y+55,dir:'up',o:1}:{x:cx,y:y+60,dir:n==='chair_side_r'?'right':'left',o:2});}
     list.sort((a,b)=>a.o-b.o||a.y-b.y||a.x-b.x);out[m[1]]=list.map(s=>({...s,ly:viewToLogical(s.y)}));}
   meetingSeatList=out;return out;
 }
