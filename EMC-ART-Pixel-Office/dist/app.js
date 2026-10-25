@@ -1562,6 +1562,7 @@ function drawGhostWalker(s){
 }
 /* 行事曆會議 → 入座會議室（2026-10-23）：後端把這場會議寫的會議室（A～D）放在 meetingRoom，這裡只在畫面上把人排進該會議室的椅子，不寫回後端。
  * 椅子位置直接從會議室家具清單的椅子素材推出來；座位依「上排→下排→兩側」排，同一間會議室人多於座位的多出來的維持原狀。 */
+const TOILET_SEAT_X=96,TOILET_SEAT_Y=[118,218];/* 隔間裡馬桶旁的站位（相對廁所內側左上角） */
 let meetingSeatList=null;
 function meetingSeats(){
   if(meetingSeatList)return meetingSeatList;const out={};
@@ -1569,12 +1570,14 @@ function meetingSeats(){
     for(const it of roomItems){if(it[0]!=='sprite')continue;const x=it[1],y=it[2],w=it[3],n=it[7]&&it[7].name;if(!/^chair_(front|back|side_r|side_l)$/.test(n)||x<rx||x>rx+rw||y<ry||y>ry+rh)continue;const cx=x+w/2;
       list.push(n==='chair_front'?{x:cx,y:y+82,dir:'down',o:0}:n==='chair_back'?{x:cx,y:y+55,dir:'up',o:1}:{x:cx,y:y+60,dir:n==='chair_side_r'?'right':'left',o:2});}
     list.sort((a,b)=>a.o-b.o||a.y-b.y||a.x-b.x);out[m[1]]=list.map(s=>({...s,ly:viewToLogical(s.y)}));}
+  // 廁所隔間（2026-10-25）：狀態是「去廁所」的人走進隔間、站在馬桶旁（男生男廁、女生女廁，各兩格）
+  for(const [key,room] of [['M',ROOMS[0]],['F',ROOMS[1]]]){const lx=room[1]+RT,y0=room[2]+RT;out['T'+key]=[0,1].map(k=>({x:lx+TOILET_SEAT_X,y:y0+TOILET_SEAT_Y[k],dir:'right',ly:viewToLogical(y0+TOILET_SEAT_Y[k])}));}
   meetingSeatList=out;return out;
 }
 function applyMeetingRooms(){
   if(embedMode||!LX){people.forEach(p=>{p.inRoom=null;});return;}
   const seats=meetingSeats(),used={};
-  people.forEach(p=>{p.inRoom=null;if(p.staff||p.status!=='meeting'||!/^[A-D]$/.test(p.meetingRoom||''))return;const list=seats[p.meetingRoom];if(!list)return;const n=used[p.meetingRoom]||0;if(n>=list.length)return;used[p.meetingRoom]=n+1;const s=list[n];p.x=s.x;p.y=s.ly;p.dir=s.dir;p.inRoom=s;});
+  people.forEach((p,i)=>{p.inRoom=null;if(p.staff)return;let key='';if(p.status==='meeting'&&/^[A-D]$/.test(p.meetingRoom||''))key=p.meetingRoom;else if(p.status==='toilet')key='T'+(WD_FEMALE[i]?'F':'M');if(!key)return;const list=seats[key];if(!list)return;const n=used[key]||0;if(n>=list.length)return;used[key]=n+1;const s=list[n];p.x=s.x;p.y=s.ly;p.dir=s.dir;p.inRoom=s;});
 }
 function drawChair(s){if(s.nochair||stationDimmed(s))return;furnitureObject(CHAIR_RECT,s.x-CHAIR_WIDTH/2,s.y-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor(s));}
 /* 專案部／企劃部桌上設備：透明像素圖集；座標與尺寸另見 assets/staff-gear-v1.json。 */
