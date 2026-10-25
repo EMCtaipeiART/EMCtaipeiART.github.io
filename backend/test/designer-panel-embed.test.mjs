@@ -370,7 +370,7 @@ test('右欄關掉時場景不會塌掉', async () => {
 test('深色模式下場景背景跟著主題，不會是一塊白', async () => {
   const [html, js] = await Promise.all([indexHtml(), officeJs()]);
   // 三層都要處理：canvas 自己別填白、iframe 透明、外框跟著主題變數走。
-  assert.match(js, /function drawOffice\(\)\{if\(embedMode\)\{ctx\.clearRect\(0,-OY,W,H\);return;\}ctx\.fillStyle='#fff';/,
+  assert.match(js, /function drawOffice\(\)\{(?:if\(FLOOR4\)\{.*?return;\})?if\(embedMode\)\{ctx\.clearRect\(0,-OY,W,H\);return;\}ctx\.fillStyle='#fff';/,
     '嵌入模式不填白底，獨立開遊戲頁時仍是白底');
   assert.match(html, /\.office-embed\{display:block;width:100%;height:100%;border:0;background:transparent/);
   assert.match(html, /\.office-embed-shell\{[^}]*background:var\(--panel,#fff\)/);
