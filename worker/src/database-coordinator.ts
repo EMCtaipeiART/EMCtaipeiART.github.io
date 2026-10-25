@@ -2184,7 +2184,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     setPixelForceMode(await this.ctx.storage.get<string>('pixelForceMode'));
     if (!pixelOfficeIsWorkday(nowMs)) return { ok: true, skipped: 'holiday' };
     const { hour } = taipeiClock(nowMs);
-    if (hour < PIXEL_OFFICE_CALENDAR_START_HOUR || hour >= PIXEL_OFFICE_CALENDAR_END_HOUR) return { ok: true, skipped: 'off-hours' };
+    // 全員上班／下班期間（手動強制時段）不受 08–22 點限制：半夜測試或加班時，行事曆會議也要讀
+    if ((hour < PIXEL_OFFICE_CALENDAR_START_HOUR || hour >= PIXEL_OFFICE_CALENDAR_END_HOUR) && pixelForceNow(nowMs) === '') return { ok: true, skipped: 'off-hours' };
     let accessToken = '';
     try {
       accessToken = await this.getValidGmailAccessToken(PIXEL_OFFICE_CALENDAR_ACCOUNT);
