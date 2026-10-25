@@ -1,6 +1,6 @@
 'use strict';
-const FLOOR4=/[?&]floor=4/.test(location.search),F4_H=3920;/* 四樓（?floor=4）：同一份遊戲、換一張場景（floor4.js），人物與功能鍵全部沿用 */
-const $=id=>document.getElementById(id), game=$('game'), ctx=game.getContext('2d'), LX=FLOOR4||/[?&]embed=1/.test(location.search)?0:320/* 往左多出來、放新桌子群的寬度（首頁小框不用） */,W=FLOOR4?2300:/[?&]embed=1/.test(location.search)?1536:2050+LX,H0=1024,GP=604/* 往上複製的桌子群：邏輯座標間距 */,GPV=497/* 畫面上的間距：群高 403 + 一張桌子的深度 94 */,OY=FLOOR4||/[?&]embed=1/.test(location.search)?0:1560/* 畫布往上多留的高度（放新增的兩組桌子） */,VB=FLOOR4?F4_H:/[?&]embed=1/.test(location.search)?H0:1700/* 場景下緣：新增的會議室／茶水間在最下面 */,H=VB+OY;// 首頁小框（embed）只看設計部，畫布維持 1536；整頁／編輯版含六張同仁桌，加寬到 2160
+const FLOOR4=/[?&]floor=4/.test(location.search),F4_H=4600;/* 四樓（?floor=4）：同一份遊戲、換一張場景（floor4.js），人物與功能鍵全部沿用 */
+const $=id=>document.getElementById(id), game=$('game'), ctx=game.getContext('2d'), LX=FLOOR4||/[?&]embed=1/.test(location.search)?0:320/* 往左多出來、放新桌子群的寬度（首頁小框不用） */,W=FLOOR4?2560:/[?&]embed=1/.test(location.search)?1536:2050+LX,H0=1024,GP=604/* 往上複製的桌子群：邏輯座標間距 */,GPV=497/* 畫面上的間距：群高 403 + 一張桌子的深度 94 */,OY=FLOOR4||/[?&]embed=1/.test(location.search)?0:1560/* 畫布往上多留的高度（放新增的兩組桌子） */,VB=FLOOR4?F4_H:/[?&]embed=1/.test(location.search)?H0:1700/* 場景下緣：新增的會議室／茶水間在最下面 */,H=VB+OY;// 首頁小框（embed）只看設計部，畫布維持 1536；整頁／編輯版含六張同仁桌，加寬到 2160
 const names=['Leona','Amber','Noise','Anna','Machi'], descriptions=['黑髮・時髦日常','暖色・樸素自在','短髮・專注模式','長髮・粉色靈感','挑染・街頭風格'];
 const starts=[[548+LX,355],[768+LX,355],[988+LX,355],[768+LX,695],[988+LX,695]];
 const fallbackScores={Machi:10832,Anna:4749.5,Amber:2905,Leona:1907,Noise:1404.5};
@@ -116,7 +116,7 @@ function updateCamera(){
 function fitCleanView(){
   const wrapEl=game.parentElement,w=wrapEl.getBoundingClientRect().width;
   if(!w)return;
-  if(FLOOR4&&!document.documentElement.classList.contains('clean-narrow')){const sc=Number(new URLSearchParams(location.search).get('cs'))||.78;cleanTop=0;cleanBottom=VB;cleanScale=sc;cleanY0=0;cleanPadY=0;wrapEl.style.height=Math.round(VB*sc)+'px';wrapEl.style.overflow='visible';try{wrapEl.parentElement.style.overflow='visible'}catch(e){}game.style.width=`${W*sc}px`;game.style.height=`${H*sc}px`;game.style.transform='translate(0px,0px)';dzSync();markDirty();return;}
+  if(FLOOR4&&!document.documentElement.classList.contains('clean-narrow')){const bw5=(staffSeated?2000+320:1112+320)-(320-250),fitW5=w*.96/bw5,cs5=Number(new URLSearchParams(location.search).get('cs'))||0,sc=Math.min((cs5?Math.min(cs5,fitW5):fitW5)*deskZoom,fitW5);cleanTop=0;cleanBottom=VB;cleanScale=sc;cleanY0=0;cleanPadY=0;wrapEl.style.height=Math.round(VB*sc)+'px';wrapEl.style.overflow='visible';try{wrapEl.parentElement.style.overflow='visible'}catch(e){}game.style.width=`${W*sc}px`;game.style.height=`${H*sc}px`;game.style.transform='translate(0px,0px)';dzSync();markDirty();return;}
   let top=TOP_BASE;try{top=Math.min(top,sceneTopExtent())}catch(error){}// 上排的帽子、對話框現在畫到哪就留到哪，不然會被切掉
   cleanTop=top;try{cleanBottom=sceneBottomExtent()}catch(error){cleanBottom=BOTTOM_FEET+40}
   // 手機（窄螢幕）：桌子四周要留走動的空間，搖桿也要在同一個畫面，所以放大倍率改成「整個可走動範圍剛好放進寬度」

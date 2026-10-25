@@ -6,7 +6,8 @@
  * 右側大會議室 H（上下兩個出口，投影機往右，六張白桌排成「C」，一桌兩椅）；桌子群下方會議室 F、G（同 B、C）；
  * 它們右側兩間大玻璃屋，各六張桌椅。素材全部沿用五樓的圖集。 */
 (function () {
-  const OFFY = 200, W = 2300, H = 3720 + OFFY;
+  const OFFY = 200, W = 2560, H = 4400;
+  const TX0 = 245, CORR = 110, T_W = 346, T_H = 438, TY = 60, GPV = 497;/* 都是五樓的數字 */
   const RM = { table_black_left: [8, 8, 55, 130], table_black_mid: [71, 8, 85, 130], table_black_right: [164, 8, 55, 130], table_white_left: [227, 8, 55, 130], table_white_mid: [290, 8, 85, 130], table_white_right: [383, 8, 55, 130], table_wood_left: [446, 8, 55, 90], table_wood_mid: [509, 8, 85, 90], table_wood_right: [602, 8, 55, 90], table_white_v: [8, 146, 100, 200], chair_front: [116, 146, 52, 56], chair_back: [176, 146, 52, 56], chair_side_l: [236, 146, 48, 52], chair_side_r: [292, 146, 48, 52], elevator: [8, 354, 150, 200], fridge_dark: [166, 354, 82, 170], plant_small: [256, 354, 40, 80], projector_right: [304, 354, 64, 52], projector_left: [376, 354, 64, 52], snack_chips_red: [512, 354, 24, 32], snack_chips_yellow: [544, 354, 24, 32], snack_chips_blue: [576, 354, 24, 32], snack_box: [608, 354, 30, 22], snack_candy: [646, 354, 20, 14] };
   const RM4 = { table_whitewood_left: [178, 8, 55, 90], table_whitewood_mid: [241, 8, 85, 90], table_whitewood_right: [334, 8, 55, 90] };
   const DESK = [8, 8, 220, 124];
@@ -63,7 +64,7 @@
     });
   };
   // ---- 左上：電梯（保留，樓層顯示改 4F、上下箭頭都保留）
-  const EX = 40, EY = 40; block(EX, EY + 70, 150, 130); sprite('elevator', EX, EY, EY + 200); label('4F 電梯 ↑↓', EX, EY + 208, 150);
+  const EX = TX0, EY = TY + T_H - 200; block(EX, EY + 70, 150, 130); sprite('elevator', EX, EY, EY + 200); label('4F 電梯 ↑↓', EX, EY + 208, 150);
   add(EY + 201, c => {
     c.fillStyle = '#1b2027'; c.fillRect(EX + 66, EY + 14, 18, 11); c.fillStyle = '#e7bd60';
     const G = { '4': ['...YY.', '..YYY.', '.YYYY.', 'YY.YY.', 'YY.YY.', 'YYYYYY', 'YYYYYY', '...YY.', '...YY.'], 'F': ['YYYYYY', 'YY....', 'YY....', 'YYYYY.', 'YY....', 'YY....', 'YY....', 'YY....', 'YY....'] };
@@ -71,8 +72,8 @@
   });
   // ---- 電梯與長桌之間：男廁、女廁（跟五樓同一套：玻璃屋＋廁所圖，門在下方）
   {
-    const TW = 346, TH = 438, TY = 40;
-    [['男廁', 250], ['女廁', 250 + TW - RT]].forEach(([name, rx]) => {
+    const TW = T_W, TH = T_H;
+    [['男廁', TX0 + 150 + CORR], ['女廁', TX0 + 150 + CORR + T_W - RT]].forEach(([name, rx]) => {
       glass(rx, TY, TW, TH, [{ side: 'b', c: rx + 262 }]);
       { const lx = rx + RT, y0 = TY + RT; block(lx + 12, y0 + 8, 44, 264); block(lx + 12, y0 + 8, 164, 44); block(lx + 12, y0 + 120, 164, 44); block(lx + 12, y0 + 236, 164, 36); block(lx + 14, y0 + 282, 67, 94); }
       add(-8990, c => { if (imgs.toiletPic.naturalWidth) { c.save(); c.imageSmoothingEnabled = true; c.drawImage(imgs.toiletPic, rx + RT, TY + RT, TW - 2 * RT, TH - 2 * RT); c.restore(); } });
@@ -81,30 +82,30 @@
   }
   // ---- 右側：木長桌（10 人：上下各 5 張椅子）
   {
-    const tx = 1000, ty = 130, tw = tableW(5); table('wood', tx, ty, 5, ty + 70); block(tx, ty + 20, tw, 80); label('木長桌（10 人）', tx, ty - 90, tw);
+    const tx = TX0 + 150 + CORR + 2 * T_W - RT + CORR + RT + ROOM_MARGIN, ty = TY + RT + ROOM_MARGIN, tw = tableW(5); table('wood', tx, ty, 5, ty + 70); block(tx, ty + 20, tw, 80); label('木長桌（10 人）', tx, ty - 90, tw);
     for (let k = 0; k < 5; k++) { const cx = tx + tw * (2 * k + 1) / 10; sprite('chair_front', cx - 26, ty - 46, ty - 1); sprite('chair_back', cx - 26, ty + 60, ty + 130); }
   }
   // ---- 茶水間（木長桌旁）
   {
-    const tx = 1000 + tableW(5) + 110, ty = 130, fx = tx + 300, fy = ty - 40; table('whitewood', tx, ty, 2, ty + 70); block(tx, ty + 20, tableW(2), 70); block(fx, fy + 60, 164, 110); label('茶水間', tx, ty - 60, tableW(2));
+    const tx = TX0 + 150 + CORR + 2 * T_W - RT + CORR + RT + ROOM_MARGIN + tableW(5) + 110, ty = TY + RT + ROOM_MARGIN, fx = tx + 300, fy = ty - 40; table('whitewood', tx, ty, 2, ty + 70); block(tx, ty + 20, tableW(2), 70); block(fx, fy + 60, 164, 110); label('茶水間', tx, ty - 60, tableW(2));
     [['snack_chips_red', 30], ['snack_chips_yellow', 66], ['snack_chips_blue', 102], ['snack_box', 150], ['snack_candy', 215]].forEach(([n, dx]) => { const r = RM[n]; sprite(n, tx + dx, ty + 58 - r[3], ty + 85); });
     sprite('fridge_dark', fx, fy, fy + 170); sprite('fridge_dark', fx + 82, fy, fy + 170); sprite('plant_small', fx + 190, fy + 90, fy + 170);
   }
   // ---- 左側：五個米白桌子群（每群上排 4 張、下排 4 張，椅子在最外側）
-  const GX = 40, GY0 = 600, GP = 470;
+  const GX = 78, GY0 = TY + T_H + 136 + 67, GP = GPV;/* 左緣 78、離廁所下緣 136（五樓：左側桌子群左緣 78、廁所下緣到第一排椅頭 136） */
   for (let g = 0; g < 5; g++) {
     const gy = GY0 + g * GP; block(GX, gy + 20, 880, 200);
     for (let k = 0; k < 4; k++) {
       const dx = GX + k * 220, cx = dx + 110;
-      chairBig(cx, gy - 70, gy + 10);       // 上排椅子（在桌子後面）
+      chairBig(cx, gy - 67, gy + 10);       // 上排椅子（在桌子後面；椅頭在桌上緣上方 67）
       deskBeige(dx, gy, gy + 100);          // 上排桌
       deskBeige(dx, gy + 94, gy + 200);     // 下排桌（接在上排正下方，蓋住上排桌腳）
-      chairBig(cx, gy + 190, gy + 420);     // 下排椅子（在桌子前面）
+      chairBig(cx, gy + 94 + 72, gy + 420); // 下排椅子（在桌子前面；椅頭在下排桌上緣下方 72）
     }
   }
   // ---- 右側：大會議室 H（玻璃，上下兩個出口；投影機往右；六張白桌排成「C」，一桌兩椅）
   {
-    const rx = 1000, ry = GY0 - 70, xL = rx + RT + 130, y0 = ry + RT + 150, rw = RT + 130 + 100 + 2 * 195 + 130 + RT, rh = RT + 150 + 400 + 90 + RT;
+    const rx = GX + 880 + CORR, ry = GY0 - 67 - RT, xL = rx + RT + 130, y0 = ry + RT + 150, rw = RT + 130 + 100 + 2 * 195 + 130 + RT, rh = RT + 150 + 400 + 90 + RT;
     glass(rx, ry, rw, rh, [{ side: 't', c: rx + rw / 2 }, { side: 'b', c: rx + rw / 2 }]);
     block(xL + 100, y0, 390, 130); block(xL + 100, y0 + 270, 390, 130); block(xL, y0, 100, 400);
     const xC = xL + 100;
@@ -117,14 +118,14 @@
     label('會議室 H', rx, ry + rh + WH + 8, rw);
   }
   // ---- 桌子群下方：會議室 F、G（同 B、C）＋右側兩間大玻璃屋（各六張桌椅）
-  const BY = GY0 + 5 * GP + 40, BC_MX = 70, BC_W = tableW(2) + 2 * BC_MX + 2 * RT, meetH = 130 + 2 * ROOM_MARGIN + 2 * RT;
+  const BY = GY0 + 4 * GP + 166 + 135 + 114,/* 最後一群下排椅腳到 F 會議室 114（五樓：下排椅腳到 B 會議室 114） */ BC_MX = 70, BC_W = tableW(2) + 2 * BC_MX + 2 * RT, meetH = 130 + 2 * ROOM_MARGIN + 2 * RT;
   const small = (name, rx, ry) => {
     glass(rx, ry, BC_W, meetH, [{ side: 'r', c: ry + meetH / 2 }]);
     const tx = rx + RT + BC_MX, ty = ry + RT + ROOM_MARGIN, tw = tableW(2); table('black', tx, ty, 2, ty + 110); block(tx, ty, tw, 130); label(name, tx, ty + 55, tw);
     sprite('projector_left', tx + tw - 84, ty + 26, ty + 125);
     for (let k = 0; k < 2; k++) { const cx = tx + tw * (2 * k + 1) / 4; sprite('chair_front', cx - 26, ty - 46, ty - 1); sprite('chair_back', cx - 26, ty + 120, ty + 170); }
   };
-  small('會議室 F', 40, BY); small('會議室 G', 40, BY + meetH + RT);
+  small('會議室 F', 60, BY); small('會議室 G', 60, BY + meetH + RT);
   const big = (name, rx, ry) => {
     const rw = RT + 40 + 3 * 220 + 40 + RT, rh = RT + 130 + 2 * 124 + 190 + 60 + RT;
     glass(rx, ry, rw, rh, [{ side: 't', c: rx + rw / 2 }, { side: 'l', c: ry + rh / 2 }]);
@@ -132,12 +133,12 @@
     for (let k = 0; k < 3; k++) { const dx = dx0 + k * 220, cx = dx + 110; chairBig(cx, dy0 - 70, dy0 + 10); deskBeige(dx, dy0, dy0 + 100); deskBeige(dx, dy0 + 94, dy0 + 200); chairBig(cx, dy0 + 190, dy0 + 420); }
     label(name, rx, ry + rh + WH + 8, rw); return rw;
   };
-  const bx = 40 + BC_W + 60; const w1 = big('玻璃辦公室 1', bx, BY); big('玻璃辦公室 2', bx + w1 + 60, BY);
+  const bx = 60 + BC_W + 92; const w1 = big('玻璃辦公室 1', bx, BY); big('玻璃辦公室 2', bx + w1 + 60, BY);
 
   const load = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(i); i.src = src; });
   const scene = {
     W, H, blocks, OFFY,
-    heroStart: { x: EX + 75, y: EY + 262 + OFFY, dir: 'down' },
+    heroStart: { x: EX + 75, y: EY + 262 + OFFY, dir: 'down' }, TX0, CORR, GPV,
     elevator: { x0: EX + 10, x1: EX + 140, y0: EY + 200 + OFFY, y1: EY + 250 + OFFY },
     canvas: null, ready: false, onReady: null,
     draw(ctx) { if (scene.canvas) ctx.drawImage(scene.canvas, 0, 0); },
