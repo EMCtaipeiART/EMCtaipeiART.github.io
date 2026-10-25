@@ -526,12 +526,12 @@
       if(e.target.closest?.('[data-arena-back]')){openUniverse()}
     });
     /* 電梯過場（2026-10-26）：兩片電梯門關上、顯示樓層、換頁、再打開。在像素辦公室走進電梯，或按「四樓／回五樓」都會播。 */
-    function uniFrameSrc(floor){const edit=Boolean(state.uniEdit)&&canEditUniverse(),t=Math.floor(Date.now()/300000);return floor===4?UNI_URL+'floor4.html?v=3&t='+t:UNI_URL+(edit?'?clean=1&cs=.78&v=118&t='+t:'?clean=1&ro=1&cs=.78&v=118&t='+t);}
+    function uniFrameSrc(floor){const edit=Boolean(state.uniEdit)&&canEditUniverse(),t=Math.floor(Date.now()/300000);return floor===4?UNI_URL+'?clean=1&cs=.78&floor=4&hero='+encodeURIComponent(state.uniHero||(typeof viewerPayload==='function'?viewerPayload().name:'')||'')+(edit?'':'&ro=1')+'&v=118&t='+t:UNI_URL+(edit?'?clean=1&cs=.78&v=118&t='+t:'?clean=1&ro=1&cs=.78&v=118&t='+t);}
     function floorTransition(to,hero){
       const wrap=document.querySelector('.uni-wrap'),fr=$('uniFrame');if(!wrap||!fr||state.uniFloorBusy||state.uniFloor===to||(to!==4&&to!==5))return;
       state.uniFloorBusy=true;const fx=document.createElement('div');fx.className='uni-elev-fx';fx.innerHTML='<i class="l"></i><i class="r"></i><b>'+to+'F</b>';wrap.appendChild(fx);
       requestAnimationFrame(()=>requestAnimationFrame(()=>fx.classList.add('close')));
-      if(hero)state.uniHero=hero;setTimeout(()=>{state.uniFloor=to;fr.src=uniFrameSrc(to);if(to===4){const send=()=>{const nm=state.uniHero||(typeof viewerPayload==='function'?viewerPayload().name:'')||'';try{fr.contentWindow.postMessage({type:'floor4Hero',name:nm,body:(state.pixBodies||{})[nm]||''},location.origin)}catch(err){}};fr.addEventListener('load',()=>{send();setTimeout(send,700)},{once:true})}const btn=document.querySelector('[data-uni-floor]');if(btn)btn.textContent=to===4?'回五樓':'四樓';fx.classList.add('show');},650);
+      if(hero)state.uniHero=hero;setTimeout(()=>{state.uniFloor=to;fr.src=uniFrameSrc(to);const btn=document.querySelector('[data-uni-floor]');if(btn)btn.textContent=to===4?'回五樓':'四樓';fx.classList.add('show');},650);
       setTimeout(()=>{fx.classList.add('open');},1900);
       setTimeout(()=>{fx.remove();state.uniFloorBusy=false;},2700);
     }

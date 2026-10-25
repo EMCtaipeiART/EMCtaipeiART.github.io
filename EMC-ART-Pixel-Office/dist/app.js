@@ -1,5 +1,6 @@
 'use strict';
-const $=id=>document.getElementById(id), game=$('game'), ctx=game.getContext('2d'), LX=/[?&]embed=1/.test(location.search)?0:320/* 往左多出來、放新桌子群的寬度（首頁小框不用） */,W=/[?&]embed=1/.test(location.search)?1536:2050+LX,H0=1024,GP=604/* 往上複製的桌子群：邏輯座標間距 */,GPV=497/* 畫面上的間距：群高 403 + 一張桌子的深度 94 */,OY=/[?&]embed=1/.test(location.search)?0:1560/* 畫布往上多留的高度（放新增的兩組桌子） */,VB=/[?&]embed=1/.test(location.search)?H0:1700/* 場景下緣：新增的會議室／茶水間在最下面 */,H=VB+OY;// 首頁小框（embed）只看設計部，畫布維持 1536；整頁／編輯版含六張同仁桌，加寬到 2160
+const FLOOR4=/[?&]floor=4/.test(location.search),F4_H=3920;/* 四樓（?floor=4）：同一份遊戲、換一張場景（floor4.js），人物與功能鍵全部沿用 */
+const $=id=>document.getElementById(id), game=$('game'), ctx=game.getContext('2d'), LX=FLOOR4||/[?&]embed=1/.test(location.search)?0:320/* 往左多出來、放新桌子群的寬度（首頁小框不用） */,W=FLOOR4?2300:/[?&]embed=1/.test(location.search)?1536:2050+LX,H0=1024,GP=604/* 往上複製的桌子群：邏輯座標間距 */,GPV=497/* 畫面上的間距：群高 403 + 一張桌子的深度 94 */,OY=FLOOR4||/[?&]embed=1/.test(location.search)?0:1560/* 畫布往上多留的高度（放新增的兩組桌子） */,VB=FLOOR4?F4_H:/[?&]embed=1/.test(location.search)?H0:1700/* 場景下緣：新增的會議室／茶水間在最下面 */,H=VB+OY;// 首頁小框（embed）只看設計部，畫布維持 1536；整頁／編輯版含六張同仁桌，加寬到 2160
 const names=['Leona','Amber','Noise','Anna','Machi'], descriptions=['黑髮・時髦日常','暖色・樸素自在','短髮・專注模式','長髮・粉色靈感','挑染・街頭風格'];
 const starts=[[548+LX,355],[768+LX,355],[988+LX,355],[768+LX,695],[988+LX,695]];
 const fallbackScores={Machi:10832,Anna:4749.5,Amber:2905,Leona:1907,Noise:1404.5};
@@ -40,7 +41,7 @@ let officeHours={dayStart:9,workEnd:19,overtimeStart:19};
 let forceMode='';/* 全員上班／全員下班（後端 hours.force = 'work' | 'off' | ''）：work＝整個畫面當成平日中午（不套加班濾鏡、不收桌椅）；off＝當成假日（全部下班、桌椅收起） */
 function applyHours(data){const h=data&&data.hours;if(!h)return;{const f=h.force==='work'||h.force==='off'?h.force:'';if(f!==forceMode){forceMode=f;taipeiClockCheckedAt=0;markDirty();}}const n=v=>Number.isFinite(Number(v))?Number(v):null,d=n(h.dayStart),w=n(h.workEnd),o=n(h.overtimeStart);if(d===null||w===null||o===null)return;if(d!==officeHours.dayStart||w!==officeHours.workEnd||o!==officeHours.overtimeStart){officeHours={dayStart:d,workEnd:w,overtimeStart:o};markDirty();}}
 function statusOf(p){if(p.staff&&p.status==='present'){const c=currentTaipeiClock();if(!(c.workday&&c.hour>=officeHours.dayStart&&c.hour<officeHours.workEnd))return 'offwork';}return p.status;}
-const isAway=p=>!p.inRoom&&!workingStatusIds.includes(statusOf(p));
+const isAway=p=>(FLOOR4&&p.f4hide!==undefined)?p.f4hide:(!p.inRoom&&!workingStatusIds.includes(statusOf(p)));
 const overtimePreview=new URLSearchParams(location.search).get('overtime')==='1';
 // 嵌入版不能走動，畫面多數時間是完全靜止的（只有心情動畫會動），沒必要每秒重畫 60 次。
 // 有變化時才畫：遠端同步、選取、框變大小都會標記一次。省下來的 CPU 讓外層系統的進站更順。
@@ -74,7 +75,7 @@ const EMBED_ROW_TOP=355,EMBED_ROW_BOTTOM=695;
 const BOTTOM_FEET=588,EMBED_ROW_SQUEEZE=(BOTTOM_FEET-EMBED_ROW_TOP)/(EMBED_ROW_BOTTOM-EMBED_ROW_TOP);
 const viewY0=y=>y>EMBED_ROW_TOP?EMBED_ROW_TOP+(y-EMBED_ROW_TOP)*EMBED_ROW_SQUEEZE:y;
 // 往上複製的兩組桌子（g=1、2）：邏輯座標是原本的 y - g*GP，畫面上是原本的畫面座標 - g*GPV。兩段在 y≈90 處剛好接上（連續）。
-const viewY=y=>{if(y>=90)return viewY0(y);const g=Math.min(2,Math.ceil((90-y)/GP));return viewY0(y+g*GP)-g*GPV;};
+const viewY=FLOOR4?(y=>y):(y=>{if(y>=90)return viewY0(y);const g=Math.min(2,Math.ceil((90-y)/GP));return viewY0(y+g*GP)-g*GPV;});
 // 畫面用的座標（嵌入模式下把下排往上收過）。資料一律用 people／stations，畫面一律用這兩個。
 let viewPeople=[],viewStations=[];
 // 六張桌子實際佔到的範圍（場景座標，下排收上來之後量的）：左右是桌子邊緣。嵌入模式就是把這一塊
@@ -115,6 +116,7 @@ function updateCamera(){
 function fitCleanView(){
   const wrapEl=game.parentElement,w=wrapEl.getBoundingClientRect().width;
   if(!w)return;
+  if(FLOOR4&&!document.documentElement.classList.contains('clean-narrow')){const sc=Number(new URLSearchParams(location.search).get('cs'))||.78;cleanTop=0;cleanBottom=VB;cleanScale=sc;cleanY0=0;cleanPadY=0;wrapEl.style.height=Math.round(VB*sc)+'px';wrapEl.style.overflow='visible';try{wrapEl.parentElement.style.overflow='visible'}catch(e){}game.style.width=`${W*sc}px`;game.style.height=`${H*sc}px`;game.style.transform='translate(0px,0px)';dzSync();markDirty();return;}
   let top=TOP_BASE;try{top=Math.min(top,sceneTopExtent())}catch(error){}// 上排的帽子、對話框現在畫到哪就留到哪，不然會被切掉
   cleanTop=top;try{cleanBottom=sceneBottomExtent()}catch(error){cleanBottom=BOTTOM_FEET+40}
   // 手機（窄螢幕）：桌子四周要留走動的空間，搖桿也要在同一個畫面，所以放大倍率改成「整個可走動範圍剛好放進寬度」
@@ -151,10 +153,11 @@ window.addEventListener('scroll',()=>{if(cleanScale)markDirty();},{passive:true}
 function followOwn(){
   if(!cleanScale||embedMode||roMode)return;
   const oi=focusIndex();if(oi<0||!viewPeople[oi])return;
-  const p=viewPeople[oi],key=Math.round(p.y)+':'+oi;
+  const p=viewPeople[oi],key=Math.round(p.y)+':'+(FLOOR4?Math.round(p.x)+':':'')+oi;
   if(followPrev===key)return;
   const first=followPrev===null||!followPrev.endsWith(':'+oi);followPrev=key;
   const want=(p.y-78-cleanY0)*cleanScale+cleanPadY-window.innerHeight/2,cur=window.scrollY,diff=want-cur;
+  if(FLOOR4){const wx=Math.max(0,p.x*cleanScale-window.innerWidth/2),cx=window.scrollX,dx=wx-cx;if(first||Math.abs(diff)>6||Math.abs(dx)>6)window.scrollTo(first?wx:cx+dx*.35,first?Math.max(0,want):cur+diff*.35);return;}
   if(first||Math.abs(diff)>6)window.scrollTo(0,first?Math.max(0,want):cur+diff*.35);
 }
 function fitEmbedView(){
@@ -172,7 +175,7 @@ function fitEmbedView(){
   fitting=false;
 }
 function syncViewLayout(){
-  if(!embedMode){viewPeople=people.map(p=>({...p,y:viewY(p.y)}));viewStations=stations.map(s=>({...s,y:viewY(s.y)}));if(document.documentElement.classList.contains('clean')&&ready){let t=TOP_BASE;try{t=Math.min(t,sceneTopExtent())}catch(error){}let b=BOTTOM_FEET+40;try{b=sceneBottomExtent()}catch(error){}if(t!==cleanTop||b!==cleanBottom||staffSeated!==cleanStaff)fitCleanView();}return;}
+  if(!embedMode){viewPeople=people.map(p=>({...p,y:viewY(p.y)}));viewStations=stations.map(s=>({...s,y:viewY(s.y)}));if(!FLOOR4&&document.documentElement.classList.contains('clean')&&ready){let t=TOP_BASE;try{t=Math.min(t,sceneTopExtent())}catch(error){}let b=BOTTOM_FEET+40;try{b=sceneBottomExtent()}catch(error){}if(t!==cleanTop||b!==cleanBottom||staffSeated!==cleanStaff)fitCleanView();}return;}
   viewPeople=people.map(p=>({...p,y:viewY(p.y)}));
   viewStations=stations.map(s=>({...s,y:viewY(s.y)}));
   syncSceneTop();
@@ -1248,7 +1251,7 @@ let syncVersion=0,syncOnline=null,syncSeeded=false;
 const localMoveAt=new Map(),pendingPositions=new Map();
 async function syncCall(payload){const response=await fetch(SYNC_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(payload),cache:'no-store'});const data=await response.json();if(!data.ok)throw Error(data.error||'同步失敗');return data;}
 function setSyncStatus(online){if(syncOnline===online)return;syncOnline=online;const tag=$('syncTag');if(tag){tag.textContent=online?'多人同步中 · 大家看到同一個畫面':'離線中 · 變更先存在這台電腦';tag.classList.toggle('offline',!online);}}
-function pushChange(i,patch){const name=people[i].name;if(people[i].inRoom&&patch&&('x' in patch||'y' in patch||'dir' in patch)){patch={...patch};delete patch.x;delete patch.y;delete patch.dir;if(!Object.keys(patch).length)return Promise.resolve(null);}/* 在會議室裡的位置只是畫面排的，不寫回後端 */if(patch&&typeof patch.x==='number'&&LX)patch={...patch,x:patch.x-LX};/* 伺服器存的是舊座標（沒有左側桌子群的寬度） */return syncCall({action:'pixelOfficeUpdate',name,patch}).then(data=>{setSyncStatus(true);return data;}).catch(err=>{setSyncStatus(false);toast('同步失敗：'+err.message);});}
+function pushChange(i,patch){const name=people[i].name;if((people[i].inRoom||FLOOR4)&&patch&&('x' in patch||'y' in patch||'dir' in patch)){patch={...patch};delete patch.x;delete patch.y;delete patch.dir;if(!Object.keys(patch).length)return Promise.resolve(null);}/* 在會議室裡的位置只是畫面排的，不寫回後端 */if(patch&&typeof patch.x==='number'&&LX)patch={...patch,x:patch.x-LX};/* 伺服器存的是舊座標（沒有左側桌子群的寬度） */return syncCall({action:'pixelOfficeUpdate',name,patch}).then(data=>{setSyncStatus(true);return data;}).catch(err=>{setSyncStatus(false);toast('同步失敗：'+err.message);});}
 /** 走路時位置很頻繁，最多每 350 ms 送一次；最後停下來的位置一定會送出。 */
 function queuePosition(i){localMoveAt.set(i,Date.now());if(pendingPositions.has(i))return;pendingPositions.set(i,setTimeout(()=>{pendingPositions.delete(i);const p=people[i];pushChange(i,{x:p.x,y:p.y,dir:p.dir});},350));}
 function applyRemote(list){markDirty();let lookChanged=false;
@@ -1267,7 +1270,7 @@ function applyRemote(list){markDirty();let lookChanged=false;
     {const look=entry.look&&typeof entry.look==='object'?{outfit:entry.look.outfit,cap:entry.look.cap,glasses:entry.look.glasses,...(entry.look.head?{head:entry.look.head}:{})}:null;if(JSON.stringify(look)!==JSON.stringify(p.look||null)){p.look=look;lookChanged=true;}}// 那個人停止分享了，正在播的也跟著停
     if(p.music&&p.music.provider==='spotify')wantSpotifyApi();// 先把播放器程式載好，點播放鈕時才來得及在「使用者剛點擊」的有效時間內開始播
     // 自己剛移動過的人物，短時間內不被遠端的舊位置拉回去。
-    if(Number.isFinite(entry.x)&&Number.isFinite(entry.y)&&Date.now()-(localMoveAt.get(i)||0)>1500&&!(i===selected&&keys.size)){p.x=entry.x+LX;p.y=entry.y;if(entry.dir)p.dir=entry.dir;}
+    if(Number.isFinite(entry.x)&&Number.isFinite(entry.y)&&!FLOOR4&&Date.now()-(localMoveAt.get(i)||0)>1500&&!(i===selected&&keys.size)){p.x=entry.x+LX;p.y=entry.y;if(entry.dir)p.dir=entry.dir;}
     if(i===selected){if(document.activeElement!==$('message')){$('message').value=p.message;updateCount();}updateMood();updateStatus();updateMusicPanel();}
   }
   // 第一次上線、後端還沒有某人的資料：把這台電腦上已經設定的內容補上去，大家從同一份開始。
@@ -1314,7 +1317,7 @@ const TX0=130+115,TB=-882;// 上排（電梯、廁所、會議室 A）整組：�
 const A_X=TX0+150+CORR+2*T_W-RT+CORR;
 const ROOMS=[['男廁',TX0+150+CORR,TB-meetH,T_W,meetH,'b',TX0+150+CORR+262],['女廁',TX0+150+CORR+T_W-RT,TB-meetH,T_W,meetH,'b',TX0+150+CORR+T_W-RT+262],['會議室 A',TX0+150+CORR+2*T_W-RT+CORR,TB-meetH,meetW(5),meetH,'l',TB-meetH/2],['會議室 B',60,730,BC_W,meetH,'r',730+meetH/2],['會議室 C',60,730+meetH+RT,BC_W,meetH,'r',730+meetH+RT+meetH/2],['會議室 D',1240,730,D_W,D_H,'t',1240+D_W/2]];
 const viewToLogical=v=>{let lo=-3000,hi=4000;for(let i=0;i<40;i++){const m=(lo+hi)/2;if(viewY(m)<v)lo=m;else hi=m;}return (lo+hi)/2;};
-const ROOM_MIN_Y=LX?viewToLogical(-1500):180-2*GP,ROOM_MAX_Y=LX?viewToLogical(1680):H0-20;
+const ROOM_MIN_Y=FLOOR4?60:LX?viewToLogical(-1500):180-2*GP,ROOM_MAX_Y=FLOOR4?F4_H-60:LX?viewToLogical(1680):H0-20;
 const roomWallList=[],roomCornerList=[];
 for(const [,x,y,w,h,side,c] of ROOMS){
   const d=ROOM_DOOR/2,seg=(sx,sy,sw,sh)=>{if(sw>0&&sh>0)roomWallList.push([sx,sy,sw,sh]);},x0=x+RT,x1=x+w-RT,y0=y+RT,y1=y+h-RT;
@@ -1358,17 +1361,26 @@ const addSprite=(name,x,y,depth,solid)=>{const r=RM[name];roomItems.push(['sprit
    roomItems.push(['label',xC,y0+250,560,20,99999,false,{text:room[0]}]);}
 }
 const roomBlockers=!LX?[]:[...roomWallList,...roomCornerList.map(([x,y])=>[x,y,RT,RT]),...roomItems.filter(it=>it[6]).map(it=>[it[1],it[2]+(it[0]==='sprite'&&/chair/.test(it[7].name)?0:it[4]*.35),it[3],it[4]*(it[0]==='table'||it[0]==='sprite'?.65:1)])].map(([x,y,w,h])=>{const t=viewToLogical(y),b=viewToLogical(y+h);return [x,t,w,b-t];});
+if(FLOOR4)stations.length=0;
 const walls0=stations.filter(s=>!s.big&&!s.gone).map(s=>s.row?[s.x-122,431+(s.y-695),244,219]:[s.x-122,s.y+18,244,80]);
-const walls=walls0.concat(roomBlockers);
+const walls=FLOOR4?((window.FLOOR4_SCENE&&window.FLOOR4_SCENE.blocks)||[]):walls0.concat(roomBlockers);
 if(LX){for(let b=0;b<3;b++){const dy=-b*GP,fy=315+dy,fh=335;walls.push([DL-92-12,fy,112,fh]);if(b===1){walls.push([DR-6-12,fy,83,fh],[DR+268-12,fy,85,fh]);}else walls.push([DR+11-8,fy,102,fh]);}walls.push([LONG_DESK.smallX-8,315,LONG_DESK.smallW+8,230],[LONG_DESK.x-8,315,LONG_DESK.w+16,165]);}
 function blocked(x,y){return x<65||x>W-65||y<ROOM_MIN_Y||y>ROOM_MAX_Y||walls.some(([a,b,w,h])=>x>a-14&&x<a+w+14&&y>b-4&&y<b+h+4);}
 /* 走進電梯（2026-10-26）：被操控的人物走到電梯門前、朝上走，就請外層（元宇宙頁）播放電梯過場並切到四樓；單獨開啟時直接換頁。 */
 let elevatorCooldown=0;
+function initFloor4(){
+  const want=new URLSearchParams(location.search).get('hero')||'';let hi=names.indexOf(want);if(hi<0){try{hi=ownIndex()}catch(e){hi=-1}}
+  people.forEach((q,i)=>{q.f4hide=i!==hi;});
+  if(hi>=0){const q=people[hi],st=(window.FLOOR4_SCENE&&FLOOR4_SCENE.heroStart)||{x:115,y:502,dir:'down'};q.x=st.x;q.y=st.y;q.dir=st.dir||'down';select(hi);}
+  if(window.FLOOR4_SCENE){FLOOR4_SCENE.onReady=()=>markDirty();if(FLOOR4_SCENE.ready)markDirty();}
+  markDirty();
+}
 function checkElevator(){
-  if(embedMode||!LX||selected===null||!keys.has('ArrowUp')||Date.now()<elevatorCooldown)return;
+  if(embedMode||(!LX&&!FLOOR4)||selected===null||!keys.has('ArrowUp')||Date.now()<elevatorCooldown)return;
   const p=people[selected];if(!p||p.inRoom)return;const vy=viewY(p.y);
-  if(p.x>=TX0+10&&p.x<=TX0+140&&vy>=TB-6&&vy<=TB+34){elevatorCooldown=Date.now()+4000;keys.clear();
-    if(window.parent!==window){try{window.parent.postMessage({type:'pixelOfficeFloor',floor:4,name:p.name},location.origin);}catch(e){}}else{location.href='floor4.html';}}
+  const f4=FLOOR4&&window.FLOOR4_SCENE?FLOOR4_SCENE.elevator:null,hit=f4?(p.x>=f4.x0&&p.x<=f4.x1&&p.y>=f4.y0&&p.y<=f4.y1):(p.x>=TX0+10&&p.x<=TX0+140&&vy>=TB-6&&vy<=TB+34);
+  if(hit){elevatorCooldown=Date.now()+4000;keys.clear();
+    if(window.parent!==window){try{window.parent.postMessage({type:'pixelOfficeFloor',floor:FLOOR4?5:4,name:p.name},location.origin);}catch(e){}}else{location.search=FLOOR4?location.search.split('&floor=4').join(''):location.search+'&floor=4&hero='+encodeURIComponent(p.name);}}
 }
 function moving(dt){if(!ready||selected===null||storyOpen()||people[selected].inRoom||isAway(people[selected])||isPunishedP(people[selected]))return false;let dx=(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0),dy=(keys.has('ArrowDown')?1:0)-(keys.has('ArrowUp')?1:0);if(!dx&&!dy)return false;const p=people[selected],length=Math.hypot(dx,dy);p.dir=dx?(dx>0?'right':'left'):(dy>0?'down':'up');const spd=document.documentElement.classList.contains('clean-narrow')?400:210;dx=dx/length*spd*dt;dy=dy/length*spd*dt;if(!blocked(p.x+dx,p.y))p.x+=dx;if(!blocked(p.x,p.y+dy))p.y+=dy;save();queuePosition(selected);return true;}
 function typing(){const el=document.activeElement;return el&&(['INPUT','TEXTAREA','SELECT'].includes(el.tagName)||el.isContentEditable);}
@@ -1515,7 +1527,7 @@ function drawFloorGrid(){
   for(let gy=Math.ceil(-OY/FLOOR_GRID)*FLOOR_GRID;gy<H;gy+=FLOOR_GRID)ctx.fillRect(0,gy,W,2);
   ctx.restore();
 }
-function drawOffice(){if(embedMode){ctx.clearRect(0,-OY,W,H);return;}ctx.fillStyle='#fff';if(document.documentElement.classList.contains('clean')){ctx.clearRect(0,-OY,W,H);drawFloorGrid();return;}ctx.fillRect(0,-OY,W,H);drawFloorGrid();}
+function drawOffice(){if(FLOOR4){ctx.clearRect(0,-OY,W,H);try{FLOOR4_SCENE.draw(ctx)}catch(e){}return;}if(embedMode){ctx.clearRect(0,-OY,W,H);return;}ctx.fillStyle='#fff';if(document.documentElement.classList.contains('clean')){ctx.clearRect(0,-OY,W,H);drawFloorGrid();return;}ctx.fillRect(0,-OY,W,H);drawFloorGrid();}
 // furniture-v3.webp：桌子分「左端／中間／右端」三種形狀（素材裡本來就是這樣畫的），
 // 0 一般桌左、1 一般桌中、2 一般桌右、3 副螢幕桌右、4 Mac mini 桌左、5 椅子、6-8 對應三種空桌。
 // 每筆是 [x, y, 寬, 高, 螢幕露出桌面的高度]。桌子本體一律是「桌面 221 + 桌腳 70」，
@@ -1696,12 +1708,12 @@ const toilet6Img=new Image();setAsset(toilet6Img,'assets/office-toilet-v10.webp?
 const toiletImg=new Image();setAsset(toiletImg,'assets/office-toilet-v5.webp?v=1');load(toiletImg).then(()=>markDirty()).catch(()=>{});
 const roomsImg=new Image();setAsset(roomsImg,'assets/office-rooms-v3.webp?v=1');load(roomsImg).then(()=>markDirty()).catch(()=>{});
 const roomsReady=()=>roomsImg.complete&&roomsImg.naturalWidth>1;
-function rm(name,x,y){const r=RM[name];if(!r||!roomsReady())return;ctx.imageSmoothingEnabled=false;ctx.drawImage(r[4]==='t'?toiletImg:r[4]==='t6'?toilet6Img:roomsImg,r[0],r[1],r[2],r[3],Math.round(x),Math.round(y),r[2],r[3]);if(name==='elevator')elevatorDisplay(Math.round(x),Math.round(y));}
-/* 電梯樓層顯示（2026-10-25）：這層是 5 樓、只往下——蓋掉原圖的「▲ 08 ▼」，改成「5F ▼」。座標是電梯素材（150×200）內的像素。 */
-function elevatorDisplay(x,y){
-  const G={'5':['YYYYYY','YY....','YY....','YYYYY.','....YY','....YY','....YY','YY..YY','.YYYY.'],'F':['YYYYYY','YY....','YY....','YYYYY.','YY....','YY....','YY....','YY....','YY....']};
-  ctx.fillStyle='#1b2027';ctx.fillRect(x+52,y+14,24,11);ctx.fillRect(x+76,y+14,8,11);ctx.fillStyle='#e7bd60';
-  [['5',58],['F',68]].forEach(([ch,gx])=>G[ch].forEach((row,j)=>{for(let i=0;i<row.length;i++)if(row[i]==='Y')ctx.fillRect(x+gx+i,y+15+j,1,1);}));
+function rm(name,x,y){const r=RM[name];if(!r||!roomsReady())return;ctx.imageSmoothingEnabled=false;ctx.drawImage(r[4]==='t'?toiletImg:r[4]==='t6'?toilet6Img:roomsImg,r[0],r[1],r[2],r[3],Math.round(x),Math.round(y),r[2],r[3]);if(name==='elevator')elevatorDisplay(Math.round(x),Math.round(y));}
+/* 電梯樓層顯示（2026-10-25）：這層是 5 樓、只往下——蓋掉原圖的「▲ 08 ▼」，改成「5F ▼」。座標是電梯素材（150×200）內的像素。 */
+function elevatorDisplay(x,y){
+  const G={'5':['YYYYYY','YY....','YY....','YYYYY.','....YY','....YY','....YY','YY..YY','.YYYY.'],'F':['YYYYYY','YY....','YY....','YYYYY.','YY....','YY....','YY....','YY....','YY....']};
+  ctx.fillStyle='#1b2027';ctx.fillRect(x+52,y+14,24,11);ctx.fillRect(x+76,y+14,8,11);ctx.fillStyle='#e7bd60';
+  [['5',58],['F',68]].forEach(([ch,gx])=>G[ch].forEach((row,j)=>{for(let i=0;i<row.length;i++)if(row[i]==='Y')ctx.fillRect(x+gx+i,y+15+j,1,1);}));
 }
 function roomTable(kind,x,y,mids){
   if(!roomsReady())return;ctx.imageSmoothingEnabled=false;
@@ -1992,7 +2004,7 @@ const sceneAnimating=()=>people.some((p,i)=>!isAway(p)&&(p.mood||musicOf(p)||act
 let embedVisible=true,embedLastDraw=0;
 if(embedMode&&'IntersectionObserver' in window)new IntersectionObserver(entries=>{embedVisible=entries[entries.length-1].isIntersecting;if(embedVisible)markDirty()}).observe(document.documentElement);
 const avatarOnly=new URLSearchParams(location.search).get('avatars')==='1';
-function render(time){try{updateCamera()}catch(error){}if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&viewer.open)){setTimeout(()=>requestAnimationFrame(render),400);return;}const dt=Math.min((time-last)/1000||0,.04);last=time;const walk=moving(dt);try{checkElevator()}catch(error){}try{ghostTick(performance.now())}catch(error){}
+function render(time){try{updateCamera()}catch(error){}if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&viewer.open)){setTimeout(()=>requestAnimationFrame(render),400);return;}const dt=Math.min((time-last)/1000||0,.04);last=time;if(FLOOR4&&ready&&!window.__f4init){window.__f4init=1;try{initFloor4()}catch(error){}}const walk=moving(dt);try{checkElevator()}catch(error){}try{ghostTick(performance.now())}catch(error){}
   if(embedMode&&!needsRedraw&&!sceneAnimating()){requestAnimationFrame(render);return;}
   // 嵌入首頁時：畫面不在可視範圍就不重畫；持續動畫（心情／未讀動態）限制在約 30fps，避免整張場景每幀全畫拖慢首頁。
   if(embedMode&&!needsRedraw){if(!embedVisible||time-embedLastDraw<40){requestAnimationFrame(render);return;}}
@@ -2000,7 +2012,7 @@ function render(time){try{updateCamera()}catch(error){}if(avatarOnly&&!(typeof v
   if(!embedMode&&!needsRedraw){const anim=!walk&&sceneAnimating(),gap=walk?8:!anim?100:(people.some((p,i)=>!isAway(p)&&actionOf(i))?30:66);/* 動作動畫約 30fps；心情／音樂／未讀動態只是慢慢跳的小圖示，約 15fps 就夠（整張場景重畫不必每幀都做） */if(time-embedLastDraw<gap){if(gap>30)setTimeout(()=>requestAnimationFrame(render),Math.max(8,gap-(time-embedLastDraw)));else requestAnimationFrame(render);return;}}
   if(!embedMode&&needsRedraw&&time-embedLastDraw<(walk?7:15)){requestAnimationFrame(render);return;}// 走路／操作時最多約 60fps（120Hz 螢幕不要每幀都全畫）// 編輯／全版：最多約 30fps，整張大畫布不必每幀都重畫
   embedLastDraw=time;
-  needsRedraw=false;try{applyMeetingRooms()}catch(error){}syncViewLayout();try{followOwn()}catch(error){}if(cam.on&&cam.w){const k=cam.pr*cam.s;ctx.setTransform(k,0,0,k,-cam.left*k,-cam.top*k);ctx.clearRect(cam.left,cam.top,cam.w/cam.s+2,cam.h/cam.s+2);}else ctx.clearRect(0,-OY,W,H);drawOffice();if(ready){hits=[];const layers=[];viewStations.forEach(s=>{if(s.gone)return;if(embedMode&&(s.grp||s.ext))return;/* 首頁小框只看設計部 */if(!inView(s.y))return;if(s.row){layers.push({depth:EMBED_ROW_TOP+115+(s.y-BOTTOM_FEET),draw:()=>drawDeskBottom(s)});layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y-21,draw:()=>drawGhost(s)});}else{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y-19,draw:()=>drawGhost(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});}layers.push({depth:s.row?s.y-1:99999,draw:()=>drawDeskPlate(s)});/* 下排名牌排在人物之前畫：頭會壓在膠囊上 */});stations.forEach(s=>{if(s.gm&&s.gm.mode!=='sit'&&ghostSeated(s)&&inView(viewY(s.gm.y)))layers.push({depth:viewY(s.gm.y),draw:()=>drawGhostWalker(s)});});viewPeople.forEach((p,i)=>{if(embedMode&&p.staff)return;if(!inView(p.y))return;if(p.staff&&!staffLookReady(i))return;/* 自己的頭像與服裝載好才畫，避免先閃出一個內建（Machi）的人 */layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)});});if(LX&&!embedMode){layers.push({depth:-99999,draw:drawProps});layers.push({depth:-99998,draw:drawLongDesk});pushRoomFurniture(layers);layers.push({depth:LONG_DESK.chairY-20,draw:drawLongDeskChair});layers.push({depth:LONG_DESK.chairY-21,draw:drawLongDeskGhost});}layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>{if(!(embedMode&&p.staff)&&inView(viewY(p.y)))drawOverlay(i,time);});people.forEach((p,i)=>{if(!(embedMode&&p.staff)&&inView(viewY(p.y)))drawActionLabel(i);});viewStations.forEach(s=>{if(!s.gone&&!(embedMode&&(s.grp||s.ext))&&inView(s.y))drawStatusMarker(s.row?{...s,y:BD_MARK_Y+(s.y-BOTTOM_FEET)}:s);});positionPersonCard();if(window.radialPlace)window.radialPlace();}requestAnimationFrame(render);}
+  needsRedraw=false;try{applyMeetingRooms()}catch(error){}syncViewLayout();try{followOwn()}catch(error){}if(cam.on&&cam.w){const k=cam.pr*cam.s;ctx.setTransform(k,0,0,k,-cam.left*k,-cam.top*k);ctx.clearRect(cam.left,cam.top,cam.w/cam.s+2,cam.h/cam.s+2);}else ctx.clearRect(0,-OY,W,H);drawOffice();if(ready){hits=[];const layers=[];viewStations.forEach(s=>{if(s.gone)return;if(embedMode&&(s.grp||s.ext))return;/* 首頁小框只看設計部 */if(!inView(s.y))return;if(s.row){layers.push({depth:EMBED_ROW_TOP+115+(s.y-BOTTOM_FEET),draw:()=>drawDeskBottom(s)});layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y-21,draw:()=>drawGhost(s)});}else{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y-19,draw:()=>drawGhost(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});}layers.push({depth:s.row?s.y-1:99999,draw:()=>drawDeskPlate(s)});/* 下排名牌排在人物之前畫：頭會壓在膠囊上 */});stations.forEach(s=>{if(s.gm&&s.gm.mode!=='sit'&&ghostSeated(s)&&inView(viewY(s.gm.y)))layers.push({depth:viewY(s.gm.y),draw:()=>drawGhostWalker(s)});});viewPeople.forEach((p,i)=>{if(embedMode&&p.staff)return;if(FLOOR4&&p.f4hide!==false)return;if(!inView(p.y))return;if(p.staff&&!staffLookReady(i))return;/* 自己的頭像與服裝載好才畫，避免先閃出一個內建（Machi）的人 */layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)});});if(LX&&!embedMode){layers.push({depth:-99999,draw:drawProps});layers.push({depth:-99998,draw:drawLongDesk});pushRoomFurniture(layers);layers.push({depth:LONG_DESK.chairY-20,draw:drawLongDeskChair});layers.push({depth:LONG_DESK.chairY-21,draw:drawLongDeskGhost});}layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>{if(!(embedMode&&p.staff)&&!(FLOOR4&&p.f4hide!==false)&&inView(viewY(p.y)))drawOverlay(i,time);});people.forEach((p,i)=>{if(!(embedMode&&p.staff)&&!(FLOOR4&&p.f4hide!==false)&&inView(viewY(p.y)))drawActionLabel(i);});viewStations.forEach(s=>{if(!s.gone&&!(embedMode&&(s.grp||s.ext))&&inView(s.y))drawStatusMarker(s.row?{...s,y:BD_MARK_Y+(s.y-BOTTOM_FEET)}:s);});positionPersonCard();if(window.radialPlace)window.radialPlace();}requestAnimationFrame(render);}
 // 圖示不擋進站：人物與家具載好就開始畫，圖示載入前先用內建的像素小圖。
 load(iconSheet).then(refreshIconCanvases).catch(()=>{});load(extraSheet).then(refreshIconCanvases).catch(()=>{});
 restoreCustomCache();Promise.all([load(wardrobeSheets.heads),load(wardrobeSheets.outfits),load(furniture)]).then(()=>{ready=true;try{applyViewerRole();}catch(e){}loadAccessories();loadCustomList();setInterval(loadCustomList,120000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadCustomList();});fitEmbedView();setTimeout(fitEmbedView,300);setTimeout(fitEmbedView,1200);markDirty();$('loading').hidden=true;refreshIconCanvases();select(null);document.querySelectorAll('.roster-button canvas:not([data-symbol])').forEach((canvas,i)=>portrait(canvas.getContext('2d'),i,false));}).catch(()=>{$('loading').textContent='場景圖片載入失敗，請重新整理頁面。';});select(null);if(!embedMode)ensureLevels();syncDesigners();pollSync();renderLevelTable();requestAnimationFrame(render);
