@@ -250,7 +250,7 @@ function staffLookReady(i){return customIdsOf(i).length>0&&customHeadIdsOf(i).le
 let staffSeated=true;// 編輯／整頁畫面一律含六張同仁桌（沒人坐也看得到桌子），首頁小框才只看設計部
 const staffStationIndex=seat=>{const g=Math.floor(seat/6);return g?12*g+6+seat%6:6+seat;};/* 座位 0–5 在原本那組，6–17 在往上複製的兩組 */
 /* 座位搬到四樓（2026-10-26）：這三位同仁的座位在四樓左側由上而下第四桌群（g 從 0 算＝3），座位 1～4 上排、5～8 下排由左到右。五樓不再顯示他們、原座位空出來。 */
-const STAFF_F4={'黎子瑄':{g:3,seat:8},'余采馨':{g:3,seat:6},'鄭筱舢':{g:3,seat:7}};
+const STAFF_F4={'黎子瑄':{g:3,seat:8,face:'down'},'余采馨':{g:3,seat:6,face:'down'},'鄭筱舢':{g:3,seat:7,face:'down'}};
 function applyStaff(list){
   if(!Array.isArray(list)||!list.length)return;let changed=false;
   for(const item of list){
@@ -1373,7 +1373,7 @@ let elevatorCooldown=0;
 /* 四樓：搬到四樓的同仁坐進自己的座位（人物＋桌位名牌）；每格都重設位置，名單晚到也會補上 */
 /* 四樓的空座位（沒有同仁坐的）比照五樓：上班時間坐一個「未登入」透明人物、桌上有「未登入」名牌 */
 function addF4Vacancies(){const sc=window.FLOOR4_SCENE;if(!sc||!sc.seats||window.__f4vac)return;window.__f4vac=1;const taken=Object.keys(STAFF_F4).map(nm=>sc.seatPos(STAFF_F4[nm].g,STAFF_F4[nm].seat));for(const t of sc.seats){if(taken.some(q=>Math.abs(q.x-t.x)<2&&Math.abs(q.y-t.y)<2))continue;stations.push({x:t.x,y:t.y,name:'',row:t.row?1:0,grp:1,empty:6,type:0,f4:true,f4ghost:true});}markDirty();}
-function syncF4Staff(){const sc=window.FLOOR4_SCENE;if(!sc||!sc.seatPos)return;addF4Vacancies();for(const nm in STAFF_F4){const i=names.indexOf(nm);if(i<0)continue;const q=people[i],pos=sc.seatPos(STAFF_F4[nm].g,STAFF_F4[nm].seat);q.f4hide=false;q.x=pos.x;q.y=pos.y;q.dir=pos.dir;if(!stations.some(t=>t.f4&&t.name===nm)){stations.push({x:pos.x,y:pos.y,name:nm,row:pos.row?1:0,grp:1,empty:6,type:0,f4:true});markDirty();}}}
+function syncF4Staff(){const sc=window.FLOOR4_SCENE;if(!sc||!sc.seatPos)return;addF4Vacancies();for(const nm in STAFF_F4){const i=names.indexOf(nm);if(i<0)continue;const q=people[i],pos=sc.seatPos(STAFF_F4[nm].g,STAFF_F4[nm].seat);q.f4hide=false;q.x=pos.x;q.y=pos.y;q.dir=STAFF_F4[nm].face||pos.dir;if(!stations.some(t=>t.f4&&t.name===nm)){stations.push({x:pos.x,y:pos.y,name:nm,row:pos.row?1:0,grp:1,empty:6,type:0,f4:true});markDirty();}}}
 function initFloor4(){
   const want=new URLSearchParams(location.search).get('hero')||'';let hi=names.indexOf(want);if(hi<0){try{hi=ownIndex()}catch(e){hi=-1}}
   people.forEach((q,i)=>{q.f4hide=i!==hi;});
