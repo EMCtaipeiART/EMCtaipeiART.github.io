@@ -86,7 +86,7 @@
   const WOOD = { tx: 0, ty: 0, tw: 0 };
   // ---- 右側：木長桌（10 人：上下各 5 張椅子）
   {
-    const tx = TX0 + 150 + CORR + 2 * T_W - RT + CORR + RT + ROOM_MARGIN - 2 * 64 + HSHIFT, ty = TY + RT + ROOM_MARGIN + 2 * 64, tw = tableW(5); WOOD.tx = tx; WOOD.ty = ty; WOOD.tw = tw; table('wood', tx, ty, 5, ty + 70); block(tx, ty + 20, tw, 80); label('木長桌（10 人）', tx, ty - 90, tw);
+    const tx = TX0 + 150 + CORR + 2 * T_W - RT + CORR + RT + ROOM_MARGIN - 2 * 64 + HSHIFT, ty = TY + RT + ROOM_MARGIN + 2 * 64, tw = tableW(5); WOOD.tx = tx; WOOD.ty = ty; WOOD.tw = tw; table('wood', tx, ty, 5, ty + 70); block(tx, ty + 20, tw, 80);
     for (let k = 0; k < 5; k++) { const cx = tx + tw * (2 * k + 1) / 10; sprite('chair_front', cx - 26, ty - 46, ty - 1); sprite('chair_back', cx - 26, ty + 60, ty + 130); }
   }
   // ---- 茶水間（木長桌旁）
@@ -111,7 +111,7 @@
   // ---- 右側：大會議室 H（玻璃，上下兩個出口；投影機往右；六張白桌排成「C」，一桌兩椅）
   {
     const rx = GX + 880 + CORR + 2 * 64, ry = GY0 - 67 - RT + 64, xL = rx + (2 * (RT + 40 + 2 * 220 + 40 + RT) + 60) - RT - 130 - (100 + 2 * 195), y0 = ry + RT + 150, rw = 2 * (RT + 40 + 2 * 220 + 40 + RT) + 60,/* 往右延伸到跟下方兩間玻璃辦公室（各 568，中間 60）的右緣切齊 */ rh = RT + 150 + 400 + 90 + RT;
-    glass(rx, ry, rw, rh, [{ side: 't', c: rx + rw / 2 }, { side: 'b', c: rx + rw / 2 }]);
+    glass(rx, ry, rw, rh, [{ side: 't', c: rx + RT + 130 + 60 }, { side: 'b', c: rx + rw / 2 }]);/* 上方出口在左側 */
     block(xL + 100, y0, 390, 130); block(xL + 100, y0 + 270, 390, 130); block(xL, y0, 100, 400);
     const xC = xL + 100;
     for (const k of [0, 1]) {
@@ -125,8 +125,8 @@
   }
   // ---- 桌子群下方：會議室 F、G（同 B、C）＋右側兩間大玻璃屋（各六張桌椅）
   const BY = GY0 + 4 * GP + 166 + 135 + 114,/* 最後一群下排椅腳到 F 會議室 114（五樓：下排椅腳到 B 會議室 114） */ BC_MX = 70, BC_W = tableW(2) + 2 * BC_MX + 2 * RT, meetH = 130 + 2 * ROOM_MARGIN + 2 * RT;
-  const small = (name, rx, ry) => {
-    glass(rx, ry, BC_W, meetH, [{ side: 'r', c: ry + meetH / 2 }]);
+  const small = (name, rx, ry, doorSide = 'r') => {
+    glass(rx, ry, BC_W, meetH, [{ side: doorSide, c: ry + meetH / 2 }]);
     const tx = rx + RT + BC_MX, ty = ry + RT + ROOM_MARGIN, tw = tableW(2); table('black', tx, ty, 2, ty + 110); block(tx, ty, tw, 130); label(name, tx, ty + 55, tw);
     sprite('projector_left', tx + tw - 84, ty + 26, ty + 125);
     for (let k = 0; k < 2; k++) { const cx = tx + tw * (2 * k + 1) / 4; sprite('chair_front', cx - 26, ty - 46, ty - 1); sprite('chair_back', cx - 26, ty + 120, ty + 170); }
@@ -147,7 +147,7 @@
   const w1 = big('office1', HROOM.x, oy1, (rx, ry, rw, rh) => [{ side: 't', c: rx + rw / 2 }, { side: 'l', c: ry + rh / 2 }]);
   big('office2', HROOM.x + w1 + 60, oy1, (rx, ry, rw, rh) => [{ side: 't', c: rx + rw / 2 }, { side: 'r', c: ry + rh / 2 }]);
   const fgY = oy1 + OFF.h + WH + 70;
-  small('會議室 F', HROOM.x, fgY); small('會議室 G', HROOM.x + w1 + 60, fgY);
+  small('會議室 F', HROOM.x, fgY); small('會議室 G', HROOM.x + w1 + 60, fgY, 'l');
 
   const load = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(i); i.src = src; });
   const scene = {
