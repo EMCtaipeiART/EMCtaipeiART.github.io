@@ -526,16 +526,16 @@
       if(e.target.closest?.('[data-arena-back]')){openUniverse()}
     });
     /* 電梯過場（2026-10-26）：兩片電梯門關上、顯示樓層、換頁、再打開。在像素辦公室走進電梯，或按「四樓／回五樓」都會播。 */
-    function uniFrameSrc(floor){const edit=Boolean(state.uniEdit)&&canEditUniverse(),t=Math.floor(Date.now()/300000);return floor===4?UNI_URL+'floor4.html?v=2&t='+t:UNI_URL+(edit?'?clean=1&cs=.78&v=118&t='+t:'?clean=1&ro=1&cs=.78&v=118&t='+t);}
-    function floorTransition(to){
+    function uniFrameSrc(floor){const edit=Boolean(state.uniEdit)&&canEditUniverse(),t=Math.floor(Date.now()/300000);return floor===4?UNI_URL+'floor4.html?v=3&t='+t:UNI_URL+(edit?'?clean=1&cs=.78&v=118&t='+t:'?clean=1&ro=1&cs=.78&v=118&t='+t);}
+    function floorTransition(to,hero){
       const wrap=document.querySelector('.uni-wrap'),fr=$('uniFrame');if(!wrap||!fr||state.uniFloorBusy||state.uniFloor===to||(to!==4&&to!==5))return;
       state.uniFloorBusy=true;const fx=document.createElement('div');fx.className='uni-elev-fx';fx.innerHTML='<i class="l"></i><i class="r"></i><b>'+to+'F</b>';wrap.appendChild(fx);
       requestAnimationFrame(()=>requestAnimationFrame(()=>fx.classList.add('close')));
-      setTimeout(()=>{state.uniFloor=to;fr.src=uniFrameSrc(to);const btn=document.querySelector('[data-uni-floor]');if(btn)btn.textContent=to===4?'回五樓':'四樓';fx.classList.add('show');},650);
+      if(hero)state.uniHero=hero;setTimeout(()=>{state.uniFloor=to;fr.src=uniFrameSrc(to);if(to===4){const send=()=>{const nm=state.uniHero||(typeof viewerPayload==='function'?viewerPayload().name:'')||'';try{fr.contentWindow.postMessage({type:'floor4Hero',name:nm,body:(state.pixBodies||{})[nm]||''},location.origin)}catch(err){}};fr.addEventListener('load',()=>{send();setTimeout(send,700)},{once:true})}const btn=document.querySelector('[data-uni-floor]');if(btn)btn.textContent=to===4?'回五樓':'四樓';fx.classList.add('show');},650);
       setTimeout(()=>{fx.classList.add('open');},1900);
       setTimeout(()=>{fx.remove();state.uniFloorBusy=false;},2700);
     }
-    window.addEventListener('message',e=>{const f=$('uniFrame');if(e.origin===location.origin&&e.data&&e.data.type==='pixelOfficeFloor'&&f&&e.source===f.contentWindow)floorTransition(Number(e.data.floor)===4?4:5)});
+    window.addEventListener('message',e=>{const f=$('uniFrame');if(e.origin===location.origin&&e.data&&e.data.type==='pixelOfficeFloor'&&f&&e.source===f.contentWindow)floorTransition(Number(e.data.floor)===4?4:5,String(e.data.name||''))});
     function renderUniversePage(){
       const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=state.uniFloor===4?UNI_URL+'floor4.html?v=1&t='+Math.floor(Date.now()/300000):UNI_URL+(edit?'?clean=1&cs=.78&v=118&t='+Math.floor(Date.now()/300000):'?clean=1&ro=1&cs=.78&v=118&t='+Math.floor(Date.now()/300000));
       $('stage').innerHTML='<div class="uni-page is-edit"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+(loggedIn()&&(isAdminUser()||isMachiUser())?'<button type="button" class="btn" data-uni-allwork>'+uniAllWorkLabel()+'</button><button type="button" class="btn" data-uni-hours>上下班設定</button>':'')+'<button type="button" class="btn" data-uni-floor>'+(state.uniFloor===4?'回五樓':'四樓')+'</button><button type="button" class="btn" data-uni-arena>出氣擂台</button><button type="button" class="btn" data-uni-close>關閉</button></div></div><div class="uni-wrap"><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe><div class="uni-loading" id="uniLoading" role="status" aria-live="polite"><span class="uni-spin" aria-hidden="true"></span><b>正在進入凱曜多元宇宙…</b><small>載入像素辦公室</small></div></div></div>';

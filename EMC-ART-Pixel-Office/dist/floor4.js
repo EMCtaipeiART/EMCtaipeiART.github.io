@@ -3,9 +3,11 @@
  * 右側大會議室 H（上下兩個出口，投影機往右，六張白桌排成「C」，一桌兩椅）；桌子群下方會議室 F、G（同 B、C）；
  * 它們右側兩間大玻璃屋，各六張桌椅。素材全部沿用五樓的圖集。 */
 (function () {
-  const cv = document.getElementById('c'), ctx = cv.getContext('2d');
-  const W = 2300, H = 3720; cv.width = W; cv.height = H;
-  const fitScale = () => { cv.style.width = Math.round(W * Math.min(1.6, Math.max(.3, window.innerWidth * .96 / 1362))) + 'px'; cv.style.height = 'auto'; };
+  const cv = document.getElementById('c'), mainCtx = cv.getContext('2d');
+  const bgCv = document.createElement('canvas'), ctx = bgCv.getContext('2d');
+  const W = 2300, H = 3720; cv.width = W; cv.height = H; bgCv.width = W; bgCv.height = H;
+  const viewScale = () => (window.innerWidth <= 720 ? .5 : .78); /* 跟五樓一樣的縮放（五樓桌機是 cs=.78） */
+  const fitScale = () => { cv.style.width = Math.round(W * viewScale()) + 'px'; cv.style.height = 'auto'; };
   fitScale(); window.addEventListener('resize', fitScale);
   const RM = { table_black_left: [8, 8, 55, 130], table_black_mid: [71, 8, 85, 130], table_black_right: [164, 8, 55, 130], table_white_left: [227, 8, 55, 130], table_white_mid: [290, 8, 85, 130], table_white_right: [383, 8, 55, 130], table_wood_left: [446, 8, 55, 90], table_wood_mid: [509, 8, 85, 90], table_wood_right: [602, 8, 55, 90], table_white_v: [8, 146, 100, 200], chair_front: [116, 146, 52, 56], chair_back: [176, 146, 52, 56], chair_side_l: [236, 146, 48, 52], chair_side_r: [292, 146, 48, 52], elevator: [8, 354, 150, 200], fridge_dark: [166, 354, 82, 170], plant_small: [256, 354, 40, 80], projector_right: [304, 354, 64, 52], projector_left: [376, 354, 64, 52], snack_chips_red: [512, 354, 24, 32], snack_chips_yellow: [544, 354, 24, 32], snack_chips_blue: [576, 354, 24, 32], snack_box: [608, 354, 30, 22], snack_candy: [646, 354, 20, 14] };
   const RM4 = { table_whitewood_left: [178, 8, 55, 90], table_whitewood_mid: [241, 8, 85, 90], table_whitewood_right: [334, 8, 55, 90] };
@@ -17,6 +19,7 @@
   Promise.all([img('assets/office-rooms-v3.webp?v=1'), img('assets/office-props-v4.webp?v=1'), img('assets/furniture-v5.webp?v=1'), img('assets/office-desks-v6.webp?v=1'), img('assets/office-toilet-v10.webp?v=1')]).then(([rooms, props, furn, desks, toiletPic]) => {
     ctx.imageSmoothingEnabled = false;
     const items = [];
+    const blocks = []; const block = (x, y, w, h) => blocks.push([x, y, w, h]);
     const add = (depth, draw) => items.push({ depth, draw });
     const spr = (name, x, y) => { const r = RM[name]; ctx.drawImage(rooms, r[0], r[1], r[2], r[3], Math.round(x), Math.round(y), r[2], r[3]); };
     const sprite = (name, x, y, depth) => add(depth, () => spr(name, x, y));
@@ -37,7 +40,15 @@
     for (let x = 0; x < W; x += 64) ctx.fillRect(x, 0, 2, H);
     for (let y = 0; y < H; y += 64) ctx.fillRect(0, y, W, 2);
     // 玻璃屋：牆頂＋後牆／前牆正面，3 px 黑外框；doors＝[{side:'t'|'b'|'l'|'r', c:門中心座標}]
-    const glass = (x, y, w, h, doors) => add(-9000, () => {
+    const glassBlock = (x, y, w, h, doors) => {
+      const d = ROOM_DOOR / 2, gap = side => doors.find(o => o.side === side);
+      const seg = (x1, x2, g) => { if (!g) return [[x1, x2]]; const g0 = g.c - d, g1 = g.c + d, o = []; if (x1 < g0) o.push([x1, Math.min(x2, g0)]); if (x2 > g1) o.push([Math.max(x1, g1), x2]); return o; };
+      for (const [a, b] of seg(x, x + w, gap('t'))) block(a, y, b - a, RT);
+      for (const [a, b] of seg(x, x + w, gap('b'))) block(a, y + h - RT, b - a, RT);
+      for (const [a, b] of seg(y + RT, y + h - RT, gap('l'))) block(x, a, RT, b - a);
+      for (const [a, b] of seg(y + RT, y + h - RT, gap('r'))) block(x + w - RT, a, RT, b - a);
+    };
+    const glass = (x, y, w, h, doors) => { glassBlock(x, y, w, h, doors); add(-9000, () => {
       const d = ROOM_DOOR / 2, gap = side => doors.find(o => o.side === side);
       const seg = (x1, x2, g) => { if (!g) return [[x1, x2]]; const g0 = g.c - d, g1 = g.c + d, o = []; if (x1 < g0) o.push([x1, Math.min(x2, g0)]); if (x2 > g1) o.push([Math.max(x1, g1), x2]); return o; };
       ctx.save(); ctx.imageSmoothingEnabled = false;
@@ -60,9 +71,9 @@
         else { const xx = o.side === 'l' ? x : x + w - RT; ctx.fillRect(xx, o.c - d - B, RT, B); ctx.fillRect(xx, o.c + d, RT, B); }
       }
       ctx.restore();
-    });
+    }); };
     // ---- 左上：電梯（保留，樓層顯示改 4F、上下箭頭都保留）
-    const EX = 40, EY = 40; sprite('elevator', EX, EY, EY + 200); label('4F 電梯 ↑↓', EX, EY + 208, 150);
+    const EX = 40, EY = 40; block(EX, EY + 70, 150, 130); sprite('elevator', EX, EY, EY + 200); label('4F 電梯 ↑↓', EX, EY + 208, 150);
     add(EY + 201, () => {
       ctx.fillStyle = '#1b2027'; ctx.fillRect(EX + 66, EY + 14, 18, 11); ctx.fillStyle = '#e7bd60';
       const G = { '4': ['...YY.', '..YYY.', '.YYYY.', 'YY.YY.', 'YY.YY.', 'YYYYYY', 'YYYYYY', '...YY.', '...YY.'], 'F': ['YYYYYY', 'YY....', 'YY....', 'YYYYY.', 'YY....', 'YY....', 'YY....', 'YY....', 'YY....'] };
@@ -73,25 +84,26 @@
       const TW = 346, TH = 438, TY = 40;
       [['男廁', 250], ['女廁', 250 + TW - RT]].forEach(([name, rx]) => {
         glass(rx, TY, TW, TH, [{ side: 'b', c: rx + 262 }]);
+        { const lx = rx + RT, y0 = TY + RT; block(lx + 12, y0 + 8, 44, 264); block(lx + 12, y0 + 8, 164, 44); block(lx + 12, y0 + 120, 164, 44); block(lx + 12, y0 + 236, 164, 36); block(lx + 14, y0 + 282, 67, 94); }
         add(-8990, () => { if (toiletPic.naturalWidth) { ctx.save(); ctx.imageSmoothingEnabled = true; ctx.drawImage(toiletPic, rx + RT, TY + RT, TW - 2 * RT, TH - 2 * RT); ctx.restore(); } });
         label(name, rx, TY - 22, TW);
       });
     }
     // ---- 右側：木長桌（10 人：上下各 5 張椅子）
     {
-      const tx = 1000, ty = 130, tw = tableW(5); table('wood', tx, ty, 5, ty + 70); label('木長桌（10 人）', tx, ty - 90, tw);
+      const tx = 1000, ty = 130, tw = tableW(5); table('wood', tx, ty, 5, ty + 70); block(tx, ty + 20, tw, 80); label('木長桌（10 人）', tx, ty - 90, tw);
       for (let k = 0; k < 5; k++) { const cx = tx + tw * (2 * k + 1) / 10; sprite('chair_front', cx - 26, ty - 46, ty - 1); sprite('chair_back', cx - 26, ty + 60, ty + 130); }
     }
     // ---- 茶水間（木長桌旁）
     {
-      const tx = 1000 + tableW(5) + 110, ty = 130, fx = tx + 300, fy = ty - 40; table('whitewood', tx, ty, 2, ty + 70); label('茶水間', tx, ty - 60, tableW(2));
+      const tx = 1000 + tableW(5) + 110, ty = 130, fx = tx + 300, fy = ty - 40; table('whitewood', tx, ty, 2, ty + 70); block(tx, ty + 20, tableW(2), 70); block(fx, fy + 60, 164, 110); label('茶水間', tx, ty - 60, tableW(2));
       [['snack_chips_red', 30], ['snack_chips_yellow', 66], ['snack_chips_blue', 102], ['snack_box', 150], ['snack_candy', 215]].forEach(([n, dx]) => { const r = RM[n]; sprite(n, tx + dx, ty + 58 - r[3], ty + 85); });
       sprite('fridge_dark', fx, fy, fy + 170); sprite('fridge_dark', fx + 82, fy, fy + 170); sprite('plant_small', fx + 190, fy + 90, fy + 170);
     }
     // ---- 左側：五個米白桌子群（每群上排 4 張、下排 4 張，椅子在最外側）
     const GX = 40, GY0 = 600, GP = 470;
     for (let g = 0; g < 5; g++) {
-      const gy = GY0 + g * GP;
+      const gy = GY0 + g * GP; block(GX, gy + 20, 880, 200);
       for (let k = 0; k < 4; k++) {
         const dx = GX + k * 220, cx = dx + 110;
         chairBig(cx, gy - 70, gy + 10);       // 上排椅子（在桌子後面）
@@ -104,6 +116,7 @@
     {
       const rx = 1000, ry = GY0 - 70, xL = rx + RT + 130, y0 = ry + RT + 150, rw = RT + 130 + 100 + 2 * 195 + 130 + RT, rh = RT + 150 + 400 + 90 + RT;
       glass(rx, ry, rw, rh, [{ side: 't', c: rx + rw / 2 }, { side: 'b', c: rx + rw / 2 }]);
+      block(xL + 100, y0, 390, 130); block(xL + 100, y0 + 270, 390, 130); block(xL, y0, 100, 400);
       const xC = xL + 100;
       for (const k of [0, 1]) {
         const tx = xC + k * 195; table('white', tx, y0, 1, y0 + 110); table('white', tx, y0 + 270, 1, y0 + 380);
@@ -117,6 +130,7 @@
     const BY = GY0 + 5 * GP + 40, BC_MX = 70, BC_W = tableW(2) + 2 * BC_MX + 2 * RT, meetH = 130 + 2 * ROOM_MARGIN + 2 * RT;
     const small = (name, rx, ry) => {
       glass(rx, ry, BC_W, meetH, [{ side: 'r', c: ry + meetH / 2 }]);
+      block(rx + RT + BC_MX, ry + RT + ROOM_MARGIN, tableW(2), 130);
       const tx = rx + RT + BC_MX, ty = ry + RT + ROOM_MARGIN, tw = tableW(2); table('black', tx, ty, 2, ty + 110); label(name, tx, ty + 55, tw);
       sprite('projector_left', tx + tw - 84, ty + 26, ty + 125);
       for (let k = 0; k < 2; k++) { const cx = tx + tw * (2 * k + 1) / 4; sprite('chair_front', cx - 26, ty - 46, ty - 1); sprite('chair_back', cx - 26, ty + 120, ty + 170); }
@@ -125,13 +139,58 @@
     const big = (name, rx, ry) => {
       const rw = RT + 40 + 3 * 220 + 40 + RT, rh = RT + 130 + 2 * 124 + 190 + 60 + RT;
       glass(rx, ry, rw, rh, [{ side: 't', c: rx + rw / 2 }, { side: 'l', c: ry + rh / 2 }]);
-      const dx0 = rx + RT + 40, dy0 = ry + RT + 130;
+      const dx0 = rx + RT + 40, dy0 = ry + RT + 130; block(dx0, dy0 + 20, 660, 200);
       for (let k = 0; k < 3; k++) { const dx = dx0 + k * 220, cx = dx + 110; chairBig(cx, dy0 - 70, dy0 + 10); deskBeige(dx, dy0, dy0 + 100); deskBeige(dx, dy0 + 94, dy0 + 200); chairBig(cx, dy0 + 190, dy0 + 420); }
       label(name, rx, ry + rh + WH + 8, rw); return rw;
     };
     const bx = 40 + BC_W + 60; const w1 = big('玻璃辦公室 1', bx, BY); big('玻璃辦公室 2', bx + w1 + 60, BY);
     items.sort((a, b) => a.depth - b.depth).forEach(it => it.draw());
+    // ---- 人物（從五樓走進電梯帶下來的那一位）：用元宇宙的「全身正面快照」，WASD／方向鍵／拖動走路，撞牆與家具（blocks）停下；走回電梯門前往上走就回五樓。
+    const hero = { name: '', img: null, x: EX + 75, y: EY + 262, h: 150 };
+    const keys = new Set(); let lastT = performance.now(), dragStart = null, cooldown = 0, needDraw = true;
+    const blockedAt = (x, y) => x < 30 || x > W - 30 || y < 30 || y > H - 20 || blocks.some(([bx, by, bw, bh]) => x > bx - 12 && x < bx + bw + 12 && y > by - 6 && y < by + bh + 6);
+    const paint = () => {
+      mainCtx.clearRect(0, 0, W, H); mainCtx.drawImage(bgCv, 0, 0);
+      if (hero.name) {
+        mainCtx.save(); mainCtx.imageSmoothingEnabled = true;
+        if (hero.img && hero.img.naturalWidth) { const w = hero.h * hero.img.naturalWidth / hero.img.naturalHeight; mainCtx.drawImage(hero.img, hero.x - w / 2, hero.y - hero.h, w, hero.h); }
+        else { mainCtx.fillStyle = '#7b8da0'; mainCtx.fillRect(hero.x - 22, hero.y - hero.h, 44, hero.h); }
+        mainCtx.font = '700 13px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif'; const tw = Math.round(mainCtx.measureText(hero.name).width) + 18;
+        mainCtx.fillStyle = '#0c0c0c'; mainCtx.fillRect(hero.x - tw / 2 - 2, hero.y - hero.h - 30, tw + 4, 24); mainCtx.fillStyle = '#fff'; mainCtx.fillRect(hero.x - tw / 2, hero.y - hero.h - 28, tw, 20);
+        mainCtx.fillStyle = '#273b50'; mainCtx.textAlign = 'center'; mainCtx.textBaseline = 'middle'; mainCtx.fillText(hero.name, hero.x, hero.y - hero.h - 17.5); mainCtx.restore();
+      }
+    };
+    const follow = () => { const sc = viewScale(), tx = hero.x * sc - window.innerWidth / 2, ty = (hero.y - hero.h / 2) * sc - window.innerHeight / 2; window.scrollTo(window.scrollX + (tx - window.scrollX) * .25, window.scrollY + (ty - window.scrollY) * .25); };
+    const tick = t => {
+      const dt = Math.min((t - lastT) / 1000, .05); lastT = t;
+      if (hero.name) {
+        let dx = (keys.has('ArrowRight') ? 1 : 0) - (keys.has('ArrowLeft') ? 1 : 0), dy = (keys.has('ArrowDown') ? 1 : 0) - (keys.has('ArrowUp') ? 1 : 0);
+        if (dx || dy) { const len = Math.hypot(dx, dy), v = 230 * dt; dx = dx / len * v; dy = dy / len * v; if (!blockedAt(hero.x + dx, hero.y)) hero.x += dx; if (!blockedAt(hero.x, hero.y + dy)) hero.y += dy; needDraw = true; }
+        // 電梯門前往上走 → 回五樓
+        if (keys.has('ArrowUp') && Date.now() > cooldown && hero.x >= EX + 10 && hero.x <= EX + 140 && hero.y <= EY + 250 && hero.y >= EY + 200) { cooldown = Date.now() + 4000; keys.clear(); try { window.parent.postMessage({ type: 'pixelOfficeFloor', floor: 5 }, location.origin); } catch (err) { /* 單獨開啟 */ } }
+        if (needDraw) { paint(); needDraw = false; }
+        follow();
+      } else if (needDraw) { paint(); needDraw = false; }
+      requestAnimationFrame(tick);
+    };
+    const KEYMAP = { w: 'ArrowUp', s: 'ArrowDown', a: 'ArrowLeft', d: 'ArrowRight', ArrowUp: 'ArrowUp', ArrowDown: 'ArrowDown', ArrowLeft: 'ArrowLeft', ArrowRight: 'ArrowRight', W: 'ArrowUp', S: 'ArrowDown', A: 'ArrowLeft', D: 'ArrowRight' };
+    window.addEventListener('keydown', e => { const k = KEYMAP[e.key]; if (k && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); keys.add(k); } });
+    window.addEventListener('keyup', e => { const k = KEYMAP[e.key]; if (k) keys.delete(k); });
+    window.addEventListener('blur', () => keys.clear());
+    // 手機：手指按住拖動＝往那個方向走
+    cv.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse' || !hero.name) return; dragStart = [e.clientX, e.clientY]; });
+    window.addEventListener('pointermove', e => { if (!dragStart) return; const dx = e.clientX - dragStart[0], dy = e.clientY - dragStart[1], len = Math.hypot(dx, dy); ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].forEach(k => keys.delete(k)); if (len < 8) return; const ax = dx / len, ay = dy / len; if (ax > .3) keys.add('ArrowRight'); if (ax < -.3) keys.add('ArrowLeft'); if (ay > .3) keys.add('ArrowDown'); if (ay < -.3) keys.add('ArrowUp'); });
+    window.addEventListener('pointerup', () => { dragStart = null; ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].forEach(k => keys.delete(k)); });
+    window.addEventListener('message', e => {
+      if (e.origin !== location.origin || !e.data || e.data.type !== 'floor4Hero') return;
+      hero.name = String(e.data.name || ''); hero.x = EX + 75; hero.y = EY + 262;
+      if (e.data.body) { const im = new Image(); im.onload = () => { hero.img = im; needDraw = true; }; im.src = e.data.body; } else hero.img = null;
+      needDraw = true;
+    });
+    window.__floor4 = { hero, blocks, blockedAt };
+    paint(); requestAnimationFrame(tick);
     cv.addEventListener('click', e => {
+      if (hero.name) return;
       const r = cv.getBoundingClientRect(), sx = W / r.width, x = (e.clientX - r.left) * sx, y = (e.clientY - r.top) * sx;
       if (x >= EX && x <= EX + 150 && y >= EY && y <= EY + 240) { try { window.parent.postMessage({ type: 'pixelOfficeFloor', floor: 5 }, location.origin); } catch (err) { /* 單獨開啟就不做事 */ } }
     });
