@@ -498,9 +498,14 @@
       document.body.appendChild(back);
     }
     document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('[data-uni-hours]'))openHoursEditor()});
+    /* 全員上班／全員下班：同一個按鈕來回切換（2026-10-25）。標籤＝按下去會變成的狀態。 */
+    let uniForce='';
+    const uniAllWorkLabel=()=>uniForce==='work'?'全員下班':'全員上班';
+    function syncAllWorkBtn(){const b=document.querySelector('[data-uni-allwork]');if(b)b.textContent=uniAllWorkLabel()}
+    async function loadAllWorkBtn(){try{const r=await api('getPixelHours',{});uniForce=r.force||'';syncAllWorkBtn()}catch(err){}}
     document.addEventListener('click',async e=>{const b=e.target.closest&&e.target.closest('[data-uni-allwork]');if(!b)return;
-      if(!confirm('把所有設計師的狀態一次設成「上班中」（晚上算加班）？ 休假與出國的人不動。  提醒：按下後到今天 24:00 為止，時間規則（假日、下班、沒心跳自動下班）暫時不套用，大家會維持上班中。'))return;
-      b.disabled=true;try{const r=await api('pixelOfficeAllWork',{});toast('已設成上班：'+(r.changed||[]).length+' 人'+((r.skipped||[]).length?'（略過休假／出國：'+r.skipped.join('、')+'）':''));const fr=$('uniFrame');if(fr)fr.src=fr.src.replace(/&t=\d+/,'&t='+Date.now())}catch(err){toast('失敗：'+(err.message||err),true)}b.disabled=false});
+      const mode=uniForce==='work'?'off':'work';
+      b.disabled=true;try{const r=await api('pixelOfficeAllWork',{mode});uniForce=mode;syncAllWorkBtn();toast(mode==='work'?'全員上班':'全員下班');const fr=$('uniFrame');if(fr)fr.src=fr.src.replace(/&t=d+/,'&t='+Date.now())}catch(err){toast('失敗：'+(err.message||err),true)}b.disabled=false});
     /* ---------- 出氣擂台（元宇宙小遊戲）：在原視窗執行（內嵌 vent-arena 遊戲），左側功能列保留 ---------- */
     function renderArenaPage(){
       $('stage').innerHTML='<div class="arena-page"><iframe id="arenaFrame" class="arena-frame" src="vent-arena/index.html?embed=1&theme='+(document.documentElement.dataset.theme==='dark'?'dark':'light')+'&t='+Date.now()+'" title="出氣擂台" allow="autoplay"></iframe></div>';
@@ -521,8 +526,8 @@
     });
     function renderUniversePage(){
       const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=UNI_URL+(edit?'?clean=1&cs=.78&v=118&t='+Math.floor(Date.now()/300000):'?clean=1&ro=1&cs=.78&v=118&t='+Math.floor(Date.now()/300000));
-      $('stage').innerHTML='<div class="uni-page is-edit"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+(loggedIn()&&(isAdminUser()||isMachiUser())?'<button type="button" class="btn" data-uni-allwork>全員上班</button><button type="button" class="btn" data-uni-hours>上下班設定</button>':'')+'<button type="button" class="btn" data-uni-arena>出氣擂台</button><button type="button" class="btn" data-uni-close>關閉</button></div></div><div class="uni-wrap"><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe><div class="uni-loading" id="uniLoading" role="status" aria-live="polite"><span class="uni-spin" aria-hidden="true"></span><b>正在進入凱曜多元宇宙…</b><small>載入像素辦公室</small></div></div></div>';
-      watchUniLoading();fitUniFrame();[120,500,1200,2500].forEach(t=>setTimeout(()=>{try{fitUniFrame()}catch(err){}},t));{const f=$('uniFrame');if(f)f.addEventListener('load',()=>{try{fitUniFrame()}catch(err){}});}
+      $('stage').innerHTML='<div class="uni-page is-edit"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+(loggedIn()&&(isAdminUser()||isMachiUser())?'<button type="button" class="btn" data-uni-allwork>'+uniAllWorkLabel()+'</button><button type="button" class="btn" data-uni-hours>上下班設定</button>':'')+'<button type="button" class="btn" data-uni-arena>出氣擂台</button><button type="button" class="btn" data-uni-close>關閉</button></div></div><div class="uni-wrap"><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe><div class="uni-loading" id="uniLoading" role="status" aria-live="polite"><span class="uni-spin" aria-hidden="true"></span><b>正在進入凱曜多元宇宙…</b><small>載入像素辦公室</small></div></div></div>';
+      watchUniLoading();loadAllWorkBtn();fitUniFrame();[120,500,1200,2500].forEach(t=>setTimeout(()=>{try{fitUniFrame()}catch(err){}},t));{const f=$('uniFrame');if(f)f.addEventListener('load',()=>{try{fitUniFrame()}catch(err){}});}
     }
     /* 電腦版：整頁鎖定在一個畫面——iframe 高度＝視窗剩下的高度，標題與右上按鈕、右下＋／－一直看得到；場景用滑鼠按住拖曳平移，不靠滾輪 */
     function fitUniFrame(){const fr=$('uniFrame');if(!fr||!matchMedia('(min-width:721px)').matches)return;window.scrollTo(0,0);fr.style.aspectRatio='auto';fr.style.minHeight='0';fr.style.height=Math.max(320,window.innerHeight-fr.getBoundingClientRect().top-8)+'px';}

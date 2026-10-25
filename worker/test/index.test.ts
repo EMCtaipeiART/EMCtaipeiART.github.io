@@ -5660,7 +5660,15 @@ describe('全員上班', () => {
     const state = await api({ action: 'pixelOfficeState', since: 0 }) as { people?: Record<string, { status?: string }> };
     expect(JSON.stringify(state)).toContain('present');
     expect(JSON.stringify(state)).not.toContain('"overtime"');// 全員上班是正常在座，不是加班
-    expect(Number((state as { hours?: { allWorkUntil?: number } }).hours?.allWorkUntil)).toBeGreaterThan(Date.now());// 前端靠這個把整個畫面當成上班時段
+    expect((state as { hours?: { force?: string } }).hours?.force).toBe('work');// 前端靠這個把整個畫面當成上班時段
+    // 同一個按鈕再按一次＝全員下班；之後可以再切回來
+    const off = await api({ action: 'pixelOfficeAllWork', mode: 'off' }, admin) as { ok: boolean; changed: string[] };
+    expect(off.ok).toBe(true);
+    const offState = await api({ action: 'pixelOfficeState', since: 0 }) as { hours?: { force?: string } };
+    expect(offState.hours?.force).toBe('off');
+    expect(JSON.stringify(offState)).toContain('"offwork"');
+    expect(await api({ action: 'getPixelHours' }, admin)).toMatchObject({ force: 'off' });
+    await api({ action: 'pixelOfficeAllWork', mode: 'work' }, admin);
     const outsider = await seedSession('anna.hsu@emctaipei.com', 'Anna');
     expect(await api({ action: 'pixelOfficeAllWork' }, outsider)).toMatchObject({ ok: false });
   });

@@ -780,3 +780,7 @@
 - 前端：在會議室裡的人不會走動、也不會把座標送回後端（pushChange 過濾 x／y／dir）。
 - Worker：行事曆會議且有 meetingRoom 時，pixelOfficeUpdate 忽略 x／y／dir（舊版畫面也不會再把位置寫壞）。
 - 資料：把被寫壞的 Leona、Amber、Noise、Anna 位置還原到各自座位。
+
+## 2026-10-25 「全員上班」改成單一切換鈕（全員上班 ↔ 全員下班）
+- 元宇宙頁只剩一顆鈕：標籤是「按下去會變成的狀態」。全員上班＝大家在座、畫面當平日中午；全員下班＝大家下班、桌椅收起、桌面灰階。兩種都可再手動改個別狀態；時間規則暫停到下一次切換或當天 24:00。移除確認視窗與長說明。
+- Worker：pixelOfficeAllWork 帶 mode（work/off），getPixelHours 與 pixelOfficeState.hours 回傳 force；前端以 force 決定畫面時段。

@@ -101,6 +101,10 @@ let pixelHours: PixelHours = { ...PIXEL_HOURS_DEFAULT };
 /** 「全員上班」之後到台北時間當天結束為止，時間規則（假日、下班、沒心跳自動下班）暫時不套用，不然按完馬上又被改回下班。 */
 let pixelAllWorkUntil = 0;
 export function setPixelAllWorkUntil(until: unknown): void { pixelAllWorkUntil = Number(until) || 0; }
+/** 全員上班／全員下班（一個按鈕來回切換）：'work' 全員上班、'off' 全員下班；開著的期間時間規則暫停。 */
+let pixelForceMode: 'work' | 'off' = 'work';
+export function setPixelForceMode(mode: unknown): void { pixelForceMode = mode === 'off' ? 'off' : 'work'; }
+function pixelForceNow(nowMs: number): '' | 'work' | 'off' { return nowMs < pixelAllWorkUntil ? pixelForceMode : ''; }
 export function setPixelHours(config: Partial<PixelHours> | null | undefined): void { pixelHours = cleanPixelHours(config); }
 export function cleanPixelHours(config: Partial<PixelHours> | null | undefined): PixelHours {
   const hour = (value: unknown, fallback: number): number => { const n = Math.floor(Number(value)); return Number.isFinite(n) && n >= 0 && n <= 23 ? n : fallback; };
@@ -137,7 +141,8 @@ function taipeiClock(nowMs: number): { date: string; weekday: number; hour: numb
 
 /** 台北時間的這一天要不要上班：週六日與國定假日都不用。 */
 export function pixelOfficeIsWorkday(nowMs: number): boolean {
-  if (!pixelHours.enabled || nowMs < pixelAllWorkUntil) return true;
+  if (pixelForceNow(nowMs) === 'off') return false;
+  if (!pixelHours.enabled || pixelForceNow(nowMs) === 'work') return true;
   const { date, weekday } = taipeiClock(nowMs);
   if (weekday === 0 || weekday === 6) return false;
   return !(PIXEL_OFFICE_HOLIDAYS[date.slice(0, 4)] || []).includes(date);
@@ -157,7 +162,7 @@ export function pixelOfficeWorkStatus(nowMs: number, idleSeconds?: number): 'pre
   if (Number.isFinite(idle) && idle >= PIXEL_OFFICE_AWAY_IDLE_SECONDS) {
     return hour >= pixelHours.lunchStart && hour < pixelHours.lunchEnd ? 'lunch' : 'toilet';
   }
-  if (nowMs < pixelAllWorkUntil) return 'present';// 全員上班期間：電腦開著也算正常在座，不套加班
+  if (pixelForceNow(nowMs) === 'work') return 'present';// 全員上班期間：電腦開著也算正常在座，不套加班
   if (pixelHours.enabled && (hour >= pixelHours.overtimeStart || hour < PIXEL_OVERTIME_END_HOUR)) return 'overtime';
   return 'present';
 }
@@ -2025,7 +2030,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const changed: string[] = [], skipped: string[] = [];
     const hour = taipeiClock(nowMs).hour;
     // 全員上班＝回到「正常上班」的在座（不是加班），之後可以自由切換狀態；到今天 24:00 為止時間規則暫停
-    const status = 'present';
+    const status = pixelForceMode === 'off' ? 'offwork' : 'present';
     const rows = this.ctx.storage.sql.exec<{ name: string; state: string }>('SELECT name, state FROM pixel_office_people').toArray();
     const version = Math.max(nowMs, this.pixelOfficeVersion() + 1);
     for (const name of Object.keys(PIXEL_OFFICE_CALENDARS)) {
@@ -2176,6 +2181,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   async runPixelOfficeCalendarSync(nowMs = Date.now()): Promise<Row> {
     setPixelHours(await this.ctx.storage.get<PixelHours>('pixelHours'));
     setPixelAllWorkUntil(await this.ctx.storage.get<number>('pixelAllWorkUntil'));
+    setPixelForceMode(await this.ctx.storage.get<string>('pixelForceMode'));
     if (!pixelOfficeIsWorkday(nowMs)) return { ok: true, skipped: 'holiday' };
     const { hour } = taipeiClock(nowMs);
     if (hour < PIXEL_OFFICE_CALENDAR_START_HOUR || hour >= PIXEL_OFFICE_CALENDAR_END_HOUR) return { ok: true, skipped: 'off-hours' };
@@ -2545,7 +2551,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     // 稱號跟著狀態一起回：前端不必為了它多打一次 API，改了也會隨輪詢傳到每個人的畫面。
     const avatars: Record<string, number> = {};
     for (const row of this.ctx.storage.sql.exec<{ name: string; updated_at: number }>('SELECT name, updated_at FROM pixel_office_avatar_current').toArray()) avatars[row.name] = Number(row.updated_at) || 0;
-    return { ok: true, action: 'pixelOfficeState', version, people, staff: this.pixelOfficeStaff().map(item => ({ seat: item.seat, name: item.name })), levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories(), avatars, hours: { dayStart: pixelHours.dayStart, workEnd: pixelHours.workEnd, overtimeStart: pixelHours.overtimeStart, allWorkUntil: pixelAllWorkUntil > Date.now() ? pixelAllWorkUntil : 0 } };
+    return { ok: true, action: 'pixelOfficeState', version, people, staff: this.pixelOfficeStaff().map(item => ({ seat: item.seat, name: item.name })), levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories(), avatars, hours: { dayStart: pixelHours.dayStart, workEnd: pixelHours.workEnd, overtimeStart: pixelHours.overtimeStart, force: pixelForceNow(Date.now()) } };
   }
 
   private pixelOfficeUpdate(payload: ApiPayload): ApiResult {
@@ -5039,6 +5045,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   async handle(actionValue: string, payload: ApiPayload = {}, context: RequestContext): Promise<ApiResult> {
     setPixelHours(await this.ctx.storage.get<PixelHours>('pixelHours'));
     setPixelAllWorkUntil(await this.ctx.storage.get<number>('pixelAllWorkUntil'));
+    setPixelForceMode(await this.ctx.storage.get<string>('pixelForceMode'));
     const result = await this.handleCore(actionValue, payload, context);
     const action = text(actionValue || payload.action || '');
     if (action.startsWith('pixelOffice') && !['pixelOfficeStoryImage', 'pixelOfficeCalendarStatus'].includes(action)) {
@@ -5078,7 +5085,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         await this.ctx.storage.put('ventArenaRank', list.slice(0, 50));
         return { ok: true, action, items: await this.ventArenaTop() };
       }
-      if (action === 'getPixelHours') return { ok: true, action, config: { ...cleanPixelHours(await this.ctx.storage.get<PixelHours>('pixelHours')) }, defaults: PIXEL_HOURS_DEFAULT };
+      if (action === 'getPixelHours') return { ok: true, action, config: { ...cleanPixelHours(await this.ctx.storage.get<PixelHours>('pixelHours')) }, defaults: PIXEL_HOURS_DEFAULT, force: pixelForceNow(Date.now()) };
       if (action === 'getHeroConfig') return { ok: true, action, config: (await this.ctx.storage.get<HeroConfig>('heroConfig')) || null };
       if (action === 'releaseInfo') return { ok: true, action: 'releaseInfo', release: Number(await this.ctx.storage.get('appRelease')) || 0 };
       if (action === 'pixelOfficeState') return this.pixelOfficeState(payload);
@@ -5343,14 +5350,18 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         return await this.pixelOfficeDiagnose();
       }
       if (action === 'pixelOfficeAllWork') {
-        // 全員上班：把所有設計師的狀態一次設成上班中（依現在時間：晚上算加班，其餘在座）。休假與出國的人不動。
+        // 全員上班／全員下班（同一個按鈕來回切換，payload.mode = 'work' | 'off'）：把所有設計師的狀態一次設成在座或下班，之後可以自由手動切換。休假與出國的人不動。
+        // 切換之後時間規則（假日、下班、沒心跳自動下班）暫停，直到下一次切換或台北時間當天 24:00。
         const who = this.requireAccess(database, session, 'database.manage');
         const nowMs = Date.now();
         const until = Math.floor((nowMs + 8 * 3600000) / 86400000) * 86400000 - 8 * 3600000 + 86400000;// 台北時間今天 24:00
+        const mode = payload.mode === 'off' ? 'off' : 'work';
         await this.ctx.storage.put('pixelAllWorkUntil', until);
+        await this.ctx.storage.put('pixelForceMode', mode);
         setPixelAllWorkUntil(until);
+        setPixelForceMode(mode);
         const result = this.pixelOfficeAllWork(nowMs);
-        await this.queueAudit([{ t: new Date().toISOString(), kind: '欄位修改', actor: auditActor(who), caseId: '像素辦公室', field: '全員上班', to: String(result.changed.length) + ' 人' }]);
+        await this.queueAudit([{ t: new Date().toISOString(), kind: '欄位修改', actor: auditActor(who), caseId: '像素辦公室', field: payload.mode === 'off' ? '全員下班' : '全員上班', to: String(result.changed.length) + ' 人' }]);
         return { ok: true, action, ...result };
       }
       if (action === 'savePixelHours') {
