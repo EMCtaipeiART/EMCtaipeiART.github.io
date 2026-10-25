@@ -16,7 +16,8 @@
   const CHAIR = [520, 0, 237, 372], CHAIR_W = 102, CHAIR_H = 135;
   const RT = 24, ROOM_DOOR = 120, ROOM_MARGIN = 130, B = 3, WH = 30;
   const tableW = m => 110 + 85 * m;
-  const items = [], blocks = [];
+  const items = [], blocks = [], dyn = [], seats = [];
+  const seatOf = (cx, gy) => { seats.push({ x: cx, y: gy + 40, row: false }); seats.push({ x: cx, y: gy + 94 + 179, row: true }); };
   const add = (depth, draw) => items.push({ depth, draw });
   const block = (x, y, w, h) => blocks.push([x, y + OFFY, w, h]);
   let imgs = null; // { rooms, props, furn, desks, toiletPic }
@@ -32,8 +33,8 @@
     c.fillStyle = '#0c0c0c'; c.fillRect(lx - 2, y - 2, tw + 4, 24); c.fillStyle = '#2f3640'; c.fillRect(lx, y, tw, 20);
     c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, x + w / 2, y + 10.5); c.restore();
   });
-  const chairBig = (cx, y, depth) => add(depth, c => c.drawImage(imgs.furn, CHAIR[0], CHAIR[1], CHAIR[2], CHAIR[3], Math.round(cx - CHAIR_W / 2), Math.round(y), CHAIR_W, CHAIR_H));
-  const deskBeige = (x, y, depth) => add(depth, c => c.drawImage(imgs.desks, DESK[0], DESK[1], DESK[2], DESK[3], Math.round(x), Math.round(y), DESK[2], DESK[3]));
+  const chairBig = (cx, y, depth) => dyn.push({ depth, draw: c => imgs && c.drawImage(imgs.furn, CHAIR[0], CHAIR[1], CHAIR[2], CHAIR[3], Math.round(cx - CHAIR_W / 2), Math.round(y), CHAIR_W, CHAIR_H) });
+  const deskBeige = (x, y, depth) => dyn.push({ depth, draw: c => imgs && c.drawImage(imgs.desks, DESK[0], DESK[1], DESK[2], DESK[3], Math.round(x), Math.round(y), DESK[2], DESK[3]) });
   // 玻璃屋：牆頂＋後牆／前牆正面，3 px 黑外框；doors＝[{side:'t'|'b'|'l'|'r', c:門中心座標}]
   const glass = (x, y, w, h, doors) => {
     const d = ROOM_DOOR / 2, gap = side => doors.find(o => o.side === side);
@@ -99,11 +100,11 @@
   for (let g = 0; g < 5; g++) {
     const gy = GY0 + g * GP; block(GX, gy + 20, 880, 200);
     for (let k = 0; k < 4; k++) {
-      const dx = GX + k * 220, cx = dx + 110;
+      const dx = GX + k * 220, cx = dx + 110; seatOf(cx, gy);
       chairBig(cx, gy - 67, gy + 10);       // 上排椅子（在桌子後面；椅頭在桌上緣上方 67）
       deskBeige(dx, gy, gy + 100);          // 上排桌
       deskBeige(dx, gy + 94, gy + 200);     // 下排桌（接在上排正下方，蓋住上排桌腳）
-      chairBig(cx, gy + 94 + 72, gy + 420); // 下排椅子（在桌子前面；椅頭在下排桌上緣下方 72）
+      chairBig(cx, gy + 94 + 72, gy + 94 + 179 - 20); // 下排椅子（在桌子前面；椅頭在下排桌上緣下方 72）
     }
   }
   const HROOM = { x: 0, bottom: 0 };
@@ -138,7 +139,7 @@
     const dx0 = rx + RT + 40;
     for (let g = 0; g < 2; g++) {
       const gy = ry + RT + 90 + 67 + g * GP2; block(dx0, gy + 20, 440, 200);
-      for (let k = 0; k < 2; k++) { const dx = dx0 + k * 220, cx = dx + 110; chairBig(cx, gy - 67, gy + 10); deskBeige(dx, gy, gy + 100); deskBeige(dx, gy + 94, gy + 200); chairBig(cx, gy + 94 + 72, gy + 420); }
+      for (let k = 0; k < 2; k++) { const dx = dx0 + k * 220, cx = dx + 110; seatOf(cx, gy); chairBig(cx, gy - 67, gy + 10); deskBeige(dx, gy, gy + 100); deskBeige(dx, gy + 94, gy + 200); chairBig(cx, gy + 94 + 72, gy + 94 + 179 - 20); }
     }
     return rw;
   };
@@ -152,6 +153,10 @@
     heroStart: { x: EX + 75, y: EY + 262 + OFFY, dir: 'down' }, TX0, CORR, GPV,
     elevator: { x0: EX + 10, x1: EX + 140, y0: EY + 200 + OFFY, y1: EY + 250 + OFFY },
     canvas: null, ready: false, onReady: null,
+    dynamic: dyn.map(it => ({ depth: it.depth + OFFY, draw: it.draw })),
+    seats: seats.map(t => ({ x: t.x, y: t.y + OFFY, row: t.row })),
+    /* 桌子群 g（0＝最上面）的座位 1～8：1～4＝上排由左到右、5～8＝下排由左到右；回傳人物腳底位置與朝向 */
+    seatPos(g, seat) { const gy = GY0 + g * GP, k = (seat - 1) % 4, cx = GX + k * 220 + 110, bottom = seat > 4; return bottom ? { x: cx, y: gy + 94 + 179 + OFFY, dir: 'up', row: true } : { x: cx, y: gy + 40 + OFFY, dir: 'down', row: false }; },
     draw(ctx) { if (scene.canvas) ctx.drawImage(scene.canvas, 0, 0); },
   };
   window.FLOOR4_SCENE = scene;
