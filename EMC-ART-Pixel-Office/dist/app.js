@@ -255,7 +255,7 @@ function applyStaff(list){
   if(!Array.isArray(list)||!list.length)return;let changed=false;
   for(const item of list){
     const seat=Number(item.seat),name=String(item.name||'');if(!name||!(seat>=0&&seat<STAFF_POS.length))continue;
-    const station=STAFF_F4[name]?null:stations[staffStationIndex(seat)];if(station&&station.name!==name){station.name=name;changed=true;}
+    const station=(STAFF_F4[name]||FLOOR4)?null:stations[staffStationIndex(seat)];/* 四樓不照五樓的同仁座位表命名桌位（四樓的桌位是 syncF4Staff 自己放的） */if(station&&station.name!==name){station.name=name;changed=true;}
     if(names.indexOf(name)<0){names.push(name);const pos=STAFF_POS[seat];starts.push(pos.slice());people.push({name,x:pos[0],y:pos[1],dir:'down',mood:'',status:'present',message:'',photo:'',staff:true});levelStats[name]=levelFromScore(0,name);changed=true;}
   }
   if(changed){staffSeated=true;markDirty();try{applyViewerRole();}catch(e){}if(typeof refreshRosterPortraits==='function'&&ready)try{refreshRosterPortraits();}catch(e){}}
