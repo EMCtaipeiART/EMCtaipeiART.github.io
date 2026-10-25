@@ -275,8 +275,11 @@ export function pixelOfficeCalendarEventState(event: Row, calendarEmail = '', ca
     // 不能再往下當一般事件算——半天假、外出被 tag 給大家，會讓全組同時顯示「會議中」。
     return '';
   }
+  // 訂了會議室（受邀者有 meetingroom{a-d}.emc@gmail.com 或文字寫了會議室）的活動一定是實體會議：
+  // 就算被設成「空閒／透明」也算（行事曆頁顯示的就是這些活動），照一般會議的長度規則往下判斷。
+  const bookedRoom = pixelOfficeMeetingRoomOf(event) !== '';
   // 透明事件不是會議；但休假常刻意設成透明，必須先完成上面的休假辨識再排除。
-  if (text(event.transparency) === 'transparent') return '';
+  if (!bookedRoom && text(event.transparency) === 'transparent') return '';
   // 專注時間、工作地點、生日等不是會議；一般事件與 Gmail 自動建立的行程才進一步看長度。
   if (!['default', 'fromGmail'].includes(eventType)) return '';
   const startRow = event.start && typeof event.start === 'object' ? event.start as Row : {};

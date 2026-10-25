@@ -5697,6 +5697,11 @@ describe('pixel office status diagnostic', () => {
 });
 
 describe('會議室（行事曆會議 → 人物入座會議室）', () => {
+  it('counts a transparent (free) event as a meeting when it books a meeting room, but not otherwise', () => {
+    const base = { status: 'confirmed', eventType: 'default', start: { dateTime: '2026-10-26T10:00:00+08:00' }, end: { dateTime: '2026-10-26T11:00:00+08:00' } };
+    expect(pixelOfficeCalendarEventState({ ...base, summary: '週會', transparency: 'transparent', attendees: [{ email: 'meetingroomb.emc@gmail.com', responseStatus: 'accepted' }] }, 'anna@emctaipei.com', 'Anna')).toBe('meeting');
+    expect(pixelOfficeCalendarEventState({ ...base, summary: '專注時間', transparency: 'transparent' }, 'anna@emctaipei.com', 'Anna')).toBe('');
+  });
   it('reads the room letter from location, then title, then description, and ignores everything else', () => {
     expect(pixelOfficeMeetingRoomOf({ location: '會議室 B', summary: '週會' })).toBe('B');
     expect(pixelOfficeMeetingRoomOf({ location: '', summary: 'A會議室 設計週會' })).toBe('A');
