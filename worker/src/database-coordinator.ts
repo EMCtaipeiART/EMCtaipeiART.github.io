@@ -2212,13 +2212,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const calendars = (data.calendars || {}) as Record<string, Row>;
     const detailStates = new Map<string, PixelOfficeCalendarState>();
     const detailRooms = new Map<string, string>();
+    const detailItems = new Map<string, Row[]>();
     const detailUnreadable: string[] = [];
     if (canReadDetails) {
       await Promise.all(Object.entries(PIXEL_OFFICE_CALENDARS).map(async ([name, email]) => {
         try {
           const params = new URLSearchParams({
             timeMin, timeMax, singleEvents: 'true', maxResults: '20', timeZone: 'Asia/Taipei',
-            fields: 'items(status,summary,location,description,eventType,start,end,transparency,organizer(email,self),attendees(self,responseStatus,resource,displayName,email))'
+            fields: 'items(iCalUID,status,summary,location,description,eventType,start,end,transparency,organizer(email,self),attendees(self,responseStatus,resource,displayName,email))'
           });
           const detailsResponse = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(email)}/events?${params.toString()}`, {
             headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' }
@@ -2227,10 +2228,30 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           if (!detailsResponse.ok) { detailUnreadable.push(name); return; }
           detailStates.set(name, pixelOfficeCalendarEventsState(details.items, email, name));
           detailRooms.set(name, pixelOfficeCalendarEventsRoom(details.items, email, name));
+          detailItems.set(name, (Array.isArray(details.items) ? details.items : []) as Row[]);
         } catch {
           detailUnreadable.push(name);
         }
       }));
+    }
+    // 同一場會議（相同 iCalUID）：只要有一個人的行事曆看得到會議室，其他被邀的人就算同一間——有些人的行事曆讀得到活動、卻看不到受邀者名單。
+    if (canReadDetails) {
+      const uidRoom = new Map<string, string>();
+      for (const [name, items] of detailItems) {
+        const email = PIXEL_OFFICE_CALENDARS[name];
+        for (const item of items) {
+          const uid = text(item.iCalUID), room = pixelOfficeMeetingRoomOf(item);
+          if (uid && room && pixelOfficeCalendarEventState(item, email, name) === 'meeting') uidRoom.set(uid, room);
+        }
+      }
+      for (const [name, items] of detailItems) {
+        if (detailRooms.get(name)) continue;
+        const email = PIXEL_OFFICE_CALENDARS[name];
+        for (const item of items) {
+          const uid = text(item.iCalUID), room = uid ? uidRoom.get(uid) : '';
+          if (room && pixelOfficeCalendarEventState(item, email, name) === 'meeting') { detailRooms.set(name, room); break; }
+        }
+      }
     }
     // 會議室自己的行事曆（meetingrooma～d.emc@gmail.com）：現在這一刻有哪些設計師被邀進哪間會議室。
     // 其他同事不一定開放活動詳細內容給這個授權帳號，但會議室行事曆（若讀得到）能直接看到受邀者；讀不到就略過、不影響原本流程。
