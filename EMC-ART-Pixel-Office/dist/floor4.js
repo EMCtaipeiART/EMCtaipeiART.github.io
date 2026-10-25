@@ -119,7 +119,7 @@
       for (const f of [.25, .75]) { const cx = tx + 195 * f; sprite('chair_front', cx - 26, y0 - 46, y0 - 1); sprite('chair_back', cx - 26, y0 + 270 + 120, y0 + 270 + 170); }
     }
     for (const k of [0, 1]) { const ty = y0 + k * 200; add(ty + 180, c => spr(c, 'table_white_v', xL, ty)); for (const dy of [50, 150]) sprite('chair_side_r', xL - 40, ty + dy - 26, ty + dy + 26); }
-    sprite('projector_right', xL + 18, y0 + 170, y0 + 230);
+    sprite('projector_right', xC + 2 * 195 + 24, y0 + 174, y0 + 230);/* 投影機放在桌子群右側、機身朝右 */
     label('會議室 H', rx, ry + rh + WH + 8, rw);
     HROOM.x = rx; HROOM.bottom = ry + rh;
   }
