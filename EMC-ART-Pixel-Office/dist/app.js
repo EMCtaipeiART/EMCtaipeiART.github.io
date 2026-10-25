@@ -1362,6 +1362,14 @@ const walls0=stations.filter(s=>!s.big&&!s.gone).map(s=>s.row?[s.x-122,431+(s.y-
 const walls=walls0.concat(roomBlockers);
 if(LX){for(let b=0;b<3;b++){const dy=-b*GP,fy=315+dy,fh=335;walls.push([DL-92-12,fy,112,fh]);if(b===1){walls.push([DR-6-12,fy,83,fh],[DR+268-12,fy,85,fh]);}else walls.push([DR+11-8,fy,102,fh]);}walls.push([LONG_DESK.smallX-8,315,LONG_DESK.smallW+8,230],[LONG_DESK.x-8,315,LONG_DESK.w+16,165]);}
 function blocked(x,y){return x<65||x>W-65||y<ROOM_MIN_Y||y>ROOM_MAX_Y||walls.some(([a,b,w,h])=>x>a-14&&x<a+w+14&&y>b-4&&y<b+h+4);}
+/* 走進電梯（2026-10-26）：被操控的人物走到電梯門前、朝上走，就請外層（元宇宙頁）播放電梯過場並切到四樓；單獨開啟時直接換頁。 */
+let elevatorCooldown=0;
+function checkElevator(){
+  if(embedMode||!LX||selected===null||!keys.has('ArrowUp')||Date.now()<elevatorCooldown)return;
+  const p=people[selected];if(!p||p.inRoom)return;const vy=viewY(p.y);
+  if(p.x>=TX0+10&&p.x<=TX0+140&&vy>=TB-6&&vy<=TB+34){elevatorCooldown=Date.now()+4000;keys.clear();
+    if(window.parent!==window){try{window.parent.postMessage({type:'pixelOfficeFloor',floor:4},location.origin);}catch(e){}}else{location.href='floor4.html';}}
+}
 function moving(dt){if(!ready||selected===null||storyOpen()||people[selected].inRoom||isAway(people[selected])||isPunishedP(people[selected]))return false;let dx=(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0),dy=(keys.has('ArrowDown')?1:0)-(keys.has('ArrowUp')?1:0);if(!dx&&!dy)return false;const p=people[selected],length=Math.hypot(dx,dy);p.dir=dx?(dx>0?'right':'left'):(dy>0?'down':'up');const spd=document.documentElement.classList.contains('clean-narrow')?400:210;dx=dx/length*spd*dt;dy=dy/length*spd*dt;if(!blocked(p.x+dx,p.y))p.x+=dx;if(!blocked(p.x,p.y+dy))p.y+=dy;save();queuePosition(selected);return true;}
 function typing(){const el=document.activeElement;return el&&(['INPUT','TEXTAREA','SELECT'].includes(el.tagName)||el.isContentEditable);}
 /* 方向鍵或 W／A／S／D（遊戲熱鍵）都能走路；W 上、S 下、A 左、D 右 */
@@ -1984,7 +1992,7 @@ const sceneAnimating=()=>people.some((p,i)=>!isAway(p)&&(p.mood||musicOf(p)||act
 let embedVisible=true,embedLastDraw=0;
 if(embedMode&&'IntersectionObserver' in window)new IntersectionObserver(entries=>{embedVisible=entries[entries.length-1].isIntersecting;if(embedVisible)markDirty()}).observe(document.documentElement);
 const avatarOnly=new URLSearchParams(location.search).get('avatars')==='1';
-function render(time){try{updateCamera()}catch(error){}if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&viewer.open)){setTimeout(()=>requestAnimationFrame(render),400);return;}const dt=Math.min((time-last)/1000||0,.04);last=time;const walk=moving(dt);try{ghostTick(performance.now())}catch(error){}
+function render(time){try{updateCamera()}catch(error){}if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&viewer.open)){setTimeout(()=>requestAnimationFrame(render),400);return;}const dt=Math.min((time-last)/1000||0,.04);last=time;const walk=moving(dt);try{checkElevator()}catch(error){}try{ghostTick(performance.now())}catch(error){}
   if(embedMode&&!needsRedraw&&!sceneAnimating()){requestAnimationFrame(render);return;}
   // 嵌入首頁時：畫面不在可視範圍就不重畫；持續動畫（心情／未讀動態）限制在約 30fps，避免整張場景每幀全畫拖慢首頁。
   if(embedMode&&!needsRedraw){if(!embedVisible||time-embedLastDraw<40){requestAnimationFrame(render);return;}}

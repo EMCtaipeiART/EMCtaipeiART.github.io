@@ -5,6 +5,8 @@
 (function () {
   const cv = document.getElementById('c'), ctx = cv.getContext('2d');
   const W = 2300, H = 3720; cv.width = W; cv.height = H;
+  const fitScale = () => { cv.style.width = Math.round(W * Math.min(1.6, Math.max(.3, window.innerWidth * .96 / 1362))) + 'px'; cv.style.height = 'auto'; };
+  fitScale(); window.addEventListener('resize', fitScale);
   const RM = { table_black_left: [8, 8, 55, 130], table_black_mid: [71, 8, 85, 130], table_black_right: [164, 8, 55, 130], table_white_left: [227, 8, 55, 130], table_white_mid: [290, 8, 85, 130], table_white_right: [383, 8, 55, 130], table_wood_left: [446, 8, 55, 90], table_wood_mid: [509, 8, 85, 90], table_wood_right: [602, 8, 55, 90], table_white_v: [8, 146, 100, 200], chair_front: [116, 146, 52, 56], chair_back: [176, 146, 52, 56], chair_side_l: [236, 146, 48, 52], chair_side_r: [292, 146, 48, 52], elevator: [8, 354, 150, 200], fridge_dark: [166, 354, 82, 170], plant_small: [256, 354, 40, 80], projector_right: [304, 354, 64, 52], projector_left: [376, 354, 64, 52], snack_chips_red: [512, 354, 24, 32], snack_chips_yellow: [544, 354, 24, 32], snack_chips_blue: [576, 354, 24, 32], snack_box: [608, 354, 30, 22], snack_candy: [646, 354, 20, 14] };
   const RM4 = { table_whitewood_left: [178, 8, 55, 90], table_whitewood_mid: [241, 8, 85, 90], table_whitewood_right: [334, 8, 55, 90] };
   const DESK = [8, 8, 220, 124];
@@ -12,7 +14,7 @@
   const RT = 24, ROOM_DOOR = 120, ROOM_MARGIN = 130, B = 3, WH = 30;
   const tableW = m => 110 + 85 * m;
   const img = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(i); i.src = src; });
-  Promise.all([img('assets/office-rooms-v3.webp?v=1'), img('assets/office-props-v4.webp?v=1'), img('assets/furniture-v5.webp?v=1'), img('assets/office-desks-v6.webp?v=1')]).then(([rooms, props, furn, desks]) => {
+  Promise.all([img('assets/office-rooms-v3.webp?v=1'), img('assets/office-props-v4.webp?v=1'), img('assets/furniture-v5.webp?v=1'), img('assets/office-desks-v6.webp?v=1'), img('assets/office-toilet-v10.webp?v=1')]).then(([rooms, props, furn, desks, toiletPic]) => {
     ctx.imageSmoothingEnabled = false;
     const items = [];
     const add = (depth, draw) => items.push({ depth, draw });
@@ -66,19 +68,28 @@
       const G = { '4': ['...YY.', '..YYY.', '.YYYY.', 'YY.YY.', 'YY.YY.', 'YYYYYY', 'YYYYYY', '...YY.', '...YY.'], 'F': ['YYYYYY', 'YY....', 'YY....', 'YYYYY.', 'YY....', 'YY....', 'YY....', 'YY....', 'YY....'] };
       [['4', 67], ['F', 77]].forEach(([ch, gx]) => G[ch].forEach((row, j) => { for (let i = 0; i < row.length; i++) if (row[i] === 'Y') ctx.fillRect(EX + gx + i, EY + 15 + j, 1, 1); }));
     });
-    // ---- 電梯右側：木長桌（10 人：上下各 5 張椅子）
+    // ---- 電梯與長桌之間：男廁、女廁（跟五樓同一套：玻璃屋＋廁所圖，門在下方）
     {
-      const tx = 250, ty = 130, tw = tableW(5); table('wood', tx, ty, 5, ty + 70); label('木長桌（10 人）', tx, ty - 90, tw);
+      const TW = 346, TH = 438, TY = 40;
+      [['男廁', 250], ['女廁', 250 + TW - RT]].forEach(([name, rx]) => {
+        glass(rx, TY, TW, TH, [{ side: 'b', c: rx + 262 }]);
+        add(-8990, () => { if (toiletPic.naturalWidth) { ctx.save(); ctx.imageSmoothingEnabled = true; ctx.drawImage(toiletPic, rx + RT, TY + RT, TW - 2 * RT, TH - 2 * RT); ctx.restore(); } });
+        label(name, rx, TY - 22, TW);
+      });
+    }
+    // ---- 右側：木長桌（10 人：上下各 5 張椅子）
+    {
+      const tx = 1000, ty = 130, tw = tableW(5); table('wood', tx, ty, 5, ty + 70); label('木長桌（10 人）', tx, ty - 90, tw);
       for (let k = 0; k < 5; k++) { const cx = tx + tw * (2 * k + 1) / 10; sprite('chair_front', cx - 26, ty - 46, ty - 1); sprite('chair_back', cx - 26, ty + 60, ty + 130); }
     }
     // ---- 茶水間（木長桌旁）
     {
-      const tx = 250 + tableW(5) + 110, ty = 130, fx = tx + 300, fy = ty - 40; table('whitewood', tx, ty, 2, ty + 70); label('茶水間', tx, ty - 60, tableW(2));
+      const tx = 1000 + tableW(5) + 110, ty = 130, fx = tx + 300, fy = ty - 40; table('whitewood', tx, ty, 2, ty + 70); label('茶水間', tx, ty - 60, tableW(2));
       [['snack_chips_red', 30], ['snack_chips_yellow', 66], ['snack_chips_blue', 102], ['snack_box', 150], ['snack_candy', 215]].forEach(([n, dx]) => { const r = RM[n]; sprite(n, tx + dx, ty + 58 - r[3], ty + 85); });
       sprite('fridge_dark', fx, fy, fy + 170); sprite('fridge_dark', fx + 82, fy, fy + 170); sprite('plant_small', fx + 190, fy + 90, fy + 170);
     }
     // ---- 左側：五個米白桌子群（每群上排 4 張、下排 4 張，椅子在最外側）
-    const GX = 40, GY0 = 380, GP = 470;
+    const GX = 40, GY0 = 600, GP = 470;
     for (let g = 0; g < 5; g++) {
       const gy = GY0 + g * GP;
       for (let k = 0; k < 4; k++) {
@@ -120,6 +131,11 @@
     };
     const bx = 40 + BC_W + 60; const w1 = big('玻璃辦公室 1', bx, BY); big('玻璃辦公室 2', bx + w1 + 60, BY);
     items.sort((a, b) => a.depth - b.depth).forEach(it => it.draw());
+    cv.addEventListener('click', e => {
+      const r = cv.getBoundingClientRect(), sx = W / r.width, x = (e.clientX - r.left) * sx, y = (e.clientY - r.top) * sx;
+      if (x >= EX && x <= EX + 150 && y >= EY && y <= EY + 240) { try { window.parent.postMessage({ type: 'pixelOfficeFloor', floor: 5 }, location.origin); } catch (err) { /* 單獨開啟就不做事 */ } }
+    });
+    cv.style.cursor = 'default';
     window.__floor4Ready = true;
   });
 })();
