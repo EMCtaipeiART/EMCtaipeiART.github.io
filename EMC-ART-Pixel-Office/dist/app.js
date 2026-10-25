@@ -1300,7 +1300,7 @@ function syncNow(){return syncCall({action:'pixelOfficeState',since:syncVersion}
 // ===== 場地大更新（2026-10-22）：電梯、廁所、會議室、茶水間。座標都是「畫面座標」（view），碰撞牆再換回邏輯座標。 =====
 // 房間素材（Codex 畫，assets/office-rooms-v3.json）已是最終遊戲像素大小，1:1 貼上，3 px 黑外框。
 const RM={table_black_left:[8,8,55,130],table_black_mid:[71,8,85,130],table_black_right:[164,8,55,130],table_white_left:[227,8,55,130],table_white_mid:[290,8,85,130],table_white_right:[383,8,55,130],table_wood_left:[446,8,55,90],table_wood_mid:[509,8,85,90],table_wood_right:[602,8,55,90],table_white_v:[8,146,100,200],chair_front:[116,146,52,56],chair_back:[176,146,52,56],chair_side_l:[236,146,48,52],chair_side_r:[292,146,48,52],toilet_side_r:[348,146,84,78],sink_side_r:[440,146,70,84],partition_white_h:[518,146,150,22],elevator:[8,354,150,200],fridge_dark:[166,354,82,170],plant_small:[256,354,40,80],projector_right:[304,354,64,52],projector_left:[376,354,64,52],projector_down:[448,354,56,60],snack_chips_red:[512,354,24,32],snack_chips_yellow:[544,354,24,32],snack_chips_blue:[576,354,24,32],snack_box:[608,354,30,22],snack_candy:[646,354,20,14],prop_pillar:[674,354,86,218],prop_bookshelf_tall:[8,580,88,220],prop_shelf_low:[104,580,60,196],prop_cabinet_red:[172,580,120,196]};
-Object.assign(RM,{toilet_side_r:[8,8,96,92,'t'],sink_side_r:[112,8,84,96,'t'],partition_white_h:[204,8,170,26,'t'],});/* 2026-10-25 廁所：直接用使用者提供的圖（assets/office-toilet-v9.webp，276×390，含白磁磚地面、兩格隔間與洗手台），男女廁共用 *//* 廁所素材（assets/office-toilet-v5.json）另一張圖 */
+Object.assign(RM,{toilet_side_r:[8,8,96,92,'t'],sink_side_r:[112,8,84,96,'t'],partition_white_h:[204,8,170,26,'t'],});/* 2026-10-25 廁所：直接用使用者提供的圖（assets/office-toilet-v10.webp，298×390，去掉地面磁磚、只留兩格隔間與洗手台），男女廁共用 *//* 廁所素材（assets/office-toilet-v5.json）另一張圖 */
 const RT=24,ROOM_DOOR=120,ROOM_MARGIN=130,SIDE_GAP=80;// 玻璃牆厚度；門寬；會議室牆內緣到桌子四邊的距離（四邊相同，椅子與人走動都放得下）；D 室牆到椅子的距離
 // 房間外框：[名稱, x, y, w, h, 門所在的邊（t/b/l/r）, 門中心座標]。會議室外框＝桌子＋四邊相同的間距＋牆。茶水間不隔間。
 const tableW=m=>110+85*m,meetW=m=>tableW(m)+2*ROOM_MARGIN+2*RT,meetH=130+2*ROOM_MARGIN+2*RT;
@@ -1676,7 +1676,7 @@ function drawProps(){
 /* ===== 場地大更新：房間與家具 ===== */
 const RM4={prop_bookshelf_side:[8,8,46,220],prop_shelf_side:[62,8,44,150],prop_cabinet_side:[114,8,56,150],table_whitewood_left:[178,8,55,90],table_whitewood_mid:[241,8,85,90],table_whitewood_right:[334,8,55,90]};
 const propsImg=new Image();setAsset(propsImg,'assets/office-props-v4.webp?v=1');load(propsImg).then(()=>markDirty()).catch(()=>{});
-const toilet6Img=new Image();setAsset(toilet6Img,'assets/office-toilet-v9.webp?v=1');load(toilet6Img).then(()=>markDirty()).catch(()=>{});
+const toilet6Img=new Image();setAsset(toilet6Img,'assets/office-toilet-v10.webp?v=1');load(toilet6Img).then(()=>markDirty()).catch(()=>{});
 const toiletImg=new Image();setAsset(toiletImg,'assets/office-toilet-v5.webp?v=1');load(toiletImg).then(()=>markDirty()).catch(()=>{});
 const roomsImg=new Image();setAsset(roomsImg,'assets/office-rooms-v3.webp?v=1');load(roomsImg).then(()=>markDirty()).catch(()=>{});
 const roomsReady=()=>roomsImg.complete&&roomsImg.naturalWidth>1;
