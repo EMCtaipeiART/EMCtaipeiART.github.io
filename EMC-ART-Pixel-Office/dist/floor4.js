@@ -107,7 +107,7 @@
   const HROOM = { x: 0, bottom: 0 };
   // ---- 右側：大會議室 H（玻璃，上下兩個出口；投影機往右；六張白桌排成「C」，一桌兩椅）
   {
-    const rx = GX + 880 + CORR + 2 * 64, ry = GY0 - 67 - RT + 64, xL = rx + RT + 130, y0 = ry + RT + 150, rw = RT + 130 + 100 + 2 * 195 + 130 + RT, rh = RT + 150 + 400 + 90 + RT;
+    const rx = GX + 880 + CORR + 2 * 64, ry = GY0 - 67 - RT + 64, xL = rx + RT + 130, y0 = ry + RT + 150, rw = 2 * (RT + 40 + 2 * 220 + 40 + RT) + 60,/* 往右延伸到跟下方兩間玻璃辦公室（各 568，中間 60）的右緣切齊 */ rh = RT + 150 + 400 + 90 + RT;
     glass(rx, ry, rw, rh, [{ side: 't', c: rx + rw / 2 }, { side: 'b', c: rx + rw / 2 }]);
     block(xL + 100, y0, 390, 130); block(xL + 100, y0 + 270, 390, 130); block(xL, y0, 100, 400);
     const xC = xL + 100;
