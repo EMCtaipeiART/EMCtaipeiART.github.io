@@ -7,7 +7,9 @@
  * 它們右側兩間大玻璃屋，各六張桌椅。素材全部沿用五樓的圖集。 */
 (function () {
   const OFFY = 200, W = 2560, H = 4400;
-  const TX0 = 245, CORR = 110, T_W = 346, T_H = 438, TY = 60, GPV = 497;/* 都是五樓的數字 */
+  const TX0 = 245, CORR = 110, T_W = 346, T_H = 438, TY = 60, GPV = 497;
+  /* 會議室 H 的桌椅往右靠齊（房間比原本寬 398）；廁所、木長桌、茶水間（電梯除外）跟著往右同樣 398 */
+  const HSHIFT = (2 * (24 + 40 + 2 * 220 + 40 + 24) + 60) - (24 + 130 + 100 + 2 * 195 + 130 + 24);/* 都是五樓的數字 */
   const RM = { table_black_left: [8, 8, 55, 130], table_black_mid: [71, 8, 85, 130], table_black_right: [164, 8, 55, 130], table_white_left: [227, 8, 55, 130], table_white_mid: [290, 8, 85, 130], table_white_right: [383, 8, 55, 130], table_wood_left: [446, 8, 55, 90], table_wood_mid: [509, 8, 85, 90], table_wood_right: [602, 8, 55, 90], table_white_v: [8, 146, 100, 200], chair_front: [116, 146, 52, 56], chair_back: [176, 146, 52, 56], chair_side_l: [236, 146, 48, 52], chair_side_r: [292, 146, 48, 52], elevator: [8, 354, 150, 200], fridge_dark: [166, 354, 82, 170], plant_small: [256, 354, 40, 80], projector_right: [304, 354, 64, 52], projector_left: [376, 354, 64, 52], snack_chips_red: [512, 354, 24, 32], snack_chips_yellow: [544, 354, 24, 32], snack_chips_blue: [576, 354, 24, 32], snack_box: [608, 354, 30, 22], snack_candy: [646, 354, 20, 14] };
   const RM4 = { table_whitewood_left: [178, 8, 55, 90], table_whitewood_mid: [241, 8, 85, 90], table_whitewood_right: [334, 8, 55, 90] };
   const DESK = [8, 8, 220, 124];
@@ -73,7 +75,7 @@
   // ---- 電梯與長桌之間：男廁、女廁（跟五樓同一套：玻璃屋＋廁所圖，門在下方）
   {
     const TW = T_W, TH = T_H;
-    [['男廁', TX0 + 150 + CORR], ['女廁', TX0 + 150 + CORR + T_W - RT]].forEach(([name, rx]) => {
+    [['男廁', TX0 + 150 + CORR + HSHIFT], ['女廁', TX0 + 150 + CORR + T_W - RT + HSHIFT]].forEach(([name, rx]) => {
       glass(rx, TY, TW, TH, [{ side: 'b', c: rx + 262 }]);
       { const lx = rx + RT, y0 = TY + RT; block(lx + 12, y0 + 8, 44, 264); block(lx + 12, y0 + 8, 164, 44); block(lx + 12, y0 + 120, 164, 44); block(lx + 12, y0 + 236, 164, 36); block(lx + 14, y0 + 282, 67, 94); }
       add(-8990, c => { if (imgs.toiletPic.naturalWidth) { c.save(); c.imageSmoothingEnabled = true; c.drawImage(imgs.toiletPic, rx + RT, TY + RT, TW - 2 * RT, TH - 2 * RT); c.restore(); } });
@@ -83,7 +85,7 @@
   const WOOD = { tx: 0, ty: 0, tw: 0 };
   // ---- 右側：木長桌（10 人：上下各 5 張椅子）
   {
-    const tx = TX0 + 150 + CORR + 2 * T_W - RT + CORR + RT + ROOM_MARGIN - 2 * 64, ty = TY + RT + ROOM_MARGIN + 2 * 64, tw = tableW(5); WOOD.tx = tx; WOOD.ty = ty; WOOD.tw = tw; table('wood', tx, ty, 5, ty + 70); block(tx, ty + 20, tw, 80); label('木長桌（10 人）', tx, ty - 90, tw);
+    const tx = TX0 + 150 + CORR + 2 * T_W - RT + CORR + RT + ROOM_MARGIN - 2 * 64 + HSHIFT, ty = TY + RT + ROOM_MARGIN + 2 * 64, tw = tableW(5); WOOD.tx = tx; WOOD.ty = ty; WOOD.tw = tw; table('wood', tx, ty, 5, ty + 70); block(tx, ty + 20, tw, 80); label('木長桌（10 人）', tx, ty - 90, tw);
     for (let k = 0; k < 5; k++) { const cx = tx + tw * (2 * k + 1) / 10; sprite('chair_front', cx - 26, ty - 46, ty - 1); sprite('chair_back', cx - 26, ty + 60, ty + 130); }
   }
   // ---- 茶水間（木長桌旁）
@@ -107,7 +109,7 @@
   const HROOM = { x: 0, bottom: 0 };
   // ---- 右側：大會議室 H（玻璃，上下兩個出口；投影機往右；六張白桌排成「C」，一桌兩椅）
   {
-    const rx = GX + 880 + CORR + 2 * 64, ry = GY0 - 67 - RT + 64, xL = rx + RT + 130, y0 = ry + RT + 150, rw = 2 * (RT + 40 + 2 * 220 + 40 + RT) + 60,/* 往右延伸到跟下方兩間玻璃辦公室（各 568，中間 60）的右緣切齊 */ rh = RT + 150 + 400 + 90 + RT;
+    const rx = GX + 880 + CORR + 2 * 64, ry = GY0 - 67 - RT + 64, xL = rx + (2 * (RT + 40 + 2 * 220 + 40 + RT) + 60) - RT - 130 - (100 + 2 * 195), y0 = ry + RT + 150, rw = 2 * (RT + 40 + 2 * 220 + 40 + RT) + 60,/* 往右延伸到跟下方兩間玻璃辦公室（各 568，中間 60）的右緣切齊 */ rh = RT + 150 + 400 + 90 + RT;
     glass(rx, ry, rw, rh, [{ side: 't', c: rx + rw / 2 }, { side: 'b', c: rx + rw / 2 }]);
     block(xL + 100, y0, 390, 130); block(xL + 100, y0 + 270, 390, 130); block(xL, y0, 100, 400);
     const xC = xL + 100;
