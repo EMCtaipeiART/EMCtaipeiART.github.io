@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createRng,dailySeed,dayKey} from '../EMC-ART-Pixel-Office/dist/minigames/core/rng.js';
+import {createRng,dailySeed,dayKey,hashString} from '../EMC-ART-Pixel-Office/dist/minigames/core/rng.js';
 import {createFixedLoop} from '../EMC-ART-Pixel-Office/dist/minigames/core/loop.js';
 import {createScoreStore} from '../EMC-ART-Pixel-Office/dist/minigames/core/score.js';
 import {createMiniGameManager} from '../EMC-ART-Pixel-Office/dist/minigames/core/manager.js';
@@ -81,4 +81,32 @@ test('遊戲拋出例外時安全退出',()=>{
 test('一次只能開一局，且未註冊的遊戲不會開啟',()=>{
   const env=setupEnv(),m=createMiniGameManager(env);m.register(simpleGame());
   assert.equal(m.open('nope'),false);assert.equal(m.open('t'),true);assert.equal(m.open('t'),false);m.close();
+});
+
+// ---- Phase 2：辦公室尋寶 ----
+import {floorCandidates,pickTreasures,treasureScore} from '../EMC-ART-Pixel-Office/dist/minigames/games/treasure-gen.js';
+const types=['a','b','c','d','e','f','g','h'];
+const free=(x,y)=>x>60&&x<1400&&y>200&&y<900&&!(x>400&&x<700&&y>300&&y<500);
+const cands=floorCandidates({minX:80,maxX:1450,minY:210,maxY:880,isFree:free});
+
+test('尋寶：同一天產生相同位置，不同天不同',()=>{
+  const gen=day=>pickTreasures({rng:createRng(hashString('treasure-items@'+day)),candidates:cands,types});
+  const a=gen('2026-10-26'),b=gen('2026-10-26'),c=gen('2026-10-27');
+  assert.equal(a.length,5);assert.deepEqual(a,b);assert.notDeepEqual(a,c);
+});
+test('尋寶：道具不在家具上、彼此保持間距、一定點得到',()=>{
+  const clickable=(x,y)=>x>=100&&x<=1000&&y>=250&&y<=800;
+  for(let d=1;d<=30;d++){
+    const r=pickTreasures({rng:createRng(d),candidates:cands,types,clickable});
+    assert.equal(r.length,5);
+    for(const it of r){assert.ok(free(it.x,it.y)&&clickable(it.x,it.y));assert.ok(free(it.x+24,it.y)&&free(it.x-24,it.y));}
+    for(let i=0;i<5;i++)for(let j=i+1;j<5;j++)assert.ok(Math.hypot(r[i].x-r[j].x,r[i].y-r[j].y)>=180);
+    assert.equal(new Set(r.map(i=>i.type)).size,5);
+  }
+});
+test('尋寶：計分規則',()=>{
+  assert.equal(treasureScore({found:3,timeLeft:40}),300);// 沒找齊沒有時間加成
+  assert.equal(treasureScore({found:5,timeLeft:50}),500+100);
+  assert.equal(treasureScore({found:5,timeLeft:50,hintUsed:true}),550);
+  assert.equal(treasureScore({found:0,timeLeft:0,hintUsed:true}),0);// 不會變負分
 });

@@ -2363,4 +2363,4 @@ window.addEventListener('message',event=>{
 })();
 
 /* 小遊戲橋接：唯讀暴露場景工具給 minigames/（不改動既有行為）。 */
-window.__pixelOffice={game,keys,markDirty,toScene,blocked,walls:()=>walls,stations,cam};
+window.__pixelOffice={game,keys,markDirty,toScene,blocked,walls:()=>walls,stations,cam,scene:()=>({W,H,OY,minY:ROOM_MIN_Y,maxY:ROOM_MAX_Y})};

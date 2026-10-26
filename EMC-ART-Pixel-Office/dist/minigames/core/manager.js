@@ -2,7 +2,7 @@
 // 遊戲模組彼此不得 import；只能透過 manager 傳入的 ctx 使用共用能力。
 import {createFixedLoop} from './loop.js';
 import {createInput} from './input.js';
-import {createRng,dailySeed,dayKey} from './rng.js';
+import {createRng,dailySeed,dayKey,hashString} from './rng.js';
 
 const COUNTDOWN=3;
 
@@ -62,9 +62,14 @@ export function createMiniGameManager({ui,store,bridge,loopFactory=createFixedLo
     run.input=inputFactory(ui.canvas,signal);
     const ctx=run.ctx={
       g,get width(){return run.width;},get height(){return run.height;},
-      rng:createRng(seed),seed,day,input:run.input,bridge,signal,
+      rng:createRng(seed),rngFor:name=>createRng(hashString(id+':'+name+'@'+day)),seed,day,input:run.input,bridge,signal,
       get score(){return run.score;},get timeLeft(){return run.timeLeft;},
       addScore(n){run.score=Math.max(0,run.score+n);ui.setScore(run.score);},
+      setScore(n){run.score=Math.max(0,n);ui.setScore(run.score);},
+      // 場景座標 <-> 遊戲畫布座標（相機移動、縮放後仍然對得上辦公室）
+      sceneToLocal(x,y){const c=bridge.sceneToClient(x,y),r=ui.root.getBoundingClientRect();return {x:c.x-r.left,y:c.y-r.top};},
+      localToScene(x,y){const r=ui.root.getBoundingClientRect();return bridge.clientToScene(r.left+x,r.top+y);},
+      scenePxScale:()=>bridge.pxPerScene(),
       setExtra:t=>ui.setExtra(t),banner:t=>ui.banner(t),
       end:(lines)=>finish(lines)
     };
