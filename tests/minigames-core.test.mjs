@@ -178,3 +178,75 @@ test('截稿：排版對齊的位移肉眼可見，且點擊區就是實際畫�
   }
 });
 test('截稿：計分與連擊',()=>{assert.equal(pointsForCorrect(1),100);assert.equal(pointsForCorrect(2),110);assert.equal(pointsForCorrect(50),200);});
+
+// ---- Phase 5：辦公室躲貓貓（單機原型）----
+import {RULES,MAP,TOTAL_SECS,createGame,stepGame,canSee,lineOfSight,zoneAt,zoneCenter,pushOutOfRect,scoreFor,aliveHiders,seekerOf} from '../EMC-ART-Pixel-Office/dist/minigames/games/hideseek-sim.js';
+import {buildNav,findPath,createBot,botInput} from '../EMC-ART-Pixel-Office/dist/minigames/games/hideseek-ai.js';
+const nav=buildNav();
+const mk=(count=4,seed=1,seekerIndex=0)=>{const rng=createRng(seed),g=createGame({rng,count,seekerIndex});return {g,rng};};
+const run=(g,secs,inputs={})=>{for(let i=0;i<Math.round(secs*60)&&!g.over;i++)stepGame(g,inputs,1/60);};
+
+test('躲貓貓：人數限制 2–6，尋找者隨機且只有一位',()=>{
+  assert.throws(()=>createGame({rng:createRng(1),count:1}));assert.throws(()=>createGame({rng:createRng(1),count:7}));
+  const roles=new Set();
+  for(let seed=1;seed<=40;seed++){const g=createGame({rng:createRng(seed),count:5});assert.equal(g.players.filter(p=>p.role==='seeker').length,1);roles.add(g.seekerId);}
+  assert.ok(roles.size>=3);
+});
+test('躲貓貓：高家具擋視線、低家具不擋；遮蔽區要靠近才看得到',()=>{
+  const a={x:300,y:270},b={x:360,y:270};// 隔著 part1（x=330,tall）
+  assert.equal(lineOfSight(a,b),false);
+  assert.equal(lineOfSight({x:380,y:200},{x:380,y:400}),true);// 會穿過會議桌（低）仍看得到
+  const z=MAP.zones.find(z=>z.id==='z-desks'),inZone=zoneCenter(z);
+  assert.ok(zoneAt(inZone));
+  const far={x:inZone.x,y:inZone.y-RULES.coverReveal-30},near={x:inZone.x,y:inZone.y-RULES.coverReveal+14};
+  assert.equal(canSee(far,inZone),false);assert.equal(canSee(near,inZone),true);
+  assert.equal(canSee({x:100,y:400},{x:100+RULES.vision+10,y:400}),false);// 超出視野
+});
+test('躲貓貓：碰撞——亂走一萬步不會進到家具或出界',()=>{
+  const {g,rng}=mk(4,3);
+  for(let i=0;i<10000;i++){const inp={};for(const p of g.players)inp[p.id]={dx:Math.sin(i*.013+p.index)*1.5,dy:Math.cos(i*.021+p.index*2)*1.5};stepGame(g,inp,1/60);if(g.over)break;
+    for(const p of g.players){for(const s of MAP.solids){const nx=Math.max(s.x,Math.min(p.x,s.x+s.w)),ny=Math.max(s.y,Math.min(p.y,s.y+s.h));assert.ok(Math.hypot(p.x-nx,p.y-ny)>=RULES.r-.5,p.id+' 卡進 '+s.id);}
+      assert.ok(p.x>=MAP.bounds.x&&p.x<=MAP.bounds.x+MAP.bounds.w&&p.y>=MAP.bounds.y&&p.y<=MAP.bounds.y+MAP.bounds.h);}}
+});
+test('躲貓貓：躲藏階段尋找者不能動；20 秒後才開始，也才能抓',()=>{
+  const {g}=mk(3,5,0),sk=seekerOf(g),h=g.players[1];const x0=sk.x;
+  h.x=sk.x+20;h.y=sk.y;// 貼在旁邊
+  run(g,10,{p0:{dx:1,dy:0,catch:true}});
+  assert.equal(sk.x,x0);assert.equal(g.phase,'hide');assert.equal(h.state,'alive');
+  run(g,11);assert.equal(g.phase,'seek');
+  run(g,0.1,{p0:{dx:0,dy:0,catch:true}});assert.equal(h.state,'caught');
+});
+test('躲貓貓：抓捕需要在範圍內且看得到；亂按有冷卻',()=>{
+  const {g}=mk(3,5,0),sk=seekerOf(g),h=g.players[1],h2=g.players[2];
+  run(g,RULES.hideSecs+0.05);
+  sk.x=300;sk.y=270;h.x=360;h.y=270;h2.x=900;h2.y=500;// h 在隔板另一側、h2 很遠
+  stepGame(g,{p0:{catch:true}},1/60);assert.equal(h.state,'alive');
+  sk.cooldown=0;sk.x=200;sk.y=300;h.x=200+RULES.catchRange+10;h.y=300;stepGame(g,{p0:{catch:true}},1/60);assert.equal(h.state,'alive');// 太遠
+  sk.cooldown=0;h.x=200+RULES.catchRange-6;stepGame(g,{p0:{catch:true}},1/60);assert.equal(h.state,'caught');
+  const before=sk.cooldown;assert.ok(before>0);
+});
+test('躲貓貓：勝負——全被抓＝尋找者贏；時間到＝躲藏者贏；被抓者進入觀戰且不再移動',()=>{
+  const a=mk(2,7,0);run(a.g,RULES.hideSecs+.05);const h=a.g.players[1];const s=seekerOf(a.g);s.x=200;s.y=300;h.x=210;h.y=300;
+  stepGame(a.g,{p0:{catch:true}},1/60);assert.equal(a.g.over,true);assert.equal(a.g.winner,'seeker');
+  const b=mk(3,8,0);run(b.g,TOTAL_SECS+1);assert.equal(b.g.over,true);assert.equal(b.g.winner,'hiders');
+  assert.ok(scoreFor(b.g,'p1')>=400&&scoreFor(b.g,'p0')===0);
+  const c=mk(3,9,0);run(c.g,RULES.hideSecs+.05);const v=c.g.players[1],sk=seekerOf(c.g);sk.x=200;sk.y=300;v.x=210;v.y=300;stepGame(c.g,{p0:{catch:true}},1/60);
+  const px=v.x;run(c.g,1,{p1:{dx:1,dy:0}});assert.equal(v.x,px);
+});
+test('躲貓貓：導航——所有出生點到所有遮蔽區都走得到，路徑點不在家具裡',()=>{
+  for(const sp of MAP.spawns)for(const z of MAP.zones){const path=findPath(nav,sp,zoneCenter(z));assert.ok(path&&path.length,'到不了 '+z.id);
+    for(const w of path)for(const s of MAP.solids){const nx=Math.max(s.x,Math.min(w.x,s.x+s.w)),ny=Math.max(s.y,Math.min(w.y,s.y+s.h));assert.ok(Math.hypot(w.x-nx,w.y-ny)>=RULES.r-.5);}}
+});
+test('躲貓貓：2–6 人機器人對戰都能正常結束，且相同種子結果相同',()=>{
+  const play=(count,seed)=>{const rng=createRng(seed),g=createGame({rng,count}),bots=g.players.map(p=>createBot(p,{rng,nav,game:g}));
+    for(let i=0;i<60*150&&!g.over;i++){const inp={};bots.forEach(b=>inp[b.id]=botInput(g,b,1/60,rng));stepGame(g,inp,1/60);}
+    return {over:g.over,winner:g.winner,t:+g.t.toFixed(3),caught:g.players.map(p=>p.state)};};
+  for(const count of [2,3,4,5,6])for(let seed=1;seed<=6;seed++){const r=play(count,seed*31+count);assert.equal(r.over,true);assert.deepEqual(r,play(count,seed*31+count));}
+});
+test('躲貓貓：地圖沒有擠不過去的窄縫（家具之間、家具與牆都要留 2×半徑以上）',()=>{
+  const gap=(a,b)=>Math.hypot(Math.max(0,a.x-(b.x+b.w),b.x-(a.x+a.w)),Math.max(0,a.y-(b.y+b.h),b.y-(a.y+a.h)));
+  const need=RULES.r*2+2,b=MAP.bounds,walls=[{x:b.x-50,y:b.y-50,w:b.w+100,h:50},{x:b.x-50,y:b.y+b.h,w:b.w+100,h:50},{x:b.x-50,y:b.y,w:50,h:b.h},{x:b.x+b.w,y:b.y,w:50,h:b.h}];
+  const all=[...MAP.solids,...walls];
+  for(let i=0;i<all.length;i++)for(let j=i+1;j<all.length;j++){const g=gap(all[i],all[j]);if(g>0)assert.ok(g>=need,(all[i].id||'牆')+' 與 '+(all[j].id||'牆')+' 間距 '+g.toFixed(1)+' 太窄');}
+  for(const z of MAP.zones)for(const s of MAP.solids)assert.ok(gap(z,s)>=0&&!(z.x<s.x+s.w&&s.x<z.x+z.w&&z.y<s.y+s.h&&s.y<z.y+z.h),z.id+' 與 '+s.id+' 重疊');
+});

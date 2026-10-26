@@ -6,6 +6,7 @@ import {demoGame} from './games/demo.js';
 import {treasureGame} from './games/treasure.js';
 import {hoopsGame} from './games/hoops.js';
 import {deadlineGame} from './games/deadline.js';
+import {hideseekGame} from './games/hideseek.js';
 
 const office=window.__pixelOffice;
 if(office){
@@ -24,7 +25,7 @@ if(office){
     get walls(){return office.walls();},get stations(){return office.stations;}
   };
   const manager=createMiniGameManager({ui:createUI(),store:createScoreStore(),bridge});
-  manager.register(demoGame);manager.register(treasureGame);manager.register(hoopsGame);manager.register(deadlineGame);
+  manager.register(demoGame);manager.register(treasureGame);manager.register(hoopsGame);manager.register(deadlineGame);manager.register(hideseekGame);
   window.miniGames=manager;
   // 入口：點「小遊戲」展開選單（測試用的點點遊戲不列出）
   const btn=document.getElementById('miniGamesBtn');

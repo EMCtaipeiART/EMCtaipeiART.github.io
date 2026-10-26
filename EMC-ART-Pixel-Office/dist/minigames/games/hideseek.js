@@ -1,0 +1,117 @@
+// 辦公室躲貓貓（單機原型）：你加上 1–5 個機器人，驗證碰撞、遮蔽與規則。多人連線（Phase 6）會沿用同一份 hideseek-sim 規則。
+import {RULES,MAP,TOTAL_SECS,createGame,stepGame,canSee,aliveHiders,seekerOf,scoreFor,dist} from './hideseek-sim.js';
+import {buildNav,createBot,botInput} from './hideseek-ai.js';
+
+const HUD_TOP=56,PLAYERS=4,JOY_R=54,BTN_R=40;
+const tag=(g,text,x,y,col)=>{g.font='700 12px sans-serif';g.textAlign='center';const w=g.measureText(text).width+8;g.fillStyle=col;g.fillRect(Math.round(x-w/2),Math.round(y-13),Math.round(w),16);g.fillStyle='#fff';g.fillText(text,x,y-1);};
+
+export const hideseekGame={
+  id:'hideseek',title:'辦公室躲貓貓',duration:TOTAL_SECS,
+  start(ctx){
+    const rng=ctx.rngFor('room:'+Math.floor(performance.now())),game=createGame({rng,count:PLAYERS}),nav=buildNav();
+    this.state={game,rng,bots:game.players.slice(1).map(p=>createBot(p,{rng,nav,game})),view:{s:1,ox:0,oy:0},
+      joy:null,btn:false,btnUntil:0,clock:0,bannerUntil:0,note:'',spectBtn:null,catchBox:null,lastExtra:''};
+    const me=game.players[0];
+    ctx.banner(me.role==='seeker'?'你是尋找者':'你是躲藏者');this.state.bannerUntil=2;
+    this.fit(ctx);
+    ctx.input.on('down',p=>{
+      const s=this.state;if(!s)return;
+      if(s.spectBtn&&this.inBox(p,s.spectBtn)){ctx.end();return;}
+      if(s.catchBox&&Math.hypot(p.x-s.catchBox.x,p.y-s.catchBox.y)<=BTN_R+10){s.btn=true;s.btnUntil=s.clock+.12;return;}
+      if(p.x<ctx.width*.6&&!s.joy)s.joy={id:p.id,ox:p.x,oy:p.y,x:p.x,y:p.y};
+    });
+    ctx.input.on('move',p=>{const j=this.state&&this.state.joy;if(j&&j.id===p.id){j.x=p.x;j.y=p.y;}});
+    ctx.input.on('up',p=>{const s=this.state;if(s&&s.joy&&s.joy.id===p.id)s.joy=null;});
+  },
+  resize(ctx){this.fit(ctx);},
+  fit(ctx){
+    const s=this.state;if(!s)return;
+    const availH=ctx.height-HUD_TOP-8,sc=Math.min(ctx.width/MAP.w,availH/MAP.h);
+    s.view={s:sc,ox:(ctx.width-MAP.w*sc)/2,oy:HUD_TOP+(availH-MAP.h*sc)/2};
+  },
+  inBox(p,b){return p.x>=b.x&&p.x<=b.x+b.w&&p.y>=b.y&&p.y<=b.y+b.h;},
+  humanInput(ctx){
+    const s=this.state,a=ctx.input.axis();let dx=a.x,dy=a.y;
+    if(s.joy){const jx=s.joy.x-s.joy.ox,jy=s.joy.y-s.joy.oy,l=Math.hypot(jx,jy);if(l>8){const k=Math.min(l,JOY_R)/JOY_R/l;dx=jx*k;dy=jy*k;}}
+    const doCatch=s.btn||ctx.input.isDown('Space')||ctx.input.isDown('KeyE');
+    s.btn=false;
+    return {dx,dy,catch:doCatch};
+  },
+  update(ctx,dt){
+    const s=this.state,g=s.game;s.clock+=dt;
+    if(s.joy&&ctx.input.pointers.size===0)s.joy=null;
+    if(s.bannerUntil&&s.clock>s.bannerUntil){ctx.banner('');s.bannerUntil=0;}
+    if(!g.over){
+      const inputs={p0:g.players[0].state==='alive'?this.humanInput(ctx):{}};
+      for(const b of s.bots)inputs[b.id]=botInput(g,b,dt,s.rng);
+      stepGame(g,inputs,dt);
+      for(const e of g.events){
+        if(e.type==='phase'&&e.phase==='seek'){ctx.banner('開始尋找！');s.bannerUntil=s.clock+1.2;}
+        if(e.type==='caught'){s.note=(e.id==='p0'?'你被抓到了，進入觀戰':g.players.find(p=>p.id===e.id).name+' 被抓到了');s.noteUntil=s.clock+2.5;}
+      }
+    }
+    const me=g.players[0],left=aliveHiders(g).length;
+    const label=(me.role==='seeker'?'尋找者':'躲藏者')+'・'+(g.phase==='hide'?'躲藏中 '+Math.max(0,Math.ceil(RULES.hideSecs-g.t)):'剩 '+left+' 人')+(me.state==='caught'?'・觀戰':'')+(me.inCover?'・隱蔽':'');
+    if(label!==s.lastExtra){s.lastExtra=label;ctx.setExtra(label);}
+    if(g.over)ctx.end();
+  },
+  render(ctx){
+    const s=this.state,g=ctx.g,G=s.game,v=s.view,me=G.players[0],seeker=seekerOf(G);
+    const X=x=>v.ox+x*v.s,Y=y=>v.oy+y*v.s,R=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(Math.round(X(x)),Math.round(Y(y)),Math.ceil(w*v.s),Math.ceil(h*v.s));};
+    g.imageSmoothingEnabled=false;
+    g.fillStyle='rgba(238,243,251,.98)';g.fillRect(0,0,ctx.width,ctx.height);
+    R(MAP.bounds.x,MAP.bounds.y,MAP.bounds.w,MAP.bounds.h,'#f7f9fd');
+    g.strokeStyle='rgba(24,46,84,.08)';g.lineWidth=1;
+    for(let x=MAP.bounds.x;x<=MAP.bounds.x+MAP.bounds.w;x+=40){g.beginPath();g.moveTo(X(x)+.5,Y(MAP.bounds.y));g.lineTo(X(x)+.5,Y(MAP.bounds.y+MAP.bounds.h));g.stroke();}
+    for(let y=MAP.bounds.y;y<=MAP.bounds.y+MAP.bounds.h;y+=40){g.beginPath();g.moveTo(X(MAP.bounds.x),Y(y)+.5);g.lineTo(X(MAP.bounds.x+MAP.bounds.w),Y(y)+.5);g.stroke();}
+    g.strokeStyle='#182e54';g.lineWidth=4;g.strokeRect(X(MAP.bounds.x),Y(MAP.bounds.y),MAP.bounds.w*v.s,MAP.bounds.h*v.s);
+    // 遮蔽區域
+    g.setLineDash([6,5]);g.strokeStyle='rgba(76,175,106,.9)';g.lineWidth=2;
+    for(const z of MAP.zones){R(z.x,z.y,z.w,z.h,'rgba(76,175,106,.12)');g.strokeRect(X(z.x),Y(z.y),z.w*v.s,z.h*v.s);}
+    g.setLineDash([]);
+    // 家具：高的（擋視線）深色，低的淺色
+    const col={cabinet:'#3a4a68',shelf:'#3a4a68',partition:'#182e54',desk:'#8c98ad',table:'#a4afc2',sofa:'#b66a5a',plant:'#4caf6a'};
+    for(const o of MAP.solids){R(o.x,o.y,o.w,o.h,col[o.kind]||'#8c98ad');g.strokeStyle='#182e54';g.lineWidth=2;g.strokeRect(X(o.x),Y(o.y),o.w*v.s,o.h*v.s);}
+    // 玩家（依 y 排序）。尋找者視角：看不到的躲藏者不畫；其他情況全畫
+    const seekerView=me.role==='seeker'&&me.state==='alive',spectating=me.state==='caught';
+    const list=G.players.slice().sort((a,b)=>a.y-b.y);
+    for(const p of list){
+      if(seekerView&&p.role==='hider'&&(p.state!=='alive'||!canSee(me,p)))continue;
+      if(p.state==='caught'&&!spectating&&me.role!=='seeker')continue;
+      const x=X(p.x),y=Y(p.y),r=RULES.r*v.s,hidden=p.role==='hider'&&p.inCover&&p.id!=='p0';
+      g.globalAlpha=p.state==='caught'?.35:(hidden&&!spectating?.55:1);
+      g.fillStyle=p.color;g.fillRect(Math.round(x-r),Math.round(y-r*.2),Math.round(r*2),Math.round(r*1.4));// 身體
+      g.fillStyle='#ffe0bd';g.fillRect(Math.round(x-r*.7),Math.round(y-r*1.5),Math.round(r*1.4),Math.round(r*1.3));// 頭
+      g.strokeStyle='#182e54';g.lineWidth=2;g.strokeRect(Math.round(x-r),Math.round(y-r*.2),Math.round(r*2),Math.round(r*1.4));
+      g.globalAlpha=1;
+      if(p.id==='p0'){g.strokeStyle='#ffd24a';g.lineWidth=3;g.beginPath();g.ellipse(x,y+r*1.3,r*1.5,r*.5,0,0,Math.PI*2);g.stroke();}
+      tag(g,p.name+(p.role==='seeker'?'（尋找者）':''),x,y-r*1.7,p.role==='seeker'?'#d9534f':'#182e54');
+    }
+    // 尋找者視野圈與躲藏階段遮罩
+    if(seekerView){g.strokeStyle='rgba(217,83,79,.35)';g.lineWidth=2;g.setLineDash([4,6]);g.beginPath();g.arc(X(me.x),Y(me.y),RULES.vision*v.s,0,Math.PI*2);g.stroke();g.setLineDash([]);}
+    if(me.role==='seeker'&&G.phase==='hide'){g.fillStyle='rgba(24,46,84,.93)';g.fillRect(0,HUD_TOP,ctx.width,ctx.height-HUD_TOP);g.fillStyle='#fff';g.font='900 28px sans-serif';g.textAlign='center';g.fillText('閉眼中… '+Math.max(0,Math.ceil(RULES.hideSecs-G.t))+' 秒',ctx.width/2,ctx.height/2);}
+    // 抓捕鍵（尋找者）與搖桿
+    s.catchBox=null;
+    if(me.role==='seeker'&&me.state==='alive'&&G.phase==='seek'){
+      const bx=ctx.width-BTN_R-16,by=ctx.height-BTN_R-16;s.catchBox={x:bx,y:by};
+      const near=aliveHiders(G).some(h=>dist(me,h)<=RULES.catchRange);
+      g.fillStyle=near?'#d9534f':'#c9d2e0';g.beginPath();g.arc(bx,by,BTN_R,0,Math.PI*2);g.fill();g.strokeStyle='#182e54';g.lineWidth=3;g.stroke();
+      g.fillStyle=near?'#fff':'#182e54';g.font='900 18px sans-serif';g.textAlign='center';g.fillText('抓！',bx,by+6);
+    }
+    if(s.joy){g.strokeStyle='rgba(24,46,84,.5)';g.lineWidth=3;g.beginPath();g.arc(s.joy.ox,s.joy.oy,JOY_R,0,Math.PI*2);g.stroke();
+      const jx=s.joy.x-s.joy.ox,jy=s.joy.y-s.joy.oy,l=Math.min(Math.hypot(jx,jy),JOY_R)/(Math.hypot(jx,jy)||1);g.fillStyle='rgba(24,46,84,.6)';g.beginPath();g.arc(s.joy.ox+jx*l,s.joy.oy+jy*l,20,0,Math.PI*2);g.fill();}
+    // 觀戰、提示
+    s.spectBtn=null;
+    if(spectating&&!G.over){const w=130,h=38,x=ctx.width-w-12,y=ctx.height-h-12;s.spectBtn={x,y,w,h};g.fillStyle='#ffd24a';g.fillRect(x,y,w,h);g.strokeStyle='#182e54';g.lineWidth=2;g.strokeRect(x,y,w,h);g.fillStyle='#182e54';g.font='700 14px sans-serif';g.textAlign='center';g.fillText('跳到結算',x+w/2,y+24);
+      g.font='900 18px sans-serif';g.fillText('觀戰中',ctx.width/2,HUD_TOP+24);}
+    if(s.note&&s.clock<(s.noteUntil||0)){g.fillStyle='#c0392b';g.font='900 18px sans-serif';g.textAlign='center';g.fillText(s.note,ctx.width/2,HUD_TOP+(spectating?48:24));}
+    if(s.clock<6&&!s.joy){g.fillStyle='#182e54';g.font='700 13px sans-serif';g.textAlign='center';g.fillText(me.role==='seeker'?'WASD／方向鍵移動；靠近後按空白鍵或「抓！」':'WASD／方向鍵移動；躲進綠色區域，別被看到',ctx.width/2,ctx.height-14);}
+  },
+  result(ctx){
+    const s=this.state,G=s.game,me=G.players[0];
+    const win=(me.role==='seeker')===(G.winner==='seeker');
+    const lines=[(win?'獲勝！':'敗北')+'　你是'+(me.role==='seeker'?'尋找者':'躲藏者')+'，'+(G.winner==='seeker'?'全員被抓到':'有人撐到時間結束'),'抓到 '+G.players.filter(p=>p.role==='hider'&&p.state==='caught').length+' / '+G.players.filter(p=>p.role==='hider').length+' 位躲藏者','單機原型：同房 '+PLAYERS+' 人（含 '+(PLAYERS-1)+' 個機器人）'];
+    return {score:scoreFor(G,'p0'),lines};
+  },
+  destroy(){this.state=null;}
+};
