@@ -45,6 +45,22 @@ const result = await page.evaluate(async (b64, spec) => {
         id.data[o] = fr; id.data[o + 1] = fg2; id.data[o + 2] = fb; id.data[o + 3] = Math.round(a * 255);
         x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
       }
+      // 去鄰格溢出：碰到格子邊緣、而且比主體小很多的碎塊（例如上一格素材的一角）一律丟掉
+      const lab = new Int32Array(cell * cell).fill(-1), comps = [];
+      for (let p = 0; p < cell * cell; p++) {
+        if (lab[p] >= 0 || id.data[p * 4 + 3] === 0) continue;
+        const stack = [p], c = { n: 0, x0: 1e9, y0: 1e9, x1: -1, y1: -1, px: [] }; lab[p] = comps.length;
+        while (stack.length) { const q = stack.pop(), qx = q % cell, qy = (q - qx) / cell; c.n++; c.px.push(q); c.x0 = Math.min(c.x0, qx); c.x1 = Math.max(c.x1, qx); c.y0 = Math.min(c.y0, qy); c.y1 = Math.max(c.y1, qy);
+          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) { const nx = qx + dx, ny = qy + dy; if (nx < 0 || ny < 0 || nx >= cell || ny >= cell) continue; const nq = ny * cell + nx; if (lab[nq] < 0 && id.data[nq * 4 + 3] !== 0) { lab[nq] = comps.length; stack.push(nq); } } }
+        comps.push(c);
+      }
+      const big = Math.max(1, ...comps.map(c => c.n));
+      x0 = 1e9; y0 = 1e9; x1 = -1; y1 = -1;
+      for (const c of comps) {
+        const edge = c.x0 <= 1 || c.y0 <= 1 || c.x1 >= cell - 2 || c.y1 >= cell - 2;
+        if (c.n < 16 || (edge && c.n < big * 0.35)) { for (const q of c.px) id.data[q * 4 + 3] = 0; continue; }
+        x0 = Math.min(x0, c.x0); y0 = Math.min(y0, c.y0); x1 = Math.max(x1, c.x1); y1 = Math.max(y1, c.y1);
+      }
       cg.putImageData(id, 0, 0);
       sprites.push({ name, cv, x0, y0, w: x1 - x0 + 1, h: y1 - y0 + 1 });
     }

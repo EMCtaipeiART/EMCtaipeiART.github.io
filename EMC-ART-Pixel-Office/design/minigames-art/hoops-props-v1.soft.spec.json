@@ -1,0 +1,5 @@
+{ "mode":"soft","cols":6,"rows":4,"cell":256,"down":1,"previewScale":1,"atlasW":1400,
+  "names":["trash_bin","backboard","paper_1","paper_2","paper_3","paper_4",
+           "paper_squash","shadow","windsock_r","windsock_l","wind_arrow_r","wind_arrow_l",
+           "swish_1","swish_2","swish_3","miss_1","miss_2","meter_frame",
+           "meter_green","meter_red","aim_dot","aim_dot_big","carpet_tile","plant"] }
