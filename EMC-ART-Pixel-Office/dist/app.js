@@ -2361,3 +2361,6 @@ window.addEventListener('message',event=>{
   $('punishCancel').onclick=()=>punishCall(0);
   $('statuses').addEventListener('click',e=>{if(e.target.closest('[data-status]'))setTimeout(window.radialClose,0);});// 選好狀態（含在座）就收合
 })();
+
+/* 小遊戲橋接：唯讀暴露場景工具給 minigames/（不改動既有行為）。 */
+window.__pixelOffice={game,keys,markDirty,toScene,blocked,walls:()=>walls,stations,cam};

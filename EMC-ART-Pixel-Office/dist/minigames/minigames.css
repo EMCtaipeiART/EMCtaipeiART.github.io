@@ -1,0 +1,22 @@
+.mg-root{position:fixed;z-index:60;touch-action:none;font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif;color:#182e54}
+.mg-root[hidden]{display:none}
+.mg-canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;image-rendering:pixelated}
+.mg-hud{position:absolute;left:8px;right:8px;top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-weight:700;font-size:14px;pointer-events:none}
+.mg-hud>span{background:#fff;border:2px solid #182e54;border-radius:8px;padding:4px 10px}
+.mg-hud .mg-extra:empty{display:none}
+.mg-hud .mg-btn{pointer-events:auto;margin-left:auto}
+.mg-hud .mg-btn+.mg-btn{margin-left:0}
+.mg-btn{border:2px solid #182e54;border-radius:8px;background:#e8f0ff;color:#182e54;font:inherit;font-weight:700;padding:6px 14px;cursor:pointer;min-height:36px}
+.mg-btn:active{transform:translateY(1px)}
+.mg-banner{position:absolute;inset:0;display:grid;place-items:center;font-size:72px;font-weight:900;color:#182e54;text-shadow:0 2px 0 #fff;pointer-events:none}
+.mg-panel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);min-width:min(320px,86%);max-height:88%;overflow:auto;background:#fff;border:3px solid #182e54;border-radius:12px;padding:18px 22px;text-align:center;box-shadow:0 8px 0 rgba(24,46,84,.25)}
+.mg-panel h2{margin:0 0 8px;font-size:20px}
+.mg-panel .mg-btn{margin:6px 4px 0}
+.mg-big{font-size:34px;font-weight:900;margin:4px 0}
+.mg-big small{font-size:14px;color:#c0392b}
+.mg-note{font-size:12px;opacity:.65}
+.mg-board{list-style:none;margin:8px 0;padding:0;font-size:14px;text-align:left}
+.mg-board li{display:grid;grid-template-columns:28px 1fr auto;gap:8px;padding:2px 6px;border-radius:6px}
+.mg-board li.me{background:#fff3c4;font-weight:700}
+.mg-entry{display:inline-flex;align-items:center;justify-content:center;padding:9px 15px;border:2px solid #182e54;border-radius:9px;background:#e8f0ff;color:#182e54;font-size:13px;font-weight:700;cursor:pointer}
+@media (max-width:640px){.mg-banner{font-size:56px}.mg-panel{padding:14px}}

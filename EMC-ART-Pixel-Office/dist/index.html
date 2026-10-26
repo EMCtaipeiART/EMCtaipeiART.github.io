@@ -19,6 +19,7 @@
   <script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('embed');</script>
   <script>/* 直接開本頁（沒帶任何模式參數）就用最新的整頁模式：場景滿版、右側工具只在選取人物時浮出、沒有下方欄位、用圓形選單選人；要看舊的完整版面加 ?full=1 */if(!/[?&](clean|embed|avatars|full)=1/.test(location.search)){try{history.replaceState(null,"",location.pathname+(location.search?location.search+"&":"?")+"clean=1&cs=1.2"+location.hash)}catch(e){}}if(/[?&]clean=1/.test(location.search))document.documentElement.classList.add('clean');if(window.top===window)document.documentElement.classList.add('solo');/* 單獨開啟（不是嵌在別頁的 iframe）：clean 模式背景是透明的，要補白底 */if(/[?&]ro=1/.test(location.search))document.documentElement.classList.add('ro');if(/[?&]avatars=1/.test(location.search))document.documentElement.classList.add('avatars')</script>
   <link rel="stylesheet" href="style.css?v=77">
+  <link rel="stylesheet" href="minigames/minigames.css?v=1">
 </head>
 <body>
   <header>
@@ -27,7 +28,7 @@
   </header>
   <main>
     <section class="play">
-      <div class="scene-bar"><div><span class="eyebrow">THE DESIGN ROOM</span><h1>今天，想說點什麼？</h1></div><a class="vent-arena-entry" href="../../vent-arena/" target="_blank" rel="noopener">出氣擂台 ↗</a></div>
+      <div class="scene-bar"><div><span class="eyebrow">THE DESIGN ROOM</span><h1>今天，想說點什麼？</h1></div><a class="vent-arena-entry" href="../../vent-arena/" target="_blank" rel="noopener">出氣擂台 ↗</a><button type="button" class="mg-entry" id="miniGamesBtn">小遊戲</button></div>
       <div class="canvas-wrap"><canvas id="game" width="1536" height="1024" tabindex="0" aria-label="設計部遊戲場景。點選人物，以方向鍵移動。"></canvas><p id="loading">正在整理設計部…</p>
         <div id="personCard" class="person-card" role="dialog" aria-label="設計師資料" hidden>
           <button type="button" class="person-card-close" id="personCardClose" aria-label="關閉">✕</button>
@@ -110,6 +111,7 @@ var $=function(i){return document.getElementById(i)},up=function(e){return e&&e.
 var moodSec=up($('moods'));if(moodSec)moodSec.style.display='none';})();
 </script>
   <script>if(/[?&]floor=4/.test(location.search))document.write('<script src="floor4.js?v=15"><\/script>');</script>
-  <script src="app.js?v=295" fetchpriority="high"></script>
+  <script src="app.js?v=296" fetchpriority="high"></script>
+  <script type="module" src="minigames/index.js?v=1"></script>
 </body>
 </html>

@@ -1,0 +1,128 @@
+// MiniGameManager：註冊遊戲、管理生命週期（倒數→進行→暫停→結算）、輸入閘門與清理。
+// 遊戲模組彼此不得 import；只能透過 manager 傳入的 ctx 使用共用能力。
+import {createFixedLoop} from './loop.js';
+import {createInput} from './input.js';
+import {createRng,dailySeed,dayKey} from './rng.js';
+
+const COUNTDOWN=3;
+
+export function createMiniGameManager({ui,store,bridge,loopFactory=createFixedLoop,inputFactory=createInput,now=()=>new Date(),onError=e=>console.error('[minigame]',e)}){
+  const games=new Map();
+  let run=null;// 目前進行中的一局，離開後為 null
+
+  const guard=(fn,fallback)=>{try{return fn();}catch(error){onError(error);abort();return fallback;}};
+
+  function register(def){
+    for(const k of ['id','title','duration','start','update','render'])if(!(k in def))throw new Error('minigame missing '+k);
+    if(games.has(def.id))throw new Error('duplicate minigame '+def.id);
+    games.set(def.id,def);
+  }
+
+  function layout(){
+    if(!run)return;
+    // 整頁模式下場景畫布可能比視窗大（頁面捲動），遊戲區只取畫布與視窗重疊的部分。
+    const b=bridge.rect(),vw=globalThis.innerWidth||b.width,vh=globalThis.innerHeight||b.height;
+    const left=Math.max(b.left,0),top=Math.max(b.top,0),r={left,top,width:Math.max(1,Math.min(b.left+b.width,vw)-left),height:Math.max(1,Math.min(b.top+b.height,vh)-top)};
+    const dpr=Math.min(2,globalThis.devicePixelRatio||1),s=ui.root.style;
+    s.left=r.left+'px';s.top=r.top+'px';s.width=r.width+'px';s.height=r.height+'px';
+    run.width=Math.max(1,Math.round(r.width));run.height=Math.max(1,Math.round(r.height));
+    ui.canvas.width=Math.round(run.width*dpr);ui.canvas.height=Math.round(run.height*dpr);
+    run.g.setTransform(dpr,0,0,dpr,0,0);
+    if(run.def.resize)guard(()=>run.def.resize(run.ctx,run.width,run.height));
+  }
+
+  function open(id){
+    if(run)return false;
+    const def=games.get(id);if(!def)return false;
+    const ac=new AbortController(),signal=ac.signal;
+    const day=dayKey(now()),seed=dailySeed(id,now());
+    const g=ui.canvas.getContext('2d');
+    run={def,ac,phase:'countdown',t:COUNTDOWN,timeLeft:def.duration,score:0,day,seed,width:1,height:1,g,loop:null,input:null,ctx:null,ended:false,result:null};
+    // ---- 輸入閘門：進行中辦公室不接收任何移動、拖曳、縮放 ----
+    bridge.releaseKeys();
+    const shield=e=>{const t=e.target;if(ui.root.contains(t))return;if(t===bridge.canvasEl||(t.closest&&t.closest('#joystick,aside')))e.stopPropagation();};
+    for(const type of ['pointerdown','pointermove','pointerup','touchstart','touchmove','wheel'])window.addEventListener(type,shield,{capture:true,signal,passive:false});
+    window.addEventListener('keydown',e=>{
+      if(e.target&&['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;
+      if(e.key==='Escape'){e.preventDefault();e.stopPropagation();togglePause();return;}
+      e.stopPropagation();
+      if(e.key.startsWith('Arrow')||e.key===' ')e.preventDefault();
+    },{capture:true,signal});
+    window.addEventListener('keyup',e=>e.stopPropagation(),{capture:true,signal});
+    document.addEventListener('visibilitychange',()=>{if(document.hidden&&run&&run.phase==='running')pause();},{signal});
+    window.addEventListener('resize',layout,{signal});
+    if(typeof ResizeObserver!=='undefined'){const ro=new ResizeObserver(layout);ro.observe(bridge.canvasEl);signal.addEventListener('abort',()=>ro.disconnect());}
+    // ---- 介面 ----
+    ui.mount();ui.show(def.title);ui.setScore(0);ui.setTime(def.duration);ui.setExtra('');ui.setPauseLabel(false);
+    ui.onAction(act=>{
+      if(act==='pause')togglePause();
+      else if(act==='quit')close();
+      else if(act==='again'){const again=run.def.id;close();open(again);}
+    },signal);
+    run.input=inputFactory(ui.canvas,signal);
+    const ctx=run.ctx={
+      g,get width(){return run.width;},get height(){return run.height;},
+      rng:createRng(seed),seed,day,input:run.input,bridge,signal,
+      get score(){return run.score;},get timeLeft(){return run.timeLeft;},
+      addScore(n){run.score=Math.max(0,run.score+n);ui.setScore(run.score);},
+      setExtra:t=>ui.setExtra(t),banner:t=>ui.banner(t),
+      end:(lines)=>finish(lines)
+    };
+    layout();
+    run.loop=loopFactory({update:step,render:draw});
+    guard(()=>def.start(ctx));
+    run.loop.start();
+    bridge.markDirty();
+    return true;
+  }
+
+  function step(dt){
+    if(!run||run.ended)return;
+    if(run.phase==='countdown'){
+      run.t-=dt;ui.banner(run.t>0?String(Math.ceil(run.t)):'GO!');
+      if(run.t<=-0.4){run.phase='running';ui.banner('');}// t<=0 時顯示 GO!，再停 0.4 秒開始
+      return;
+    }
+    if(run.phase!=='running')return;
+    run.timeLeft-=dt;ui.setTime(run.timeLeft);
+    guard(()=>run.def.update(run.ctx,dt));
+    if(run&&run.timeLeft<=0)finish();
+  }
+
+  function draw(alpha){
+    if(!run)return;
+    run.g.clearRect(0,0,run.width,run.height);
+    guard(()=>run.def.render(run.ctx,alpha,run.phase));
+  }
+
+  function pause(){if(!run||run.phase!=='running')return;run.phase='paused';run.loop.stop();ui.setPauseLabel(true);ui.pausePanel();run.input.clear();}
+  function resume(){if(!run||run.phase!=='paused')return;run.phase='running';ui.setPauseLabel(false);ui.closePanel();run.loop.start();}
+  function togglePause(){if(!run)return;if(run.phase==='paused')resume();else pause();}
+
+  function finish(lines=[]){
+    if(!run||run.ended)return;
+    run.ended=true;run.phase='finished';run.loop.stop();
+    const r=run,extra=guard(()=>r.def.result?r.def.result(r.ctx):null,null)||{};
+    const score=Math.max(0,Math.round(extra.score??r.score));
+    const record=store.submit(r.def.id,{score,day:r.day});
+    r.result={score,record};
+    ui.setScore(score);ui.banner('');
+    ui.results({title:r.def.title,score,lines:[...(extra.lines||[]),...lines],record,board:record.board});
+  }
+
+  // 例外時的安全退出：不留下任何事件、計時器或被鎖住的輸入。
+  function abort(){if(run)close();}
+
+  function close(){
+    if(!run)return;
+    const r=run;run=null;
+    try{r.loop&&r.loop.stop();}catch(e){onError(e);}
+    try{r.def.destroy&&r.def.destroy(r.ctx);}catch(e){onError(e);}
+    r.ac.abort();// 一次移除所有事件監聽（輸入、閘門、resize、visibility）
+    ui.hide();ui.unmount();
+    bridge.releaseKeys();bridge.markDirty();
+  }
+
+  return {register,open,close,pause,resume,list:()=>[...games.values()].map(g=>({id:g.id,title:g.title})),
+    get active(){return !!run;},get phase(){return run?run.phase:'idle';},get lastResult(){return run?run.result:null;}};
+}
