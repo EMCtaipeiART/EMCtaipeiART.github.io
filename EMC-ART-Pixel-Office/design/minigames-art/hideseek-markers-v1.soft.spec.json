@@ -1,0 +1,5 @@
+{ "mode":"soft","cols":8,"rows":4,"cell":192,"down":1,"previewScale":1,"atlasW":1200,
+  "names":["seeker_marker","hider_marker","you_marker","ghost_caught","hide_spot","alert_bubble","question_bubble","zzz",
+           "poof_1","poof_2","poof_3","feet_up","feet_right","door","blindfold","stopwatch",
+           "minimap_frame","map_pin","icon_fullmap","icon_follow","joystick_ring","joystick_knob","catch_button","spectator_eye",
+           "icon_toilet","icon_table","icon_elevator","icon_fridge","icon_bookshelf","icon_cabinet","icon_desk","empty"] }

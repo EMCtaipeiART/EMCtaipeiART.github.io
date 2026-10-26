@@ -123,3 +123,23 @@ cd worker; npx wrangler dev --local --port 8799     # 連線躲貓貓與排行�
 - 躲貓貓使用獨立繪製的簡化地圖，不是真實辦公室座標。
 - 重新整理頁面後不會自動回到連線房間。
 - 全域建房限流需在 Cloudflare 另外設定。
+
+## 交接（2026-10-27 上架當天寫）
+
+**目前狀態：已上架，但預設隱藏。** 測試入口（管理者與 Machi）：
+
+- <https://emc-art.com/EMC-ART-Pixel-Office/dist/?minigames=1>
+- <https://emctaipeiart.github.io/EMC-ART-Pixel-Office/dist/?minigames=1>
+
+網址沒帶 `?minigames=1` 的人看不到按鈕、也不會載入任何小遊戲程式。要對所有人開放：拿掉 `dist/index.html` 的兩段開關腳本（`minigames-on`）並恢復靜態載入、再拿掉 `minigames.css` 開頭的 `.mg-entry{display:none}`。要整個關掉：revert 網站那個合併 commit 即可（後端沒人呼叫就沒負載）。
+
+**明天到公司，從這裡接手：**
+
+1. `git pull`（main）。本機啟動：`cd EMC-ART-Pixel-Office; node server.cjs`（網站 8787），`cd worker; npx wrangler dev --local --port 8799`（排行榜與連線躲貓貓；localhost 自動連它）。測試網址帶 `?minigames=1`。
+2. **Codex 素材（還沒進遊戲）**：圖集草稿在 `design/minigames-art/`：`raw/`（Codex 原圖）、`processed-soft/`（去背後的圖集與 `*.preview.png` 審稿圖）、`prompts/`（提示詞）、`*.soft.spec.json`（切格規格）。六張草稿：ui-skin、treasure-items、hoops-props、deadline-ui、hideseek-markers 已切成圖集（看 `processed-soft/*.preview.png`）；**guest-character（第 6 位訪客角色，正面／側面／背面）只有原圖 `raw/guest-character-v1.png`，還沒切格**（`process-art.mjs` 目前只支援正方形格，要切它得先加 cellW／cellH 支援，或手動裁三個 512×768 的格子）。**每張審稿通過才整合**：複製 `processed-soft/*.atlas.png` 與 `*.json` 到 `dist/minigames/assets/`，再改遊戲讀圖（見下），沒有圖時遊戲會退回程式繪製。重畫：改 `prompts/*.body.md` 後 `node tools/run-codex-art.mjs <名稱>`（先刪 `raw/<名稱>.png`），再 `node tools/process-art.mjs raw/<名稱>.png <名稱>.soft.spec.json processed-soft`。
+3. **素材要接的地方**：尋寶道具（`assets/treasure-items.js` 現在是 10×10 程式點陣）、投籃場景（`games/hoops.js` 的紙團／垃圾桶／風向）、介面皮膚（`core/ui.js` 的 `pixelIcon` 與 `minigames.css`，樣式檔尾預留 `.mg-art-ui`）、躲貓貓標記與第 6 位角色（`games/hideseek-draw.js` 的 `AVATAR_ROWS`、`drawPerson`）。
+4. **還沒驗證**：iPhone Safari 實機（投籃拖曳、躲貓貓搖桿、輸入法）、投籃分數在 iPhone 上是否與伺服器一致（`Math.sin` 的最後一位小數）、真人試玩躲貓貓平衡（`hideseek-sim.js` 的 `RULES`；機器人尋找者目前偏強）、真實網路下連線躲貓貓。
+5. **已知缺口**：排行榜沒有管理端刪除（暱稱不當時只能直接清 `MinigameBoard` 的資料）；尋寶位置依螢幕而異，只能簡易驗證；地毯磚（投籃素材）不夠無縫、紙團有點像雲。
+6. 改了之後的上線流程：`cd worker && npx wrangler deploy`（有改 Worker 才需要）→ 網站 push main（pre-push 會跑煙霧測試）。改地圖：先 `node tools/capture-office-map.mjs` 再 `node tools/build-office-map.mjs`。
+
+**本機測試用的帳號與金鑰**：沒有。前端沒有任何秘密；排行榜用匿名裝置碼。

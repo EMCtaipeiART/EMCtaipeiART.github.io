@@ -193,6 +193,17 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-10-27 Asia/Taipei — 像素辦公室：小遊戲上架（預設隱藏，網址帶 ?minigames=1 才出現）
+
+- 修改目的：新增四款小遊戲（辦公室尋寶、廢紙投籃、截稿倒數、辦公室躲貓貓單機與連線），以及伺服器驗證的排行榜；先上架給管理者與 Machi 測試，不對一般同事開放。
+- 影響檔案：`EMC-ART-Pixel-Office/dist/minigames/**`（新增）、`dist/index.html`（入口開關與樣式）、`dist/app.js`（只多 2 行 `window.__pixelOffice` 橋接，放在 `toScene` 後面，不能放檔尾，否則 radial 測試會壞）、`dist/assets/office-map-v1.webp`、`worker/src/{hide-room,minigame-board,minigame-verify,index}.ts`、`worker/wrangler.jsonc`（新增兩個 Durable Object：migration v3 `HideSeekRoom`、v4 `MinigameBoard`）、`worker/test/`、`tests/minigames-core.test.mjs`、`EMC-ART-Pixel-Office/tools/`、`docs/MINIGAMES.md`。
+- 影響功能：測試入口 `https://emc-art.com/EMC-ART-Pixel-Office/dist/?minigames=1`（同樣適用 `https://emctaipeiart.github.io/EMC-ART-Pixel-Office/dist/?minigames=1`）。沒帶參數時按鈕隱藏、完全不載入小遊戲程式。Worker 新增路由 `/minigames/run|submit|board` 與 WebSocket `/hideseek`；既有路由與資料表不變。
+- 風險區塊：Worker 新增的 Durable Object 會計費（連線躲貓貓進行中持續計算時間）；排行榜匿名、只能擋改紀錄與假分數，擋不住照人類速度解題的腳本；躲貓貓機器人尋找者偏強、尚未真人試玩平衡。
+- 已檢查／驗證方式：前端 `node --test tests/minigames-core.test.mjs` 41 項、Worker `vitest` hide-room 13＋minigame-board 16＋duel-room 2、`tsc --noEmit`、pre-push 煙霧測試；本機瀏覽器完整玩過四款，排行榜伺服器分數與客戶端逐球／逐題一致。`backend` 測試在 main 上本來就有 35 項失敗（與本次無關，本次沒有新增失敗）。
+- 部署狀態：Worker 已 `wrangler deploy`（Version 7125962d-7177-4470-bf0e-c1db9f32df2c，含 migration v3、v4）；網站已推送 main 由 GitHub Pages 發布。回滾：網站 revert 合併 commit；Worker `npx wrangler rollback`（migration 不能撤銷，但只是新增兩個類別，無害）。
+- 尚未完成（明天接手看 `EMC-ART-Pixel-Office/docs/MINIGAMES.md` 的「交接」一節）：Codex 素材審稿與整合、iPhone Safari 實機、躲貓貓平衡、管理端刪除排行榜資料。
+- commit：見 `git log`（feature/minigames 合併進 main）
+
 ### 2026-10-17 Asia/Taipei — 像素辦公室：加班特效改成舞台聚光＋冷色調＋藍紫鬼火（取代貼圖黑眼圈與鬼火）
 
 - 修改目的：貼圖式黑眼圈與鬼火要靠每個角色的眼睛、頭部位置對位，頭型不同就常常錯位，想換成不依賴臉的表現方式；同時要顧到手機發燙與白色背景。

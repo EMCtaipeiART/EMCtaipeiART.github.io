@@ -21,7 +21,6 @@ node_modules/
 
 exports/
 EMC-ART-Pixel-Office/design/office-map/office-map-source.png
-EMC-ART-Pixel-Office/design/minigames-art/raw/
+EMC-ART-Pixel-Office/design/minigames-art/raw/*.log
 EMC-ART-Pixel-Office/design/minigames-art/refs/
 EMC-ART-Pixel-Office/design/minigames-art/processed/
-EMC-ART-Pixel-Office/design/minigames-art/processed-soft/
