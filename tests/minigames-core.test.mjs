@@ -110,3 +110,30 @@ test('尋寶：計分規則',()=>{
   assert.equal(treasureScore({found:5,timeLeft:50,hintUsed:true}),550);
   assert.equal(treasureScore({found:0,timeLeft:0,hintUsed:true}),0);// 不會變負分
 });
+
+// ---- Phase 3：廢紙投籃 ----
+import {GEO,createBall,stepBall,launchVelocity,pointsFor,previewPath,binXAt,makeWindSchedule,windAt} from '../EMC-ART-Pixel-Office/dist/minigames/games/hoops-sim.js';
+function fly(vx,vy,env={binX:GEO.binBaseX,wind:0}){const b=createBall(vx,vy);for(let i=0;i<60*8;i++){const ev=stepBall(b,1/60,env);if(ev)return {...ev,touched:b.touched};}return {type:'timeout'};}
+function search(pred){for(let a=25;a<=80;a+=.5)for(let sp=350;sp<=1190;sp+=5){const r=a*Math.PI/180,res=fly(Math.cos(r)*sp,-Math.sin(r)*sp);if(pred(res))return {a,sp,res};}return null;}
+
+test('投籃：存在空心進球，也存在碰框／板後的普通進球',()=>{
+  assert.ok(search(r=>r.type==='score'&&r.swish),'找不到空心');
+  assert.ok(search(r=>r.type==='score'&&!r.swish),'找不到普通進球');
+});
+test('投籃：太弱的球落地算沒進，且 60fps 與 120fps 結果一致',()=>{
+  assert.equal(fly(100,-100).type,'miss');
+  const hit=search(r=>r.type==='score'&&r.swish),r=hit.a*Math.PI/180,vx=Math.cos(r)*hit.sp,vy=-Math.sin(r)*hit.sp;
+  const b=createBall(vx,vy);let ev=null;for(let i=0;i<60*8&&!ev;i++)ev=stepBall(b,1/120,{binX:GEO.binBaseX,wind:0})||stepBall(b,1/120,{binX:GEO.binBaseX,wind:0});
+  assert.equal(ev&&ev.type,'score');
+});
+test('投籃：同一發球結果可重現',()=>{const h=search(r=>r.type==='score');const r=h.a*Math.PI/180;const run=()=>fly(Math.cos(r)*h.sp,-Math.sin(r)*h.sp);assert.deepEqual(run(),run());});
+test('投籃：力道上限與計分、連擊',()=>{
+  const a=launchVelocity(170,-170),b=launchVelocity(1700,-1700);assert.ok(Math.abs(a.vx-b.vx)<1e-6&&b.power===1);
+  assert.equal(pointsFor({swish:false,combo:1}),100);assert.equal(pointsFor({swish:true,combo:1}),150);
+  assert.equal(pointsFor({swish:true,combo:3}),190);assert.equal(pointsFor({swish:false,combo:99}),100+200);
+});
+test('投籃：籃框 20 秒前不動、風力由種子決定',()=>{
+  assert.equal(binXAt(0),GEO.binBaseX);assert.equal(binXAt(19.9),GEO.binBaseX);assert.notEqual(binXAt(30),GEO.binBaseX);
+  const s1=makeWindSchedule(createRng(hashString('wind@d')),60),s2=makeWindSchedule(createRng(hashString('wind@d')),60);
+  assert.deepEqual(s1,s2);assert.equal(windAt(s1,10),0);assert.ok(previewPath(500,-500,0).length>5);
+});
