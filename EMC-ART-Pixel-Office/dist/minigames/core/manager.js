@@ -4,7 +4,7 @@ import {createFixedLoop} from './loop.js';
 import {createInput} from './input.js';
 import {createRng,dailySeed,dayKey,hashString} from './rng.js';
 
-const COUNTDOWN=3;
+const COUNTDOWN=3;// 遊戲可用 def.countdown 覆寫（連線遊戲由伺服器決定開始時間，設 0）
 
 export function createMiniGameManager({ui,store,bridge,loopFactory=createFixedLoop,inputFactory=createInput,now=()=>new Date(),onError=e=>console.error('[minigame]',e)}){
   const games=new Map();
@@ -37,7 +37,8 @@ export function createMiniGameManager({ui,store,bridge,loopFactory=createFixedLo
     const ac=new AbortController(),signal=ac.signal;
     const day=dayKey(now()),seed=dailySeed(id,now());
     const g=ui.canvas.getContext('2d');
-    run={def,ac,phase:'countdown',t:COUNTDOWN,timeLeft:def.duration,score:0,day,seed,width:1,height:1,g,loop:null,input:null,ctx:null,ended:false,result:null};
+    const countdown=def.countdown??COUNTDOWN;
+    run={def,ac,phase:countdown>0?'countdown':'running',t:countdown,timeLeft:def.duration,score:0,day,seed,width:1,height:1,g,loop:null,input:null,ctx:null,ended:false,result:null};
     // ---- 輸入閘門：進行中辦公室不接收任何移動、拖曳、縮放 ----
     bridge.releaseKeys();
     const shield=e=>{const t=e.target;if(ui.root.contains(t))return;if(t===bridge.canvasEl||(t.closest&&t.closest('#joystick,aside')))e.stopPropagation();};
@@ -53,7 +54,7 @@ export function createMiniGameManager({ui,store,bridge,loopFactory=createFixedLo
     window.addEventListener('resize',layout,{signal});
     if(typeof ResizeObserver!=='undefined'){const ro=new ResizeObserver(layout);ro.observe(bridge.canvasEl);signal.addEventListener('abort',()=>ro.disconnect());}
     // ---- 介面 ----
-    ui.mount();ui.show(def.title);ui.setScore(0);ui.setTime(def.duration);ui.setExtra('');ui.setPauseLabel(false);
+    ui.mount();ui.show(def.title);ui.setPauseVisible(def.canPause!==false);ui.setScore(0);ui.setTime(def.duration);ui.setExtra('');ui.setPauseLabel(false);
     ui.onAction(act=>{
       if(act==='pause')togglePause();
       else if(act==='quit')close();
@@ -70,7 +71,7 @@ export function createMiniGameManager({ui,store,bridge,loopFactory=createFixedLo
       sceneToLocal(x,y){const c=bridge.sceneToClient(x,y),r=ui.root.getBoundingClientRect();return {x:c.x-r.left,y:c.y-r.top};},
       localToScene(x,y){const r=ui.root.getBoundingClientRect();return bridge.clientToScene(r.left+x,r.top+y);},
       scenePxScale:()=>bridge.pxPerScene(),
-      setExtra:t=>ui.setExtra(t),banner:t=>ui.banner(t),
+      setExtra:t=>ui.setExtra(t),setTime:sec=>ui.setTime(sec),banner:t=>ui.banner(t),
       end:(lines)=>finish(lines)
     };
     layout();
@@ -89,9 +90,11 @@ export function createMiniGameManager({ui,store,bridge,loopFactory=createFixedLo
       return;
     }
     if(run.phase!=='running')return;
-    run.timeLeft-=dt;ui.setTime(run.timeLeft);
+    // timer:'external'＝時間由遊戲（伺服器）決定：不倒數、不自動結束，遊戲自己呼叫 ctx.setTime／ctx.end
+    const external=run.def.timer==='external';
+    if(!external){run.timeLeft-=dt;ui.setTime(run.timeLeft);}
     guard(()=>run.def.update(run.ctx,dt));
-    if(run&&run.timeLeft<=0)finish();
+    if(run&&!external&&run.timeLeft<=0)finish();
   }
 
   function draw(alpha){
@@ -100,7 +103,7 @@ export function createMiniGameManager({ui,store,bridge,loopFactory=createFixedLo
     guard(()=>run.def.render(run.ctx,alpha,run.phase));
   }
 
-  function pause(){if(!run||run.phase!=='running')return;run.phase='paused';run.loop.stop();ui.setPauseLabel(true);ui.pausePanel();run.input.clear();}
+  function pause(){if(!run||run.phase!=='running'||run.def.canPause===false)return;run.phase='paused';run.loop.stop();ui.setPauseLabel(true);ui.pausePanel();run.input.clear();}
   function resume(){if(!run||run.phase!=='paused')return;run.phase='running';ui.setPauseLabel(false);ui.closePanel();run.loop.start();}
   function togglePause(){if(!run)return;if(run.phase==='paused')resume();else pause();}
 
@@ -109,10 +112,11 @@ export function createMiniGameManager({ui,store,bridge,loopFactory=createFixedLo
     run.ended=true;run.phase='finished';run.loop.stop();
     const r=run,extra=guard(()=>r.def.result?r.def.result(r.ctx):null,null)||{};
     const score=Math.max(0,Math.round(extra.score??r.score));
-    const record=store.submit(r.def.id,{score,day:r.day});
+    // noRecord：連線對戰不寫入任何成績紀錄或排行，避免互相配合刷分
+    const record=r.def.noRecord?null:store.submit(r.def.id,{score,day:r.day});
     r.result={score,record};
     ui.setScore(score);ui.banner('');
-    ui.results({title:r.def.title,score,lines:[...(extra.lines||[]),...lines],record,board:record.board});
+    ui.results({title:r.def.title,score,lines:[...(extra.lines||[]),...lines],record,board:record?record.board:[],again:!r.def.noAgain});
   }
 
   // 例外時的安全退出：不留下任何事件、計時器或被鎖住的輸入。
@@ -126,8 +130,10 @@ export function createMiniGameManager({ui,store,bridge,loopFactory=createFixedLo
     r.ac.abort();// 一次移除所有事件監聽（輸入、閘門、resize、visibility）
     ui.hide();ui.unmount();
     bridge.releaseKeys();bridge.markDirty();
+    for(const fn of [...closeListeners])try{fn(r.def.id);}catch(e){onError(e);}
   }
+  const closeListeners=new Set();
 
-  return {register,open,close,pause,resume,list:()=>[...games.values()].map(g=>({id:g.id,title:g.title})),
+  return {register,open,close,pause,resume,onClosed:fn=>{closeListeners.add(fn);return ()=>closeListeners.delete(fn);},get(id){return games.get(id);},list:()=>[...games.values()].map(g=>({id:g.id,title:g.title})),
     get active(){return !!run;},get phase(){return run?run.phase:'idle';},get lastResult(){return run?run.result:null;}};
 }

@@ -18,7 +18,7 @@ function setupEnv(){
   const ui={
     root:{style:{},contains:()=>false},canvas:{width:0,height:0,getContext:()=>({setTransform(){},clearRect(){}}),addEventListener:fakeTarget().addEventListener},
     calls:[],mounted:false,
-    mount(){this.mounted=true;},unmount(){this.mounted=false;},show(){},hide(){},setTime(){},setScore(){},setExtra(){},setPauseLabel(){},banner(){},pausePanel(){},closePanel(){},
+    mount(){this.mounted=true;},unmount(){this.mounted=false;},show(){},hide(){},setTime(){},setScore(){},setExtra(){},setPauseLabel(){},setPauseVisible(){},banner(){},pausePanel(){},closePanel(){},
     results(r){this.last=r;},onAction(fn,signal){this.act=fn;}
   };
   ui.canvas=Object.assign(fakeTarget(),{width:0,height:0,getContext:()=>({setTransform(){},clearRect(){}}),getBoundingClientRect:()=>({left:0,top:0,width:800,height:600})});
@@ -249,4 +249,45 @@ test('躲貓貓：地圖沒有擠不過去的窄縫（家具之間、家具與�
   const all=[...MAP.solids,...walls];
   for(let i=0;i<all.length;i++)for(let j=i+1;j<all.length;j++){const g=gap(all[i],all[j]);if(g>0)assert.ok(g>=need,(all[i].id||'牆')+' 與 '+(all[j].id||'牆')+' 間距 '+g.toFixed(1)+' 太窄');}
   for(const z of MAP.zones)for(const s of MAP.solids)assert.ok(gap(z,s)>=0&&!(z.x<s.x+s.w&&s.x<z.x+z.w&&z.y<s.y+s.h&&s.y<z.y+z.h),z.id+' 與 '+s.id+' 重疊');
+});
+
+// ---- Phase 6：連線客戶端 ----
+import {createNet,createRoomCode,hideSeekServerUrl} from '../EMC-ART-Pixel-Office/dist/minigames/core/net.js';
+function fakeWS(){
+  const made=[];
+  class FakeWS{constructor(url){this.url=url;this.readyState=0;this.sent=[];made.push(this);}
+    send(s){this.sent.push(JSON.parse(s));}close(){this.readyState=3;}
+    open(){this.readyState=1;this.onopen&&this.onopen();}msg(o){this.onmessage&&this.onmessage({data:JSON.stringify(o)});}drop(code){this.readyState=3;this.onclose&&this.onclose({code});}}
+  return {FakeWS,made};
+}
+const mkNet=(extra={})=>{const {FakeWS,made}=fakeWS(),timers=[],states=[],msgs=[];
+  const net=createNet({url:'ws://x/hideseek',room:'ABCDEF',mode:'create',name:'小明',max:4,WS:FakeWS,setTimer:(fn,ms)=>{timers.push({fn,ms});return timers.length;},clearTimer(){},setTick:()=>1,clearTick(){},onMessage:m=>msgs.push(m),onState:(s,i)=>states.push([s,i&&i.code]),...extra});
+  return {net,made,timers,states,msgs};};
+
+test('連線：邀請碼只含易辨識字元；伺服器網址依環境選擇',()=>{
+  for(let i=0;i<50;i++)assert.match(createRoomCode(),/^[A-HJ-NP-Z2-9]{6}$/);
+  assert.equal(hideSeekServerUrl({hostname:'localhost',search:''}),'ws://127.0.0.1:8799/hideseek');
+  assert.match(hideSeekServerUrl({hostname:'emctaipeiart.github.io',search:''}),/^wss:\/\//);
+  assert.equal(hideSeekServerUrl({hostname:'emctaipeiart.github.io',search:'?hsServer=wss://t/x'}),'wss://t/x');
+});
+test('連線：建立房間帶人數、取得憑證後重連一律用 join＋憑證',()=>{
+  const {made,timers,states}=mkNet();
+  assert.match(made[0].url,/mode=create/);assert.match(made[0].url,/max=4/);assert.match(made[0].url,/name=%E5%B0%8F%E6%98%8E/);
+  made[0].open();made[0].msg({t:'welcome',token:'TOK123',you:'m0'});
+  made[0].drop(1006);// 意外斷線
+  assert.equal(states.at(-1)[0],'reconnecting');assert.equal(timers.length,1);
+  timers[0].fn();
+  assert.match(made[1].url,/mode=join/);assert.match(made[1].url,/token=TOK123/);assert.doesNotMatch(made[1].url,/max=/);
+});
+test('連線：致命關閉碼不重連；重連有次數上限；主動離開不重連',()=>{
+  for(const code of [4404,4409,4429,4408,4400]){const t=mkNet();t.made[0].open();t.made[0].drop(code);assert.equal(t.states.at(-1)[0],'closed');assert.equal(t.timers.length,0);}
+  const t=mkNet();t.made[0].open();
+  for(let i=0;i<5;i++){t.made.at(-1).drop(1006);assert.equal(t.states.at(-1)[0],'reconnecting');t.timers.at(-1).fn();}
+  t.made.at(-1).drop(1006);assert.equal(t.states.at(-1)[0],'closed');
+  const u=mkNet();u.made[0].open();u.net.close();assert.equal(u.states.at(-1)[0],'closed');assert.equal(u.timers.length,0);
+});
+test('連線：舊連線的遲來訊息不會干擾新連線',()=>{
+  const t=mkNet();t.made[0].open();t.made[0].drop(1006);t.timers[0].fn();
+  const old=t.made[0];old.msg({t:'snap'});assert.equal(t.msgs.length,0);
+  t.made[1].open();t.made[1].msg({t:'welcome',token:'T',you:'m0'});assert.equal(t.msgs.length,1);
 });

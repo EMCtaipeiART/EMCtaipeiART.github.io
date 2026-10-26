@@ -20,11 +20,12 @@ export function createUI(doc=document){
     banner(text){banner.textContent=text||'';banner.hidden=!text;},
     pausePanel(){panel.innerHTML='<h2>已暫停</h2><button type="button" class="mg-btn" data-act="pause">繼續</button><button type="button" class="mg-btn" data-act="quit">離開</button>';panel.hidden=false;},
     closePanel(){panel.hidden=true;},
-    results({title,score,lines=[],record,board=[]}){
+    setPauseVisible(v){q('.mg-hud [data-act=pause]').hidden=!v;},
+    results({title,score,lines=[],record,board=[],again=true}){
       const rows=board.map((r,i)=>'<li'+(record&&record.rank===i+1?' class="me"':'')+'><b>'+(i+1)+'</b><span>'+esc(r.day)+'</span><em>'+r.score+'</em></li>').join('');
       panel.innerHTML='<h2>'+esc(title)+'・結算</h2><p class="mg-big">'+score+' 分'+(record&&record.isBest?' <small>新紀錄！</small>':'')+'</p>'
         +lines.map(l=>'<p>'+esc(l)+'</p>').join('')+(rows?'<ol class="mg-board">'+rows+'</ol>':'')
-        +'<p class="mg-note">僅供娛樂，不作為任何工作績效依據。</p><button type="button" class="mg-btn" data-act="again">再玩一次</button><button type="button" class="mg-btn" data-act="quit">回辦公室</button>';
+        +'<p class="mg-note">僅供娛樂，不作為任何工作績效依據。</p>'+(again?'<button type="button" class="mg-btn" data-act="again">再玩一次</button>':'')+'<button type="button" class="mg-btn" data-act="quit">回辦公室</button>';
       panel.hidden=false;
     },
     onAction(fn,signal){root.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b)fn(b.dataset.act);},{signal});}

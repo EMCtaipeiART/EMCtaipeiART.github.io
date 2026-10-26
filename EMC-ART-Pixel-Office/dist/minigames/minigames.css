@@ -28,3 +28,20 @@
   .mg-hud>span{padding:3px 7px;font-size:12px}
   .mg-hud .mg-btn{padding:3px 9px;min-height:30px;font-size:12px}
 }
+
+.mg-lobby{position:fixed;z-index:65;left:50%;top:50%;transform:translate(-50%,-50%);width:min(360px,92vw);max-height:88vh;overflow:auto;background:#fff;border:3px solid #182e54;border-radius:12px;padding:16px 20px;box-shadow:0 8px 0 rgba(24,46,84,.25);color:#182e54;font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif}
+.mg-lobby[hidden]{display:none}
+.mg-lobby h2{margin:0 0 10px;font-size:20px}
+.mg-lobby label{display:block;font-size:13px;font-weight:700;margin-bottom:10px}
+.mg-lobby input,.mg-lobby select{font:inherit;border:2px solid #182e54;border-radius:8px;padding:6px 8px;min-height:36px;box-sizing:border-box}
+.mg-lobby label input{display:block;width:100%;margin-top:4px}
+.mg-lobby .row{display:flex;gap:8px;margin:8px 0}
+.mg-lobby .row input{flex:1;min-width:0;text-transform:uppercase;letter-spacing:2px}
+.mg-lobby .mg-btn{margin-top:6px}
+.mg-lobby .mg-btn[disabled]{opacity:.45;cursor:not-allowed}
+.mg-lobby .code{font-size:28px;letter-spacing:4px;background:#fff3c4;padding:0 8px;border-radius:6px}
+.mg-lobby .hint{font-size:13px;opacity:.75;margin:4px 0}
+.mg-lobby .err{color:#c0392b;font-size:13px;min-height:1em;margin:6px 0}
+.mg-lobby .roster{list-style:none;margin:8px 0;padding:0}
+.mg-lobby .roster li{display:flex;justify-content:space-between;padding:4px 8px;border-radius:6px;background:#f2f5fb;margin-bottom:4px}
+.mg-lobby .roster li.off{opacity:.5}

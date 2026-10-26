@@ -38,6 +38,10 @@
       {
         "name": "DUEL_ROOM",
         "class_name": "DuelRoom"
+      },
+      {
+        "name": "HIDESEEK_ROOM",
+        "class_name": "HideSeekRoom"
       }
     ]
   },
@@ -49,6 +53,10 @@
     {
       "tag": "v2",
       "new_sqlite_classes": ["DuelRoom"]
+    },
+    {
+      "tag": "v3",
+      "new_sqlite_classes": ["HideSeekRoom"]
     }
   ],
   "triggers": {

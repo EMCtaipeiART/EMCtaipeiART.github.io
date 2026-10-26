@@ -71,18 +71,20 @@ export function canSee(seeker,hider,map=MAP){
 
 // ───────── 遊戲狀態 ─────────
 /** rng：{next,int,shuffle}；count：2–6 位玩家；seekerIndex 預設用 rng 隨機挑。 */
-export function createGame({rng,count=4,map=MAP,seekerIndex}){
+export function createGame({rng,count=4,map=MAP,seekerIndex,timing={}}){
   if(count<RULES.minPlayers||count>RULES.maxPlayers)throw new Error('players must be '+RULES.minPlayers+'-'+RULES.maxPlayers);
   const seeker=seekerIndex??rng.int(0,count-1),spawns=rng.shuffle(map.spawns);
   const players=Array.from({length:count},(_,i)=>({id:'p'+i,index:i,name:i===0?'你':String.fromCharCode(64+i),color:PLAYER_COLORS[i],role:i===seeker?'seeker':'hider',
     x:spawns[i].x,y:spawns[i].y,dir:1,state:'alive',cooldown:0,caughtAt:null,catches:0,inCover:false}));
-  return {map,players,t:0,phase:'hide',over:false,winner:null,events:[],seekerId:'p'+seeker};
+  // timing：只給測試縮短時間用（伺服器在正式環境不接受客戶端指定）
+  return {map,players,t:0,phase:'hide',over:false,winner:null,events:[],seekerId:'p'+seeker,hideSecs:timing.hideSecs??RULES.hideSecs,totalSecs:(timing.hideSecs??RULES.hideSecs)+(timing.seekSecs??RULES.seekSecs)};
 }
 export const seekerOf=g=>g.players.find(p=>p.role==='seeker');
 export const hidersOf=g=>g.players.filter(p=>p.role==='hider');
 export const aliveHiders=g=>hidersOf(g).filter(p=>p.state==='alive');
 
-function move(g,p,ax,ay,dt){
+/** 移動一步（含碰撞）。單機、伺服器與客戶端預測共用，結果必須完全相同。g 只需要 g.map。 */
+export function movePlayer(g,p,ax,ay,dt){
   const l=Math.hypot(ax,ay);if(l<1e-6)return;
   const sp=p.role==='seeker'?RULES.seekerSpeed:RULES.hiderSpeed,k=Math.min(l,1)/l;
   p.x+=ax*k*sp*dt;p.y+=ay*k*sp*dt;if(ax)p.dir=ax>0?1:-1;
@@ -98,13 +100,13 @@ export function stepGame(g,inputs,dt){
   g.events=[];
   if(g.over)return g;
   g.t+=dt;
-  const phase=g.t<RULES.hideSecs?'hide':'seek';
+  const phase=g.t<g.hideSecs?'hide':'seek';
   if(phase!==g.phase){g.phase=phase;g.events.push({type:'phase',phase});}
   for(const p of g.players){
     if(p.cooldown>0)p.cooldown-=dt;
     if(p.state!=='alive')continue;
     const inp=inputs[p.id]||{};
-    if(!(p.role==='seeker'&&g.phase==='hide'))move(g,p,inp.dx||0,inp.dy||0,dt);
+    if(!(p.role==='seeker'&&g.phase==='hide'))movePlayer(g,p,inp.dx||0,inp.dy||0,dt);
     p.inCover=!!zoneAt(p,g.map);
   }
   const sk=seekerOf(g),skInp=inputs[sk.id]||{};
@@ -116,14 +118,14 @@ export function stepGame(g,inputs,dt){
     else g.events.push({type:'miss',id:sk.id});
   }
   if(aliveHiders(g).length===0){g.over=true;g.winner='seeker';g.events.push({type:'over',winner:'seeker'});}
-  else if(g.t>=TOTAL_SECS){g.over=true;g.winner='hiders';g.events.push({type:'over',winner:'hiders'});}
+  else if(g.t>=g.totalSecs){g.over=true;g.winner='hiders';g.events.push({type:'over',winner:'hiders'});}
   return g;
 }
 
 /** 本地排行用的分數（不是績效指標）：尋找者每抓一人 300，全抓完再加剩餘秒數×3；躲藏者撐到最後 400，另加存活秒數×2。 */
 export function scoreFor(g,id){
   const p=g.players.find(x=>x.id===id);if(!p)return 0;
-  if(p.role==='seeker')return p.catches*300+(g.winner==='seeker'?Math.floor(Math.max(TOTAL_SECS-g.t,0))*3:0);
-  const survived=Math.max(0,(p.state==='caught'?p.caughtAt:g.t)-RULES.hideSecs);
+  if(p.role==='seeker')return p.catches*300+(g.winner==='seeker'?Math.floor(Math.max(g.totalSecs-g.t,0))*3:0);
+  const survived=Math.max(0,(p.state==='caught'?p.caughtAt:g.t)-g.hideSecs);
   return Math.floor(survived)*2+(p.state==='alive'&&g.winner==='hiders'?400:0);
 }

@@ -1,10 +1,9 @@
 // 辦公室躲貓貓（單機原型）：你加上 1–5 個機器人，驗證碰撞、遮蔽與規則。多人連線（Phase 6）會沿用同一份 hideseek-sim 規則。
 import {RULES,MAP,TOTAL_SECS,createGame,stepGame,canSee,aliveHiders,seekerOf,scoreFor,dist} from './hideseek-sim.js';
 import {buildNav,createBot,botInput} from './hideseek-ai.js';
+import {fitView,drawBoard,drawPerson} from './hideseek-draw.js';
 
 const HUD_TOP=56,PLAYERS=4,JOY_R=54,BTN_R=40;
-const tag=(g,text,x,y,col)=>{g.font='700 12px sans-serif';g.textAlign='center';const w=g.measureText(text).width+8;g.fillStyle=col;g.fillRect(Math.round(x-w/2),Math.round(y-13),Math.round(w),16);g.fillStyle='#fff';g.fillText(text,x,y-1);};
-
 export const hideseekGame={
   id:'hideseek',title:'辦公室躲貓貓',duration:TOTAL_SECS,
   start(ctx){
@@ -24,11 +23,7 @@ export const hideseekGame={
     ctx.input.on('up',p=>{const s=this.state;if(s&&s.joy&&s.joy.id===p.id)s.joy=null;});
   },
   resize(ctx){this.fit(ctx);},
-  fit(ctx){
-    const s=this.state;if(!s)return;
-    const availH=ctx.height-HUD_TOP-8,sc=Math.min(ctx.width/MAP.w,availH/MAP.h);
-    s.view={s:sc,ox:(ctx.width-MAP.w*sc)/2,oy:HUD_TOP+(availH-MAP.h*sc)/2};
-  },
+  fit(ctx){const s=this.state;if(s)s.view=fitView(ctx,HUD_TOP);},
   inBox(p,b){return p.x>=b.x&&p.x<=b.x+b.w&&p.y>=b.y&&p.y<=b.y+b.h;},
   humanInput(ctx){
     const s=this.state,a=ctx.input.axis();let dx=a.x,dy=a.y;
@@ -57,35 +52,15 @@ export const hideseekGame={
   },
   render(ctx){
     const s=this.state,g=ctx.g,G=s.game,v=s.view,me=G.players[0],seeker=seekerOf(G);
-    const X=x=>v.ox+x*v.s,Y=y=>v.oy+y*v.s,R=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(Math.round(X(x)),Math.round(Y(y)),Math.ceil(w*v.s),Math.ceil(h*v.s));};
-    g.imageSmoothingEnabled=false;
-    g.fillStyle='rgba(238,243,251,.98)';g.fillRect(0,0,ctx.width,ctx.height);
-    R(MAP.bounds.x,MAP.bounds.y,MAP.bounds.w,MAP.bounds.h,'#f7f9fd');
-    g.strokeStyle='rgba(24,46,84,.08)';g.lineWidth=1;
-    for(let x=MAP.bounds.x;x<=MAP.bounds.x+MAP.bounds.w;x+=40){g.beginPath();g.moveTo(X(x)+.5,Y(MAP.bounds.y));g.lineTo(X(x)+.5,Y(MAP.bounds.y+MAP.bounds.h));g.stroke();}
-    for(let y=MAP.bounds.y;y<=MAP.bounds.y+MAP.bounds.h;y+=40){g.beginPath();g.moveTo(X(MAP.bounds.x),Y(y)+.5);g.lineTo(X(MAP.bounds.x+MAP.bounds.w),Y(y)+.5);g.stroke();}
-    g.strokeStyle='#182e54';g.lineWidth=4;g.strokeRect(X(MAP.bounds.x),Y(MAP.bounds.y),MAP.bounds.w*v.s,MAP.bounds.h*v.s);
-    // 遮蔽區域
-    g.setLineDash([6,5]);g.strokeStyle='rgba(76,175,106,.9)';g.lineWidth=2;
-    for(const z of MAP.zones){R(z.x,z.y,z.w,z.h,'rgba(76,175,106,.12)');g.strokeRect(X(z.x),Y(z.y),z.w*v.s,z.h*v.s);}
-    g.setLineDash([]);
-    // 家具：高的（擋視線）深色，低的淺色
-    const col={cabinet:'#3a4a68',shelf:'#3a4a68',partition:'#182e54',desk:'#8c98ad',table:'#a4afc2',sofa:'#b66a5a',plant:'#4caf6a'};
-    for(const o of MAP.solids){R(o.x,o.y,o.w,o.h,col[o.kind]||'#8c98ad');g.strokeStyle='#182e54';g.lineWidth=2;g.strokeRect(X(o.x),Y(o.y),o.w*v.s,o.h*v.s);}
+    const X=x=>v.ox+x*v.s,Y=y=>v.oy+y*v.s;
+    drawBoard(g,ctx,v);
     // 玩家（依 y 排序）。尋找者視角：看不到的躲藏者不畫；其他情況全畫
     const seekerView=me.role==='seeker'&&me.state==='alive',spectating=me.state==='caught';
     const list=G.players.slice().sort((a,b)=>a.y-b.y);
     for(const p of list){
       if(seekerView&&p.role==='hider'&&(p.state!=='alive'||!canSee(me,p)))continue;
       if(p.state==='caught'&&!spectating&&me.role!=='seeker')continue;
-      const x=X(p.x),y=Y(p.y),r=RULES.r*v.s,hidden=p.role==='hider'&&p.inCover&&p.id!=='p0';
-      g.globalAlpha=p.state==='caught'?.35:(hidden&&!spectating?.55:1);
-      g.fillStyle=p.color;g.fillRect(Math.round(x-r),Math.round(y-r*.2),Math.round(r*2),Math.round(r*1.4));// 身體
-      g.fillStyle='#ffe0bd';g.fillRect(Math.round(x-r*.7),Math.round(y-r*1.5),Math.round(r*1.4),Math.round(r*1.3));// 頭
-      g.strokeStyle='#182e54';g.lineWidth=2;g.strokeRect(Math.round(x-r),Math.round(y-r*.2),Math.round(r*2),Math.round(r*1.4));
-      g.globalAlpha=1;
-      if(p.id==='p0'){g.strokeStyle='#ffd24a';g.lineWidth=3;g.beginPath();g.ellipse(x,y+r*1.3,r*1.5,r*.5,0,0,Math.PI*2);g.stroke();}
-      tag(g,p.name+(p.role==='seeker'?'（尋找者）':''),x,y-r*1.7,p.role==='seeker'?'#d9534f':'#182e54');
+      drawPerson(g,v,p,{me:p.id==='p0',ghost:p.state==='caught',faded:p.role==='hider'&&p.inCover&&p.id!=='p0'&&!spectating});
     }
     // 尋找者視野圈與躲藏階段遮罩
     if(seekerView){g.strokeStyle='rgba(217,83,79,.35)';g.lineWidth=2;g.setLineDash([4,6]);g.beginPath();g.arc(X(me.x),Y(me.y),RULES.vision*v.s,0,Math.PI*2);g.stroke();g.setLineDash([]);}

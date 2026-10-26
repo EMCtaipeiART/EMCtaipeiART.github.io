@@ -25,6 +25,7 @@ interface __BaseEnv_Env {
 	GMAIL_OAUTH_CLIENT_SECRET: string;
 	DATABASE_COORDINATOR: DurableObjectNamespace<import("./src/index").DatabaseCoordinator>;
 	DUEL_ROOM: DurableObjectNamespace<import("./src/index").DuelRoom>;
+	HIDESEEK_ROOM: DurableObjectNamespace<import("./src/index").HideSeekRoom>;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
