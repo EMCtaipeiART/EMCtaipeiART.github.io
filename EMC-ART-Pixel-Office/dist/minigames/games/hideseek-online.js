@@ -1,7 +1,7 @@
 // 辦公室躲貓貓（連線版）：位置、抓捕、勝負全由伺服器算。這裡只做三件事——
 // 送出輸入、預測自己的移動（和伺服器同一份 movePlayer，收到快照就校正並重播未確認的輸入）、內插別人的位置。
 import {MAP,RULES,movePlayer} from './hideseek-sim.js';
-import {fitView,drawBoard,drawPerson} from './hideseek-draw.js';
+import {loadArt,makeView,drawBoard,drawPerson,drawSorted,drawFog,drawMinimap,resetMotion} from './hideseek-draw.js';
 import {hideSeekSession} from '../core/net.js';
 
 const HUD_TOP=56,JOY_R=54,BTN_R=40,STEP=1/30,INTERP_MS=110;
@@ -10,10 +10,11 @@ const lerp=(a,b,t)=>a+(b-a)*t;
 export const hideseekOnline={
   id:'hideseek-online',title:'躲貓貓（連線）',duration:3600,timer:'external',countdown:0,canPause:false,noRecord:true,noAgain:true,
   start(ctx){
+    loadArt(()=>ctx.bridge.markDirty());resetMotion();
     const S=hideSeekSession,info=S.info;
-    const meta=Object.fromEntries(info.players.map(p=>[p.id,p]));
+    const meta=Object.fromEntries(info.players.map((p,i)=>[p.id,{...p,index:i}]));
     this.state={S,info,meta,role:info.role,you:info.you,ents:new Map(),me:{x:0,y:0,dir:1,role:info.role,alive:true,cover:false,ready:false},
-      pending:[],seq:0,acc:0,phase:'hide',time:0,left:0,caught:new Set(),view:{s:1,ox:0,oy:0},joy:null,btn:false,wasCatch:false,
+      pending:[],seq:0,acc:0,phase:'hide',time:0,left:0,caught:new Set(),view:null,mode:'follow',modeBtn:null,wasM:false,joy:null,btn:false,wasCatch:false,
       clock:0,bannerUntil:0,note:'',noteUntil:0,netNote:'',over:null,voided:null,catchBox:null,lastExtra:''};
     ctx.banner(info.role==='seeker'?'你是尋找者':'你是躲藏者');this.state.bannerUntil=2;
     this.fit(ctx);
@@ -21,6 +22,7 @@ export const hideseekOnline={
     S.onNetState=(st,i)=>{const s=this.state;if(!s)return;s.netNote=st==='reconnecting'?'連線中斷，重新連線中…':'';if(st==='closed'&&!s.over){s.voided='與伺服器的連線已中斷';ctx.end();}};
     ctx.input.on('down',p=>{
       const s=this.state;if(!s)return;
+      if(s.modeBtn&&p.x>=s.modeBtn.x&&p.x<=s.modeBtn.x+s.modeBtn.w&&p.y>=s.modeBtn.y&&p.y<=s.modeBtn.y+s.modeBtn.h){s.mode=s.mode==='full'?'follow':'full';return;}
       if(s.catchBox&&Math.hypot(p.x-s.catchBox.x,p.y-s.catchBox.y)<=BTN_R+10){s.btn=true;return;}
       if(p.x<ctx.width*.6&&!s.joy)s.joy={id:p.id,ox:p.x,oy:p.y,x:p.x,y:p.y};
     });
@@ -28,7 +30,7 @@ export const hideseekOnline={
     ctx.input.on('up',p=>{const s=this.state;if(s&&s.joy&&s.joy.id===p.id)s.joy=null;});
   },
   resize(ctx){this.fit(ctx);},
-  fit(ctx){const s=this.state;if(s)s.view=fitView(ctx,HUD_TOP);},
+  fit(ctx){const s=this.state;if(s)s.view=makeView(ctx,HUD_TOP,s.mode,s.me.ready?s.me:null);},
   canMove(){const s=this.state;return s.me.ready&&s.me.alive&&!(s.role==='seeker'&&s.phase==='hide');},
   // ───────── 伺服器訊息 ─────────
   onNet(ctx,m){
@@ -68,6 +70,7 @@ export const hideseekOnline={
   },
   update(ctx,dt){
     const s=this.state;s.clock+=dt;
+    const mk=ctx.input.isDown('KeyM');if(mk&&!s.wasM)s.mode=s.mode==='full'?'follow':'full';s.wasM=mk;
     if(s.joy&&ctx.input.pointers.size===0)s.joy=null;
     if(s.bannerUntil&&s.clock>s.bannerUntil){ctx.banner('');s.bannerUntil=0;}
     s.acc+=dt;
@@ -93,22 +96,29 @@ export const hideseekOnline={
     return {x:lerp(a.x,c.x,k),y:lerp(a.y,c.y,k),dir:c.dir,flags:c.flags};
   },
   render(ctx){
-    const s=this.state,g=ctx.g,v=s.view,now=performance.now(),me=s.me;
+    const s=this.state,g=ctx.g,now=performance.now(),me=s.me;
+    s.view=makeView(ctx,HUD_TOP,s.mode,me.ready?me:null);const v=s.view;
     drawBoard(g,ctx,v);
-    const list=[];
+    const list=[],dots=[];
     if(me.ready)list.push({id:s.you,x:me.x,y:me.y,self:true,flags:me.alive?0:1,role:s.role});
     for(const [id,ent] of s.ents){const p=this.posOf(ent,now);if(p)list.push({id,x:p.x,y:p.y,flags:p.flags,role:p.flags&4?'seeker':'hider'});}
-    list.sort((a,b)=>a.y-b.y);
-    for(const p of list){const mt=s.meta[p.id]||{name:'?',color:'#888'};drawPerson(g,v,{x:p.x,y:p.y,color:mt.color,name:mt.name,role:p.role},{me:p.self,ghost:!!(p.flags&1)});}
-    const X=x=>v.ox+x*v.s,Y=y=>v.oy+y*v.s;
+    const ents=list.map(p=>{
+      const mt=s.meta[p.id]||{name:'?',color:'#888',index:0};
+      dots.push({x:p.x,y:p.y,color:p.self?'#ffd24a':(p.role==='seeker'?'#d9534f':mt.color),me:!!p.self});
+      return {depth:p.y,draw:()=>drawPerson(g,v,{id:p.id,x:p.x,y:p.y,color:mt.color,name:mt.name,role:p.role,index:mt.index},{me:p.self,ghost:!!(p.flags&1),now})};
+    });
+    drawSorted(g,ctx,v,ents);
     const blind=s.role==='seeker'&&me.alive;
-    if(blind&&me.ready){g.strokeStyle='rgba(217,83,79,.35)';g.lineWidth=2;g.setLineDash([4,6]);g.beginPath();g.arc(X(me.x),Y(me.y),RULES.vision*v.s,0,Math.PI*2);g.stroke();g.setLineDash([]);}
+    if(blind&&me.ready)drawFog(g,ctx,v,me,RULES.vision,HUD_TOP);
     if(s.role==='seeker'&&s.phase==='hide'){g.fillStyle='rgba(24,46,84,.93)';g.fillRect(0,HUD_TOP,ctx.width,ctx.height-HUD_TOP);g.fillStyle='#fff';g.font='900 28px sans-serif';g.textAlign='center';g.fillText('閉眼中… '+Math.max(0,Math.ceil(s.info.hideSecs-s.time))+' 秒',ctx.width/2,ctx.height/2);}
+    drawMinimap(g,ctx,v,HUD_TOP,s.role==='seeker'&&s.phase==='hide'?dots.filter(d=>d.me):dots);
+    const bw=64,bh=30,bx=10,by=HUD_TOP+8;s.modeBtn={x:bx,y:by,w:bw,h:bh};
+    g.fillStyle='#fff';g.fillRect(bx,by,bw,bh);g.strokeStyle='#182e54';g.lineWidth=2;g.strokeRect(bx,by,bw,bh);g.fillStyle='#182e54';g.font='700 13px sans-serif';g.textAlign='center';g.fillText(s.mode==='full'?'跟隨':'全圖',bx+bw/2,by+20);
     s.catchBox=null;
     if(s.role==='seeker'&&me.alive&&s.phase==='seek'){
-      const bx=ctx.width-BTN_R-16,by=ctx.height-BTN_R-16;s.catchBox={x:bx,y:by};
-      g.fillStyle='#d9534f';g.beginPath();g.arc(bx,by,BTN_R,0,Math.PI*2);g.fill();g.strokeStyle='#182e54';g.lineWidth=3;g.stroke();
-      g.fillStyle='#fff';g.font='900 18px sans-serif';g.textAlign='center';g.fillText('抓！',bx,by+6);
+      const bx2=ctx.width-BTN_R-16,by2=ctx.height-BTN_R-16;s.catchBox={x:bx2,y:by2};
+      g.fillStyle='#d9534f';g.beginPath();g.arc(bx2,by2,BTN_R,0,Math.PI*2);g.fill();g.strokeStyle='#182e54';g.lineWidth=3;g.stroke();
+      g.fillStyle='#fff';g.font='900 18px sans-serif';g.textAlign='center';g.fillText('抓！',bx2,by2+6);
     }
     if(s.joy){g.strokeStyle='rgba(24,46,84,.5)';g.lineWidth=3;g.beginPath();g.arc(s.joy.ox,s.joy.oy,JOY_R,0,Math.PI*2);g.stroke();
       const jx=s.joy.x-s.joy.ox,jy=s.joy.y-s.joy.oy,l=Math.min(Math.hypot(jx,jy),JOY_R)/(Math.hypot(jx,jy)||1);g.fillStyle='rgba(24,46,84,.6)';g.beginPath();g.arc(s.joy.ox+jx*l,s.joy.oy+jy*l,20,0,Math.PI*2);g.fill();}
@@ -116,7 +126,7 @@ export const hideseekOnline={
     if(!me.alive){g.fillStyle='#182e54';g.font='900 18px sans-serif';g.fillText('觀戰中',ctx.width/2,HUD_TOP+24);}
     if(s.note&&s.clock<s.noteUntil){g.fillStyle='#c0392b';g.font='900 18px sans-serif';g.fillText(s.note,ctx.width/2,HUD_TOP+(me.alive?24:48));}
     if(s.netNote){g.fillStyle='rgba(192,57,43,.95)';g.fillRect(0,HUD_TOP,ctx.width,28);g.fillStyle='#fff';g.font='700 14px sans-serif';g.fillText(s.netNote,ctx.width/2,HUD_TOP+19);}
-    if(s.clock<6&&!s.joy){g.fillStyle='#182e54';g.font='700 13px sans-serif';g.fillText(s.role==='seeker'?'WASD／方向鍵移動；靠近後按空白鍵或「抓！」':'WASD／方向鍵移動；躲進綠色區域，別被看到',ctx.width/2,ctx.height-14);}
+    if(s.clock<6&&!s.joy){g.fillStyle='#182e54';g.font='700 13px sans-serif';g.fillText(s.role==='seeker'?'WASD／方向鍵移動；靠近後按空白鍵或「抓！」；M 切換全圖':'WASD／方向鍵移動；躲進綠色區域，別被看到；M 切換全圖',ctx.width/2,ctx.height-14);}
   },
   result(ctx){
     const s=this.state;

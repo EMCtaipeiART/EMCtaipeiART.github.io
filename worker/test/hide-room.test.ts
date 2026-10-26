@@ -1,12 +1,19 @@
 import { env, runInDurableObject, SELF } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
-import { RULES, MAP, canSee, movePlayer, zoneCenter } from '../../EMC-ART-Pixel-Office/dist/minigames/games/hideseek-sim.js';
+import { RULES, MAP, canSee, lineOfSight, movePlayer, zoneCenter } from '../../EMC-ART-Pixel-Office/dist/minigames/games/hideseek-sim.js';
 
 const wait = (ms = 30) => new Promise(r => setTimeout(r, ms));
 async function until(cond: () => boolean, ms = 4000) {
   const end = Date.now() + ms;
   while (!cond() && Date.now() < end) await wait(10);
   return cond();
+}
+// 真實辦公室地圖：以出生點附近的開放空間為基準，找「放得下人、和基準點之間沒有高家具」的點
+const S0 = MAP.spawns[0];
+const freeAt = (x: number, y: number) => MAP.solids.every((s: any) => Math.hypot(x - Math.max(s.x, Math.min(x, s.x + s.w)), y - Math.max(s.y, Math.min(y, s.y + s.h))) >= RULES.r + 1);
+function openPoint(from: { x: number; y: number }, dist: number) {
+  for (let a = 0; a < 360; a += 15) { const p = { x: from.x + Math.cos(a * Math.PI / 180) * dist, y: from.y + Math.sin(a * Math.PI / 180) * dist }; if (freeAt(p.x, p.y) && lineOfSight(from, p)) return p; }
+  throw new Error('找不到空點');
 }
 let counter = 0;
 const newCode = () => ('T' + String(Date.now() % 1e9) + String(counter++)).slice(-6).toUpperCase().padStart(6, 'A').replace(/[^A-Z0-9]/g, 'X');
@@ -154,11 +161,11 @@ describe('HideSeekRoom 連線房間', () => {
     await inst(code, i => {
       const g = i.room.game, byId = (id: string) => g.players.find((p: any) => p.id === id);
       const skp = g.players.find((p: any) => p.role === 'seeker');
-      g.t = g.hideSecs + 0.1; skp.x = 200; skp.y = 300;
+      g.t = g.hideSecs + 0.1; skp.x = S0.x; skp.y = S0.y;
       const [a, b] = g.players.filter((p: any) => p.role === 'hider');
-      const z = MAP.zones.find(z => z.id === 'z-desks')!; const zc = zoneCenter(z);
+      const z = MAP.zones.find((z: any) => z.id === 'tea-south')!; const zc = zoneCenter(z);
       a.x = zc.x; a.y = zc.y;     // 遠處、在遮蔽區
-      b.x = 360; b.y = 270;       // 隔板（高家具）另一側附近
+      b.x = S0.x + RULES.vision + 300; b.y = S0.y;   // 超出視野
       void byId;
     });
     await wait(300);
@@ -166,7 +173,7 @@ describe('HideSeekRoom 連線房間', () => {
     expect(snap.phase).toBe('seek');
     expect(snap.p.map((p: any) => p[0]).sort()).toEqual([sk.id]);
     // 把 h1 帶到尋找者面前（開放空地、沒有遮蔽區）→ 看得到
-    await inst(code, i => { const g = i.room.game; const hs = g.players.filter((p: any) => p.role === 'hider'); hs[0].x = 260; hs[0].y = 300; });
+    await inst(code, i => { const g = i.room.game; const hs = g.players.filter((p: any) => p.role === 'hider'); const p = openPoint(S0, 300); hs[0].x = p.x; hs[0].y = p.y; });
     await wait(300);
     snap = sk.last('snap');
     const ids = snap.p.map((p: any) => p[0]);
@@ -181,7 +188,7 @@ describe('HideSeekRoom 連線房間', () => {
   it('抓捕：要在範圍內；被抓者收到通報並進入觀戰；全被抓則尋找者贏並回到大廳', async () => {
     const { code, host, all } = await startGame(3);
     const sk = seekerOf(all), hs = hidersOf(all);
-    await inst(code, i => { const g = i.room.game; g.t = g.hideSecs + 0.1; const s = g.players.find((p: any) => p.role === 'seeker'); s.x = 200; s.y = 300; const h = g.players.filter((p: any) => p.role === 'hider'); h[0].x = 200 + RULES.catchRange + 30; h[0].y = 300; h[1].x = 205; h[1].y = 300; });
+    await inst(code, i => { const g = i.room.game; g.t = g.hideSecs + 0.1; const s = g.players.find((p: any) => p.role === 'seeker'); s.x = S0.x; s.y = S0.y; const h = g.players.filter((p: any) => p.role === 'hider'); const far = openPoint(S0, RULES.catchRange + 30), near = openPoint(S0, 40); h[0].x = far.x; h[0].y = far.y; h[1].x = near.x; h[1].y = near.y; });
     sk.input(0, 0, true);// 抓最近的（h[1]），h[0] 太遠
     await until(() => sk.last('snap')?.c.length === 1);
     expect(sk.last('snap').c).toHaveLength(1);
