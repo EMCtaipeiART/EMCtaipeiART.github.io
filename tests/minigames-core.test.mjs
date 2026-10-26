@@ -137,3 +137,44 @@ test('投籃：籃框 20 秒前不動、風力由種子決定',()=>{
   const s1=makeWindSchedule(createRng(hashString('wind@d')),60),s2=makeWindSchedule(createRng(hashString('wind@d')),60);
   assert.deepEqual(s1,s2);assert.equal(windAt(s1,10),0);assert.ok(previewPath(500,-500,0).length>5);
 });
+
+// ---- Phase 4：截稿倒數 ----
+import {createDeck,TYPES,levelFor,pointsForCorrect,colorType,shapeType,alignType,revisionType} from '../EMC-ART-Pixel-Office/dist/minigames/games/deadline-challenges.js';
+const BOX={x:12,y:124,w:700,h:420};
+const overlaps=(a,b)=>a.x<b.x+b.w-1&&b.x<a.x+a.w-1&&a.y<b.y+b.h-1&&b.y<a.y+a.h-1;
+
+test('截稿：每日題組可重現，同類型不連續三題',()=>{
+  const mk=day=>{const d=createDeck(createRng(hashString('deck@'+day)));return Array.from({length:60},(_,i)=>d.get(i));};
+  const a=mk('2026-10-26'),b=mk('2026-10-26'),c=mk('2026-10-27');
+  assert.deepEqual(a.map(x=>[x.type.id,x.puzzle]),b.map(x=>[x.type.id,x.puzzle]));
+  assert.notDeepEqual(a.map(x=>x.type.id+JSON.stringify(x.puzzle)),c.map(x=>x.type.id+JSON.stringify(x.puzzle)));
+  for(let i=2;i<a.length;i++)assert.ok(!(a[i].type.id===a[i-1].type.id&&a[i].type.id===a[i-2].type.id));
+  // 玩家讀題的順序不影響題目（惰性產生也一樣）
+  const d=createDeck(createRng(hashString('deck@2026-10-26')));assert.deepEqual(d.get(30).puzzle,a[30].puzzle);
+});
+test('截稿：難度依題號升級，最高 6 級',()=>{assert.equal(levelFor(0),1);assert.equal(levelFor(5),2);assert.equal(levelFor(500),6);});
+test('截稿：每種題型在各難度下都只有一個正確答案、選項互不重疊',()=>{
+  for(let seed=1;seed<=40;seed++)for(let level=1;level<=6;level++)for(const type of TYPES){
+    const p=type.generate(createRng(seed*100+level),level),regions=type.regions(p,BOX);
+    const right=regions.filter(r=>type.isCorrect(p,r.id));
+    assert.equal(right.length,1,type.id+' L'+level+' seed'+seed);
+    for(let i=0;i<regions.length;i++){
+      const r=regions[i];assert.ok(r.w>8&&r.h>8,type.id+' 區域太小');
+      assert.ok(r.x>=BOX.x-1&&r.x+r.w<=BOX.x+BOX.w+1,type.id+' x 超出');
+      if(type.id!=='align')for(let j=i+1;j<regions.length;j++)assert.ok(!overlaps(r,regions[j]),type.id+' 選項重疊');
+    }
+    if(type===shapeType){const keys=new Set(p.options.map(o=>o.map(c=>c.join(',')).sort().join(';')));assert.equal(keys.size,4);}
+    if(type===revisionType){
+      const k=new Set(p.options.map(o=>o.shape+'|'+o.color+'|'+o.size));assert.equal(k.size,4);
+      const ok=p.options[p.correct];for(const a of ['shape','color','size'])assert.equal(ok[a],a in p.request?p.request[a]:p.current[a]);
+      assert.equal(p.options.filter(o=>['shape','color','size'].every(a=>o[a]===(a in p.request?p.request[a]:p.current[a]))).length,1);
+    }
+  }
+});
+test('截稿：排版對齊的位移肉眼可見，且點擊區就是實際畫的位置',()=>{
+  for(let level=1;level<=6;level++){
+    const p=alignType.generate(createRng(level),level),rs=alignType.regions(p,BOX),odd=rs[p.odd],ref=rs[(p.odd+1)%rs.length];
+    const off=p.axis==='y'?Math.abs(odd.y-ref.y):Math.abs(odd.x-ref.x);assert.ok(off>=2,'L'+level+' 位移 '+off);
+  }
+});
+test('截稿：計分與連擊',()=>{assert.equal(pointsForCorrect(1),100);assert.equal(pointsForCorrect(2),110);assert.equal(pointsForCorrect(50),200);});
