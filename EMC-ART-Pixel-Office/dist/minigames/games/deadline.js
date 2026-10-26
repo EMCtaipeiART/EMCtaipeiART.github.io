@@ -10,7 +10,8 @@ function wrap(g,text,maxW){
 }
 
 export const deadlineGame={
-  id:'deadline',title:'截稿倒數',duration:90,ranked:true,
+  id:'deadline',title:'截稿倒數',icon:'clock',blurb:'90 秒完成色彩、圖形、排版、改稿挑戰',medals:[2000,4500,7000],
+  howto:{goal:'90 秒內盡量完成設計挑戰。答對 +100，答錯 −20，連續答對有連擊加分。',pc:'用滑鼠點選答案，或按數字鍵 1–9。',touch:'用手指點選答案。',tips:['改稿題：只改客戶要求的地方，其他都不能動','每 5 題難度升一級','答錯也會換下一題，不要亂點']},duration:90,ranked:true,
   start(ctx){
     this.state={
       deck:createDeck(ctx.rngFor('deck')),idx:0,combo:0,bestCombo:0,correct:0,wrong:0,

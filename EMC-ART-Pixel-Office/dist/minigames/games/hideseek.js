@@ -6,7 +6,8 @@ import {loadArt,makeView,drawBoard,drawPerson,drawSorted,drawFog,drawMinimap,res
 const HUD_TOP=56,PLAYERS=4,JOY_R=54,BTN_R=40;
 
 export const hideseekGame={
-  id:'hideseek',title:'辦公室躲貓貓',duration:TOTAL_SECS,
+  id:'hideseek',title:'辦公室躲貓貓',icon:'eye',blurb:'在真實辦公室裡躲貓貓（你加 3 個機器人）',medals:[300,600,900],
+  howto:{goal:'尋找者：120 秒內抓到所有躲藏者。躲藏者：躲好，撐到時間結束。',pc:'WASD／方向鍵移動；尋找者靠近後按空白鍵抓人；M 切換全圖／跟隨。',touch:'按住左半邊畫面拖曳＝搖桿；尋找者按右下角「抓！」。',tips:['綠色虛線是遮蔽區域，躲在裡面要靠很近才會被看到','玻璃牆與櫃子會擋視線，會議室與廁所的門有缺口','開局 20 秒，尋找者要閉眼等躲藏者躲好']},duration:TOTAL_SECS,
   start(ctx){
     loadArt(()=>ctx.bridge.markDirty());resetMotion();
     const rng=ctx.rngFor('room:'+Math.floor(performance.now())),game=createGame({rng,count:PLAYERS}),nav=buildNav();

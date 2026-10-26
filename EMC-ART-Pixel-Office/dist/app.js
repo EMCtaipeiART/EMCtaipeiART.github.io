@@ -1504,7 +1504,7 @@ function setCardPinned(value){cardPinned=value;$('personCard').classList.toggle(
 /** 螢幕座標 → 場景座標（手機鏡頭模式的畫布只有螢幕那麼大，用鏡頭左上角換算） */
 function toScene(cx,cy,r){return cam.on?{x:cam.left+(cx-r.left)/cam.s,y:cam.top+(cy-r.top)/cam.s}:{x:(cx-r.left)*W/r.width,y:(cy-r.top)*H/r.height-OY};}
 /* 小遊戲橋接：唯讀暴露場景工具給 minigames/（不改動既有行為）。 */
-window.__pixelOffice={game,keys,markDirty,toScene,blocked,walls:()=>walls,stations,cam,scene:()=>({W,H,OY,minY:ROOM_MIN_Y,maxY:ROOM_MAX_Y})};
+window.__pixelOffice={game,keys,markDirty,toScene,blocked,viewToLogical,walls:()=>walls,stations,cam,scene:()=>({W,H,OY,minY:viewY(ROOM_MIN_Y),maxY:viewY(ROOM_MAX_Y)})};
 function hitAt(clientX,clientY){const r=game.getBoundingClientRect();if(!r.width||!r.height)return null;const pt=toScene(clientX,clientY,r),x=pt.x,y=pt.y;return [...hits].reverse().find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h)||null;}
 game.addEventListener('pointermove',e=>{const hit=hitAt(e.clientX,e.clientY);game.style.cursor=hit?'pointer':'default';
   // 嵌入的是展示用畫面，滑過人物就直接展開資料卡（不用點、也沒有關閉鈕）。

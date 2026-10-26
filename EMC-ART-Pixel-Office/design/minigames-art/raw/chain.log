@@ -1,0 +1,5 @@
+開始 treasure-items-v1 上午12:22:53
+(node:22108) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+結束 treasure-items-v1 exit 0 有圖 上午12:24:20
+開始 hoops-props-v1 上午12:24:20

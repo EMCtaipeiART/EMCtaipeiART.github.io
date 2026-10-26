@@ -10,6 +10,7 @@ import {hideseekGame} from './games/hideseek.js';
 import {hideseekOnline} from './games/hideseek-online.js';
 import {createLobby} from './core/lobby.js';
 import {createBoardClient} from './core/board.js';
+import {createMenu} from './core/menu.js';
 
 const office=window.__pixelOffice;
 if(office){
@@ -24,7 +25,9 @@ if(office){
       return c.on?{x:r.left+(x-c.left)*c.s,y:r.top+(y-c.top)*c.s}:{x:r.left+x*r.width/sc.W,y:r.top+(y+sc.OY)*r.height/sc.H};
     },
     pxPerScene(){const r=office.game.getBoundingClientRect(),c=office.cam;return c.on?c.s:r.width/office.scene().W;},
-    scene:office.scene,blocked:office.blocked,
+    scene:office.scene,
+    // 場景座標＝畫面座標（會被縱向壓縮），app 的 blocked 吃的是邏輯座標：這裡換好，遊戲一律用場景座標
+    blocked:(x,y)=>office.blocked(x,office.viewToLogical(y)),
     get walls(){return office.walls();},get stations(){return office.stations;}
   };
   // 暱稱：匿名、只用來顯示在排行榜（榜上是「暱稱#裝置碼後四碼」），和大廳共用同一個設定
@@ -32,12 +35,11 @@ if(office){
   const manager=createMiniGameManager({ui:createUI(),store:createScoreStore(),bridge,board:createBoardClient(),nickname:getNick});
   manager.register(demoGame);manager.register(treasureGame);manager.register(hoopsGame);manager.register(deadlineGame);manager.register(hideseekGame);manager.register(hideseekOnline);const lobby=createLobby({manager});window.hideSeekLobby=lobby;
   window.miniGames=manager;
-  // 入口：點「小遊戲」展開選單（測試用的點點遊戲不列出）
+  // 入口：點「小遊戲」開啟卡片式選單（測試用的點點遊戲不列出）
+  const store=createScoreStore();
+  const menu=createMenu({manager,store,getNick,setNick:v=>{try{localStorage.setItem(NAME_KEY,v);}catch{/* 儲存不可用 */}},
+    onPick:id=>{if(id==='hideseek-online')lobby.show();else manager.open(id);}});
+  window.miniGamesMenu=menu;
   const btn=document.getElementById('miniGamesBtn');
-  if(btn){
-    const menu=document.createElement('div');menu.className='mg-menu';menu.hidden=true;btn.after(menu);
-    const render=()=>{menu.innerHTML='';const lab=document.createElement('label');lab.className='mg-nick';lab.textContent='暱稱（排行榜顯示用）';const inp=document.createElement('input');inp.maxLength=12;inp.value=getNick();inp.placeholder='玩家';inp.addEventListener('change',()=>{try{localStorage.setItem(NAME_KEY,inp.value.trim().slice(0,12));}catch{/* 儲存不可用 */}});lab.appendChild(inp);menu.appendChild(lab);for(const g of manager.list().filter(g=>g.id!=='demo')){const b=document.createElement('button');b.type='button';b.className='mg-btn';const best=createScoreStore().get(g.id).best;b.textContent=g.title+(best?'（最佳 '+best+'）':'');b.onclick=()=>{menu.hidden=true;if(g.id==='hideseek-online')lobby.show();else manager.open(g.id);};menu.appendChild(b);}};
-    btn.addEventListener('click',()=>{if(menu.hidden){render();const r=btn.getBoundingClientRect();menu.style.top=(r.bottom+6)+'px';menu.style.right=Math.max(8,innerWidth-r.right)+'px';}menu.hidden=!menu.hidden;});
-    document.addEventListener('pointerdown',e=>{if(!menu.hidden&&!menu.contains(e.target)&&e.target!==btn)menu.hidden=true;});
-  }
+  if(btn)btn.addEventListener('click',()=>menu.toggle());
 }

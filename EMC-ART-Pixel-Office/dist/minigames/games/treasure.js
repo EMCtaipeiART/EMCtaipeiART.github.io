@@ -5,10 +5,11 @@ import {floorCandidates,pickTreasures,treasureScore,TREASURE_COUNT,TREASURE_SECO
 const HUD_TOP=64,BOTTOM_PAD=64,HINT_W=104,HINT_H=40;
 
 export const treasureGame={
-  id:'treasure',title:'辦公室尋寶',duration:TREASURE_SECONDS,ranked:true,
+  id:'treasure',title:'辦公室尋寶',icon:'map',blurb:'限時找出藏在辦公室裡的 5 件小東西',medals:[300,500,650],
+  howto:{goal:'在 120 秒內，找出今天藏在辦公室裡的 5 個小道具。',pc:'用滑鼠點道具；按 H 或點右下「提示」看大概位置（扣 50 分，每局一次）。',touch:'用手指點道具；點右下「提示」看大概位置。',tips:['道具很小，留意家具邊緣與房間角落','全部找齊後，剩餘時間每秒 +2 分','每天的題目不同，同一天大家一樣']},duration:TREASURE_SECONDS,ranked:true,
   start(ctx){
     const sc=ctx.bridge.scene(),defs=Object.fromEntries(TREASURE_ITEMS.map(d=>[d.id,d]));
-    const candidates=floorCandidates({minX:80,maxX:sc.W-80,minY:Math.max(sc.minY,0)+30,maxY:sc.maxY-30,isFree:(x,y)=>!ctx.bridge.blocked(x,y)});
+    const candidates=floorCandidates({minX:80,maxX:sc.W-80,minY:sc.minY+30,maxY:sc.maxY-30,isFree:(x,y)=>!ctx.bridge.blocked(x,y)});
     // 點得到＝在遊戲畫布內，並避開上方 HUD、下方道具列與提示鍵
     const clickable=(x,y)=>{const p=ctx.sceneToLocal(x,y);return p.x>=40&&p.x<=ctx.width-40&&p.y>=HUD_TOP&&p.y<=ctx.height-BOTTOM_PAD;};
     let items=[];

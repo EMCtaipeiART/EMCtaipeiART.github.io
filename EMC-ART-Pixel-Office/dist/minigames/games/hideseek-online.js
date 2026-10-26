@@ -8,7 +8,7 @@ const HUD_TOP=56,JOY_R=54,BTN_R=40,STEP=1/30,INTERP_MS=110;
 const lerp=(a,b,t)=>a+(b-a)*t;
 
 export const hideseekOnline={
-  id:'hideseek-online',title:'躲貓貓（連線）',duration:3600,timer:'external',countdown:0,canPause:false,noRecord:true,noAgain:true,
+  id:'hideseek-online',title:'躲貓貓（連線）',icon:'ghost',blurb:'和同事連線躲貓貓（2–6 人、邀請碼）',duration:3600,timer:'external',countdown:0,canPause:false,noRecord:true,noAgain:true,
   start(ctx){
     loadArt(()=>ctx.bridge.markDirty());resetMotion();
     const S=hideSeekSession,info=S.info;

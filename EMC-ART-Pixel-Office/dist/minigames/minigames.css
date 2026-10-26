@@ -1,35 +1,109 @@
-.mg-root{position:fixed;z-index:60;touch-action:none;font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif;color:#182e54}
+/* 小遊戲樣式：像素風（深藍外框、硬陰影）。顏色與外框粗細集中在變數；Codex 素材核准後，
+   在 <html> 加 class "mg-art-ui" 即可改用 minigames/assets 裡的圖（見檔尾的 .mg-art-ui 區）。 */
+:root{--mg-navy:#182e54;--mg-blue:#5b8def;--mg-pale:#e8f0ff;--mg-yellow:#ffd24a;--mg-orange:#e8913a;--mg-red:#d9534f;--mg-green:#4caf6a;--mg-grey:#c9d2e0;--mg-b:3px;--mg-shadow:0 3px 0 rgba(24,46,84,.35)}
+.mg-root{position:fixed;z-index:60;touch-action:none;font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif;color:var(--mg-navy)}
 .mg-root[hidden]{display:none}
 .mg-canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;image-rendering:pixelated}
+
+/* ── HUD ── */
 .mg-hud{position:absolute;left:8px;right:8px;top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-weight:700;font-size:14px;pointer-events:none}
-.mg-hud>span{background:#fff;border:2px solid #182e54;border-radius:8px;padding:4px 10px}
+.mg-hud>span{background:#fff;border:var(--mg-b) solid var(--mg-navy);border-radius:6px;padding:3px 10px;box-shadow:var(--mg-shadow)}
+.mg-chip{display:inline-flex;align-items:center;gap:6px;min-height:30px;box-sizing:border-box}
+.mg-chip b{font-variant-numeric:tabular-nums;font-weight:900}
+.mg-timechip .mg-icon{color:var(--mg-blue)}.mg-scorechip .mg-icon{color:#e0a800}
 .mg-hud .mg-extra:empty{display:none}
 .mg-hud .mg-btn{pointer-events:auto;margin-left:auto}
 .mg-hud .mg-btn+.mg-btn{margin-left:0}
-.mg-btn{border:2px solid #182e54;border-radius:8px;background:#e8f0ff;color:#182e54;font:inherit;font-weight:700;padding:6px 14px;cursor:pointer;min-height:36px}
-.mg-btn:active{transform:translateY(1px)}
-.mg-banner{position:absolute;inset:0;display:grid;place-items:center;font-size:72px;font-weight:900;color:#182e54;text-shadow:0 2px 0 #fff;pointer-events:none}
-.mg-panel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);min-width:min(320px,86%);max-height:88%;overflow:auto;background:#fff;border:3px solid #182e54;border-radius:12px;padding:18px 22px;text-align:center;box-shadow:0 8px 0 rgba(24,46,84,.25)}
-.mg-panel h2{margin:0 0 8px;font-size:20px}
-.mg-panel .mg-btn{margin:6px 4px 0}
-.mg-big{font-size:34px;font-weight:900;margin:4px 0}
-.mg-big small{font-size:14px;color:#c0392b}
+.mg-icon{flex:none;image-rendering:pixelated}
+
+/* ── 按鈕 ── */
+.mg-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:var(--mg-b) solid var(--mg-navy);border-radius:6px;background:var(--mg-pale);color:var(--mg-navy);font:inherit;font-weight:800;padding:6px 14px;cursor:pointer;min-height:40px;box-sizing:border-box;box-shadow:0 3px 0 var(--mg-navy);position:relative;top:0;transition:top .05s,box-shadow .05s}
+.mg-btn:hover{background:#f3f7ff}
+.mg-btn:active,.mg-btn.is-pressed{top:3px;box-shadow:0 0 0 var(--mg-navy)}
+.mg-btn:focus-visible{outline:3px solid var(--mg-yellow);outline-offset:2px}
+.mg-btn[disabled]{opacity:.45;cursor:not-allowed}
+.mg-primary{background:var(--mg-yellow)}.mg-primary:hover{background:#ffdd6b}
+.mg-danger{background:#ffe0de}.mg-danger:hover{background:#ffd0cd}
+.mg-icon-btn{padding:4px 10px}
+
+/* ── 倒數與提示大字 ── */
+.mg-banner{position:absolute;inset:0;display:grid;place-items:center;font-size:84px;font-weight:900;color:#fff;-webkit-text-stroke:3px var(--mg-navy);paint-order:stroke fill;text-shadow:0 5px 0 var(--mg-navy);pointer-events:none}
+.mg-banner.pop{animation:mg-pop .45s ease-out}
+@keyframes mg-pop{0%{transform:scale(.5)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+
+/* ── 面板（怎麼玩、暫停、結算）── */
+.mg-panel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(380px,92%);max-height:90%;overflow:auto;background:#fff;border:var(--mg-b) solid var(--mg-navy);border-radius:10px;padding:18px 22px;text-align:center;box-shadow:0 6px 0 rgba(24,46,84,.3);animation:mg-panel-in .18s ease-out}
+@keyframes mg-panel-in{from{transform:translate(-50%,-47%)}to{transform:translate(-50%,-50%)}}
+.mg-panel h2{margin:0 0 8px;font-size:21px}
+.mg-panel p{margin:6px 0}
+.mg-panel .mg-btn{margin:8px 4px 0}
 .mg-note{font-size:12px;opacity:.65}
+.mg-goal{font-weight:700;line-height:1.5}
+.mg-keys{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;text-align:left;font-size:14px;margin:10px 0;background:#f2f5fb;border:2px solid var(--mg-grey);border-radius:8px;padding:8px 10px}
+.mg-keys dt{font-weight:900;color:var(--mg-blue)}.mg-keys dd{margin:0;line-height:1.45}
+.mg-tips{text-align:left;font-size:13px;margin:8px 0;padding-left:20px;line-height:1.5}
+.mg-skip{display:flex;gap:6px;align-items:center;justify-content:center;font-size:13px;margin-top:8px;cursor:pointer}
+.mg-skip input{width:18px;height:18px;accent-color:var(--mg-navy)}
+
+/* ── 結算 ── */
+.mg-medalrow{display:flex;gap:14px;align-items:center;justify-content:center;margin:6px 0 10px}
+.mg-big{font-size:36px;font-weight:900;margin:0;font-variant-numeric:tabular-nums;line-height:1.1}
+.mg-new{margin:2px 0 0;color:#c0392b;font-weight:900;animation:mg-blink .8s steps(2) infinite}
+@keyframes mg-blink{50%{opacity:.45}}
+.mg-next{margin:2px 0 0;font-size:12px;opacity:.7}
+.mg-rank{font-size:15px}
+.mg-medal{width:68px;height:68px;border-radius:50%;border:var(--mg-b) solid var(--mg-navy);display:grid;place-items:center;font-size:13px;font-weight:900;box-shadow:0 4px 0 rgba(24,46,84,.35),inset 0 -6px 0 rgba(0,0,0,.14),inset 0 5px 0 rgba(255,255,255,.55);animation:mg-medal .5s ease-out}
+@keyframes mg-medal{0%{transform:scale(.4) rotate(-30deg)}70%{transform:scale(1.12) rotate(6deg)}100%{transform:none}}
+.mg-medal-gold{background:var(--mg-yellow)}.mg-medal-silver{background:#d7dde8}.mg-medal-bronze{background:#d9955a}.mg-medal-none{background:var(--mg-pale);color:#7a88a3;box-shadow:none;animation:none}
 .mg-board{list-style:none;margin:8px 0;padding:0;font-size:14px;text-align:left}
-.mg-board li{display:grid;grid-template-columns:28px 1fr auto;gap:8px;padding:2px 6px;border-radius:6px}
-.mg-board li.me{background:#fff3c4;font-weight:700}
+.mg-board li{display:grid;grid-template-columns:30px 1fr auto;gap:8px;padding:3px 8px;border-radius:6px}
+.mg-board li:nth-child(odd){background:#f5f7fc}
+.mg-board li.me{background:#fff3c4;font-weight:800}
+.mg-board li b{min-width:1.5em}
+.mg-board li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mg-sub{font-size:14px;margin:8px 0 2px}
+
+/* ── 入口按鈕（場景右上角）── */
 .mg-entry{display:none}
 html.minigames-on .mg-entry{display:inline-flex;align-items:center;justify-content:center;padding:9px 15px;border:2px solid #182e54;border-radius:9px;background:#e8f0ff;color:#182e54;font-size:13px;font-weight:700;cursor:pointer}
-@media (max-width:640px){.mg-banner{font-size:56px}.mg-panel{padding:14px}}
-.mg-menu{position:fixed;z-index:70;display:flex;flex-direction:column;gap:6px;padding:8px;background:#fff;border:2px solid #182e54;border-radius:10px}
-.mg-menu[hidden]{display:none}
+
+/* ── 選單：卡片 ── */
+.mg-menu-modal{position:fixed;inset:0;z-index:70;background:rgba(24,46,84,.5);display:grid;place-items:center;padding:12px;font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif;color:var(--mg-navy)}
+.mg-menu-modal[hidden]{display:none}
+.mg-menu-card{width:min(720px,100%);max-height:94vh;overflow:auto;background:#fff;border:var(--mg-b) solid var(--mg-navy);border-radius:12px;padding:16px 18px;box-shadow:0 8px 0 rgba(24,46,84,.3);animation:mg-menu-in .16s ease-out}
+@keyframes mg-menu-in{from{transform:translateY(10px)}to{transform:none}}
+.mg-menu-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.mg-menu-head h2{margin:0;font-size:22px}
+.mg-nick{display:block;font-size:12px;font-weight:700;color:var(--mg-navy);margin-bottom:10px}
+.mg-nick input{display:block;width:100%;box-sizing:border-box;margin-top:3px;font:inherit;border:var(--mg-b) solid var(--mg-navy);border-radius:6px;padding:6px 8px;min-height:40px}
+.mg-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.mg-card{display:flex;gap:12px;align-items:center;text-align:left;font:inherit;color:inherit;background:var(--mg-pale);border:var(--mg-b) solid var(--mg-navy);border-radius:10px;padding:12px;cursor:pointer;box-shadow:0 4px 0 var(--mg-navy);position:relative;top:0;transition:top .06s,box-shadow .06s,background .1s;min-height:92px}
+.mg-card:hover{background:#f3f7ff;top:-1px}
+.mg-card:active{top:4px;box-shadow:0 0 0 var(--mg-navy)}
+.mg-card:focus-visible{outline:3px solid var(--mg-yellow);outline-offset:2px}
+.mg-card-icon{flex:none;width:52px;height:52px;display:grid;place-items:center;background:#fff;border:var(--mg-b) solid var(--mg-navy);border-radius:8px;color:var(--mg-blue)}
+.mg-card:nth-child(2) .mg-card-icon{color:var(--mg-orange)}.mg-card:nth-child(3) .mg-card-icon{color:var(--mg-green)}.mg-card:nth-child(4) .mg-card-icon{color:var(--mg-red)}.mg-card:nth-child(5) .mg-card-icon{color:#8e5cd9}
+.mg-card-body{display:flex;flex-direction:column;gap:4px;min-width:0}
+.mg-card-body b{font-size:16px}
+.mg-card-blurb{font-size:13px;line-height:1.4;opacity:.85}
+.mg-card-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px}
+.mg-card-meta i{font-style:normal;font-weight:800;background:var(--mg-navy);color:#fff;border-radius:4px;padding:1px 6px}
+.mg-card-meta em{font-style:normal;font-weight:800;color:#b07b00}
+
 @media (max-width:640px){
+  .mg-banner{font-size:64px}
+  .mg-panel{padding:14px;width:94%}
   .mg-title{display:none}
   .mg-hud{gap:5px;left:6px;right:6px;top:6px}
-  .mg-hud>span{padding:3px 7px;font-size:12px}
-  .mg-hud .mg-btn{padding:3px 9px;min-height:30px;font-size:12px}
+  .mg-hud>span{padding:2px 7px;font-size:12px;min-height:28px}
+  .mg-hud .mg-btn{padding:3px 9px;min-height:44px;min-width:44px;font-size:12px}
+  .mg-hud .mg-btn span{display:none}
+  .mg-cards{grid-template-columns:1fr}
+  .mg-menu-card{padding:12px}
 }
+@media (prefers-reduced-motion:reduce){.mg-panel,.mg-menu-card,.mg-banner.pop,.mg-medal,.mg-new{animation:none}.mg-btn,.mg-card{transition:none}}
 
+/* ── 躲貓貓連線大廳 ── */
 .mg-lobby{position:fixed;z-index:65;left:50%;top:50%;transform:translate(-50%,-50%);width:min(360px,92vw);max-height:88vh;overflow:auto;background:#fff;border:3px solid #182e54;border-radius:12px;padding:16px 20px;box-shadow:0 8px 0 rgba(24,46,84,.25);color:#182e54;font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif}
 .mg-lobby[hidden]{display:none}
 .mg-lobby h2{margin:0 0 10px;font-size:20px}
@@ -46,9 +120,3 @@ html.minigames-on .mg-entry{display:inline-flex;align-items:center;justify-conte
 .mg-lobby .roster{list-style:none;margin:8px 0;padding:0}
 .mg-lobby .roster li{display:flex;justify-content:space-between;padding:4px 8px;border-radius:6px;background:#f2f5fb;margin-bottom:4px}
 .mg-lobby .roster li.off{opacity:.5}
-
-.mg-sub{font-size:14px;margin:8px 0 2px}
-.mg-board li b{min-width:1.5em}
-.mg-board li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mg-nick{display:block;font-size:12px;font-weight:700;color:#182e54}
-.mg-nick input{display:block;width:100%;box-sizing:border-box;margin-top:2px;font:inherit;border:2px solid #182e54;border-radius:8px;padding:4px 6px;min-height:32px}

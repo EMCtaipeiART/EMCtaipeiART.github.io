@@ -6,7 +6,9 @@ import {createRng,dayKey,hashString,seedForDay} from './rng.js';
 
 const COUNTDOWN=3;// 遊戲可用 def.countdown 覆寫（連線遊戲由伺服器決定開始時間，設 0）
 
-export function createMiniGameManager({ui,store,bridge,board=null,nickname=()=>'',loopFactory=createFixedLoop,inputFactory=createInput,now=()=>new Date(),onError=e=>console.error('[minigame]',e)}){
+const lsGet=k=>{try{return globalThis.localStorage.getItem(k);}catch{return null;}},lsSet=(k,v)=>{try{globalThis.localStorage.setItem(k,v);}catch{/* 儲存不可用 */}};
+
+export function createMiniGameManager({ui,store,bridge,board=null,nickname=()=>'',prefs={get:lsGet,set:lsSet},loopFactory=createFixedLoop,inputFactory=createInput,now=()=>new Date(),onError=e=>console.error('[minigame]',e)}){
   const games=new Map();
   let run=null;// 目前進行中的一局，離開後為 null
 
@@ -59,6 +61,11 @@ export function createMiniGameManager({ui,store,bridge,board=null,nickname=()=>'
       if(act==='pause')togglePause();
       else if(act==='quit')close();
       else if(act==='again'){const again=run.def.id;close();open(again);}
+      else if(act==='go'){
+        if(run.phase==='howto'){if(ui.skipChecked())prefs.set('emc-mg-howto-'+run.def.id,'1');const go=run.startPlay;run.startPlay=null;go();}
+        else if(run.phase==='paused')resume();// 從暫停選單看完說明回到遊戲
+      }
+      else if(act==='howto'&&run.phase==='paused'&&run.def.howto)ui.howto({title:run.def.title,...run.def.howto,resume:true});
     },signal);
     run.input=inputFactory(ui.canvas,signal);
     const ctx=run.ctx={
@@ -80,12 +87,20 @@ export function createMiniGameManager({ui,store,bridge,board=null,nickname=()=>'
       if(run!==r0)return;// 等票的時候玩家已經離開
       if(ticket){r0.ticket=ticket;r0.day=ticket.day;}else if(ranked){r0.practice=true;}
       r0.seed=seedForDay(id,r0.day);ctx.rng=createRng(r0.seed);
-      r0.phase=countdown>0?'countdown':'running';
-      ui.banner(r0.practice?'練習模式：未連上排行榜':'');
-      r0.loop=loopFactory({update:step,render:draw});
-      guard(()=>def.start(ctx));
-      if(run===r0)r0.loop.start();
-      bridge.markDirty();
+      const play=()=>{
+        if(run!==r0)return;
+        r0.phase=countdown>0?'countdown':'running';
+        ui.closePanel();
+        ui.banner(r0.practice?'練習模式：未連上排行榜':'');
+        r0.loop=loopFactory({update:step,render:draw});
+        guard(()=>def.start(ctx));
+        if(run===r0)r0.loop.start();
+        bridge.markDirty();
+      };
+      // 第一次玩（或沒勾「不再顯示」）先看「怎麼玩」說明卡，按「開始」才進倒數
+      if(def.howto&&typeof ui.howto==='function'&&prefs.get('emc-mg-howto-'+id)!=='1'){
+        r0.phase='howto';r0.startPlay=play;ui.banner('');ui.howto({title:def.title,...def.howto,startLabel:'開始'+(r0.practice?'（練習）':''),canSkip:true});
+      }else play();
     };
     if(ranked){
       ui.banner('連線中…');
@@ -115,7 +130,7 @@ export function createMiniGameManager({ui,store,bridge,board=null,nickname=()=>'
     guard(()=>run.def.render(run.ctx,alpha,run.phase));
   }
 
-  function pause(){if(!run||run.phase!=='running'||run.def.canPause===false)return;run.phase='paused';run.loop.stop();ui.setPauseLabel(true);ui.pausePanel();run.input.clear();}
+  function pause(){if(!run||run.phase!=='running'||run.def.canPause===false)return;run.phase='paused';run.loop.stop();ui.setPauseLabel(true);ui.pausePanel({howto:!!run.def.howto});run.input.clear();}
   function resume(){if(!run||run.phase!=='paused')return;run.phase='running';ui.setPauseLabel(false);ui.closePanel();run.loop.start();}
   function togglePause(){if(!run)return;if(run.phase==='paused')resume();else pause();}
 
@@ -125,12 +140,13 @@ export function createMiniGameManager({ui,store,bridge,board=null,nickname=()=>'
     const r=run,extra=guard(()=>r.def.result?r.def.result(r.ctx):null,null)||{};
     const score=Math.max(0,Math.round(extra.score??r.score));
     const baseLines=[...(extra.lines||[]),...lines];
+    const medalFor=sc=>{const m=r.def.medals;if(!m)return {medal:null,medalNext:null};const i=m.filter(t=>sc>=t).length;return {medal:[null,'bronze','silver','gold'][i],medalNext:i<m.length?m[i]-sc:null};};
     ui.setScore(score);ui.banner('');
     const showLocal=(note)=>{
       // noRecord：連線對戰不寫入任何成績紀錄或排行，避免互相配合刷分
       const record=r.def.noRecord?null:store.submit(r.def.id,{score,day:r.day});
       r.result={score,record};
-      ui.results({title:r.def.title,score,lines:note?[...baseLines,note]:baseLines,record,board:record?record.board:[],again:!r.def.noAgain});
+      ui.results({title:r.def.title,score,lines:note?[...baseLines,note]:baseLines,record,board:record?record.board:[],again:!r.def.noAgain,...medalFor(score)});
     };
     if(r.ticket&&!r.practice&&r.def.log){
       // 正式排行：成績由伺服器依作答紀錄重算，這裡顯示的分數以伺服器為準
@@ -143,7 +159,7 @@ export function createMiniGameManager({ui,store,bridge,board=null,nickname=()=>'
         const record=store.submit(r.def.id,{score:res.score,day:r.day});
         r.result={score:res.score,record,remote:res};
         ui.setScore(res.score);
-        ui.results({title:r.def.title,score:res.score,lines:baseLines.filter(l=>!/^題組日期/.test(l)),record,board:[],again:true,
+        ui.results({title:r.def.title,score:res.score,lines:baseLines.filter(l=>!/^題組日期/.test(l)),record,board:[],again:true,...medalFor(res.score),
           remote:{rank:res.rank,day:res.day,level:r.ticket.verification,board:res.board||[],me:r.ticket.nick+'#'+r.ticket.tag,replay:!!res.replay}});
       },()=>{if(run===r)showLocal('無法連上排行榜，成績只存在本機');});
       return;
@@ -166,6 +182,6 @@ export function createMiniGameManager({ui,store,bridge,board=null,nickname=()=>'
   }
   const closeListeners=new Set();
 
-  return {register,open,close,pause,resume,onClosed:fn=>{closeListeners.add(fn);return ()=>closeListeners.delete(fn);},get(id){return games.get(id);},list:()=>[...games.values()].map(g=>({id:g.id,title:g.title})),
+  return {register,open,close,pause,resume,onClosed:fn=>{closeListeners.add(fn);return ()=>closeListeners.delete(fn);},get(id){return games.get(id);},list:()=>[...games.values()].map(g=>({id:g.id,title:g.title,icon:g.icon,blurb:g.blurb,ranked:!!g.ranked})),
     get active(){return !!run;},get phase(){return run?run.phase:'idle';},get lastResult(){return run?run.result:null;}};
 }

@@ -11,7 +11,8 @@ function ballSprite(){
 }
 
 export const hoopsGame={
-  id:'hoops',title:'廢紙投籃',duration:60,ranked:true,
+  id:'hoops',title:'廢紙投籃',icon:'ball',blurb:'拖曳瞄準，把紙團投進垃圾桶',medals:[1000,2000,3200],
+  howto:{goal:'60 秒內盡量把紙團投進垃圾桶。普通進球 100 分、空心 150 分，連續進球有連擊加分。',pc:'按住滑鼠往左下拖曳，放開就投出；拉得越長力道越大。',touch:'手指按住畫面往左下拖曳，放開就投出。',tips:['虛線是預測軌跡，風會讓球飄','20 秒後垃圾桶開始左右移動，35 秒後出現風']},duration:60,ranked:true,
   start(ctx){
     this.state={
       t:0,ball:null,wait:0,drag:null,sprite:ballSprite(),fx:[],combo:0,bestCombo:0,

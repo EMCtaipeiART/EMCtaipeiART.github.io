@@ -19,7 +19,7 @@ function setupEnv(){
     root:{style:{},contains:()=>false},canvas:{width:0,height:0,getContext:()=>({setTransform(){},clearRect(){}}),addEventListener:fakeTarget().addEventListener},
     calls:[],mounted:false,
     mount(){this.mounted=true;},unmount(){this.mounted=false;},show(){},hide(){},setTime(){},setScore(){},setExtra(){},setPauseLabel(){},setPauseVisible(){},banner(){},pausePanel(){},closePanel(){},
-    results(r){this.last=r;},onAction(fn,signal){this.act=fn;}
+    results(r){this.last=r;},closePanel(){},onAction(fn,signal){this.act=fn;}
   };
   ui.canvas=Object.assign(fakeTarget(),{width:0,height:0,getContext:()=>({setTransform(){},clearRect(){}}),getBoundingClientRect:()=>({left:0,top:0,width:800,height:600})});
   const cleared=[];
@@ -397,4 +397,26 @@ test('躲貓貓：沒有擠不過去的窄縫——家具之間 0～58 像素的
     checked++;
   }
   assert.ok(checked>20);
+});
+
+// ---- 介面：怎麼玩說明卡、獎牌 ----
+test('怎麼玩：第一次先顯示說明卡，按「開始」才進倒數；勾「不再顯示」後下次直接開始',()=>{
+  const env=setupEnv();let shown=0,skip=false;const saved={};
+  env.ui.howto=()=>{shown++;};env.ui.skipChecked=()=>skip;
+  const game={...simpleGame(),howto:{goal:'g',pc:'p',touch:'t',tips:[]},starts:0};const orig=game.start;game.start=function(c){this.starts++;return orig.call(this,c);};
+  const m=createMiniGameManager({...env,prefs:{get:k=>saved[k]??null,set:(k,v)=>{saved[k]=v;}}});m.register(game);
+  m.open('t');assert.equal(m.phase,'howto');assert.equal(shown,1);assert.equal(game.starts,0);
+  skip=true;env.ui.act('go');assert.equal(m.phase,'countdown');assert.equal(game.starts,1);assert.equal(saved['emc-mg-howto-t'],'1');
+  m.close();m.open('t');assert.equal(m.phase,'countdown');assert.equal(shown,1);m.close();// 第二次不再顯示
+  assert.equal(window.count,0);
+});
+test('獎牌：依分數門檻給銅／銀／金，並告知離下一面還差多少',()=>{
+  const cases=[[0,null,100],[100,'bronze',200],[250,'bronze',50],[300,'silver',300],[600,'gold',null]];
+  for(const [score,medal,next] of cases){
+    const env=setupEnv(),game={...simpleGame({medals:[100,300,600]}),result(){return {score};}};
+    const m=createMiniGameManager({...env,prefs:{get:()=>null,set(){}}});m.register(game);
+    m.open('t');env.loops[0].tick(60*4);env.loops[0].tick(60*2);
+    assert.equal(env.ui.last.medal,medal,'分數 '+score);assert.equal(env.ui.last.medalNext,next);
+    m.close();
+  }
 });
