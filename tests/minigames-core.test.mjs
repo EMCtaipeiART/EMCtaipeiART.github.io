@@ -350,3 +350,19 @@ test('正式排行：伺服器拒絕或連不上時，分數只留本機並說�
     assert.match(env.ui.last.lines.join(' '),res?/驗證失敗/:/無法連上排行榜/);assert.ok(env.ui.last.record);m.close();
   }
 });
+
+// ---- 入口開關 ----
+import fs from 'node:fs';
+test('入口開關：預設隱藏按鈕、不載入小遊戲程式；只有 ?minigames=1 才啟用',()=>{
+  const html=fs.readFileSync(new URL('../EMC-ART-Pixel-Office/dist/index.html',import.meta.url),'utf8');
+  const css=fs.readFileSync(new URL('../EMC-ART-Pixel-Office/dist/minigames/minigames.css',import.meta.url),'utf8');
+  assert.doesNotMatch(html,/<script[^>]*type="module"[^>]*minigames/);// 不再靜態載入
+  assert.match(html,/get\('minigames'\)==='1'/);
+  assert.match(html,/classList\.contains\('minigames-on'\)/);
+  assert.match(css,/\.mg-entry\{display:none\}/);
+  assert.match(css,/html\.minigames-on \.mg-entry\{display:inline-flex/);
+  // 開關只認 =1：模擬網址判斷
+  const on=s=>new URLSearchParams(s).get('minigames')==='1';
+  assert.equal(on(''),false);assert.equal(on('?clean=1&cs=1.2'),false);assert.equal(on('?minigames=0'),false);assert.equal(on('?minigames=true'),false);
+  assert.equal(on('?minigames=1'),true);assert.equal(on('?clean=1&minigames=1&cs=1.2'),true);
+});
