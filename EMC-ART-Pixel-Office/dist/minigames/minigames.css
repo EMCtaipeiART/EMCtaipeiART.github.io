@@ -45,3 +45,9 @@
 .mg-lobby .roster{list-style:none;margin:8px 0;padding:0}
 .mg-lobby .roster li{display:flex;justify-content:space-between;padding:4px 8px;border-radius:6px;background:#f2f5fb;margin-bottom:4px}
 .mg-lobby .roster li.off{opacity:.5}
+
+.mg-sub{font-size:14px;margin:8px 0 2px}
+.mg-board li b{min-width:1.5em}
+.mg-board li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mg-nick{display:block;font-size:12px;font-weight:700;color:#182e54}
+.mg-nick input{display:block;width:100%;box-sizing:border-box;margin-top:2px;font:inherit;border:2px solid #182e54;border-radius:8px;padding:4px 6px;min-height:32px}

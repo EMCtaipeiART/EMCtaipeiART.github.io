@@ -21,10 +21,10 @@ export function createUI(doc=document){
     pausePanel(){panel.innerHTML='<h2>已暫停</h2><button type="button" class="mg-btn" data-act="pause">繼續</button><button type="button" class="mg-btn" data-act="quit">離開</button>';panel.hidden=false;},
     closePanel(){panel.hidden=true;},
     setPauseVisible(v){q('.mg-hud [data-act=pause]').hidden=!v;},
-    results({title,score,lines=[],record,board=[],again=true}){
-      const rows=board.map((r,i)=>'<li'+(record&&record.rank===i+1?' class="me"':'')+'><b>'+(i+1)+'</b><span>'+esc(r.day)+'</span><em>'+r.score+'</em></li>').join('');
+    results({title,score,lines=[],record,board=[],again=true,remote=null}){
+      const rows=remote?remote.board.map(r=>'<li'+(r.name===remote.me?' class="me"':'')+'><b>'+r.rank+'</b><span>'+esc(r.name)+'</span><em>'+r.score+'</em></li>').join(''):board.map((r,i)=>'<li'+(record&&record.rank===i+1?' class="me"':'')+'><b>'+(i+1)+'</b><span>'+esc(r.day)+'</span><em>'+r.score+'</em></li>').join('');
       panel.innerHTML='<h2>'+esc(title)+'・結算</h2><p class="mg-big">'+score+' 分'+(record&&record.isBest?' <small>新紀錄！</small>':'')+'</p>'
-        +lines.map(l=>'<p>'+esc(l)+'</p>').join('')+(rows?'<ol class="mg-board">'+rows+'</ol>':'')
+        +lines.map(l=>'<p>'+esc(l)+'</p>').join('')+(remote?'<p><b>今日第 '+remote.rank+' 名</b>・'+(remote.level==='full'?'成績已由伺服器驗證':'簡易驗證')+'</p><h3 class="mg-sub">今日排行（'+esc(remote.day)+'）</h3>':'')+(rows?'<ol class="mg-board">'+rows+'</ol>':'')
         +'<p class="mg-note">僅供娛樂，不作為任何工作績效依據。</p>'+(again?'<button type="button" class="mg-btn" data-act="again">再玩一次</button>':'')+'<button type="button" class="mg-btn" data-act="quit">回辦公室</button>';
       panel.hidden=false;
     },

@@ -2,9 +2,10 @@ import type { ApiPayload, ApiResult, RequestContext } from './types';
 import { DatabaseCoordinator, isQuietHours } from './database-coordinator';
 import { DuelRoom } from './duel-room';
 import { HideSeekRoom } from './hide-room';
+import { MinigameBoard } from './minigame-board';
 import { text } from './model';
 
-export { DatabaseCoordinator, DuelRoom, HideSeekRoom };
+export { DatabaseCoordinator, DuelRoom, HideSeekRoom, MinigameBoard };
 
 // 前端 Gmail 編輯器允許最多 18 MiB 原始圖片；轉成 Base64 放進 JSON 後會膨脹到約 24 MiB。
 // 舊的 2 MiB 上限會讓一張普通的貼上截圖還沒進入 sendCaseMail 就被拒絕。
@@ -189,6 +190,34 @@ async function handleSiteHost(request: Request, env: Env): Promise<Response> {
   return fetch(request);
 }
 
+// 小遊戲排行榜：開票／提交／查榜。內容很小，限制 16 KB；所有判斷都在 MinigameBoard 裡。
+const MINIGAME_MAX_BODY = 16 * 1024;
+async function handleMinigames(request: Request, env: Env): Promise<Response> {
+  const path = new URL(request.url).pathname;
+  const stub = env.MINIGAME_BOARD.getByName('primary', { locationHint: 'apac' }) as DurableObjectStub<MinigameBoard>;
+  const send = (r: { status: number; body: Record<string, unknown> }) => jsonResponse(request, env, r.body, r.status);
+  try {
+    if (path === '/minigames/board') {
+      if (request.method !== 'GET') return jsonResponse(request, env, { ok: false, error: 'method' }, 405);
+      const q = new URL(request.url).searchParams;
+      return send(await stub.board({ game: q.get('game'), range: q.get('range') }));
+    }
+    if (path !== '/minigames/run' && path !== '/minigames/submit') return jsonResponse(request, env, { ok: false, error: 'not-found' }, 404);
+    if (request.method !== 'POST') return jsonResponse(request, env, { ok: false, error: 'method' }, 405);
+    if ((Number(request.headers.get('Content-Length')) || 0) > MINIGAME_MAX_BODY) return jsonResponse(request, env, { ok: false, error: 'too-large' }, 413);
+    const raw = await request.text();
+    if (raw.length > MINIGAME_MAX_BODY) return jsonResponse(request, env, { ok: false, error: 'too-large' }, 413);
+    let body: Record<string, unknown>;
+    try { const v = JSON.parse(raw); if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error('shape'); body = v; }
+    catch { return jsonResponse(request, env, { ok: false, error: 'bad-json' }, 400); }
+    if (path === '/minigames/run') return send(await stub.startRun({ game: body.game, device: body.device, nick: body.nick, ip: request.headers.get('CF-Connecting-IP') || 'unknown' }));
+    return send(await stub.submit({ runId: body.runId, device: body.device, log: body.log }));
+  } catch (error) {
+    console.error(JSON.stringify({ event: 'minigames-error', message: error instanceof Error ? error.message : String(error) }));
+    return jsonResponse(request, env, { ok: false, error: 'server-error' }, 500);
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (SITE_HOSTS.has(new URL(request.url).hostname)) return handleSiteHost(request, env);
@@ -220,6 +249,7 @@ export default {
       return new Response(null, { status: 204, headers });
     }
     if (!['GET', 'POST', 'PATCH', 'DELETE'].includes(request.method)) return jsonResponse(request, env, { ok: false, error: 'Method Not Allowed' }, 405);
+    if (new URL(request.url).pathname.startsWith('/minigames/')) return handleMinigames(request, env);
     try { return await handleApi(request, env); }
     catch (error) {
       console.error(JSON.stringify({ event: 'request-error', message: error instanceof Error ? error.message : String(error) }));

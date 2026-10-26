@@ -11,7 +11,7 @@ function ballSprite(){
 }
 
 export const hoopsGame={
-  id:'hoops',title:'廢紙投籃',duration:60,
+  id:'hoops',title:'廢紙投籃',duration:60,ranked:true,
   start(ctx){
     this.state={
       t:0,ball:null,wait:0,drag:null,sprite:ballSprite(),fx:[],combo:0,bestCombo:0,
@@ -38,12 +38,12 @@ export const hoopsGame={
     if(len<18||ctx.timeLeft<=0)return;// 拉太短視為取消
     const l=launchVelocity(v.x,v.y);
     s.ball=createBall(l.vx,l.vy);s.shots++;s.launchAt=s.t;
-    s.log.push({t:+s.t.toFixed(3),vx:Math.round(l.vx),vy:Math.round(l.vy),bin:Math.round(s.binX),wind:s.wind});
+    s.log.push({k:Math.max(1,Math.round(s.t*60)),vx:l.vx,vy:l.vy,bin:Math.round(s.binX),wind:s.wind});// k＝出手時的幀號（1/60 秒），初速保留完整精度：伺服器逐球重放物理
   },
   /** 拖曳向量換成世界座標下的「往後拉」量（往左下拉 → 往右上投） */
   pull(d){const sc=this.state.view.s;return {x:(d.ox-d.x)/sc,y:(d.oy-d.y)/sc};},
   update(ctx,dt){
-    const s=this.state;s.t=this.duration-ctx.timeLeft;
+    const s=this.state;s.t=Math.round((this.duration-ctx.timeLeft)*60)/60;// 取整到幀，才能和伺服器的重放逐幀一致
     s.binX=binXAt(s.t);s.wind=windAt(s.windSchedule,s.t);
     if(s.drag&&ctx.input.pointers.size===0)s.drag=null;// 暫停或失焦後取消拖曳
     s.fx=s.fx.filter(f=>s.t-f.t<1.1);
@@ -105,6 +105,8 @@ export const hoopsGame={
     for(const f of s.fx){const a=1-(s.t-f.t)/1.1,c=w2c(f.x,f.y);g.globalAlpha=Math.max(0,a);g.fillStyle=f.good?'#0f7f27':'#c0392b';g.font='900 22px sans-serif';g.textAlign='center';g.fillText(f.text,c.x,c.y-30-(1-a)*40);g.globalAlpha=1;}
     if(s.t<3&&!s.drag&&s.shots===0){g.fillStyle='#182e54';g.font='700 16px sans-serif';g.textAlign='center';g.fillText('在畫面上往左下拖曳，放開投出（拉越長越用力）',ctx.width/2,ctx.height-24);}
   },
+  /** 正式排行用的出手紀錄（桌子位置與風力由伺服器依種子與時間重算，不信任客戶端）。 */
+  log(){return {shots:this.state.log.map(({k,vx,vy})=>({k,vx,vy}))};},
   result(ctx){
     const s=this.state,acc=s.shots?Math.round(s.makes/s.shots*100):0;
     return {lines:['投 '+s.shots+' 球，進 '+s.makes+' 球（命中率 '+acc+'%）','空心 '+s.swishes+' 次，最高連擊 '+s.bestCombo,'題組日期 '+ctx.day+'（風向每天固定）']};

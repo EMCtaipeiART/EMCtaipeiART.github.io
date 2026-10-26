@@ -10,7 +10,7 @@ function wrap(g,text,maxW){
 }
 
 export const deadlineGame={
-  id:'deadline',title:'截稿倒數',duration:90,
+  id:'deadline',title:'截稿倒數',duration:90,ranked:true,
   start(ctx){
     this.state={
       deck:createDeck(ctx.rngFor('deck')),idx:0,combo:0,bestCombo:0,correct:0,wrong:0,
@@ -29,7 +29,7 @@ export const deadlineGame={
     const s=this.state,cur=s.deck.get(s.idx),ok=cur.type.isCorrect(cur.puzzle,id),stat=s.byType[cur.type.id];
     if(ok){s.combo++;s.correct++;stat.ok++;s.bestCombo=Math.max(s.bestCombo,s.combo);const pts=pointsForCorrect(s.combo);ctx.addScore(pts);s.flash={t:s.clock,ok:true,text:'+'+pts+(s.combo>1?'  連擊 x'+s.combo:'')};}
     else{s.combo=0;s.wrong++;stat.bad++;ctx.addScore(-WRONG_PENALTY);s.flash={t:s.clock,ok:false,text:'-'+WRONG_PENALTY};}
-    s.log.push({i:s.idx,a:id,ok,t:+s.clock.toFixed(2)});
+    s.log.push({i:s.idx,a:id,ok,t:+s.clock.toFixed(3)});
     s.idx++;ctx.setExtra('第 '+(s.idx+1)+' 題'+(s.combo>1?'  連擊 x'+s.combo:''));
   },
   update(ctx,dt){
@@ -62,6 +62,8 @@ export const deadlineGame={
       }
     }
   },
+  /** 正式排行用的作答紀錄：伺服器用同一份題組逐題重算分數（客戶端宣稱的分數無效）。 */
+  log(){return {answers:this.state.log.map(({i,a,t})=>({i,a,t}))};},
   result(ctx){
     const s=this.state,n=s.correct+s.wrong,acc=n?Math.round(s.correct/n*100):0;
     const per=TYPES.map(t=>t.title+' '+s.byType[t.id].ok+'/'+(s.byType[t.id].ok+s.byType[t.id].bad)).join('　');

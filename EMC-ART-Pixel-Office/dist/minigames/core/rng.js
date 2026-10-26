@@ -3,7 +3,8 @@ export function hashString(text){let h=2166136261;for(let i=0;i<text.length;i++)
 export function dayKey(date=new Date()){
   return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);// YYYY-MM-DD（台北時間）
 }
-export function dailySeed(gameId,date=new Date()){return hashString(gameId+'@'+dayKey(date));}
+export const seedForDay=(gameId,day)=>hashString(gameId+'@'+day);
+export function dailySeed(gameId,date=new Date()){return seedForDay(gameId,dayKey(date));}
 export function createRng(seed){
   let a=seed>>>0;
   const next=()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};

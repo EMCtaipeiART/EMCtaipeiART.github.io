@@ -42,14 +42,37 @@ worker/src/hide-room.ts    HideSeekRoom Durable Object（連線躲貓貓）
 - 只存記憶體；不碰案件資料庫、`pixel_office_people`、`DuelRoom`。連線對戰不寫入任何排行榜或個人紀錄。
 - 關閉碼：4400 請求錯誤、4404 找不到房間、4409 已存在／已滿／已開始、4413 訊息太大、4429 太頻繁、4408 閒置、4000 被新連線取代。
 
+## 正式排行榜（伺服器驗證）
+
+只對 **截稿倒數、廢紙投籃（完整驗證）** 與 **辦公室尋寶（簡易驗證）** 開放；兩款躲貓貓不上榜。
+
+**「一局一張票」**
+1. 開局：`POST /minigames/run` → 伺服器發 `runId`、**決定當天日期**（客戶端時鐘無效）並記下發出時間。要不到票（離線／伺服器錯誤）＝**練習模式**，成績只存本機。
+2. 遊玩：客戶端用伺服器給的日期推出同一組題目／風力／道具。
+3. 提交：`POST /minigames/submit {runId, device, log}`。伺服器檢查：票存在、屬於這個裝置、沒用過、沒過期；用同一份遊戲程式重算分數（**客戶端宣稱的分數無效**）；真實經過時間必須 ≥ 倒數 3 秒＋遊戲時間 − 2 秒。
+4. 一票一次：交易內標記已使用；同票重送回第一次的結果（冪等）；驗證失敗也會作廢該票（不能拿同一張票反覆試探）。
+
+| 遊戲 | 驗證 | 紀錄格式 |
+|---|---|---|
+| 截稿倒數 | 依種子重建題組，逐題檢查答案與選項是否存在、重算連擊與分數；最短間隔 0.3 秒、機器人式等間隔會被擋 | `{answers:[{i,a,t}]}` |
+| 廢紙投籃 | 逐球重放物理（桶位置與風力由種子與幀號重算）；力道上限、球與球之間的最短間隔 | `{shots:[{k,vx,vy}]}`（k＝1/60 秒幀號） |
+| 辦公室尋寶 | 位置依螢幕而異，伺服器無法重現；只檢查次數、間隔、提示最多一次、分數公式與真實時間 | `{finds:[{t}],hint}` |
+
+**身分**：匿名裝置碼（伺服器發、存在瀏覽器）＋暱稱，榜上顯示「暱稱#後四碼」。不連結任何人事或工作狀態資料；換瀏覽器就是新身分。
+**限流**：每裝置同時最多 3 張未用的票、每小時 40 局；每 IP 每小時 120 局（只存每天換鹽的雜湊）。請求 ≤ 16 KB，來源須在白名單內。
+**榜單**：今日前 20、近 7 天前 20，每人每天只算最高分；查詢快取 30 秒。資料保留 90 天（alarm 每天清理）。
+**誠實的限制**：無法證明「是真人玩的」。擋得住改本機紀錄、重放、假分數、不可能的速度；擋不住照人類速度精準解題的腳本。投籃用到 `Math.sin`，不同瀏覽器最後一位小數可能不同，極少數壓在邊緣的球以伺服器判定為準。
+
+後端：`worker/src/minigame-board.ts`（Durable Object `MinigameBoard`，SQLite）、`worker/src/minigame-verify.ts`（驗證器，直接引用前端同一份遊戲程式碼）、`worker/src/index.ts`（`/minigames/run|submit|board`）。前端：`core/board.js`、`core/manager.js`（開票／提交）。
+
 ## 本機執行
 
 ```powershell
 cd EMC-ART-Pixel-Office; node server.cjs            # 站台 http://localhost:8787
-cd worker; npx wrangler dev --local --port 8799     # 連線躲貓貓（localhost 自動連 ws://127.0.0.1:8799）
+cd worker; npx wrangler dev --local --port 8799     # 連線躲貓貓與排行榜（localhost 自動連 127.0.0.1:8799）
 ```
 
-`?hsServer=wss://…` 可覆寫連線位址。
+`?hsServer=wss://…` 覆寫躲貓貓連線位址，`?mgApi=https://…` 覆寫排行榜位址。
 
 ## 測試
 
@@ -57,6 +80,7 @@ cd worker; npx wrangler dev --local --port 8799     # 連線躲貓貓（localhos
 |---|---|
 | `node --test tests/minigames-core.test.mjs` | 框架、四款遊戲規則、躲貓貓模擬與導航、連線客戶端 |
 | `cd worker; npx vitest run test/hide-room.test.ts` | 連線房間（13 項，含規則一致性與資訊過濾） |
+| `cd worker; npx vitest run test/minigame-board.test.ts` | 排行榜（16 項：票的生命週期、重放、偽造、限流、榜單、清理、HTTP 路由） |
 | `cd worker; npx tsc --noEmit` | 型別檢查 |
 | `npm run smoke` | 既有煙霧測試（pre-push 鉤子會跑） |
 
@@ -81,7 +105,8 @@ cd worker; npx wrangler dev --local --port 8799     # 連線躲貓貓（localhos
 
 ## 已知限制
 
-- 正式排行榜（後端驗證成績）**尚未實作**，目前只有本機紀錄。
+- 排行榜尚無管理端刪除功能（需先確認現有管理員登入如何串接）。
+- 排行榜的日期與種子由伺服器發：離線時只能玩練習模式。
 - 躲貓貓使用獨立繪製的簡化地圖，不是真實辦公室座標。
 - 重新整理頁面後不會自動回到連線房間。
 - 全域建房限流需在 Cloudflare 另外設定。

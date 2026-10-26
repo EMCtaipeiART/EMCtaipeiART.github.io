@@ -2,11 +2,11 @@
 // 遊戲模組彼此不得 import；只能透過 manager 傳入的 ctx 使用共用能力。
 import {createFixedLoop} from './loop.js';
 import {createInput} from './input.js';
-import {createRng,dailySeed,dayKey,hashString} from './rng.js';
+import {createRng,dayKey,hashString,seedForDay} from './rng.js';
 
 const COUNTDOWN=3;// 遊戲可用 def.countdown 覆寫（連線遊戲由伺服器決定開始時間，設 0）
 
-export function createMiniGameManager({ui,store,bridge,loopFactory=createFixedLoop,inputFactory=createInput,now=()=>new Date(),onError=e=>console.error('[minigame]',e)}){
+export function createMiniGameManager({ui,store,bridge,board=null,nickname=()=>'',loopFactory=createFixedLoop,inputFactory=createInput,now=()=>new Date(),onError=e=>console.error('[minigame]',e)}){
   const games=new Map();
   let run=null;// 目前進行中的一局，離開後為 null
 
@@ -35,10 +35,10 @@ export function createMiniGameManager({ui,store,bridge,loopFactory=createFixedLo
     if(run)return false;
     const def=games.get(id);if(!def)return false;
     const ac=new AbortController(),signal=ac.signal;
-    const day=dayKey(now()),seed=dailySeed(id,now());
+    const ranked=!!(def.ranked&&board);// 正式排行：日期與種子由伺服器發的票決定；要不到票就是練習模式
     const g=ui.canvas.getContext('2d');
     const countdown=def.countdown??COUNTDOWN;
-    run={def,ac,phase:countdown>0?'countdown':'running',t:countdown,timeLeft:def.duration,score:0,day,seed,width:1,height:1,g,loop:null,input:null,ctx:null,ended:false,result:null};
+    const r0=run={def,ac,phase:ranked?'pending':(countdown>0?'countdown':'running'),t:countdown,timeLeft:def.duration,score:0,day:dayKey(now()),seed:0,width:1,height:1,g,loop:null,input:null,ctx:null,ended:false,result:null,ticket:null,practice:false};
     // ---- 輸入閘門：進行中辦公室不接收任何移動、拖曳、縮放 ----
     bridge.releaseKeys();
     const shield=e=>{const t=e.target;if(ui.root.contains(t))return;if(t===bridge.canvasEl||(t.closest&&t.closest('#joystick,aside')))e.stopPropagation();};
@@ -63,7 +63,8 @@ export function createMiniGameManager({ui,store,bridge,loopFactory=createFixedLo
     run.input=inputFactory(ui.canvas,signal);
     const ctx=run.ctx={
       g,get width(){return run.width;},get height(){return run.height;},
-      rng:createRng(seed),rngFor:name=>createRng(hashString(id+':'+name+'@'+day)),seed,day,input:run.input,bridge,signal,
+      rngFor:name=>createRng(hashString(id+':'+name+'@'+r0.day)),input:run.input,bridge,signal,
+      get day(){return r0.day;},get seed(){return r0.seed;},get practice(){return r0.practice;},
       get score(){return run.score;},get timeLeft(){return run.timeLeft;},
       addScore(n){run.score=Math.max(0,run.score+n);ui.setScore(run.score);},
       setScore(n){run.score=Math.max(0,n);ui.setScore(run.score);},
@@ -75,10 +76,21 @@ export function createMiniGameManager({ui,store,bridge,loopFactory=createFixedLo
       end:(lines)=>finish(lines)
     };
     layout();
-    run.loop=loopFactory({update:step,render:draw});
-    guard(()=>def.start(ctx));
-    run.loop.start();
-    bridge.markDirty();
+    const begin=ticket=>{
+      if(run!==r0)return;// 等票的時候玩家已經離開
+      if(ticket){r0.ticket=ticket;r0.day=ticket.day;}else if(ranked){r0.practice=true;}
+      r0.seed=seedForDay(id,r0.day);ctx.rng=createRng(r0.seed);
+      r0.phase=countdown>0?'countdown':'running';
+      ui.banner(r0.practice?'練習模式：未連上排行榜':'');
+      r0.loop=loopFactory({update:step,render:draw});
+      guard(()=>def.start(ctx));
+      if(run===r0)r0.loop.start();
+      bridge.markDirty();
+    };
+    if(ranked){
+      ui.banner('連線中…');
+      Promise.resolve().then(()=>board.startRun(id,nickname())).then(t=>begin(t&&t.ok?t:null),()=>begin(null));
+    }else begin(null);
     return true;
   }
 
@@ -112,11 +124,31 @@ export function createMiniGameManager({ui,store,bridge,loopFactory=createFixedLo
     run.ended=true;run.phase='finished';run.loop.stop();
     const r=run,extra=guard(()=>r.def.result?r.def.result(r.ctx):null,null)||{};
     const score=Math.max(0,Math.round(extra.score??r.score));
-    // noRecord：連線對戰不寫入任何成績紀錄或排行，避免互相配合刷分
-    const record=r.def.noRecord?null:store.submit(r.def.id,{score,day:r.day});
-    r.result={score,record};
+    const baseLines=[...(extra.lines||[]),...lines];
     ui.setScore(score);ui.banner('');
-    ui.results({title:r.def.title,score,lines:[...(extra.lines||[]),...lines],record,board:record?record.board:[],again:!r.def.noAgain});
+    const showLocal=(note)=>{
+      // noRecord：連線對戰不寫入任何成績紀錄或排行，避免互相配合刷分
+      const record=r.def.noRecord?null:store.submit(r.def.id,{score,day:r.day});
+      r.result={score,record};
+      ui.results({title:r.def.title,score,lines:note?[...baseLines,note]:baseLines,record,board:record?record.board:[],again:!r.def.noAgain});
+    };
+    if(r.ticket&&!r.practice&&r.def.log){
+      // 正式排行：成績由伺服器依作答紀錄重算，這裡顯示的分數以伺服器為準
+      r.result={score,record:null};
+      ui.results({title:r.def.title,score,lines:[...baseLines,'成績驗證中…'],record:null,board:[],again:false});
+      const log=guard(()=>r.def.log(r.ctx),null);
+      Promise.resolve().then(()=>board.submit(r.ticket,log)).then(res=>{
+        if(run!==r)return;
+        if(!res||!res.ok)return showLocal('成績驗證失敗（'+(res&&res.error||'無回應')+'），只存在本機');
+        const record=store.submit(r.def.id,{score:res.score,day:r.day});
+        r.result={score:res.score,record,remote:res};
+        ui.setScore(res.score);
+        ui.results({title:r.def.title,score:res.score,lines:baseLines.filter(l=>!/^題組日期/.test(l)),record,board:[],again:true,
+          remote:{rank:res.rank,day:res.day,level:r.ticket.verification,board:res.board||[],me:r.ticket.nick+'#'+r.ticket.tag,replay:!!res.replay}});
+      },()=>{if(run===r)showLocal('無法連上排行榜，成績只存在本機');});
+      return;
+    }
+    showLocal(r.practice?'練習模式：成績只存在本機，不計入排行':'');
   }
 
   // 例外時的安全退出：不留下任何事件、計時器或被鎖住的輸入。

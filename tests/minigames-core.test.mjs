@@ -291,3 +291,62 @@ test('連線：舊連線的遲來訊息不會干擾新連線',()=>{
   const old=t.made[0];old.msg({t:'snap'});assert.equal(t.msgs.length,0);
   t.made[1].open();t.made[1].msg({t:'welcome',token:'T',you:'m0'});assert.equal(t.msgs.length,1);
 });
+
+// ---- Phase 7+：正式排行榜（客戶端）----
+import {createBoardClient,boardBaseUrl} from '../EMC-ART-Pixel-Office/dist/minigames/core/board.js';
+const tick=()=>new Promise(r=>setTimeout(r,0));
+const rankedGame=(extra={})=>({id:'rk',title:'RK',duration:1,ranked:true,starts:0,start(ctx){this.starts++;this.day=ctx.day;this.seed=ctx.seed;ctx.input.on('down',()=>ctx.addScore(10));},update(){},render(){},log(){return {answers:[{i:0,a:1,t:1}]};},destroy(){},...extra});
+const ticket={ok:true,runId:'a'.repeat(32),device:'b'.repeat(32),day:'2031-01-02',nick:'小明',tag:'bbbb',verification:'full'};
+
+test('排行榜客戶端：裝置碼存在本機；逾時與錯誤不丟例外',async()=>{
+  const mem={};const storage={getItem:k=>mem[k]??null,setItem:(k,v)=>{mem[k]=v;}};
+  const calls=[];
+  const fetchImpl=async(url,opt)=>{calls.push([url,opt&&opt.method,opt&&opt.body&&JSON.parse(opt.body)]);return {ok:true,status:200,json:async()=>({ok:true,device:'c'.repeat(32),runId:'r'})};};
+  const c=createBoardClient({base:'http://x',fetchImpl,storage});
+  const r=await c.startRun('hoops','甲');assert.equal(r.ok,true);assert.equal(mem['emc-mg-device'],'c'.repeat(32));
+  await c.startRun('hoops','甲');assert.equal(calls[1][2].device,'c'.repeat(32));// 第二次帶上同一個裝置碼
+  await c.submit(r,{shots:[]});assert.equal(calls[2][0],'http://x/minigames/submit');
+  await c.board('hoops','week');assert.match(calls[3][0],/board\?game=hoops&range=week/);
+  const slow=createBoardClient({base:'http://x',timeoutMs:20,fetchImpl:(u,o)=>new Promise((_,rej)=>o.signal.addEventListener('abort',()=>rej(new Error('abort'))))});
+  await assert.rejects(()=>slow.startRun('hoops','x'));
+  const bad=createBoardClient({base:'http://x',fetchImpl:async()=>({ok:false,status:429,json:async()=>({ok:false,error:'rate-limited'})})});
+  assert.deepEqual({ok:(await bad.startRun('hoops','x')).ok},{ok:false});
+  assert.equal(boardBaseUrl({hostname:'localhost',search:''}),'http://127.0.0.1:8799');
+  assert.match(boardBaseUrl({hostname:'emctaipeiart.github.io',search:''}),/^https:\/\//);
+});
+
+test('正式排行：用伺服器發的日期開局；結算時提交紀錄，以伺服器分數為準',async()=>{
+  const env=setupEnv(),game=rankedGame(),submitted=[];
+  const board={startRun:async(g,n)=>({...ticket,nick:n||'小明'}),submit:async(t,log)=>{submitted.push([t.runId,log]);return {ok:true,score:777,rank:2,day:'2031-01-02',board:[{rank:1,name:'甲#aaaa',score:900},{rank:2,name:'小明#bbbb',score:777}]};}};
+  const m=createMiniGameManager({...env,board,nickname:()=>'小明'});m.register(game);
+  m.open('rk');assert.equal(m.phase,'pending');assert.equal(game.starts,0);// 還沒拿到票就不開始
+  await tick();await tick();
+  assert.equal(m.phase,'countdown');assert.equal(game.starts,1);assert.equal(game.day,'2031-01-02');// 日期是伺服器的，不是本機時鐘
+  env.loops[0].tick(60*4);env.loops[0].tick(60*2);
+  await tick();await tick();await tick();
+  assert.equal(submitted.length,1);assert.deepEqual(submitted[0][1],{answers:[{i:0,a:1,t:1}]});
+  assert.equal(env.ui.last.score,777);assert.equal(env.ui.last.remote.rank,2);assert.equal(env.ui.last.remote.me,'小明#bbbb');
+  m.close();assert.equal(window.count,0);
+});
+
+test('正式排行：拿不到票就是練習模式，不提交、成績只存本機；等票時離開不會留下殘局',async()=>{
+  const env=setupEnv(),game=rankedGame(),submits=[];
+  const m=createMiniGameManager({...env,board:{startRun:async()=>{throw new Error('offline');},submit:async()=>{submits.push(1);}}});m.register(game);
+  m.open('rk');await tick();await tick();
+  assert.equal(m.phase,'countdown');assert.equal(game.starts,1);
+  env.loops[0].tick(60*4);env.loops[0].tick(60*2);await tick();
+  assert.equal(submits.length,0);assert.match(env.ui.last.lines.join(' '),/練習模式/);assert.ok(env.ui.last.record);
+  m.close();
+  const game2=rankedGame({id:'rk2'});m.register(game2);
+  m.open('rk2');m.close();await tick();await tick();// 還在等票就關掉
+  assert.equal(game2.starts,0);assert.equal(m.active,false);assert.equal(window.count,0);
+});
+
+test('正式排行：伺服器拒絕或連不上時，分數只留本機並說明原因',async()=>{
+  for(const res of [{ok:false,error:'too-fast'},null]){
+    const env=setupEnv(),game=rankedGame();
+    const m=createMiniGameManager({...env,board:{startRun:async()=>ticket,submit:async()=>{if(!res)throw new Error('net');return res;}}});m.register(game);
+    m.open('rk');await tick();await tick();env.loops[0].tick(60*4);env.loops[0].tick(60*2);await tick();await tick();
+    assert.match(env.ui.last.lines.join(' '),res?/驗證失敗/:/無法連上排行榜/);assert.ok(env.ui.last.record);m.close();
+  }
+});

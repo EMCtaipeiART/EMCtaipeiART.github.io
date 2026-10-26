@@ -26,6 +26,7 @@ interface __BaseEnv_Env {
 	DATABASE_COORDINATOR: DurableObjectNamespace<import("./src/index").DatabaseCoordinator>;
 	DUEL_ROOM: DurableObjectNamespace<import("./src/index").DuelRoom>;
 	HIDESEEK_ROOM: DurableObjectNamespace<import("./src/index").HideSeekRoom>;
+	MINIGAME_BOARD: DurableObjectNamespace<import("./src/index").MinigameBoard>;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {

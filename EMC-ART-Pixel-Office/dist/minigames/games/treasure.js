@@ -5,7 +5,7 @@ import {floorCandidates,pickTreasures,treasureScore,TREASURE_COUNT,TREASURE_SECO
 const HUD_TOP=64,BOTTOM_PAD=64,HINT_W=104,HINT_H=40;
 
 export const treasureGame={
-  id:'treasure',title:'辦公室尋寶',duration:TREASURE_SECONDS,
+  id:'treasure',title:'辦公室尋寶',duration:TREASURE_SECONDS,ranked:true,
   start(ctx){
     const sc=ctx.bridge.scene(),defs=Object.fromEntries(TREASURE_ITEMS.map(d=>[d.id,d]));
     const candidates=floorCandidates({minX:80,maxX:sc.W-80,minY:Math.max(sc.minY,0)+30,maxY:sc.maxY-30,isFree:(x,y)=>!ctx.bridge.blocked(x,y)});
@@ -18,7 +18,7 @@ export const treasureGame={
     }
     this.state={
       items:items.map(i=>({...i,found:false,foundAt:0,canvas:renderItem(defs[i.type]),name:defs[i.type].name})),
-      total:items.length,found:0,hintUsed:false,hint:null,clock:0,fx:[],hDown:false,hintBox:null
+      total:items.length,found:0,finds:[],hintUsed:false,hint:null,clock:0,fx:[],hDown:false,hintBox:null
     };
     this.sync(ctx);
     ctx.input.on('down',p=>this.press(ctx,p));
@@ -32,7 +32,7 @@ export const treasureGame={
     const cell=this.cell(ctx),reach=Math.max(26,cell*7);// 命中半徑至少 26px，手指也點得到
     let best=null,bd=Infinity;
     for(const it of s.items){if(it.found)continue;const l=ctx.sceneToLocal(it.x,it.y),d=Math.hypot(l.x-p.x,l.y-p.y);if(d<=reach&&d<bd){best=it;bd=d;}}
-    if(best){best.found=true;best.foundAt=s.clock;s.found++;s.fx.push({x:best.x,y:best.y,t:s.clock,text:'+'+FIND_POINTS});this.sync(ctx);if(s.found>=s.total)ctx.end();}
+    if(best){best.found=true;best.foundAt=s.clock;s.found++;s.finds.push({t:+(this.duration-ctx.timeLeft).toFixed(3)});s.fx.push({x:best.x,y:best.y,t:s.clock,text:'+'+FIND_POINTS});this.sync(ctx);if(s.found>=s.total)ctx.end();}
     else s.fx.push({x:ctx.localToScene(p.x,p.y).x,y:ctx.localToScene(p.x,p.y).y,t:s.clock,miss:true});
   },
   useHint(ctx){
@@ -76,6 +76,8 @@ export const treasureGame={
     g.fillStyle=off?'#d6dbe4':'#ffd24a';g.fillRect(hx,hy,HINT_W,HINT_H);g.strokeStyle='#182e54';g.lineWidth=2;g.strokeRect(hx,hy,HINT_W,HINT_H);
     g.fillStyle='#182e54';g.font='700 14px sans-serif';g.textAlign='center';g.fillText(off?'提示已用':'提示 -50',hx+HINT_W/2,hy+HINT_H/2+5);
   },
+  /** 正式排行用的紀錄（道具位置依螢幕而異，伺服器只能做簡易驗證：次數、間隔、真實時間）。 */
+  log(){const s=this.state;return {finds:s.finds,hint:s.hintUsed};},
   result(ctx){
     const s=this.state,score=treasureScore({found:s.found,total:s.total,timeLeft:ctx.timeLeft,hintUsed:s.hintUsed});
     const lines=['找到 '+s.found+' / '+s.total+' 個'];

@@ -1,0 +1,141 @@
+import { DurableObject } from 'cloudflare:workers';
+import { dayKey } from '../../EMC-ART-Pixel-Office/dist/minigames/core/rng.js';
+import { COUNTDOWN_SECS, GAMES, verifyRun, type GameId } from './minigame-verify';
+
+/**
+ * 小遊戲正式排行榜（單一實例，SQLite 儲存）。
+ * 「一局一張票」：開局由伺服器發 runId、決定日期（客戶端時鐘無效）；提交時伺服器重算分數、
+ * 票只能用一次（單執行緒＋交易，同時兩個請求只會成功一個）、真實經過時間必須夠長。
+ * 身分是匿名裝置碼＋暱稱（榜上顯示「暱稱#後四碼」），不連結任何人事或工作狀態資料。
+ * 回傳 { status, body }，由 index.ts 轉成帶 CORS 的 Response。
+ */
+export const LIMITS = { openRuns: 3, perDeviceHour: 40, perIpHour: 120, retentionDays: 90, runRetentionDays: 7, boardSize: 20, grace: 45 };
+const HEX32 = /^[0-9a-f]{32}$/;
+const HOUR = 3600_000, DAY = 86_400_000;
+type Reply = { status: number; body: Record<string, unknown> };
+const reply = (status: number, body: Record<string, unknown>): Reply => ({ status, body });
+const hex = (n: number) => [...crypto.getRandomValues(new Uint8Array(n))].map(b => b.toString(16).padStart(2, '0')).join('');
+export const cleanNick = (v: unknown) => String(v ?? '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, 12);
+
+export class MinigameBoard extends DurableObject<Env> {
+  /** 測試可覆寫的時鐘 */
+  clock: () => number = () => Date.now();
+
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env);
+    ctx.blockConcurrencyWhile(async () => {
+      const sql = ctx.storage.sql;
+      sql.exec(`CREATE TABLE IF NOT EXISTS devices (id TEXT PRIMARY KEY, nick TEXT NOT NULL, created_at INTEGER NOT NULL, last_seen INTEGER NOT NULL)`);
+      sql.exec(`CREATE TABLE IF NOT EXISTS runs (run_id TEXT PRIMARY KEY, game TEXT NOT NULL, day TEXT NOT NULL, device TEXT NOT NULL, ip_hash TEXT NOT NULL,
+        issued_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, used INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'open', score INTEGER)`);
+      sql.exec(`CREATE TABLE IF NOT EXISTS scores (id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL UNIQUE, game TEXT NOT NULL, day TEXT NOT NULL,
+        device TEXT NOT NULL, score INTEGER NOT NULL, at INTEGER NOT NULL)`);
+      sql.exec(`CREATE TABLE IF NOT EXISTS salts (day TEXT PRIMARY KEY, v TEXT NOT NULL)`);
+      sql.exec(`CREATE INDEX IF NOT EXISTS idx_scores_board ON scores(game, day, score DESC)`);
+      sql.exec(`CREATE INDEX IF NOT EXISTS idx_runs_device ON runs(device, issued_at)`);
+      sql.exec(`CREATE INDEX IF NOT EXISTS idx_runs_ip ON runs(ip_hash, issued_at)`);
+      if ((await ctx.storage.getAlarm()) === null) await ctx.storage.setAlarm(Date.now() + DAY);
+    });
+  }
+
+  private sql() { return this.ctx.storage.sql; }
+  private one<T = Record<string, any>>(q: string, ...b: any[]): T | undefined { return this.sql().exec(q, ...b).toArray()[0] as T | undefined; }
+  private all<T = Record<string, any>>(q: string, ...b: any[]): T[] { return this.sql().exec(q, ...b).toArray() as T[]; }
+
+  private async ipHash(ip: string, day: string): Promise<string> {
+    let salt = this.one<{ v: string }>('SELECT v FROM salts WHERE day = ?', day)?.v;
+    if (!salt) { salt = hex(16); this.sql().exec('INSERT OR IGNORE INTO salts (day, v) VALUES (?, ?)', day, salt); salt = this.one<{ v: string }>('SELECT v FROM salts WHERE day = ?', day)!.v; }
+    const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + '|' + ip));
+    return [...new Uint8Array(d)].slice(0, 12).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // ───────── 開局：發票 ─────────
+  async startRun(req: { game?: unknown; device?: unknown; nick?: unknown; ip?: unknown }): Promise<Reply> {
+    const game = String(req.game ?? '') as GameId;
+    if (!(game in GAMES)) return reply(400, { ok: false, error: 'bad-game' });
+    const now = this.clock(), day = dayKey(new Date(now));
+    const ip = await this.ipHash(String(req.ip ?? 'unknown'), day);
+    let device = typeof req.device === 'string' && HEX32.test(req.device) ? req.device : '';
+    const nick = cleanNick(req.nick);
+    if (device && !this.one('SELECT 1 FROM devices WHERE id = ?', device)) device = '';   // 沒見過的裝置碼不採用，由伺服器重發
+    // 以下到 INSERT 為止都是同步的：檢查與寫入之間不會被別的請求插隊
+    if (!device) device = hex(16);
+    if (!this.one('SELECT 1 FROM devices WHERE id = ?', device)) this.sql().exec('INSERT INTO devices (id, nick, created_at, last_seen) VALUES (?, ?, ?, ?)', device, nick || '玩家', now, now);
+    else this.sql().exec('UPDATE devices SET last_seen = ?, nick = CASE WHEN ? != \'\' THEN ? ELSE nick END WHERE id = ?', now, nick, nick, device);
+    const perDevice = this.one<{ n: number }>('SELECT COUNT(*) AS n FROM runs WHERE device = ? AND issued_at > ?', device, now - HOUR)!.n;
+    const open = this.one<{ n: number }>('SELECT COUNT(*) AS n FROM runs WHERE device = ? AND used = 0 AND expires_at > ?', device, now)!.n;
+    const perIp = this.one<{ n: number }>('SELECT COUNT(*) AS n FROM runs WHERE ip_hash = ? AND issued_at > ?', ip, now - HOUR)!.n;
+    if (perDevice >= LIMITS.perDeviceHour || open >= LIMITS.openRuns || perIp >= LIMITS.perIpHour) return reply(429, { ok: false, error: 'rate-limited' });
+    const runId = hex(16), spec = GAMES[game];
+    const expires = now + (spec.duration + COUNTDOWN_SECS + LIMITS.grace) * 1000;
+    this.sql().exec('INSERT INTO runs (run_id, game, day, device, ip_hash, issued_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)', runId, game, day, device, ip, now, expires);
+    const nickNow = this.one<{ nick: string }>('SELECT nick FROM devices WHERE id = ?', device)!.nick;
+    return reply(200, { ok: true, runId, game, day, duration: spec.duration, expiresAt: expires, device, nick: nickNow, tag: device.slice(0, 4), verification: spec.level });
+  }
+
+  // ───────── 提交：驗證、重算、記分 ─────────
+  submit(req: { runId?: unknown; device?: unknown; log?: unknown }): Reply {
+    const runId = String(req.runId ?? ''), device = String(req.device ?? '');
+    if (!HEX32.test(runId) || !HEX32.test(device)) return reply(400, { ok: false, error: 'bad-request' });
+    const now = this.clock();
+    return this.ctx.storage.transactionSync(() => {
+      const run = this.one<{ game: GameId; day: string; device: string; issued_at: number; expires_at: number; used: number; status: string; score: number | null }>(
+        'SELECT game, day, device, issued_at, expires_at, used, status, score FROM runs WHERE run_id = ?', runId);
+      if (!run) return reply(404, { ok: false, error: 'no-run' });
+      if (run.device !== device) return reply(403, { ok: false, error: 'wrong-device' });
+      if (run.used) {   // 冪等：同一張票重送，回第一次的結果，不會再記一次
+        if (run.status === 'ok') return reply(200, { ok: true, replay: true, score: run.score, ...this.standing(run.game, run.day, device, run.score!) });
+        return reply(409, { ok: false, error: 'already-used', status: run.status });
+      }
+      const reject = (status: number, error: string) => { this.sql().exec('UPDATE runs SET used = 1, status = ? WHERE run_id = ?', 'rejected:' + error, runId); return reply(status, { ok: false, error }); };
+      if (now > run.expires_at) return reject(410, 'expired');
+      const verdict = verifyRun(run.game, run.day, req.log);
+      if (!verdict.ok) return reject(422, verdict.error);
+      // 真實時間下限：宣稱玩了多久，就必須真的過了那麼久（容許 2 秒誤差）
+      const elapsed = (now - run.issued_at) / 1000;
+      if (elapsed < COUNTDOWN_SECS + verdict.endT - 2) return reject(422, 'too-fast-real-time');
+      this.sql().exec('INSERT INTO scores (run_id, game, day, device, score, at) VALUES (?, ?, ?, ?, ?, ?)', runId, run.game, run.day, device, verdict.score, now);
+      this.sql().exec('UPDATE runs SET used = 1, status = \'ok\', score = ? WHERE run_id = ?', verdict.score, runId);
+      return reply(200, { ok: true, score: verdict.score, detail: verdict.detail, ...this.standing(run.game, run.day, device, verdict.score) });
+    });
+  }
+
+  private standing(game: GameId, day: string, device: string, score: number) {
+    const better = this.one<{ n: number }>('SELECT COUNT(*) AS n FROM (SELECT device, MAX(score) AS m FROM scores WHERE game = ? AND day = ? GROUP BY device) WHERE m > ?', game, day, score)!.n;
+    const mine = this.one<{ m: number }>('SELECT MAX(score) AS m FROM scores WHERE game = ? AND day = ? AND device = ?', game, day, device)?.m ?? score;
+    return { rank: better + 1, dayBest: mine, isDayBest: score >= mine, day, board: this.boardRows(game, day, day) };
+  }
+
+  // ───────── 榜單 ─────────
+  private boardRows(game: GameId, from: string, to: string) {
+    return this.all<{ device: string; nick: string; score: number }>(
+      `SELECT s.device AS device, d.nick AS nick, MAX(s.score) AS score FROM scores s JOIN devices d ON d.id = s.device
+       WHERE s.game = ? AND s.day >= ? AND s.day <= ? GROUP BY s.device ORDER BY score DESC, MIN(s.at) ASC LIMIT ?`, game, from, to, LIMITS.boardSize
+    ).map((r, i) => ({ rank: i + 1, name: r.nick + '#' + r.device.slice(0, 4), score: r.score }));
+  }
+  private cache = new Map<string, { at: number; body: Record<string, unknown> }>();
+  board(req: { game?: unknown; range?: unknown }): Reply {
+    const game = String(req.game ?? '') as GameId;
+    if (!(game in GAMES)) return reply(400, { ok: false, error: 'bad-game' });
+    const range = req.range === 'week' ? 'week' : 'today';
+    const now = this.clock(), key = game + '|' + range + '|' + dayKey(new Date(now));
+    const hit = this.cache.get(key);
+    if (hit && now - hit.at < 30_000) return reply(200, hit.body);
+    const to = dayKey(new Date(now)), from = range === 'week' ? dayKey(new Date(now - 6 * DAY)) : to;
+    const body = { ok: true, game, range, from, to, verification: GAMES[game].level, entries: this.boardRows(game, from, to) };
+    this.cache.set(key, { at: now, body });
+    if (this.cache.size > 40) this.cache.clear();
+    return reply(200, body);
+  }
+
+  // ───────── 清理 ─────────
+  purge(now = this.clock()) {
+    const cutoffDay = dayKey(new Date(now - LIMITS.retentionDays * DAY));
+    this.sql().exec('DELETE FROM scores WHERE day < ?', cutoffDay);
+    this.sql().exec('DELETE FROM runs WHERE issued_at < ?', now - LIMITS.runRetentionDays * DAY);
+    this.sql().exec('DELETE FROM salts WHERE day < ?', dayKey(new Date(now - 2 * DAY)));
+    this.sql().exec('DELETE FROM devices WHERE last_seen < ? AND id NOT IN (SELECT device FROM scores)', now - LIMITS.retentionDays * DAY);
+    this.cache.clear();
+  }
+  async alarm() { this.purge(); await this.ctx.storage.setAlarm(this.clock() + DAY); }
+}
