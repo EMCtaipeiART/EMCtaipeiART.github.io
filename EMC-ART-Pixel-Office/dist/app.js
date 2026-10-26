@@ -1429,6 +1429,36 @@ function setZoom(target){const base=Math.max(.34,Math.min(.62,cam.w/760)),s=Math
   window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
 })();
 /* 手機：手指拖曳平移（鏡頭暫時不跟角色）；沒拖動的輕點照舊選人。自己的角色一走動，鏡頭就回來跟著。 */
+/* 手機單獨開啟的多元宇宙沒有外層頁面的工具列（四樓／五樓、全員上班、上下班設定），在返回鈕旁放「選單」（2026-10-26） */
+(function(){
+  if(window.parent!==window||!document.documentElement.classList.contains('clean')||!matchMedia('(max-width:720px)').matches)return;
+  const el=(tag,cls,html)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(html!==undefined)e.innerHTML=html;return e;};
+  const admin=()=>Boolean(storyIdentity.token&&storyIdentity.monitor);
+  const call=(action,extra)=>syncCall({action,...(extra||{}),editorToken:storyIdentity.token});
+  const goFloor=()=>{const u=new URL(location.href),hero=u.searchParams.get('hero')||(selected!=null&&people[selected]?people[selected].name:'')||storyIdentity.name||'';if(FLOOR4){u.searchParams.delete('floor');u.searchParams.delete('hero');}else{u.searchParams.set('floor','4');if(hero)u.searchParams.set('hero',hero);}u.searchParams.set('t',String(Date.now()));location.href=u.href;};
+  const btn=el('button','menu-btn','☰ 選單');btn.type='button';btn.setAttribute('aria-label','選單');
+  const panel=el('div','f-menu');panel.hidden=true;
+  const close=()=>{panel.hidden=true;};
+  const item=(label,fn)=>{const b=el('button','f-menu-item',label);b.type='button';b.onclick=()=>{close();fn();};return b;};
+  async function hoursModal(){
+    let cfg;try{cfg=(await call('getPixelHours')).config;}catch(err){toast('讀取失敗：'+(err.message||err));return;}
+    const back=el('div','f-modal');const card=el('div','f-modal-card');
+    const rows=[['dayStart','上班開始'],['lunchStart','午休開始'],['lunchEnd','午休結束'],['workEnd','下班'],['overtimeStart','加班開始']];
+    card.innerHTML='<h3>上下班設定</h3><label class="f-row"><input type="checkbox" id="fhOn"> 套用上下班時段規則</label><label class="f-row"><input type="checkbox" id="fhRooms"> 行事曆有會議時，人物依會議室入座</label>'+rows.map(r=>'<label class="f-row"><span>'+r[1]+'</span><input type="number" min="0" max="23" id="fh_'+r[0]+'"></label>').join('')+'<div class="f-actions"><button type="button" id="fhCancel">取消</button><button type="button" id="fhSave" class="primary">儲存</button></div>';
+    back.appendChild(card);document.body.appendChild(back);
+    card.querySelector('#fhOn').checked=cfg.enabled!==false;card.querySelector('#fhRooms').checked=cfg.meetingRooms!==false;rows.forEach(r=>{card.querySelector('#fh_'+r[0]).value=cfg[r[0]];});
+    card.querySelector('#fhCancel').onclick=()=>back.remove();
+    card.querySelector('#fhSave').onclick=async()=>{const body={enabled:card.querySelector('#fhOn').checked,meetingRooms:card.querySelector('#fhRooms').checked};rows.forEach(r=>{body[r[0]]=Number(card.querySelector('#fh_'+r[0]).value);});try{await call('savePixelHours',body);toast('已儲存上下班時段');back.remove();}catch(err){toast('儲存失敗：'+(err.message||err));}};
+  }
+  async function allWork(){
+    try{const r=await call('getPixelHours'),mode=r.force==='work'?'off':'work';await call('pixelOfficeAllWork',{mode});toast(mode==='work'?'全員上班':'全員下班');setTimeout(()=>location.reload(),600);}catch(err){toast('失敗：'+(err.message||err));}
+  }
+  btn.onclick=()=>{if(!panel.hidden){close();return;}panel.innerHTML='';panel.appendChild(item(FLOOR4?'回五樓':'四樓',goFloor));
+    if(admin()){panel.appendChild(item('全員上班／下班（切換）',allWork));panel.appendChild(item('上下班設定',hoursModal));}
+    panel.hidden=false;};
+  document.addEventListener('pointerdown',e=>{if(!panel.hidden&&!panel.contains(e.target)&&e.target!==btn)close();});
+  document.body.appendChild(btn);document.body.appendChild(panel);
+})();
 /* 手機單獨開啟的多元宇宙（新分頁／主畫面 App）沒有外層頁面的「關閉」可用：左上角放返回鈕，回到系統首頁 */
 (function(){
   if(window.parent!==window||!document.documentElement.classList.contains('clean')||!matchMedia('(max-width:720px)').matches)return;
