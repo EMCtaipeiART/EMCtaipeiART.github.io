@@ -38,8 +38,9 @@ if(office){
   // 入口：點「小遊戲」開啟卡片式選單（測試用的點點遊戲不列出）
   const store=createScoreStore();
   const menu=createMenu({manager,store,getNick,setNick:v=>{try{localStorage.setItem(NAME_KEY,v);}catch{/* 儲存不可用 */}},
-    onPick:id=>{if(id==='hideseek-online')lobby.show();else manager.open(id);}});
+    isAdmin:()=>Boolean(office.isMonitor&&office.isMonitor()),
+    onPick:id=>{if(id==='vent-arena'){if(window.parent!==window)window.parent.postMessage({type:'pixelOfficeOpenArena'},location.origin);else window.open('../../vent-arena/','_blank','noopener');}else if(id==='hideseek-online')lobby.show();else manager.open(id);}});
   window.miniGamesMenu=menu;
-  const btn=document.getElementById('miniGamesBtn');
+  const btn=document.getElementById('miniGamesBtn');/* 入口按鈕已移到主站上方的「小遊戲」，這裡只留相容 */
   if(btn)btn.addEventListener('click',()=>menu.toggle());
 }

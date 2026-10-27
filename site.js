@@ -522,7 +522,7 @@
     window.addEventListener('message',e=>{const f=$('arenaFrame');if(e.origin===location.origin&&e.data&&e.data.type==='ventArenaBack'&&f&&e.source===f.contentWindow)openUniverse()});
     document.addEventListener('click',e=>{
       if(e.target.closest?.('[data-uni-floor]')){floorTransition(state.uniFloor===4?5:4);return}
-      if(e.target.closest?.('[data-uni-arena]')){show('arena');return}
+      if(e.target.closest?.('[data-uni-minigames]')){try{$('uniFrame').contentWindow.postMessage({type:'pixelOfficeMiniGames'},location.origin)}catch(err){}return}
       if(e.target.closest?.('[data-arena-back]')){openUniverse()}
     });
     /* 電梯過場（2026-10-26）：兩片電梯門關上、顯示樓層、換頁、再打開。在像素辦公室走進電梯，或按「四樓／回五樓」都會播。 */
@@ -539,7 +539,7 @@
     function renderUniversePage(){
       if(state.uniFloor===undefined){try{state.uniFloor=Number(sessionStorage.getItem('uniFloor'))===4?4:5;state.uniHero=sessionStorage.getItem('uniHero')||state.uniHero}catch(err){state.uniFloor=5}}/* 重新整理後停留在原本的樓層 */
       const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=uniFrameSrc(state.uniFloor===4?4:5);
-      $('stage').innerHTML='<div class="uni-page is-edit"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+(loggedIn()&&(isAdminUser()||isMachiUser())?'<button type="button" class="btn" data-uni-allwork>'+uniAllWorkLabel()+'</button><button type="button" class="btn" data-uni-hours>上下班設定</button>':'')+'<button type="button" class="btn" data-uni-floor>'+(state.uniFloor===4?'回五樓':'四樓')+'</button><button type="button" class="btn" data-uni-arena>出氣擂台</button><button type="button" class="btn" data-uni-close>關閉</button></div></div><div class="uni-wrap"><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe><div class="uni-loading" id="uniLoading" role="status" aria-live="polite"><span class="uni-spin" aria-hidden="true"></span><b>正在進入凱曜多元宇宙…</b><small>載入像素辦公室</small></div></div></div>';
+      $('stage').innerHTML='<div class="uni-page is-edit"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+(loggedIn()&&(isAdminUser()||isMachiUser())?'<button type="button" class="btn" data-uni-allwork>'+uniAllWorkLabel()+'</button><button type="button" class="btn" data-uni-hours>上下班設定</button>':'')+'<button type="button" class="btn" data-uni-floor>'+(state.uniFloor===4?'回五樓':'四樓')+'</button><button type="button" class="btn" data-uni-minigames>小遊戲</button><button type="button" class="btn" data-uni-close>關閉</button></div></div><div class="uni-wrap"><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe><div class="uni-loading" id="uniLoading" role="status" aria-live="polite"><span class="uni-spin" aria-hidden="true"></span><b>正在進入凱曜多元宇宙…</b><small>載入像素辦公室</small></div></div></div>';
       watchUniLoading();loadAllWorkBtn();fitUniFrame();[120,500,1200,2500].forEach(t=>setTimeout(()=>{try{fitUniFrame()}catch(err){}},t));{const f=$('uniFrame');if(f)f.addEventListener('load',()=>{try{fitUniFrame()}catch(err){}});}
     }
     /* 電腦版：整頁鎖定在一個畫面——iframe 高度＝視窗剩下的高度，標題與右上按鈕、右下＋／－一直看得到；場景用滑鼠按住拖曳平移，不靠滾輪 */
@@ -603,6 +603,7 @@
     window.addEventListener('message',e=>{const fr=$('uniFrame');if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeLookChanged'||!fr||e.source!==fr.contentWindow||!loggedIn())return;
       clearTimeout(lookSnapTimer);lookSnapTimer=setTimeout(()=>{let fin=false;const finish=p=>{if(fin)return;fin=true;window.removeEventListener('message',onMsg);clearTimeout(t);if(p&&p.lookKey&&p.png)uploadAvatarSnapshot(p)},onMsg=ev=>{if(ev.origin===location.origin&&ev.data&&ev.data.type==='pixelOfficeSnapshotDone')finish(ev.data)},t=setTimeout(finish,2500);window.addEventListener('message',onMsg);try{fr.contentWindow.postMessage({type:'pixelOfficeSnapshot'},location.origin)}catch(err){finish()}},600)});
     window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;
+      if(e.data.type==='pixelOfficeOpenArena'){const fr=$('uniFrame');if(fr&&e.source===fr.contentWindow){show('arena');return}}
       if(e.data.type==='pixelOfficeViewerRequest'){setTimeout(()=>{try{snapshotEveryone(0)}catch(err){}},5000);try{e.source.postMessage(viewerPayload(),location.origin)}catch(err){}}
       if(e.data.type==='pixelOfficeThemeRequest'){try{e.source.postMessage({type:'pixelOfficeTheme',theme:document.documentElement.dataset.theme==='dark'?'dark':'light'},location.origin)}catch(err){}}});
     $('universeClose').addEventListener('click',closeUniverse);

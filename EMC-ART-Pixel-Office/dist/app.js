@@ -999,9 +999,10 @@ let storyIdentity={name:'',token:'',staff:false,monitor:false};
 /* 企劃部、專案部同仁：只能操控自己的人物（點別人不會選取），右側沒有等級欄（他們沒有等級制度）。 */
 function viewerIsStaff(){return Boolean(storyIdentity.staff);}
 function ownIndex(){const who=String(storyIdentity.name||'').toLowerCase();return who?names.findIndex(n=>n.toLowerCase()===who):-1;}
-/* 小遊戲入口：網址帶 ?minigames=1 才開；管理者與 Machi（monitor）登入後不用帶參數也自動開啟（index.html 的載入器只看網址，這裡補上） */
-function enableMinigamesForMonitor(){if(!storyIdentity.monitor||window.__mgLoaded||document.documentElement.classList.contains('minigames-on'))return;window.__mgLoaded=true;document.documentElement.classList.add('minigames-on');const m=document.createElement('script');m.type='module';m.src='minigames/index.js?v=13';document.body.appendChild(m);}
-function applyViewerRole(){document.documentElement.classList.toggle('staff-view',viewerIsStaff());try{enableMinigamesForMonitor();}catch(error){}if(viewerIsStaff()){const i=ownIndex();if(i>=0&&selected!==i&&ready){select(i);}}}
+/* 小遊戲：上方「小遊戲」按鈕（主站）送訊息進來才載入選單；所有人都看得到出氣擂台，其餘測試中的遊戲只有管理者與 Machi（monitor）看得到（見 minigames/index.js）。 */
+function openMiniGamesMenu(){const go=()=>{try{window.miniGamesMenu&&window.miniGamesMenu.toggle();}catch(error){}};if(window.miniGamesMenu)return go();if(window.__mgLoading)return;window.__mgLoading=true;document.documentElement.classList.add('minigames-on');const m=document.createElement('script');m.type='module';m.src='minigames/index.js?v=14';m.onload=go;document.body.appendChild(m);}
+window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==window.parent||!event.data||event.data.type!=='pixelOfficeMiniGames')return;openMiniGamesMenu();});
+function applyViewerRole(){document.documentElement.classList.toggle('staff-view',viewerIsStaff());if(viewerIsStaff()){const i=ownIndex();if(i>=0&&selected!==i&&ready){select(i);}}}
 const storyLoggedIn=()=>Boolean(storyIdentity.name&&storyIdentity.token);
 /* 新分頁拿不到 window.opener（部分手機瀏覽器）時，改讀主站開分頁前存的登入交接資料（同網域 localStorage，10 分鐘內有效）。 */
 function applyHandoff(){if(storyIdentity.name)return;try{const h=JSON.parse(localStorage.getItem('pixelViewerHandoff')||'null');if(h&&h.name&&Date.now()-Number(h.at)<86400000){storyIdentity={name:String(h.name),token:String(h.token||''),staff:Boolean(h.staff),monitor:Boolean(h.monitor)};applyViewerRole();}}catch(error){}}
@@ -1506,7 +1507,7 @@ function setCardPinned(value){cardPinned=value;$('personCard').classList.toggle(
 /** 螢幕座標 → 場景座標（手機鏡頭模式的畫布只有螢幕那麼大，用鏡頭左上角換算） */
 function toScene(cx,cy,r){return cam.on?{x:cam.left+(cx-r.left)/cam.s,y:cam.top+(cy-r.top)/cam.s}:{x:(cx-r.left)*W/r.width,y:(cy-r.top)*H/r.height-OY};}
 /* 小遊戲橋接：唯讀暴露場景工具給 minigames/（不改動既有行為）。 */
-window.__pixelOffice={game,keys,markDirty,toScene,blocked,viewToLogical,walls:()=>walls,stations,cam,scene:()=>({W,H,OY,minY:viewY(ROOM_MIN_Y),maxY:viewY(ROOM_MAX_Y)})};
+window.__pixelOffice={isMonitor:()=>Boolean(storyIdentity.monitor),game,keys,markDirty,toScene,blocked,viewToLogical,walls:()=>walls,stations,cam,scene:()=>({W,H,OY,minY:viewY(ROOM_MIN_Y),maxY:viewY(ROOM_MAX_Y)})};
 function hitAt(clientX,clientY){const r=game.getBoundingClientRect();if(!r.width||!r.height)return null;const pt=toScene(clientX,clientY,r),x=pt.x,y=pt.y;return [...hits].reverse().find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h)||null;}
 game.addEventListener('pointermove',e=>{const hit=hitAt(e.clientX,e.clientY);game.style.cursor=hit?'pointer':'default';
   // 嵌入的是展示用畫面，滑過人物就直接展開資料卡（不用點、也沒有關閉鈕）。
