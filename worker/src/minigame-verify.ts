@@ -20,8 +20,8 @@ const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFin
 const BOX = { x: 12, y: 124, w: 700, h: 420 };
 
 // ───────── 截稿倒數（完整重算）─────────
-export const DEADLINE_MIN_GAP = 0.3;    // 兩次作答最短間隔（秒）
-export const DEADLINE_MIN_FIRST = 0.6;  // 第一題最短反應時間
+export const DEADLINE_MIN_GAP = 0.12;   // 兩次作答最短間隔（秒）
+export const DEADLINE_MIN_FIRST = 0.3;  // 第一題最短反應時間
 function verifyDeadline(day: string, log: any): Verdict {
   const answers = log?.answers;
   if (!Array.isArray(answers)) return bad('bad-log');
