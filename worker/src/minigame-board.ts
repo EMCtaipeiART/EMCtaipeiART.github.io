@@ -158,6 +158,14 @@ export class MinigameBoard extends DurableObject<Env> {
       this.sql().exec("INSERT OR REPLACE INTO fridge_meta (k, v) VALUES ('stocker', ?)", '自動進貨');
       this.sql().exec("INSERT OR REPLACE INTO fridge_meta (k, v) VALUES ('stockAt', ?)", String(now));
     }
+    // 桌上的紙箱：每 4 小時換一批（每批 3 箱、3 種不同零食），先搶先贏
+    const hour = new Date(this.clock() + 8 * 3600_000).getUTCHours(), batch = day + '-' + Math.floor(hour / 4);
+    if (this.one<{ v: string }>("SELECT v FROM fridge_meta WHERE k = 'batch'")?.v !== batch) {
+      const pool = [...FRIDGE_SLOTS], boxes: string[] = [];
+      while (boxes.length < 3) boxes.push(pool.splice(crypto.getRandomValues(new Uint8Array(1))[0] % pool.length, 1)[0]);
+      this.sql().exec("INSERT OR REPLACE INTO fridge_meta (k, v) VALUES ('batch', ?)", batch);
+      this.sql().exec("INSERT OR REPLACE INTO fridge_meta (k, v) VALUES ('boxes', ?)", JSON.stringify(boxes));
+    }
     return day;
   }
 
@@ -168,7 +176,7 @@ export class MinigameBoard extends DurableObject<Env> {
     const days = [0, 1, 2, 3, 4, 5, 6].map(n => dayKey(new Date(this.clock() - n * DAY)));
     const top = (col: 'took' | 'stocked') => this.all<{ nick: string; n: number }>(
       `SELECT nick, SUM(${col}) AS n FROM fridge_stats WHERE day IN (${days.map(() => '?').join(',')}) GROUP BY nick HAVING n > 0 ORDER BY n DESC, nick LIMIT 3`, ...days);
-    return { ok: true, day, stock, stocker: meta('stocker'), stockAt: Number(meta('stockAt')) || 0, kings: top('took'), heroes: top('stocked') };
+    return { ok: true, day, stock, stocker: meta('stocker'), stockAt: Number(meta('stockAt')) || 0, kings: top('took'), heroes: top('stocked'), boxes: JSON.parse(meta('boxes') || '[]') };
   }
 
   async fridge(): Promise<Reply> { return reply(200, this.fridgeView(this.fridgeDay())); }
@@ -189,6 +197,18 @@ export class MinigameBoard extends DurableObject<Env> {
       const surprise = slot === 'rare' ? 'rare' : slot === 'yogurt' && crypto.getRandomValues(new Uint8Array(1))[0] < 32 ? 'expired' : null;
       const t = new Date(this.clock() + 8 * 3600_000), hour = t.getUTCHours(), weekend = [0, 6].includes(t.getUTCDay());
       return reply(200, { ...this.fridgeView(day), took: slot, surprise, caught: weekend || hour < 9 || hour >= 19 });
+    }
+    if (action === 'box') {
+      const boxes: string[] = JSON.parse(this.one<{ v: string }>("SELECT v FROM fridge_meta WHERE k = 'boxes'")?.v ?? '[]'), at = boxes.indexOf(slot);
+      if (at < 0) return reply(409, { ok: false, error: 'no-box', ...this.fridgeView(day) });
+      if ((used?.stocked ?? 0) >= FRIDGE_STOCK_LIMIT) return reply(429, { ok: false, error: 'enough', ...this.fridgeView(day) });
+      boxes.splice(at, 1);
+      this.sql().exec("INSERT OR REPLACE INTO fridge_meta (k, v) VALUES ('boxes', ?)", JSON.stringify(boxes));
+      this.sql().exec('UPDATE fridge_stock SET qty = MIN(?, qty + 3) WHERE slot = ?', FRIDGE_MAX, slot);
+      bump('stocked');
+      this.sql().exec("INSERT OR REPLACE INTO fridge_meta (k, v) VALUES ('stocker', ?)", nick);
+      this.sql().exec("INSERT OR REPLACE INTO fridge_meta (k, v) VALUES ('stockAt', ?)", String(this.clock()));
+      return reply(200, { ...this.fridgeView(day), stocked: slot });
     }
     if (action === 'stock' || action === 'fill') {
       if ((used?.stocked ?? 0) >= FRIDGE_STOCK_LIMIT) return reply(429, { ok: false, error: 'enough', ...this.fridgeView(day) });

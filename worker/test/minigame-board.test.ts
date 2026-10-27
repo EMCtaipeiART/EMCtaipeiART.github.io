@@ -294,3 +294,20 @@ describe('茶水間冰箱', () => {
     expect((await stub().fridgeAct({ action: 'take', slot: 'nope', nick: 'Dan' })).status).toBe(400);
   });
 });
+
+describe('冰箱紙箱', () => {
+  it('桌上有 3 箱不同零食，拖進冰箱補貨 +3、箱子被拿走、記補貨人', async () => {
+    T.now = Date.UTC(2026, 9, 28, 4, 0, 0);
+    const s0 = (await stub().fridge()).body;
+    expect(s0.boxes).toHaveLength(3);
+    expect(new Set(s0.boxes).size).toBe(3);
+    const slot = s0.boxes[0];
+    const r = (await stub().fridgeAct({ action: 'box', slot, nick: 'Eve' })).body;
+    expect(r.boxes).toHaveLength(2);
+    expect(r.stocker).toBe('Eve');
+    expect(r.stock[slot]).toBe(Math.min(8, s0.stock[slot] + 3));
+    expect((await stub().fridgeAct({ action: 'box', slot, nick: 'Eve' })).status).toBe(409);
+    T.now += 4 * 3600_000;
+    expect(((await stub().fridge()).body.boxes).length).toBe(3);
+  });
+});

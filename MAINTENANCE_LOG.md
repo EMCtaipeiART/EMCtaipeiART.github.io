@@ -963,3 +963,9 @@
 - 後端：`worker/src/minigame-board.ts` 新增 `fridge_*` 資料表與 `fridge()`／`fridgeAct()`；`index.ts` 加 `/minigames/fridge`（GET 查、POST 動作）。每天第一次被問到自動進貨（台北日期），補貨人顯示「自動進貨」。已 `wrangler deploy`。測試加在 `worker/test/minigame-board.test.ts`。
 - 圖示：Codex 畫的 `assets/office-snacks-v1.webp/json`（8 個 64×64），同步到 `cdn/public/assets/`。`app.js?v=314`、新增 `fridge.js?v=1`。
 - 本機測試可用 `?mgApi=<Worker 網址>` 指定後端。
+
+## 2026-10-27 冰箱改版：場景裡直接開門、桌上紙箱拖進冰箱補貨
+- 不再跳窗：點場景裡的冰箱，冰箱就地開門（關著的門收成窄條、側門浮現），三層架上的零食直接點一個拿一個；結果用冰箱上方的對話泡泡顯示，下方寫今日補貨人／零食之王／補貨英雄；30 秒沒動作或點旁邊會自動關門；管理者多一顆「一鍵補滿」。素材 Codex 畫的 `assets/office-fridge-ui-v1.webp/json`，同步到 cdn。
+- 補貨：茶水間桌上有 3 個紙箱（每個標一種零食），拖到冰箱放開，後端 `action:'box'` 該格 +3、箱子被拿走（所有人同步，先搶先贏）、名牌換成補貨人；每 4 小時換一批。`fridge.js` 負責冰箱開門與紙箱拖曳（`window.fridgeBoxDraw`／`fridgeBoxDown`／`fridgeSceneClick`，app.js 在 pointerdown 最前面、`onGamePress` 開頭與 `pushRoomFurniture` 掛接）。
+- 後端 `minigame-board.ts` 新增 boxes 與 `box` 動作，已部署；測試在 `minigame-board.test.ts`。`app.js?v=317`、`fridge.js?v=4`。
+- 本機測試注意：Worker 的 ALLOWED_ORIGINS 不含 localhost:8765，本機要自己 mock fetch。

@@ -1,0 +1,74 @@
+{
+  "image": "office-fridge-ui-v1.webp",
+  "width": 856,
+  "height": 444,
+  "door": [
+    12,
+    12,
+    320,
+    420
+  ],
+  "inside": [
+    348,
+    12,
+    320,
+    420
+  ],
+  "door_open": [
+    684,
+    12,
+    70,
+    420
+  ],
+  "box1": [
+    772,
+    66,
+    72,
+    60
+  ],
+  "box2": [
+    772,
+    192,
+    72,
+    60
+  ],
+  "box3": [
+    772,
+    318,
+    72,
+    60
+  ],
+  "shelves": {
+    "y": [
+      118,
+      214,
+      310
+    ],
+    "x_range": [
+      33,
+      287
+    ],
+    "relative_to": "inside",
+    "x_range_end": "exclusive",
+    "clear_height": [
+      74,
+      78,
+      78
+    ]
+  },
+  "box_label": {
+    "rect": [
+      17,
+      27,
+      28,
+      28
+    ],
+    "relative_to": "each box",
+    "color": "#FFFFFF"
+  },
+  "outline": {
+    "width": 3,
+    "color": "#000000"
+  },
+  "coordinates": "[x,y,w,h], native pixels; origin at top left"
+}
