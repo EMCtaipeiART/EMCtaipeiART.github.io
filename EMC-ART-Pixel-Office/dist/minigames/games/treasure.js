@@ -1,13 +1,14 @@
 // 辦公室尋寶：120 秒內找出今天藏在辦公室裡的 5 個小物。道具位置由每日種子決定。
-import {TREASURE_ITEMS,renderItem} from '../assets/treasure-items.js';
+import {TREASURE_ITEMS,loadTreasureArt,drawSprite} from '../assets/treasure-items.js';
 import {floorCandidates,pickTreasures,treasureScore,TREASURE_COUNT,TREASURE_SECONDS,FIND_POINTS,HINT_PENALTY,TIME_BONUS_PER_SEC} from './treasure-gen.js';
 
-const HUD_TOP=64,BOTTOM_PAD=64,HINT_W=104,HINT_H=40;
+const HUD_TOP=64,BOTTOM_PAD=70,HINT_W=120,HINT_H=44;
 
 export const treasureGame={
   id:'treasure',title:'辦公室尋寶',icon:'map',blurb:'限時找出藏在辦公室裡的 5 件小東西',medals:[300,500,650],
   howto:{goal:'在 120 秒內，找出今天藏在辦公室裡的 5 個小道具。',pc:'用滑鼠點道具；按 H 或點右下「提示」看大概位置（扣 50 分，每局一次）。',touch:'用手指點道具；點右下「提示」看大概位置。',tips:['道具很小，留意家具邊緣與房間角落','全部找齊後，剩餘時間每秒 +2 分','每天的題目不同，同一天大家一樣']},duration:TREASURE_SECONDS,ranked:true,
   start(ctx){
+    loadTreasureArt(()=>ctx.bridge.markDirty());
     const sc=ctx.bridge.scene(),defs=Object.fromEntries(TREASURE_ITEMS.map(d=>[d.id,d]));
     const candidates=floorCandidates({minX:80,maxX:sc.W-80,minY:sc.minY+30,maxY:sc.maxY-30,isFree:(x,y)=>!ctx.bridge.blocked(x,y)});
     // 點得到＝在遊戲畫布內，並避開上方 HUD、下方道具列與提示鍵
@@ -18,7 +19,7 @@ export const treasureGame={
       if(items.length>=TREASURE_COUNT)break;
     }
     this.state={
-      items:items.map(i=>({...i,found:false,foundAt:0,canvas:renderItem(defs[i.type]),name:defs[i.type].name})),
+      items:items.map(i=>({...i,found:false,foundAt:0,sprite:'item_'+i.type,name:defs[i.type].name})),
       total:items.length,found:0,finds:[],hintUsed:false,hint:null,clock:0,fx:[],hDown:false,hintBox:null
     };
     this.sync(ctx);
@@ -52,9 +53,9 @@ export const treasureGame={
   render(ctx){
     const s=this.state,g=ctx.g,cell=this.cell(ctx);g.imageSmoothingEnabled=false;
     for(const it of s.items){
-      const l=ctx.sceneToLocal(it.x,it.y),size=10*cell,age=s.clock-it.foundAt;
-      if(it.found){if(age<0.6){g.globalAlpha=1-age/0.6;g.drawImage(it.canvas,Math.round(l.x-size/2),Math.round(l.y-size/2-age*30),size,size);g.globalAlpha=1;}continue;}
-      g.globalAlpha=.92;g.drawImage(it.canvas,Math.round(l.x-size/2),Math.round(l.y-size/2),size,size);g.globalAlpha=1;
+      const l=ctx.sceneToLocal(it.x,it.y),size=Math.max(30,Math.round(64*ctx.scenePxScale())),age=s.clock-it.foundAt;
+      if(it.found){if(age<0.6){g.globalAlpha=1-age/0.6;drawSprite(g,it.sprite,l.x-size/2,l.y-size/2-age*30,size,size);const f=age<.2?'a':age<.4?'b':'c',fs=size*.9;drawSprite(g,'fx_sparkle_'+f,l.x-fs/2,l.y-fs/2-age*30,fs,fs);g.globalAlpha=1;}continue;}
+      drawSprite(g,it.sprite,l.x-size/2,l.y-size/2,size,size);
     }
     if(s.hint){
       const l=ctx.sceneToLocal(s.hint.item.x,s.hint.item.y),r=70+Math.sin(s.clock*6)*6;
@@ -67,14 +68,13 @@ export const treasureGame={
       g.globalAlpha=1;
     }
     // 道具列（左下）與提示鍵（右下）
-    const slot=34;g.font='700 12px sans-serif';
+    const slot=48;
     s.items.forEach((it,i)=>{
       const x=10+i*(slot+6),y=ctx.height-slot-10;
-      g.fillStyle='#fff';g.fillRect(x,y,slot,slot);g.strokeStyle='#182e54';g.lineWidth=2;g.strokeRect(x,y,slot,slot);
-      if(it.found)g.drawImage(it.canvas,x+3,y+3,slot-6,slot-6);else{g.fillStyle='#182e54';g.textAlign='center';g.fillText('?',x+slot/2,y+slot/2+4);}
+      if(it.found){drawSprite(g,'slot_frame',x,y,slot,slot);drawSprite(g,it.sprite,x+4,y+4,slot-8,slot-8);}else drawSprite(g,'slot_empty',x,y,slot,slot);
     });
     const hx=ctx.width-HINT_W-10,hy=ctx.height-HINT_H-10,off=s.hintUsed;s.hintBox={x:hx,y:hy,w:HINT_W,h:HINT_H};
-    g.fillStyle=off?'#d6dbe4':'#ffd24a';g.fillRect(hx,hy,HINT_W,HINT_H);g.strokeStyle='#182e54';g.lineWidth=2;g.strokeRect(hx,hy,HINT_W,HINT_H);
+    drawSprite(g,off?'hint_btn_off':'hint_btn',hx,hy,HINT_W,HINT_H);
     g.fillStyle='#182e54';g.font='700 14px sans-serif';g.textAlign='center';g.fillText(off?'提示已用':'提示 -50',hx+HINT_W/2,hy+HINT_H/2+5);
   },
   /** 正式排行用的紀錄（道具位置依螢幕而異，伺服器只能做簡易驗證：次數、間隔、真實時間）。 */
