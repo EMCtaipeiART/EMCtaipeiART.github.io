@@ -956,3 +956,10 @@
 
 ## 2026-10-27 四樓下班收人物
 - 下班（平日時段外、週末假日、全員下班）固定坐四樓的同仁一併收掉（只留加班中的）；未登入半透明人物原本就只在平日 9–19 點出現。
+
+## 2026-10-27 茶水間冰箱互動（偷吃／補貨／排行／被抓包）
+- 點元宇宙茶水間的冰箱或零食桌（座標 620–1104 × 1095–1265，冰箱上有「冰箱・點我」標籤）開 `fridge.js` 面板：拿零食、補貨（每次 +2，每人每天 5 次）、管理者一鍵補滿；顯示今日補貨人名牌、本週零食之王／補貨英雄。
+- 趣味：優格 1/8 機率「過期優格」、部分日子出現限量金布丁、下班時間或週末偷吃會「被抓包」。
+- 後端：`worker/src/minigame-board.ts` 新增 `fridge_*` 資料表與 `fridge()`／`fridgeAct()`；`index.ts` 加 `/minigames/fridge`（GET 查、POST 動作）。每天第一次被問到自動進貨（台北日期），補貨人顯示「自動進貨」。已 `wrangler deploy`。測試加在 `worker/test/minigame-board.test.ts`。
+- 圖示：Codex 畫的 `assets/office-snacks-v1.webp/json`（8 個 64×64），同步到 `cdn/public/assets/`。`app.js?v=314`、新增 `fridge.js?v=1`。
+- 本機測試可用 `?mgApi=<Worker 網址>` 指定後端。

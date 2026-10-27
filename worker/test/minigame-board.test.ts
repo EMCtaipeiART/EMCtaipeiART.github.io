@@ -267,3 +267,30 @@ describe('HTTP 路由', () => {
     expect(sub.board.some((e: any) => e.name === '網頁#' + run.device.slice(0, 4))).toBe(true);
   });
 });
+
+describe('茶水間冰箱', () => {
+  it('每天自動進貨、拿零食會扣庫存並記排行，空了拿不到', async () => {
+    T.now = Date.UTC(2026, 9, 27, 4, 0, 0);   // 台北 12:00（上班時間）
+    const s0 = (await stub().fridge()).body;
+    expect(s0.stocker).toBe('自動進貨');
+    expect(s0.stock.chips).toBeGreaterThanOrEqual(3);
+    const r = (await stub().fridgeAct({ action: 'take', slot: 'chips', nick: 'Anna' })).body;
+    expect(r.ok).toBe(true);
+    expect(r.caught).toBe(false);
+    expect(r.stock.chips).toBe(s0.stock.chips - 1);
+    expect(r.kings[0]).toEqual({ nick: 'Anna', n: 1 });
+    for (let k = 0; k < s0.stock.chips - 1; k++) await stub().fridgeAct({ action: 'take', slot: 'chips', nick: 'Bob' });
+    const empty = await stub().fridgeAct({ action: 'take', slot: 'chips', nick: 'Bob' });
+    expect(empty.status).toBe(409);
+  });
+  it('下班時間偷吃會被抓包；補貨會記名字、每人每天有上限', async () => {
+    T.now = Date.UTC(2026, 9, 27, 15, 0, 0);  // 台北 23:00
+    expect((await stub().fridgeAct({ action: 'take', slot: 'cookie', nick: 'Cat' })).body.caught).toBe(true);
+    const st = (await stub().fridgeAct({ action: 'stock', slot: 'cookie', nick: 'Dan' })).body;
+    expect(st.stocker).toBe('Dan');
+    expect(st.heroes[0].nick).toBe('Dan');
+    for (let k = 0; k < 4; k++) await stub().fridgeAct({ action: 'stock', slot: 'cookie', nick: 'Dan' });
+    expect((await stub().fridgeAct({ action: 'stock', slot: 'cookie', nick: 'Dan' })).status).toBe(429);
+    expect((await stub().fridgeAct({ action: 'take', slot: 'nope', nick: 'Dan' })).status).toBe(400);
+  });
+});
