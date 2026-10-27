@@ -106,7 +106,7 @@
   {
     const tx = Math.round(WOOD.tx + WOOD.tw / 2 - 250), ty = WOOD.ty - 190 - 64, fx = tx + 300, fy = ty - 40; table('whitewood', tx, ty, 2, ty + 70); block(tx, ty + 20, tableW(2), 70); block(fx, fy + 60, 164, 110); label('茶水間', tx, ty - 60, tableW(2));
     [['snack_chips_red', 30], ['snack_chips_yellow', 66], ['snack_chips_blue', 102], ['snack_box', 150], ['snack_candy', 215]].forEach(([n, dx]) => { const r = RM[n]; sprite(n, tx + dx, ty + 58 - r[3], ty + 85); });
-    sprite('fridge_dark', fx, fy, fy + 170); sprite('fridge_dark', fx + 82, fy, fy + 170); sprite('plant_small', fx + 190, fy + 90, fy + 170);
+    sprite('fridge_dark', fx, fy, fy + 170); sprite('fridge_dark', fx + 82, fy, fy + 170); label('冰箱・點我', fx, fy - 24, 164); window.__f4Fridge = { fx, fy: fy + OFFY, tx, ty: ty + OFFY }; sprite('plant_small', fx + 190, fy + 90, fy + 170);
   }
   // ---- 左側：五個米白桌子群（每群上排 4 張、下排 4 張，椅子在最外側）
   const GX = 78, GY0 = TY + T_H + 136 + 64 + 67, GP = GPV - 64 + 32;/* 左緣 78、離廁所下緣 136（五樓：左側桌子群左緣 78、廁所下緣到第一排椅頭 136） */

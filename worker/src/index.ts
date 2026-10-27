@@ -202,7 +202,7 @@ async function handleMinigames(request: Request, env: Env): Promise<Response> {
       const q = new URL(request.url).searchParams;
       return send(await stub.board({ game: q.get('game'), range: q.get('range') }));
     }
-    if (path === '/minigames/fridge' && request.method === 'GET') return send(await stub.fridge());
+    if (path === '/minigames/fridge' && request.method === 'GET') { const q = new URL(request.url).searchParams; return send(await stub.fridge({ floor: q.get('floor'), since: q.get('since') })); }
     if (path !== '/minigames/run' && path !== '/minigames/fridge' && path !== '/minigames/submit') return jsonResponse(request, env, { ok: false, error: 'not-found' }, 404);
     if (request.method !== 'POST') return jsonResponse(request, env, { ok: false, error: 'method' }, 405);
     if ((Number(request.headers.get('Content-Length')) || 0) > MINIGAME_MAX_BODY) return jsonResponse(request, env, { ok: false, error: 'too-large' }, 413);
@@ -211,7 +211,7 @@ async function handleMinigames(request: Request, env: Env): Promise<Response> {
     let body: Record<string, unknown>;
     try { const v = JSON.parse(raw); if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error('shape'); body = v; }
     catch { return jsonResponse(request, env, { ok: false, error: 'bad-json' }, 400); }
-    if (path === '/minigames/fridge') return send(await stub.fridgeAct({ action: body.action, slot: body.slot, nick: body.nick }));
+    if (path === '/minigames/fridge') return send(await stub.fridgeAct({ action: body.action, slot: body.slot, nick: body.nick, floor: body.floor }));
     if (path === '/minigames/run') return send(await stub.startRun({ game: body.game, device: body.device, nick: body.nick, ip: request.headers.get('CF-Connecting-IP') || 'unknown' }));
     return send(await stub.submit({ runId: body.runId, device: body.device, log: body.log }));
   } catch (error) {

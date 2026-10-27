@@ -13,17 +13,22 @@ const NAMES=Object.fromEntries(Object.entries(FOODS).map(([k,v])=>[k,v[0]]));
 const IDX={chips:0,cookie:1,candy:2,pudding:3,yogurt:4,drink:5,rare:6,expired:7,boba:8,bento:9,onigiri:10,sandwich:11,energy:12,egg:13,noodle:14,coffee:15,cake:16,donut:17,choco:18};
 const FOOD='assets/office-foods-v1.webp?v=1',OPEN='assets/office-fridge-dark-open-v1.webp?v=1',ROOMS='assets/office-rooms-v3.webp?v=1',UI='assets/office-fridge-ui-v1.webp?v=1';
 /* 兩台深色冰箱（各 82x170）左右對開：左台往左、右台往右開。每台 3 層、每層 3 格 */
-const FR=[940,1095,82,170],SHELVES=[[['boba','bento','onigiri'],['sandwich','yogurt','pudding'],['drink','energy','egg']],[['chips','cookie','candy'],['noodle','coffee','cake'],['donut','choco','rare']]];
+let FR=[940,1095,82,170];const SHELVES=[[['boba','bento','onigiri'],['sandwich','yogurt','pudding'],['drink','energy','egg']],[['chips','cookie','candy'],['noodle','coffee','cake'],['donut','choco','rare']]];
 const SH_Y=[53,90,127],SH_X=[2,27,52],FOOD_PX=28,STRIDE=25,SWING=450,IDLE=30000,NEAR=[-150,150,40,200];// 站位範圍（相對冰箱左／右邊、上／下邊）
-const BOX={w:60,h:50,x0:630,y:1154,gap:86,label:[14,22,24,24]},FRIDGE=[FR[0],FR[1],FR[2]*2,FR[3]];
+const BOX={w:60,h:50,x0:630,y:1154,gap:86,label:[14,22,24,24]};let FRIDGE=[FR[0],FR[1],FR[2]*2,FR[3]],TABLE=[620,1140],FLOOR=/[?&]floor=4/.test(location.search)?4:5;
+/** 五樓的位置固定；四樓由 floor4.js 排版後放在 window.__f4Fridge（fx,fy 冰箱左上；tx,ty 茶水間桌子左上）。沒有就代表場景還沒好。 */
+function sync(){
+  const c=FLOOR===4?window.__f4Fridge:{fx:940,fy:1095,tx:620,ty:1140};if(!c)return false;
+  FR=[c.fx,c.fy,82,170];FRIDGE=[c.fx,c.fy,164,170];TABLE=[c.tx,c.ty];BOX.x0=c.tx+10;BOX.y=c.ty+14;return true;
+}
 const base=()=>new URLSearchParams(location.search).get('mgApi')?.replace(/\/$/,'')||(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)?'http://127.0.0.1:8799':'https://machi-design-api.machi-chen.workers.dev');
 const nick=()=>{try{return String(window.__pixelOffice.viewerName()||'').trim();}catch{return '';}};
 const dirty=()=>{try{window.__pixelOffice.markDirty();}catch{}};
 const img=src=>{const i=new Image();i.src=src;i.onload=dirty;return i;};
-let state=null,busy=false,foodImg,openImg,roomsImg,uiImg,drag=null,openAt=0,bubble=null,idleTimer=0;
+let remote=false,mine=0,lastEv=null,state=null,busy=false,foodImg,openImg,roomsImg,uiImg,drag=null,openAt=0,bubble=null,idleTimer=0;
 const ready=i=>i&&i.complete&&i.naturalWidth;
-async function call(body){
-  const r=await fetch(base()+'/minigames/fridge',{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:undefined,body:body?JSON.stringify(body):undefined});
+async function call(body,query){
+  const r=await fetch(base()+'/minigames/fridge'+(body?'':'?floor='+FLOOR+(query||'')),{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:undefined,body:body?JSON.stringify({...body,floor:FLOOR}):undefined});
   return {status:r.status,...(await r.json().catch(()=>({ok:false})))};
 }
 const setState=r=>{if(r&&r.stock){state=r;dirty();}};
@@ -68,33 +73,38 @@ function drawFridge(ctx,overlay){
   ctx.restore();
 }
 function open(){
+  if(!sync())return false;
   if(isOpen())return true;
   const me=own();
   if(!me){say('要有自己的人物（先登入）才能開冰箱');return false;}
   if(!nearFridge(me)){say('走到冰箱前面才能開門喔');return false;}
-  openAt=performance.now();dirty();touch();
+  openAt=performance.now();remote=false;dirty();touch();
   try{window.__pixelOffice.tempMood(me.i,'',SWING+200,'up');}catch{}
-  call().then(setState,()=>say('連線失敗，等等再試'));return true;
+  call({action:'open',nick:nick()||'匿名'}).then(setState,()=>say('連線失敗，等等再試'));mine=performance.now();return true;
 }
 function close(){if(!isOpen())return;openAt=0;clearTimeout(idleTimer);dirty();}
-function touch(){clearTimeout(idleTimer);idleTimer=setTimeout(close,IDLE);}
+function touch(ms=IDLE){clearTimeout(idleTimer);idleTimer=setTimeout(close,ms);}
 window.fridgeIsOpen=isOpen;
-window.openFridge=()=>{if(isOpen())close();else open();};
+window.openFridge=()=>{if(isOpen()&&!remote)close();else open();};
+/** 點到茶水間桌子或冰箱附近就算 */
+window.fridgeHit=(x,y)=>sync()&&x>=TABLE[0]&&x<=FRIDGE[0]+FRIDGE[2]&&y>=FRIDGE[1]&&y<=FRIDGE[1]+FRIDGE[3];
+/** 圖層深度：冰箱本體、桌上紙箱（供 app.js 四樓排圖層用） */
+window.fridgeDepths=()=>sync()?{body:FRIDGE[1]+FRIDGE[3]+1,box:TABLE[1]+75}:null;
 /** 場景點擊：回傳 true 代表這一下已被冰箱吃掉。 */
 window.fridgeSceneClick=(x,y)=>{
-  if(!isOpen())return false;
+  if(!sync()||!isOpen())return false;
   const inside=x>=FRIDGE[0]-34&&x<=FRIDGE[0]+FRIDGE[2]+34&&y>=FRIDGE[1]&&y<=FRIDGE[1]+FRIDGE[3]+60;
   if(!inside){close();return false;}
   touch();if(performance.now()-openAt<SWING)return true;
   const hit=itemRects().find(it=>x>=it.x-1&&x<=it.x+it.s+1&&y>=it.y&&y<=it.y+it.s);
-  if(hit){if(!nearFridge(own())){say('站太遠了，走近一點');close();return true;}act({action:'take',slot:hit.id});}
+  if(hit){if(!nearFridge(own())){say('站太遠了，走近一點');close();return true;}remote=false;act({action:'take',slot:hit.id});}
   return true;
 };
 /** 人物走遠就自動關門 */
-setInterval(()=>{if(isOpen()&&!nearFridge(own())){close();say('你走遠了，冰箱門自動關上');}},500);
+setInterval(()=>{if(isOpen()&&!remote&&!nearFridge(own())){close();say('你走遠了，冰箱門自動關上');}},500);
 const react=(mood,ms=3200)=>{const me=own();if(me)try{window.__pixelOffice.tempMood(me.i,mood,ms,'down');}catch{}};// 做表情時轉向正面
 async function act(body){
-  if(busy)return;busy=true;
+  if(busy)return;busy=true;mine=performance.now();
   try{
     const r=await call({...body,nick:nick()||'匿名'});setState(r);
     if(r.ok&&body.action==='take'){
@@ -120,7 +130,7 @@ function drawBox(ctx,i,slot,x,y,lift){
   ctx.restore();
 }
 window.fridgeBoxDraw=(ctx,top)=>{
-  if(!uiImg)return;const list=boxes();
+  if(!uiImg||!sync())return;const list=boxes();
   if(top==='fridge'){drawFridge(ctx,false);return;}
   if(top==='fridgeTop'){drawFridge(ctx,true);return;}
   if(!top)list.forEach((slot,i)=>{if(!(drag&&drag.i===i)){const r=boxRect(i);drawBox(ctx,i,slot,r[0],r[1],false);}});
@@ -130,7 +140,7 @@ const inRect=(x,y,r)=>x>=r[0]&&x<=r[2]+r[0]&&y>=r[1]&&y<=r[3]+r[1];
 const inFridge=(x,y)=>x>=FRIDGE[0]-40&&x<=FRIDGE[0]+FRIDGE[2]+40&&y>=FRIDGE[1]-60&&y<=FRIDGE[1]+FRIDGE[3];
 /** 回傳 true 代表這次按下是在抓紙箱，場景不要再處理（選人／平移）。 */
 window.fridgeBoxDown=(e,pt)=>{
-  if(!boxes().length||busy)return false;
+  if(!sync()||!boxes().length||busy)return false;
   const i=boxes().findIndex((_,k)=>inRect(pt.x,pt.y,boxRect(k)));if(i<0)return false;
   const po=window.__pixelOffice,game=po.game;drag={i,x:pt.x,y:pt.y,slot:boxes()[i]};try{game.setPointerCapture(e.pointerId);}catch{}po.markDirty();
   const mv=m=>{const p=po.toScene(m.clientX,m.clientY,game.getBoundingClientRect());drag.x=p.x;drag.y=p.y;po.markDirty();m.preventDefault();};
@@ -142,8 +152,26 @@ window.fridgeBoxDown=(e,pt)=>{
 };
 (()=>{
   foodImg=img(FOOD);openImg=img(OPEN);roomsImg=img(ROOMS);uiImg=img(UI);
-  if(/[?&]floor=4/.test(location.search))return;
-  const poll=async()=>{if(document.hidden||drag||busy)return;try{setState(await call());}catch{}};
-  setTimeout(poll,2500);setInterval(poll,90000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll();});
+  /* 其他人的動作（開門、拿食物、補貨）：每 4 秒問一次，在自己的畫面上重演，大家都看得到 */
+  const remoteEvent=e=>{
+    if(!sync())return;const f=FOODS[e.slot]||FOODS.chips;
+    if(!isOpen()){openAt=performance.now();remote=true;dirty();}
+    if(remote)touch(9000);
+    const po=window.__pixelOffice;let mood='',text='',icon=e.slot;
+    if(e.kind==='take'){
+      if(e.flag==='caught'){text='🚨 '+e.nick+' 下班偷吃「'+f[0]+'」被抓到！';mood='angry';}
+      else if(e.flag==='rare'){text='✨ '+e.nick+' 抽到限量金布丁！';mood='joy';icon='rare';}
+      else if(e.flag==='expired'){text='🤢 '+e.nick+' 吃到過期優格⋯';mood='sad';icon='expired';}
+      else{text=e.nick+'：'+f[1];mood=f[2];}
+    }else if(e.kind==='box'){text='🦸 '+e.nick+' 補貨「'+f[0]+'」+3！';mood='joy';}
+    else{try{po.tempMoodByName(e.nick,'',SWING+300,'up');}catch{}return;}
+    say(text,icon);try{po.tempMoodByName(e.nick,mood,3200,'down');}catch{}
+  };
+  const poll=async()=>{if(document.hidden||drag||busy)return;
+    try{const r=await call(null,lastEv===null?'':'&since='+lastEv);setState(r);
+      if(r&&r.ok){const mineNow=nick()||'匿名';
+        for(const e of r.events||[]){if(e.nick===mineNow&&(mineNow!=='匿名'||performance.now()-mine<8000))continue;remoteEvent(e);}
+        if(typeof r.evMax==='number')lastEv=r.evMax;}}catch{}};
+  setTimeout(poll,2500);setInterval(poll,4000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll();});
 })();
 })();

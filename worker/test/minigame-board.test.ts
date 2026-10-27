@@ -311,3 +311,22 @@ describe('冰箱紙箱', () => {
     expect(((await stub().fridge()).body.boxes).length).toBe(3);
   });
 });
+
+describe('四樓冰箱與動作同步', () => {
+  it('四樓庫存與五樓分開；動作事件讓別人看得到', async () => {
+    T.now = Date.UTC(2026, 9, 29, 4, 0, 0);
+    const f5 = (await stub().fridge({ floor: 5 })).body, f4 = (await stub().fridge({ floor: 4 })).body;
+    expect(f4.floor).toBe(4);
+    expect(f4.boxes).toHaveLength(3);
+    const first = (await stub().fridge({ floor: 4, since: null })).body;
+    expect(first.events).toEqual([]);
+    await stub().fridgeAct({ action: 'open', nick: 'Anna', floor: 4 });
+    await stub().fridgeAct({ action: 'take', slot: 'boba', nick: 'Anna', floor: 4 });
+    const after = (await stub().fridge({ floor: 4, since: first.evMax })).body;
+    expect(after.events.map((e: any) => e.kind)).toEqual(['open', 'take']);
+    expect(after.events[1]).toMatchObject({ nick: 'Anna', slot: 'boba' });
+    expect(after.stock.boba).toBe(f4.stock.boba - 1);
+    expect((await stub().fridge({ floor: 5 })).body.stock.boba).toBe(f5.stock.boba);
+    expect((await stub().fridge({ floor: 5, since: 0 })).body.events).toEqual([]);
+  });
+});
