@@ -176,9 +176,12 @@ function fitEmbedView(){
   game.style.transform=`translate(${wrap.width/2-cx*scale}px,${wrap.height/2-cy*scale}px)`;
   fitting=false;
 }
+/* 暫時的表情／面向（只在自己畫面上；冰箱拿食物用）：不寫回人物資料，時間到就恢復。 */
+let tempMood=null;
+function applyTempMood(){if(!tempMood)return;if(performance.now()>tempMood.until){tempMood=null;return;}const p=viewPeople[tempMood.i];if(p){p.mood=tempMood.mood;if(tempMood.dir)p.dir=tempMood.dir;}}
 function syncViewLayout(){
-  if(!embedMode){viewPeople=people.map(p=>({...p,y:viewY(p.y)}));viewStations=stations.map(s=>({...s,y:viewY(s.y)}));if(!FLOOR4&&document.documentElement.classList.contains('clean')&&ready){let t=TOP_BASE;try{t=Math.min(t,sceneTopExtent())}catch(error){}let b=BOTTOM_FEET+40;try{b=sceneBottomExtent()}catch(error){}if(t!==cleanTop||b!==cleanBottom||staffSeated!==cleanStaff)fitCleanView();}return;}
-  viewPeople=people.map(p=>({...p,y:viewY(p.y)}));
+  if(!embedMode){viewPeople=people.map(p=>({...p,y:viewY(p.y)}));applyTempMood();viewStations=stations.map(s=>({...s,y:viewY(s.y)}));if(!FLOOR4&&document.documentElement.classList.contains('clean')&&ready){let t=TOP_BASE;try{t=Math.min(t,sceneTopExtent())}catch(error){}let b=BOTTOM_FEET+40;try{b=sceneBottomExtent()}catch(error){}if(t!==cleanTop||b!==cleanBottom||staffSeated!==cleanStaff)fitCleanView();}return;}
+  viewPeople=people.map(p=>({...p,y:viewY(p.y)}));applyTempMood();
   viewStations=stations.map(s=>({...s,y:viewY(s.y)}));
   syncSceneTop();
 }
@@ -1539,7 +1542,7 @@ function treasureSpots(){
   }
   return {desk,table,corner};
 }
-window.__pixelOffice={treasureSpots,viewY,viewerName:()=>String(storyIdentity.name||''),isMonitor:()=>Boolean(storyIdentity.monitor),game,keys,markDirty,toScene,blocked,viewToLogical,walls:()=>walls,stations,cam,scene:()=>({W,H,OY,minY:viewY(ROOM_MIN_Y),maxY:viewY(ROOM_MAX_Y)})};
+window.__pixelOffice={treasureSpots,ownPos:()=>{const i=ownIndex();if(i<0)return null;const p=viewPeople[i];return p&&!isAway(p)?{i,x:p.x,y:p.y}:null;},tempMood:(i,mood,ms,dir)=>{tempMood={i,mood,dir,until:performance.now()+ms};markDirty();},viewY,viewerName:()=>String(storyIdentity.name||''),isMonitor:()=>Boolean(storyIdentity.monitor),game,keys,markDirty,toScene,blocked,viewToLogical,walls:()=>walls,stations,cam,scene:()=>({W,H,OY,minY:viewY(ROOM_MIN_Y),maxY:viewY(ROOM_MAX_Y)})};
 function hitAt(clientX,clientY){const r=game.getBoundingClientRect();if(!r.width||!r.height)return null;const pt=toScene(clientX,clientY,r),x=pt.x,y=pt.y;return [...hits].reverse().find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h)||null;}
 game.addEventListener('pointermove',e=>{const hit=hitAt(e.clientX,e.clientY);game.style.cursor=hit?'pointer':'default';
   // 嵌入的是展示用畫面，滑過人物就直接展開資料卡（不用點、也沒有關閉鈕）。

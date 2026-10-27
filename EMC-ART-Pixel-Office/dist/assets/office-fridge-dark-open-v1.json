@@ -1,0 +1,45 @@
+{
+  "image": "office-fridge-dark-open-v1.webp",
+  "width": 120,
+  "height": 170,
+  "interior": [
+    0,
+    0,
+    82,
+    170
+  ],
+  "door_open_left": [
+    86,
+    0,
+    34,
+    170
+  ],
+  "shelves": {
+    "y": [
+      53,
+      90,
+      127
+    ],
+    "x": [
+      2,
+      27,
+      52
+    ]
+  },
+  "placement": {
+    "door_open_left": [
+      -34,
+      0
+    ],
+    "relative_to": "interior",
+    "food_top_y": "shelves.y[row] - 28",
+    "slot_stride": 25,
+    "transparent_cell_overlap": 3,
+    "clear_height": [
+      31,
+      31,
+      31
+    ]
+  },
+  "coordinates": "[x,y,w,h], native pixels; shelves relative to interior top-left"
+}

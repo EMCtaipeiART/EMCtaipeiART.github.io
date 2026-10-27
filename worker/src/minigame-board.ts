@@ -12,7 +12,7 @@ import { COUNTDOWN_SECS, GAMES, verifyRun, type GameId } from './minigame-verify
 export const LIMITS = { openRuns: 3, perDeviceHour: 40, perIpHour: 120, retentionDays: 90, runRetentionDays: 7, boardSize: 20, grace: 45 };
 const HEX32 = /^[0-9a-f]{32}$/;
 const HOUR = 3600_000, DAY = 86_400_000;
-export const FRIDGE_SLOTS = ['chips', 'cookie', 'candy', 'pudding', 'yogurt', 'drink'] as const;
+export const FRIDGE_SLOTS = ['boba', 'bento', 'onigiri', 'sandwich', 'yogurt', 'pudding', 'drink', 'energy', 'egg', 'chips', 'cookie', 'candy', 'noodle', 'coffee', 'cake', 'donut', 'choco'] as const;
 const FRIDGE_MAX = 8, FRIDGE_TAKE_LIMIT = 30, FRIDGE_STOCK_LIMIT = 5;
 type Reply = { status: number; body: Record<string, unknown> };
 const reply = (status: number, body: Record<string, unknown>): Reply => ({ status, body });
@@ -149,7 +149,7 @@ export class MinigameBoard extends DurableObject<Env> {
     if (this.one<{ v: string }>("SELECT v FROM fridge_meta WHERE k = 'day'")?.v !== day) {
       const h = [...day].reduce((a, c) => (Math.imul(a, 31) + c.charCodeAt(0)) >>> 0, 7);
       FRIDGE_SLOTS.forEach((slot, i) => {
-        const base = 3 + ((h >>> (i * 3)) % 3);
+        const base = 2 + ((h >>> ((i * 3) % 29)) % 4);
         const cur = this.one<{ qty: number }>('SELECT qty FROM fridge_stock WHERE slot = ?', slot)?.qty ?? 0;
         this.sql().exec('INSERT OR REPLACE INTO fridge_stock (slot, qty) VALUES (?, ?)', slot, Math.max(cur, base));
       });
@@ -210,16 +210,14 @@ export class MinigameBoard extends DurableObject<Env> {
       this.sql().exec("INSERT OR REPLACE INTO fridge_meta (k, v) VALUES ('stockAt', ?)", String(this.clock()));
       return reply(200, { ...this.fridgeView(day), stocked: slot });
     }
-    if (action === 'stock' || action === 'fill') {
+    if (action === 'stock') {
       if ((used?.stocked ?? 0) >= FRIDGE_STOCK_LIMIT) return reply(429, { ok: false, error: 'enough', ...this.fridgeView(day) });
-      if (action === 'stock') {
-        if (!(FRIDGE_SLOTS as readonly string[]).includes(slot)) return reply(400, { ok: false, error: 'bad-slot' });
-        this.sql().exec('UPDATE fridge_stock SET qty = MIN(?, qty + 2) WHERE slot = ?', FRIDGE_MAX, slot);
-      } else for (const s of FRIDGE_SLOTS) this.sql().exec('UPDATE fridge_stock SET qty = ? WHERE slot = ?', FRIDGE_MAX, s);
+      if (!(FRIDGE_SLOTS as readonly string[]).includes(slot)) return reply(400, { ok: false, error: 'bad-slot' });
+      this.sql().exec('UPDATE fridge_stock SET qty = MIN(?, qty + 2) WHERE slot = ?', FRIDGE_MAX, slot);
       bump('stocked');
       this.sql().exec("INSERT OR REPLACE INTO fridge_meta (k, v) VALUES ('stocker', ?)", nick);
       this.sql().exec("INSERT OR REPLACE INTO fridge_meta (k, v) VALUES ('stockAt', ?)", String(this.clock()));
-      return reply(200, { ...this.fridgeView(day), stocked: action === 'fill' ? 'all' : slot });
+      return reply(200, { ...this.fridgeView(day), stocked: slot });
     }
     return reply(400, { ok: false, error: 'bad-action' });
   }

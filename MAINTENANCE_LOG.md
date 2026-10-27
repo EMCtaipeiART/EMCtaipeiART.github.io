@@ -969,3 +969,9 @@
 - 補貨：茶水間桌上有 3 個紙箱（每個標一種零食），拖到冰箱放開，後端 `action:'box'` 該格 +3、箱子被拿走（所有人同步，先搶先贏）、名牌換成補貨人；每 4 小時換一批。`fridge.js` 負責冰箱開門與紙箱拖曳（`window.fridgeBoxDraw`／`fridgeBoxDown`／`fridgeSceneClick`，app.js 在 pointerdown 最前面、`onGamePress` 開頭與 `pushRoomFurniture` 掛接）。
 - 後端 `minigame-board.ts` 新增 boxes 與 `box` 動作，已部署；測試在 `minigame-board.test.ts`。`app.js?v=317`、`fridge.js?v=4`。
 - 本機測試注意：Worker 的 ALLOWED_ORIGINS 不含 localhost:8765，本機要自己 mock fetch。
+
+## 2026-10-27 冰箱再改：深色冰箱左右對開門、19 種辦公室食物、站近才能開、人物表情
+- 場景裡兩台深色冰箱（各 82×170）點一下就「左右對開」（左台往左開、右台往右開，關著的門收成窄條、側門浮現），每台 3 層×3 格共 17 種可拿食物＋限量金布丁：珍珠奶茶、便當、御飯糰、三明治、提神飲料、茶葉蛋、泡麵、咖啡、蛋糕、甜甜圈、巧克力棒，加上原本的洋芋片、餅乾、糖果、布丁、優格、汽水。移除「一鍵補滿」（前端與後端 `fill` 動作都拿掉）。素材 Codex 畫：`assets/office-foods-v1`（28×28×19）、`assets/office-fridge-dark-open-v1`（內部 82×170、側門 34×170，右台鏡像），已同步 cdn。
+- 必須「自己的人物」站在冰箱前（`NEAR` 範圍）才能開門；沒有自己的人物或太遠會跳提示，走遠自動關門；拖紙箱補貨也要在冰箱旁。
+- 拿食物時人物轉向冰箱並有表情：甜食／珍奶 → 愛心跳（joy）、一般食物 → 開心跳（happy）、限量金布丁 → 愛心、過期優格 → 哭（sad）、下班偷吃被抓 → 氣炸（angry）。用 app.js 的 `tempMood`（只在自己畫面上，不寫回人物資料，時間到恢復）；`__pixelOffice` 新增 `ownPos`、`tempMood`。
+- 後端 `FRIDGE_SLOTS` 擴成 17 種並已部署；`app.js?v=318`、`fridge.js?v=5`。
