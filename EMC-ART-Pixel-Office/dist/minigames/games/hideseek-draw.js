@@ -3,14 +3,15 @@
 // 人物走到家具後面時，把那件家具的底圖再畫一次蓋在人物上（深度排序），家具維持原尺寸、原位置、原角度。
 import {MAP,RULES} from './hideseek-sim.js';
 
-const art={map:null,chars:null,ready:false,failed:false};
+const art={map:null,chars:null,rooms:null,desks:null,ready:false,failed:false};
+const SPR={rooms:{chair_back:[176,146,52,56],plant_small:[256,354,40,80]},desks:{desk_beige:[8,8,220,124]}};/* 走道補的家具：assets/office-rooms-v3.json、office-desks-v6.json */
 const base=()=>new URL('../../',import.meta.url).href;   // …/dist/
 /** 載入底圖與人物圖；沒載入完成時 drawBoard 會畫簡單的色塊，不會出錯。 */
 export function loadArt(onReady){
   if(art.map)return art;
   const mk=src=>{const i=new Image();i.src=base()+src;return i;};
-  art.map=mk(MAP.image.file+'?v=1');art.chars=mk('assets/sprites-packed.webp?v=1');
-  Promise.all([art.map,art.chars].map(i=>i.decode?i.decode():new Promise((ok,no)=>{i.onload=ok;i.onerror=no;}))).then(()=>{art.ready=true;if(onReady)onReady();}).catch(()=>{art.failed=true;});
+  art.map=mk(MAP.image.file+'?v=1');art.chars=mk('assets/sprites-packed.webp?v=1');art.rooms=mk('assets/office-rooms-v3.webp?v=1');art.desks=mk('assets/office-desks-v6.webp?v=1');
+  Promise.all([art.map,art.chars,art.rooms,art.desks].map(i=>i.decode?i.decode():new Promise((ok,no)=>{i.onload=ok;i.onerror=no;}))).then(()=>{art.ready=true;if(onReady)onReady();}).catch(()=>{art.failed=true;});
   return art;
 }
 export const artReady=()=>art.ready;
@@ -85,6 +86,11 @@ export function drawSorted(g,ctx,v,entities){
       if(x>ctx.width||y>ctx.height||x+w<0||y+h<0)continue;
       list.push({depth:o.depth,draw:()=>{g.imageSmoothingEnabled=true;g.drawImage(art.map,o.x*k,o.y*k,o.w*k,o.h*k,x,y,w,h);g.imageSmoothingEnabled=false;}});
     }
+  }
+  if(art.ready)for(const p of MAP.props||[]){
+    const r=SPR[p.img][p.spr],im=art[p.img],x=v.ox+p.x*v.s,y=v.oy+p.y*v.s,w=r[2]*v.s,h=r[3]*v.s;
+    if(x>ctx.width||y>ctx.height||x+w<0||y+h<0)continue;
+    list.push({depth:p.depth,draw:()=>{g.imageSmoothingEnabled=false;g.drawImage(im,r[0],r[1],r[2],r[3],x,y,w,h);}});
   }
   list.sort((a,b)=>a.depth-b.depth);
   for(const e of list)e.draw();
