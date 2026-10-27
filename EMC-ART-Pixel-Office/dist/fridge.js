@@ -42,10 +42,10 @@ function itemRects(){
 }
 function drawText(ctx,t,x,y,size,align='left'){ctx.font='bold '+size+'px system-ui,"PingFang TC","Microsoft JhengHei"';ctx.textAlign=align;ctx.textBaseline='top';ctx.lineWidth=4;ctx.strokeStyle='#000';ctx.lineJoin='round';ctx.strokeText(t,x,y);ctx.fillStyle='#fff';ctx.fillText(t,x,y);}
 const flip=(ctx,im,sx,sy,sw,sh,x,y,w,h,mirror)=>{if(!mirror){ctx.drawImage(im,sx,sy,sw,sh,x,y,w,h);return;}ctx.save();ctx.translate(x+w,y);ctx.scale(-1,1);ctx.drawImage(im,sx,sy,sw,sh,0,y*0,w,h);ctx.restore();};
-function drawFridge(ctx){
+function drawFridge(ctx,overlay){
   const now=performance.now();
   ctx.save();ctx.imageSmoothingEnabled=false;
-  if(isOpen()&&ready(openImg)&&ready(roomsImg)){
+  if(!overlay&&isOpen()&&ready(openImg)&&ready(roomsImg)){
     const p=Math.min(1,(now-openAt)/SWING),e=1-Math.pow(1-p,3);
     for(const f of [0,1]){const fx=FR[0]+f*FR[2];
       flip(ctx,openImg,0,0,82,170,fx,FR[1],82,170,f===1);// 內部
@@ -55,14 +55,16 @@ function drawFridge(ctx){
     if(ready(foodImg))for(const it of itemRects()){const a=Math.max(0,(p-.55)/.45);ctx.globalAlpha=a*(it.q?1:.3);
       ctx.drawImage(foodImg,IDX[it.id]*FOOD_PX,0,FOOD_PX,FOOD_PX,it.x,it.y-Math.round((1-a)*8),it.s,it.s);ctx.globalAlpha=1;
       if(it.q&&a>.9){const t=String(it.q);ctx.fillStyle='#000';ctx.fillRect(it.x+it.s-8,it.y-2,6+t.length*5,11);ctx.fillStyle='#fff';ctx.font='bold 9px system-ui';ctx.textAlign='left';ctx.textBaseline='top';ctx.fillText(t,it.x+it.s-5,it.y-1);}}
-    if(p>=1){const b=state||{},info=['今日補貨：'+(b.stocker||'—'),b.kings&&b.kings[0]?'零食之王：'+b.kings[0].nick+' ×'+b.kings[0].n:'',b.heroes&&b.heroes[0]?'補貨英雄：'+b.heroes[0].nick+' ×'+b.heroes[0].n:''].filter(Boolean);
+  }
+  if(!overlay&&isOpen()&&performance.now()-openAt>=SWING){
+    {const b=state||{},info=['今日補貨：'+(b.stocker||'—'),b.kings&&b.kings[0]?'零食之王：'+b.kings[0].nick+' ×'+b.kings[0].n:'',b.heroes&&b.heroes[0]?'補貨英雄：'+b.heroes[0].nick+' ×'+b.heroes[0].n:''].filter(Boolean);
       info.forEach((t,i)=>drawText(ctx,t,FRIDGE[0]+FRIDGE[2]/2,FRIDGE[1]+FRIDGE[3]+6+i*15,12,'center'));}
   }
-  if(bubble&&now<bubble.until){const t=bubble.text,y=FRIDGE[1]-52;ctx.font='bold 14px system-ui,"PingFang TC","Microsoft JhengHei"';const tw=Math.ceil(ctx.measureText(t).width)+(bubble.icon?44:16),x=Math.round(FRIDGE[0]+FRIDGE[2]/2-tw/2);
+  if(overlay&&bubble&&now<bubble.until){const t=bubble.text,y=FRIDGE[1]-52;ctx.font='bold 14px system-ui,"PingFang TC","Microsoft JhengHei"';const tw=Math.ceil(ctx.measureText(t).width)+(bubble.icon?44:16),x=Math.round(FRIDGE[0]+FRIDGE[2]/2-tw/2);
     ctx.fillStyle='#000';ctx.fillRect(x-3,y-3,tw+6,38);ctx.fillStyle='#fff';ctx.fillRect(x,y,tw,32);
     if(bubble.icon&&ready(foodImg))ctx.drawImage(foodImg,IDX[bubble.icon]*FOOD_PX,0,FOOD_PX,FOOD_PX,x+4,y+2,28,28);
     ctx.fillStyle='#111';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(t,x+(bubble.icon?36:8),y+17);dirty();}
-  else if(bubble)bubble=null;
+  else if(overlay&&bubble&&now>=bubble.until)bubble=null;
   ctx.restore();
 }
 function open(){
@@ -90,7 +92,7 @@ window.fridgeSceneClick=(x,y)=>{
 };
 /** 人物走遠就自動關門 */
 setInterval(()=>{if(isOpen()&&!nearFridge(own())){close();say('你走遠了，冰箱門自動關上');}},500);
-const react=(mood,ms=3200)=>{const me=own();if(me)try{window.__pixelOffice.tempMood(me.i,mood,ms,'up');}catch{}};
+const react=(mood,ms=3200)=>{const me=own();if(me)try{window.__pixelOffice.tempMood(me.i,mood,ms,'down');}catch{}};// 做表情時轉向正面
 async function act(body){
   if(busy)return;busy=true;
   try{
@@ -119,7 +121,8 @@ function drawBox(ctx,i,slot,x,y,lift){
 }
 window.fridgeBoxDraw=(ctx,top)=>{
   if(!uiImg)return;const list=boxes();
-  if(top==='fridge'){drawFridge(ctx);return;}
+  if(top==='fridge'){drawFridge(ctx,false);return;}
+  if(top==='fridgeTop'){drawFridge(ctx,true);return;}
   if(!top)list.forEach((slot,i)=>{if(!(drag&&drag.i===i)){const r=boxRect(i);drawBox(ctx,i,slot,r[0],r[1],false);}});
   else if(drag)drawBox(ctx,drag.i,boxes()[drag.i],drag.x-BOX.w/2,drag.y-BOX.h/2,true);
 };

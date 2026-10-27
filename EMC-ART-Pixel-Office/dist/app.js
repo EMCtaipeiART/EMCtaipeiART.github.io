@@ -1838,7 +1838,7 @@ function drawRoomsBase(){
 }
 function pushRoomFurniture(layers){
   layers.push({depth:-99997,draw:drawRoomsBase});
-  layers.push({depth:1215,draw:()=>{if(window.fridgeBoxDraw)window.fridgeBoxDraw(ctx,false);}});layers.push({depth:99998,draw:()=>{if(window.fridgeBoxDraw)window.fridgeBoxDraw(ctx,true);}});layers.push({depth:99997,draw:()=>{if(window.fridgeBoxDraw)window.fridgeBoxDraw(ctx,'fridge');}});
+  layers.push({depth:1215,draw:()=>{if(window.fridgeBoxDraw)window.fridgeBoxDraw(ctx,false);}});layers.push({depth:99998,draw:()=>{if(window.fridgeBoxDraw)window.fridgeBoxDraw(ctx,true);}});layers.push({depth:1266,draw:()=>{if(window.fridgeBoxDraw)window.fridgeBoxDraw(ctx,'fridge');}});layers.push({depth:99997,draw:()=>{if(window.fridgeBoxDraw)window.fridgeBoxDraw(ctx,'fridgeTop');}});
   for(const it of roomItems){const [kind,x,y,w,h,depth,,p]=it;
     layers.push({depth,draw:kind==='toiletroom'?()=>{if(!toilet6Img.complete||!toilet6Img.naturalWidth)return;ctx.save();ctx.imageSmoothingEnabled=true;ctx.drawImage(toilet6Img,x,y,w,h);ctx.restore();}:kind==='table'?()=>roomTable(p.kind,x,y,p.mids):kind==='label'?()=>{if(window.fridgeIsOpen&&p.text==='冰箱・點我'&&window.fridgeIsOpen())return;roomLabel(p.text,x,y+(p.above?0:Math.round(h/2)-10),w,p.above);}:()=>rm(p.name,x,y)});}
 }
