@@ -11,7 +11,7 @@ export const hideseekGame={
   start(ctx){
     loadArt(()=>ctx.bridge.markDirty());resetMotion();
     const rng=ctx.rngFor('room:'+Math.floor(performance.now())),game=createGame({rng,count:PLAYERS}),nav=buildNav();
-    this.state={game,rng,bots:game.players.slice(1).map(p=>createBot(p,{rng,nav,game})),view:null,mode:'follow',
+    this.state={game,rng,bots:game.players.slice(1).map(p=>createBot(p,{rng,nav,game})),view:null,mode:'full',
       joy:null,btn:false,clock:0,bannerUntil:0,note:'',spectBtn:null,catchBox:null,modeBtn:null,lastExtra:'',wasKey:false};
     const me=game.players[0];
     ctx.banner(me.role==='seeker'?'你是尋找者':'你是躲藏者');this.state.bannerUntil=2;

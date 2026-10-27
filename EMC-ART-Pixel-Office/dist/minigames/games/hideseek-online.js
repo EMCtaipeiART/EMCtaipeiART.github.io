@@ -14,7 +14,7 @@ export const hideseekOnline={
     const S=hideSeekSession,info=S.info;
     const meta=Object.fromEntries(info.players.map((p,i)=>[p.id,{...p,index:i}]));
     this.state={S,info,meta,role:info.role,you:info.you,ents:new Map(),me:{x:0,y:0,dir:1,role:info.role,alive:true,cover:false,ready:false},
-      pending:[],seq:0,acc:0,phase:'hide',time:0,left:0,caught:new Set(),view:null,mode:'follow',modeBtn:null,wasM:false,joy:null,btn:false,wasCatch:false,
+      pending:[],seq:0,acc:0,phase:'hide',time:0,left:0,caught:new Set(),view:null,mode:'full',modeBtn:null,wasM:false,joy:null,btn:false,wasCatch:false,
       clock:0,bannerUntil:0,note:'',noteUntil:0,netNote:'',over:null,voided:null,catchBox:null,lastExtra:''};
     ctx.banner(info.role==='seeker'?'你是尋找者':'你是躲藏者');this.state.bannerUntil=2;
     this.fit(ctx);
