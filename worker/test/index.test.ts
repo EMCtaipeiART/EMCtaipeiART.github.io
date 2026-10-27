@@ -4244,6 +4244,14 @@ describe('Pixel Office shared state', () => {
     await expect(api({ action: 'pixelOfficeLevelTitlesUpdate', titles: ['壞掉的格式'] })).resolves.toMatchObject({ ok: false });
   });
 
+  it('records which floor a person is on (floor 4 heartbeat) and clears it when they return', async () => {
+    const up = await api({ action: 'pixelOfficeUpdate', name: 'Machi', patch: { floor: 4 } });
+    expect(up).toMatchObject({ ok: true, person: { name: 'Machi' } });
+    expect(Number(up.person.floor4At)).toBeGreaterThan(Date.now() - 60000);
+    const back = await api({ action: 'pixelOfficeUpdate', name: 'Machi', patch: { floor: 5 } });
+    expect(back.person.floor4At).toBeUndefined();
+  });
+
   it('shares mood, message, status, position and photos between visitors without a login, and never commits to GitHub', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const empty = await api({ action: 'pixelOfficeState' });

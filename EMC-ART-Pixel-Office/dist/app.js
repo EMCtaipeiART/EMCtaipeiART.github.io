@@ -41,7 +41,8 @@ let officeHours={dayStart:9,workEnd:19,overtimeStart:19};
 let forceMode='';/* 全員上班／全員下班（後端 hours.force = 'work' | 'off' | ''）：work＝整個畫面當成平日中午（不套加班濾鏡、不收桌椅）；off＝當成假日（全部下班、桌椅收起） */
 function applyHours(data){const h=data&&data.hours;if(!h)return;{const f=h.force==='work'||h.force==='off'?h.force:'';if(f!==forceMode){forceMode=f;taipeiClockCheckedAt=0;markDirty();}}const n=v=>Number.isFinite(Number(v))?Number(v):null,d=n(h.dayStart),w=n(h.workEnd),o=n(h.overtimeStart);if(d===null||w===null||o===null)return;if(d!==officeHours.dayStart||w!==officeHours.workEnd||o!==officeHours.overtimeStart){officeHours={dayStart:d,workEnd:w,overtimeStart:o};markDirty();}}
 function statusOf(p){if(p.staff&&p.status==='present'){const c=currentTaipeiClock();if(!(c.workday&&c.hour>=officeHours.dayStart&&c.hour<officeHours.workEnd))return 'offwork';}return p.status;}
-const isAway=p=>(!FLOOR4&&STAFF_F4[p.name])||((FLOOR4&&p.f4hide!==undefined)?p.f4hide:(!p.inRoom&&!workingStatusIds.includes(statusOf(p))));
+const onFloor4=p=>!FLOOR4&&p.floor4At>0&&Date.now()-p.floor4At<150000&&String(p.name).toLowerCase()!==String(storyIdentity.name||'').toLowerCase();/* 別人現在在四樓：五樓畫面不畫他（本人在五樓時不藏自己） */
+const isAway=p=>(!FLOOR4&&STAFF_F4[p.name])||onFloor4(p)||((FLOOR4&&p.f4hide!==undefined)?p.f4hide:(!p.inRoom&&!workingStatusIds.includes(statusOf(p))));
 const overtimePreview=new URLSearchParams(location.search).get('overtime')==='1';
 // 嵌入版不能走動，畫面多數時間是完全靜止的（只有心情動畫會動），沒必要每秒重畫 60 次。
 // 有變化時才畫：遠端同步、選取、框變大小都會標記一次。省下來的 CPU 讓外層系統的進站更順。
@@ -1265,6 +1266,7 @@ function applyRemote(list){markDirty();let lookChanged=false;
     const i=names.indexOf(entry.name);if(i<0)continue;seen.add(i);const p=people[i];
     if(typeof entry.message==='string')p.message=entry.message;
     p.punish=entry.punish&&typeof entry.punish==='object'&&Number(entry.punish.until)>Date.now()?entry.punish:null;// 班長的處罰（原因、天數、到期時間）
+    p.floor4At=Number(entry.floor4At)||0;
     if(typeof entry.mood==='string')p.mood=entry.mood;
     if(typeof entry.status==='string')p.status=entry.status;
     p.meetingRoom=typeof entry.meetingRoom==='string'?entry.meetingRoom:'';
@@ -2067,7 +2069,9 @@ const sceneAnimating=()=>people.some((p,i)=>!isAway(p)&&(p.mood||musicOf(p)||act
 let embedVisible=true,embedLastDraw=0;
 if(embedMode&&'IntersectionObserver' in window)new IntersectionObserver(entries=>{embedVisible=entries[entries.length-1].isIntersecting;if(embedVisible)markDirty()}).observe(document.documentElement);
 const avatarOnly=new URLSearchParams(location.search).get('avatars')==='1';
-function render(time){try{updateCamera()}catch(error){}if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&viewer.open)){setTimeout(()=>requestAnimationFrame(render),400);return;}const dt=Math.min((time-last)/1000||0,.04);last=time;if(FLOOR4&&ready&&!window.__f4init){window.__f4init=1;try{initFloor4()}catch(error){}}if(FLOOR4&&window.__f4init&&!(window.__f4hero>=0)&&Date.now()-(window.__f4retry||0)>400){window.__f4retry=Date.now();try{initFloor4()}catch(error){}}/* 同仁名單（企劃／專案）比場景晚到：一開始找不到自己的人物就每 0.4 秒重找，找到才顯示（以前會永遠不出現，只能走路） */
+function render(time){try{updateCamera()}catch(error){}if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&viewer.open)){setTimeout(()=>requestAnimationFrame(render),400);return;}const dt=Math.min((time-last)/1000||0,.04);last=time;if(FLOOR4&&ready&&!window.__f4init){window.__f4init=1;try{initFloor4()}catch(error){}}if(FLOOR4&&window.__f4hero>=0&&Date.now()-(window.__f4beat||0)>60000){window.__f4beat=Date.now();try{pushChange(window.__f4hero,{floor:4})}catch(error){}}/* 在四樓：每分鐘回報，五樓的人才知道他不在五樓 */
+  if(!FLOOR4&&ready&&Date.now()-(window.__f5t||0)>3000){window.__f5t=Date.now();try{const oi=ownIndex();if(oi>=0&&people[oi].floor4At>0){people[oi].floor4At=0;pushChange(oi,{floor:5});}}catch(error){}}/* 回到五樓：清掉自己的「在四樓」標記 */
+  if(FLOOR4&&window.__f4init&&!(window.__f4hero>=0)&&Date.now()-(window.__f4retry||0)>400){window.__f4retry=Date.now();try{initFloor4()}catch(error){}}/* 同仁名單（企劃／專案）比場景晚到：一開始找不到自己的人物就每 0.4 秒重找，找到才顯示（以前會永遠不出現，只能走路） */
 if(FLOOR4&&window.__f4init)try{people.forEach((q,i)=>{if(q.f4hide===undefined)q.f4hide=i!==window.__f4hero;});syncF4Staff()}catch(error){}const walk=moving(dt);try{checkElevator()}catch(error){}try{ghostTick(performance.now())}catch(error){}
   if(embedMode&&!needsRedraw&&!sceneAnimating()){requestAnimationFrame(render);return;}
   // 嵌入首頁時：畫面不在可視範圍就不重畫；持續動畫（心情／未讀動態）限制在約 30fps，避免整張場景每幀全畫拖慢首頁。
