@@ -1283,6 +1283,7 @@ function applyRemote(list){markDirty();let lookChanged=false;
     if(p.music&&p.music.provider==='spotify')wantSpotifyApi();// 先把播放器程式載好，點播放鈕時才來得及在「使用者剛點擊」的有效時間內開始播
     // 自己剛移動過的人物，短時間內不被遠端的舊位置拉回去。
     if(Number.isFinite(entry.x)&&Number.isFinite(entry.y)&&!FLOOR4&&Date.now()-(localMoveAt.get(i)||0)>1500&&!(i===selected&&keys.size)){p.x=entry.x+LX;p.y=entry.y;if(entry.dir)p.dir=entry.dir;}
+    if(Number.isFinite(entry.x)&&Number.isFinite(entry.y)&&!FLOOR4)p.realPos={x:entry.x+LX,y:entry.y,dir:entry.dir||p.dir};/* 後端記的真實位置（人在會議室／廁所時畫面位置是排的，離開時要回到這裡） */
     if(i===selected){if(document.activeElement!==$('message')){$('message').value=p.message;updateCount();}updateMood();updateStatus();updateMusicPanel();}
   }
   // 第一次上線、後端還沒有某人的資料：把這台電腦上已經設定的內容補上去，大家從同一份開始。
@@ -1676,7 +1677,11 @@ function meetingSeats(){
 function applyMeetingRooms(){
   if(embedMode||!LX){people.forEach(p=>{p.inRoom=null;});return;}
   const seats=meetingSeats(),used={};
-  people.forEach((p,i)=>{p.inRoom=null;if(p.staff)return;let key='';if(p.status==='meeting'&&/^[A-D]$/.test(p.meetingRoom||''))key=p.meetingRoom;else if(p.status==='toilet')key='T'+(WD_FEMALE[i]?'F':'M');if(!key)return;const list=seats[key];if(!list)return;const n=used[key]||0;if(n>=list.length)return;used[key]=n+1;const s=list[n];p.x=s.x;p.y=s.ly;p.dir=s.dir;p.inRoom=s;});
+  people.forEach((p,i)=>{const wasIn=Boolean(p.inRoom);p.inRoom=null;if(p.staff)return;let key='';if(p.status==='meeting'&&/^[A-D]$/.test(p.meetingRoom||''))key=p.meetingRoom;else if(p.status==='toilet')key='T'+(WD_FEMALE[i]?'F':'M');
+    if(!key||!seats[key]||(used[key]||0)>=seats[key].length){/* 不在會議室／廁所了（改回「在座」等）：站回原本的位置，不要停在洗手台或會議室裡（以前會留在剛剛排的座位上） */
+      if(wasIn||p.preRoom){const back=p.realPos||p.preRoom;if(back){p.x=back.x;p.y=back.y;if(back.dir)p.dir=back.dir;}p.preRoom=null;markDirty();}return;}
+    if(!p.preRoom&&!p.realPos)p.preRoom={x:p.x,y:p.y,dir:p.dir};
+    used[key]=(used[key]||0)+1;const s=seats[key][used[key]-1];p.x=s.x;p.y=s.ly;p.dir=s.dir;p.inRoom=s;});
 }
 function drawChair(s){if(s.nochair||stationDimmed(s))return;furnitureObject(CHAIR_RECT,s.x-CHAIR_WIDTH/2,s.y-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor(s));}
 /* 專案部／企劃部桌上設備：透明像素圖集；座標與尺寸另見 assets/staff-gear-v1.json。 */
