@@ -1257,7 +1257,8 @@ let syncVersion=0,syncOnline=null,syncSeeded=false;
 const localMoveAt=new Map(),pendingPositions=new Map();
 async function syncCall(payload){const response=await fetch(SYNC_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(payload),cache:'no-store'});const data=await response.json();if(!data.ok)throw Error(data.error||'同步失敗');return data;}
 function setSyncStatus(online){if(syncOnline===online)return;syncOnline=online;const tag=$('syncTag');if(tag){tag.textContent=online?'多人同步中 · 大家看到同一個畫面':'離線中 · 變更先存在這台電腦';tag.classList.toggle('offline',!online);}}
-function pushChange(i,patch){const name=people[i].name;if((people[i].inRoom||FLOOR4)&&patch&&('x' in patch||'y' in patch||'dir' in patch)){patch={...patch};delete patch.x;delete patch.y;delete patch.dir;if(!Object.keys(patch).length)return Promise.resolve(null);}/* 在會議室裡的位置只是畫面排的，不寫回後端 */if(patch&&typeof patch.x==='number'&&LX)patch={...patch,x:patch.x-LX};/* 伺服器存的是舊座標（沒有左側桌子群的寬度） */return syncCall({action:'pixelOfficeUpdate',name,patch}).then(data=>{setSyncStatus(true);return data;}).catch(err=>{setSyncStatus(false);toast('同步失敗：'+err.message);});}
+function pushChange(i,patch){const name=people[i].name;if(FLOOR4&&i===window.__f4hero&&patch&&('x' in patch||'y' in patch||'dir' in patch)){patch={...patch,floor:4,fx:Math.round(Number(patch.x)),fy:Math.round(Number(patch.y)),fdir:patch.dir};}/* 四樓的位置存成 fx／fy（和五樓的 x／y 分開），別人在四樓才看得到他 */
+  if((people[i].inRoom||FLOOR4)&&patch&&('x' in patch||'y' in patch||'dir' in patch)){patch={...patch};delete patch.x;delete patch.y;delete patch.dir;if(!Object.keys(patch).length)return Promise.resolve(null);}/* 在會議室裡的位置只是畫面排的，不寫回後端 */if(patch&&typeof patch.x==='number'&&LX)patch={...patch,x:patch.x-LX};/* 伺服器存的是舊座標（沒有左側桌子群的寬度） */return syncCall({action:'pixelOfficeUpdate',name,patch}).then(data=>{setSyncStatus(true);return data;}).catch(err=>{setSyncStatus(false);toast('同步失敗：'+err.message);});}
 /** 走路時位置很頻繁，最多每 350 ms 送一次；最後停下來的位置一定會送出。 */
 function queuePosition(i){localMoveAt.set(i,Date.now());if(pendingPositions.has(i))return;pendingPositions.set(i,setTimeout(()=>{pendingPositions.delete(i);const p=people[i];pushChange(i,{x:p.x,y:p.y,dir:p.dir});},350));}
 function applyRemote(list){markDirty();let lookChanged=false;
@@ -1267,6 +1268,9 @@ function applyRemote(list){markDirty();let lookChanged=false;
     if(typeof entry.message==='string')p.message=entry.message;
     p.punish=entry.punish&&typeof entry.punish==='object'&&Number(entry.punish.until)>Date.now()?entry.punish:null;// 班長的處罰（原因、天數、到期時間）
     p.floor4At=Number(entry.floor4At)||0;
+    // 四樓畫面：同樣在四樓的人（本人除外、不含固定坐四樓的同仁）出現在他回報的四樓位置；沒回報了就藏起來
+    if(FLOOR4&&i!==window.__f4hero&&!STAFF_F4[p.name]&&!p.f4room){const on=p.floor4At>0&&Date.now()-p.floor4At<150000&&Number.isFinite(Number(entry.f4x))&&Number.isFinite(Number(entry.f4y));
+      if(on){p.x=Number(entry.f4x);p.y=Number(entry.f4y);if(entry.f4dir)p.dir=entry.f4dir;p.f4hide=false;p.f4remote=true;}else if(p.f4remote){p.f4hide=true;p.f4remote=false;}}
     if(typeof entry.mood==='string')p.mood=entry.mood;
     if(typeof entry.status==='string')p.status=entry.status;
     p.meetingRoom=typeof entry.meetingRoom==='string'?entry.meetingRoom:'';
@@ -2069,10 +2073,10 @@ const sceneAnimating=()=>people.some((p,i)=>!isAway(p)&&(p.mood||musicOf(p)||act
 let embedVisible=true,embedLastDraw=0;
 if(embedMode&&'IntersectionObserver' in window)new IntersectionObserver(entries=>{embedVisible=entries[entries.length-1].isIntersecting;if(embedVisible)markDirty()}).observe(document.documentElement);
 const avatarOnly=new URLSearchParams(location.search).get('avatars')==='1';
-function render(time){try{updateCamera()}catch(error){}if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&viewer.open)){setTimeout(()=>requestAnimationFrame(render),400);return;}const dt=Math.min((time-last)/1000||0,.04);last=time;if(FLOOR4&&ready&&!window.__f4init){window.__f4init=1;try{initFloor4()}catch(error){}}if(FLOOR4&&window.__f4hero>=0&&Date.now()-(window.__f4beat||0)>60000){window.__f4beat=Date.now();try{pushChange(window.__f4hero,{floor:4})}catch(error){}}/* 在四樓：每分鐘回報，五樓的人才知道他不在五樓 */
+function render(time){try{updateCamera()}catch(error){}if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&viewer.open)){setTimeout(()=>requestAnimationFrame(render),400);return;}const dt=Math.min((time-last)/1000||0,.04);last=time;if(FLOOR4&&ready&&!window.__f4init){window.__f4init=1;try{initFloor4()}catch(error){}}if(FLOOR4&&window.__f4hero>=0&&Date.now()-(window.__f4beat||0)>60000){window.__f4beat=Date.now();try{const q=people[window.__f4hero];pushChange(window.__f4hero,{floor:4,fx:Math.round(q.x),fy:Math.round(q.y),fdir:q.dir})}catch(error){}}/* 在四樓：每分鐘回報，五樓的人才知道他不在五樓 */
   if(!FLOOR4&&ready&&Date.now()-(window.__f5t||0)>3000){window.__f5t=Date.now();try{const oi=ownIndex();if(oi>=0&&people[oi].floor4At>0){people[oi].floor4At=0;pushChange(oi,{floor:5});}}catch(error){}}/* 回到五樓：清掉自己的「在四樓」標記 */
   if(FLOOR4&&window.__f4init&&!(window.__f4hero>=0)&&Date.now()-(window.__f4retry||0)>400){window.__f4retry=Date.now();try{initFloor4()}catch(error){}}/* 同仁名單（企劃／專案）比場景晚到：一開始找不到自己的人物就每 0.4 秒重找，找到才顯示（以前會永遠不出現，只能走路） */
-if(FLOOR4&&window.__f4init)try{people.forEach((q,i)=>{if(q.f4hide===undefined)q.f4hide=i!==window.__f4hero;});syncF4Staff()}catch(error){}const walk=moving(dt);try{checkElevator()}catch(error){}try{ghostTick(performance.now())}catch(error){}
+if(FLOOR4&&window.__f4init)try{people.forEach((q,i)=>{if(q.f4hide===undefined)q.f4hide=i!==window.__f4hero;if(q.f4remote&&!(q.floor4At>0&&Date.now()-q.floor4At<150000)){q.f4hide=true;q.f4remote=false;}});syncF4Staff()}catch(error){}const walk=moving(dt);try{checkElevator()}catch(error){}try{ghostTick(performance.now())}catch(error){}
   if(embedMode&&!needsRedraw&&!sceneAnimating()){requestAnimationFrame(render);return;}
   // 嵌入首頁時：畫面不在可視範圍就不重畫；持續動畫（心情／未讀動態）限制在約 30fps，避免整張場景每幀全畫拖慢首頁。
   if(embedMode&&!needsRedraw){if(!embedVisible||time-embedLastDraw<40){requestAnimationFrame(render);return;}}

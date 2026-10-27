@@ -470,7 +470,7 @@
     })();
     function stashViewer(){try{if(loggedIn())localStorage.setItem('pixelViewerHandoff',JSON.stringify(Object.assign({at:Date.now()},viewerPayload())))}catch(err){}}
     setTimeout(stashViewer,1500);setInterval(stashViewer,20*60*1000);
-    function openUniverseTab(){try{localStorage.setItem('pixelViewerHandoff',JSON.stringify(Object.assign({at:Date.now()},viewerPayload())));}catch(err){}try{if(!(matchMedia('(max-width:720px)').matches&&matchMedia('(hover:none)').matches))return false;const edit=canEditUniverse(),w=window.open('EMC-ART-Pixel-Office/dist/'+(edit?'?clean=1&cs=.78&v=119&t=':'?clean=1&ro=1&cs=.78&v=119&t=')+Math.floor(Date.now()/300000),'_blank');return Boolean(w)}catch(err){return false}}
+    function openUniverseTab(){try{localStorage.setItem('pixelViewerHandoff',JSON.stringify(Object.assign({at:Date.now()},viewerPayload())));}catch(err){}try{if(!(matchMedia('(max-width:720px)').matches&&matchMedia('(hover:none)').matches))return false;const edit=canEditUniverse(),w=window.open('EMC-ART-Pixel-Office/dist/'+(edit?'?clean=1&cs=.78&v=120&t=':'?clean=1&ro=1&cs=.78&v=120&t=')+Math.floor(Date.now()/300000),'_blank');return Boolean(w)}catch(err){return false}}
     function openUniverse(){if(openUniverseTab())return;state.uniEdit=canEditUniverse();state.form=null;state.mail=null;state.editing=false;show('universe')}
     function closeUniverse(){const u=$('universe');if(u&&!u.hidden)u.hidden=true}
     const UNI_URL='EMC-ART-Pixel-Office/dist/';
@@ -526,7 +526,7 @@
       if(e.target.closest?.('[data-arena-back]')){openUniverse()}
     });
     /* 電梯過場（2026-10-26）：兩片電梯門關上、顯示樓層、換頁、再打開。在像素辦公室走進電梯，或按「四樓／回五樓」都會播。 */
-    function uniFrameSrc(floor){const edit=Boolean(state.uniEdit)&&canEditUniverse(),t=Math.floor(Date.now()/300000);return floor===4?UNI_URL+'?clean=1&cs=.78&floor=4&hero='+encodeURIComponent(state.uniHero||(typeof viewerPayload==='function'?viewerPayload().name:'')||'')+(edit?'':'&ro=1')+'&v=119&t='+t:UNI_URL+(edit?'?clean=1&cs=.78&v=119&t='+t:'?clean=1&ro=1&cs=.78&v=119&t='+t);}
+    function uniFrameSrc(floor){const edit=Boolean(state.uniEdit)&&canEditUniverse(),t=Math.floor(Date.now()/300000);return floor===4?UNI_URL+'?clean=1&cs=.78&floor=4&hero='+encodeURIComponent(state.uniHero||(typeof viewerPayload==='function'?viewerPayload().name:'')||'')+(edit?'':'&ro=1')+'&v=120&t='+t:UNI_URL+(edit?'?clean=1&cs=.78&v=120&t='+t:'?clean=1&ro=1&cs=.78&v=120&t='+t);}
     function floorTransition(to,hero){
       const wrap=document.querySelector('.uni-wrap'),fr=$('uniFrame');if(!wrap||!fr||state.uniFloorBusy||state.uniFloor===to||(to!==4&&to!==5))return;
       state.uniFloorBusy=true;const fx=document.createElement('div');fx.className='uni-elev-fx';fx.innerHTML='<i class="l"></i><i class="r"></i><b>'+to+'F</b>';wrap.appendChild(fx);

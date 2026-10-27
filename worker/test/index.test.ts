@@ -4248,8 +4248,11 @@ describe('Pixel Office shared state', () => {
     const up = await api({ action: 'pixelOfficeUpdate', name: 'Machi', patch: { floor: 4 } });
     expect(up).toMatchObject({ ok: true, person: { name: 'Machi' } });
     expect(Number(up.person.floor4At)).toBeGreaterThan(Date.now() - 60000);
+    const pos = await api({ action: 'pixelOfficeUpdate', name: 'Machi', patch: { floor: 4, fx: 300.4, fy: 520, fdir: 'left' } });
+    expect(pos.person).toMatchObject({ f4x: 300, f4y: 520, f4dir: 'left' });
     const back = await api({ action: 'pixelOfficeUpdate', name: 'Machi', patch: { floor: 5 } });
     expect(back.person.floor4At).toBeUndefined();
+    expect(back.person.f4x).toBeUndefined();
   });
 
   it('shares mood, message, status, position and photos between visitors without a login, and never commits to GitHub', async () => {

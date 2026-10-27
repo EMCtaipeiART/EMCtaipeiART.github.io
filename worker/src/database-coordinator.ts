@@ -2610,7 +2610,15 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       state.y = Math.round(Math.max(PIXEL_OFFICE_MIN_Y, Math.min(PIXEL_OFFICE_MAX_Y, y)));
     }
     // 樓層（2026-10-27）：人在四樓時前端每分鐘回報一次 floor:4，記下時間；回五樓回報 floor:5 清掉。五樓畫面據此把人藏起來（超過 2.5 分鐘沒更新就當作已離開四樓）
-    if ('floor' in patch) { if (Number(patch.floor) === 4) state.floor4At = Date.now(); else delete state.floor4At; }
+    if ('floor' in patch) {
+      if (Number(patch.floor) === 4) {
+        state.floor4At = Date.now();
+        // 四樓的位置（四樓場景座標，和五樓的 x、y 分開存）：讓同樣在四樓的人看得到他
+        const fx = Number(patch.fx), fy = Number(patch.fy);
+        if ('fx' in patch && 'fy' in patch && Number.isFinite(fx) && Number.isFinite(fy)) { state.f4x = Math.round(Math.max(0, Math.min(6000, fx))); state.f4y = Math.round(Math.max(0, Math.min(6000, fy))); }
+        if (['up', 'down', 'left', 'right'].includes(text(patch.fdir))) state.f4dir = text(patch.fdir);
+      } else { delete state.floor4At; delete state.f4x; delete state.f4y; delete state.f4dir; }
+    }
     if ('dir' in patch) {
       const dir = text(patch.dir);
       if (!['up', 'down', 'left', 'right'].includes(dir)) throw new Error('方向不正確');
