@@ -24,7 +24,8 @@ test('three desk groups per side: 18 staff seats, extra groups shifted up by 604
   const app = await readFile(new URL('../../EMC-ART-Pixel-Office/dist/app.js', import.meta.url), 'utf8');
   assert.match(app, /GP=604[^,]*,GPV=497/);
   assert.match(app, /const staffStationIndex=seat=>/);
-  assert.match(app, /const viewY=y=>\{if\(y>=90\)return viewY0\(y\);/);
+  // 四樓（?floor=4）的場景不收上排，viewY 直接回傳原座標；三樓維持原本的收攏算法。
+  assert.match(app, /const viewY=FLOOR4\?\(y=>y\):\(y=>\{if\(y>=90\)return viewY0\(y\);/);
 });
 
 test('layout 2026-10-19: seats 6 and 9 move 110 left (between the groups), left region widened (LX 300), office extras sheet', async () => {
@@ -42,5 +43,5 @@ test('work hours come from the back-office setting (state.hours); overtime mask 
   assert.match(app, /let officeHours=\{dayStart:9,workEnd:19,overtimeStart:19\};/);
   assert.match(app, /clock\.hour>=officeHours\.overtimeStart\|\|clock\.hour<6/);
   assert.match(app, /c\.hour>=officeHours\.dayStart&&c\.hour<officeHours\.workEnd/);
-  assert.match(source, /hours: \{ dayStart: pixelHours\.dayStart, workEnd: pixelHours\.workEnd, overtimeStart: pixelHours\.overtimeStart \}/);
+  assert.match(source, /hours: \{ dayStart: pixelHours\.dayStart, workEnd: pixelHours\.workEnd, overtimeStart: pixelHours\.overtimeStart, force: pixelForceNow\(Date\.now\(\)\) \}/);
 });

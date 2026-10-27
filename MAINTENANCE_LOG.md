@@ -2,6 +2,10 @@
 
 > 每次修改網站後在最上面補一筆（新的在上）。AGENT.md 要求的修改紀錄放這裡。
 
+## 2026-10-27
+
+- 修 GitHub 測試失敗（actions run 40427127496）：①`EMC-ART-Pixel-Office/dist/app.js` 被別台電腦以 CRLF 換行提交（2365 行全變），讓用 `\n` 比對原始碼的測試失效 → 轉回 LF，並新增 `.gitattributes`（`app.js text eol=lf`），之後不論哪台電腦提交都會正規化；②`staff-seat-assignment.test.mjs` 兩項釘死舊寫法的測試更新到新寫法（四樓 `viewY=FLOOR4?…`、`pixelOfficeState` 的 hours 多了 `force`），保留檢查意圖。完整測試 281 項全過。
+
 ## 2026-10-23
 
 - 新增部門「呈鈺顧問」（外部顧問公司，Google 信箱網域 `jadeit.cc`），運作方式比照專案部：①Worker `model.ts` 新增 `ALLOWED_LOGIN_DOMAINS`／`isAllowedLoginAccount()`（`@emctaipei.com`、`@jadeit.cc`）、`PROJECT_LIKE_DEPARTMENTS=['專案部','呈鈺顧問']`；Google 登入、後台新增帳號、匯入帳號改用這個網域判斷（ERP 登入仍只限公司）；②寫死「企劃部|專案部」的地方（平台幣、元宇宙座位／服裝、客戶設定、刪除申請、前台 `site.js`）都加上呈鈺顧問；平台幣餘額多一個「呈鈺顧問」組；③資料庫後台新增帳號的網域檢查放行 jadeit.cc；④新增人員 Carrie Yeh（`carrieyeh@jadeit.cc`，部門／組別「呈鈺顧問」，一般使用者權限同專案部）。測試 `worker/test/login-domains.test.ts`。注意：Google OAuth 若是「僅限組織內部」，外部網域帳號會被 Google 擋下（需在 Google Cloud 主控台改外部或加測試使用者）。

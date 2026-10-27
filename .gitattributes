@@ -1,0 +1,2 @@
+# 像素辦公室的 app.js 一律用 LF：曾被別台電腦以 CRLF 提交（2365 行全變），讓用 \n 比對原始碼的測試全部失效。
+EMC-ART-Pixel-Office/dist/app.js text eol=lf
