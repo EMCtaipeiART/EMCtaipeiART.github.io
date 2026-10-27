@@ -21,11 +21,12 @@ export const tag=(g,text,x,y,col)=>{g.font='700 12px sans-serif';g.textAlign='ce
  * 世界座標 → 畫布。mode 'full'：整層縮到放得下；'follow'：以 focus 為中心，約顯示 1500 世界像素寬（手機較窄時縮小到至少看得到視野）。
  */
 export function makeView(ctx,hudTop,mode='full',focus=null){
-  const availH=Math.max(10,ctx.height-hudTop-8),fullS=Math.max(.02,Math.min(ctx.width/MAP.w,availH/MAP.h));
-  if(mode==='full'||!focus)return {s:fullS,ox:(ctx.width-MAP.w*fullS)/2,oy:hudTop+(availH-MAP.h*fullS)/2,mode:'full'};
-  const s=Math.max(fullS,Math.min(ctx.width,availH)/1500);
-  const clamp=(v,size,view)=>size*s<=view?(view-size*s)/2:Math.max(view-size*s,Math.min(0,v));
-  return {s,ox:clamp(ctx.width/2-focus.x*s,MAP.w,ctx.width),oy:hudTop+clamp(availH/2-focus.y*s,MAP.h,availH),mode:'follow'};
+  const V=MAP.view,availH=Math.max(10,ctx.height-hudTop-8),fullS=Math.max(.02,Math.min(ctx.width/V.w,availH/V.h));
+  if(mode==='full'||!focus)return {s:fullS,ox:(ctx.width-V.w*fullS)/2-V.x*fullS,oy:hudTop+(availH-V.h*fullS)/2-V.y*fullS,mode:'full'};
+  const s=Math.max(fullS,Math.min(ctx.width,availH)/900);
+  /* 玩家可走的範圍（V）小於畫面就置中，否則鏡頭不超出 V */
+  const clamp=(o,pos,size,view)=>size*s<=view?(view-size*s)/2-pos*s:Math.max(view-(pos+size)*s,Math.min(-pos*s,o));
+  return {s,ox:clamp(ctx.width/2-focus.x*s,V.x,V.w,ctx.width),oy:hudTop+clamp(availH/2-focus.y*s,V.y,V.h,availH),mode:'follow'};
 }
 export const toCanvas=(v,x,y)=>({x:v.ox+x*v.s,y:v.oy+y*v.s});
 export const toWorld=(v,x,y)=>({x:(x-v.ox)/v.s,y:(y-v.oy)/v.s});
@@ -34,8 +35,8 @@ export const toWorld=(v,x,y)=>({x:(x-v.ox)/v.s,y:(y-v.oy)/v.s});
 export function drawBoard(g,ctx,v,{showZones=true}={}){
   g.imageSmoothingEnabled=false;
   g.fillStyle='#e9eef7';g.fillRect(0,0,ctx.width,ctx.height);
-  if(art.ready){g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';g.drawImage(art.map,0,0,art.map.naturalWidth,art.map.naturalHeight,v.ox,v.oy,MAP.w*v.s,MAP.h*v.s);g.imageSmoothingEnabled=false;}
-  else{g.fillStyle='#fff';g.fillRect(v.ox,v.oy,MAP.w*v.s,MAP.h*v.s);for(const s of MAP.solids){g.fillStyle=s.tall?'#3a4a68':'#8c98ad';g.fillRect(v.ox+s.x*v.s,v.oy+s.y*v.s,s.w*v.s,s.h*v.s);}}
+  if(art.ready){g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';{const V=MAP.view,k=art.map.naturalWidth/MAP.w;g.drawImage(art.map,V.x*k,V.y*k,V.w*k,V.h*k,v.ox+V.x*v.s,v.oy+V.y*v.s,V.w*v.s,V.h*v.s);}g.imageSmoothingEnabled=false;}
+  else{g.fillStyle='#fff';g.fillRect(v.ox+MAP.view.x*v.s,v.oy+MAP.view.y*v.s,MAP.view.w*v.s,MAP.view.h*v.s);for(const s of MAP.solids){g.fillStyle=s.tall?'#3a4a68':'#8c98ad';g.fillRect(v.ox+s.x*v.s,v.oy+s.y*v.s,s.w*v.s,s.h*v.s);}}
   if(showZones){
     g.setLineDash([6,5]);g.lineWidth=2;g.strokeStyle='rgba(76,175,106,.85)';g.fillStyle='rgba(76,175,106,.10)';
     for(const z of MAP.zones){const x=v.ox+z.x*v.s,y=v.oy+z.y*v.s,w=z.w*v.s,h=z.h*v.s;if(x>ctx.width||y>ctx.height||x+w<0||y+h<0)continue;g.fillRect(x,y,w,h);g.strokeRect(x,y,w,h);}
@@ -98,12 +99,12 @@ export function drawFog(g,ctx,v,center,radius,hudTop){
 
 /** 小地圖（右上角）：整層縮圖、自己（黃）、其他可見的人、目前視野框。 */
 export function drawMinimap(g,ctx,v,hudTop,dots){
-  const mw=Math.min(84,ctx.width*.22),mh=mw*MAP.h/MAP.w,x0=ctx.width-mw-8,y0=hudTop+8,k=mw/MAP.w;
+  const V=MAP.view,mw=Math.min(84,ctx.width*.22),mh=mw*V.h/V.w,x0=ctx.width-mw-8,y0=hudTop+8,k=mw/V.w;
   g.save();g.globalAlpha=.92;g.fillStyle='#fff';g.fillRect(x0-2,y0-2,mw+4,mh+4);
-  if(art.ready)g.drawImage(art.map,x0,y0,mw,mh);
+  if(art.ready){const ik=art.map.naturalWidth/MAP.w;g.drawImage(art.map,V.x*ik,V.y*ik,V.w*ik,V.h*ik,x0,y0,mw,mh);}
   g.globalAlpha=1;g.strokeStyle='#182e54';g.lineWidth=2;g.strokeRect(x0-2,y0-2,mw+4,mh+4);
-  if(v.mode==='follow'){g.strokeStyle='#e8913a';g.lineWidth=1.5;g.strokeRect(x0+(-v.ox/v.s)*k,y0+(-(v.oy-hudTop)/v.s)*k,(ctx.width/v.s)*k,((ctx.height-hudTop)/v.s)*k);}
-  for(const d of dots){g.fillStyle=d.color;g.beginPath();g.arc(x0+d.x*k,y0+d.y*k,d.me?3.5:2.5,0,Math.PI*2);g.fill();}
+  if(v.mode==='follow'){g.strokeStyle='#e8913a';g.lineWidth=1.5;g.strokeRect(x0+((-v.ox/v.s)-V.x)*k,y0+((-(v.oy-hudTop)/v.s)-V.y)*k,(ctx.width/v.s)*k,((ctx.height-hudTop)/v.s)*k);}
+  for(const d of dots){g.fillStyle=d.color;g.beginPath();g.arc(x0+(d.x-V.x)*k,y0+(d.y-V.y)*k,d.me?3.5:2.5,0,Math.PI*2);g.fill();}
   g.restore();
   return {x:x0,y:y0,w:mw,h:mh};
 }

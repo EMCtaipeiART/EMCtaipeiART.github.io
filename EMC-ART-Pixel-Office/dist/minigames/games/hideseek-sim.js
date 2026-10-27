@@ -11,7 +11,13 @@ export const TOTAL_SECS=RULES.hideSecs+RULES.seekSecs;
  * solids＝會擋人的家具與玻璃牆；tall＝同時擋視線（書櫃、冰箱、電梯、隔間與玻璃牆，門的缺口保留）；桌椅等矮家具只擋人。
  * zones＝遮蔽區域（走得進去）：躲在裡面時，尋找者要靠近到 coverReveal 內才看得到；zone.spot 是圓放得進去的點。
  */
-export const MAP=OFFICE;
+/* 場地縮小（2026-10-27）：只用辦公室下半部的一塊（會議室 B、C、茶水間與中間走道），
+ * 約 1190×1000，原本整層 2370×3260 太大。座標系不變，只是玩家限制在 view 之內、畫面只畫這一塊；
+ * 家具、遮蔽區域、遮擋圖層只留與這塊相交的。伺服器（worker/hide-room）用同一份，所以線上版也一起縮小。 */
+const VIEW={x:40,y:2240,w:1190,h:1000};
+const hit=r=>r.x<VIEW.x+VIEW.w&&r.x+r.w>VIEW.x&&r.y<VIEW.y+VIEW.h&&r.y+r.h>VIEW.y;
+export const MAP={...OFFICE,view:VIEW,bounds:{...VIEW},solids:OFFICE.solids.filter(hit),zones:OFFICE.zones.filter(hit),occluders:OFFICE.occluders.filter(hit),
+  spawns:OFFICE.spawns.filter(p=>p.x>=VIEW.x+30&&p.x<=VIEW.x+VIEW.w-20&&p.y>=VIEW.y+30&&p.y<=VIEW.y+VIEW.h-30)};
 
 const PLAYER_COLORS=['#d9534f','#3b6fd8','#4caf6a','#f0b429','#a463d9','#e8913a'];
 export const zoneCenter=z=>z.spot||({x:z.x+z.w/2,y:z.y+z.h/2});
