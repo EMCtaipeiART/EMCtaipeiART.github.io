@@ -999,7 +999,9 @@ let storyIdentity={name:'',token:'',staff:false,monitor:false};
 /* 企劃部、專案部同仁：只能操控自己的人物（點別人不會選取），右側沒有等級欄（他們沒有等級制度）。 */
 function viewerIsStaff(){return Boolean(storyIdentity.staff);}
 function ownIndex(){const who=String(storyIdentity.name||'').toLowerCase();return who?names.findIndex(n=>n.toLowerCase()===who):-1;}
-function applyViewerRole(){document.documentElement.classList.toggle('staff-view',viewerIsStaff());if(viewerIsStaff()){const i=ownIndex();if(i>=0&&selected!==i&&ready){select(i);}}}
+/* 小遊戲入口：網址帶 ?minigames=1 才開；管理者與 Machi（monitor）登入後不用帶參數也自動開啟（index.html 的載入器只看網址，這裡補上） */
+function enableMinigamesForMonitor(){if(!storyIdentity.monitor||window.__mgLoaded||document.documentElement.classList.contains('minigames-on'))return;window.__mgLoaded=true;document.documentElement.classList.add('minigames-on');const m=document.createElement('script');m.type='module';m.src='minigames/index.js?v=13';document.body.appendChild(m);}
+function applyViewerRole(){document.documentElement.classList.toggle('staff-view',viewerIsStaff());try{enableMinigamesForMonitor();}catch(error){}if(viewerIsStaff()){const i=ownIndex();if(i>=0&&selected!==i&&ready){select(i);}}}
 const storyLoggedIn=()=>Boolean(storyIdentity.name&&storyIdentity.token);
 /* 新分頁拿不到 window.opener（部分手機瀏覽器）時，改讀主站開分頁前存的登入交接資料（同網域 localStorage，10 分鐘內有效）。 */
 function applyHandoff(){if(storyIdentity.name)return;try{const h=JSON.parse(localStorage.getItem('pixelViewerHandoff')||'null');if(h&&h.name&&Date.now()-Number(h.at)<86400000){storyIdentity={name:String(h.name),token:String(h.token||''),staff:Boolean(h.staff),monitor:Boolean(h.monitor)};applyViewerRole();}}catch(error){}}
