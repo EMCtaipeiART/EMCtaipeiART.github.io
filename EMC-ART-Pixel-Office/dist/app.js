@@ -2067,7 +2067,8 @@ const sceneAnimating=()=>people.some((p,i)=>!isAway(p)&&(p.mood||musicOf(p)||act
 let embedVisible=true,embedLastDraw=0;
 if(embedMode&&'IntersectionObserver' in window)new IntersectionObserver(entries=>{embedVisible=entries[entries.length-1].isIntersecting;if(embedVisible)markDirty()}).observe(document.documentElement);
 const avatarOnly=new URLSearchParams(location.search).get('avatars')==='1';
-function render(time){try{updateCamera()}catch(error){}if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&viewer.open)){setTimeout(()=>requestAnimationFrame(render),400);return;}const dt=Math.min((time-last)/1000||0,.04);last=time;if(FLOOR4&&ready&&!window.__f4init){window.__f4init=1;try{initFloor4()}catch(error){}}if(FLOOR4&&window.__f4init)try{syncF4Staff()}catch(error){}const walk=moving(dt);try{checkElevator()}catch(error){}try{ghostTick(performance.now())}catch(error){}
+function render(time){try{updateCamera()}catch(error){}if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&viewer.open)){setTimeout(()=>requestAnimationFrame(render),400);return;}const dt=Math.min((time-last)/1000||0,.04);last=time;if(FLOOR4&&ready&&!window.__f4init){window.__f4init=1;try{initFloor4()}catch(error){}}if(FLOOR4&&window.__f4init&&!(window.__f4hero>=0)&&Date.now()-(window.__f4retry||0)>400){window.__f4retry=Date.now();try{initFloor4()}catch(error){}}/* 同仁名單（企劃／專案）比場景晚到：一開始找不到自己的人物就每 0.4 秒重找，找到才顯示（以前會永遠不出現，只能走路） */
+if(FLOOR4&&window.__f4init)try{people.forEach((q,i)=>{if(q.f4hide===undefined)q.f4hide=i!==window.__f4hero;});syncF4Staff()}catch(error){}const walk=moving(dt);try{checkElevator()}catch(error){}try{ghostTick(performance.now())}catch(error){}
   if(embedMode&&!needsRedraw&&!sceneAnimating()){requestAnimationFrame(render);return;}
   // 嵌入首頁時：畫面不在可視範圍就不重畫；持續動畫（心情／未讀動態）限制在約 30fps，避免整張場景每幀全畫拖慢首頁。
   if(embedMode&&!needsRedraw){if(!embedVisible||time-embedLastDraw<40){requestAnimationFrame(render);return;}}
