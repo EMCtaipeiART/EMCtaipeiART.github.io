@@ -31,14 +31,15 @@ if(office){
     get walls(){return office.walls();},get stations(){return office.stations;}
   };
   // 暱稱：匿名、只用來顯示在排行榜（榜上是「暱稱#裝置碼後四碼」），和大廳共用同一個設定
-  const NAME_KEY='emc-mg-name',getNick=()=>{try{return(localStorage.getItem(NAME_KEY)||'').trim().slice(0,12);}catch{return '';}};
+  const NAME_KEY='emc-mg-name',acct=()=>String((office.viewerName&&office.viewerName())||'').trim().slice(0,12),/* 有登入帳號就直接用帳號名字，不用再輸入暱稱 */
+  getNick=()=>acct()||(()=>{try{return(localStorage.getItem(NAME_KEY)||'').trim().slice(0,12);}catch{return '';}})();
   const manager=createMiniGameManager({ui:createUI(),store:createScoreStore(),bridge,board:createBoardClient(),nickname:getNick});
   manager.register(demoGame);manager.register(treasureGame);manager.register(hoopsGame);manager.register(deadlineGame);manager.register(hideseekGame);manager.register(hideseekOnline);const lobby=createLobby({manager});window.hideSeekLobby=lobby;
   window.miniGames=manager;
   // 入口：點「小遊戲」開啟卡片式選單（測試用的點點遊戲不列出）
   const store=createScoreStore();
   const menu=createMenu({manager,store,getNick,setNick:v=>{try{localStorage.setItem(NAME_KEY,v);}catch{/* 儲存不可用 */}},
-    isAdmin:()=>Boolean(office.isMonitor&&office.isMonitor()),
+    loggedIn:()=>Boolean(acct()),isAdmin:()=>Boolean(office.isMonitor&&office.isMonitor()),
     onPick:id=>{if(id==='vent-arena'){if(window.parent!==window)window.parent.postMessage({type:'pixelOfficeOpenArena'},location.origin);else window.open('../../vent-arena/','_blank','noopener');}else if(id==='hideseek-online')lobby.show();else manager.open(id);}});
   window.miniGamesMenu=menu;
   const btn=document.getElementById('miniGamesBtn');/* 入口按鈕已移到主站上方的「小遊戲」，這裡只留相容 */

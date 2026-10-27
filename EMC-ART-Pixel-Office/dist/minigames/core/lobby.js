@@ -12,10 +12,11 @@ export function createLobby({manager,gameId='hideseek-online',doc=document,url=h
   const S=hideSeekSession;
   let net=null,room=null,view='connect',status='',retries=0,pendingCreate=null;
 
-  const name=()=>(root.querySelector('#hsName')?.value||safe(()=>localStorage.getItem(NAME_KEY),'')||'').trim().slice(0,12);
+  const acct=()=>String((window.__pixelOffice&&window.__pixelOffice.viewerName&&window.__pixelOffice.viewerName())||'').trim().slice(0,12);/* 已登入就直接用帳號名字 */
+  const name=()=>acct()||(root.querySelector('#hsName')?.value||safe(()=>localStorage.getItem(NAME_KEY),'')||'').trim().slice(0,12);
   function render(){
     if(view==='connect'){
-      root.innerHTML='<h2>躲貓貓・連線</h2><label>你的暱稱（匿名，最多 12 字）<input id="hsName" maxlength="12" value="'+esc(safe(()=>localStorage.getItem(NAME_KEY),'')||'')+'"></label>'
+      root.innerHTML='<h2>躲貓貓・連線</h2>'+(acct()?'<p>玩家：'+esc(acct())+'</p>':'<label>你的暱稱（匿名，最多 12 字）<input id="hsName" maxlength="12" value="'+esc(safe(()=>localStorage.getItem(NAME_KEY),'')||'')+'"></label>')+''
         +'<div class="row"><select id="hsMax" aria-label="人數">'+[2,3,4,5,6].map(n=>'<option value="'+n+'"'+(n===4?' selected':'')+'>'+n+' 人</option>').join('')+'</select><button type="button" class="mg-btn" data-a="create">建立房間</button></div>'
         +'<div class="row"><input id="hsCode" maxlength="6" placeholder="邀請碼" autocapitalize="characters" autocomplete="off"><button type="button" class="mg-btn" data-a="join">加入</button></div>'
         +'<p class="err">'+esc(status)+'</p><button type="button" class="mg-btn" data-a="close">關閉</button>';
