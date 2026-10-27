@@ -1507,7 +1507,24 @@ function setCardPinned(value){cardPinned=value;$('personCard').classList.toggle(
 /** 螢幕座標 → 場景座標（手機鏡頭模式的畫布只有螢幕那麼大，用鏡頭左上角換算） */
 function toScene(cx,cy,r){return cam.on?{x:cam.left+(cx-r.left)/cam.s,y:cam.top+(cy-r.top)/cam.s}:{x:(cx-r.left)*W/r.width,y:(cy-r.top)*H/r.height-OY};}
 /* 小遊戲橋接：唯讀暴露場景工具給 minigames/（不改動既有行為）。 */
-window.__pixelOffice={viewerName:()=>String(storyIdentity.name||''),isMonitor:()=>Boolean(storyIdentity.monitor),game,keys,markDirty,toScene,blocked,viewToLogical,walls:()=>walls,stations,cam,scene:()=>({W,H,OY,minY:viewY(ROOM_MIN_Y),maxY:viewY(ROOM_MAX_Y)})};
+/** 辦公室尋寶用：整個場景裡適合藏小東西的位置（場景座標）。desk＝桌面上、table＝會議桌／茶水間桌面上、corner＝房間角落與家具旁。 */
+function treasureSpots(){
+  const desk=[],table=[],corner=[];
+  for(const s of stations){
+    if(s.gone||s.big)continue;const vs=viewY(s.y);
+    const y=s.row?BD_TOP+(vs-BOTTOM_FEET)+40:vs-40+36;
+    for(const dx of [-76,-26,26,76])desk.push({x:Math.round(s.x+dx),y:Math.round(y)});
+  }
+  if(LX){
+    for(const dx of [50,150,250,320])desk.push({x:LONG_DESK.x+dx,y:LONG_DESK.y+70});desk.push({x:LONG_DESK.smallX+55,y:LONG_DESK.y+70},{x:LONG_DESK.smallX+55,y:LONG_DESK.y+150});
+    for(const it of roomItems){if(it[0]!=='table')continue;const [,x,y,w]=it,wood=it[7].kind==='wood'||it[7].kind==='whitewood';for(const f of [.12,.3,.7,.88])table.push({x:Math.round(x+w*f),y:Math.round(y+(wood?32:60))});}
+    for(const [,x,y,w,h] of ROOMS)for(const [cx,cy] of [[x+RT+26,y+RT+26],[x+w-RT-26,y+RT+26],[x+RT+26,y+h-RT-26],[x+w-RT-26,y+h-RT-26]])corner.push({x:cx,y:cy});
+    for(const it of roomItems){if(it[0]!=='sprite'||!it[6])continue;corner.push({x:Math.round(it[1]+it[3]+22),y:Math.round(it[2]+it[4]-18)});corner.push({x:Math.round(it[1]-22),y:Math.round(it[2]+it[4]-18)});}
+    for(const [cx,cy] of [[110,-1150],[W-110,-1150],[W-110,1500],[110,1500],[90,300],[W-90,300],[100,1100],[W-100,1100],[1195,-620],[1195,640]])corner.push({x:cx,y:cy});
+  }
+  return {desk,table,corner};
+}
+window.__pixelOffice={treasureSpots,viewY,viewerName:()=>String(storyIdentity.name||''),isMonitor:()=>Boolean(storyIdentity.monitor),game,keys,markDirty,toScene,blocked,viewToLogical,walls:()=>walls,stations,cam,scene:()=>({W,H,OY,minY:viewY(ROOM_MIN_Y),maxY:viewY(ROOM_MAX_Y)})};
 function hitAt(clientX,clientY){const r=game.getBoundingClientRect();if(!r.width||!r.height)return null;const pt=toScene(clientX,clientY,r),x=pt.x,y=pt.y;return [...hits].reverse().find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h)||null;}
 game.addEventListener('pointermove',e=>{const hit=hitAt(e.clientX,e.clientY);game.style.cursor=hit?'pointer':'default';
   // 嵌入的是展示用畫面，滑過人物就直接展開資料卡（不用點、也沒有關閉鈕）。

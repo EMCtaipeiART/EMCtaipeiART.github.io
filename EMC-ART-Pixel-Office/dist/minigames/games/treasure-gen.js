@@ -17,12 +17,12 @@ export function floorCandidates({minX,maxX,minY,maxY,step=48,margin=24,isFree}){
  * 依 rng 洗牌候選點與道具種類，挑出 count 個互相保持 minGap 距離、且 clickable(x,y) 為真的位置。
  * 回傳 [{type,x,y}]；候選不足時回傳較少的數量（呼叫端要處理）。
  */
-export function pickTreasures({rng,candidates,types,count=TREASURE_COUNT,minGap=180,clickable=()=>true}){
+export function pickTreasures({rng,candidates,types,count=TREASURE_COUNT,minGap=180,clickable=()=>true,existing=[]}){
   const order=rng.shuffle(candidates),kinds=rng.shuffle(types).slice(0,count),picked=[];
   for(const c of order){
     if(picked.length>=count)break;
     if(!clickable(c.x,c.y))continue;
-    if(picked.some(p=>Math.hypot(p.x-c.x,p.y-c.y)<minGap))continue;
+    if(picked.some(p=>Math.hypot(p.x-c.x,p.y-c.y)<minGap)||existing.some(p=>Math.hypot(p.x-c.x,p.y-c.y)<minGap))continue;
     picked.push({type:kinds[picked.length],x:c.x,y:c.y});
   }
   return picked;
