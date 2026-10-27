@@ -25,7 +25,7 @@ test('three desk groups per side: 18 staff seats, extra groups shifted up by 604
   assert.match(app, /GP=604[^,]*,GPV=497/);
   assert.match(app, /const staffStationIndex=seat=>/);
   // 四樓（?floor=4）的場景不收上排，viewY 直接回傳原座標；三樓維持原本的收攏算法。
-  assert.match(app, /const viewY=FLOOR4\?\(y=>y\):\(y=>\{if\(y>=90\)return viewY0\(y\);/);
+  assert.match(app, /const viewY5=y=>\{if\(y>=90\)return viewY0\(y\);/);
 });
 
 test('layout 2026-10-19: seats 6 and 9 move 110 left (between the groups), left region widened (LX 300), office extras sheet', async () => {

@@ -76,7 +76,8 @@ const EMBED_ROW_TOP=355,EMBED_ROW_BOTTOM=695;
 const BOTTOM_FEET=588,EMBED_ROW_SQUEEZE=(BOTTOM_FEET-EMBED_ROW_TOP)/(EMBED_ROW_BOTTOM-EMBED_ROW_TOP);
 const viewY0=y=>y>EMBED_ROW_TOP?EMBED_ROW_TOP+(y-EMBED_ROW_TOP)*EMBED_ROW_SQUEEZE:y;
 // 往上複製的兩組桌子（g=1、2）：邏輯座標是原本的 y - g*GP，畫面上是原本的畫面座標 - g*GPV。兩段在 y≈90 處剛好接上（連續）。
-const viewY=FLOOR4?(y=>y):(y=>{if(y>=90)return viewY0(y);const g=Math.min(2,Math.ceil((90-y)/GP));return viewY0(y+g*GP)-g*GPV;});
+const viewY5=y=>{if(y>=90)return viewY0(y);const g=Math.min(2,Math.ceil((90-y)/GP));return viewY0(y+g*GP)-g*GPV;};/* 五樓的邏輯→畫面座標（四樓頁面也要用它算「回五樓時站在哪」） */
+const viewY=FLOOR4?(y=>y):viewY5;
 // 畫面用的座標（嵌入模式下把下排往上收過）。資料一律用 people／stations，畫面一律用這兩個。
 let viewPeople=[],viewStations=[];
 // 六張桌子實際佔到的範圍（場景座標，下排收上來之後量的）：左右是桌子邊緣。嵌入模式就是把這一塊
@@ -1379,6 +1380,11 @@ if(LX){for(let b=0;b<3;b++){const dy=-b*GP,fy=315+dy,fh=335;walls.push([DL-92-12
 function blocked(x,y){return x<65||x>W-65||y<ROOM_MIN_Y||y>ROOM_MAX_Y||walls.some(([a,b,w,h])=>x>a-14&&x<a+w+14&&y>b-4&&y<b+h+4);}
 /* 走進電梯（2026-10-26）：被操控的人物走到電梯門前、朝上走，就請外層（元宇宙頁）播放電梯過場並切到四樓；單獨開啟時直接換頁。 */
 let elevatorCooldown=0;
+/** 離開四樓回五樓：馬上告訴後端「我回五樓了」並把位置放在五樓電梯門前，五樓的人才看得到他出現（不用等五樓頁面載入） */
+function leaveFloor4(){const hi=window.__f4hero;if(!FLOOR4||!(hi>=0)||window.__f4left)return;window.__f4left=Date.now();
+  let lo=-3000,hiY=4000;const target=TB+30;for(let k=0;k<40;k++){const m=(lo+hiY)/2;if(viewY5(m)<target)lo=m;else hiY=m;}
+  try{syncCall({action:'pixelOfficeUpdate',name:people[hi].name,patch:{floor:5,x:TX0+75-320,y:Math.round((lo+hiY)/2),dir:'down'}}).catch(()=>{});}catch(error){}}
+window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==window.parent||!event.data||event.data.type!=='pixelOfficeLeaveFloor4')return;leaveFloor4();});
 /* 四樓：搬到四樓的同仁坐進自己的座位（人物＋桌位名牌）；每格都重設位置，名單晚到也會補上 */
 /* 四樓的空座位（沒有同仁坐的）比照五樓：上班時間坐一個「未登入」透明人物、桌上有「未登入」名牌 */
 function addF4Vacancies(){const sc=window.FLOOR4_SCENE;if(!sc||!sc.seats||window.__f4vac)return;window.__f4vac=1;const taken=Object.keys(STAFF_F4).map(nm=>sc.seatPos(STAFF_F4[nm].g,STAFF_F4[nm].seat));for(const t of sc.seats){if(taken.some(q=>Math.abs(q.x-t.x)<2&&Math.abs(q.y-t.y)<2))continue;stations.push({x:t.x,y:t.y,name:'',row:t.row?1:0,grp:1,empty:6,type:0,f4:true,f4ghost:true});}markDirty();}
@@ -1387,7 +1393,7 @@ function syncF4Meetings(){const sc=window.FLOOR4_SCENE;if(!sc||!sc.roomSeats)ret
 function syncF4Staff(){const sc=window.FLOOR4_SCENE;if(!sc||!sc.seatPos)return;addF4Vacancies();try{syncF4Meetings()}catch(e){}for(const nm in STAFF_F4){const i=names.indexOf(nm);if(i<0)continue;const q=people[i];if(q.f4room)continue;const pos=sc.seatPos(STAFF_F4[nm].g,STAFF_F4[nm].seat);q.f4hide=workingStatusIds.includes(statusOf(q))?false:true;q.x=pos.x;q.y=pos.y;q.dir=STAFF_F4[nm].face||pos.dir;if(!stations.some(t=>t.f4&&t.name===nm)){stations.push({x:pos.x,y:pos.y,name:nm,row:pos.row?1:0,grp:1,empty:6,type:0,f4:true});markDirty();}}}
 function initFloor4(){
   const want=new URLSearchParams(location.search).get('hero')||'';let hi=names.indexOf(want);if(hi<0){try{hi=ownIndex()}catch(e){hi=-1}}
-  window.__f4hero=hi;people.forEach((q,i)=>{q.f4hide=i!==hi;});
+  window.__f4hero=hi;people.forEach((q,i)=>{q.f4hide=q.f4remote?false:i!==hi;});/* 已經在四樓出現的別人（f4remote）不要被重設成隱藏 */
   if(hi>=0){const q=people[hi],st=(window.FLOOR4_SCENE&&FLOOR4_SCENE.heroStart)||{x:115,y:502,dir:'down'};q.x=st.x;q.y=st.y;q.dir=st.dir||'down';try{const sv=JSON.parse(sessionStorage.getItem('f4pos')||'null');if(sv&&sv.n===q.name&&Number.isFinite(sv.x)&&Number.isFinite(sv.y)&&!blocked(sv.x,sv.y)){q.x=sv.x;q.y=sv.y;q.dir=sv.d||q.dir;}}catch(e){}select(hi);}/* 重新整理後回到離開時的位置 */
   if(window.FLOOR4_SCENE){FLOOR4_SCENE.onReady=()=>markDirty();if(FLOOR4_SCENE.ready)markDirty();}
   markDirty();
@@ -1398,7 +1404,7 @@ function checkElevator(){
   if(embedMode||(!LX&&!FLOOR4)||selected===null||!keys.has('ArrowUp')||Date.now()<elevatorCooldown)return;
   const p=people[selected];if(!p||p.inRoom)return;const vy=viewY(p.y);
   const f4=FLOOR4&&window.FLOOR4_SCENE?FLOOR4_SCENE.elevator:null,hit=f4?(p.x>=f4.x0&&p.x<=f4.x1&&p.y>=f4.y0&&p.y<=f4.y1):(p.x>=TX0+10&&p.x<=TX0+140&&vy>=TB-6&&vy<=TB+34);
-  if(hit){elevatorCooldown=Date.now()+4000;keys.clear();
+  if(hit){elevatorCooldown=Date.now()+4000;keys.clear();if(FLOOR4)leaveFloor4();
     if(window.parent!==window){try{window.parent.postMessage({type:'pixelOfficeFloor',floor:FLOOR4?5:4,name:p.name},location.origin);}catch(e){}}else{location.search=FLOOR4?location.search.split('&floor=4').join(''):location.search+'&floor=4&hero='+encodeURIComponent(p.name);}}
 }
 function moving(dt){if(!ready||selected===null||storyOpen()||people[selected].inRoom||isAway(people[selected])||isPunishedP(people[selected]))return false;let dx=(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0),dy=(keys.has('ArrowDown')?1:0)-(keys.has('ArrowUp')?1:0);if(!dx&&!dy)return false;const p=people[selected],length=Math.hypot(dx,dy);p.dir=dx?(dx>0?'right':'left'):(dy>0?'down':'up');const spd=document.documentElement.classList.contains('clean-narrow')?400:210;dx=dx/length*spd*dt;dy=dy/length*spd*dt;if(!blocked(p.x+dx,p.y))p.x+=dx;if(!blocked(p.x,p.y+dy))p.y+=dy;save();queuePosition(selected);return true;}
@@ -2073,9 +2079,9 @@ const sceneAnimating=()=>people.some((p,i)=>!isAway(p)&&(p.mood||musicOf(p)||act
 let embedVisible=true,embedLastDraw=0;
 if(embedMode&&'IntersectionObserver' in window)new IntersectionObserver(entries=>{embedVisible=entries[entries.length-1].isIntersecting;if(embedVisible)markDirty()}).observe(document.documentElement);
 const avatarOnly=new URLSearchParams(location.search).get('avatars')==='1';
-function render(time){try{updateCamera()}catch(error){}if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&viewer.open)){setTimeout(()=>requestAnimationFrame(render),400);return;}const dt=Math.min((time-last)/1000||0,.04);last=time;if(FLOOR4&&ready&&!window.__f4init){window.__f4init=1;try{initFloor4()}catch(error){}}if(FLOOR4&&window.__f4hero>=0&&Date.now()-(window.__f4beat||0)>60000){window.__f4beat=Date.now();try{const q=people[window.__f4hero];pushChange(window.__f4hero,{floor:4,fx:Math.round(q.x),fy:Math.round(q.y),fdir:q.dir})}catch(error){}}/* 在四樓：每分鐘回報，五樓的人才知道他不在五樓 */
-  if(!FLOOR4&&ready&&Date.now()-(window.__f5t||0)>3000){window.__f5t=Date.now();try{const oi=ownIndex();if(oi>=0&&people[oi].floor4At>0){people[oi].floor4At=0;pushChange(oi,{floor:5});}}catch(error){}}/* 回到五樓：清掉自己的「在四樓」標記 */
-  if(FLOOR4&&window.__f4init&&!(window.__f4hero>=0)&&Date.now()-(window.__f4retry||0)>400){window.__f4retry=Date.now();try{initFloor4()}catch(error){}}/* 同仁名單（企劃／專案）比場景晚到：一開始找不到自己的人物就每 0.4 秒重找，找到才顯示（以前會永遠不出現，只能走路） */
+function render(time){try{updateCamera()}catch(error){}if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&viewer.open)){setTimeout(()=>requestAnimationFrame(render),400);return;}const dt=Math.min((time-last)/1000||0,.04);last=time;if(FLOOR4&&ready&&!window.__f4init){window.__f4init=1;try{initFloor4()}catch(error){}}if(FLOOR4&&window.__f4hero>=0&&!window.__f4left&&Date.now()-(window.__f4beat||0)>60000){window.__f4beat=Date.now();try{const q=people[window.__f4hero];pushChange(window.__f4hero,{floor:4,fx:Math.round(q.x),fy:Math.round(q.y),fdir:q.dir})}catch(error){}}/* 在四樓：每分鐘回報，五樓的人才知道他不在五樓 */
+  if(!FLOOR4&&ready&&Date.now()-(window.__f5t||0)>3000){window.__f5t=Date.now();try{const oi=ownIndex();if(oi>=0&&people[oi].floor4At>0){const q=people[oi];q.floor4At=0;q.x=TX0+75;q.y=viewToLogical(TB+30);q.dir='down';markDirty();pushChange(oi,{floor:5,x:q.x,y:q.y,dir:'down'});}}catch(error){}}/* 回到五樓：清掉自己的「在四樓」標記 */
+  if(FLOOR4&&window.__f4init&&!(window.__f4hero>=0)&&Date.now()-(window.__f4retry||0)>400&&Date.now()-(window.__f4init0||(window.__f4init0=Date.now()))<30000){window.__f4retry=Date.now();try{initFloor4()}catch(error){}}/* 同仁名單（企劃／專案）比場景晚到：一開始找不到自己的人物就每 0.4 秒重找，找到才顯示（以前會永遠不出現，只能走路） */
 if(FLOOR4&&window.__f4init)try{people.forEach((q,i)=>{if(q.f4hide===undefined)q.f4hide=i!==window.__f4hero;if(q.f4remote&&!(q.floor4At>0&&Date.now()-q.floor4At<150000)){q.f4hide=true;q.f4remote=false;}});syncF4Staff()}catch(error){}const walk=moving(dt);try{checkElevator()}catch(error){}try{ghostTick(performance.now())}catch(error){}
   if(embedMode&&!needsRedraw&&!sceneAnimating()){requestAnimationFrame(render);return;}
   // 嵌入首頁時：畫面不在可視範圍就不重畫；持續動畫（心情／未讀動態）限制在約 30fps，避免整張場景每幀全畫拖慢首頁。
