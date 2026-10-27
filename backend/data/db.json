@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 9394,
+  "revision": 9395,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-27T03:34:56.162Z",
+  "updatedAt": "2026-10-27T03:35:33.106Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1313,7 +1313,7 @@
         {"案件編號":"26100148","修改次數":"0","建立日期":"2026/10/23 23:05:48","修改日期":"2026/10/23 23:05:48","修改內容":"初稿完成","修改人":"Machi","確認修正日":"2026/10/23 23:05:48","圖片連結":"[{\"fileName\":\"261023_添可_GPT廣告_s9_2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1BvBsHlSYl9wI1RGqEoPSda574YTDpPiG=w1600\"},{\"fileName\":\"261023_添可_GPT廣告_s9_1.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/19d1wBTZEdA9YxAgKKQCW3u2RhdEOUSiO=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/10/23 23:06:01"},
         {"案件編號":"26100150","修改次數":"0","建立日期":"2026/10/24 00:21:53","修改日期":"2026/10/24 00:21:53","修改內容":"初稿完成","修改人":"Machi","確認修正日":"2026/10/24 00:21:53","圖片連結":"[{\"fileName\":\"261024_Epson_奕昇文創微噴_體驗活動報名_01.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1wJJoTdGBNdU9sDT4JHMhmaw6Lej67xE2=w1600\"},{\"fileName\":\"261024_Epson_奕昇文創微噴_體驗活動報名_02.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1MJjrP7UxZMTdooVKs8dmgWLAvmyfY31E=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/10/24 00:22:06"},
         {"案件編號":"26100146","修改次數":"0","建立日期":"2026/10/27 08:33:39","修改日期":"2026/10/27 08:33:39","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/27 08:33:39","圖片連結":"[{\"fileName\":\"261024_添可_十一月_CPAS_STATION5_包框A_塔科A.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/17fG00ijyMQd1dT4lvfW6tGAurVevYxV_=w1600\"},{\"fileName\":\"261024_添可_十一月_CPAS_STATION5_包框B_塔科B.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1QBFGxOQq095eQEaI4zYu5tnK0KIk6gO7=w1600\"},{\"fileName\":\"261024_添可_十一月_CPAS_STATION5_包框B_科技A.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1_EepbMVu3kF8x2o_1dzSqh8tCZPjfWQX=w1600\"},{\"fileName\":\"261024_添可_十一月_CPAS_STATION5_包框B_科技B.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1bbwPYBmbSaUByKqVTwv8qewSEEweZnVc=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/27 08:33:39"},
-        {"案件編號":"26100161","修改次數":"1","建立日期":"2026/10/27 11:33:46","修改日期":"2026-10-27","修改內容":"廣告測試上架後，發現版位關係文字可能會看不清楚，希望提供無文字版本四張，再請協助，感恩。","修改內容連結":"","修改人":"吳冠賢","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"261027_添可_GPT廣告_StationS9_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ipvZBIA3QSzuuYP5SnnLfjT2Dl32GVGQ=w1600\"},{\"fileName\":\"261027_添可_GPT廣告_StationS9_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1LT-5GeWtwcsijFJ3HMOQcd0kbLCinY_R=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/27 11:34:37"},
+        {"案件編號":"26100161","修改次數":"1","建立日期":"2026/10/27 11:33:46","修改日期":"2026-10-27","修改內容":"廣告測試上架後，發現版位關係文字可能會看不清楚，希望提供無文字版本四張，再請協助，感恩。","修改內容連結":"","修改人":"吳冠賢","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"261027_添可_GPT廣告_StationS9_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ipvZBIA3QSzuuYP5SnnLfjT2Dl32GVGQ=w1600\"},{\"fileName\":\"261027_添可_GPT廣告_StationS9_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1LT-5GeWtwcsijFJ3HMOQcd0kbLCinY_R=w1600\"},{\"fileName\":\"261023_添可_GPT廣告_s9_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1uRXihJARaLJUzuG2RSlFylehhWicYvs9=w1600\"},{\"fileName\":\"261023_添可_GPT廣告_s9_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1O3UBpnCs5gFS7LLglJHcCFISTIvcsbpm=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/27 11:35:33"},
         {"案件編號":"26100148","修改次數":"1","建立日期":"2026/10/27 11:34:12","修改日期":"2026-10-27","修改內容":"廣告測試上架後，發現版位關係文字可能會看不清楚，希望提供無文字版本2張，再請協助，感恩。","修改內容連結":"","修改人":"吳冠賢","確認修正日":"","待修改圖片":""}
       ]
     },
