@@ -1457,6 +1457,7 @@ function setZoom(target){const base=Math.max(.34,Math.min(.62,cam.w/760)),s=Math
     try{const r=await call('getPixelHours'),mode=r.force==='work'?'off':'work';await call('pixelOfficeAllWork',{mode});toast(mode==='work'?'全員上班':'全員下班');setTimeout(()=>location.reload(),600);}catch(err){toast('失敗：'+(err.message||err));}
   }
   btn.onclick=()=>{if(!panel.hidden){close();return;}panel.innerHTML='';panel.appendChild(item(FLOOR4?'回五樓':'四樓',goFloor));
+    panel.appendChild(item('小遊戲',()=>{close();openMiniGamesMenu();}));/* 手機也要有小遊戲入口（所有人：出氣擂台、辦公室尋寶；管理者另有測試遊戲） */
     if(admin()){panel.appendChild(item('全員上班／下班（切換）',allWork));panel.appendChild(item('上下班設定',hoursModal));}
     panel.hidden=false;};
   document.addEventListener('pointerdown',e=>{if(!panel.hidden&&!panel.contains(e.target)&&e.target!==btn)close();});
