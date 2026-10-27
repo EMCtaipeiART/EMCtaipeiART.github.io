@@ -163,7 +163,7 @@ describe('HideSeekRoom 連線房間', () => {
       const skp = g.players.find((p: any) => p.role === 'seeker');
       g.t = g.hideSecs + 0.1; skp.x = S0.x; skp.y = S0.y;
       const [a, b] = g.players.filter((p: any) => p.role === 'hider');
-      const z = MAP.zones.find((z: any) => z.id === 'tea-south')!; const zc = zoneCenter(z);
+      const z = MAP.zones.find((z: any) => { const c = zoneCenter(z); const d = Math.hypot(c.x - S0.x, c.y - S0.y); return d > 400 && d < 700; })!; const zc = zoneCenter(z);
       a.x = zc.x; a.y = zc.y;     // 遠處、在遮蔽區
       b.x = S0.x + RULES.vision + 300; b.y = S0.y;   // 超出視野
       void byId;

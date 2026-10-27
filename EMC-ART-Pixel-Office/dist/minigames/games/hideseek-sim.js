@@ -11,26 +11,46 @@ export const TOTAL_SECS=RULES.hideSecs+RULES.seekSecs;
  * solids＝會擋人的家具與玻璃牆；tall＝同時擋視線（書櫃、冰箱、電梯、隔間與玻璃牆，門的缺口保留）；桌椅等矮家具只擋人。
  * zones＝遮蔽區域（走得進去）：躲在裡面時，尋找者要靠近到 coverReveal 內才看得到；zone.spot 是圓放得進去的點。
  */
-/* 場地縮小（2026-10-27）：只用辦公室下半部的一塊（會議室 B、C、茶水間與中間走道），
- * 約 1190×1000，原本整層 2370×3260 太大。座標系不變，只是玩家限制在 view 之內、畫面只畫這一塊；
- * 家具、遮蔽區域、遮擋圖層只留與這塊相交的。伺服器（worker/hide-room）用同一份，所以線上版也一起縮小。 */
-const VIEW={x:540,y:2250,w:1760,h:990};/* 橫式約 16:9：茶水間、走道與會議室 D（B、C 不在範圍內） */
-const hit=r=>r.x<VIEW.x+VIEW.w&&r.x+r.w>VIEW.x&&r.y<VIEW.y+VIEW.h&&r.y+r.h>VIEW.y;
-/* 走道補的家具（畫在底圖上，見 hideseek-draw drawSorted）：辦公桌＋椅子＋盆栽，各自帶擋路範圍與躲藏區域 */
-const EXTRA_DESKS=[[600,2450],[840,2450],[600,2890],[840,2890]],EXTRA_PLANTS=[[580,2290],[1160,2290],[580,3150],[1160,3150],[1120,2880],[580,2720]];
+/* 場地（2026-10-27 重做）：不再用整層辦公室的底圖與玻璃牆，改成專為躲貓貓排的橫式 16:9 場地（2240×1260，無隔間，方便跑動）。
+ * 家具用現有素材拼出來：辦公桌、會議桌、茶水間、書櫃、盆栽……每件都有擋路範圍，高的（書櫃、冰箱、方柱、工具櫃）也擋視線，旁邊有綠色躲藏區。
+ * 伺服器（worker/hide-room）用同一份，所以線上版是同一個場地。畫面見 hideseek-draw（SPR 表是素材座標）。 */
+const VIEW={x:0,y:0,w:2240,h:1260};
+const SZ={desk_beige:[220,124],desk_white_row:[354,152],desk_white_v:[110,218],table_white_v:[100,200],chair_front:[52,56],chair_back:[52,56],chair_side_l:[48,52],chair_side_r:[48,52],
+  fridge_dark:[82,170],plant_small:[40,80],projector_right:[64,52],projector_left:[64,52],projector_down:[56,60],prop_pillar:[86,218],shelf_tall:[46,220],shelf_low:[44,150],cabinet_red:[56,150]};
 const EXTRA={props:[],solids:[],zones:[]};
-for(const [x,y] of EXTRA_DESKS){
-  EXTRA.props.push({img:'desks',spr:'desk_beige',x,y,depth:y+104},{img:'rooms',spr:'chair_back',x:x+84,y:y+96,depth:y+160});
-  EXTRA.solids.push({kind:'desk',tall:false,x,y:y+8,w:220,h:100});
-  EXTRA.zones.push({id:'xd'+x+'-'+y,label:'辦公桌旁',x:x+40,y:y+110,w:140,h:80,spot:{x:x+110,y:y+150}});
-}
-for(const [x,y] of EXTRA_PLANTS){
-  EXTRA.props.push({img:'rooms',spr:'plant_small',x,y,depth:y+78});
-  EXTRA.solids.push({kind:'shelf',tall:false,x:x+4,y:y+40,w:32,h:38});
-  EXTRA.zones.push({id:'xp'+x+'-'+y,label:'盆栽旁',x:x-34,y:y+10,w:108,h:90,spot:{x:x>800?x-26:x+66,y:y+60}});
-}
-export const MAP={...OFFICE,view:VIEW,bounds:{...VIEW},solids:[...OFFICE.solids.filter(hit),...EXTRA.solids],zones:[...OFFICE.zones.filter(hit),...EXTRA.zones],occluders:OFFICE.occluders.filter(hit),props:EXTRA.props,
-  spawns:[660,750,840,930,1020,1110].map(x=>({x,y:2340}))};
+let zid=0;
+const put=(spr,x,y,depth)=>EXTRA.props.push({spr,x,y,depth:depth??y+(SZ[spr]?SZ[spr][1]:0)});
+const solid=(x,y,w,h,tall=false,kind='desk')=>EXTRA.solids.push({kind,tall,x,y,w,h});
+const zone=(label,x,y,w,h,spot)=>EXTRA.zones.push({id:'z'+(zid++),label,x,y,w,h,spot:spot||{x:x+w/2,y:y+h/2}});
+/** 單件家具：底下 55% 擋路；tall 的同時擋視線；zone 在左右或下方留一塊躲藏區 */
+const item=(spr,x,y,{tall=false,side=null,label='家具旁'}={})=>{const [w,h]=SZ[spr];put(spr,x,y);solid(x,y+Math.round(h*.4),w,Math.round(h*.6),tall,tall?'tall':'shelf');
+  if(side==='r')zone(label,x+w,y+Math.round(h*.3),70,Math.round(h*.7),{x:x+w+36,y:y+h-40});else if(side==='l')zone(label,x-70,y+Math.round(h*.3),70,Math.round(h*.7),{x:x-36,y:y+h-40});};
+const chair=(spr,x,y)=>put(spr,x,y,y+SZ[spr][1]+(spr==='chair_back'?40:0));
+/** 辦公桌（米色）＋背面椅子＋椅子下的躲藏區 */
+const desk=(x,y)=>{put('desk_beige',x,y,y+104);solid(x,y+8,220,100);chair('chair_back',x+84,y+96);zone('辦公桌旁',x+40,y+110,140,80,{x:x+110,y:y+150});};
+/** 長桌：左端＋中段×n＋右端，拼成一張（kind＝black／white／wood） */
+const tbl=(kind,x,y,mids,h=130)=>{const w=110+85*mids,d=y+h-20;put('table_'+kind+'_left',x,y,d);for(let k=0;k<mids;k++)put('table_'+kind+'_mid',x+55+85*k,y,d);put('table_'+kind+'_right',x+55+85*mids,y,d);solid(x,y+10,w,h-34);return w;};
+/** 會議桌：上下各 n 張椅子、一台投影機 */
+const meet=(x,y,mids,n,proj)=>{const w=tbl('black',x,y,mids);put(proj,proj==='projector_right'?x+w-124:x+60,y+26,y+125);
+  for(let k=0;k<n;k++){const cx=x+w*(2*k+1)/(2*n);chair('chair_front',cx-26,y-46);chair('chair_back',cx-26,y+120);}
+  zone('會議桌下方',x+20,y+150,w-40,90);return w;};
+// 上排：4 張辦公桌、一張 3＋3 椅的長會議桌
+for(const x of [140,380,620,860])desk(x,120);
+meet(1240,140,5,3,'projector_right');
+// 中排：2 張辦公桌、白色長桌（單排）、2 椅的小會議桌、直式白桌
+desk(140,540);desk(380,540);
+put('desk_white_row',680,540,540+140);solid(680,550,354,118);chair('chair_back',680+177-26,540+130);zone('白色長桌旁',700,690,314,80);
+meet(1240,560,3,2,'projector_left');
+for(const y of [520,760]){put('desk_white_v',1700,y,y+196);solid(1700,y+10,110,186);}
+chair('chair_side_l',1812,545);chair('chair_side_l',1812,785);zone('直式桌旁',1850,520,110,420);
+// 下排：茶水間（木桌＋冰箱）、書櫃、方柱、工具櫃、盆栽
+tbl('wood',140,920,2,90);zone('茶水間桌下',150,1020,260,80);item('fridge_dark',470,880,{tall:true,side:'r',label:'冰箱旁'});item('fridge_dark',552,880,{tall:true});
+item('shelf_tall',760,900,{tall:true,side:'r',label:'書櫃旁'});item('shelf_tall',960,900,{tall:true,side:'r',label:'書櫃旁'});
+item('shelf_low',1160,970,{side:'r'});item('cabinet_red',1260,970,{tall:false,side:'r',label:'工具櫃旁'});
+item('prop_pillar',1480,900,{tall:true,side:'r',label:'方柱旁'});item('shelf_tall',1700,980,{tall:true,side:'l',label:'書櫃旁'});item('shelf_low',1880,1040,{side:'l'});
+for(const [x,y] of [[60,60],[2120,60],[60,1120],[2120,1120],[1960,380],[40,500],[2100,640],[640,780],[1420,780]])item('plant_small',x,y,{side:x>1100?'l':'r',label:'盆栽旁'});
+export const MAP={...OFFICE,w:2370,h:3260,view:VIEW,bounds:{...VIEW},solids:EXTRA.solids,zones:EXTRA.zones,occluders:[],props:EXTRA.props,rooms:[],
+  spawns:[300,500,700,900,1100,1300].map(x=>({x,y:410}))};
 
 const PLAYER_COLORS=['#d9534f','#3b6fd8','#4caf6a','#f0b429','#a463d9','#e8913a'];
 export const zoneCenter=z=>z.spot||({x:z.x+z.w/2,y:z.y+z.h/2});

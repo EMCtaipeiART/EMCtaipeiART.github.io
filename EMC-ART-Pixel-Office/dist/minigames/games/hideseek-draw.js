@@ -3,15 +3,22 @@
 // 人物走到家具後面時，把那件家具的底圖再畫一次蓋在人物上（深度排序），家具維持原尺寸、原位置、原角度。
 import {MAP,RULES} from './hideseek-sim.js';
 
-const art={map:null,chars:null,rooms:null,desks:null,ready:false,failed:false};
-const SPR={rooms:{chair_back:[176,146,52,56],plant_small:[256,354,40,80]},desks:{desk_beige:[8,8,220,124]}};/* 走道補的家具：assets/office-rooms-v3.json、office-desks-v6.json */
+const art={chars:null,rooms:null,desks:null,props:null,ready:false,failed:false};
+const SPR=(()=>{const R='rooms',D='desks',P='props';return {
+  table_black_left:[R,8,8,55,130],table_black_mid:[R,71,8,85,130],table_black_right:[R,164,8,55,130],
+  table_white_left:[R,227,8,55,130],table_white_mid:[R,290,8,85,130],table_white_right:[R,383,8,55,130],
+  table_wood_left:[R,446,8,55,90],table_wood_mid:[R,509,8,85,90],table_wood_right:[R,602,8,55,90],
+  table_white_v:[R,8,146,100,200],chair_front:[R,116,146,52,56],chair_back:[R,176,146,52,56],chair_side_l:[R,236,146,48,52],chair_side_r:[R,292,146,48,52],
+  fridge_dark:[R,166,354,82,170],plant_small:[R,256,354,40,80],projector_right:[R,304,354,64,52],projector_left:[R,376,354,64,52],projector_down:[R,448,354,56,60],prop_pillar:[R,674,354,86,218],
+  shelf_tall:[P,8,8,46,220],shelf_low:[P,62,8,44,150],cabinet_red:[P,114,8,56,150],
+  desk_beige:[D,8,8,220,124],desk_white_row:[D,236,8,354,152],desk_white_v:[D,598,8,110,218]};})();/* 素材座標：assets/office-rooms-v3.json、office-props-v4.json、office-desks-v6.json */
 const base=()=>new URL('../../',import.meta.url).href;   // …/dist/
 /** 載入底圖與人物圖；沒載入完成時 drawBoard 會畫簡單的色塊，不會出錯。 */
 export function loadArt(onReady){
-  if(art.map)return art;
+  if(art.chars)return art;
   const mk=src=>{const i=new Image();i.src=base()+src;return i;};
-  art.map=mk(MAP.image.file+'?v=1');art.chars=mk('assets/sprites-packed.webp?v=1');art.rooms=mk('assets/office-rooms-v3.webp?v=1');art.desks=mk('assets/office-desks-v6.webp?v=1');
-  Promise.all([art.map,art.chars,art.rooms,art.desks].map(i=>i.decode?i.decode():new Promise((ok,no)=>{i.onload=ok;i.onerror=no;}))).then(()=>{art.ready=true;if(onReady)onReady();}).catch(()=>{art.failed=true;});
+  art.chars=mk('assets/sprites-packed.webp?v=1');art.rooms=mk('assets/office-rooms-v3.webp?v=1');art.desks=mk('assets/office-desks-v6.webp?v=1');art.props=mk('assets/office-props-v4.webp?v=1');
+  Promise.all([art.chars,art.rooms,art.desks,art.props].map(i=>i.decode?i.decode():new Promise((ok,no)=>{i.onload=ok;i.onerror=no;}))).then(()=>{art.ready=true;if(onReady)onReady();}).catch(()=>{art.failed=true;});
   return art;
 }
 export const artReady=()=>art.ready;
@@ -36,8 +43,10 @@ export const toWorld=(v,x,y)=>({x:(x-v.ox)/v.s,y:(y-v.oy)/v.s});
 export function drawBoard(g,ctx,v,{showZones=true}={}){
   g.imageSmoothingEnabled=false;
   g.fillStyle='#e9eef7';g.fillRect(0,0,ctx.width,ctx.height);
-  if(art.ready){g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';{const V=MAP.view,k=art.map.naturalWidth/MAP.w;g.drawImage(art.map,V.x*k,V.y*k,V.w*k,V.h*k,v.ox+V.x*v.s,v.oy+V.y*v.s,V.w*v.s,V.h*v.s);}g.imageSmoothingEnabled=false;}
-  else{g.fillStyle='#fff';g.fillRect(v.ox+MAP.view.x*v.s,v.oy+MAP.view.y*v.s,MAP.view.w*v.s,MAP.view.h*v.s);for(const s of MAP.solids){g.fillStyle=s.tall?'#3a4a68':'#8c98ad';g.fillRect(v.ox+s.x*v.s,v.oy+s.y*v.s,s.w*v.s,s.h*v.s);}}
+  /* 場地地板：淺色底＋64 px 格線＋細外框（沒有牆，方便跑動） */
+  {const V=MAP.view,x0=v.ox+V.x*v.s,y0=v.oy+V.y*v.s,w=V.w*v.s,h=V.h*v.s;g.fillStyle='#f7f8f5';g.fillRect(x0,y0,w,h);g.strokeStyle='#e1e5e0';g.lineWidth=1;g.beginPath();
+    for(let gx=V.x;gx<=V.x+V.w;gx+=64){const x=v.ox+gx*v.s;g.moveTo(x,y0);g.lineTo(x,y0+h);}for(let gy=V.y;gy<=V.y+V.h;gy+=64){const y=v.oy+gy*v.s;g.moveTo(x0,y);g.lineTo(x0+w,y);}g.stroke();
+    g.strokeStyle='#0c0c0c';g.lineWidth=3;g.strokeRect(x0,y0,w,h);}
   if(showZones){
     g.setLineDash([6,5]);g.lineWidth=2;g.strokeStyle='rgba(76,175,106,.85)';g.fillStyle='rgba(76,175,106,.10)';
     for(const z of MAP.zones){const x=v.ox+z.x*v.s,y=v.oy+z.y*v.s,w=z.w*v.s,h=z.h*v.s;if(x>ctx.width||y>ctx.height||x+w<0||y+h<0)continue;g.fillRect(x,y,w,h);g.strokeRect(x,y,w,h);}
@@ -79,18 +88,10 @@ export function drawPerson(g,v,p,opts={}){
  */
 export function drawSorted(g,ctx,v,entities){
   const list=entities.slice();
-  if(art.ready){
-    const k=art.map.naturalWidth/MAP.w;
-    for(const o of MAP.occluders){
-      const x=v.ox+o.x*v.s,y=v.oy+o.y*v.s,w=o.w*v.s,h=o.h*v.s;
-      if(x>ctx.width||y>ctx.height||x+w<0||y+h<0)continue;
-      list.push({depth:o.depth,draw:()=>{g.imageSmoothingEnabled=true;g.drawImage(art.map,o.x*k,o.y*k,o.w*k,o.h*k,x,y,w,h);g.imageSmoothingEnabled=false;}});
-    }
-  }
   if(art.ready)for(const p of MAP.props||[]){
-    const r=SPR[p.img][p.spr],im=art[p.img],x=v.ox+p.x*v.s,y=v.oy+p.y*v.s,w=r[2]*v.s,h=r[3]*v.s;
+    const r=SPR[p.spr];if(!r)continue;const im=art[r[0]],x=v.ox+p.x*v.s,y=v.oy+p.y*v.s,w=r[3]*v.s,h=r[4]*v.s;
     if(x>ctx.width||y>ctx.height||x+w<0||y+h<0)continue;
-    list.push({depth:p.depth,draw:()=>{g.imageSmoothingEnabled=false;g.drawImage(im,r[0],r[1],r[2],r[3],x,y,w,h);}});
+    list.push({depth:p.depth,draw:()=>{g.imageSmoothingEnabled=false;g.drawImage(im,r[1],r[2],r[3],r[4],x,y,w,h);}});
   }
   list.sort((a,b)=>a.depth-b.depth);
   for(const e of list)e.draw();
@@ -107,7 +108,7 @@ export function drawFog(g,ctx,v,center,radius,hudTop){
 export function drawMinimap(g,ctx,v,hudTop,dots){
   const V=MAP.view,mw=Math.min(84,ctx.width*.22),mh=mw*V.h/V.w,x0=ctx.width-mw-8,y0=hudTop+8,k=mw/V.w;
   g.save();g.globalAlpha=.92;g.fillStyle='#fff';g.fillRect(x0-2,y0-2,mw+4,mh+4);
-  if(art.ready){const ik=art.map.naturalWidth/MAP.w;g.drawImage(art.map,V.x*ik,V.y*ik,V.w*ik,V.h*ik,x0,y0,mw,mh);}
+  g.fillStyle='#f7f8f5';g.fillRect(x0,y0,mw,mh);g.fillStyle='#8c98ad';for(const s of MAP.solids)g.fillRect(x0+(s.x-V.x)*k,y0+(s.y-V.y)*k,Math.max(1,s.w*k),Math.max(1,s.h*k));
   g.globalAlpha=1;g.strokeStyle='#182e54';g.lineWidth=2;g.strokeRect(x0-2,y0-2,mw+4,mh+4);
   if(v.mode==='follow'){g.strokeStyle='#e8913a';g.lineWidth=1.5;g.strokeRect(x0+((-v.ox/v.s)-V.x)*k,y0+((-(v.oy-hudTop)/v.s)-V.y)*k,(ctx.width/v.s)*k,((ctx.height-hudTop)/v.s)*k);}
   for(const d of dots){g.fillStyle=d.color;g.beginPath();g.arc(x0+(d.x-V.x)*k,y0+(d.y-V.y)*k,d.me?3.5:2.5,0,Math.PI*2);g.fill();}
