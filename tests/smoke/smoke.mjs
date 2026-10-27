@@ -48,7 +48,25 @@ const apiReply = (body) => {
   }
 };
 
-const browser = await puppeteer.launch({ executablePath: findChrome(), headless: true, args: ['--no-sandbox', '--disable-gpu'] });
+// GitHub 的 runner 偶爾會讓 Chrome 起不來（2026-10-27 04:08 那次：等不到 WS endpoint，30 秒逾時），那跟網站本身無關。
+// 所以啟動給長一點的逾時、多帶幾個適合容器的參數，失敗就重試最多 3 次，真的起不來才算失敗。
+async function launchBrowser() {
+  let lastError;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      return await puppeteer.launch({
+        executablePath: findChrome(), headless: true, timeout: 90000,
+        args: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', '--disable-setuid-sandbox', '--no-first-run', '--no-default-browser-check']
+      });
+    } catch (error) {
+      lastError = error;
+      console.warn(`Chrome 啟動失敗（第 ${attempt} 次）：${error.message}`);
+      await new Promise(resolve => setTimeout(resolve, 3000 * attempt));
+    }
+  }
+  throw lastError;
+}
+const browser = await launchBrowser();
 const failures = [];
 const page = await browser.newPage();
 await page.setViewport({ width: 1280, height: 900 });

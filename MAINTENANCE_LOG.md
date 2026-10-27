@@ -4,6 +4,8 @@
 
 ## 2026-10-27
 
+- GitHub 瀏覽器煙霧測試偶發失敗（actions run 40448046505）：04:08 那次是 runner 上 Chrome 啟動逾時（TimeoutError: WS endpoint，30 秒），跟網站程式無關，之後的執行都通過。`tests/smoke/smoke.mjs` 啟動 Chrome 改成逾時 90 秒、加容器用參數（`--disable-dev-shm-usage` 等），失敗自動重試最多 3 次，真的起不來才算失敗。本機煙霧測試通過。
+
 - 修 GitHub 測試失敗（actions run 40427127496）：①`EMC-ART-Pixel-Office/dist/app.js` 被別台電腦以 CRLF 換行提交（2365 行全變），讓用 `\n` 比對原始碼的測試失效 → 轉回 LF，並新增 `.gitattributes`（`app.js text eol=lf`），之後不論哪台電腦提交都會正規化；②`staff-seat-assignment.test.mjs` 兩項釘死舊寫法的測試更新到新寫法（四樓 `viewY=FLOOR4?…`、`pixelOfficeState` 的 hours 多了 `force`），保留檢查意圖。完整測試 281 項全過。
 
 ## 2026-10-23
