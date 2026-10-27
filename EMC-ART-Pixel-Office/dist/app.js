@@ -1584,6 +1584,8 @@ function ensureFurnitureGray(){
 const VACANT_DESK_ON_HOUR=()=>officeHours.dayStart,VACANT_DESK_OFF_HOUR=()=>officeHours.workEnd;
 const VACANT_DESK_LUNCH_START=12,VACANT_DESK_LUNCH_END=14;
 const stationVacant=s=>!s.name;
+/* 四樓（floor4.js）桌子下班灰階用：平日 officeHours.dayStart–workEnd 以外、週末假日 */
+window.f4DeskDimmed=()=>{const c=currentTaipeiClock();return !(c.workday&&c.hour>=officeHours.dayStart&&c.hour<officeHours.workEnd);};
 function stationDimmed(s){
   if(s.lg){const c=currentTaipeiClock();return !(c.workday&&c.hour>=9&&c.hour<19);}/* 左側新增的桌子群（2026-10-24）：平日 09:00–19:00 維持原色，下班與假日桌面灰階、椅子與桌上電腦收起來 */
   if(s.grp){const c=currentTaipeiClock();return !(c.workday&&c.hour>=officeHours.dayStart&&c.hour<officeHours.workEnd)||Boolean(stationAway(s));}// 企劃部、專案部的桌子：非上班時間（平日 10:00–19:00 以外）整張灰階、椅子收起來

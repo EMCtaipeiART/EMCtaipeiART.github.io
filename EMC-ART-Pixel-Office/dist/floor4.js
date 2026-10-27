@@ -39,8 +39,15 @@
     c.fillStyle = '#0c0c0c'; c.fillRect(lx - 2, y - 2, tw + 4, 24); c.fillStyle = '#2f3640'; c.fillRect(lx, y, tw, 20);
     c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, x + w / 2, y + 10.5); c.restore();
   });
-  const chairBig = (cx, y, depth) => dyn.push({ depth, draw: c => imgs && c.drawImage(imgs.furn, CHAIR[0], CHAIR[1], CHAIR[2], CHAIR[3], Math.round(cx - CHAIR_W / 2), Math.round(y), CHAIR_W, CHAIR_H) });
-  const deskBeige = (x, y, depth) => dyn.push({ depth, draw: c => imgs && c.drawImage(imgs.desks, DESK[0], DESK[1], DESK[2], DESK[3], Math.round(x), Math.round(y), DESK[2], DESK[3]) });
+  const chairBig = (cx, y, depth) => dyn.push({ depth, draw: c => imgs && !dimNow() && c.drawImage(imgs.furn, CHAIR[0], CHAIR[1], CHAIR[2], CHAIR[3], Math.round(cx - CHAIR_W / 2), Math.round(y), CHAIR_W, CHAIR_H) });
+  /* 下班（平日 09:00–19:00 以外、週末假日）：桌面灰階、桌上筆電滑鼠和椅子收起來；上班時桌上放黑色筆電＋黑色滑鼠（跟五樓左側新桌子群一樣）。dimNow 由 app.js 提供 */
+  const dimNow = () => { try { return typeof window.f4DeskDimmed === 'function' && window.f4DeskDimmed(); } catch (e) { return false; } };
+  const GEAR = { laptop: [0, 0, 76, 48], laptop_back: [272, 0, 76, 48], mouse: [168, 0, 14, 19] };
+  const deskBeige = (x, y, depth, back) => {
+    dyn.push({ depth, draw: c => { if (!imgs) return; const dim = dimNow(), im = dim && window.grayOfImage ? window.grayOfImage(imgs.desks) : imgs.desks; c.drawImage(im, DESK[0], DESK[1], DESK[2], DESK[3], Math.round(x), Math.round(y), DESK[2], DESK[3]); } });
+    dyn.push({ depth: depth + 1, draw: c => { if (!imgs || !imgs.gear || dimNow()) return; const lp = GEAR[back ? 'laptop_back' : 'laptop'], mo = GEAR.mouse; c.imageSmoothingEnabled = false;
+      c.drawImage(imgs.gear, lp[0], lp[1], lp[2], lp[3], Math.round(x + 62), Math.round(y + 24), lp[2], lp[3]); c.drawImage(imgs.gear, mo[0], mo[1], mo[2], mo[3], Math.round(x + 157), Math.round(y + 55), mo[2], mo[3]); } });
+  };
   // 玻璃屋：牆頂＋後牆／前牆正面，3 px 黑外框；doors＝[{side:'t'|'b'|'l'|'r', c:門中心座標}]
   const glass = (x, y, w, h, doors) => {
     const d = ROOM_DOOR / 2, gap = side => doors.find(o => o.side === side);
@@ -108,8 +115,8 @@
     for (let k = 0; k < 4; k++) {
       const dx = GX + k * 220, cx = dx + 110; seatOf(cx, gy);
       chairBig(cx, gy - 67, gy + 10);       // 上排椅子（在桌子後面；椅頭在桌上緣上方 67）
-      deskBeige(dx, gy, gy + 100);          // 上排桌
-      deskBeige(dx, gy + 94, gy + 200);     // 下排桌（接在上排正下方，蓋住上排桌腳）
+      deskBeige(dx, gy, gy + 100, true);    // 上排桌
+      deskBeige(dx, gy + 94, gy + 200, false); // 下排桌（接在上排正下方，蓋住上排桌腳）
       chairBig(cx, gy + 94 + 72, gy + 94 + 179 - 20); // 下排椅子（在桌子前面；椅頭在下排桌上緣下方 72）
     }
   }
@@ -144,7 +151,7 @@
     const dx0 = rx + RT + 40;
     for (let g = 0; g < 2; g++) {
       const gy = ry + RT + 90 + 67 + g * GP2; block(dx0, gy + 20, 440, 200);
-      for (let k = 0; k < 2; k++) { const dx = dx0 + k * 220, cx = dx + 110; seatOf(cx, gy); chairBig(cx, gy - 67, gy + 10); deskBeige(dx, gy, gy + 100); deskBeige(dx, gy + 94, gy + 200); chairBig(cx, gy + 94 + 72, gy + 94 + 179 - 20); }
+      for (let k = 0; k < 2; k++) { const dx = dx0 + k * 220, cx = dx + 110; seatOf(cx, gy); chairBig(cx, gy - 67, gy + 10); deskBeige(dx, gy, gy + 100, true); deskBeige(dx, gy + 94, gy + 200, false); chairBig(cx, gy + 94 + 72, gy + 94 + 179 - 20); }
     }
     OFF.h = rh; return rw;
   };
@@ -169,8 +176,8 @@
     draw(ctx) { if (scene.canvas) ctx.drawImage(scene.canvas, 0, 0); },
   };
   window.FLOOR4_SCENE = scene;
-  Promise.all([load('assets/office-rooms-v3.webp?v=1'), load('assets/office-props-v4.webp?v=1'), load('assets/furniture-v5.webp?v=1'), load('assets/office-desks-v6.webp?v=1'), load('assets/office-toilet-v10.webp?v=1')]).then(([rooms, props, furn, desks, toiletPic]) => {
-    imgs = { rooms, props, furn, desks, toiletPic };
+  Promise.all([load('assets/office-rooms-v3.webp?v=1'), load('assets/office-props-v4.webp?v=1'), load('assets/furniture-v5.webp?v=1'), load('assets/office-desks-v6.webp?v=1'), load('assets/office-toilet-v10.webp?v=1'), load('assets/staff-gear-v1.webp?v=2')]).then(([rooms, props, furn, desks, toiletPic, gear]) => {
+    imgs = { rooms, props, furn, desks, toiletPic, gear };
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
     c.imageSmoothingEnabled = false; c.fillStyle = '#fff'; c.fillRect(0, 0, W, H); c.fillStyle = 'rgba(120,128,136,.16)';
     for (let x = 0; x < W; x += 64) c.fillRect(x, 0, 2, H);
