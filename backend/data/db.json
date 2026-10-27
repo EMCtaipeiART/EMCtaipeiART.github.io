@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 9411,
+  "revision": 9412,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-27T04:29:02.065Z",
+  "updatedAt": "2026-10-27T04:32:16.703Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -2228,7 +2228,9 @@
         {"短碼":"kdW42c","原始網址":"https://drive.google.com/file/d/17MEvmvvGNrA_d1pfmaHCURwpx55eBTge/view?usp=sharing","名稱":"Liberty 5 Pro","專案":"Soundcore","可見範圍":"同組","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/10/23 16:04:33","更新時間":"2026/10/23 16:04:33"},
         {"短碼":"dmrQYG","原始網址":"https://drive.google.com/file/d/1Zr688viTftkL3ftfk-r_b-WMkWfMa6kT/view?usp=sharing","名稱":"Liberty 5 Pro Max","專案":"Soundcore","可見範圍":"同組","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/10/23 16:04:33","更新時間":"2026/10/23 16:04:33"},
         {"短碼":"P4hBgF","原始網址":"https://www.soundcore.com.tw/products/soundcore-liberty-5-pro-max","名稱":"pro-max","專案":"Soundcore","可見範圍":"同組","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/10/27 12:29:02","更新時間":"2026/10/27 12:29:02"},
-        {"短碼":"GGwiSp","原始網址":"https://www.soundcore.com.tw/products/soundcore-p42i","名稱":"p42i","專案":"Soundcore","可見範圍":"同組","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/10/27 12:29:02","更新時間":"2026/10/27 12:29:02"}
+        {"短碼":"GGwiSp","原始網址":"https://www.soundcore.com.tw/products/soundcore-p42i","名稱":"p42i","專案":"Soundcore","可見範圍":"同組","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/10/27 12:29:02","更新時間":"2026/10/27 12:29:02"},
+        {"短碼":"PVKCXG","原始網址":"https://www.soundcore.com.tw/products/soundcore-p42i","名稱":"1101~1109 momo","專案":"Soundcore","可見範圍":"同組","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/10/27 12:32:16","更新時間":"2026/10/27 12:32:16"},
+        {"短碼":"GxkM5i","原始網址":"https://www.soundcore.com.tw/products/soundcore-work","名稱":"1101~1109 pc","專案":"Soundcore","可見範圍":"同組","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/10/27 12:32:16","更新時間":"2026/10/27 12:32:16"}
       ]
     }
   },
