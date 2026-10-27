@@ -4,8 +4,7 @@ import {pixelIcon} from './ui.js';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const TAGS={treasure:['排行榜'],hoops:['排行榜'],deadline:['排行榜'],hideseek:['單機'],'hideseek-online':['多人','2–6 人']};
 
-/* 已開放給所有人的小遊戲（出氣擂台另外排在最前面）；其餘測試中的只有管理者與 Machi 看得到 */
-const PUBLIC=new Set(['treasure']);
+/* 小遊戲全部對所有人開放（出氣擂台另外排在最前面） */
 const ARENA={id:'vent-arena',title:'出氣擂台',blurb:'把煩惱打包丟進擂台，痛快出氣',icon:'star'};
 
 export function createMenu({manager,store,getNick,setNick,onPick,isAdmin=()=>false,loggedIn=()=>false,doc=document}){
@@ -13,8 +12,7 @@ export function createMenu({manager,store,getNick,setNick,onPick,isAdmin=()=>fal
   doc.body.appendChild(el);
   let lastFocus=null;
   function render(){
-    /* 只有出氣擂台公開；其餘測試中的遊戲只有管理者與 Machi 看得到 */
-    const games=[ARENA,...manager.list().filter(g=>g.id!=='demo'&&(PUBLIC.has(g.id)||isAdmin()))];
+    const games=[ARENA,...manager.list().filter(g=>g.id!=='demo')];
     el.innerHTML='<div class="mg-menu-card"><div class="mg-menu-head"><h2>小遊戲</h2><button type="button" class="mg-btn mg-icon-btn" data-m="close" aria-label="關閉">'+pixelIcon('quit',16)+'<span>關閉</span></button></div>'
       +(loggedIn()?'<p class="mg-nick">玩家：'+esc(getNick())+'（已登入，排行榜顯示你的名字）</p>':'<label class="mg-nick">暱稱（排行榜顯示，最多 12 字，匿名）<input maxlength="12" placeholder="玩家" value="'+esc(getNick())+'"></label>')
       +'<div class="mg-cards">'+games.map(g=>{
