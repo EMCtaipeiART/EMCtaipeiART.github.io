@@ -256,7 +256,7 @@ function staffLookReady(i){return customIdsOf(i).length>0&&customHeadIdsOf(i).le
 let staffSeated=true;// 編輯／整頁畫面一律含六張同仁桌（沒人坐也看得到桌子），首頁小框才只看設計部
 const staffStationIndex=seat=>{const g=Math.floor(seat/6);return g?12*g+6+seat%6:6+seat;};/* 座位 0–5 在原本那組，6–17 在往上複製的兩組 */
 /* 座位搬到四樓（2026-10-26）：這三位同仁的座位在四樓左側由上而下第四桌群（g 從 0 算＝3），座位 1～4 上排、5～8 下排由左到右。五樓不再顯示他們、原座位空出來。 */
-const STAFF_F4={'黎子瑄':{g:3,seat:8,face:'down'},'余采馨':{g:3,seat:6,face:'down'},'鄭筱舢':{g:3,seat:7,face:'down'}};
+const STAFF_F4={'黎子瑄':{g:3,seat:8,face:'down'},'余采馨':{g:3,seat:6,face:'down'},'鄭筱舢':{g:3,seat:7,face:'down'},'王藍庭':{g:4,seat:5,face:'down'}};/* 王藍庭：四樓 E 桌子群 5 號（2026-10-28 使用者指定） */
 function applyStaff(list,meetings){if(meetings&&typeof meetings==='object'){staffMeetings=meetings;markDirty();}/* 企劃／專案同仁今天在哪間會議室（後端依通訊錄信箱比對會議室行事曆） */
   if(!Array.isArray(list)||!list.length)return;let changed=false;
   for(const item of list){

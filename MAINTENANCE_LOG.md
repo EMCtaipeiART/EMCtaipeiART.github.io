@@ -1019,3 +1019,6 @@
 ## 2026-10-28（續）AI 服裝生成器：「The image data you provided does not represent a valid image」
 - 生成紀錄裡 12:24～12:39 王藍庭的頭像／參考照片／衣服共 8 筆失敗，錯誤都是 OpenAI 判定上傳的照片不是有效圖片（副檔名／type 是 JPG，內容多半是 HEIC 或毀損）。原因在獨立 repo `EMCtaipeiART/emc-ai-stage-classifier`。
 - 修法（已部署 emc-ai-stage-classifier）：前端上傳前一律用 canvas 重新編碼成真正的 JPEG（最長邊 1600，`lib/normalize-photo.ts`，套用在服裝、頭像、建立角色三處）；後端 `describeOutfit` 改看檔頭位元組判斷真實格式，不是 PNG／JPEG／WebP／GIF 就回清楚的中文訊息。解不開的檔案（例如非 Safari 的 HEIC）會直接提示改用 JPG／PNG。未用真實 HEIC 實測。
+
+## 2026-10-28（續）王藍庭固定坐四樓 E 桌子群 5 號
+- `STAFF_F4` 加入 王藍庭（g:4、seat:5）。她還沒完成「建立你的角色」（後端同仁名單裡沒有她；AI 生成器的照片上傳失敗就是她卡住的原因，已修），所以目前畫面上沒有人物；完成後會自動入座並顯示在四樓這個座位。app.js v329。
