@@ -257,7 +257,7 @@ let staffSeated=true;// 編輯／整頁畫面一律含六張同仁桌（沒人�
 const staffStationIndex=seat=>{const g=Math.floor(seat/6);return g?12*g+6+seat%6:6+seat;};/* 座位 0–5 在原本那組，6–17 在往上複製的兩組 */
 /* 座位搬到四樓（2026-10-26）：這三位同仁的座位在四樓左側由上而下第四桌群（g 從 0 算＝3），座位 1～4 上排、5～8 下排由左到右。五樓不再顯示他們、原座位空出來。 */
 const STAFF_F4={'黎子瑄':{g:3,seat:8,face:'down'},'余采馨':{g:3,seat:6,face:'down'},'鄭筱舢':{g:3,seat:7,face:'down'}};
-function applyStaff(list){
+function applyStaff(list,meetings){if(meetings&&typeof meetings==='object'){staffMeetings=meetings;markDirty();}/* 企劃／專案同仁今天在哪間會議室（後端依通訊錄信箱比對會議室行事曆） */
   if(!Array.isArray(list)||!list.length)return;let changed=false;
   for(const item of list){
     const seat=Number(item.seat),name=String(item.name||'');if(!name||!(seat>=0&&seat<STAFF_POS.length))continue;
@@ -1300,10 +1300,10 @@ function applyRemote(list){markDirty();let lookChanged=false;
 }
 {const _applyRemote=applyRemote;applyRemote=function(list){const r=_applyRemote(list);try{const c={};people.forEach(p=>{if(p.look&&typeof p.look==='object')c[p.name]=p.look;});localStorage.setItem('pixelLooksV1',JSON.stringify(c));}catch{}return r;};}
 let pushOpen=false;// 後端推送連線正常時，輪詢只當備援（60 秒）；沒連上就維持原本每 3 秒
-async function pollSync(){try{const early=window.__pixelP&&window.__pixelP.state;if(window.__pixelP)window.__pixelP.state=null;let data=early?await early:null;if(!data||!data.ok)data=await syncCall({action:'pixelOfficeState',since:syncVersion});setSyncStatus(true);if(!data.unchanged){(applyStaff(data.staff),applyRemote(data.people));applyLevelTitles(data);applyHours(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}catch{setSyncStatus(false);}finally{setTimeout(pollSync,pushOpen?60000:(document.hidden?15000:3000));}}
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncCall({action:'pixelOfficeState',since:syncVersion}).then(data=>{if(!data.unchanged){(applyStaff(data.staff),applyRemote(data.people));applyLevelTitles(data);applyHours(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}).catch(()=>{});});
+async function pollSync(){try{const early=window.__pixelP&&window.__pixelP.state;if(window.__pixelP)window.__pixelP.state=null;let data=early?await early:null;if(!data||!data.ok)data=await syncCall({action:'pixelOfficeState',since:syncVersion});setSyncStatus(true);if(!data.unchanged){(applyStaff(data.staff,data.staffMeetings),applyRemote(data.people));applyLevelTitles(data);applyHours(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}catch{setSyncStatus(false);}finally{setTimeout(pollSync,pushOpen?60000:(document.hidden?15000:3000));}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncCall({action:'pixelOfficeState',since:syncVersion}).then(data=>{if(!data.unchanged){(applyStaff(data.staff,data.staffMeetings),applyRemote(data.people));applyLevelTitles(data);applyHours(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}).catch(()=>{});});
 // 即時推送：後端（Durable Object）有人改狀態／對話框／音樂／造型／限時動態就通知這裡，馬上重讀，不必等輪詢。
-function syncNow(){return syncCall({action:'pixelOfficeState',since:syncVersion}).then(data=>{if(!data.unchanged){(applyStaff(data.staff),applyRemote(data.people));applyLevelTitles(data);applyHours(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}).catch(()=>{});}
+function syncNow(){return syncCall({action:'pixelOfficeState',since:syncVersion}).then(data=>{if(!data.unchanged){(applyStaff(data.staff,data.staffMeetings),applyRemote(data.people));applyLevelTitles(data);applyHours(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}).catch(()=>{});}
 (function pushConnect(){
   if(!('WebSocket' in window)||typeof SYNC_API!=='string')return;
   let ws=null,pingTimer=0,retry=0;
@@ -1673,7 +1673,7 @@ function drawGhostWalker(s){
 /* 行事曆會議 → 入座會議室（2026-10-23）：後端把這場會議寫的會議室（A～D）放在 meetingRoom，這裡只在畫面上把人排進該會議室的椅子，不寫回後端。
  * 椅子位置直接從會議室家具清單的椅子素材推出來；座位依「上排→下排→兩側」排，同一間會議室人多於座位的多出來的維持原狀。 */
 const TOILET_SEAT_X=96,TOILET_SEAT_Y=[118,218];/* 隔間裡馬桶旁的站位（相對廁所內側左上角） */
-let meetingSeatList=null;
+let meetingSeatList=null,staffMeetings={};
 function meetingSeats(){
   if(meetingSeatList)return meetingSeatList;const out={};
   for(const room of ROOMS){const m=/^會議室 ([A-D])$/.exec(room[0]);if(!m)continue;const rx=room[1],ry=room[2],rw=room[3],rh=room[4],list=[];
@@ -1687,7 +1687,7 @@ function meetingSeats(){
 function applyMeetingRooms(){
   if(embedMode||!LX){people.forEach(p=>{p.inRoom=null;});return;}
   const seats=meetingSeats(),used={};
-  people.forEach((p,i)=>{const wasIn=Boolean(p.inRoom);p.inRoom=null;if(p.staff)return;let key='';if(p.status==='meeting'&&/^[A-D]$/.test(p.meetingRoom||''))key=p.meetingRoom;else if(p.status==='toilet')key='T'+(WD_FEMALE[i]?'F':'M');
+  people.forEach((p,i)=>{const wasIn=Boolean(p.inRoom);p.inRoom=null;if(p.staff){const r=FLOOR4?'':staffMeetings[p.name];if(/^[A-D]$/.test(r||'')&&p.status==='present'||p.status==='meeting'&&p.staffMeet){p.staffMeet=/^[A-D]$/.test(r||'')?r:'';p.status=p.staffMeet?'meeting':'present';p.meetingRoom=p.staffMeet;}}let key='';if(p.status==='meeting'&&/^[A-D]$/.test(p.meetingRoom||''))key=p.meetingRoom;else if(p.status==='toilet')key='T'+(WD_FEMALE[i]?'F':'M');
     if(!key||!seats[key]||(used[key]||0)>=seats[key].length){/* 不在會議室／廁所了（改回「在座」等）：站回原本的位置，不要停在洗手台或會議室裡（以前會留在剛剛排的座位上） */
       if(wasIn||p.preRoom){const back=p.realPos||p.preRoom;if(back){p.x=back.x;p.y=back.y;if(back.dir)p.dir=back.dir;}p.preRoom=null;markDirty();}return;}
     if(!p.preRoom&&!p.realPos)p.preRoom={x:p.x,y:p.y,dir:p.dir};

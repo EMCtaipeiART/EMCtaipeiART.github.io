@@ -314,6 +314,17 @@ export function pixelOfficeMeetingRoomOf(event: Row): string {
   return '';
 }
 
+/** 現在進行中的會議最晚幾點結束（毫秒）；查不到回 0。 */
+function pixelOfficeCalendarEventsEnd(events: unknown, calendarEmail = '', calendarName = ''): number {
+  let end = 0;
+  for (const event of Array.isArray(events) ? events as Row[] : []) {
+    if (pixelOfficeCalendarEventState(event, calendarEmail, calendarName) !== 'meeting') continue;
+    const row = event.end && typeof event.end === 'object' ? event.end as Row : {};
+    end = Math.max(end, Date.parse(text(row.dateTime || row.date)) || 0);
+  }
+  return end;
+}
+
 function pixelOfficeCalendarEventsRoom(events: unknown, calendarEmail = '', calendarName = ''): string {
   for (const event of Array.isArray(events) ? events as Row[] : []) {
     if (pixelOfficeCalendarEventState(event, calendarEmail, calendarName) !== 'meeting') continue;
@@ -2126,7 +2137,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   /** 行事曆同步：把某位設計師改成「會議／休假」，或事件結束後交還給電腦自動判斷。
    * 不碰使用者手動指定的狀態（使用者的選擇優先），也不碰後端還沒有資料的人。 */
-  private pixelOfficeApplyCalendar(name: string, desired: PixelOfficeCalendarState, nowMs: number, room = ''): 'meeting' | 'leave' | 'released' | 'unchanged' | 'manual' | 'at-desk' {
+  private pixelOfficeApplyCalendar(name: string, desired: PixelOfficeCalendarState, nowMs: number, room = '', endMs = 0): 'meeting' | 'leave' | 'released' | 'unchanged' | 'manual' | 'at-desk' {
     const row = this.ctx.storage.sql.exec<{ state: string; last_seen: number }>(
       'SELECT state, last_seen FROM pixel_office_people WHERE name = ?', name
     ).toArray()[0];
@@ -2135,6 +2146,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     try { state = JSON.parse(row.state) as Row; } catch { state = {}; }
     const status = text(state.status) || 'present';
     const source = text(state.statusSource);
+    if (desired === 'meeting' && Number(state.deskReleasedEnd) > nowMs && (!endMs || endMs <= Number(state.deskReleasedEnd))) return 'at-desk';// 這場會議已因人回到電腦前而解除
     if (desired) {
       if (status === desired && source === 'calendar') {
         // 會議室換了（或剛查到）：只更新會議室，不動其他狀態
@@ -2157,6 +2169,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       state.status = desired;
       state.statusSource = 'calendar';
       if (desired === 'meeting' && room) state.meetingRoom = room; else delete state.meetingRoom;
+      if (desired === 'meeting' && endMs) state.meetingEnd = endMs; else delete state.meetingEnd;
       // 會議剛開始時同樣重新起算，否則開會前一直在電腦前的人會在第一次心跳就被收回成在座。
       delete state.activeSince;
     } else {
@@ -2164,7 +2177,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (!['meeting', 'leave'].includes(status) || source !== 'calendar') return 'unchanged';
       state.status = pixelOfficeWorkStatus(nowMs);
       state.statusSource = 'auto';
-      delete state.meetingRoom;
+      delete state.meetingRoom; delete state.meetingEnd;
     }
     state.statusAt = nowMs;
     const version = Math.max(nowMs, this.pixelOfficeVersion() + 1);
@@ -2219,6 +2232,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const calendars = (data.calendars || {}) as Record<string, Row>;
     const detailStates = new Map<string, PixelOfficeCalendarState>();
     const detailRooms = new Map<string, string>();
+    const detailEnds = new Map<string, number>();
     const detailItems = new Map<string, Row[]>();
     const detailUnreadable: string[] = [];
     if (canReadDetails) {
@@ -2235,6 +2249,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           if (!detailsResponse.ok) { detailUnreadable.push(name); return; }
           detailStates.set(name, pixelOfficeCalendarEventsState(details.items, email, name));
           detailRooms.set(name, pixelOfficeCalendarEventsRoom(details.items, email, name));
+          detailEnds.set(name, pixelOfficeCalendarEventsEnd(details.items, email, name));
           detailItems.set(name, (Array.isArray(details.items) ? details.items : []) as Row[]);
         } catch {
           detailUnreadable.push(name);
@@ -2264,6 +2279,16 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     // 其他同事不一定開放活動詳細內容給這個授權帳號，但會議室行事曆（若讀得到）能直接看到受邀者；讀不到就略過、不影響原本流程。
     const roomByName = new Map<string, string>();
     const roomCalStatus: Row = {};
+    // 企劃／專案同仁：通訊錄（設定表的帳號＝公司信箱）對得到的，就依會議室行事曆的受邀者排進會議室（2026-10-28）
+    const staffByEmail = new Map<string, string>();
+    try {
+      for (const row of this.coinStaffRows((await this.snapshot()).database)) {
+        const mail = text(row['帳號']).toLowerCase();
+        if (mail.includes('@')) staffByEmail.set(mail, text(row['名字']));
+      }
+    } catch { /* 讀不到通訊錄就只排設計師 */ }
+    const staffRooms: Record<string, string> = {};
+    let staffRoomsReadable = false;
     if (canReadDetails) {
       await Promise.all(Object.entries(PIXEL_OFFICE_ROOM_CALENDARS).map(async ([letter, roomEmail]) => {
         try {
@@ -2271,7 +2296,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           const roomResponse = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(roomEmail)}/events?${params.toString()}`, { headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' } });
           const roomData = await roomResponse.json().catch(() => ({})) as Row;
           if (!roomResponse.ok) { roomCalStatus[letter] = 'unreadable'; return; }
-          roomCalStatus[letter] = 'ok';
+          roomCalStatus[letter] = 'ok'; staffRoomsReadable = true;
           for (const item of Array.isArray(roomData.items) ? roomData.items as Row[] : []) {
             if (text(item.status) === 'cancelled' || text(item.transparency) === 'transparent') continue;
             const startRow = item.start && typeof item.start === 'object' ? item.start as Row : {};
@@ -2283,10 +2308,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
             if (text(organizer.email)) guests.add(text(organizer.email).toLowerCase());
             for (const guest of Array.isArray(item.attendees) ? item.attendees as Row[] : []) if (text(guest.responseStatus) !== 'declined' && text(guest.email)) guests.add(text(guest.email).toLowerCase());
             for (const [name, email] of Object.entries(PIXEL_OFFICE_CALENDARS)) if (guests.has(email.toLowerCase()) && !roomByName.has(name)) roomByName.set(name, letter);
+            for (const [mail, who] of staffByEmail) if (guests.has(mail) && !staffRooms[who]) staffRooms[who] = letter;
           }
         } catch { roomCalStatus[letter] = 'unreadable'; }
       }));
     }
+    // 會議室行事曆至少讀得到一間才更新（全讀不到就維持上一輪，不要把人誤趕回座位）；沒有會議的同仁自然不在名單裡
+    if (staffRoomsReadable && pixelHours.meetingRooms) this.pixelOfficeSetStaffMeetings(staffRooms, nowMs);
+    else if (!pixelHours.meetingRooms) this.pixelOfficeSetStaffMeetings({}, nowMs);
     const meeting: string[] = [], leave: string[] = [], released: string[] = [], unreadable: string[] = [];
     const detected: Row = {}, manualHeld: string[] = [], atDesk: string[] = [];
     // 人資系統的假單優先於 Google 行事曆：Google 上沒有活動（或設成空閒）的請假也要算休假。
@@ -2318,7 +2347,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       // 先記下「行事曆說這個人現在應該是什麼」，再記實際套用的結果——兩者分開才查得出問題出在哪一段。
       if (desired) detected[name] = desired;
       else if (busy.length) detected[name] = 'busy-ignored';
-      const result = this.pixelOfficeApplyCalendar(name, desired, nowMs, desired === 'meeting' ? roomHere : '');
+      const endHere = desired === 'meeting' ? detailEnds.get(name) || busy.reduce((m, span) => { const e = Date.parse(text(span.end)); const b = Date.parse(text(span.start)); return b <= nowMs + 60_000 && e > nowMs ? Math.max(m, e) : m; }, 0) : 0;
+      const result = this.pixelOfficeApplyCalendar(name, desired, nowMs, desired === 'meeting' ? roomHere : '', endHere);
       if (result === 'meeting') meeting.push(name);
       else if (result === 'leave') leave.push(name);
       else if (result === 'released') released.push(name);
@@ -2330,6 +2360,20 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const result = { ok: true, detected, rooms, meeting, leave, released, manualHeld, atDesk, unreadable, detailUnreadable, femas: { ok: femas.ok, events: femas.events, onLeave: [...femas.names], ...(femas.error ? { error: femas.error } : {}) } };
     await this.rememberCalendarSync(result, nowMs);
     return result;
+  }
+
+  /** 企劃／專案同仁現在在哪間會議室（名字→A～D）。存在 pixel_office_settings，變動才更新時間戳（會驚動所有人的輪詢）。 */
+  private pixelOfficeSetStaffMeetings(rooms: Record<string, string>, nowMs: number): void {
+    const json = JSON.stringify(Object.fromEntries(Object.entries(rooms).sort(([x], [y]) => x.localeCompare(y))));
+    const old = this.ctx.storage.sql.exec<{ value: string }>('SELECT value FROM pixel_office_settings WHERE key = ?', 'staffMeetings').toArray()[0];
+    if ((old ? old.value : '{}') === json) return;
+    const version = Math.max(nowMs, this.pixelOfficeVersion() + 1);
+    this.ctx.storage.sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', 'staffMeetings', json, version);
+  }
+
+  private pixelOfficeStaffMeetings(): Record<string, string> {
+    const row = this.ctx.storage.sql.exec<{ value: string }>('SELECT value FROM pixel_office_settings WHERE key = ?', 'staffMeetings').toArray()[0];
+    try { return row ? JSON.parse(row.value) as Record<string, string> : {}; } catch { return {}; }
   }
 
   /** 行事曆同步的最後一次結果。這個功能靠好幾個外部條件（授權、Calendar API 有沒有啟用、網域共用設定），
@@ -2507,8 +2551,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     // 人就在電腦前敲鍵盤，卻還掛著公出／會議／用餐：收回成在座（使用者 2026-09-23 要求）。
     // 不管是自己點的還是行事曆設的都收——會議排到了但人沒去、或是提早散會回座位，都屬於這一類。
     const inRoomMeeting = current === 'meeting' && source === 'calendar' && Boolean(text(state.meetingRoom));
-    const returned = PIXEL_OFFICE_RETURN_STATUSES.includes(current) && !inRoomMeeting
+    // 訂了會議室的會議也一樣：人連續在電腦前就是提早散會了（2026-10-28），收回成在座，並記下這場會議的結束時間，
+    // 行事曆同步在那之前不要再把他設回會議。
+    const returned = PIXEL_OFFICE_RETURN_STATUSES.includes(current)
       && pixelOfficeBackAtDesk(state, nowMs, nowMs);
+    if (returned && inRoomMeeting) { state.deskReleasedEnd = Number(state.meetingEnd) || nowMs + 30 * 60_000; delete state.meetingEnd; }
     if (!wasOnline && !inCalendarEvent) {
       next = desired;
       source = 'auto';
@@ -2552,7 +2599,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     // 稱號跟著狀態一起回：前端不必為了它多打一次 API，改了也會隨輪詢傳到每個人的畫面。
     const avatars: Record<string, number> = {};
     for (const row of this.ctx.storage.sql.exec<{ name: string; updated_at: number }>('SELECT name, updated_at FROM pixel_office_avatar_current').toArray()) avatars[row.name] = Number(row.updated_at) || 0;
-    return { ok: true, action: 'pixelOfficeState', version, people, staff: this.pixelOfficeStaff().map(item => ({ seat: item.seat, name: item.name })), levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories(), avatars, hours: { dayStart: pixelHours.dayStart, workEnd: pixelHours.workEnd, overtimeStart: pixelHours.overtimeStart, force: pixelForceNow(Date.now()) } };
+    return { ok: true, action: 'pixelOfficeState', version, people, staff: this.pixelOfficeStaff().map(item => ({ seat: item.seat, name: item.name })), staffMeetings: this.pixelOfficeStaffMeetings(), levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories(), avatars, hours: { dayStart: pixelHours.dayStart, workEnd: pixelHours.workEnd, overtimeStart: pixelHours.overtimeStart, force: pixelForceNow(Date.now()) } };
   }
 
   private pixelOfficeUpdate(payload: ApiPayload): ApiResult {
