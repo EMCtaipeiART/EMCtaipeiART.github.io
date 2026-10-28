@@ -41,9 +41,10 @@ let officeHours={dayStart:9,workEnd:19,overtimeStart:19};
 let forceMode='';/* 全員上班／全員下班（後端 hours.force = 'work' | 'off' | ''）：work＝整個畫面當成平日中午（不套加班濾鏡、不收桌椅）；off＝當成假日（全部下班、桌椅收起） */
 function applyHours(data){const h=data&&data.hours;if(!h)return;{const f=h.force==='work'||h.force==='off'?h.force:'';if(f!==forceMode){forceMode=f;taipeiClockCheckedAt=0;markDirty();}}const n=v=>Number.isFinite(Number(v))?Number(v):null,d=n(h.dayStart),w=n(h.workEnd),o=n(h.overtimeStart);if(d===null||w===null||o===null)return;if(d!==officeHours.dayStart||w!==officeHours.workEnd||o!==officeHours.overtimeStart){officeHours={dayStart:d,workEnd:w,overtimeStart:o};markDirty();}}
 const staffAwake=new Map();/* 企劃／專案同仁下班後被操控走動：解除下班與加班，五分鐘沒動作自動回下班 */
+const awakeOvertime=p=>{const c=currentTaipeiClock();return c.workday&&c.hour>=officeHours.dayStart&&c.hour<officeHours.workEnd?'present':'overtime';};/* 下班後走動：解除下班、改成加班；上班時間內就是正常在座 */
 const awakeP=p=>!!(p&&p.staff&&Date.now()-(staffAwake.get(p.name)||0)<300000);
 setInterval(()=>{let ch=false;staffAwake.forEach((t,n)=>{if(Date.now()-t>=300000){staffAwake.delete(n);ch=true;}});if(ch){try{f4Free.clear()}catch(e){}markDirty();}},10000);
-function statusOf(p){if(awakeP(p)&&(p.status==='present'||p.status==='overtime'||p.status==='offwork'))return 'present';if(p.staff&&p.status==='present'){const c=currentTaipeiClock();if(!(c.workday&&c.hour>=officeHours.dayStart&&c.hour<officeHours.workEnd))return 'offwork';}return p.status;}
+function statusOf(p){if(awakeP(p)&&(p.status==='present'||p.status==='overtime'||p.status==='offwork'))return awakeOvertime(p);if(p.staff&&p.status==='present'){const c=currentTaipeiClock();if(!(c.workday&&c.hour>=officeHours.dayStart&&c.hour<officeHours.workEnd))return 'offwork';}return p.status;}
 const onFloor4=p=>!FLOOR4&&p.floor4At>0&&Date.now()-p.floor4At<150000&&String(p.name).toLowerCase()!==String(storyIdentity.name||'').toLowerCase();/* 別人現在在四樓：五樓畫面不畫他（本人在五樓時不藏自己） */
 const isAway=p=>(!FLOOR4&&STAFF_F4[p.name]&&!p.inRoom)||onFloor4(p)||((FLOOR4&&p.f4hide!==undefined)?p.f4hide:(!p.inRoom&&!workingStatusIds.includes(statusOf(p))));
 const overtimePreview=new URLSearchParams(location.search).get('overtime')==='1';
