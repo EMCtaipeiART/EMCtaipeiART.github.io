@@ -1251,7 +1251,9 @@ $('storyFile').onchange=async e=>{
     setSyncStatus(true);applyStories(data.stories);toast('限時動態已貼出，24 小時後自動下架。');
   }catch(err){toast(err&&err.message&&err.message!=='undefined'?err.message:'無法讀取這個檔案，請換一個再試。');}
   finally{URL.revokeObjectURL(url);}
-};const returnEveryone=()=>{if(FLOOR4){/* 四樓：回自己四樓的座位（固定坐四樓的同仁）或電梯口；不能用五樓的座位座標，否則人物會跑到四樓地圖的別處、看起來消失 */const sc=window.FLOOR4_SCENE;people.forEach((p,i)=>{if(p.f4hide!==false||p.f4remote||p.f4room)return;const f=STAFF_F4[p.name];if(f&&sc&&sc.seatPos){const pos=sc.seatPos(f.g,f.seat);p.x=pos.x;p.y=pos.y;p.dir=f.face||pos.dir;}else if((i===selected||i===window.__f4hero)&&sc&&sc.heroStart){p.x=sc.heroStart.x;p.y=sc.heroStart.y;p.dir=sc.heroStart.dir||'down';pushChange(i,{x:p.x,y:p.y,dir:p.dir});}else return;localMoveAt.set(i,Date.now());});markDirty();toast('回到四樓的座位了');return;}people.forEach((p,i)=>{p.x=starts[i][0];p.y=starts[i][1];p.dir='down';localMoveAt.set(i,Date.now());pushChange(i,{x:p.x,y:p.y,dir:'down'});});save();toast('大家都回到自己的座位附近了');};
+};/* 四樓的「回座位」：固定坐四樓的同仁回四樓座位，其他被操控的人回電梯口（絕對不能用五樓的 starts 座標，人物會跑到四樓地圖別處、畫面跳走） */
+function returnSeatF4(i){const p=people[i],sc=window.FLOOR4_SCENE,f=STAFF_F4[p.name];if(!sc)return false;if(f&&sc.seatPos){const pos=sc.seatPos(f.g,f.seat);p.x=pos.x;p.y=pos.y;p.dir=f.face||pos.dir;}else if(sc.heroStart){p.x=sc.heroStart.x;p.y=sc.heroStart.y;p.dir=sc.heroStart.dir||'down';pushChange(i,{x:p.x,y:p.y,dir:p.dir});}else return false;localMoveAt.set(i,Date.now());return true;}
+const returnEveryone=()=>{if(FLOOR4){people.forEach((p,k)=>{if(p.f4hide!==false||p.f4remote||p.f4room)return;if(STAFF_F4[p.name]||k===selected||k===window.__f4hero)returnSeatF4(k);});markDirty();toast('回到四樓的座位了');return;}people.forEach((p,i)=>{p.x=starts[i][0];p.y=starts[i][1];p.dir='down';localMoveAt.set(i,Date.now());pushChange(i,{x:p.x,y:p.y,dir:'down'});});save();toast('大家都回到自己的座位附近了');};
 /* ---------------------------------------------------------------------------------------------
  * 多人同步（2026-09-18）：心情、對話、離席狀態、位置與照片存在主系統的 Cloudflare 後端，所有打開這個網頁的
  * 人看到同一個畫面。不用登入、任何人都能改（使用者決定）。每 3 秒輪詢一次（分頁在背景時 15 秒），沒有
@@ -2319,7 +2321,7 @@ window.addEventListener('message',event=>{
   const head=document.createElement('div');head.className='radial-head';head.append(back,title);
   const body=document.createElement('div');body.className='radial-body';panel.append(head,body);
   const btns={};
-  defs.forEach(([k,t])=>{const b=document.createElement('button');b.type='button';b.className='radial-btn';b.title=t;b.setAttribute('aria-label',t);b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+ICONS[k]+'</svg><span>'+t+'</span>';b.onclick=()=>{if(k==='seat'){const i=selected;if(i===null)return;setStatus('present');const p=people[i];p.x=starts[i][0];p.y=starts[i][1];p.dir='down';keys.clear();markDirty();save();queuePosition(i);window.radialClose();return;}/* 在座＝狀態設為在座並回到自己的座位 */show(k);};ring.appendChild(b);btns[k]=b;});
+  defs.forEach(([k,t])=>{const b=document.createElement('button');b.type='button';b.className='radial-btn';b.title=t;b.setAttribute('aria-label',t);b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+ICONS[k]+'</svg><span>'+t+'</span>';b.onclick=()=>{if(k==='seat'){const i=selected;if(i===null)return;setStatus('present');const p=people[i];if(FLOOR4){returnSeatF4(i);}else{p.x=starts[i][0];p.y=starts[i][1];p.dir='down';}keys.clear();markDirty();save();if(!FLOOR4)queuePosition(i);window.radialClose();return;}/* 在座＝狀態設為在座並回到自己的座位 */show(k);};ring.appendChild(b);btns[k]=b;});
   box.append(ring,panel);wrap.appendChild(box);
   // 班長（管理者與 Machi）：處罰違反規則的人——坐在自己的位置上整整 N 天，不能移動、不能變裝；人物上方顯示原因與剩餘天數
   const ps=document.createElement('section');ps.className='tool-section radial-sec';ps.id='punishSec';
@@ -2370,6 +2372,10 @@ window.addEventListener('message',event=>{
   // 原上傳 label 對滑鼠可用；補上鍵盤操作，不更動檔案選取流程。
   const upload=$('storyUpload');upload.tabIndex=0;upload.setAttribute('role','button');upload.setAttribute('aria-label','貼一則限時動態');
   upload.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('storyFile').click();}});
+  /* 滾動畫面時直接收合選單（跟人物走動一樣）：只看使用者的滾輪、觸控、拖動捲軸，程式自己捲動（跟隨人物）不算 */
+  let ptrDown=false;window.addEventListener('pointerdown',()=>{ptrDown=true;},{passive:true});window.addEventListener('pointerup',()=>{ptrDown=false;},{passive:true});
+  const scrollClose=()=>{if(!box.hidden&&level!==0)window.radialClose();};
+  window.addEventListener('wheel',scrollClose,{passive:true});window.addEventListener('touchmove',scrollClose,{passive:true});window.addEventListener('scroll',()=>{if(ptrDown)scrollClose();},{passive:true});
   function place(){
     if(box.hidden||level===0||selected===null)return;
     if(keys.size){window.radialClose();return;}// 人物走動時收合選單
