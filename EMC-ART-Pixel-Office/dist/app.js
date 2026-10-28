@@ -1251,7 +1251,7 @@ $('storyFile').onchange=async e=>{
     setSyncStatus(true);applyStories(data.stories);toast('限時動態已貼出，24 小時後自動下架。');
   }catch(err){toast(err&&err.message&&err.message!=='undefined'?err.message:'無法讀取這個檔案，請換一個再試。');}
   finally{URL.revokeObjectURL(url);}
-};const returnEveryone=()=>{people.forEach((p,i)=>{p.x=starts[i][0];p.y=starts[i][1];p.dir='down';localMoveAt.set(i,Date.now());pushChange(i,{x:p.x,y:p.y,dir:'down'});});save();toast('大家都回到自己的座位附近了');};
+};const returnEveryone=()=>{if(FLOOR4){/* 四樓：回自己四樓的座位（固定坐四樓的同仁）或電梯口；不能用五樓的座位座標，否則人物會跑到四樓地圖的別處、看起來消失 */const sc=window.FLOOR4_SCENE;people.forEach((p,i)=>{if(p.f4hide!==false||p.f4remote||p.f4room)return;const f=STAFF_F4[p.name];if(f&&sc&&sc.seatPos){const pos=sc.seatPos(f.g,f.seat);p.x=pos.x;p.y=pos.y;p.dir=f.face||pos.dir;}else if((i===selected||i===window.__f4hero)&&sc&&sc.heroStart){p.x=sc.heroStart.x;p.y=sc.heroStart.y;p.dir=sc.heroStart.dir||'down';}else return;localMoveAt.set(i,Date.now());});markDirty();toast('回到四樓的座位了');return;}people.forEach((p,i)=>{p.x=starts[i][0];p.y=starts[i][1];p.dir='down';localMoveAt.set(i,Date.now());pushChange(i,{x:p.x,y:p.y,dir:'down'});});save();toast('大家都回到自己的座位附近了');};
 /* ---------------------------------------------------------------------------------------------
  * 多人同步（2026-09-18）：心情、對話、離席狀態、位置與照片存在主系統的 Cloudflare 後端，所有打開這個網頁的
  * 人看到同一個畫面。不用登入、任何人都能改（使用者決定）。每 3 秒輪詢一次（分頁在背景時 15 秒），沒有
