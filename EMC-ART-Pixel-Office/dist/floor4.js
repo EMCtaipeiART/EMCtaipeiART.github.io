@@ -23,6 +23,7 @@
   const seatOf = (cx, gy) => { seats.push({ x: cx, y: gy + 40, row: false }); seats.push({ x: cx, y: gy + 94 + 179, row: true }); };
   const addStatic = (depth, draw) => items.push({ depth, draw });/* 固定背景：地板格線、玻璃牆、廁所圖 */
   const add = (depth, draw) => dyn.push({ depth, draw: c => { if (imgs) draw(c); } });/* 其餘（桌、椅、電梯、標籤、小物）都是動態圖層，跟人物依深度排序 */
+  const rooms4 = {};/* 會議室 F、G、H 的室內範圍（場景座標，未加 OFFY），給前端找站位 */
   const block = (x, y, w, h) => blocks.push([x, y + OFFY, w, h]);
   let imgs = null; // { rooms, props, furn, desks, toiletPic }
   const spr = (c, name, x, y) => { const r = RM[name]; c.drawImage(imgs.rooms, r[0], r[1], r[2], r[3], Math.round(x), Math.round(y), r[2], r[3]); };
@@ -134,12 +135,14 @@
     for (const k of [0, 1]) { const ty = y0 + k * 200; dyn.push({ depth: ty + 180, draw: c => imgs && spr(c, 'table_white_v', xL, ty) }); for (const dy of [50, 150]) { sprite('chair_side_r', xL - 40, ty + dy - 26, ty + dy + 26); addRoomSeat('H', 'side', xL - 40, ty + dy - 26); } }
     sprite('projector_right', xC + 2 * 195 + 24, y0 + 174, y0 + 230);/* 投影機放在桌子群右側、機身朝右 */
     label('會議室 H', rx, ry + rh + WH + 8, rw);
+    rooms4.H = { x: rx + RT, y: ry + RT, w: rw - 2 * RT, h: rh - 2 * RT };
     HROOM.x = rx; HROOM.bottom = ry + rh;
   }
   // ---- 桌子群下方：會議室 F、G（同 B、C）＋右側兩間大玻璃屋（各六張桌椅）
   const BY = GY0 + 4 * GP + 166 + 135 + 114,/* 最後一群下排椅腳到 F 會議室 114（五樓：下排椅腳到 B 會議室 114） */ BC_MX = 70, BC_W = tableW(2) + 2 * BC_MX + 2 * RT, meetH = 130 + 2 * ROOM_MARGIN + 2 * RT;
   const small = (name, rx, ry, doorSide = 'r') => {
     glass(rx, ry, BC_W, meetH, [{ side: doorSide, c: ry + meetH / 2 }]);
+    rooms4[name.slice(-1)] = { x: rx + RT, y: ry + RT, w: BC_W - 2 * RT, h: meetH - 2 * RT };
     const tx = rx + RT + BC_MX, ty = ry + RT + ROOM_MARGIN, tw = tableW(2); table('black', tx, ty, 2, ty + 110); block(tx, ty, tw, 130); label(name, tx, ty + 55, tw);
     sprite('projector_left', tx + tw - 84, ty + 26, ty + 125);
     for (let k = 0; k < 2; k++) { const cx = tx + tw * (2 * k + 1) / 4; sprite('chair_front', cx - 26, ty - 46, ty - 1); sprite('chair_back', cx - 26, ty + 120, ty + 170); addRoomSeat(name.slice(-1), 'front', cx - 26, ty - 46); addRoomSeat(name.slice(-1), 'back', cx - 26, ty + 120); }
@@ -170,6 +173,7 @@
     canvas: null, ready: false, onReady: null,
     dynamic: dyn.map(it => ({ depth: it.depth + OFFY, draw: it.draw })),
     seats: seats.map(t => ({ x: t.x, y: t.y + OFFY, row: t.row })),
+    roomRects: Object.fromEntries(Object.entries(rooms4).map(([k, r]) => [k, { x: r.x, y: r.y + OFFY, w: r.w, h: r.h }])), blocks: blocks.map(b => b.slice()),
     roomSeats: Object.fromEntries(Object.entries(roomSeats).map(([k, v]) => [k, v.slice().sort((a, b) => a.o - b.o || a.y - b.y || a.x - b.x).map(t => ({ x: t.x, y: t.y + OFFY, dir: t.dir }))])),
     /* 桌子群 g（0＝最上面）的座位 1～8：1～4＝上排由左到右、5～8＝下排由左到右；回傳人物腳底位置與朝向 */
     seatPos(g, seat) { const gy = GY0 + g * GP, k = (seat - 1) % 4, cx = GX + k * 220 + 110, bottom = seat > 4; return bottom ? { x: cx, y: gy + 94 + 179 + OFFY, dir: 'up', row: true } : { x: cx, y: gy + 40 + OFFY, dir: 'down', row: false }; },

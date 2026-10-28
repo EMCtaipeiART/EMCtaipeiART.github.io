@@ -1394,7 +1394,7 @@ window.addEventListener('message',event=>{if(event.origin!==location.origin||eve
 /* 四樓的空座位（沒有同仁坐的）比照五樓：上班時間坐一個「未登入」透明人物、桌上有「未登入」名牌 */
 function addF4Vacancies(){const sc=window.FLOOR4_SCENE;if(!sc||!sc.seats||window.__f4vac)return;window.__f4vac=1;const taken=Object.keys(STAFF_F4).map(nm=>sc.seatPos(STAFF_F4[nm].g,STAFF_F4[nm].seat));for(const t of sc.seats){if(taken.some(q=>Math.abs(q.x-t.x)<2&&Math.abs(q.y-t.y)<2))continue;stations.push({x:t.x,y:t.y,name:'',row:t.row?1:0,grp:1,empty:6,type:0,f4:true,f4ghost:true});}markDirty();}
 /* 四樓會議室 F、G、H：行事曆會議在這幾間時，那位同仁（設計師或同仁、本人除外）從五樓離席、坐進四樓會議室；散會就消失 */
-function syncF4Meetings(){const sc=window.FLOOR4_SCENE;if(!sc||!sc.roomSeats)return;const used={},hero=window.__f4hero;people.forEach((q,i)=>{if(i===hero)return;const room=(q.status==='meeting'&&/^[F-H]$/.test(q.meetingRoom||''))?q.meetingRoom:'';if(room){const list=sc.roomSeats[room]||[],n=used[room]||0;if(n<list.length){used[room]=n+1;const s=list[n];q.f4hide=false;q.x=s.x;q.y=s.y;q.dir=s.dir;q.f4room=room;return;}}if(q.f4room){q.f4hide=true;q.f4room='';}});}
+function syncF4Meetings(){const sc=window.FLOOR4_SCENE;if(!sc||!sc.roomSeats)return;const used={},hero=window.__f4hero;people.forEach((q,i)=>{if(i===hero)return;const room=(q.status==='meeting'&&/^[F-H]$/.test(q.meetingRoom||''))?q.meetingRoom:'';if(room){const list=sc.roomSeats[room]||[],n=used[room]||0;const stand=(sc.roomStand=sc.roomStand||{})[room]||(sc.roomStand[room]=standSpots(sc.roomRects[room],sc.blocks,list)),extra=n-list.length;if(n<list.length||stand[extra]){used[room]=n+1;const s=n<list.length?list[n]:stand[extra];q.f4hide=false;q.x=s.x;q.y=s.y;q.dir=s.dir;q.f4room=room;return;}}if(q.f4room){q.f4hide=true;q.f4room='';}});}
 function syncF4Staff(){const sc=window.FLOOR4_SCENE;if(!sc||!sc.seatPos)return;addF4Vacancies();try{syncF4Meetings()}catch(e){}for(const nm in STAFF_F4){const i=names.indexOf(nm);if(i<0)continue;const q=people[i];if(q.f4room)continue;const pos=sc.seatPos(STAFF_F4[nm].g,STAFF_F4[nm].seat);{const st=statusOf(q);q.f4hide=!(workingStatusIds.includes(st)&&(!window.f4DeskDimmed()||st==='overtime'));}/* 下班（平日時段外、週末假日、全員下班）：固定坐四樓的同仁也收掉，只留加班中的 */q.x=pos.x;q.y=pos.y;q.dir=STAFF_F4[nm].face||pos.dir;if(!stations.some(t=>t.f4&&t.name===nm)){stations.push({x:pos.x,y:pos.y,name:nm,row:pos.row?1:0,grp:1,empty:6,type:0,f4:true});markDirty();}}}
 function initFloor4(){
   const want=new URLSearchParams(location.search).get('hero')||'';let hi=names.findIndex(n=>n.toLowerCase()===want.toLowerCase());
@@ -1674,12 +1674,16 @@ function drawGhostWalker(s){
  * 椅子位置直接從會議室家具清單的椅子素材推出來；座位依「上排→下排→兩側」排，同一間會議室人多於座位的多出來的維持原狀。 */
 const TOILET_SEAT_X=96,TOILET_SEAT_Y=[118,218];/* 隔間裡馬桶旁的站位（相對廁所內側左上角） */
 let meetingSeatList=null,staffMeetings={};
+/* 會議室座位不夠時，其他人站在室內的空白處：在室內畫格子，避開桌子／家具（blocks）與座位，離中心近的先站 */
+function standSpots(r,blocks,seats){const out=[],cx=r.x+r.w/2,cy=r.y+r.h/2;for(let y=r.y+50;y<=r.y+r.h-26;y+=58)for(let x=r.x+38;x<=r.x+r.w-38;x+=66){if(blocks.some(b=>x>b[0]-34&&x<b[0]+b[2]+34&&y>b[1]-4&&y<b[1]+b[3]+16))continue;if(seats.some(t=>Math.abs(t.x-x)<46&&Math.abs(t.y-y)<40))continue;out.push({x,y,dir:'down'});}out.sort((a,b)=>Math.hypot(a.x-cx,a.y-cy)-Math.hypot(b.x-cx,b.y-cy));return out;}
 function meetingSeats(){
   if(meetingSeatList)return meetingSeatList;const out={};
   for(const room of ROOMS){const m=/^會議室 ([A-D])$/.exec(room[0]);if(!m)continue;const rx=room[1],ry=room[2],rw=room[3],rh=room[4],list=[];
     for(const it of roomItems){if(it[0]!=='sprite')continue;const x=it[1],y=it[2],w=it[3],n=it[7]&&it[7].name;if(!/^chair_(front|back|side_r|side_l)$/.test(n)||x<rx||x>rx+rw||y<ry||y>ry+rh)continue;const cx=x+w/2;
       list.push(n==='chair_front'?{x:cx,y:y+82,dir:'down',o:0}:n==='chair_back'?{x:cx,y:y+55,dir:'up',o:1}:{x:cx,y:y+60,dir:n==='chair_side_r'?'right':'left',o:2});}
-    list.sort((a,b)=>a.o-b.o||a.y-b.y||a.x-b.x);out[m[1]]=list.map(s=>({...s,ly:viewToLogical(s.y)}));}
+    list.sort((a,b)=>a.o-b.o||a.y-b.y||a.x-b.x);out[m[1]]=list.map(s=>({...s,ly:viewToLogical(s.y)}));
+    const blocks=roomItems.filter(it=>(it[0]==='table'||it[0]==='sprite'&&it[6])&&it[1]>=rx&&it[1]<=rx+rw&&it[2]>=ry&&it[2]<=ry+rh).map(it=>[it[1],it[2],it[3],it[4]]);
+    out[m[1]+'S']=standSpots({x:rx+RT,y:ry+RT,w:rw-2*RT,h:rh-2*RT},blocks,list).map(s=>({...s,ly:viewToLogical(s.y)}));}
   // 廁所隔間（2026-10-25）：狀態是「去廁所」的人走進隔間、站在馬桶旁（男生男廁、女生女廁，各兩格）
   for(const [key,room] of [['M',ROOMS[0]],['F',ROOMS[1]]]){const lx=room[1]+RT,y0=room[2]+RT;out['T'+key]=[0,1].map(k=>({x:lx+TOILET_SEAT_X,y:y0+TOILET_SEAT_Y[k],dir:'right',ly:viewToLogical(y0+TOILET_SEAT_Y[k])}));}
   meetingSeatList=out;return out;
@@ -1688,7 +1692,8 @@ function applyMeetingRooms(){
   people.forEach(p=>{if(!p.staff)return;const r=staffMeetings[p.name];if(/^[A-H]$/.test(r||'')&&p.status==='present'||p.status==='meeting'&&p.staffMeet){p.staffMeet=/^[A-H]$/.test(r||'')?r:'';p.status=p.staffMeet?'meeting':'present';p.meetingRoom=p.staffMeet;}});/* 企劃／專案同仁的會議室（含四樓 F～H） */
   if(embedMode||!LX){people.forEach(p=>{p.inRoom=null;});return;}
   const seats=meetingSeats(),used={};
-  people.forEach((p,i)=>{const wasIn=Boolean(p.inRoom);p.inRoom=null;if(p.staff)return;let key='';if(p.status==='meeting'&&/^[A-D]$/.test(p.meetingRoom||''))key=p.meetingRoom;else if(p.status==='toilet')key='T'+(WD_FEMALE[i]?'F':'M');
+  people.forEach((p,i)=>{const wasIn=Boolean(p.inRoom);p.inRoom=null;if(p.staff&&!p.staffMeet&&!wasIn&&!p.preRoom)return;let key='';if(p.status==='meeting'&&/^[A-D]$/.test(p.meetingRoom||''))key=p.meetingRoom;else if(p.status==='toilet')key='T'+(WD_FEMALE[i]?'F':'M');
+    if(key&&seats[key]&&(used[key]||0)>=seats[key].length&&seats[key+'S']&&seats[key+'S'][(used[key]||0)-seats[key].length]){const st=seats[key+'S'][(used[key]||0)-seats[key].length];used[key]=(used[key]||0)+1;if(!p.preRoom&&!p.realPos)p.preRoom={x:p.x,y:p.y,dir:p.dir};p.x=st.x;p.y=st.ly;p.dir='down';p.inRoom=st;return;}/* 座位坐滿：站在室內空白處 */
     if(!key||!seats[key]||(used[key]||0)>=seats[key].length){/* 不在會議室／廁所了（改回「在座」等）：站回原本的位置，不要停在洗手台或會議室裡（以前會留在剛剛排的座位上） */
       if(wasIn||p.preRoom){const back=p.realPos||p.preRoom;if(back){p.x=back.x;p.y=back.y;if(back.dir)p.dir=back.dir;}p.preRoom=null;markDirty();}return;}
     if(!p.preRoom&&!p.realPos)p.preRoom={x:p.x,y:p.y,dir:p.dir};

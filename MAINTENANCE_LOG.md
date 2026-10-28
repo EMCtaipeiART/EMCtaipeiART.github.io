@@ -1004,3 +1004,7 @@
 ## 2026-10-28（續）通訊錄群組受邀的同仁、會議室 F～H
 - 會議受邀者若是通訊錄群組（b@／c@emctaipei.com），會議室行事曆只會看到群組信箱、不展開成員（例：吳冠賢）。改為：會議室行事曆事件記下 iCalUID，再讀同仁自己的行事曆（有分享才讀得到），同一場會議（iCalUID）就對到那間會議室；同步結果多了 `staffRooms`、`staffCalStatus` 供診斷。
 - 會議室行事曆加上 F、G、H（meetingroomf／g／h.emc@gmail.com；沒有 E）。前端把同仁的會議狀態移到 `applyMeetingRooms` 最前面，四樓也吃得到（app.js v325）。
+
+## 2026-10-28（續）會議室座位不夠時站在空白處
+- 會議室（五樓 A～D、四樓 F～H）椅子坐滿後，其餘的人改站在室內空白處：`standSpots()` 在室內畫格子、避開桌子家具與椅子，離中心近的先站。四樓 `floor4.js` 匯出 `roomRects`／`blocks`。
+- 順手修正：企劃／專案同仁在五樓 A～D 的入座判斷（`applyMeetingRooms` 不再讓同仁提早 return）。app.js v326、floor4.js v18。未做畫面截圖驗證。
