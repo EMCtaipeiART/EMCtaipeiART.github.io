@@ -1389,7 +1389,7 @@ let elevatorCooldown=0;
 function leaveFloor4(){const hi=window.__f4hero;if(!FLOOR4||!(hi>=0)||window.__f4left)return;window.__f4left=Date.now();
   let lo=-3000,hiY=4000;const target=TB+30;for(let k=0;k<40;k++){const m=(lo+hiY)/2;if(viewY5(m)<target)lo=m;else hiY=m;}
   try{syncCall({action:'pixelOfficeUpdate',name:people[hi].name,patch:{floor:5,x:TX0+75-320,y:Math.round((lo+hiY)/2),dir:'down'}}).catch(()=>{});}catch(error){}}
-window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==window.parent||!event.data||event.data.type!=='pixelOfficeLeaveFloor4')return;leaveFloor4();});
+window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==window.parent||!event.data||event.data.type!=='pixelOfficeLeaveFloor4')return;const only=String(event.data.only||'').toLowerCase(),hi=window.__f4hero;if(only&&hi>=0&&people[hi]&&String(people[hi].name).toLowerCase()!==only)return;/* 右上角按鈕只帶「本人」回五樓；四樓裡操控的是別人就不動他 */leaveFloor4();});
 /* 四樓：搬到四樓的同仁坐進自己的座位（人物＋桌位名牌）；每格都重設位置，名單晚到也會補上 */
 /* 四樓的空座位（沒有同仁坐的）比照五樓：上班時間坐一個「未登入」透明人物、桌上有「未登入」名牌 */
 function addF4Vacancies(){const sc=window.FLOOR4_SCENE;if(!sc||!sc.seats||window.__f4vac)return;window.__f4vac=1;const taken=Object.keys(STAFF_F4).map(nm=>sc.seatPos(STAFF_F4[nm].g,STAFF_F4[nm].seat));for(const t of sc.seats){if(taken.some(q=>Math.abs(q.x-t.x)<2&&Math.abs(q.y-t.y)<2))continue;stations.push({x:t.x,y:t.y,name:'',row:t.row?1:0,grp:1,empty:6,type:0,f4:true,f4ghost:true});}markDirty();}
