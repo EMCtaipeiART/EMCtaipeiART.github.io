@@ -1688,6 +1688,10 @@ function meetingSeats(){
   for(const [key,room] of [['M',ROOMS[0]],['F',ROOMS[1]]]){const lx=room[1]+RT,y0=room[2]+RT;out['T'+key]=[0,1].map(k=>({x:lx+TOILET_SEAT_X,y:y0+TOILET_SEAT_Y[k],dir:'right',ly:viewToLogical(y0+TOILET_SEAT_Y[k])}));}
   meetingSeatList=out;return out;
 }
+/* 企劃／專案同仁沒有電腦心跳：自己在會議室裡、卻在操作這個頁面＝已經散會回座位，通知後端解除（同一場會議只通知一次，間隔 60 秒） */
+let staffBackAt=0;
+function staffBackCheck(){const me=String(storyIdentity.name||''),r=staffMeetings[me];if(!me||!r||!viewerIsStaff()||Date.now()-staffBackAt<60000)return;staffBackAt=Date.now();syncCall({action:'pixelOfficeStaffBack',name:me}).then(d=>{if(d&&d.released){delete staffMeetings[me];markDirty();}}).catch(()=>{});}
+['pointerdown','keydown'].forEach(t=>window.addEventListener(t,()=>{try{staffBackCheck()}catch(e){}},{passive:true}));
 function applyMeetingRooms(){
   people.forEach(p=>{if(!p.staff)return;const r=staffMeetings[p.name];if(/^[A-H]$/.test(r||'')&&p.status==='present'||p.status==='meeting'&&p.staffMeet){p.staffMeet=/^[A-H]$/.test(r||'')?r:'';p.status=p.staffMeet?'meeting':'present';p.meetingRoom=p.staffMeet;}});/* 企劃／專案同仁的會議室（含四樓 F～H） */
   if(embedMode||!LX){people.forEach(p=>{p.inRoom=null;});return;}

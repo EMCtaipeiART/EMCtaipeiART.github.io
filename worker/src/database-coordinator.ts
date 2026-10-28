@@ -2288,7 +2288,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       }
     } catch { /* 讀不到通訊錄就只排設計師 */ }
     const staffRooms: Record<string, string> = {};
-    const roomUidLetter = new Map<string, string>();
+    const roomUidLetter = new Map<string, { letter: string; end: number }>();
+    const staffEnds: Record<string, number> = {};
     const staffCalStatus: Row = {};
     let staffRoomsReadable = false;
     if (canReadDetails) {
@@ -2311,7 +2312,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
             for (const guest of Array.isArray(item.attendees) ? item.attendees as Row[] : []) if (text(guest.responseStatus) !== 'declined' && text(guest.email)) guests.add(text(guest.email).toLowerCase());
             for (const [name, email] of Object.entries(PIXEL_OFFICE_CALENDARS)) if (guests.has(email.toLowerCase()) && !roomByName.has(name)) roomByName.set(name, letter);
             for (const [mail, who] of staffByEmail) if (guests.has(mail) && !staffRooms[who]) staffRooms[who] = letter;
-            if (text(item.iCalUID)) roomUidLetter.set(text(item.iCalUID), letter);
+            if (text(item.iCalUID)) roomUidLetter.set(text(item.iCalUID), { letter, end: endMs });
+            for (const [mail, who] of staffByEmail) if (guests.has(mail) && staffRooms[who] === letter) staffEnds[who] = Math.max(staffEnds[who] || 0, endMs);
           }
         } catch { roomCalStatus[letter] = 'unreadable'; }
       }));
@@ -2330,13 +2332,18 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           for (const item of Array.isArray(data.items) ? data.items as Row[] : []) {
             if (text(item.status) === 'cancelled') continue;
             if ((Array.isArray(item.attendees) ? item.attendees as Row[] : []).some(a => a.self === true && text(a.responseStatus) === 'declined')) continue;
-            const letter = roomUidLetter.get(text(item.iCalUID));
-            if (letter) { staffRooms[who] = letter; break; }
+            const hit = roomUidLetter.get(text(item.iCalUID));
+            if (hit) { staffRooms[who] = hit.letter; staffEnds[who] = hit.end; break; }
           }
         } catch { staffCalStatus[who] = 'unreadable'; }
       }));
     }
     // 會議室行事曆至少讀得到一間才更新（全讀不到就維持上一輪，不要把人誤趕回座位）；沒有會議的同仁自然不在名單裡
+    // 同仁自己按了「回座位」的（提早散會），在那場會議預定結束前不再排進去
+    const staffBack = (await this.ctx.storage.get<Record<string, number>>('staffReleased')) || {};
+    for (const who of Object.keys(staffRooms)) if (Number(staffBack[who]) > nowMs && (!staffEnds[who] || staffEnds[who] <= Number(staffBack[who]))) delete staffRooms[who];
+    await this.ctx.storage.put('staffReleased', Object.fromEntries(Object.entries(staffBack).filter(([, until]) => Number(until) > nowMs)));
+    await this.ctx.storage.put('staffMeetEnds', staffEnds);
     if (staffRoomsReadable && pixelHours.meetingRooms) this.pixelOfficeSetStaffMeetings(staffRooms, nowMs);
     else if (!pixelHours.meetingRooms) this.pixelOfficeSetStaffMeetings({}, nowMs);
     const meeting: string[] = [], leave: string[] = [], released: string[] = [], unreadable: string[] = [];
@@ -2392,6 +2399,23 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if ((old ? old.value : '{}') === json) return;
     const version = Math.max(nowMs, this.pixelOfficeVersion() + 1);
     this.ctx.storage.sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', 'staffMeetings', json, version);
+  }
+
+  /** 企劃／專案同仁提早散會、回到電腦前（前端偵測到他在操作元宇宙頁面）：把他從會議室放回座位，直到那場會議預定結束。 */
+  private async pixelOfficeStaffBack(payload: ApiPayload): Promise<ApiResult> {
+    const name = text(payload.name);
+    if (!this.pixelOfficeStaff().some(item => item.name === name)) throw new Error('找不到這位同仁');
+    const rooms = this.pixelOfficeStaffMeetings();
+    if (!rooms[name]) return { ok: true, action: 'pixelOfficeStaffBack', released: false };
+    const nowMs = Date.now();
+    const ends = (await this.ctx.storage.get<Record<string, number>>('staffMeetEnds')) || {};
+    const until = Number(ends[name]) > nowMs ? Number(ends[name]) : nowMs + 30 * 60_000;
+    const back = (await this.ctx.storage.get<Record<string, number>>('staffReleased')) || {};
+    back[name] = until;
+    await this.ctx.storage.put('staffReleased', back);
+    delete rooms[name];
+    this.pixelOfficeSetStaffMeetings(rooms, nowMs);
+    return { ok: true, action: 'pixelOfficeStaffBack', released: true };
   }
 
   private pixelOfficeStaffMeetings(): Record<string, string> {
@@ -5171,6 +5195,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'releaseInfo') return { ok: true, action: 'releaseInfo', release: Number(await this.ctx.storage.get('appRelease')) || 0 };
       if (action === 'pixelOfficeState') return this.pixelOfficeState(payload);
       if (action === 'pixelOfficeUpdate') return this.pixelOfficeUpdate(payload);
+      if (action === 'pixelOfficeStaffBack') return await this.pixelOfficeStaffBack(payload);
       if (action === 'pixelOfficeHeartbeat') return await this.pixelOfficeHeartbeat(payload);
       if (action === 'pixelOfficeCalendarStatus') return await this.pixelOfficeCalendarStatus(payload);
       if (action === 'pixelOfficePhoto') return this.pixelOfficePhoto(payload);
