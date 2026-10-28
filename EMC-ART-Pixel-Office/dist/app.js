@@ -1251,7 +1251,7 @@ $('storyFile').onchange=async e=>{
     setSyncStatus(true);applyStories(data.stories);toast('限時動態已貼出，24 小時後自動下架。');
   }catch(err){toast(err&&err.message&&err.message!=='undefined'?err.message:'無法讀取這個檔案，請換一個再試。');}
   finally{URL.revokeObjectURL(url);}
-};const returnEveryone=()=>{if(FLOOR4){/* 四樓：回自己四樓的座位（固定坐四樓的同仁）或電梯口；不能用五樓的座位座標，否則人物會跑到四樓地圖的別處、看起來消失 */const sc=window.FLOOR4_SCENE;people.forEach((p,i)=>{if(p.f4hide!==false||p.f4remote||p.f4room)return;const f=STAFF_F4[p.name];if(f&&sc&&sc.seatPos){const pos=sc.seatPos(f.g,f.seat);p.x=pos.x;p.y=pos.y;p.dir=f.face||pos.dir;}else if((i===selected||i===window.__f4hero)&&sc&&sc.heroStart){p.x=sc.heroStart.x;p.y=sc.heroStart.y;p.dir=sc.heroStart.dir||'down';}else return;localMoveAt.set(i,Date.now());});markDirty();toast('回到四樓的座位了');return;}people.forEach((p,i)=>{p.x=starts[i][0];p.y=starts[i][1];p.dir='down';localMoveAt.set(i,Date.now());pushChange(i,{x:p.x,y:p.y,dir:'down'});});save();toast('大家都回到自己的座位附近了');};
+};const returnEveryone=()=>{if(FLOOR4){/* 四樓：回自己四樓的座位（固定坐四樓的同仁）或電梯口；不能用五樓的座位座標，否則人物會跑到四樓地圖的別處、看起來消失 */const sc=window.FLOOR4_SCENE;people.forEach((p,i)=>{if(p.f4hide!==false||p.f4remote||p.f4room)return;const f=STAFF_F4[p.name];if(f&&sc&&sc.seatPos){const pos=sc.seatPos(f.g,f.seat);p.x=pos.x;p.y=pos.y;p.dir=f.face||pos.dir;}else if((i===selected||i===window.__f4hero)&&sc&&sc.heroStart){p.x=sc.heroStart.x;p.y=sc.heroStart.y;p.dir=sc.heroStart.dir||'down';pushChange(i,{x:p.x,y:p.y,dir:p.dir});}else return;localMoveAt.set(i,Date.now());});markDirty();toast('回到四樓的座位了');return;}people.forEach((p,i)=>{p.x=starts[i][0];p.y=starts[i][1];p.dir='down';localMoveAt.set(i,Date.now());pushChange(i,{x:p.x,y:p.y,dir:'down'});});save();toast('大家都回到自己的座位附近了');};
 /* ---------------------------------------------------------------------------------------------
  * 多人同步（2026-09-18）：心情、對話、離席狀態、位置與照片存在主系統的 Cloudflare 後端，所有打開這個網頁的
  * 人看到同一個畫面。不用登入、任何人都能改（使用者決定）。每 3 秒輪詢一次（分頁在背景時 15 秒），沒有
@@ -1262,7 +1262,7 @@ let syncVersion=0,syncOnline=null,syncSeeded=false;
 const localMoveAt=new Map(),pendingPositions=new Map();
 async function syncCall(payload){const response=await fetch(SYNC_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(payload),cache:'no-store'});const data=await response.json();if(!data.ok)throw Error(data.error||'同步失敗');return data;}
 function setSyncStatus(online){if(syncOnline===online)return;syncOnline=online;const tag=$('syncTag');if(tag){tag.textContent=online?'多人同步中 · 大家看到同一個畫面':'離線中 · 變更先存在這台電腦';tag.classList.toggle('offline',!online);}}
-function pushChange(i,patch){const name=people[i].name;if(FLOOR4&&i===window.__f4hero&&patch&&('x' in patch||'y' in patch||'dir' in patch)){patch={...patch,floor:4,fx:Math.round(Number(patch.x)),fy:Math.round(Number(patch.y)),fdir:patch.dir};}/* 四樓的位置存成 fx／fy（和五樓的 x／y 分開），別人在四樓才看得到他 */
+function pushChange(i,patch){const name=people[i].name;if(FLOOR4&&(i===window.__f4hero||(i===selected&&!STAFF_F4[people[i].name]&&people[i].f4hide===false))&&patch&&('x' in patch||'y' in patch||'dir' in patch)){patch={...patch,floor:4,fx:Math.round(Number(patch.x)),fy:Math.round(Number(patch.y)),fdir:patch.dir};}/* 四樓的位置存成 fx／fy（和五樓的 x／y 分開），別人在四樓才看得到他 */
   if((people[i].inRoom||FLOOR4)&&patch&&('x' in patch||'y' in patch||'dir' in patch)){patch={...patch};delete patch.x;delete patch.y;delete patch.dir;if(!Object.keys(patch).length)return Promise.resolve(null);}/* 在會議室裡的位置只是畫面排的，不寫回後端 */if(patch&&typeof patch.x==='number'&&LX)patch={...patch,x:patch.x-LX};/* 伺服器存的是舊座標（沒有左側桌子群的寬度） */return syncCall({action:'pixelOfficeUpdate',name,patch}).then(data=>{setSyncStatus(true);return data;}).catch(err=>{setSyncStatus(false);toast('同步失敗：'+err.message);});}
 /** 走路時位置很頻繁，最多每 350 ms 送一次；最後停下來的位置一定會送出。 */
 function queuePosition(i){localMoveAt.set(i,Date.now());if(pendingPositions.has(i))return;pendingPositions.set(i,setTimeout(()=>{pendingPositions.delete(i);const p=people[i];pushChange(i,{x:p.x,y:p.y,dir:p.dir});},350));}
@@ -1274,7 +1274,7 @@ function applyRemote(list){markDirty();let lookChanged=false;
     p.punish=entry.punish&&typeof entry.punish==='object'&&Number(entry.punish.until)>Date.now()?entry.punish:null;// 班長的處罰（原因、天數、到期時間）
     p.floor4At=Number(entry.floor4At)||0;
     // 四樓畫面：同樣在四樓的人（本人除外、不含固定坐四樓的同仁）出現在他回報的四樓位置；沒回報了就藏起來
-    if(FLOOR4&&i!==window.__f4hero&&!STAFF_F4[p.name]&&!p.f4room){const on=p.floor4At>0&&Date.now()-p.floor4At<150000&&Number.isFinite(Number(entry.f4x))&&Number.isFinite(Number(entry.f4y));
+    if(FLOOR4&&i!==window.__f4hero&&i!==selected&&!STAFF_F4[p.name]&&!p.f4room){/* 正在操控的人（被選取）不要被後端的舊位置蓋回去，否則走一走就回朔 */const on=p.floor4At>0&&Date.now()-p.floor4At<150000&&Number.isFinite(Number(entry.f4x))&&Number.isFinite(Number(entry.f4y));
       if(on){p.x=Number(entry.f4x);p.y=Number(entry.f4y);if(entry.f4dir)p.dir=entry.f4dir;p.f4hide=false;p.f4remote=true;}else if(p.f4remote){p.f4hide=true;p.f4remote=false;}}
     if(typeof entry.mood==='string')p.mood=entry.mood;
     if(typeof entry.status==='string')p.status=entry.status;
