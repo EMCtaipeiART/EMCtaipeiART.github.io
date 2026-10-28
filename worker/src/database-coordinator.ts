@@ -202,7 +202,7 @@ export function pixelOfficeBackAtDesk(state: { activeSince?: unknown }, lastSeen
 // 看得到彼此的忙碌時段；若同事另有分享事件詳細資料，還能用事件類型／標題分辨「會議」與「休假」。
 const PIXEL_OFFICE_CALENDAR_ACCOUNT = 'machi.chen@emctaipei.com';
 /** 會議室 A～D 的行事曆信箱（使用者 2026-10-25 指定）。 */
-const PIXEL_OFFICE_ROOM_CALENDARS: Record<string, string> = { A: 'meetingrooma.emc@gmail.com', B: 'meetingroomb.emc@gmail.com', C: 'meetingroomc.emc@gmail.com', D: 'meetingroomd.emc@gmail.com' };
+const PIXEL_OFFICE_ROOM_CALENDARS: Record<string, string> = { A: 'meetingrooma.emc@gmail.com', B: 'meetingroomb.emc@gmail.com', C: 'meetingroomc.emc@gmail.com', D: 'meetingroomd.emc@gmail.com', F: 'meetingroomf.emc@gmail.com', G: 'meetingroomg.emc@gmail.com', H: 'meetingroomh.emc@gmail.com' };
 const PIXEL_OFFICE_CALENDARS: Record<string, string> = {
   Machi: 'machi.chen@emctaipei.com',
   Anna: 'anna.hsu@emctaipei.com',
@@ -2288,11 +2288,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       }
     } catch { /* 讀不到通訊錄就只排設計師 */ }
     const staffRooms: Record<string, string> = {};
+    const roomUidLetter = new Map<string, string>();
+    const staffCalStatus: Row = {};
     let staffRoomsReadable = false;
     if (canReadDetails) {
       await Promise.all(Object.entries(PIXEL_OFFICE_ROOM_CALENDARS).map(async ([letter, roomEmail]) => {
         try {
-          const params = new URLSearchParams({ timeMin, timeMax, singleEvents: 'true', maxResults: '20', timeZone: 'Asia/Taipei', fields: 'items(status,start,end,transparency,organizer(email),attendees(email,responseStatus))' });
+          const params = new URLSearchParams({ timeMin, timeMax, singleEvents: 'true', maxResults: '20', timeZone: 'Asia/Taipei', fields: 'items(iCalUID,status,start,end,transparency,organizer(email),attendees(email,responseStatus))' });
           const roomResponse = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(roomEmail)}/events?${params.toString()}`, { headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' } });
           const roomData = await roomResponse.json().catch(() => ({})) as Row;
           if (!roomResponse.ok) { roomCalStatus[letter] = 'unreadable'; return; }
@@ -2309,8 +2311,29 @@ export class DatabaseCoordinator extends DurableObject<Env> {
             for (const guest of Array.isArray(item.attendees) ? item.attendees as Row[] : []) if (text(guest.responseStatus) !== 'declined' && text(guest.email)) guests.add(text(guest.email).toLowerCase());
             for (const [name, email] of Object.entries(PIXEL_OFFICE_CALENDARS)) if (guests.has(email.toLowerCase()) && !roomByName.has(name)) roomByName.set(name, letter);
             for (const [mail, who] of staffByEmail) if (guests.has(mail) && !staffRooms[who]) staffRooms[who] = letter;
+            if (text(item.iCalUID)) roomUidLetter.set(text(item.iCalUID), letter);
           }
         } catch { roomCalStatus[letter] = 'unreadable'; }
+      }));
+    }
+    // 受邀的是通訊錄群組（b@emctaipei.com 之類）時，會議室行事曆的受邀者名單只有群組信箱、不會展開成員（吳冠賢，2026-10-28）：
+    // 改讀同仁自己的行事曆（有分享才讀得到），用同一場會議的 iCalUID 對到會議室。
+    if (canReadDetails && roomUidLetter.size) {
+      await Promise.all([...staffByEmail].map(async ([mail, who]) => {
+        if (staffRooms[who]) return;
+        try {
+          const params = new URLSearchParams({ timeMin, timeMax, singleEvents: 'true', maxResults: '20', timeZone: 'Asia/Taipei', fields: 'items(iCalUID,status,attendees(self,responseStatus))' });
+          const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(mail)}/events?${params.toString()}`, { headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' } });
+          const data = await response.json().catch(() => ({})) as Row;
+          if (!response.ok) { staffCalStatus[who] = 'unreadable'; return; }
+          staffCalStatus[who] = 'ok';
+          for (const item of Array.isArray(data.items) ? data.items as Row[] : []) {
+            if (text(item.status) === 'cancelled') continue;
+            if ((Array.isArray(item.attendees) ? item.attendees as Row[] : []).some(a => a.self === true && text(a.responseStatus) === 'declined')) continue;
+            const letter = roomUidLetter.get(text(item.iCalUID));
+            if (letter) { staffRooms[who] = letter; break; }
+          }
+        } catch { staffCalStatus[who] = 'unreadable'; }
       }));
     }
     // 會議室行事曆至少讀得到一間才更新（全讀不到就維持上一輪，不要把人誤趕回座位）；沒有會議的同仁自然不在名單裡
@@ -2357,7 +2380,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     }
     detailUnreadable.sort((a, b) => PIXEL_OFFICE_NAMES.indexOf(a) - PIXEL_OFFICE_NAMES.indexOf(b));
     const rooms: Row = { _roomCalendars: roomCalStatus };for (const name of meeting) rooms[name] = detailRooms.get(name) || roomByName.get(name) || (detailStates.has(name) ? '(會議沒寫會議室)' : '(讀不到活動詳細內容)');
-    const result = { ok: true, detected, rooms, meeting, leave, released, manualHeld, atDesk, unreadable, detailUnreadable, femas: { ok: femas.ok, events: femas.events, onLeave: [...femas.names], ...(femas.error ? { error: femas.error } : {}) } };
+    const result = { ok: true, detected, rooms, staffRooms, staffCalStatus, meeting, leave, released, manualHeld, atDesk, unreadable, detailUnreadable, femas: { ok: femas.ok, events: femas.events, onLeave: [...femas.names], ...(femas.error ? { error: femas.error } : {}) } };
     await this.rememberCalendarSync(result, nowMs);
     return result;
   }

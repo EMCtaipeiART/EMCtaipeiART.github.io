@@ -1685,9 +1685,10 @@ function meetingSeats(){
   meetingSeatList=out;return out;
 }
 function applyMeetingRooms(){
+  people.forEach(p=>{if(!p.staff)return;const r=staffMeetings[p.name];if(/^[A-H]$/.test(r||'')&&p.status==='present'||p.status==='meeting'&&p.staffMeet){p.staffMeet=/^[A-H]$/.test(r||'')?r:'';p.status=p.staffMeet?'meeting':'present';p.meetingRoom=p.staffMeet;}});/* 企劃／專案同仁的會議室（含四樓 F～H） */
   if(embedMode||!LX){people.forEach(p=>{p.inRoom=null;});return;}
   const seats=meetingSeats(),used={};
-  people.forEach((p,i)=>{const wasIn=Boolean(p.inRoom);p.inRoom=null;if(p.staff){const r=FLOOR4?'':staffMeetings[p.name];if(/^[A-D]$/.test(r||'')&&p.status==='present'||p.status==='meeting'&&p.staffMeet){p.staffMeet=/^[A-D]$/.test(r||'')?r:'';p.status=p.staffMeet?'meeting':'present';p.meetingRoom=p.staffMeet;}}let key='';if(p.status==='meeting'&&/^[A-D]$/.test(p.meetingRoom||''))key=p.meetingRoom;else if(p.status==='toilet')key='T'+(WD_FEMALE[i]?'F':'M');
+  people.forEach((p,i)=>{const wasIn=Boolean(p.inRoom);p.inRoom=null;if(p.staff)return;let key='';if(p.status==='meeting'&&/^[A-D]$/.test(p.meetingRoom||''))key=p.meetingRoom;else if(p.status==='toilet')key='T'+(WD_FEMALE[i]?'F':'M');
     if(!key||!seats[key]||(used[key]||0)>=seats[key].length){/* 不在會議室／廁所了（改回「在座」等）：站回原本的位置，不要停在洗手台或會議室裡（以前會留在剛剛排的座位上） */
       if(wasIn||p.preRoom){const back=p.realPos||p.preRoom;if(back){p.x=back.x;p.y=back.y;if(back.dir)p.dir=back.dir;}p.preRoom=null;markDirty();}return;}
     if(!p.preRoom&&!p.realPos)p.preRoom={x:p.x,y:p.y,dir:p.dir};

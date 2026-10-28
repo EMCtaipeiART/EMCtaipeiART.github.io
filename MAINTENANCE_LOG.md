@@ -1000,3 +1000,7 @@
 - 設計師：訂了會議室的會議以前即使人回到電腦前也不會解除。現在連續在電腦前（同一套門檻）就收回成在座，並記下該場會議結束時間（`meetingEnd`→`deskReleasedEnd`），行事曆同步在那之前不再把他設回會議；下一場會議照常。
 - 企劃／專案：後端從 `設定` 表（通訊錄匯入的帳號＝公司信箱）取信箱，比對會議室 A～D 行事曆的受邀者，結果存 `pixel_office_settings.staffMeetings`，`pixelOfficeState` 回傳 `staffMeetings`；前端 `applyStaff` 收下後在 `applyMeetingRooms` 把同仁排進該會議室（桌子變灰）。會議室行事曆讀不到時維持上一輪，不會誤趕人。
 - 限制：只認得「會議室行事曆（meetingrooma～d）有看到的活動」，且同仁帳號必須是信箱；四樓不套用。app.js v324，worker 已部署。
+
+## 2026-10-28（續）通訊錄群組受邀的同仁、會議室 F～H
+- 會議受邀者若是通訊錄群組（b@／c@emctaipei.com），會議室行事曆只會看到群組信箱、不展開成員（例：吳冠賢）。改為：會議室行事曆事件記下 iCalUID，再讀同仁自己的行事曆（有分享才讀得到），同一場會議（iCalUID）就對到那間會議室；同步結果多了 `staffRooms`、`staffCalStatus` 供診斷。
+- 會議室行事曆加上 F、G、H（meetingroomf／g／h.emc@gmail.com；沒有 E）。前端把同仁的會議狀態移到 `applyMeetingRooms` 最前面，四樓也吃得到（app.js v325）。
