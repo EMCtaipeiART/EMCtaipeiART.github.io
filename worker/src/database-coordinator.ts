@@ -2191,7 +2191,27 @@ export class DatabaseCoordinator extends DurableObject<Env> {
    * 詳細事件看不到時只針對該人退回 freeBusy 的會議判斷，不會讓其他人的同步一起失敗。
    * 任何一步失敗（沒授權、沒開 API、某個人的行事曆看不到）都只是這一輪不動狀態，不會把人改錯。
    */
+  /** 2026-10-28 一次性資料補登：王藍庭的頭像與衣服都已生成完成，只差「建立你的角色」最後一步，使用者指示直接設定完成。
+   * 排進同仁座位 6（顯示在四樓 E 桌子群 5 號，見前端 STAFF_F4），造型用她剛做好的頭像與衣服。由每分鐘排程呼叫，只做一次。 */
+  private async seedStaffLanTing(): Promise<void> {
+    if (await this.ctx.storage.get('seed:王藍庭')) return;
+    this.ctx.storage.transactionSync(() => {
+      const sql = this.ctx.storage.sql;
+      const name = '王藍庭';
+      if (!sql.exec('SELECT 1 FROM pixel_office_staff WHERE name = ?', name).toArray().length && !sql.exec('SELECT 1 FROM pixel_office_staff WHERE seat = 6').toArray().length) {
+        sql.exec('INSERT INTO pixel_office_staff (seat, name, account, joined_at) VALUES (?, ?, ?, ?)', 6, name, 'celine.wang@emctaipei.com', Date.now());
+        const state: Row = { status: 'present', look: { outfit: 'c:2bdf597b-f9f4-4afb-a543-1cdbd8015b13', cap: '', glasses: '', head: 'h:e6d65a91-cfb2-41f1-bf79-2c6fbe2f8a98' } };
+        const pos = PIXEL_OFFICE_STAFF_SEAT_POS[6];
+        if (pos) { state.x = pos[0]; state.y = pos[1]; state.dir = 'down'; }
+        const version = Math.max(Date.now(), this.pixelOfficeVersion() + 1);
+        sql.exec('INSERT INTO pixel_office_people(name, state, photo, photo_version, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(name) DO UPDATE SET state = excluded.state, updated_at = excluded.updated_at', name, JSON.stringify(state), '', 0, version);
+      }
+    });
+    await this.ctx.storage.put('seed:王藍庭', Date.now());
+  }
+
   async runPixelOfficeCalendarSync(nowMs = Date.now()): Promise<Row> {
+    try { await this.seedStaffLanTing(); } catch { /* 下一分鐘再試 */ }
     setPixelHours(await this.ctx.storage.get<PixelHours>('pixelHours'));
     setPixelAllWorkUntil(await this.ctx.storage.get<number>('pixelAllWorkUntil'));
     setPixelForceMode(await this.ctx.storage.get<string>('pixelForceMode'));
