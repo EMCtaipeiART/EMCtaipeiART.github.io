@@ -1015,3 +1015,7 @@
 ## 2026-10-28（續）企劃／專案同仁提早散會自動解除
 - 同仁沒有電腦心跳，行事曆到預定結束前都會把他留在會議室。新增：本人在元宇宙頁面操作（點擊／按鍵，每 60 秒最多通知一次）→ 前端送 `pixelOfficeStaffBack`，後端記下 `staffReleased[名字]＝那場會議的預定結束時間`，同步時不再把他排進會議室，並立即從 `staffMeetings` 移除。預定結束後照常交還給行事曆（下一場會議不受影響）。
 - 後端同步結果新增 `staffEnds`（記在 `staffMeetEnds`）。app.js v328，worker 已部署。限制：必須是同仁本人登入且開著元宇宙頁面；沒開頁面的人只能等會議預定結束。
+
+## 2026-10-28（續）AI 服裝生成器：「The image data you provided does not represent a valid image」
+- 生成紀錄裡 12:24～12:39 王藍庭的頭像／參考照片／衣服共 8 筆失敗，錯誤都是 OpenAI 判定上傳的照片不是有效圖片（副檔名／type 是 JPG，內容多半是 HEIC 或毀損）。原因在獨立 repo `EMCtaipeiART/emc-ai-stage-classifier`。
+- 修法（已部署 emc-ai-stage-classifier）：前端上傳前一律用 canvas 重新編碼成真正的 JPEG（最長邊 1600，`lib/normalize-photo.ts`，套用在服裝、頭像、建立角色三處）；後端 `describeOutfit` 改看檔頭位元組判斷真實格式，不是 PNG／JPEG／WebP／GIF 就回清楚的中文訊息。解不開的檔案（例如非 Safari 的 HEIC）會直接提示改用 JPG／PNG。未用真實 HEIC 實測。
