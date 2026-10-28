@@ -2355,7 +2355,7 @@ window.addEventListener('message',event=>{
     if(target)target.focus({preventScroll:true});
   }
   back.onclick=toRing;
-  window.radialOpen=i=>{box.hidden=false;box.dataset.i=i;toRing();try{if(!cam.on){const holder=wrap.getBoundingClientRect(),view=game.getBoundingClientRect(),p=viewPeople[i]||people[i],cy=view.top-holder.top+(p.y+OY-78)*(view.height/H),docY=holder.top+window.scrollY+cy;/* 把人物捲到視窗正中央，圓形選單才不會被邊緣擠歪 */window.scrollTo({top:Math.max(0,docY-window.innerHeight/2),behavior:'smooth'});}}catch(error){}const c=$('personCard');if(c)c.classList.add('radial-hide');};
+  window.radialOpen=i=>{box.hidden=false;box.dataset.i=i;toRing();try{if(!cam.on&&!FLOOR4){/* 四樓的畫面比例不同（cleanScale），這個算式會把畫面捲到地圖最上面；四樓不在這裡捲動，選單自己會限制在可見範圍內 */const holder=wrap.getBoundingClientRect(),view=game.getBoundingClientRect(),p=viewPeople[i]||people[i],cy=view.top-holder.top+(p.y+OY-78)*(view.height/H),docY=holder.top+window.scrollY+cy;/* 把人物捲到視窗正中央，圓形選單才不會被邊緣擠歪 */window.scrollTo({top:Math.max(0,docY-window.innerHeight/2),behavior:'smooth'});}}catch(error){}const c=$('personCard');if(c)c.classList.add('radial-hide');};
   window.radialClose=()=>{
     if(box.hidden||level===0)return;
     const fromRing=level===1;resetMotion();level=0;
