@@ -1397,7 +1397,10 @@ function addF4Vacancies(){const sc=window.FLOOR4_SCENE;if(!sc||!sc.seats||window
 function syncF4Meetings(){const sc=window.FLOOR4_SCENE;if(!sc||!sc.roomSeats)return;const used={},hero=window.__f4hero;people.forEach((q,i)=>{if(i===hero)return;const room=(q.status==='meeting'&&/^[F-H]$/.test(q.meetingRoom||''))?q.meetingRoom:'';if(room){const list=sc.roomSeats[room]||[],n=used[room]||0;if(n<list.length){used[room]=n+1;const s=list[n];q.f4hide=false;q.x=s.x;q.y=s.y;q.dir=s.dir;q.f4room=room;return;}}if(q.f4room){q.f4hide=true;q.f4room='';}});}
 function syncF4Staff(){const sc=window.FLOOR4_SCENE;if(!sc||!sc.seatPos)return;addF4Vacancies();try{syncF4Meetings()}catch(e){}for(const nm in STAFF_F4){const i=names.indexOf(nm);if(i<0)continue;const q=people[i];if(q.f4room)continue;const pos=sc.seatPos(STAFF_F4[nm].g,STAFF_F4[nm].seat);{const st=statusOf(q);q.f4hide=!(workingStatusIds.includes(st)&&(!window.f4DeskDimmed()||st==='overtime'));}/* 下班（平日時段外、週末假日、全員下班）：固定坐四樓的同仁也收掉，只留加班中的 */q.x=pos.x;q.y=pos.y;q.dir=STAFF_F4[nm].face||pos.dir;if(!stations.some(t=>t.f4&&t.name===nm)){stations.push({x:pos.x,y:pos.y,name:nm,row:pos.row?1:0,grp:1,empty:6,type:0,f4:true});markDirty();}}}
 function initFloor4(){
-  const want=new URLSearchParams(location.search).get('hero')||'';let hi=names.indexOf(want);if(hi<0){try{hi=ownIndex()}catch(e){hi=-1}}
+  const want=new URLSearchParams(location.search).get('hero')||'';let hi=names.findIndex(n=>n.toLowerCase()===want.toLowerCase());
+  /* 指定的人物（例如管理者操控的企劃同事）可能還沒載入名單：先不要退回「自己」，否則下樓的會變成本人；等名單到了（initFloor4 會重試，最多 30 秒）再說 */
+  if(hi<0&&want&&Date.now()-(window.__f4init0||(window.__f4init0=Date.now()))<30000){window.__f4hero=-1;return;}
+  if(hi<0){try{hi=ownIndex()}catch(e){hi=-1}}
   window.__f4hero=hi;people.forEach((q,i)=>{q.f4hide=q.f4remote?false:i!==hi;});/* 已經在四樓出現的別人（f4remote）不要被重設成隱藏 */
   if(hi>=0){const q=people[hi],st=(window.FLOOR4_SCENE&&FLOOR4_SCENE.heroStart)||{x:115,y:502,dir:'down'};q.x=st.x;q.y=st.y;q.dir=st.dir||'down';try{const sv=JSON.parse(sessionStorage.getItem('f4pos')||'null');if(sv&&sv.n===q.name&&Number.isFinite(sv.x)&&Number.isFinite(sv.y)&&!blocked(sv.x,sv.y)){q.x=sv.x;q.y=sv.y;q.dir=sv.d||q.dir;}}catch(e){}select(hi);}/* 重新整理後回到離開時的位置 */
   if(window.FLOOR4_SCENE){FLOOR4_SCENE.onReady=()=>markDirty();if(FLOOR4_SCENE.ready)markDirty();}
