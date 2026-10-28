@@ -42,7 +42,7 @@ let forceMode='';/* 全員上班／全員下班（後端 hours.force = 'work' | 
 function applyHours(data){const h=data&&data.hours;if(!h)return;{const f=h.force==='work'||h.force==='off'?h.force:'';if(f!==forceMode){forceMode=f;taipeiClockCheckedAt=0;markDirty();}}const n=v=>Number.isFinite(Number(v))?Number(v):null,d=n(h.dayStart),w=n(h.workEnd),o=n(h.overtimeStart);if(d===null||w===null||o===null)return;if(d!==officeHours.dayStart||w!==officeHours.workEnd||o!==officeHours.overtimeStart){officeHours={dayStart:d,workEnd:w,overtimeStart:o};markDirty();}}
 function statusOf(p){if(p.staff&&p.status==='present'){const c=currentTaipeiClock();if(!(c.workday&&c.hour>=officeHours.dayStart&&c.hour<officeHours.workEnd))return 'offwork';}return p.status;}
 const onFloor4=p=>!FLOOR4&&p.floor4At>0&&Date.now()-p.floor4At<150000&&String(p.name).toLowerCase()!==String(storyIdentity.name||'').toLowerCase();/* 別人現在在四樓：五樓畫面不畫他（本人在五樓時不藏自己） */
-const isAway=p=>(!FLOOR4&&STAFF_F4[p.name])||onFloor4(p)||((FLOOR4&&p.f4hide!==undefined)?p.f4hide:(!p.inRoom&&!workingStatusIds.includes(statusOf(p))));
+const isAway=p=>(!FLOOR4&&STAFF_F4[p.name]&&!p.inRoom)||onFloor4(p)||((FLOOR4&&p.f4hide!==undefined)?p.f4hide:(!p.inRoom&&!workingStatusIds.includes(statusOf(p))));
 const overtimePreview=new URLSearchParams(location.search).get('overtime')==='1';
 // 嵌入版不能走動，畫面多數時間是完全靜止的（只有心情動畫會動），沒必要每秒重畫 60 次。
 // 有變化時才畫：遠端同步、選取、框變大小都會標記一次。省下來的 CPU 讓外層系統的進站更順。
