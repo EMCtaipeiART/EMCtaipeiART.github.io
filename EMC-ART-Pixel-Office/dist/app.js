@@ -97,7 +97,7 @@ let cleanTop=null,cleanBottom=BOTTOM_FEET+40,cleanStaff=false,cleanScrolled=fals
 /* 桌機整頁模式的縮放：＋／－ 按鈕，每次 0.1，範圍鎖在 DZ_MIN～DZ_MAX（再大也不會超出視窗寬度），偏好記在 localStorage。 */
 const DZ_MIN=.7,DZ_MAX=1.6;let deskZoom=1,deskCapped=false,dzSync=()=>{};try{localStorage.removeItem('pixelZoomDesk')}catch(error){}/* 縮放只在這次進入期間有效，每次進來都是預設大小 */
 /* 畫面鎖定的人物（2026-10-25）：預設是自己；管理者／Machi 正在操控別人（選了別人並剛走動過）時，改鎖定被操控的那位，畫面才會跟著走、不用手動滾動。 */
-function focusIndex(){try{if(selected!==null&&selected!==undefined&&people[selected]&&(typeof localMoveAt!=='undefined'&&Date.now()-(localMoveAt.get(selected)||0)<4000||keys.size))return selected;}catch(error){}try{return ownIndex();}catch(error){return -1;}}
+function focusIndex(){try{if(FLOOR4&&selected!==null&&selected!==undefined&&people[selected]&&people[selected].f4hide===false)return selected;/* 四樓：一律跟著正在操控的人。過了 4 秒沒動就退回「本人」（Machi 不在四樓），畫面會被帶到地圖最上面 */}catch(error){}try{if(selected!==null&&selected!==undefined&&people[selected]&&(typeof localMoveAt!=='undefined'&&Date.now()-(localMoveAt.get(selected)||0)<4000||keys.size))return selected;}catch(error){}try{return ownIndex();}catch(error){return -1;}}
 let zoomFactor=1;try{localStorage.removeItem('pixelZoom')}catch(error){}/* 縮放只在這次進入期間有效，每次進來都回到預設大小 */
 const ZOOM_MIN=.3,ZOOM_MAX=.95;
 let pinching=false;
