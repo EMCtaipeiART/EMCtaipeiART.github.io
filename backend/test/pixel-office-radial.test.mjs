@@ -53,8 +53,8 @@ function fixture({ width = 960, height = 640, reduced = false, monitor = true } 
   }
   make('storyFile'); make('personCard');
   const context = {
-    document, window: { innerWidth: width, innerHeight: height, matchMedia: () => ({ matches: reduced }) },
-    $: id => ids.get(id), game, embedMode: false, selected: 0, W: width, H: height, OY: 0, cam: { on: false },
+    document, window: { innerWidth: width, innerHeight: height, addEventListener() {}, matchMedia: () => ({ matches: reduced }) },
+    $: id => ids.get(id), game, FLOOR4: false, embedMode: false, selected: 0, W: width, H: height, OY: 0, cam: { on: false },
     people: [{ x: width / 2, y: height / 2 + 78 }], viewPeople: [], starts: [[80, 100]], keys: new Set(), storyIdentity: { monitor },
     isPunishedP: p => !!p.punish, storyOpen: () => context.storyIsOpen,
     setStatus: s => calls.push(['status', s]), markDirty: () => {}, save: () => {}, queuePosition: i => calls.push(['position', i]),
