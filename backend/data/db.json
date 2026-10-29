@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 9874,
+  "revision": 9875,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-29T11:00:25.927Z",
+  "updatedAt": "2026-10-29T11:00:44.434Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -2288,7 +2288,9 @@
         "案件摘要"
       ],
       "primaryKey": "案件編號",
-      "rows": []
+      "rows": [
+        {"案件編號":"26100183","申請人帳號":"allen.li@emctaipei.com","申請人":"李明庭","申請時間":"2026-10-29T11:00:44.434Z","案件摘要":"Epson_社群貼文_防詐騙公告｜Leona｜暫停中"}
+      ]
     },
     "短連結": {
       "headers": [
