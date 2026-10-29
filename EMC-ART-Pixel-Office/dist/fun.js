@@ -91,7 +91,7 @@ window.funSceneClick=(x,y,hit)=>{try{
   if(prompt&&prompt.rect&&x>=prompt.rect[0]&&x<=prompt.rect[0]+prompt.rect[2]&&y>=prompt.rect[1]&&y<=prompt.rect[1]+prompt.rect[3]){const p=prompt.p;prompt=null;flush(p);return true;}
   for(const d of dropsNow()){const vy=api().viewY(d.y);if(Math.abs(x-d.x)<26&&Math.abs(y-(vy-14))<30){collectDrop(d);return true;}}
   for(const n of notesNow()){if(Math.abs(x-n.x)<24&&Math.abs(y-n.y)<20){collectNote(n);return true;}}
-  const g=api().geo();for(const p of g.proj||[]){if(x>=p.x-6&&x<=p.x+p.w+6&&y>=p.y-6&&y<=p.y+p.h+6){const st=projState(p);claim(st.id,st.on?0:1+Math.floor(Math.random()*SLIDE_N));toast(st.on?'📽️ 投影機關閉':'📽️ 投影機開啟');return true;}}
+  const g=api().geo();for(const p of g.proj||[]){const body=x>=p.x-6&&x<=p.x+p.w+6&&y>=p.y-6&&y<=p.y+p.h+6;let scr=false;if(!body&&projState(p).on){const rt=/right/.test(p.name),dn=/down/.test(p.name),oy=p.y+p.h/2,sx=dn?p.x+p.w/2-85:rt?p.x+p.w+36:p.x-36-170,sy=dn?p.y+p.h+30:oy-52;scr=x>=sx&&x<=sx+170&&y>=sy&&y<=sy+104;}/* 點投影畫面也能關 */if(body||scr){const st=projState(p);claim(st.id,st.on?0:1+Math.floor(Math.random()*SLIDE_N));toast(st.on?'📽️ 投影機關閉':'📽️ 投影機開啟');return true;}}
   /* 點到廁所裡、馬桶上有便便的人物：跳出「沖馬桶」 */
   const ps=poops().filter(q=>!taken(q.id));
   if(hit&&hit.i!==undefined){const pp=api().people()[hit.i];if(pp){const q=ps.find(q=>Math.abs(pp.x-(q.x+4))<70&&Math.abs(pp.vy-(q.y+32))<70);if(q)prompt={p:q,x:pp.x,y:pp.vy,until:Date.now()+6000};}}
