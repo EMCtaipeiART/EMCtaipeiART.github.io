@@ -122,7 +122,7 @@ function updateCamera(){
 function fitCleanView(){
   const wrapEl=game.parentElement,w=wrapEl.getBoundingClientRect().width;
   if(!w)return;
-  if(FLOOR4&&!document.documentElement.classList.contains('clean-narrow')){const bw5=(staffSeated?2000+320:1112+320)-(320-250),fitW5=w*.96/bw5,cs5=Number(new URLSearchParams(location.search).get('cs'))||0,sc=Math.min((cs5?Math.min(cs5,fitW5):fitW5)*deskZoom,fitW5);cleanTop=0;cleanBottom=VB;cleanScale=sc;cleanY0=0;cleanPadY=0;wrapEl.style.height=Math.round(VB*sc)+'px';wrapEl.style.overflow='visible';try{wrapEl.parentElement.style.overflow='visible'}catch(e){}game.style.width=`${W*sc}px`;game.style.height=`${H*sc}px`;game.style.transform='translate(0px,0px)';dzSync();markDirty();return;}
+  if(FLOOR4&&!document.documentElement.classList.contains('clean-narrow')){const bw5=(staffSeated?2000+320:1112+320)-(320-250),fitW5=w*.96/bw5,cs5=Number(new URLSearchParams(location.search).get('cs'))||0,sc=Math.min((cs5?Math.min(cs5,fitW5):fitW5)*deskZoom,fitW5);const f4x0=20,f4x1=2400,f4top=500,padY4=130;/* 跟五樓一樣：內容置中、去掉上方與左側空白，上下留 130px 給圓形選單 */cleanTop=f4top;cleanBottom=VB;cleanScale=sc;cleanY0=f4top;cleanPadY=padY4;wrapEl.style.height=Math.round((VB-f4top)*sc)+padY4*2+'px';wrapEl.style.overflow='visible';try{wrapEl.parentElement.style.overflow='visible'}catch(e){}game.style.width=`${W*sc}px`;game.style.height=`${H*sc}px`;game.style.transform=`translate(${(w-(f4x1-f4x0)*sc)/2-f4x0*sc}px,${-f4top*sc+padY4}px)`;dzSync();markDirty();return;}
   let top=TOP_BASE;try{top=Math.min(top,sceneTopExtent())}catch(error){}// 上排的帽子、對話框現在畫到哪就留到哪，不然會被切掉
   cleanTop=top;try{cleanBottom=sceneBottomExtent()}catch(error){cleanBottom=BOTTOM_FEET+40}
   // 手機（窄螢幕）：桌子四周要留走動的空間，搖桿也要在同一個畫面，所以放大倍率改成「整個可走動範圍剛好放進寬度」
