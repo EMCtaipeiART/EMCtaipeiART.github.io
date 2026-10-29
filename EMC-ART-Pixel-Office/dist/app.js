@@ -1839,7 +1839,7 @@ function elevatorDisplay(x,y){
 }
 function roomTable(kind,x,y,mids){
   if(!roomsReady())return;ctx.imageSmoothingEnabled=false;
-  const piece=(part,dx)=>{const key='table_'+kind+'_'+part,r=RM[key]||RM4[key],img=RM[key]?roomsImg:propsImg;ctx.drawImage(img,r[0],r[1],r[2],r[3],Math.round(x+dx),Math.round(y),r[2],r[3]);};
+  const piece=(part,dx)=>{const key='table_'+kind+'_'+part,r=RM[key]||RM4[key],img=RM[key]?roomsImg:propsImg;ctx.drawImage(img,r[0],r[1],r[2],r[3],Math.round(x+dx),Math.round(y),r[2]+(part==='right'?0:1),r[3]);};/* 除了最右端，每塊多畫 1px 疊進下一塊，蓋住接縫的白線 */
   piece('left',0);for(let i=0;i<mids;i++)piece('mid',55+i*85);piece('right',55+mids*85);
 }
 const roomLabel=(text,x,y,w,above)=>{ctx.save();ctx.font='700 13px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';const tw=Math.round(ctx.measureText(text).width)+16,lx=Math.round(x+w/2-tw/2);ctx.fillStyle='#0c0c0c';ctx.fillRect(lx-2,y-2,tw+4,24);ctx.fillStyle='#2f3640';ctx.fillRect(lx,y,tw,20);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,x+w/2,y+10.5);ctx.restore();};

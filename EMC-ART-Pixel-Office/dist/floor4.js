@@ -31,7 +31,7 @@
   /* 桌子是動態圖層（跟人物依深度排序）：人坐在桌後，下半身被桌子擋住 */
   const table = (kind, x, y, mids, depth) => dyn.push({ depth, draw: c => {
     if (!imgs) return;
-    const piece = (part, dx) => { const key = 'table_' + kind + '_' + part, r = RM[key] || RM4[key], im = RM[key] ? imgs.rooms : imgs.props; c.drawImage(im, r[0], r[1], r[2], r[3], Math.round(x + dx), Math.round(y), r[2], r[3]); };
+    const piece = (part, dx) => { const key = 'table_' + kind + '_' + part, r = RM[key] || RM4[key], im = RM[key] ? imgs.rooms : imgs.props; c.drawImage(im, r[0], r[1], r[2], r[3], Math.round(x + dx), Math.round(y), r[2] + (part === 'right' ? 0 : 1), r[3]); };/* 除了最右端，每塊多畫 1px 疊進下一塊，蓋住接縫的白線 */
     piece('left', 0); for (let i = 0; i < mids; i++) piece('mid', 55 + i * 85); piece('right', 55 + mids * 85);
   } });
   const label = (text, x, y, w) => add(99999, c => {
