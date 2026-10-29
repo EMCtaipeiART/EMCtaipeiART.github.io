@@ -183,7 +183,7 @@
   Promise.all([load('assets/office-rooms-v3.webp?v=1'), load('assets/office-props-v4.webp?v=1'), load('assets/furniture-v5.webp?v=1'), load('assets/office-desks-v6.webp?v=1'), load('assets/office-toilet-v10.webp?v=1'), load('assets/staff-gear-v1.webp?v=2')]).then(([rooms, props, furn, desks, toiletPic, gear]) => {
     imgs = { rooms, props, furn, desks, toiletPic, gear };
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
-    c.imageSmoothingEnabled = false; c.fillStyle = '#fff'; c.fillRect(0, 0, W, H); c.fillStyle = 'rgba(120,128,136,.16)';
+    c.imageSmoothingEnabled = false; c.fillStyle = 'rgba(120,128,136,.16)';/* 地板透明、只有格線：跟五樓一樣，不要有一塊白色範圍框住 */
     for (let x = 0; x < W; x += 64) c.fillRect(x, 0, 2, H);
     for (let y = 0; y < H; y += 64) c.fillRect(0, y, W, 2);
     c.translate(0, OFFY);
