@@ -1668,23 +1668,23 @@ function drawLongDeskGhost(){const st=stations.find(t=>t.big);if(LX&&st&&ghostSe
 const ghostWalkers=()=>stations.filter(s=>s.gm&&s.gm.mode!=='sit'&&ghostSeated(s)).length;
 function ghostBusy(){return !embedMode&&ghostWalkers()>0;}
 function ghostRand(a,b){return a+Math.random()*(b-a);}
-function ghostPick(s){const g=s.gm;for(let n=0;n<14;n++){const tx=s.x+ghostRand(-380,380),ty=s.y+ghostRand(-200,300);if(blocked(tx,ty))continue;let ok=true;const dx=tx-g.x,dy=ty-g.y,len=Math.hypot(dx,dy);for(let k=1;k<=len/20;k++){if(blocked(g.x+dx*k*20/len,g.y+dy*k*20/len)){ok=false;break;}}if(ok){g.tx=tx;g.ty=ty;return true;}}return false;}
+function ghostPick(s){const g=s.gm;for(let n=0;n<20;n++){const tx=s.x+ghostRand(-560,560),ty=s.y+ghostRand(-320,420);if(blocked(tx,ty))continue;let ok=true;const dx=tx-g.x,dy=ty-g.y,len=Math.hypot(dx,dy);for(let k=1;k<=len/20;k++){if(blocked(g.x+dx*k*20/len,g.y+dy*k*20/len)){ok=false;break;}}if(ok){g.tx=tx;g.ty=ty;return true;}}return false;}
 function ghostTick(now){
-  if(embedMode||!LX)return;
-  const open=stations.filter(t=>t.wander===undefined?(t.wander=((t.x*7+t.y*13)>>0)%4===0):t.wander);
-  let busy=ghostWalkers();
+  if(embedMode)return;/* 四、五樓都會走（2026-10-29：不再固定四分之一，每個空位都可能隨機起身） */
+  const open=stations.filter(t=>!t.name&&!t.nochair&&!t.gone);
+  let busy=ghostWalkers();const cap=Math.max(4,Math.round(open.length*.14));
   for(const s of open){
     if(!ghostSeated(s)){if(s.gm)s.gm=null;continue;}
-    const g=s.gm||(s.gm={mode:'sit',until:now+ghostRand(6000,40000),x:s.x,y:s.y,hops:0,last:now});
+    const g=s.gm||(s.gm={mode:'sit',until:now+ghostRand(3000,45000),x:s.x,y:s.y,hops:0,last:now});
     const dt=Math.min((now-g.last)/1000,.1);g.last=now;
-    if(g.mode==='sit'){if(now>g.until&&busy<3){g.x=s.x;g.y=s.y;g.hops=0;if(ghostPick(s)){g.mode='walk';busy++;markDirty();}else g.until=now+ghostRand(8000,20000);}continue;}
+    if(g.mode==='sit'){if(now>g.until&&busy<cap){g.x=s.x;g.y=s.y;g.hops=0;if(Math.random()<.7&&ghostPick(s)){g.mode='walk';busy++;markDirty();}else g.until=now+ghostRand(4000,25000);}continue;}
     if(g.mode==='walk'||g.mode==='back'){
-      const dx=g.tx-g.x,dy=g.ty-g.y,len=Math.hypot(dx,dy),step=70*dt;g.dir=Math.abs(dy)>Math.abs(dx)&&dy<0?'up':'down';
-      if(len<=step+1){g.x=g.tx;g.y=g.ty;if(g.mode==='back'){g.mode='sit';g.until=now+ghostRand(15000,60000);}else{g.mode='pause';g.until=now+ghostRand(3000,12000);}}
+      const dx=g.tx-g.x,dy=g.ty-g.y,len=Math.hypot(dx,dy),step=(g.sp||(g.sp=ghostRand(55,95)))*dt;g.dir=Math.abs(dy)>Math.abs(dx)&&dy<0?'up':'down';
+      if(len<=step+1){g.x=g.tx;g.y=g.ty;if(g.mode==='back'){g.mode='sit';g.until=now+ghostRand(8000,50000);}else{g.mode='pause';g.until=now+ghostRand(1500,10000);}}
       else{const nx=g.x+dx/len*step,ny=g.y+dy/len*step;if(blocked(nx,ny)&&len>40){g.mode='pause';g.until=now+ghostRand(2000,6000);}else{g.x=nx;g.y=ny;}}
       markDirty();continue;
     }
-    if(g.mode==='pause'&&now>g.until){if(g.hops<2&&Math.random()<.5&&ghostPick(s)){g.hops++;g.mode='walk';}else{g.tx=s.x;g.ty=s.y;g.mode='back';}markDirty();}
+    if(g.mode==='pause'&&now>g.until){if(g.hops<4&&Math.random()<.65&&ghostPick(s)){g.hops++;g.mode='walk';}else{g.tx=s.x;g.ty=s.y;g.mode='back';}markDirty();}
   }
 }
 function drawGhostWalker(s){
