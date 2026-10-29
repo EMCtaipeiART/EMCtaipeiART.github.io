@@ -133,8 +133,8 @@
       for (const f of [.25, .75]) { const cx = tx + 195 * f; sprite('chair_front', cx - 26, y0 - 46, y0 - 1); sprite('chair_back', cx - 26, y0 + 270 + 120, y0 + 270 + 170); addRoomSeat('H', 'front', cx - 26, y0 - 46); addRoomSeat('H', 'back', cx - 26, y0 + 270 + 120); }
     }
     for (const k of [0, 1]) { const ty = y0 + k * 200; dyn.push({ depth: ty + 180, draw: c => imgs && spr(c, 'table_white_v', xL, ty) }); for (const dy of [50, 150]) { sprite('chair_side_r', xL - 40, ty + dy - 26, ty + dy + 26); addRoomSeat('H', 'side', xL - 40, ty + dy - 26); } }
-    sprite('projector_right', xC + 2 * 195 + 24, y0 + 174, y0 + 230);/* 投影機放在桌子群右側、機身朝右 */
-    label('會議室 H', rx, ry + rh + WH + 8, rw);
+    sprite('projector_right', xC + 2 * 195 - 64, y0 + 174, y0 + 230);/* 投影機放在桌子群中央空白處、右緣與桌子群右側切齊，機身朝右 */
+    label('會議室 H', xC, y0 + 192, 2 * 195);/* 牌子放在桌子群中央空白處 */
     rooms4.H = { x: rx + RT, y: ry + RT, w: rw - 2 * RT, h: rh - 2 * RT };
     HROOM.x = rx; HROOM.bottom = ry + rh;
   }
