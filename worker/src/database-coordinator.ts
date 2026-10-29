@@ -2685,7 +2685,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const claims = this.pixelOfficeFunClaims();
     const old = claims[id];
     // 撿道具、沖馬桶、撿遺落物只能被處理一次（先到先得）；投影機的開關可以反覆切
-    const once = !id.startsWith('j:');
+    const once = !id.startsWith('j:') && !id.startsWith('f:');
     let won = true;
     if (once && old) won = false;
     else claims[id] = [v, now];

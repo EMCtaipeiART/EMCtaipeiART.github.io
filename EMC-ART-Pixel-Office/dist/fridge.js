@@ -78,12 +78,17 @@ function open(){
   const me=own();
   if(!me){say('要有自己的人物（先登入）才能開冰箱');return false;}
   if(!nearFridge(me)){say('走到冰箱前面才能開門喔');return false;}
-  openAt=performance.now();remote=false;dirty();touch();
+  openAt=performance.now();remote=false;dirty();touch();doorClaim(1);
   try{window.__pixelOffice.tempMood(me.i,'',SWING+200,'up');}catch{}
   call({action:'open',nick:nick()||'匿名'}).then(setState,()=>say('連線失敗，等等再試'));mine=performance.now();return true;
 }
-function close(){if(!isOpen())return;openAt=0;clearTimeout(idleTimer);dirty();}
-function touch(ms=IDLE){clearTimeout(idleTimer);idleTimer=setTimeout(close,ms);}
+/* 冰箱門的開關同步給所有人：用 pixelOfficeFun 的 f: 紀錄（0＝關、1＝開；寫入時間在 30 秒內才算開著），其他人每秒看一次 */
+const doorId=()=>'f:'+FLOOR+':fridge';
+function doorClaim(v){try{const a=window.__funApi;if(a&&a.post)a.post({action:'pixelOfficeFun',id:doorId(),v:v?1:0,token:a.token?a.token():''}).then(r=>{if(r&&r.funClaims&&window.funSetClaims)window.funSetClaims(r.funClaims);}).catch(()=>{});}catch{}}
+function close(){if(!isOpen())return;const was=!remote;openAt=0;clearTimeout(idleTimer);dirty();if(was)doorClaim(0);}
+setInterval(()=>{try{if(!sync()||!window.__fun)return;const c=window.__fun.claims()[doorId()],want=!!(c&&c[0]===1&&Date.now()-c[1]<32000);
+  if(want&&!isOpen()){openAt=performance.now();remote=true;dirty();}else if(!want&&isOpen()&&remote){openAt=0;clearTimeout(idleTimer);dirty();}}catch{}},1000);
+let lastDoor=0;function touch(ms=IDLE){clearTimeout(idleTimer);idleTimer=setTimeout(close,ms);if(isOpen()&&!remote&&Date.now()-lastDoor>8000){lastDoor=Date.now();doorClaim(1);}/* 操作中定期刷新，別人的門才不會 30 秒後自己關上 */}
 window.fridgeIsOpen=isOpen;
 window.openFridge=()=>{if(isOpen()&&!remote)close();else open();};
 /** 點到茶水間桌子或冰箱附近就算 */
@@ -156,7 +161,7 @@ window.fridgeBoxDown=(e,pt)=>{
   const remoteEvent=e=>{
     if(!sync())return;const f=FOODS[e.slot]||FOODS.chips;
     if(!isOpen()){openAt=performance.now();remote=true;dirty();}
-    if(remote)touch(9000);
+    if(remote)touch(34000);
     const po=window.__pixelOffice;let mood='',text='',icon=e.slot;
     if(e.kind==='take'){
       if(e.flag==='caught'){text='🚨 '+e.nick+' 下班偷吃「'+f[0]+'」被抓到！';mood='angry';}
