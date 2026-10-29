@@ -6331,6 +6331,17 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         if (crossCase && !draft.tables.database.rows.some(row => text(row['案件編號']) === toCaseId)) throw new Error(`找不到目標案件 ${toCaseId}`);
         let targetRow = rows.find(row => text(row['案件編號']) === toCaseId && (Number(row['修改次數']) || 0) === toRound);
         let createdRound = false;
+        const targetMaxRound = rows.filter(row => text(row['案件編號']) === toCaseId).reduce((max, row) => Math.max(max, Number(row['修改次數']) || 0), -1);
+        // 合併信件回覆時，設計師把檔案分給各專案：目標專案還沒有這一輪（剛好是下一輪）就自動建立，不然跨案件搬不過去。
+        if (!targetRow && crossCase && toRound > 0 && toRound === targetMaxRound + 1) {
+          const now = nowTaipei();
+          targetRow = {
+            '案件編號': toCaseId, '修改次數': String(toRound), '建立日期': now, '修改日期': now,
+            '修改內容': '設計圖搬移（合併信件分類）', '修改人': text(current.user || '系統'), '確認修正日': now, '圖片連結': '[]'
+          };
+          rows.push(targetRow);
+          createdRound = true;
+        }
         if (!targetRow && crossCase && toRound === 0) {
           // 跨案件搬到「初稿」時，目標案件常常還沒有任何紀錄（這就是要搬過去的原因），自動建立初稿，
           // 做法跟 addCaseDesignImages 自動建立初稿一致（第 0 輪視為已完成，不會變成待確認的修改需求）。

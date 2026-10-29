@@ -1739,6 +1739,19 @@ describe('Machi Design API Worker', () => {
     void token;
   });
 
+  it('cross-case move creates the target case\'s next round (merged-mail classification) but not a gap', async () => {
+    const token = await login();
+    await seedCase('26080002');
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => Response.json({ content: { sha: 'cls-file-sha' }, commit: { sha: 'cls-commit-sha' } }));
+    await api({ action: 'addCaseDesignImages', serviceKey: 'test-nas-watcher-key', caseId: '26080001', round: 0, images: [{ fileName: 'c1.jpg', url: 'https://lh3.googleusercontent.com/d/c1' }] });
+    await api({ action: 'addCaseDesignImages', serviceKey: 'test-nas-watcher-key', caseId: '26080001', round: 1, images: [{ fileName: 'c2.jpg', url: 'https://lh3.googleusercontent.com/d/c2' }] });
+    await api({ action: 'addCaseDesignImages', serviceKey: 'test-nas-watcher-key', caseId: '26080002', round: 0, images: [{ fileName: 'k.jpg', url: 'https://lh3.googleusercontent.com/d/k' }] });
+    const ok = await api({ action: 'moveCaseDesignImages', caseId: '26080001', toCaseId: '26080002', toRound: 1, images: [{ round: 1, url: 'https://lh3.googleusercontent.com/d/c2' }] }, token);
+    expect(ok).toMatchObject({ ok: true, moved: 1 });
+    const gap = await api({ action: 'moveCaseDesignImages', caseId: '26080001', toCaseId: '26080002', toRound: 5, images: [{ round: 0, url: 'https://lh3.googleusercontent.com/d/c1' }] }, token);
+    expect(gap).toMatchObject({ ok: false });
+  });
+
   it('cross-case image move carries NAS tracking: source skips the moved files, target pins them on the same folder', async () => {
     const token = await login();
     await seedCase('26080002');

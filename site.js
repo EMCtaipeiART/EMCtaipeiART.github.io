@@ -2664,6 +2664,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         ${d.reply?threadPanelHtml(false):''}
         ${drBlock?'<div class="notice">圖片備份／上傳中，完成後信件會自動帶入圖片並可寄出。 <button type="button" class="btn" data-mail="dr-skip">不等圖片，直接寄出</button></div>':''}
         ${(d.dr&&d.mode==='designer'&&!d.sent)?`<div class="notice dr-track">NAS 路徑：${esc(nasTrackLabel(d.id)||'尚未指定')}　<button type="button" class="btn" data-mail="dr-track">${nasTrackLabel(d.id)?'更換／追加 NAS 路徑':'補上 NAS 路徑'}</button></div>`:''}
+        ${drClassifyHtml(d)}
         ${drEarly?'<div class="notice">圖片已先放進信件，雲端備份在背景進行；現在就可以寄出，備份不會中斷（請先不要關閉這個頁面）。</div>':''}
         <div class="queue-bar"><span class="queue-step">${total>1?`第 ${m.index+1} / ${total} 封`:'1 封'}</span>${d.sent?`<span class="pill st-done">${d.scheduledDone?'已排程':'這封已寄出'}</span>`:''}${total>1?`<button type="button" class="btn" data-mail="prev"${m.index===0?' disabled':''}>上一封</button><button type="button" class="btn" data-mail="next"${m.index===total-1?' disabled':''}>下一封</button>`:''}</div>
         ${mergePanel}
@@ -2943,6 +2944,52 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(!acc('media.manage',false)){toast('此帳號沒有管理案件設計圖的權限',true);return}
       nasOpen({id,round:round||0,mode:'track',afterReply:false});
     }
+
+    /* 合併信件的設計師回覆：把這封回信的檔案分給各個專案（案件）。寄出、備份完成後，自動把圖搬到各自專案的這一輪（NAS 追蹤也跟著搬）。 */
+    function drSiblings(id){
+      const row=allRows().find(r=>idKey(r)===id),th=String(row&&row['Gmail信件串ID']||'').trim();if(!th)return [];
+      const list=allRows().filter(r=>String(r['Gmail信件串ID']||'').trim()===th).sort((a,b)=>idKey(a).localeCompare(idKey(b)));
+      return list.length>1?list:[];
+    }
+    const isVideoName=n=>/\.(mp4|mov|m4v)$/i.test(String(n||''));
+    function drFileNames(d){
+      const names=[],add=n=>{n=String(n||'').trim();if(n&&!names.includes(n))names.push(n)};
+      try{const box=document.createElement('div');box.innerHTML=d.body||'';box.querySelectorAll('#v5DrImages img,img[data-gmail-inline-image-id]').forEach(im=>add(im.getAttribute('alt')))}catch(e){}
+      const rec=d.dr&&(state.mods.get(d.id)||[]).find(x=>(+x['修改次數']||0)===d.dr.round);
+      if(rec)imageList(rec).forEach(i=>{if(isVideoName(i.fileName))add(i.fileName)});
+      return names;
+    }
+    function drClassifyHtml(d){
+      if(!d.dr||d.mode!=='designer'||d.sent)return '';
+      const sib=drSiblings(d.id);if(sib.length<2)return '';
+      const names=drFileNames(d);
+      const assign=d.dr.assign||(d.dr.assign={});
+      const opts=nm=>sib.map(r=>{const k=idKey(r);return `<option value="${esc(k)}"${(assign[nm]||d.id)===k?' selected':''}>${esc(k+' '+(r['專案名稱']||''))}</option>`}).join('');
+      const rows=names.length?names.map(nm=>`<div class="dr-cls-row"><span class="dr-cls-name">${esc(nm)}</span><select class="input" data-dr-assign="${esc(nm)}" aria-label="${esc(nm)} 屬於哪個專案">${opts(nm)}</select></div>`).join(''):'<div class="empty">圖片備份完成、放進信件後，這裡會列出每個檔案。</div>';
+      return `<div class="notice dr-classify"><b>合併信件：指定每個檔案屬於哪個專案</b><p class="page-sub" style="margin:4px 0 8px">這封信同時回覆 ${sib.length} 個專案。預設全部歸在 ${esc(d.id)}；改選後，寄出並備份完成時會自動把檔案搬到所選專案（NAS 之後的修改也跟著歸過去）。</p>${rows}<div style="margin-top:8px"><button type="button" class="btn" data-mail="dr-cls-write">把分類寫進信件</button></div></div>`;
+    }
+    function drClassifySummary(d){
+      const sib=drSiblings(d.id),assign=(d.dr&&d.dr.assign)||{},groups=new Map();
+      for(const nm of drFileNames(d)){const k=assign[nm]||d.id;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(nm)}
+      return [...groups].map(([k,list])=>{const r=sib.find(x=>idKey(x)===k);return `<b>${esc(k+' '+(r&&r['專案名稱']||''))}</b>：${list.length} 個（${list.map(esc).join('、')}）`}).join('<br>');
+    }
+    async function drDistribute(d,round){
+      const assign=(d.dr&&d.dr.assign)||{},moves=new Map();
+      for(const [nm,t] of Object.entries(assign))if(t&&t!==d.id){if(!moves.has(t))moves.set(t,[]);moves.get(t).push(nm)}
+      if(!moves.size||round===null||round===undefined)return;
+      await refreshMods(d.id).catch(()=>{});
+      const rec=(state.mods.get(d.id)||[]).find(x=>(+x['修改次數']||0)===round),imgs=rec?imageList(rec):[];
+      const base=n=>String(n||'').replace(/\.[^./\\]+$/,'').toLowerCase();
+      let done=0,fail=[];
+      for(const [t,names] of moves){
+        const items=[];for(const nm of names){const hit=imgs.find(i=>i.fileName===nm)||imgs.find(i=>base(i.fileName)===base(nm));if(hit&&!items.some(x=>x.url===hit.url))items.push({round,url:hit.url})}
+        if(!items.length){fail.push(`${t}（找不到備份的檔案）`);continue}
+        try{const r=await api('moveCaseDesignImages',{caseId:d.id,toCaseId:t,toRound:round,images:items});done+=Number(r&&r.moved)||items.length}catch(err){fail.push(`${t}：${err.message}`)}
+      }
+      await refreshMods(d.id).catch(()=>{});for(const t of moves.keys())await refreshMods(t).catch(()=>{});
+      loadDatabase(true,true).catch(()=>{});
+      toast(fail.length?`已把 ${done} 個檔案歸到各專案；失敗：${fail.join('；')}`:`已把 ${done} 個檔案歸到各自的專案`,Boolean(fail.length));
+    }
     /* 設計師回覆信：先選圖片來源，再直接進信件編輯器 */
     const drLive=new Map();
     const drNasHtml=folders=>folders.length?`<br> NAS路徑${folders.length>1?`（共 ${folders.length} 個資料夾）`:''}`+folders.map(p=>`<br><b>${esc(p)}</b>`).join(''):'';
@@ -3028,6 +3075,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       /* 備份還在背景進行就先寄出（有預覽圖時允許）：輪次確認要等資料庫有這一輪紀錄，所以等備份完成再做（最久 3 分鐘）。 */
       if(d.dr&&d.dr.pending){toast('信已寄出，圖片備份仍在背景進行，請先不要關閉頁面');for(let i=0;i<360&&d.dr.pending;i++)await new Promise(r=>setTimeout(r,500))}
       try{const nasIds=(d.dr&&d.dr.nasIds)||new Set();imgs=imgs.filter(i=>!nasIds.has(i.contentId));if(imgs.length&&round!==null){await api('backupReplyInlineImages',{caseId:d.id,round,images:imgs.filter(i=>i.base64&&/^image\//.test(i.mimeType||'')).map(i=>({fileName:i.fileName||'照片',mimeType:i.mimeType,base64:i.base64}))});await refreshMods(d.id)}}catch(err){toast(`信已寄出，但信件照片備份至修改紀錄失敗：${err.message}`,true)}
+      try{await drDistribute(d,round)}catch(err){toast(`歸類到各專案失敗：${err.message}`,true)}
       if(round>0){try{const rec=(state.mods.get(d.id)||[]).find(x=>(+x['修改次數']||0)===round);if(rec&&!String(rec['確認修正日']||'').trim())await setConfirm(d.id,round,true)}catch(err){toast(`自動標記${roundLabel(round)}設計完成確認失敗：${err.message}`,true)}}
       refreshView();
     }
@@ -4155,6 +4203,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(mail==='sched-open'){saveMailDraft();openSchedPage(state.mail.drafts[state.mail.index].id);return}
       if(mail==='sched-abort'){const sid=state.mail.drafts[state.mail.index].id;state.mail=null;openSchedPage(sid);return}
       const sc=t.closest('[data-sched]');if(sc){const k=sc.dataset.sched;if(k==='edit')editSched(sc.dataset.sid);else if(k==='cancel')cancelSched(sc.dataset.sid);else if(k==='back')backToBoard();return}
+      if(mail==='dr-cls-write'){const d=state.mail.drafts[state.mail.index];saveMailDraft();const html=drClassifySummary(d);drMutate(d,root=>{root.querySelector('#v5DrClass')?.remove();const box=root.querySelector('#v5DrImages');const el=document.createElement('div');el.id='v5DrClass';el.innerHTML=html+'<br>';if(box)box.parentNode.insertBefore(el,box);else root.appendChild(el)});saveMailDraft();renderMail();return}
       if(mail==='dr-track'){const d=state.mail.drafts[state.mail.index];saveMailDraft();nasTrackOpen(d.id,d.dr?d.dr.round:0);return}
       if(mail==='send'){sendCurrent();return}
       if(mail==='skip'){saveMailDraft();const m=state.mail;toast(m&&m.sentCount?`已寄出 ${m.sentCount} 封；其餘案件已建立，可稍後補寄`:'案件已建立，信件稍後再寄');state.mail=null;show(state.home);return}
@@ -4393,6 +4442,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     let dbTick=0,lastInputAt=0;['keydown','input','compositionupdate'].forEach(ev=>document.addEventListener(ev,()=>{lastInputAt=Date.now()},true));
     function bgBusy(){return document.hidden||Date.now()-lastInputAt<1500||Boolean(document.querySelector('.ai-modal:not([hidden]),.cell-pop:not([hidden]),.filter-pop,.rc-pick'))||state.editing||Boolean(state.drag)||Boolean(state.colDrag)||(state.view!=='board'&&state.view!=='projects')}
     setInterval(()=>{if(document.hidden)return;if(state.dirty&&!bgBusy()){state.dirty=false;if(state.view==='board')renderBoard();else if(state.view==='projects')renderProjects();renderTeam()}dbTick=(dbTick+1)%15;if(quietHours()?((state.pushOk?dbTick===0:dbTick%5===0)):(!state.pushOk||dbTick%3===0))loadDatabase(true)},8000);
+    document.addEventListener('change',e=>{const sel=e.target.closest&&e.target.closest('[data-dr-assign]');if(!sel||!state.mail)return;const d=state.mail.drafts[state.mail.index];if(!d||!d.dr)return;(d.dr.assign||(d.dr.assign={}))[sel.dataset.drAssign]=sel.value});
     document.addEventListener('visibilitychange',()=>{if(!document.hidden){loadOffice();renderLogin();pullFilters();loadDatabase(true,true)}});
     /* 分頁在背景時瀏覽器會把計時器與連線降速甚至暫停，系統通知（修改需求、新案、回信）可能晚好幾小時才跳；已開啟系統通知時，背景每分鐘輕量問一次版本號（沒變就不下載）。 */
     setInterval(()=>{try{if(document.hidden&&state.loaded&&loggedIn()&&bnOn())loadDatabase(true)}catch(err){}},60000);
