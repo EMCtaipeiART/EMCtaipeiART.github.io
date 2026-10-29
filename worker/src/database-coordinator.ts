@@ -248,7 +248,7 @@ function gmailScopesAllowCalendarDetails(scopes: unknown): boolean {
 }
 
 type PixelOfficeCalendarState = '' | 'meeting' | 'leave' | 'out';
-/** 行事曆標題寫了公出／外出／外勤／外訪／拜訪／外拍：顯示成「公出」（優先序：休假 > 公出 > 會議）。 */
+/** 行事曆標題寫了公出／外出／外勤／外訪／拜訪／外拍：顯示成「公出」（優先序：休假 > 公出 > 會議；整天或超過 4 小時也算）。 */
 const PIXEL_OFFICE_OUT_KEYWORDS = /公出|外出|外勤|外訪|拜訪|外拍/;
 
 /** freeBusy 的忙碌區段裡，有沒有「現在這一刻正在進行、而且整段不超過 4 小時」的——整天的請假／出差不算會議。 */
@@ -282,15 +282,9 @@ export function pixelOfficeCalendarEventState(event: Row, calendarEmail = '', ca
     // 不能再往下當一般事件算——半天假、外出被 tag 給大家，會讓全組同時顯示「會議中」。
     return '';
   }
-  if (PIXEL_OFFICE_OUT_KEYWORDS.test(summary)) {
-    // 跟休假一樣：只有建立者本人或標題點名這位同仁才算他公出，避免別人 tag 的通知讓全組一起公出
-    const organizer = event.organizer && typeof event.organizer === 'object' ? event.organizer as Row : {};
-    const organizerEmail = text(organizer.email).toLowerCase();
-    const ownerEmail = calendarEmail.trim().toLowerCase();
-    const ownerAliases = [calendarName.trim(), ownerEmail.split('@')[0] || ''].filter(Boolean);
-    const namesOwner = ownerAliases.some(alias => summary.toLowerCase().includes(alias.toLowerCase()));
-    if (!ownerEmail || organizerEmail === ownerEmail || namesOwner) return 'out';
-  }
+  // 公出通常是專案／同事建立、再邀請設計師（例如「(公出)Anker旗艦店_開幕拍攝」），所以不要求建立者是本人：
+  // 這筆活動出現在本人的行事曆上、而且本人沒拒絕（上面已排除），就算他公出（跟休假通知不同，沒有「被 tag 的假單通知」問題）。
+  if (PIXEL_OFFICE_OUT_KEYWORDS.test(summary)) return 'out';
   // 訂了會議室（受邀者有 meetingroom{a-d}.emc@gmail.com 或文字寫了會議室）的活動一定是實體會議：
   // 就算被設成「空閒／透明」也算（行事曆頁顯示的就是這些活動），照一般會議的長度規則往下判斷。
   const bookedRoom = pixelOfficeMeetingRoomOf(event) !== '';

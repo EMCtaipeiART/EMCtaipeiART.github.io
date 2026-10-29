@@ -5144,8 +5144,9 @@ describe('Pixel Office calendar: 公出', () => {
     expect(pixelOfficeCalendarEventState({ ...base, summary: '公出', organizer: { email: 'noise@emctaipei.com' } }, 'noise@emctaipei.com', 'Noise')).toBe('out');
     expect(pixelOfficeCalendarEventState({ ...base, summary: 'Noise 外出拍攝', organizer: { email: 'boss@emctaipei.com' } }, 'noise@emctaipei.com', 'Noise')).toBe('out');
   });
-  it('ignores a 公出 notice created by someone else that does not name the owner', () => {
-    expect(pixelOfficeCalendarEventState({ ...base, summary: '公出', organizer: { email: 'boss@emctaipei.com' } }, 'noise@emctaipei.com', 'Noise')).not.toBe('out');
+  it('counts a 公出 event created by someone else (e.g. 專案 invites the designer), but not one the owner declined', () => {
+    expect(pixelOfficeCalendarEventState({ ...base, summary: '(公出)Anker旗艦店_開幕拍攝', organizer: { email: 'pm@emctaipei.com' } }, 'noise@emctaipei.com', 'Noise')).toBe('out');
+    expect(pixelOfficeCalendarEventState({ ...base, summary: '(公出)Anker旗艦店_開幕拍攝', attendees: [{ self: true, responseStatus: 'declined' }] }, 'noise@emctaipei.com', 'Noise')).toBe('');
   });
 });
 
