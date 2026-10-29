@@ -17,7 +17,7 @@ const FL=()=>api().floor();
 /* ---------- 共用的「已處理」紀錄 ---------- */
 let claims={};
 window.funSetClaims=m=>{if(m&&typeof m==='object'){claims=m;dirty();}};
-function claim(id,v){claims[id]=[v?1:0,Date.now()];dirty();try{return api().post({action:'pixelOfficeFun',id,v:v?1:0}).then(r=>{if(r&&r.funClaims)claims=r.funClaims;dirty();return r;}).catch(()=>null);}catch(e){return Promise.resolve(null);}}
+function claim(id,v){claims[id]=[v?1:0,Date.now()];dirty();try{return api().post({action:'pixelOfficeFun',id,v:v?1:0,token:api().token()}).then(r=>{if(r&&r.funClaims)claims=r.funClaims;dirty();return r;}).catch(()=>null);}catch(e){return Promise.resolve(null);}}
 const taken=id=>!!claims[id];
 /* ---------- 圖片 ---------- */
 let sheet=null,rects=null;
@@ -76,7 +76,7 @@ function dropsNow(){const a=api(),b=a.bounds(),sl=Math.floor(Date.now()/SLOT_D),
 function drawDrop(c,d,t){const vy=api().viewY(d.y),bob=Math.round(Math.sin(t/300+d.x)*3);c.save();c.fillStyle='rgba(0,0,0,.14)';c.beginPath();c.ellipse(d.x,vy+6,15,6,0,0,Math.PI*2);c.fill();
   const glow=.5+.5*Math.sin(t/250+d.y);c.fillStyle='rgba(255,230,120,'+(.12+glow*.18)+')';c.beginPath();c.arc(d.x,vy-14+bob,24,0,Math.PI*2);c.fill();c.restore();
   if(spr(c,DROP_IDS[d.k],d.x,vy-14+bob))return;c.save();c.font='28px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(ITEMS[d.k][0],d.x,vy-14+bob);c.restore();}
-function collectDrop(d){claim(d.id,1).then(r=>{if(r&&r.won===false){toast('✨ 被別人先撿走了');return;}stat.found++;save();toast('✨ '+ITEMS[d.k][2]+'（累計撿到 '+stat.found+' 個）');const sel=api().selected();if(sel!==null&&sel!==undefined)api().mood(sel,'joy');});dirty();}
+function collectDrop(d){claim(d.id,1).then(r=>{if(r&&r.won===false){toast('✨ 被別人先撿走了');return;}stat.found++;save();if(r&&r.reward){toast('🎉 太幸運了！撿到的道具中獎，系統回饋你 1 點平台幣！');}else toast('✨ '+ITEMS[d.k][2]+'（累計撿到 '+stat.found+' 個）');const sel=api().selected();if(sel!==null&&sel!==undefined)api().mood(sel,'joy');});dirty();}
 function collectNote(n){claim(n.id,1).then(r=>{if(r&&r.won===false){toast('📦 被別人先撿走了');return;}stat.notes++;save();toast(NOTES[n.k][1]+'（累計 '+stat.notes+' 件）');});dirty();}
 /* ---------- 對外 ---------- */
 window.funDraw=c=>{try{const t=performance.now(),g=api().geo();

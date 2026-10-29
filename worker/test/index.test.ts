@@ -5244,6 +5244,20 @@ describe('平台幣', () => {
   const SERVICE = 'test-coin-service-key';
   const uuid = () => crypto.randomUUID();
 
+  it('驚喜道具有 1% 機會回饋 1 點平台幣，同一個道具只會發一次', async () => {
+    const who = await seedDesigner('funwin@emctaipei.test', 'Leona');
+    const spy = vi.spyOn(Math, 'random').mockReturnValue(0);
+    try {
+      const hit = await api({ action: 'pixelOfficeFun', id: 'd:5:900:0', v: 1, token: who });
+      expect(hit).toMatchObject({ ok: true, won: true, reward: 1 });
+      const again = await api({ action: 'pixelOfficeFun', id: 'd:5:900:0', v: 1, token: who });
+      expect(again).toMatchObject({ won: false, reward: 0 });
+      expect(await api({ action: 'coinMe' }, who)).toMatchObject({ ok: true, balance: 1 });
+      spy.mockReturnValue(0.5);
+      expect(await api({ action: 'pixelOfficeFun', id: 'd:5:900:1', v: 1, token: who })).toMatchObject({ won: true, reward: 0 });
+    } finally { spy.mockRestore(); }
+  });
+
   it('earns 1 coin per completed point from 2026/10/01 and never twice for the same case', async () => {
     const admin = await login();
     const leona = await seedDesigner('leona@emctaipei.test', 'Leona');

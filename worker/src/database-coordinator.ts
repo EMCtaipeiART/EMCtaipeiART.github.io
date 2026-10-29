@@ -2676,7 +2676,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     try { const m = JSON.parse(row?.value || '{}'); return m && typeof m === 'object' ? m : {}; } catch { return {}; }
   }
 
-  private pixelOfficeFun(payload: ApiPayload): ApiResult {
+  private async pixelOfficeFun(payload: ApiPayload): Promise<ApiResult> {
     const id = String(payload.id || '');
     if (!/^[a-z]:[A-Za-z0-9:._-]{1,70}$/.test(id)) return { ok: false, action: 'pixelOfficeFun', error: 'invalid id' } as ApiResult;
     const v = Number(payload.v) ? 1 : 0;
@@ -2695,7 +2695,20 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       this.ctx.storage.sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', 'funClaims', JSON.stringify(claims), now);
       this.pixelVersionMemo = null;
     }
-    return { ok: true, action: 'pixelOfficeFun', won, funClaims: claims } as ApiResult;
+    // 地上驚喜道具：撿到的人有 1% 機會獲得系統回饋 1 點平台幣（伺服器抽籤、帳本以道具 id 為 ref 保證同一個道具不會重複發）
+    let reward = 0;
+    if (won && id.startsWith('d:') && sessionToken(payload) && Math.floor(Math.random() * 100) === 0) {
+      try {
+        const session = await this.sessionFor(payload);
+        const database = (await this.snapshot()).database;
+        const holder = this.coinHolderName(database, session);
+        if (holder && this.isCoinHolder(database, holder)) {
+          await this.coinAppend([{ kind: 'earn', holder, amount: coinsToTenths(1), ref: `fun:${id}`, memo: '辦公室驚喜道具回饋', actor: 'system' }]);
+          reward = 1;
+        }
+      } catch { reward = 0; }
+    }
+    return { ok: true, action: 'pixelOfficeFun', won, reward, funClaims: claims } as ApiResult;
   }
 
   private pixelOfficeUpdate(payload: ApiPayload): ApiResult {
@@ -5245,7 +5258,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'pixelOfficeState') return this.pixelOfficeState(payload);
       if (action === 'pixelOfficeUpdate') return this.pixelOfficeUpdate(payload);
       if (action === 'pixelOfficeStaffBack') return await this.pixelOfficeStaffBack(payload);
-      if (action === 'pixelOfficeFun') return this.pixelOfficeFun(payload);
+      if (action === 'pixelOfficeFun') return await this.pixelOfficeFun(payload);
       if (action === 'pixelOfficeHeartbeat') return await this.pixelOfficeHeartbeat(payload);
       if (action === 'pixelOfficeCalendarStatus') return await this.pixelOfficeCalendarStatus(payload);
       if (action === 'pixelOfficePhoto') return this.pixelOfficePhoto(payload);
