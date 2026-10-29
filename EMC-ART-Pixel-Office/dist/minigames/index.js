@@ -9,8 +9,8 @@ import {deadlineGame} from './games/deadline.js';
 import {hideseekGame} from './games/hideseek.js';
 import {hideseekOnline} from './games/hideseek-online.js';
 import {createLobby} from './core/lobby.js';
-import {createBoardClient} from './core/board.js';
-import {createMenu} from './core/menu.js';
+import {createBoardClient} from './core/board.js?v=2';
+import {createMenu} from './core/menu.js?v=2';
 
 const office=window.__pixelOffice;
 if(office){
@@ -33,12 +33,13 @@ if(office){
   // 暱稱：匿名、只用來顯示在排行榜（榜上是「暱稱#裝置碼後四碼」），和大廳共用同一個設定
   const NAME_KEY='emc-mg-name',acct=()=>String((office.viewerName&&office.viewerName())||'').trim().slice(0,12),/* 有登入帳號就直接用帳號名字，不用再輸入暱稱 */
   getNick=()=>acct()||(()=>{try{return(localStorage.getItem(NAME_KEY)||'').trim().slice(0,12);}catch{return '';}})();
-  const manager=createMiniGameManager({ui:createUI(),store:createScoreStore(),bridge,board:createBoardClient(),nickname:getNick});
+  const boardClient=createBoardClient({getToken:()=>(office.viewerToken&&office.viewerToken())||''});
+  const manager=createMiniGameManager({ui:createUI(),store:createScoreStore(),bridge,board:boardClient,nickname:getNick});
   manager.register(demoGame);manager.register(treasureGame);manager.register(hoopsGame);manager.register(deadlineGame);manager.register(hideseekGame);manager.register(hideseekOnline);const lobby=createLobby({manager});window.hideSeekLobby=lobby;
   window.miniGames=manager;
   // 入口：點「小遊戲」開啟卡片式選單（測試用的點點遊戲不列出）
   const store=createScoreStore();
-  const menu=createMenu({manager,store,getNick,setNick:v=>{try{localStorage.setItem(NAME_KEY,v);}catch{/* 儲存不可用 */}},
+  const menu=createMenu({manager,store,board:boardClient,getNick,setNick:v=>{try{localStorage.setItem(NAME_KEY,v);}catch{/* 儲存不可用 */}},
     loggedIn:()=>Boolean(acct()),isAdmin:()=>Boolean(office.isMonitor&&office.isMonitor()),
     onPick:id=>{if(id==='vent-arena'){if(window.parent!==window)window.parent.postMessage({type:'pixelOfficeOpenArena'},location.origin);else window.open('../../vent-arena/','_blank','noopener');}else if(id==='hideseek-online')lobby.show();else manager.open(id);}});
   window.miniGamesMenu=menu;

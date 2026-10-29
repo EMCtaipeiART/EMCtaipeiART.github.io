@@ -202,6 +202,10 @@ async function handleMinigames(request: Request, env: Env): Promise<Response> {
       const q = new URL(request.url).searchParams;
       return send(await stub.board({ game: q.get('game'), range: q.get('range') }));
     }
+    if (path === '/minigames/top3') {
+      if (request.method !== 'GET') return jsonResponse(request, env, { ok: false, error: 'method' }, 405);
+      return send(await stub.top3({ range: new URL(request.url).searchParams.get('range') }));
+    }
     if (path === '/minigames/fridge' && request.method === 'GET') { const q = new URL(request.url).searchParams; return send(await stub.fridge({ floor: q.get('floor'), since: q.get('since') })); }
     if (path !== '/minigames/run' && path !== '/minigames/fridge' && path !== '/minigames/submit') return jsonResponse(request, env, { ok: false, error: 'not-found' }, 404);
     if (request.method !== 'POST') return jsonResponse(request, env, { ok: false, error: 'method' }, 405);
@@ -212,7 +216,15 @@ async function handleMinigames(request: Request, env: Env): Promise<Response> {
     try { const v = JSON.parse(raw); if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error('shape'); body = v; }
     catch { return jsonResponse(request, env, { ok: false, error: 'bad-json' }, 400); }
     if (path === '/minigames/fridge') return send(await stub.fridgeAct({ action: body.action, slot: body.slot, nick: body.nick, floor: body.floor }));
-    if (path === '/minigames/run') return send(await stub.startRun({ game: body.game, device: body.device, nick: body.nick, ip: request.headers.get('CF-Connecting-IP') || 'unknown' }));
+    if (path === '/minigames/run') {
+      // 有帶登入 token：由主站資料庫驗證出帳號本人的名字，排行榜以帳號為準（跨裝置同一人）
+      let account = '';
+      if (typeof body.token === 'string' && body.token) {
+        const coord = env.DATABASE_COORDINATOR.getByName('primary', { locationHint: 'apac' }) as DurableObjectStub<DatabaseCoordinator>;
+        account = await coord.minigameViewer(body.token);
+      }
+      return send(await stub.startRun({ game: body.game, device: body.device, nick: body.nick, account, ip: request.headers.get('CF-Connecting-IP') || 'unknown' }));
+    }
     return send(await stub.submit({ runId: body.runId, device: body.device, log: body.log }));
   } catch (error) {
     console.error(JSON.stringify({ event: 'minigames-error', message: error instanceof Error ? error.message : String(error) }));

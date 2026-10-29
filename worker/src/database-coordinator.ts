@@ -3108,6 +3108,15 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'pixelOfficeAvatarGet', png: row.png };
   }
 
+  /** 小遊戲排行榜用：把登入 token 換成帳號本人的名字（沒登入或無效回空字串）。名字由伺服器決定，前端傳的暱稱不算。 */
+  async minigameViewer(token: string): Promise<string> {
+    if (!token) return '';
+    try {
+      const session = await this.sessionFor({ token } as ApiPayload);
+      return text(session?.user || session?.account?.split('@')[0]).slice(0, 12);
+    } catch { return ''; }
+  }
+
   private async pixelOfficeStoryViewer(payload: ApiPayload): Promise<string> {
     const session = await this.sessionFor(payload);
     const viewer = text(session?.user || session?.account?.split('@')[0]).slice(0, 20);

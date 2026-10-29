@@ -11,7 +11,7 @@ export function boardBaseUrl(loc=globalThis.location){
   return 'https://machi-design-api.machi-chen.workers.dev';
 }
 
-export function createBoardClient({base=boardBaseUrl(),fetchImpl=(...a)=>globalThis.fetch(...a),storage=globalThis.localStorage,timeoutMs=TIMEOUT_MS}={}){
+export function createBoardClient({base=boardBaseUrl(),fetchImpl=(...a)=>globalThis.fetch(...a),storage=globalThis.localStorage,timeoutMs=TIMEOUT_MS,getToken=()=>''}={}){
   async function call(path,{method='GET',body}={}){
     const ac=new AbortController(),timer=setTimeout(()=>ac.abort(),timeoutMs);
     try{
@@ -23,11 +23,13 @@ export function createBoardClient({base=boardBaseUrl(),fetchImpl=(...a)=>globalT
   return {
     async startRun(game,nick){
       const device=safe(()=>storage.getItem(DEVICE_KEY),'')||'';
-      const r=await call('/minigames/run',{method:'POST',body:{game,device,nick}});
+      const token=safe(()=>getToken(),'')||'';/* 登入 token：伺服器驗證後以帳號本人的名字上榜（跨裝置同一人） */
+      const r=await call('/minigames/run',{method:'POST',body:{game,device,nick,token}});
       if(r.ok&&r.device)safe(()=>storage.setItem(DEVICE_KEY,r.device));
       return r;
     },
     submit(ticket,log){return call('/minigames/submit',{method:'POST',body:{runId:ticket.runId,device:ticket.device,log}});},
+    top3(range='today'){return call('/minigames/top3?range='+range);},
     board(game,range='today'){return call('/minigames/board?game='+encodeURIComponent(game)+'&range='+range);}
   };
 }

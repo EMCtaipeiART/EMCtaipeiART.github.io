@@ -37,6 +37,7 @@ export class MinigameBoard extends DurableObject<Env> {
       sql.exec(`CREATE TABLE IF NOT EXISTS fridge_meta (k TEXT PRIMARY KEY, v TEXT NOT NULL)`);
       sql.exec(`CREATE TABLE IF NOT EXISTS fridge_events (id INTEGER PRIMARY KEY AUTOINCREMENT, floor INTEGER NOT NULL, nick TEXT NOT NULL, kind TEXT NOT NULL, slot TEXT NOT NULL DEFAULT '', flag TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL)`);
       sql.exec(`CREATE TABLE IF NOT EXISTS fridge_stats (day TEXT NOT NULL, nick TEXT NOT NULL, took INTEGER NOT NULL DEFAULT 0, stocked INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, nick))`);
+      for (const t of ['runs', 'scores']) { try { sql.exec(`ALTER TABLE ${t} ADD COLUMN account TEXT NOT NULL DEFAULT ''`); } catch { /* 已有欄位 */ } }   // 登入者本人（伺服器用登入 token 驗證過的名字）
       sql.exec(`CREATE INDEX IF NOT EXISTS idx_scores_board ON scores(game, day, score DESC)`);
       sql.exec(`CREATE INDEX IF NOT EXISTS idx_runs_device ON runs(device, issued_at)`);
       sql.exec(`CREATE INDEX IF NOT EXISTS idx_runs_ip ON runs(ip_hash, issued_at)`);
@@ -56,13 +57,14 @@ export class MinigameBoard extends DurableObject<Env> {
   }
 
   // ───────── 開局：發票 ─────────
-  async startRun(req: { game?: unknown; device?: unknown; nick?: unknown; ip?: unknown }): Promise<Reply> {
+  async startRun(req: { game?: unknown; device?: unknown; nick?: unknown; ip?: unknown; account?: unknown }): Promise<Reply> {
     const game = String(req.game ?? '') as GameId;
     if (!(game in GAMES)) return reply(400, { ok: false, error: 'bad-game' });
     const now = this.clock(), day = dayKey(new Date(now));
     const ip = await this.ipHash(String(req.ip ?? 'unknown'), day);
     let device = typeof req.device === 'string' && HEX32.test(req.device) ? req.device : '';
-    const nick = cleanNick(req.nick);
+    const account = cleanNick(req.account);   // 由 index.ts 用登入 token 驗證後帶入；有值就以帳號為準
+    const nick = account || cleanNick(req.nick);
     if (device && !this.one('SELECT 1 FROM devices WHERE id = ?', device)) device = '';   // 沒見過的裝置碼不採用，由伺服器重發
     // 以下到 INSERT 為止都是同步的：檢查與寫入之間不會被別的請求插隊
     if (!device) device = hex(16);
@@ -74,9 +76,9 @@ export class MinigameBoard extends DurableObject<Env> {
     if (perDevice >= LIMITS.perDeviceHour || open >= LIMITS.openRuns || perIp >= LIMITS.perIpHour) return reply(429, { ok: false, error: 'rate-limited' });
     const runId = hex(16), spec = GAMES[game];
     const expires = now + (spec.duration + COUNTDOWN_SECS + LIMITS.grace) * 1000;
-    this.sql().exec('INSERT INTO runs (run_id, game, day, device, ip_hash, issued_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)', runId, game, day, device, ip, now, expires);
+    this.sql().exec('INSERT INTO runs (run_id, game, day, device, ip_hash, issued_at, expires_at, account) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', runId, game, day, device, ip, now, expires, account);
     const nickNow = this.one<{ nick: string }>('SELECT nick FROM devices WHERE id = ?', device)!.nick;
-    return reply(200, { ok: true, runId, game, day, duration: spec.duration, expiresAt: expires, device, nick: nickNow, tag: device.slice(0, 4), verification: spec.level });
+    return reply(200, { ok: true, runId, game, day, duration: spec.duration, expiresAt: expires, device, nick: account || nickNow, tag: account ? '' : device.slice(0, 4), account, verification: spec.level });
   }
 
   // ───────── 提交：驗證、重算、記分 ─────────
@@ -85,12 +87,12 @@ export class MinigameBoard extends DurableObject<Env> {
     if (!HEX32.test(runId) || !HEX32.test(device)) return reply(400, { ok: false, error: 'bad-request' });
     const now = this.clock();
     return this.ctx.storage.transactionSync(() => {
-      const run = this.one<{ game: GameId; day: string; device: string; issued_at: number; expires_at: number; used: number; status: string; score: number | null }>(
-        'SELECT game, day, device, issued_at, expires_at, used, status, score FROM runs WHERE run_id = ?', runId);
+      const run = this.one<{ game: GameId; day: string; device: string; account: string; issued_at: number; expires_at: number; used: number; status: string; score: number | null }>(
+        'SELECT game, day, device, account, issued_at, expires_at, used, status, score FROM runs WHERE run_id = ?', runId);
       if (!run) return reply(404, { ok: false, error: 'no-run' });
       if (run.device !== device) return reply(403, { ok: false, error: 'wrong-device' });
       if (run.used) {   // 冪等：同一張票重送，回第一次的結果，不會再記一次
-        if (run.status === 'ok') return reply(200, { ok: true, replay: true, score: run.score, ...this.standing(run.game, run.day, device, run.score!) });
+        if (run.status === 'ok') return reply(200, { ok: true, replay: true, score: run.score, ...this.standing(run.game, run.day, device, run.score!, run.account) });
         return reply(409, { ok: false, error: 'already-used', status: run.status });
       }
       const reject = (status: number, error: string) => { this.sql().exec('UPDATE runs SET used = 1, status = ? WHERE run_id = ?', 'rejected:' + error, runId); return reply(status, { ok: false, error }); };
@@ -100,24 +102,34 @@ export class MinigameBoard extends DurableObject<Env> {
       // 真實時間下限：宣稱玩了多久，就必須真的過了那麼久（容許 2 秒誤差）
       const elapsed = (now - run.issued_at) / 1000;
       if (elapsed < COUNTDOWN_SECS + verdict.endT - 2) return reject(422, 'too-fast-real-time');
-      this.sql().exec('INSERT INTO scores (run_id, game, day, device, score, at) VALUES (?, ?, ?, ?, ?, ?)', runId, run.game, run.day, device, verdict.score, now);
+      this.sql().exec('INSERT INTO scores (run_id, game, day, device, score, at, account) VALUES (?, ?, ?, ?, ?, ?, ?)', runId, run.game, run.day, device, verdict.score, now, run.account);
       this.sql().exec('UPDATE runs SET used = 1, status = \'ok\', score = ? WHERE run_id = ?', verdict.score, runId);
-      return reply(200, { ok: true, score: verdict.score, detail: verdict.detail, ...this.standing(run.game, run.day, device, verdict.score) });
+      return reply(200, { ok: true, score: verdict.score, detail: verdict.detail, ...this.standing(run.game, run.day, device, verdict.score, run.account) });
     });
   }
 
-  private standing(game: GameId, day: string, device: string, score: number) {
-    const better = this.one<{ n: number }>('SELECT COUNT(*) AS n FROM (SELECT device, MAX(score) AS m FROM scores WHERE game = ? AND day = ? GROUP BY device) WHERE m > ?', game, day, score)!.n;
-    const mine = this.one<{ m: number }>('SELECT MAX(score) AS m FROM scores WHERE game = ? AND day = ? AND device = ?', game, day, device)?.m ?? score;
+  private standing(game: GameId, day: string, device: string, score: number, account = '') {
+    // 有登入就以帳號為同一個人（換裝置也算同一人）；沒登入才用裝置碼
+    const key = account ? 'a:' + account : 'd:' + device;
+    const better = this.one<{ n: number }>("SELECT COUNT(*) AS n FROM (SELECT MAX(score) AS m FROM scores WHERE game = ? AND day = ? GROUP BY CASE WHEN account != '' THEN 'a:' || account ELSE 'd:' || device END) WHERE m > ?", game, day, score)!.n;
+    const mine = this.one<{ m: number }>("SELECT MAX(score) AS m FROM scores WHERE game = ? AND day = ? AND CASE WHEN account != '' THEN 'a:' || account ELSE 'd:' || device END = ?", game, day, key)?.m ?? score;
     return { rank: better + 1, dayBest: mine, isDayBest: score >= mine, day, board: this.boardRows(game, day, day) };
   }
 
   // ───────── 榜單 ─────────
-  private boardRows(game: GameId, from: string, to: string) {
-    return this.all<{ device: string; nick: string; score: number }>(
-      `SELECT s.device AS device, d.nick AS nick, MAX(s.score) AS score FROM scores s JOIN devices d ON d.id = s.device
-       WHERE s.game = ? AND s.day >= ? AND s.day <= ? GROUP BY s.device ORDER BY score DESC, MIN(s.at) ASC LIMIT ?`, game, from, to, LIMITS.boardSize
-    ).map((r, i) => ({ rank: i + 1, name: r.nick + '#' + r.device.slice(0, 4), score: r.score }));
+  private boardRows(game: GameId, from: string, to: string, limit: number = LIMITS.boardSize) {
+    return this.all<{ account: string; device: string; nick: string; score: number }>(
+      `SELECT s.account AS account, s.device AS device, d.nick AS nick, MAX(s.score) AS score FROM scores s JOIN devices d ON d.id = s.device
+       WHERE s.game = ? AND s.day >= ? AND s.day <= ? GROUP BY CASE WHEN s.account != '' THEN 'a:' || s.account ELSE 'd:' || s.device END
+       ORDER BY score DESC, MIN(s.at) ASC LIMIT ?`, game, from, to, limit
+    ).map((r, i) => ({ rank: i + 1, name: r.account ? r.account : r.nick + '#' + r.device.slice(0, 4), account: !!r.account, score: r.score }));
+  }
+  /** 每款遊戲的前三名（名字與分數），給「遊戲排行榜」總覽用 */
+  top3(req: { range?: unknown }): Reply {
+    const range = req.range === 'week' ? 'week' : 'today';
+    const now = this.clock(), to = dayKey(new Date(now)), from = range === 'week' ? dayKey(new Date(now - 6 * DAY)) : to;
+    const games = (Object.keys(GAMES) as GameId[]).map(game => ({ game, entries: this.boardRows(game, from, to, 3) }));
+    return reply(200, { ok: true, range, from, to, games });
   }
   private cache = new Map<string, { at: number; body: Record<string, unknown> }>();
   board(req: { game?: unknown; range?: unknown }): Reply {
