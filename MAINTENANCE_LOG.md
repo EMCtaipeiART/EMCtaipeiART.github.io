@@ -1133,3 +1133,9 @@
 - 後端：POST /minigames/run 帶登入 token → 主站驗證出帳號本人名字（DatabaseCoordinator.minigameViewer），runs／scores 新增 account 欄位；榜單以帳號為同一人（換裝置也算），沒登入仍用「暱稱#裝置碼」。新增 GET /minigames/top3?range=today|week（每款遊戲前三名）。worker 已部署。
 - 前端：board.js 送 token、top3；選單新增「🏆 排行榜」＝每款遊戲前三名的名字與分數（今日／本週，未登入者標示）。
 - 人物名字膠囊改成只有點選（操控）的人才顯示，避免擋畫面。
+
+## 2026-10-29 出氣擂台外殼統一為小遊戲系列
+- `vent-arena/emc-theme.css` 新增與 `minigames.css` 同名的深藍、淡藍、黃、橘、藍、紅、綠色票及外框／硬陰影變數，讓早期擂台與後續小遊戲有一致的視覺語言。
+- `vent-arena/overrides.css` 統一頂部導覽、角色／道具／模式按鈕、HUD 膠囊、成績卡、提示、結算／排行榜與一對一對戰視窗；套用深藍 3px 外框、6–12px 圓角、粗體與按下下沉效果。保留既有排列、定位、流程、角色／武器素材與戰鬥特效，手機維持八欄道具列並讓長名稱折行。
+- `vent-arena/dark.css` 改用明確的深色色票，取消整頁及素材反相；`vent-arena/arena.css` 移除原有 dialog backdrop-filter，以純色遮罩維持可讀性。未修改 HTML 或任何 JavaScript，未執行 commit。
+- 驗證：`npm test` 共 281 項，261 項通過；20 項失敗逐項確認皆為沙盒禁止監聽本機埠的 `listen EPERM`。`git diff --check` 通過，CSS 括號配對檢查通過，確認無 backdrop-filter 與 JS／HTML 差異。瀏覽器啟動及本機預覽受到環境限制，電腦操作工具亦回報 browser access host unavailable，因此未完成桌機／手機與深色模式的實際截圖驗證。

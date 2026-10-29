@@ -1,8 +1,121 @@
-/* 出氣擂台小調整：陪練血量區塊移除白色底框（只留血條與名字） */
-.opponent-hud{background:transparent!important;border-color:transparent!important;box-shadow:none!important}
-.opponent-hud>span:first-child{text-shadow:0 0 4px #fff,0 0 2px #fff,1px 1px 0 #fff}
-.opponent-hud>span:nth-child(2){text-shadow:0 0 3px #fff}
-/* 深色模式整頁反相時，這塊再反相一次，維持「深色字＋白色光暈」壓在亮場景上 */
-html[data-theme="dark"] .opponent-hud{filter:invert(1) hue-rotate(180deg)}
-/* K.O. 大字比照被打擊的狀聲詞（POW!／SUPER!!）：粗斜體、深紫色粗外框、亮黃色字，不用等寬字型 */
+/* 小遊戲系列外殼：保留 cabinet / portrait / duel 的尺寸、定位與顯示狀態。
+   多層舊版 ID / 狀態選擇器的按鈕繪製屬性集中以 important 收斂；
+   變體只改 --va-button-*，不覆寫 display、position、padding 或遊戲動畫。 */
+html, body {
+  background:var(--va-bg); color:var(--va-ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif;
+}
+html, body .roster #roster, body #weapons { scrollbar-color:var(--mg-blue) var(--va-soft); }
+.arena-title h1 { color:var(--va-ink); font-weight:900; -webkit-text-stroke:0; text-shadow:none; }
+body :is(.panel,.roster,.arsenal,.settings .challenge),
+body :is(dialog,#leaderboard,.duel-card) {
+  background:var(--va-surface); color:var(--va-ink);
+  border:var(--mg-b) solid var(--va-edge); border-radius:10px; box-shadow:var(--va-shadow);
+}
+body :is(dialog,#leaderboard,.duel-card) { border-radius:12px; box-shadow:var(--va-panel-shadow); }
+body :is(.panel h2,.panel-heading h2,.actions-heading h2,.duel h2,dialog h2) {
+  color:var(--va-ink); font-weight:900; font-style:normal; text-shadow:none;
+}
+/* 自由模式仍保持原有的無計時卡狀態。 */
+.settings:has([data-mode=free][aria-pressed=true]) .challenge { background:none; border:0; box-shadow:none; }
+body .roster .role-tabs { background:var(--va-soft); border-color:var(--va-edge); border-radius:8px; }
+body button, body .arena-home {
+  --va-button-bg:var(--va-soft); --va-button-hover:var(--va-hover); --va-button-ink:var(--va-ink);
+  background:var(--va-button-bg)!important; color:var(--va-button-ink)!important;
+  border:var(--mg-b) solid var(--va-edge)!important; border-radius:6px!important;
+  box-shadow:0 3px 0 var(--va-edge)!important; font-weight:800!important;
+  text-shadow:none!important; filter:none!important; transform:none!important;
+  transition:translate .05s,box-shadow .05s,background .1s!important;
+}
+body :is(button,.arena-home):hover { background:var(--va-button-hover)!important; }
+body :is(button:active:not(:disabled),.arena-home:active) { translate:0 3px; box-shadow:0 0 0 var(--va-edge)!important; }
+body button:disabled { opacity:.45!important; cursor:not-allowed; translate:none; }
+body :is(button,a,canvas,input,summary):focus-visible { outline:3px solid var(--mg-yellow); outline-offset:2px; }
+body :is(button[aria-pressed=true],.person.active,#start,#again,.duel-main,#ultimate.ready) {
+  --va-button-bg:var(--mg-yellow); --va-button-hover:#ffdd6b; --va-button-ink:var(--mg-navy);
+}
+body :is(.duel-x,#close-result) { --va-button-bg:var(--va-danger-soft); --va-button-hover:var(--va-danger-soft); }
+body .duel-block { --va-button-bg:var(--mg-blue); --va-button-hover:#86acf5; --va-button-ink:var(--mg-navy); border-radius:50%!important; }
+body .duel-block.on { --va-button-bg:var(--mg-yellow); }
+/* 複製鈕的 transform 是原有置中定位，保留。 */
+body .duel-copyicon { transform:translateY(-50%)!important; }
+body :is(.person strong,.mode-buttons b,.mode-buttons button>span),
+body #weapons .weapon>b { color:inherit; font-weight:800; }
+body .mode-buttons small, body .duel-entries small { color:inherit; font-weight:700; }
+body :is(.person,.weapon,.mode-buttons button,.duel-entries button) { border-radius:8px!important; }
+body button[data-hotkey]::after, body .arena>.rage-panel #ultimate::after {
+  background:var(--va-surface); color:var(--va-ink); border-color:var(--va-edge); text-shadow:none;
+}
+body .arena>.rage-panel #ultimate .ultimate-label { font-weight:900; }
+
+/* HUD 保留原有座標；膠囊外框採外繪，不擠動血條與分數。 */
+body .arena { border-color:var(--va-edge); border-radius:12px; box-shadow:var(--va-shadow); }
+body .arena::before { background:repeating-linear-gradient(120deg,var(--mg-navy) 0 12px,var(--mg-yellow) 12px 20px); }
+body .arena.impact { border-color:var(--mg-orange); }
+body .arena.danger { border-color:var(--mg-red); }
+body .arena.ultimate-scene { border-color:var(--mg-yellow); }
+.opponent-hud { background:transparent; border-color:transparent; box-shadow:none; }
+body :is(.opponent-hud>span:first-child,#self-name) {
+  color:var(--va-ink); background:var(--va-surface); border-radius:6px;
+  box-shadow:0 0 0 3px var(--va-edge),0 3px 0 3px rgba(24,46,84,.35);
+  text-shadow:none; font-weight:900;
+}
+body .opponent-hud .health, body .self-hud .health, body .arena>.rage-panel .rage {
+  background:var(--va-soft); border:var(--mg-b) solid var(--va-edge); border-radius:6px; box-shadow:none;
+}
+/* 血條保留 JS 的健康／警戒／危險色與寬度，維持戰鬥狀態訊號。 */
+body .health>div { box-shadow:none; }
+body .health #hp-number, body .self-hud .health>span {
+  color:#fff; font-weight:900;
+  text-shadow:1px 1px var(--mg-navy),-1px -1px var(--mg-navy),1px -1px var(--mg-navy),-1px 1px var(--mg-navy);
+}
+body .injury-status { color:var(--va-ink)!important; text-shadow:1px 1px var(--va-surface),-1px -1px var(--va-surface); }
+body .injury-status[data-level=medium] { color:var(--va-orange-text)!important; }
+body .injury-status[data-level=heavy] { color:var(--va-danger-text)!important; }
+body .arena>.rage-panel .rage>div { background:var(--mg-orange); }
+body .arena>.rage-panel span, body .arena>.rage-panel span>b {
+  color:var(--mg-yellow); -webkit-text-stroke-color:var(--mg-navy); text-shadow:1px 1px var(--mg-navy);
+}
+body .live-score {
+  background:var(--va-yellow-soft); color:var(--va-ink); border-radius:6px;
+  box-shadow:0 0 0 3px var(--va-edge),0 3px 0 3px rgba(24,46,84,.35);
+}
+body .live-score>span, body .live-score>strong {
+  color:var(--va-ink); -webkit-text-stroke:0; text-shadow:none; font-weight:900; font-variant-numeric:tabular-nums;
+}
+body .bubble {
+  background:var(--va-surface); color:var(--va-ink); border:var(--mg-b) solid var(--va-edge);
+  border-radius:8px; box-shadow:var(--va-shadow); font-weight:700;
+}
+body .bubble::after { border-top-color:var(--va-edge); }
+body .settings .stats>div {
+  background:var(--va-soft); border:var(--mg-b) solid var(--va-edge); border-radius:8px; box-shadow:var(--va-shadow);
+}
+body .settings .stats>div:first-child { background:var(--va-yellow-soft); }
+body .settings .stats>div:nth-child(2) { background:var(--va-orange-soft); }
+body .settings .stats>div:is(:first-child,:nth-child(2),:nth-child(3)) strong {
+  color:var(--va-ink); font-weight:900; font-variant-numeric:tabular-nums; text-shadow:none;
+}
+body .settings .stats>div:nth-child(2) strong { color:var(--va-orange-text); }
+body .settings .stats>div:nth-child(3) strong { color:var(--va-blue-text); }
+body :is(.settings .stats>div span,.challenge p,.challenge>span,.hotkeys,.hotkeys h3,
+  .duel-sub,.duel-status,.duel-eyebrow,#leaderboard>p,dialog>p:not(.eyebrow),dialog>span) { color:var(--va-muted); }
+body :is(.eyebrow,.challenge>strong,dialog>strong,#leaderboard-list strong) { color:var(--va-blue-text); font-weight:900; }
+body .hotkeys dt, body .duel-rules { background:var(--va-soft); color:var(--va-ink); border-color:var(--va-edge); border-radius:6px; }
+body .duel { background:var(--va-overlay); color:var(--va-ink); font-family:inherit; }
+body .duel-code, body .duel-input { background:var(--va-soft); color:var(--va-ink); border:var(--mg-b) solid var(--va-edge); border-radius:8px; }
+body .duel-status.bad { color:var(--va-danger-text); }
+body #leaderboard-list li { border-color:var(--mg-grey); border-radius:6px; }
+body #leaderboard-list li:nth-child(odd) { background:var(--va-soft); }
+body #toast {
+  background:var(--mg-yellow); color:var(--mg-navy); border:var(--mg-b) solid var(--va-edge);
+  border-radius:8px; box-shadow:var(--va-shadow); font-weight:800;
+}
+/* 原有 K.O. 特效字樣保持。 */
 #stage-message{font-family:system-ui,'Microsoft JhengHei',sans-serif!important;font-weight:900!important;font-style:italic!important;letter-spacing:0!important;color:#ffed45!important;-webkit-text-stroke:7px #291039;paint-order:stroke fill;text-shadow:none!important}
+/* 保留手機八欄道具列；粗外框內的長名稱可折行，圖示等比例縮小。 */
+@media(max-width:420px) {
+  .arsenal .weapon>b { white-space:normal; overflow-wrap:anywhere; }
+  .arsenal .weapon>span, .arsenal .weapon>span>svg { max-width:100%; }
+}
+@media(prefers-reduced-motion:reduce) { body button, body .arena-home { transition:none!important; } }

@@ -1,4 +1,4 @@
-/* EMC v5 design tokens: matched to emc-art.com and the workspace's site.css. */
+/* Legacy shell sizing is retained below; shared minigame tokens are at EOF. */
 :root{--brand:#159e31;--brand-deep:#0f7f27;--brand-soft:#e8f6ec;--bg:#f5f7f6;--panel:#fff;--ink:#17211d;--muted:#6b7772;--faint:#98a39e;--line:#e3e9e5;--shadow:0 10px 30px rgba(18,38,28,.08);--green:var(--brand);background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans TC',Arial,sans-serif}
 body{background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
 header{height:76px;border-bottom:1px solid var(--line);background:#fff;padding:0 32px}.brand,.brand b{color:var(--ink)}.brand{gap:10px}.brand b{font-weight:900;font-size:19px;letter-spacing:.6px}.brand b span{color:var(--muted);font-size:9px;letter-spacing:1px}.logo{width:40px;height:40px;display:block;object-fit:contain;border:0;border-radius:12px;box-shadow:none;transform:none;background:none}.test-label{color:var(--muted);font-size:11px;letter-spacing:0}.test-label i{background:var(--brand);box-shadow:none}#sound{border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);box-shadow:none;font-size:12px;min-height:38px;padding:8px 13px}#sound:hover{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-deep)}
@@ -15,3 +15,23 @@ main{padding:0 32px}.intro{background:linear-gradient(120deg,#159e31,#0e8b27);bo
 .mode-buttons{gap:10px}.mode-buttons button{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 10px;box-shadow:none}.mode-buttons button[aria-pressed=true]{background:var(--brand-soft);border-color:#a4d7b0;box-shadow:none}.mode-buttons button:hover{background:#f1f8f3;border-color:#b6d8bf}.mode-buttons button>span{color:var(--brand);font-size:25px}.mode-buttons b{font-size:12px;font-weight:800;color:#344b3c}.mode-buttons small{font-size:10px;color:var(--muted);margin-top:5px}.challenge{background:#f6f9f6;border:1px solid #e1e9e2;border-radius:12px}.challenge p{color:var(--muted)}.challenge>strong{color:var(--brand-deep);text-shadow:none}.challenge>span{color:var(--muted);font-size:10px}.challenge button,#again{background:var(--brand);border:1px solid var(--brand);border-radius:11px;box-shadow:none;color:#fff;min-height:42px;font-size:12px;font-weight:800}.challenge button:hover,#again:hover{background:var(--brand-deep);filter:none;transform:none}.challenge button:active,#again:active{transform:translateY(1px)}.round-info{color:var(--muted);border-color:var(--line);font-size:11px}.round-info b{color:var(--brand-deep)}details,details p{color:var(--muted);font-size:11px}footer{color:#8a9990;font-size:9px;letter-spacing:0}.combo,.combo strong,.combo svg{border-radius:0}dialog{background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:0 22px 50px #12261c2e;color:var(--ink)}dialog h2{color:var(--ink);text-shadow:none;font-style:normal;font-weight:900}dialog>strong{color:var(--brand)}dialog>p:not(.eyebrow),dialog>span,#close-result{color:var(--muted)}#close-result{background:none;border:0;box-shadow:none}
 #roster,#weapons{scrollbar-color:#bfd4c4 #edf3ef}html{scrollbar-color:#c0cec4 #f5f7f6}button:focus-visible,a:focus-visible,canvas:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #159e3170;outline-offset:3px}
 @media(max-width:650px){header{height:64px;padding:0 16px}.logo{width:34px;height:34px}.brand b{font-size:17px}.brand b span{font-size:8px}.test-label{font-size:10px}#sound{font-size:11px;padding:7px 10px;min-height:34px}main{padding:0 14px}.intro{margin:16px 0;padding:24px 21px;border-radius:19px}.intro h1{font-size:42px;letter-spacing:1px}.intro p:last-child{font-size:11px;line-height:1.7;margin-top:9px}.panel{padding:13px;border-radius:16px}.role-tabs{margin:0 0 10px}.person{border-radius:10px}.stats{gap:8px;margin-bottom:12px}.stats>div,.stats>div:first-child{border-radius:12px;padding:12px 10px}.stats span{font-size:10px}.stats strong,.stats>div:first-child strong,.stats>div:nth-child(2) strong{font-size:29px}.arena{border-radius:15px}.stage-header{left:15px;right:15px}.stage-header b{font-size:10px}.opponent-hud{left:13px;right:13px;top:48px}.health{height:12px}.rage-panel{padding:11px;gap:10px;border-radius:12px}#ultimate{min-width:136px;font-size:11px;padding:12px 9px}.weapon{flex:0 0 83px;min-height:98px;border-radius:12px}.weapon>b{font-size:12px}.weapon>em{font-size:8px}.mode-buttons b{font-size:12px}.mode-buttons small{font-size:9px}.scene-switch button{font-size:10px}.bubble{font-size:11px}}
+
+/* 小遊戲共用色票；既有尺寸與響應式配置保留。 */
+:root {
+  --mg-navy:#182e54; --mg-blue:#5b8def; --mg-pale:#e8f0ff;
+  --mg-yellow:#ffd24a; --mg-orange:#e8913a; --mg-red:#d9534f;
+  --mg-green:#4caf6a; --mg-grey:#c9d2e0; --mg-b:3px;
+  --mg-shadow:0 3px 0 rgba(24,46,84,.35);
+  --va-bg:var(--mg-pale); --va-surface:#fff; --va-soft:var(--mg-pale);
+  --va-hover:#f3f7ff; --va-ink:var(--mg-navy); --va-muted:#536580;
+  --va-edge:var(--mg-navy); --va-shadow:var(--mg-shadow);
+  --va-panel-shadow:0 6px 0 rgba(24,46,84,.3);
+  --va-yellow-soft:#fff3c4; --va-orange-soft:#fff0df;
+  --va-blue-text:#315fa4; --va-orange-text:#855018;
+  --va-danger-text:#b23936; --va-danger-soft:#ffe0de;
+  --va-overlay:rgba(24,46,84,.65);
+  --brand:var(--mg-blue); --brand-deep:var(--va-blue-text); --brand-soft:var(--va-soft);
+  --bg:var(--va-bg); --panel:var(--va-surface); --ink:var(--va-ink);
+  --muted:var(--va-muted); --faint:var(--va-muted); --line:var(--va-edge);
+  --shadow:var(--va-shadow); --green:var(--mg-green);
+}

@@ -1,5 +1,14 @@
-/* 出氣擂台深色模式：整頁反相＋色相轉回（綠色仍是綠色），角色圖／畫布／圖示再反相一次還原原色。
-   由 arena.js 依 ?theme=dark、主站訊息或系統深色設定，在 <html> 加上 data-theme="dark"。 */
-html[data-theme="dark"]{color-scheme:dark;background:#101418}
-html[data-theme="dark"] body{filter:invert(1) hue-rotate(180deg) brightness(.93) contrast(.96);background:#fff}
-html[data-theme="dark"] body canvas,html[data-theme="dark"] body img,html[data-theme="dark"] body svg,html[data-theme="dark"] body video{filter:invert(1) hue-rotate(180deg)}
+/* 沿用 arena.js 的 data-theme 切換；實色色票不再反相畫布、角色或武器。 */
+html[data-theme="dark"] {
+  color-scheme:dark;
+  --va-bg:#101b30; --va-surface:#263c60; --va-soft:#304971;
+  --va-hover:#3a5680; --va-ink:#e8f0ff; --va-muted:#bdcce4;
+  --va-edge:var(--mg-navy);
+  --va-shadow:0 3px 0 rgba(5,14,30,.65);
+  --va-panel-shadow:0 6px 0 rgba(5,14,30,.65);
+  --va-yellow-soft:#51482c; --va-orange-soft:#503c30;
+  --va-blue-text:#a8c5ff; --va-orange-text:#ffc184;
+  --va-danger-text:#ffaaa6; --va-danger-soft:#563641;
+  --va-overlay:rgba(7,16,32,.8);
+  background:var(--va-bg);
+}
