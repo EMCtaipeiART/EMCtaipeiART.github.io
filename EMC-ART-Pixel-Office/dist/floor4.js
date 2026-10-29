@@ -184,8 +184,8 @@
     imgs = { rooms, props, furn, desks, toiletPic, gear };
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
     c.imageSmoothingEnabled = false; c.fillStyle = 'rgba(120,128,136,.16)';/* 地板透明、只有格線：跟五樓一樣，不要有一塊白色範圍框住 */
-    for (let x = 0; x < W; x += 64) c.fillRect(x, 0, 2, H);
-    for (let y = 0; y < H; y += 64) c.fillRect(0, y, W, 2);
+    if (!window.__pageGrid) { for (let x = 0; x < W; x += 64) c.fillRect(x, 0, 2, H);
+    for (let y = 0; y < H; y += 64) c.fillRect(0, y, W, 2); }
     c.translate(0, OFFY);
     items.slice().sort((a, b) => a.depth - b.depth).forEach(it => it.draw(c));
     scene.canvas = cv; scene.ready = true; if (scene.onReady) scene.onReady();

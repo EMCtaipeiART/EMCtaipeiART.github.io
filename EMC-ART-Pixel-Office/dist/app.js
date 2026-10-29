@@ -1,4 +1,5 @@
 'use strict';
+window.__pageGrid=document.documentElement.classList.contains('clean')&&!matchMedia('(max-width:720px)').matches&&!/[?&]embed=1/.test(location.search);
 const FLOOR4=/[?&]floor=4/.test(location.search),F4_H=3500;/* 四樓（?floor=4）：同一份遊戲、換一張場景（floor4.js），人物與功能鍵全部沿用 */
 const $=id=>document.getElementById(id), game=$('game'), ctx=game.getContext('2d'), LX=FLOOR4||/[?&]embed=1/.test(location.search)?0:320/* 往左多出來、放新桌子群的寬度（首頁小框不用） */,W=FLOOR4?2560:/[?&]embed=1/.test(location.search)?1536:2050+LX,H0=1024,GP=604/* 往上複製的桌子群：邏輯座標間距 */,GPV=497/* 畫面上的間距：群高 403 + 一張桌子的深度 94 */,OY=FLOOR4||/[?&]embed=1/.test(location.search)?0:1560/* 畫布往上多留的高度（放新增的兩組桌子） */,VB=FLOOR4?F4_H:/[?&]embed=1/.test(location.search)?H0:1700/* 場景下緣：新增的會議室／茶水間在最下面 */,H=VB+OY;// 首頁小框（embed）只看設計部，畫布維持 1536；整頁／編輯版含六張同仁桌，加寬到 2160
 const names=['Leona','Amber','Noise','Anna','Machi'], descriptions=['黑髮・時髦日常','暖色・樸素自在','短髮・專注模式','長髮・粉色靈感','挑染・街頭風格'];
@@ -119,10 +120,13 @@ function updateCamera(){
   const left=Math.max(0,Math.min(Math.max(0,W-vw),cam.x-vw/2)),top=Math.max(minTop,Math.min(maxTop,cam.y-vh/2));
   if(Math.abs(left-cam.left)>.2||Math.abs(top-cam.top)>.2){cam.left=left;cam.top=top;markDirty();}
 }
+function setPageGrid(sc,tx,ty){/* 地板格線畫在整個頁面背景（64 格、2px 淡灰），與場景座標對齊；四、五樓共用 */
+  if(!window.__pageGrid)return;try{const r=game.parentElement.getBoundingClientRect(),ox=r.left+window.scrollX+tx,oy=r.top+window.scrollY+ty+OY*sc,c='rgba(120,128,136,.16)',st=document.documentElement.style,g=64*sc,l=Math.max(1,2*sc);
+    st.backgroundImage=`linear-gradient(to right,${c} ${l}px,transparent ${l}px),linear-gradient(to bottom,${c} ${l}px,transparent ${l}px)`;st.backgroundSize=`${g}px ${g}px`;st.backgroundPosition=`${ox}px ${oy}px`;st.backgroundAttachment='scroll';}catch(e){}}
 function fitCleanView(){
   const wrapEl=game.parentElement,w=wrapEl.getBoundingClientRect().width;
   if(!w)return;
-  if(FLOOR4&&!document.documentElement.classList.contains('clean-narrow')){const bw5=(staffSeated?2000+320:1112+320)-(320-250),fitW5=w*.96/bw5,cs5=Number(new URLSearchParams(location.search).get('cs'))||0,sc=Math.min((cs5?Math.min(cs5,fitW5):fitW5)*deskZoom,fitW5);const f4x0=20,f4x1=2400,f4top=150,padY4=130;/* 跟五樓一樣：內容置中、去掉上方與左側空白，上下留 130px 給圓形選單 */cleanTop=f4top;cleanBottom=VB;cleanScale=sc;cleanY0=f4top;cleanPadY=padY4;wrapEl.style.height=Math.round((VB-f4top)*sc)+padY4*2+'px';wrapEl.style.overflow='visible';wrapEl.style.overflowX='clip';try{wrapEl.parentElement.style.overflow='visible';wrapEl.parentElement.style.overflowX='clip'}catch(e){}game.style.width=`${W*sc}px`;game.style.height=`${H*sc}px`;game.style.transform=`translate(${(w-(f4x1-f4x0)*sc)/2-f4x0*sc}px,${-f4top*sc+padY4}px)`;dzSync();markDirty();return;}
+  if(FLOOR4&&!document.documentElement.classList.contains('clean-narrow')){const bw5=(staffSeated?2000+320:1112+320)-(320-250),fitW5=w*.96/bw5,cs5=Number(new URLSearchParams(location.search).get('cs'))||0,sc=Math.min((cs5?Math.min(cs5,fitW5):fitW5)*deskZoom,fitW5);const f4x0=20,f4x1=2400,f4top=150,padY4=130;/* 跟五樓一樣：內容置中、去掉上方與左側空白，上下留 130px 給圓形選單 */cleanTop=f4top;cleanBottom=VB;cleanScale=sc;cleanY0=f4top;cleanPadY=padY4;wrapEl.style.height=Math.round((VB-f4top)*sc)+padY4*2+'px';wrapEl.style.overflow='visible';wrapEl.style.overflowX='clip';try{wrapEl.parentElement.style.overflow='visible';wrapEl.parentElement.style.overflowX='clip'}catch(e){}game.style.width=`${W*sc}px`;game.style.height=`${H*sc}px`;{const tx4=(w-(f4x1-f4x0)*sc)/2-f4x0*sc,ty4=-f4top*sc+padY4;game.style.transform=`translate(${tx4}px,${ty4}px)`;setPageGrid(sc,tx4,ty4);}dzSync();markDirty();return;}
   let top=TOP_BASE;try{top=Math.min(top,sceneTopExtent())}catch(error){}// 上排的帽子、對話框現在畫到哪就留到哪，不然會被切掉
   cleanTop=top;try{cleanBottom=sceneBottomExtent()}catch(error){cleanBottom=BOTTOM_FEET+40}
   // 手機（窄螢幕）：桌子四周要留走動的空間，搖桿也要在同一個畫面，所以放大倍率改成「整個可走動範圍剛好放進寬度」
@@ -142,7 +146,7 @@ function fitCleanView(){
   wrapEl.style.height=`${(narrow?Math.round(bh*scale):Math.max(Math.round(bh*scale),Math.round((VB-y0)*scale)))+padY*2}px`;// 桌機：高度含整個可走動範圍（走到桌子下面也不會被切掉）
   game.style.width=`${W*scale}px`;game.style.height=`${H*scale}px`;
   cleanScale=scale;cleanY0=y0;cleanPadY=padY;dzSync();
-  game.style.transform=`translate(${w/2-cx*scale}px,${-(y0+OY)*scale+padY}px)`;
+  game.style.transform=`translate(${w/2-cx*scale}px,${-(y0+OY)*scale+padY}px)`;setPageGrid(scale,w/2-cx*scale,-(y0+OY)*scale+padY);
   markDirty();
   /* 場景變高了（往上多兩組桌子）：第一次進來把畫面捲到自己的座位（沒有就捲到原本那組），不用自己往下找 */
   if(ready&&!cleanScrolled){cleanScrolled=true;let oi=-1;try{oi=ownIndex()}catch(error){}const p0=oi>=0&&people[oi]?viewPeople[oi]||people[oi]:null,wy=p0?p0.y:BOTTOM_FEET-120;setTimeout(()=>{try{window.scrollTo(0,Math.max(0,(wy-y0)*scale+padY-window.innerHeight/2))}catch(error){}},60);}
@@ -1388,7 +1392,7 @@ const roomBlockers=!LX?[]:[...roomWallList,...roomCornerList.map(([x,y])=>[x,y,R
 if(FLOOR4)stations.length=0;
 const walls0=stations.filter(s=>!s.big&&!s.gone).map(s=>s.row?[s.x-122,431+(s.y-695),244,219]:[s.x-122,s.y+18,244,80]);
 const walls=FLOOR4?((window.FLOOR4_SCENE&&window.FLOOR4_SCENE.blocks)||[]):walls0.concat(roomBlockers);
-if(LX){for(let b=0;b<3;b++){const dy=-b*GP,fy=315+dy,fh=335;walls.push([DL-92-12,fy,112,fh]);if(b===1){walls.push([DR-6-12,fy,83,fh],[DR+268-12,fy,85,fh]);}else walls.push([DR+11-8,fy,102,fh]);}walls.push([LONG_DESK.smallX-8,315,LONG_DESK.smallW+8,230],[LONG_DESK.x-8,315,LONG_DESK.w+16,165]);}
+if(LX){for(let b=0;b<3;b++){const dy=-b*GP,fy=315+dy,fh=335;walls.push([DL-92-12,fy,112,fh]);if(b===1){walls.push([DR-10+8,fy,52,fh],[DR+264+8,fy,54,fh]);}/* 窄書櫃的碰撞範圍貼合實際大小（畫出來寬 68／70，原本 83／85 再加上左右各 14 的邊，通道被擠太窄） */else walls.push([DR+11-8,fy,102,fh]);}walls.push([LONG_DESK.smallX-8,315,LONG_DESK.smallW+8,230],[LONG_DESK.x-8,315,LONG_DESK.w+16,165]);}
 function blocked(x,y){return x<65||x>W-65||y<ROOM_MIN_Y||y>ROOM_MAX_Y||walls.some(([a,b,w,h])=>x>a-14&&x<a+w+14&&y>b-4&&y<b+h+4);}
 /* 走進電梯（2026-10-26）：被操控的人物走到電梯門前、朝上走，就請外層（元宇宙頁）播放電梯過場並切到四樓；單獨開啟時直接換頁。 */
 let elevatorCooldown=0;
@@ -1618,6 +1622,7 @@ const furnitureFor=s=>stationDimmed(s)?(ensureFurnitureGray()||furniture):furnit
 /* 地板灰色格線（2026-10-25）：整個元宇宙比照廁所的白磁磚，每 64 px 一條淡灰線，從世界座標 0 對齊，捲動、縮放都不會漂移。 */
 const FLOOR_GRID=64;
 function drawFloorGrid(){
+  if(window.__pageGrid)return;/* 桌機整頁：格線改畫在整個頁面背景，兩側不會有收邊 */
   ctx.save();ctx.fillStyle='rgba(120,128,136,.16)';
   for(let gx=Math.ceil(0/FLOOR_GRID)*FLOOR_GRID;gx<W;gx+=FLOOR_GRID)ctx.fillRect(gx,-OY,2,H+OY);
   for(let gy=Math.ceil(-OY/FLOOR_GRID)*FLOOR_GRID;gy<H;gy+=FLOOR_GRID)ctx.fillRect(0,gy,W,2);
