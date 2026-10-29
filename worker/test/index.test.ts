@@ -1752,6 +1752,28 @@ describe('Machi Design API Worker', () => {
     expect(gap).toMatchObject({ ok: false });
   });
 
+  it('classifyCaseFiles writes the merged-mail classification into each sibling\'s NAS tracking', async () => {
+    const token = await login();
+    await seedCase('26080002');
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => Response.json({ content: { sha: 'cf-file-sha' }, commit: { sha: 'cf-commit-sha' } }));
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    await runInDurableObject(stub, async (_i, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      const db = JSON.parse(stored.json) as DatabaseSnapshot;
+      for (const row of db.tables.database.rows) if (row['案件編號'] === '26080001' || row['案件編號'] === '26080002') row['Gmail信件串ID'] = 'thread-x';
+      const a = db.tables.database.rows.find(r => r['案件編號'] === '26080001');
+      if (a) a['設計圖資料夾清單'] = JSON.stringify([{ path: '客戶/共用', keyword: 'KW' }]);
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(db), 'primary');
+    });
+    const res = await api({ action: 'classifyCaseFiles', caseId: '26080001', assignments: { 'a.png': '26080001', 'B.png': '26080002' } }, token);
+    expect(res).toMatchObject({ ok: true, applied: 2 });
+    const listed = await api({ action: 'list' }, token);
+    const rows = (listed.rows || listed.data) as Record<string, unknown>[];
+    const folders = (id: string) => JSON.parse(String(rows.find(r => (r.id || r['案件編號']) === id)?.designImageFolders || '[]'));
+    expect(folders('26080001')).toEqual([{ path: '客戶/共用', keyword: 'KW', pin: ['a'], skip: ['b'] }]);
+    expect(folders('26080002')).toEqual([{ path: '客戶/共用', keyword: '', pinOnly: true, pin: ['b'], skip: ['a'] }]);
+  });
+
   it('cross-case image move carries NAS tracking: source skips the moved files, target pins them on the same folder', async () => {
     const token = await login();
     await seedCase('26080002');

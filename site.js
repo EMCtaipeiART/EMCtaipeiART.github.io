@@ -2995,6 +2995,14 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       }catch(err){toast(`移除已備份的圖片失敗：${err.message}`,true)}
       drLive.delete(`${id}|${round}`);
     }
+    /* 把分類寫進後台（各案件的 NAS 追蹤設定）：之後回信與爬蟲都照這份歸檔，不會再亂分配 */
+    async function drSaveClassification(d){
+      if(!d.dr||drSiblings(d.id).length<2)return;
+      const assign=d.dr.assign||{},all={};for(const nm of drFileNames(d))all[nm]=assign[nm]||d.id;
+      if(!Object.keys(all).length)return;
+      await api('classifyCaseFiles',{caseId:d.id,assignments:all});
+      loadDatabase(true,true).catch(()=>{});
+    }
     async function drDistribute(d,round){
       const assign=(d.dr&&d.dr.assign)||{},moves=new Map();
       for(const [nm,t] of Object.entries(assign))if(t&&t!==d.id){if(!moves.has(t))moves.set(t,[]);moves.get(t).push(nm)}
@@ -3097,6 +3105,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       /* 備份還在背景進行就先寄出（有預覽圖時允許）：輪次確認要等資料庫有這一輪紀錄，所以等備份完成再做（最久 3 分鐘）。 */
       if(d.dr&&d.dr.pending){toast('信已寄出，圖片備份仍在背景進行，請先不要關閉頁面');for(let i=0;i<360&&d.dr.pending;i++)await new Promise(r=>setTimeout(r,500))}
       try{const nasIds=(d.dr&&d.dr.nasIds)||new Set();imgs=imgs.filter(i=>!nasIds.has(i.contentId));if(imgs.length&&round!==null){await api('backupReplyInlineImages',{caseId:d.id,round,images:imgs.filter(i=>i.base64&&/^image\//.test(i.mimeType||'')).map(i=>({fileName:i.fileName||'照片',mimeType:i.mimeType,base64:i.base64}))});await refreshMods(d.id)}}catch(err){toast(`信已寄出，但信件照片備份至修改紀錄失敗：${err.message}`,true)}
+      try{await drSaveClassification(d)}catch(err){toast(`分類寫入後台失敗：${err.message}`,true)}
       try{await drDistribute(d,round)}catch(err){toast(`歸類到各專案失敗：${err.message}`,true)}
       if(round>0){try{const rec=(state.mods.get(d.id)||[]).find(x=>(+x['修改次數']||0)===round);if(rec&&!String(rec['確認修正日']||'').trim())await setConfirm(d.id,round,true)}catch(err){toast(`自動標記${roundLabel(round)}設計完成確認失敗：${err.message}`,true)}}
       refreshView();

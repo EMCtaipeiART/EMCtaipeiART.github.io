@@ -81,3 +81,10 @@ test('略過回信：移除這次回信已備份的圖片；合併分類列有�
   assert.match(src, /dr-cls-thumb/);
   assert.match(lib, /recordedAnywhere\.has/);
 });
+
+test('合併信件分類寫進後台：寄出時呼叫 classifyCaseFiles', async () => {
+  const src = await readFile(new URL('../../site.js', import.meta.url), 'utf8');
+  assert.match(src, /async function drSaveClassification\(d\)/);
+  assert.match(src, /api\('classifyCaseFiles',\{caseId:d\.id,assignments:all\}\)/);
+  assert.match(src, /await drSaveClassification\(d\)/);
+});

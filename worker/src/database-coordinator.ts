@@ -1364,6 +1364,52 @@ function readNasFolders(row: Row): NasFolderEntry[] {
   return legacy ? [{ path: legacy, keyword: text(row['設計圖檔名關鍵字']) }] : [];
 }
 
+/** 合併信件分類寫進後台：每個檔案只歸指定的案件追蹤——其他同信件串案件 skip、指定案件 pin（必要時補上同一批 NAS 資料夾）。回傳有改動的案件列。 */
+function applyFileClassification(cases: Row[], assignments: Record<string, string>): Row[] {
+  const byId = new Map(cases.map(row => [text(row['案件編號']), row]));
+  const folderMap = new Map<string, NasFolderEntry[]>(cases.map(row => [text(row['案件編號']), readNasFolders(row)]));
+  const allPaths = [...new Set([...folderMap.values()].flat().map(entry => entry.path))];
+  if (!allPaths.length) return [];
+  const merge = (a: string[] | undefined, add: string[]) => [...new Set([...(a || []), ...add])];
+  const without = (a: string[] | undefined, remove: string[]) => (a || []).filter(name => !remove.includes(name));
+  const setList = (list: string[] | undefined, entry: NasFolderEntry, key: 'pin' | 'skip') => { if (list && list.length) entry[key] = list; else delete entry[key]; };
+  // 先讓每個案件都有同一批資料夾的項目（沒有的補成「只追蹤釘選檔名」），後面才能對每個案件各自記 skip／pin。
+  for (const folders of folderMap.values()) {
+    for (const path of allPaths) if (!folders.some(entry => entry.path === path)) folders.push({ path, keyword: '', pinOnly: true });
+  }
+  const touched = new Set<string>();
+  for (const [fileName, assignee] of Object.entries(assignments)) {
+    const name = designImageBaseNameOf(fileName);
+    if (!name || !byId.has(assignee)) continue;
+    for (const [id] of byId) {
+      const folders = folderMap.get(id) as NasFolderEntry[];
+      if (id === assignee) {
+        for (const path of allPaths) if (!folders.some(entry => entry.path === path)) folders.push({ path, keyword: '', pinOnly: true });
+        for (const entry of folders) {
+          setList(without(entry.skip, [name]), entry, 'skip');
+          if (entry.pinOnly || text(entry.keyword)) setList(merge(entry.pin, [name]), entry, 'pin');
+        }
+      } else {
+        for (const entry of folders) {
+          setList(merge(entry.skip, [name]), entry, 'skip');
+          setList(without(entry.pin, [name]), entry, 'pin');
+        }
+      }
+      touched.add(id);
+    }
+  }
+  const changed: Row[] = [];
+  for (const id of touched) {
+    const row = byId.get(id) as Row;
+    const folders = folderMap.get(id) as NasFolderEntry[];
+    if (!folders.length) continue;
+    row['設計圖資料夾清單'] = JSON.stringify(folders);
+    if (!text(row['設計圖資料夾連結'])) { row['設計圖資料夾連結'] = folders[0].path; row['設計圖檔名關鍵字'] = folders[0].keyword; }
+    changed.push(row);
+  }
+  return changed;
+}
+
 /** 跨案件搬移設計圖後，讓 NAS 追蹤跟著搬：來源排除這幾個檔名，目標釘選這幾個檔名。回傳有沒有改動。 */
 function moveNasTracking(sourceCase: Row, targetCase: Row, fileNames: string[]): boolean {
   const names = [...new Set(fileNames.map(designImageBaseNameOf).filter(Boolean))];
@@ -6306,6 +6352,26 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         }
         if (createdRound) recalculateDatabaseModificationCounts(draft);
         return { result: { ok: true, action, caseId, round: roundNumber, images: merged, ignoredImages, record: row }, changedTables: createdRound ? ['修改統計表', 'database'] : ['修改統計表'] };
+      });
+    }
+    if (action === 'classifyCaseFiles') {
+      // 合併信件的設計師回覆：把「哪個檔案屬於哪個專案」寫進後台（NAS 追蹤設定），之後回信、爬蟲就不會再亂分配。
+      const current = this.requireAccess(database, session, 'media.manage');
+      const caseId = text(payload.caseId || payload.id);
+      const raw = asRow(payload.assignments);
+      const assignments: Record<string, string> = {};
+      for (const [fileName, target] of Object.entries(raw)) if (text(fileName) && text(target)) assignments[text(fileName)] = text(target);
+      if (!caseId) throw new Error('缺少案件編號');
+      if (!Object.keys(assignments).length) throw new Error('沒有指定分類');
+      return this.mutate(action, current, draft => {
+        const rows = draft.tables.database.rows;
+        const self = rows.find(row => text(row['案件編號']) === caseId);
+        if (!self) throw new Error('找不到案件');
+        const thread = text(self['Gmail信件串ID']);
+        const siblings = thread ? rows.filter(row => text(row['Gmail信件串ID']) === thread) : [];
+        if (siblings.length < 2) return { result: { ok: true, action, caseId, applied: 0 }, changedTables: [] };
+        const changed = applyFileClassification(siblings, assignments);
+        return { result: { ok: true, action, caseId, applied: changed.length }, changedTables: changed.length ? ['database'] : [] };
       });
     }
     if (action === 'moveCaseDesignImages') {
