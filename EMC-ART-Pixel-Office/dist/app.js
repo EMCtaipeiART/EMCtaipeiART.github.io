@@ -163,6 +163,7 @@ function followOwn(){
   if(followPrev===key)return;
   const first=followPrev===null||!followPrev.endsWith(':'+oi);followPrev=key;
   const want=(p.y-78-cleanY0)*cleanScale+cleanPadY-window.innerHeight/2,cur=window.scrollY,diff=want-cur;
+  window.__progScrollAt=Date.now();
   if(FLOOR4){const wx=Math.max(0,p.x*cleanScale-window.innerWidth/2),cx=window.scrollX,dx=wx-cx;if(first||Math.abs(diff)>6||Math.abs(dx)>6)window.scrollTo(first?wx:cx+dx*.35,first?Math.max(0,want):cur+diff*.35);return;}
   if(first||Math.abs(diff)>6)window.scrollTo(0,first?Math.max(0,want):cur+diff*.35);
 }
@@ -2360,7 +2361,7 @@ window.addEventListener('message',event=>{
     if(target)target.focus({preventScroll:true});
   }
   back.onclick=toRing;
-  window.radialOpen=i=>{box.hidden=false;box.dataset.i=i;toRing();try{if(!cam.on&&!FLOOR4){/* 四樓的畫面比例不同（cleanScale），這個算式會把畫面捲到地圖最上面；四樓不在這裡捲動，選單自己會限制在可見範圍內 */const holder=wrap.getBoundingClientRect(),view=game.getBoundingClientRect(),p=viewPeople[i]||people[i],cy=view.top-holder.top+(p.y+OY-78)*(view.height/H),docY=holder.top+window.scrollY+cy;/* 把人物捲到視窗正中央，圓形選單才不會被邊緣擠歪 */window.scrollTo({top:Math.max(0,docY-window.innerHeight/2),behavior:'smooth'});}}catch(error){}const c=$('personCard');if(c)c.classList.add('radial-hide');};
+  window.radialOpen=i=>{window.__radialOpenAt=Date.now();box.hidden=false;box.dataset.i=i;toRing();try{if(!cam.on&&!FLOOR4){/* 四樓的畫面比例不同（cleanScale），這個算式會把畫面捲到地圖最上面；四樓不在這裡捲動，選單自己會限制在可見範圍內 */const holder=wrap.getBoundingClientRect(),view=game.getBoundingClientRect(),p=viewPeople[i]||people[i],cy=view.top-holder.top+(p.y+OY-78)*(view.height/H),docY=holder.top+window.scrollY+cy;/* 把人物捲到視窗正中央，圓形選單才不會被邊緣擠歪 */window.scrollTo({top:Math.max(0,docY-window.innerHeight/2),behavior:'smooth'});}}catch(error){}const c=$('personCard');if(c)c.classList.add('radial-hide');};
   window.radialClose=()=>{
     if(box.hidden||level===0)return;
     const fromRing=level===1;resetMotion();level=0;
@@ -2380,7 +2381,7 @@ window.addEventListener('message',event=>{
   /* 滾動畫面時直接收合選單（跟人物走動一樣）：只看使用者的滾輪、觸控、拖動捲軸，程式自己捲動（跟隨人物）不算 */
   let ptrDown=false;window.addEventListener('pointerdown',()=>{ptrDown=true;},{passive:true});window.addEventListener('pointerup',()=>{ptrDown=false;},{passive:true});
   const scrollClose=()=>{if(!box.hidden&&level!==0)window.radialClose();};
-  window.addEventListener('wheel',scrollClose,{passive:true});window.addEventListener('touchmove',scrollClose,{passive:true});window.addEventListener('scroll',()=>{if(ptrDown)scrollClose();},{passive:true});
+  window.addEventListener('wheel',scrollClose,{passive:true});window.addEventListener('touchmove',scrollClose,{passive:true});window.addEventListener('scroll',()=>{if(ptrDown&&Date.now()-(window.__radialOpenAt||0)>900&&Date.now()-(window.__progScrollAt||0)>500)scrollClose();},{passive:true});/* 剛點開選單時鏡頭會自己捲到人物身上（程式捲動），不能算使用者在捲 */
   function place(){
     if(box.hidden||level===0||selected===null)return;
     if(keys.size){window.radialClose();return;}// 人物走動時收合選單
