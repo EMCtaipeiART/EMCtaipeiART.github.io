@@ -11,11 +11,11 @@ const dirty=()=>{try{api().markDirty()}catch(e){}};
 const toast=m=>{try{api().toast(m)}catch(e){}};
 const seen=new Set();
 /* ---------- 馬桶 ---------- */
-const BOWLS=[[70,86],[70,200]];/* 兩格馬桶中心（相對廁所內側左上角） */
+const BOWLS=[[92,86],[92,200]];/* 兩格馬桶中心（相對廁所內側左上角） */
 const poop=new Map();/* key → {at,flushing} */
 let prompt=null;/* {key,x,y,until} 點人物後出現的「沖馬桶」按鈕 */
 function bowlList(){const g=api().geo();const out=[];(g.toilets||[]).forEach((t,ti)=>BOWLS.forEach((b,bi)=>out.push({key:ti+':'+bi,x:t.x+b[0],y:t.y+b[1]})));return out;}
-function updateToilets(){const ps=api().people().filter(p=>!p.away);bowlList().forEach(b=>{const occ=ps.some(p=>Math.abs(p.x-(b.x+28))<62&&Math.abs(p.vy-(b.y+36))<62);const st=poop.get(b.key);if(occ&&!st)poop.set(b.key,{at:Date.now(),occ:true});else if(st&&!st.flushing){st.occ=occ;if(!occ&&Date.now()-st.at>180000)poop.delete(b.key);}});}
+function updateToilets(){const ps=api().people().filter(p=>!p.away);bowlList().forEach(b=>{const occ=ps.some(p=>Math.abs(p.x-(b.x+4))<62&&Math.abs(p.vy-(b.y+36))<62);const st=poop.get(b.key);if(occ&&!st)poop.set(b.key,{at:Date.now(),occ:true});else if(st&&!st.flushing){st.occ=occ;if(!occ&&Date.now()-st.at>180000)poop.delete(b.key);}});}
 function flush(key){const st=poop.get(key);if(!st||st.flushing)return;st.flushing=Date.now();stat.flush++;save();
   const m=pick(['🚽 嘩～沖乾淨了！衛生之星 +1','🚽 順手沖馬桶，同事感謝你！','🚽 清潔小天使上線，今天運氣 +1','🚽 沖水成功！廁所又恢復清爽']);toast(m+'（累計 '+stat.flush+' 次）');
   const sel=api().selected();if(sel!==null&&sel!==undefined)api().mood(sel,'joy');setTimeout(()=>{poop.delete(key);dirty();},1100);dirty();}
@@ -80,7 +80,7 @@ window.funSceneClick=(x,y,hit)=>{try{
   for(const n of notes){if(Math.abs(x-n.x)<24&&Math.abs(y-n.y)<20){notes=notes.filter(q=>q!==n);stat.notes++;save();toast(NOTES[n.k][1]+'（累計 '+stat.notes+' 件）');dirty();return true;}}
   const g=api().geo();for(const p of g.proj||[]){if(x>=p.x-6&&x<=p.x+p.w+6&&y>=p.y-6&&y<=p.y+p.h+6){const k=pkey(p),n=proj.get(k)||0;proj.set(k,n>=SLIDES.length?0:n+1);toast(n>=SLIDES.length?'📽️ 投影機關閉':'📽️ 投影中：'+SLIDES[n][0]);dirty();return true;}}
   /* 點到廁所裡有便便的人物：跳出「沖馬桶」 */
-  if(hit&&hit.i!==undefined){const ps=api().people(),p=ps[hit.i];if(p){const b=bowlList().find(b=>poop.has(b.key)&&!poop.get(b.key).flushing&&Math.abs(p.x-(b.x+28))<70&&Math.abs(p.vy-(b.y+36))<70);if(b)prompt={key:b.key,x:p.x,y:p.vy,until:Date.now()+6000};}}
+  if(hit&&hit.i!==undefined){const ps=api().people(),p=ps[hit.i];if(p){const b=bowlList().find(b=>poop.has(b.key)&&!poop.get(b.key).flushing&&Math.abs(p.x-(b.x+4))<70&&Math.abs(p.vy-(b.y+36))<70);if(b)prompt={key:b.key,x:p.x,y:p.vy,until:Date.now()+6000};}}
   for(const b of bowlList()){const st=poop.get(b.key);if(st&&!st.flushing&&Math.abs(x-b.x)<26&&Math.abs(y-b.y)<28){flush(b.key);return true;}}
   return false;}catch(e){return false;}};
 /* 排程：廁所偵測、筆記本、驚喜道具；走過去也能撿 */
