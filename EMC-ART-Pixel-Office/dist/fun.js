@@ -40,16 +40,19 @@ function drawPoop(c,p,t){const fl=flushing.get(p.id);if(fl){const k=Math.min(1,(
   box('#8b5a2b',-9,0,18,6);box('#9c6a35',-6,-6,12,6);box('#ad7a40',-3,-11,6,5);c.fillStyle='#fff';c.fillRect(x-4,y-4,3,3);c.fillRect(x+1,y-4,3,3);c.restore();}
 function drawPrompt(c,p){const w=150,h=34,x=p.x-w/2,y=p.y-92;c.save();c.fillStyle='#111';c.fillRect(x-3,y-3,w+6,h+6);c.fillStyle='#e6f6ff';c.fillRect(x,y,w,h);c.fillStyle='#111';c.font='bold 16px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('🚽 順手沖馬桶',p.x,y+h/2+1);c.restore();p.rect=[x,y,w,h];}
 /* ---------- 投影機 ---------- */
-const SLIDE_IDS=['slide_chart','slide_pie','slide_photo','slide_cat','slide_rocket'],SLOT_J=360000;
+const SLIDES=[['本週進度','▮▮▮▮▮▯▯ 72%'],['午餐投票','🍱 便當　🍜 拉麵　🥗 沙拉'],['今日金句','「改稿是設計師的日常」'],['Q4 目標','客戶滿意度 ↑ 加班 ↓'],['休息一下','☕ 15 分鐘後回來'],['週五提醒','🎉 下班前記得關電腦'],['新需求','「這個logo可以再大一點嗎」'],['會議紀錄','結論：下次再討論']],SLIDE_N=SLIDES.length,SLOT_J=360000;
 const pkey=p=>p.x+'_'+p.y;
-function projState(p){const sl=Math.floor(Date.now()/SLOT_J),r=rng('j:'+FL()+':'+sl+':'+pkey(p)),base=r()<.45,pic=Math.floor(r()*SLIDE_IDS.length),ov=claims['j:'+FL()+':'+sl+':'+pkey(p)];return{on:ov?!!ov[0]:base,pic,id:'j:'+FL()+':'+sl+':'+pkey(p)};}
+function projState(p){const sl=Math.floor(Date.now()/SLOT_J),r=rng('j:'+FL()+':'+sl+':'+pkey(p)),base=r()<.45,pic=Math.floor(r()*SLIDE_N),ov=claims['j:'+FL()+':'+sl+':'+pkey(p)];return{on:ov?!!ov[0]:base,pic,id:'j:'+FL()+':'+sl+':'+pkey(p)};}
 function drawProj(c,p){const st=projState(p);if(!st.on)return;const right=/right/.test(p.name),down=/down/.test(p.name),W=170,H=104,oy=p.y+p.h/2;let sx,sy;if(down){sx=p.x+p.w/2-W/2;sy=p.y+p.h+30;}else if(right){sx=p.x+p.w+36;sy=oy-H/2;}else{sx=p.x-36-W;sy=oy-H/2;}
   c.save();c.fillStyle='rgba(255,246,170,.20)';c.beginPath();
   if(down){c.moveTo(p.x+p.w/2-8,p.y+p.h);c.lineTo(p.x+p.w/2+8,p.y+p.h);c.lineTo(sx+W,sy);c.lineTo(sx,sy);}
   else if(right){c.moveTo(p.x+p.w,oy-6);c.lineTo(p.x+p.w,oy+6);c.lineTo(sx,sy+H);c.lineTo(sx,sy);}
   else{c.moveTo(p.x,oy-6);c.lineTo(p.x,oy+6);c.lineTo(sx+W,sy+H);c.lineTo(sx+W,sy);}
   c.closePath();c.fill();c.restore();
-  if(!spr(c,SLIDE_IDS[st.pic],sx+W/2,sy+H/2)){c.save();c.fillStyle='#111';c.fillRect(sx-3,sy-3,W+6,H+6);c.fillStyle=['#cfe8ff','#ffe3c2','#d9f2d0','#f6d6ee','#fff3b0'][st.pic];c.fillRect(sx,sy,W,H);c.restore();}}
+  const sl=SLIDES[st.pic%SLIDES.length];/* 第一版的簡報卡（藍色標題列＋一句話）：比較有趣，隨機挑一張 */
+  c.save();c.fillStyle='#111';c.fillRect(sx-4,sy-4,W+8,H+8);c.fillStyle='#f8fbff';c.fillRect(sx,sy,W,H);c.fillStyle='#2f6fd6';c.fillRect(sx,sy,W,22);
+  c.fillStyle='#fff';c.font='bold 14px sans-serif';c.textAlign='left';c.textBaseline='middle';c.fillText(sl[0],sx+8,sy+12);
+  c.fillStyle='#223';c.font='bold 13px sans-serif';c.textAlign='center';c.fillText(sl[1],sx+W/2,sy+H/2+10,W-12);c.restore();}
 /* ---------- 會議室遺落物 ---------- */
 const NOTE_IDS=['note_book','note_paper','note_sticky','note_sketch','note_pen'];
 const NOTES=[['筆記本','📓 撿到一本筆記本，上面寫著「下週一要交稿」'],['紙筆','✏️ 一張紙和一支筆，畫了一隻很醜的貓'],['便利貼','🗒️ 便利貼：「誰把我的馬克杯拿走了」'],['速寫本','📒 速寫本裡全是上班摸魚畫的小人'],['原子筆','🖊️ 一支有咬痕的原子筆，不知道是誰的']];
