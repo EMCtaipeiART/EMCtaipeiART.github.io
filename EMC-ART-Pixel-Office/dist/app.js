@@ -1015,7 +1015,7 @@ let storyIdentity={name:'',token:'',staff:false,monitor:false};
 function viewerIsStaff(){return Boolean(storyIdentity.staff);}
 function ownIndex(){const who=String(storyIdentity.name||'').toLowerCase();return who?names.findIndex(n=>n.toLowerCase()===who):-1;}
 /* 小遊戲：上方「小遊戲」按鈕（主站）送訊息進來才載入選單；所有人都看得到出氣擂台，其餘測試中的遊戲只有管理者與 Machi（monitor）看得到（見 minigames/index.js）。 */
-function openMiniGamesMenu(){const go=()=>{try{window.miniGamesMenu&&window.miniGamesMenu.toggle();}catch(error){}};if(window.miniGamesMenu)return go();if(window.__mgLoading)return;window.__mgLoading=true;document.documentElement.classList.add('minigames-on');const m=document.createElement('script');m.type='module';m.src='minigames/index.js?v=16';m.onload=go;document.body.appendChild(m);}
+function openMiniGamesMenu(){const go=()=>{try{window.miniGamesMenu&&window.miniGamesMenu.toggle();}catch(error){}};if(window.miniGamesMenu)return go();if(window.__mgLoading)return;window.__mgLoading=true;document.documentElement.classList.add('minigames-on');const m=document.createElement('script');m.type='module';m.src='minigames/index.js?v=17';m.onload=go;document.body.appendChild(m);}
 window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==window.parent||!event.data||event.data.type!=='pixelOfficeMiniGames')return;openMiniGamesMenu();});
 function applyViewerRole(){document.documentElement.classList.toggle('staff-view',viewerIsStaff());if(viewerIsStaff()){const i=ownIndex();if(i>=0&&selected!==i&&ready){select(i);}}}
 const storyLoggedIn=()=>Boolean(storyIdentity.name&&storyIdentity.token);

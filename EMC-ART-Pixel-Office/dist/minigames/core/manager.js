@@ -119,7 +119,10 @@ export function createMiniGameManager({ui,store,bridge,board=null,nickname=()=>'
     if(run.phase!=='running')return;
     // timer:'external'＝時間由遊戲（伺服器）決定：不倒數、不自動結束，遊戲自己呼叫 ctx.setTime／ctx.end
     const external=run.def.timer==='external';
-    if(!external){run.timeLeft-=dt;ui.setTime(run.timeLeft);}
+    if(!external){
+      /* clock:'wall'：用真實時間倒數。固定步長遊戲在畫面卡頓（例如 Safari、手機）時，遊戲時鐘會比真實時間慢，玩家慢慢點卻被記成「幾秒內找完」而被伺服器判 too-fast；單次最多算 1 秒，避免分頁休眠後一次跳很多 */
+      let d=dt;if(run.def.clock==='wall'){const n=performance.now();d=run.lastWall?Math.min((n-run.lastWall)/1000,1):dt;run.lastWall=n;}
+      run.timeLeft-=d;ui.setTime(run.timeLeft);}
     guard(()=>run.def.update(run.ctx,dt));
     if(run&&!external&&run.timeLeft<=0)finish();
   }

@@ -5,6 +5,7 @@ import {floorCandidates,pickTreasures,treasureScore,TREASURE_COUNT,TREASURE_SECO
 const HUD_TOP=64,BOTTOM_PAD=70,HINT_W=120,HINT_H=44;
 
 export const treasureGame={
+  clock:'wall',
   id:'treasure',title:'辦公室尋寶',icon:'map',blurb:'限時找出藏在辦公室裡的 5 件小東西',medals:[300,500,650],
   howto:{goal:'在 120 秒內，找出今天藏在整個辦公室裡的 5 個小道具（桌上、角落、家具旁都可能有，畫面可以捲動）。',pc:'滾輪或拖曳捲動辦公室，用滑鼠點道具；按 H 或點右下「提示」看大概位置（扣 50 分，每局一次）。',touch:'手指拖曳捲動辦公室、點道具；點右下「提示」看大概位置。',tips:['道具很小，留意家具邊緣與房間角落','全部找齊後，剩餘時間每秒 +2 分','每天的題目不同，同一天大家一樣']},duration:TREASURE_SECONDS,ranked:true,
   start(ctx){

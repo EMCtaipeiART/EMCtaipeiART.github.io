@@ -1154,3 +1154,9 @@
 
 ## 2026-10-29 點投影畫面也能關閉投影機
 - fun.js：投影機開啟時，點投影畫面（不只機身）也會切換關閉；fun.js?v=10。
+
+## 2026-10-29 辦公室尋寶「成績驗證失敗（too-fast）」
+- 現象：使用者慢慢點、5 個道具約 6 秒就被記成「剩餘 114 秒」，伺服器因找到道具間隔小於 2 秒判 too-fast，成績只存本機（也就看不到帳號上榜）。
+- 原因：小遊戲用固定步長（1/60 秒、單幀最多補 5 步）推進，畫面卡頓（Safari／手機）時遊戲時鐘比真實時間慢，log 裡的 `t = 120 − timeLeft` 被壓縮。
+- 修正：遊戲定義新增 `clock:'wall'`（尋寶使用），manager 倒數改用 `performance.now()` 真實時間（單次最多 1 秒）；其他遊戲（含 hoops 依 tick 驗證）不變。minigames/index.js 改版本 v17，manager／treasure 的 import 補版本參數，dist/index.html app.js v362，避免 Safari 用舊檔。
+- 測試：tests/minigames-core.test.mjs 修改前後同為 35 通過／6 失敗（既有失敗，與本次無關）。

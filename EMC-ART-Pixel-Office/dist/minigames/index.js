@@ -1,9 +1,9 @@
 // 小遊戲啟動點：把 manager 接到像素辦公室（透過 app.js 暴露的 window.__pixelOffice 橋接）。
-import {createMiniGameManager} from './core/manager.js';
+import {createMiniGameManager} from './core/manager.js?v=2';
 import {createUI} from './core/ui.js';
 import {createScoreStore} from './core/score.js';
 import {demoGame} from './games/demo.js';
-import {treasureGame} from './games/treasure.js';
+import {treasureGame} from './games/treasure.js?v=2';
 import {hoopsGame} from './games/hoops.js';
 import {deadlineGame} from './games/deadline.js?v=3';
 import {hideseekGame} from './games/hideseek.js';
