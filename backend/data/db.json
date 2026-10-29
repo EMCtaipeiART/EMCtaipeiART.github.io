@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 9740,
+  "revision": 9741,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-29T05:43:50.079Z",
+  "updatedAt": "2026-10-29T06:51:11.349Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -2310,7 +2310,8 @@
         {"短碼":"PVKCXG","原始網址":"https://www.soundcore.com.tw/products/soundcore-p42i","名稱":"1101~1109 momo","專案":"Soundcore","可見範圍":"同組","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/10/27 12:32:16","更新時間":"2026/10/27 12:32:16"},
         {"短碼":"GxkM5i","原始網址":"https://www.soundcore.com.tw/products/soundcore-work","名稱":"1101~1109 pc","專案":"Soundcore","可見範圍":"同組","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/10/27 12:32:16","更新時間":"2026/10/27 12:32:16"},
         {"短碼":"1102Aeroclip2socialpost","原始網址":"https://emc-art.com/PVKCXG 1101~1109 pc  https://emc-art.com/GxkM5i","名稱":"","專案":"Soundcore","可見範圍":"同組","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/10/27 12:34:14","更新時間":"2026/10/27 12:34:14"},
-        {"短碼":"1111shopeeAeroClip2","原始網址":"https://docs.google.com/presentation/d/1cVC38kYoeMbHKMaL0PhcW1cVSQBzuGlF/edit?slide=id.h6559b2b1aa3fa3c6_1_7#slide=id.h6559b2b1aa3fa3c6_1_7","名稱":"蝦皮雙11熱賣AeroClip2","專案":"Soundcore","可見範圍":"同組","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/10/28 22:53:56","更新時間":"2026/10/28 22:53:56"}
+        {"短碼":"1111shopeeAeroClip2","原始網址":"https://docs.google.com/presentation/d/1cVC38kYoeMbHKMaL0PhcW1cVSQBzuGlF/edit?slide=id.h6559b2b1aa3fa3c6_1_7#slide=id.h6559b2b1aa3fa3c6_1_7","名稱":"蝦皮雙11熱賣AeroClip2","專案":"Soundcore","可見範圍":"同組","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/10/28 22:53:56","更新時間":"2026/10/28 22:53:56"},
+        {"短碼":"wg2KEZ","原始網址":"https://docs.google.com/presentation/d/1_FlSzfkmLIL4gUkL6vAdJCOJz9qt0-S63c5owoMG2OI/edit?slide=id.h66754a9a4d169b44_0_4#slide=id.h66754a9a4d169b44_0_4","名稱":"","專案":"","可見範圍":"同組","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/10/29 14:51:11","更新時間":"2026/10/29 14:51:11"}
       ]
     }
   },
