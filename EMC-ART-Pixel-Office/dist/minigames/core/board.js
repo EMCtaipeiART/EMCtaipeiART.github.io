@@ -30,6 +30,8 @@ export function createBoardClient({base=boardBaseUrl(),fetchImpl=(...a)=>globalT
     },
     submit(ticket,log){return call('/minigames/submit',{method:'POST',body:{runId:ticket.runId,device:ticket.device,log}});},
     top3(range='today'){return call('/minigames/top3?range='+range);},
+    /* 出氣擂台前三名（由主 API 的 ventArenaTop3 提供；range＝today／week／all） */
+    arenaTop3(range='today'){return call('/api',{method:'POST',body:{action:'ventArenaTop3',range}});},
     board(game,range='today'){return call('/minigames/board?game='+encodeURIComponent(game)+'&range='+range);}
   };
 }

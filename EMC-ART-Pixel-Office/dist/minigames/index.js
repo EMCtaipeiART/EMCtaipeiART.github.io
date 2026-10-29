@@ -9,8 +9,8 @@ import {deadlineGame} from './games/deadline.js?v=3';
 import {hideseekGame} from './games/hideseek.js';
 import {hideseekOnline} from './games/hideseek-online.js';
 import {createLobby} from './core/lobby.js';
-import {createBoardClient} from './core/board.js?v=2';
-import {createMenu} from './core/menu.js?v=2';
+import {createBoardClient} from './core/board.js?v=3';
+import {createMenu} from './core/menu.js?v=3';
 
 const office=window.__pixelOffice;
 if(office){

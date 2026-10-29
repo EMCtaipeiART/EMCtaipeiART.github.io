@@ -5775,6 +5775,22 @@ describe('出氣擂台排行榜', () => {
     expect(await api({ action: 'ventArenaScore', score: 0, mode: 'free' })).toMatchObject({ ok: false });
     expect(await api({ action: 'ventArenaScore', score: 999999, mode: 'free' })).toMatchObject({ ok: false });
   });
+
+  it('ventArenaTop3 gives the top three by range (today / week / all history)', async () => {
+    const admin = await login();
+    await api({ action: 'ventArenaScore', score: 500, mode: 'timed', kos: 1, roundId: 'a1', token: admin });
+    await api({ action: 'ventArenaScore', score: 400, mode: 'free', kos: 1, roundId: 'a2' });
+    await api({ action: 'ventArenaScore', score: 300, mode: 'free', kos: 1, roundId: 'a3' });
+    await api({ action: 'ventArenaScore', score: 200, mode: 'free', kos: 1, roundId: 'a4' });
+    for (const range of ['today', 'week', 'all']) {
+      const top = await api({ action: 'ventArenaTop3', range }) as { ok: boolean; range: string; entries: Array<{ rank: number; name: string; score: number; account: boolean }> };
+      expect(top.ok).toBe(true);
+      expect(top.range).toBe(range);
+      expect(top.entries.map(e => e.score)).toEqual([500, 400, 300]);
+      expect(top.entries[0].account).toBe(true);
+      expect(top.entries[1]).toMatchObject({ name: '未登入使用者', account: false });
+    }
+  });
 });
 
 describe('pixel office status diagnostic', () => {

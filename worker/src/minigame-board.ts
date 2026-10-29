@@ -126,8 +126,8 @@ export class MinigameBoard extends DurableObject<Env> {
   }
   /** 每款遊戲的前三名（名字與分數），給「遊戲排行榜」總覽用 */
   top3(req: { range?: unknown }): Reply {
-    const range = req.range === 'week' ? 'week' : 'today';
-    const now = this.clock(), to = dayKey(new Date(now)), from = range === 'week' ? dayKey(new Date(now - 6 * DAY)) : to;
+    const range = req.range === 'week' ? 'week' : req.range === 'all' ? 'all' : 'today';
+    const now = this.clock(), to = dayKey(new Date(now)), from = range === 'all' ? '0000-01-01' : range === 'week' ? dayKey(new Date(now - 6 * DAY)) : to;
     const games = (Object.keys(GAMES) as GameId[]).map(game => ({ game, entries: this.boardRows(game, from, to, 3) }));
     return reply(200, { ok: true, range, from, to, games });
   }
@@ -135,11 +135,11 @@ export class MinigameBoard extends DurableObject<Env> {
   board(req: { game?: unknown; range?: unknown }): Reply {
     const game = String(req.game ?? '') as GameId;
     if (!(game in GAMES)) return reply(400, { ok: false, error: 'bad-game' });
-    const range = req.range === 'week' ? 'week' : 'today';
+    const range = req.range === 'week' ? 'week' : req.range === 'all' ? 'all' : 'today';
     const now = this.clock(), key = game + '|' + range + '|' + dayKey(new Date(now));
     const hit = this.cache.get(key);
     if (hit && now - hit.at < 30_000) return reply(200, hit.body);
-    const to = dayKey(new Date(now)), from = range === 'week' ? dayKey(new Date(now - 6 * DAY)) : to;
+    const to = dayKey(new Date(now)), from = range === 'all' ? '0000-01-01' : range === 'week' ? dayKey(new Date(now - 6 * DAY)) : to;
     const body = { ok: true, game, range, from, to, verification: GAMES[game].level, entries: this.boardRows(game, from, to) };
     this.cache.set(key, { at: now, body });
     if (this.cache.size > 40) this.cache.clear();

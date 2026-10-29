@@ -5299,6 +5299,24 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       /* 出氣擂台排行榜：所有人讀得到；送成績時有登入就記帳號名字，沒登入就是「未登入使用者」。
          每個登入的人每種模式只留最高分，未登入的成績各自一筆；只留前 50 名，回傳前 10 名。 */
       if (action === 'ventArenaRanking') return { ok: true, action, items: await this.ventArenaTop() };
+      /* 「遊戲排行榜」總覽用：出氣擂台前三名，range＝today／week／all（歷史）。每人（帳號或未登入各筆）取範圍內最高分；
+         today／week 依「該最高分的時間」篩，台北時間的日界線。 */
+      if (action === 'ventArenaTop3') {
+        const range = payload.range === 'week' ? 'week' : payload.range === 'all' ? 'all' : 'today';
+        const list = (await this.ctx.storage.get<Array<{ id: string; user: string; name: string; score: number; at: number }>>('ventArenaRank')) || [];
+        const taipeiDay = (t: number) => new Date(t + 8 * 3600_000).toISOString().slice(0, 10);
+        const nowDay = taipeiDay(Date.now());
+        const from = range === 'all' ? '0000-01-01' : range === 'week' ? taipeiDay(Date.now() - 6 * 86400_000) : nowDay;
+        const best = new Map<string, { name: string; score: number; account: boolean }>();
+        for (const item of list) {
+          if (taipeiDay(item.at) < from) continue;
+          const key = item.user ? 'u:' + item.user : 'i:' + item.id;
+          const have = best.get(key);
+          if (!have || item.score > have.score) best.set(key, { name: item.name, score: item.score, account: Boolean(item.user) });
+        }
+        const entries = [...best.values()].sort((a, b) => b.score - a.score).slice(0, 3).map((e, i) => ({ rank: i + 1, ...e }));
+        return { ok: true, action, range, entries };
+      }
       if (action === 'ventArenaScore') {
         const session = await this.sessionFor(payload);
         const mode = payload.mode === 'timed' ? 'timed' : 'free';

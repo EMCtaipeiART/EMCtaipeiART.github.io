@@ -1160,3 +1160,9 @@
 - 原因：小遊戲用固定步長（1/60 秒、單幀最多補 5 步）推進，畫面卡頓（Safari／手機）時遊戲時鐘比真實時間慢，log 裡的 `t = 120 − timeLeft` 被壓縮。
 - 修正：遊戲定義新增 `clock:'wall'`（尋寶使用），manager 倒數改用 `performance.now()` 真實時間（單次最多 1 秒）；其他遊戲（含 hoops 依 tick 驗證）不變。minigames/index.js 改版本 v17，manager／treasure 的 import 補版本參數，dist/index.html app.js v362，避免 Safari 用舊檔。
 - 測試：tests/minigames-core.test.mjs 修改前後同為 35 通過／6 失敗（既有失敗，與本次無關）。
+
+## 2026-10-29 遊戲排行榜加入出氣擂台與「歷史」排名
+- 「遊戲排行榜」原本只列尋寶／投籃／截稿，沒有出氣擂台；且只有今日、本週。
+- 後端：`/minigames/top3`、`/minigames/board` 的 `range` 新增 `all`（歷史，不限日期）；新增 API action `ventArenaTop3`（range＝today／week／all，每人取範圍內最高分取前三，登入者以帳號名字，未登入顯示「未登入使用者」，日界線台北時間）。worker vitest 218／218（新增 ventArenaTop3 與 range=all 測試）。
+- 前台：minigames 選單排行榜新增「歷史」頁籤，並在最上方列出出氣擂台前三名（board.js 新增 arenaTop3）。minigames/index.js v18、app.js v363。
+- 注意：出氣擂台後端只保存「每人每模式的最高分（前 50 名）」，所以「今日／本週」是依「最高分是何時打出的」篩選，不是逐局紀錄；歷史＝全部。

@@ -22,7 +22,9 @@ const taken=id=>!!claims[id];
 /* ---------- 圖片 ---------- */
 let sheet=null,rects=null;
 (()=>{const im=new Image();im.onload=()=>{sheet=im;dirty();};im.src='assets/office-fun-v1.webp?v=1';fetch('assets/office-fun-v1.json?v=1').then(r=>r.ok?r.json():null).then(j=>{if(j){rects=j;dirty();}}).catch(()=>{});})();
-const spr=(c,id,cx,cy)=>{const r=rects&&rects[id];if(!sheet||!r)return false;c.save();c.imageSmoothingEnabled=false;c.drawImage(sheet,r.x,r.y,r.w,r.h,Math.round(cx-r.w/2),Math.round(cy-r.h/2),r.w,r.h);c.restore();return true;};
+let sheet2=null,rects2=null;
+(()=>{const im=new Image();im.onload=()=>{sheet2=im;dirty();};im.src='assets/office-fun-v2.webp?v=1';fetch('assets/office-fun-v2.json?v=1').then(r=>r.ok?r.json():null).then(j=>{if(j){rects2=j;dirty();}}).catch(()=>{});})();
+const spr=(c,id,cx,cy)=>{const two=/^prop_/.test(id),rs=two?rects2:rects,r=rs&&rs[id],sh=two?sheet2:sheet;if(!sh||!r)return false;c.save();c.imageSmoothingEnabled=false;c.drawImage(sh,r.x,r.y,r.w,r.h,Math.round(cx-r.w/2),Math.round(cy-r.h/2),r.w,r.h);c.restore();return true;};
 /* ---------- 馬桶 ---------- */
 const BOWLS=[[90,72],[90,186]];/* 兩格馬桶水面中心（相對廁所內側左上角） */
 const SLOT_P=300000;
@@ -56,16 +58,23 @@ function drawProj(c,p){const st=projState(p);if(!st.on)return;const right=/right
   c.fillStyle='#223';c.font='bold 13px sans-serif';c.textAlign='center';c.fillText(sl[1],sx+W/2,sy+H/2+10,W-12);c.restore();}
 /* ---------- 會議室遺落物 ---------- */
 const NOTE_IDS=['note_book','note_paper','note_sticky','note_sketch','note_pen'];
-const NOTES=[['筆記本','📓 撿到一本筆記本，上面寫著「下週一要交稿」'],['紙筆','✏️ 一張紙和一支筆，畫了一隻很醜的貓'],['便利貼','🗒️ 便利貼：「誰把我的馬克杯拿走了」'],['速寫本','📒 速寫本裡全是上班摸魚畫的小人'],['原子筆','🖊️ 一支有咬痕的原子筆，不知道是誰的']];
+const PROPS=[['coffee','☕','咖啡杯','還熱的咖啡，沒人認領，今天續命成功'],['donut','🍩','甜甜圈','一個甜甜圈！熱量不算，因為不是你買的'],['cactus','🌵','小仙人掌','迷你仙人掌，比客戶的修改意見還刺'],['stapler','📎','訂書機','訂書機沒針了，這是辦公室永恆的謎'],['mouse','🖱️','滑鼠','一隻滑鼠，右鍵好像壞了'],['usb','💾','隨身碟','隨身碟裡存著「最終版_改_真的最終」'],['headphones','🎧','耳機','降噪耳機，戴上就聽不到改稿的聲音'],['noodle','🍜','泡麵杯','一杯泡好的泡麵，已經糊了'],['boba','🧋','珍珠奶茶','半糖少冰珍奶，吸管還咬得扁扁的'],['eraser','🧽','橡皮擦','一塊橡皮擦，擦不掉的是需求變更'],['calc','🧮','計算機','計算機算出來：今天預算還差一點'],['lunchbox','🍱','便當盒','忘了帶走的便當盒，裡面是別人的愛心'],['duck','🦆','小黃鴨','小黃鴨：專門聽你講 bug 的好夥伴'],['fan','🪭','手持小風扇','手持小風扇，夏天的救星'],['glasses','👓','眼鏡','眼鏡掉了，主人現在一定看什麼都模糊'],['swatch','🎨','色票扇','色票扇，可是客戶說要「更藍一點的藍」'],['stylus','🖊️','繪圖筆','繪圖筆，筆尖已經被畫到圓了'],['cube','🧩','魔術方塊','魔術方塊，轉了三天還是只有一面'],['plane','✈️','紙飛機','紙飛機，上面寫著「我想放假」'],['pizza','🍕','披薩片','一片披薩！今天誰加班請客？']];
+PROPS.forEach(p=>NOTE_IDS.push('prop_'+p[0]));
+const NOTES0=[['筆記本','📓 撿到一本筆記本，上面寫著「下週一要交稿」'],['紙筆','✏️ 一張紙和一支筆，畫了一隻很醜的貓'],['便利貼','🗒️ 便利貼：「誰把我的馬克杯拿走了」'],['速寫本','📒 速寫本裡全是上班摸魚畫的小人'],['原子筆','🖊️ 一支有咬痕的原子筆，不知道是誰的']];
+const NOTES=NOTES0.concat(PROPS.map(p=>[p[2],p[1]+' '+p[3]]));
 const SLOT_N=720000,cacheN=new Map();
 function notesNow(){const g=api().geo(),rooms=(g.rooms||[]).filter(r=>r.tables&&r.tables.length),sl=Math.floor(Date.now()/SLOT_N),out=[];if(!rooms.length)return out;
   for(const s of [sl-1,sl]){const ck=FL()+':'+s+':'+rooms.length;let L=cacheN.get(ck);if(!L){L=[];const r=rng('n:'+ck),n=Math.floor(r()*4);for(let i=0;i<n;i++){const room=rooms[Math.floor(r()*rooms.length)],t=room.tables[Math.floor(r()*room.tables.length)],x=Math.round(t[0]+20+r()*Math.max(1,t[2]-40)),y=Math.round(t[1]+22+r()*Math.max(1,Math.min(t[3],120)-44));L.push({id:'n:'+FL()+':'+s+':'+i,x,y,k:Math.floor(r()*NOTE_IDS.length)});}cacheN.set(ck,L);}
     L.forEach(q=>{if(!taken(q.id))out.push(q);});}
   return out;}
-function drawNote(c,n){if(spr(c,NOTE_IDS[n.k],n.x,n.y))return;c.save();c.imageSmoothingEnabled=false;c.fillStyle='#111';c.fillRect(n.x-14,n.y-10,28,20);c.fillStyle=['#3a6fb0','#fffdf5','#ffe66d','#e9c46a','#2a9d8f'][n.k];c.fillRect(n.x-12,n.y-8,24,16);c.restore();}
+/* 道具不蓋到人物的臉／名牌／投影畫面：靠近人物（含頭上名牌）或落在投影機與畫面附近就先不畫、不能點 */
+function covered(x,y){try{const a=api();for(const q of a.people()){if(q.away)continue;const dx=Math.abs(x-q.x),dy=y-q.vy;if(dx<46&&dy>-120&&dy<34)return true;}
+  for(const p of (a.geo().proj||[])){const rt=/right/.test(p.name),dn=/down/.test(p.name),oy=p.y+p.h/2,sx=dn?p.x+p.w/2-85:rt?p.x+p.w+36:p.x-36-170,sy=dn?p.y+p.h+30:oy-52;if(x>=p.x-30&&x<=p.x+p.w+30&&y>=p.y-30&&y<=p.y+p.h+30)return true;if(x>=sx-30&&x<=sx+200&&y>=sy-30&&y<=sy+134)return true;}}catch(e){}return false;}
+function drawNote(c,n){if(covered(n.x,n.y))return;if(spr(c,NOTE_IDS[n.k],n.x,n.y))return;c.save();c.imageSmoothingEnabled=false;c.fillStyle='#111';c.fillRect(n.x-14,n.y-10,28,20);c.fillStyle=['#3a6fb0','#fffdf5','#ffe66d','#e9c46a','#2a9d8f'][n.k];c.fillRect(n.x-12,n.y-8,24,16);c.restore();}
 /* ---------- 地上的驚喜道具 ---------- */
 const DROP_IDS=['drop_coin','drop_clover','drop_gift','drop_ticket','drop_key','drop_star','drop_candy'];
 const ITEMS=[['🪙','金幣','撿到一枚金幣，今天財運不錯'],['🍀','幸運草','四葉幸運草！今天會順順利利'],['🎁','小禮物','撿到一份小禮物，裡面是一顆糖'],['🎫','抽獎券','撿到一張抽獎券，記得下午開獎'],['🔑','小鑰匙','一把小鑰匙，不知道開哪個抽屜'],['⭐','星星','撿到一顆星星，心情 +10'],['🍬','糖果','地上有顆糖果，沒拆封的，賺到']];
+PROPS.forEach(p=>{DROP_IDS.push('prop_'+p[0]);ITEMS.push([p[1],p[2],p[3]]);});
 const SLOT_D=480000,cacheD=new Map();
 function dropsNow(){const a=api(),b=a.bounds(),sl=Math.floor(Date.now()/SLOT_D),out=[];
   for(const s of [sl-1,sl]){const ck=FL()+':'+s;let L=cacheD.get(ck);if(!L){L=[];const r=rng('d:'+ck),n=1+Math.floor(r()*2);
@@ -73,7 +82,7 @@ function dropsNow(){const a=api(),b=a.bounds(),sl=Math.floor(Date.now()/SLOT_D),
       if(a.blocked(x,y)||a.blocked(x+30,y)||a.blocked(x-30,y)||a.blocked(x,y+30)||a.blocked(x,y-30))continue;L.push({id:'d:'+FL()+':'+s+':'+i,x,y,k:Math.floor(r()*ITEMS.length)});break;}}cacheD.set(ck,L);}
     L.forEach(q=>{if(!taken(q.id))out.push(q);});}
   return out;}
-function drawDrop(c,d,t){const vy=api().viewY(d.y),bob=Math.round(Math.sin(t/300+d.x)*3);c.save();c.fillStyle='rgba(0,0,0,.14)';c.beginPath();c.ellipse(d.x,vy+6,15,6,0,0,Math.PI*2);c.fill();
+function drawDrop(c,d,t){const vy=api().viewY(d.y);if(covered(d.x,vy))return;const bob=Math.round(Math.sin(t/300+d.x)*3);c.save();c.fillStyle='rgba(0,0,0,.14)';c.beginPath();c.ellipse(d.x,vy+6,15,6,0,0,Math.PI*2);c.fill();
   const glow=.5+.5*Math.sin(t/250+d.y);c.fillStyle='rgba(255,230,120,'+(.12+glow*.18)+')';c.beginPath();c.arc(d.x,vy-14+bob,24,0,Math.PI*2);c.fill();c.restore();
   if(spr(c,DROP_IDS[d.k],d.x,vy-14+bob))return;c.save();c.font='28px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(ITEMS[d.k][0],d.x,vy-14+bob);c.restore();}
 function collectDrop(d){claim(d.id,1).then(r=>{if(r&&r.won===false){toast('✨ 被別人先撿走了');return;}stat.found++;save();if(r&&r.reward){toast('🎉 太幸運了！撿到的道具中獎，系統回饋你 1 點平台幣！');}else toast('✨ '+ITEMS[d.k][2]+'（累計撿到 '+stat.found+' 個）');const sel=api().selected();if(sel!==null&&sel!==undefined)api().mood(sel,'joy');});dirty();}
@@ -89,8 +98,8 @@ window.funDraw=c=>{try{const t=performance.now(),g=api().geo();
 }catch(e){}};
 window.funSceneClick=(x,y,hit)=>{try{
   if(prompt&&prompt.rect&&x>=prompt.rect[0]&&x<=prompt.rect[0]+prompt.rect[2]&&y>=prompt.rect[1]&&y<=prompt.rect[1]+prompt.rect[3]){const p=prompt.p;prompt=null;flush(p);return true;}
-  for(const d of dropsNow()){const vy=api().viewY(d.y);if(Math.abs(x-d.x)<26&&Math.abs(y-(vy-14))<30){collectDrop(d);return true;}}
-  for(const n of notesNow()){if(Math.abs(x-n.x)<24&&Math.abs(y-n.y)<20){collectNote(n);return true;}}
+  for(const d of dropsNow()){const vy=api().viewY(d.y);if(Math.abs(x-d.x)<26&&Math.abs(y-(vy-14))<30&&!covered(d.x,vy)){collectDrop(d);return true;}}
+  for(const n of notesNow()){if(Math.abs(x-n.x)<24&&Math.abs(y-n.y)<20&&!covered(n.x,n.y)){collectNote(n);return true;}}
   const g=api().geo();for(const p of g.proj||[]){const body=x>=p.x-6&&x<=p.x+p.w+6&&y>=p.y-6&&y<=p.y+p.h+6;let scr=false;if(!body&&projState(p).on){const rt=/right/.test(p.name),dn=/down/.test(p.name),oy=p.y+p.h/2,sx=dn?p.x+p.w/2-85:rt?p.x+p.w+36:p.x-36-170,sy=dn?p.y+p.h+30:oy-52;scr=x>=sx&&x<=sx+170&&y>=sy&&y<=sy+104;}/* 點投影畫面也能關 */if(body||scr){const st=projState(p);claim(st.id,st.on?0:1+Math.floor(Math.random()*SLIDE_N));toast(st.on?'📽️ 投影機關閉':'📽️ 投影機開啟');return true;}}
   /* 點到廁所裡、馬桶上有便便的人物：跳出「沖馬桶」 */
   const ps=poops().filter(q=>!taken(q.id));

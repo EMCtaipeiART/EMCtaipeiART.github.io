@@ -13,17 +13,17 @@ export function createMenu({manager,store,board=null,getNick,setNick,onPick,isAd
   let lastFocus=null,view='games',range='today',rank=null,rankBusy=false;
   const MEDAL=['①','②','③'];
   /* 遊戲排行榜：每款遊戲前三名的名字與分數（登入的人用帳號本人名字上榜） */
-  function loadRank(){if(!board||rankBusy)return;rankBusy=true;rank=null;Promise.resolve(board.top3(range)).then(r=>{rank=r&&r.ok?r:{error:true};},()=>{rank={error:true};}).finally(()=>{rankBusy=false;if(view==='rank'&&!el.hidden)render();});}
+  function loadRank(){if(!board||rankBusy)return;rankBusy=true;rank=null;Promise.all([Promise.resolve(board.top3(range)),Promise.resolve(board.arenaTop3?board.arenaTop3(range):null).catch(()=>null)]).then(([r,a])=>{rank=r&&r.ok?{...r,arena:a&&a.ok?a.entries:null}:{error:true};},()=>{rank={error:true};}).finally(()=>{rankBusy=false;if(view==='rank'&&!el.hidden)render();});}
   function renderRank(){
     const titles=Object.fromEntries(manager.list().map(g=>[g.id,g.title]));
-    const tabs='<div class="mg-rank-tabs"><button type="button" data-range="today" class="'+(range==='today'?'on':'')+'">今日</button><button type="button" data-range="week" class="'+(range==='week'?'on':'')+'">本週</button></div>';
+    const tabs='<div class="mg-rank-tabs"><button type="button" data-range="today" class="'+(range==='today'?'on':'')+'">今日</button><button type="button" data-range="week" class="'+(range==='week'?'on':'')+'">本週</button><button type="button" data-range="all" class="'+(range==='all'?'on':'')+'">歷史</button></div>';
     let body;
     if(rankBusy||!rank)body='<p class="mg-note">載入中…</p>';
     else if(rank.error)body='<p class="mg-note">暫時抓不到排行榜，請稍後再試。</p>';
-    else body='<div class="mg-rank-list">'+rank.games.map(g=>'<section class="mg-rank-card"><h3>'+esc(titles[g.game]||g.game)+'</h3>'
+    else body='<div class="mg-rank-list">'+(rank.arena?'<section class="mg-rank-card"><h3>'+esc(ARENA.title)+'</h3>'+(rank.arena.length?'<ol>'+rank.arena.map((e,i)=>'<li><span class="mg-rank-no">'+MEDAL[i]+'</span><span class="mg-rank-name">'+esc(e.name)+(e.account?'':'<i>未登入</i>')+'</span><b class="mg-rank-score">'+e.score+'</b></li>').join('')+'</ol>':'<p class="mg-rank-empty">還沒有人上榜</p>')+'</section>':'')+rank.games.map(g=>'<section class="mg-rank-card"><h3>'+esc(titles[g.game]||g.game)+'</h3>'
       +(g.entries.length?'<ol>'+g.entries.map((e,i)=>'<li><span class="mg-rank-no">'+MEDAL[i]+'</span><span class="mg-rank-name">'+esc(e.name)+(e.account?'':'<i>未登入</i>')+'</span><b class="mg-rank-score">'+e.score+'</b></li>').join('')+'</ol>':'<p class="mg-rank-empty">還沒有人上榜</p>')+'</section>').join('')+'</div>';
     return '<div class="mg-menu-card"><div class="mg-menu-head"><h2>遊戲排行榜</h2><button type="button" class="mg-btn mg-icon-btn" data-m="close" aria-label="關閉">'+pixelIcon('quit',16)+'<span>關閉</span></button></div>'
-      +'<p class="mg-nick">每款遊戲前三名的名字與分數；登入帳號玩的成績會用你的名字上榜。</p>'+tabs+body
+      +'<p class="mg-nick">每款遊戲前三名的名字與分數（今日、本週、歷史）；登入帳號玩的成績會用你的名字上榜。</p>'+tabs+body
       +'<div class="mg-rank-foot"><button type="button" class="mg-btn" data-m="games">← 回遊戲列表</button></div><p class="mg-note">僅供娛樂，不作為任何工作績效依據。</p></div>';
   }
   function render(){

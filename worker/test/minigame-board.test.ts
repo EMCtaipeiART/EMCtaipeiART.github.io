@@ -218,6 +218,10 @@ describe('身分、限流與榜單', () => {
     T.now += 40_000;
     expect((await stub().board({ game: 'treasure', range: 'today' })).body.entries).toHaveLength(0);    // 現在是 10/27，今日榜是空的
     expect((await stub().board({ game: 'treasure', range: 'week' })).body.entries.length).toBeGreaterThanOrEqual(3);
+    const all = (await stub().board({ game: 'treasure', range: 'all' })).body;                       // 歷史榜：不限日期
+    expect(all.range).toBe('all');
+    expect(all.entries.length).toBeGreaterThanOrEqual(3);
+    expect((await stub().top3({ range: 'all' })).body.range).toBe('all');
   });
 
   it('清理：超過 90 天的成績被刪，近期的保留', async () => {
