@@ -1489,3 +1489,19 @@ html[data-hero-fest="midautumn"] .hero{--hf-light:#ffe5af;--hf-cool:#8bb8ff}
 body.arena-on .stage-wrap{padding:0!important;max-width:none!important}
 body.arena-on .stage{padding:0!important;max-width:none!important}
 body.arena-on .arena-frame{border-radius:0;box-shadow:none;background:transparent}
+
+/* 設計師回覆信：NAS 路徑與合併信件分類 */
+.dr-nas,.dr-cls{border:1px solid var(--line,#e3e8e5);border-radius:14px;background:var(--surface,#fff);padding:14px 16px;margin:0 0 12px}
+.dr-nas-head,.dr-cls-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.dr-cls-head>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.dr-cls-head span{font-size:12.5px;color:var(--muted,#66756c)}
+.dr-nas-list{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.dr-nas-list li{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-size:13px;padding:7px 10px;border-radius:10px;background:var(--soft,#f4f7f5)}
+.dr-nas-path{word-break:break-all}.dr-nas-kw{color:var(--muted,#66756c);font-size:12px}
+.dr-nas-none{margin:6px 0 0;color:var(--muted,#66756c);font-size:13px}
+.dr-cls-list{display:flex;flex-direction:column;margin-top:10px;border-top:1px solid var(--line,#e3e8e5)}
+.dr-cls-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line,#e3e8e5)}
+.dr-cls-name{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dr-cls-row select{width:100%;min-width:0}
+.dr-cls-empty,.dr-cls-foot{font-size:12.5px;color:var(--muted,#66756c);padding-top:8px}
+@media(max-width:640px){.dr-cls-row{grid-template-columns:1fr;gap:6px}.dr-nas-head,.dr-cls-head{flex-wrap:wrap}}

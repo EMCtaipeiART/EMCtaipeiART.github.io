@@ -2663,7 +2663,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         ${gmailNotice}
         ${d.reply?threadPanelHtml(false):''}
         ${drBlock?'<div class="notice">圖片備份／上傳中，完成後信件會自動帶入圖片並可寄出。 <button type="button" class="btn" data-mail="dr-skip">不等圖片，直接寄出</button></div>':''}
-        ${(d.dr&&d.mode==='designer'&&!d.sent)?`<div class="notice dr-track">NAS 路徑：${esc(nasTrackLabel(d.id)||'尚未指定')}　<button type="button" class="btn" data-mail="dr-track">${nasTrackLabel(d.id)?'更換／追加 NAS 路徑':'補上 NAS 路徑'}</button></div>`:''}
+        ${(d.dr&&d.mode==='designer'&&!d.sent)?`<section class="dr-nas" aria-label="NAS 路徑"><div class="dr-nas-head"><b>NAS 路徑</b><button type="button" class="btn" data-mail="dr-track">${nasTrackLabel(d.id)?'更換／追加':'補上 NAS 路徑'}</button></div>${nasTrackItems(d.id)}</section>`:''}
         ${drClassifyHtml(d)}
         ${drEarly?'<div class="notice">圖片已先放進信件，雲端備份在背景進行；現在就可以寄出，備份不會中斷（請先不要關閉這個頁面）。</div>':''}
         <div class="queue-bar"><span class="queue-step">${total>1?`第 ${m.index+1} / ${total} 封`:'1 封'}</span>${d.sent?`<span class="pill st-done">${d.scheduledDone?'已排程':'這封已寄出'}</span>`:''}${total>1?`<button type="button" class="btn" data-mail="prev"${m.index===0?' disabled':''}>上一封</button><button type="button" class="btn" data-mail="next"${m.index===total-1?' disabled':''}>下一封</button>`:''}</div>
@@ -2938,6 +2938,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
 
     /* 補上／更換 NAS 路徑（隨時可用）：只記錄路徑與關鍵字、不備份，之後該資料夾裡修改過的圖由爬蟲自動追蹤到後續輪次。
      * 入口：案件詳情頁、設計師回覆信編輯器。電腦上傳時案件沒有 NAS 路徑，事後用它補記。 */
+    const nasTrackItems=id=>{const l=caseNasFolders(id,allRows().find(r=>idKey(r)===id));return l.length?`<ul class="dr-nas-list">${l.map(i=>`<li><span class="dr-nas-path">${esc(i.path)}</span>${i.keyword?`<span class="dr-nas-kw">關鍵字 ${esc(i.keyword)}</span>`:''}</li>`).join('')}</ul>`:'<p class="dr-nas-none">尚未指定</p>'};
     const nasTrackLabel=id=>{const l=caseNasFolders(id,allRows().find(r=>idKey(r)===id));return l.length?l.map(i=>i.path+(i.keyword?`（關鍵字：${i.keyword}）`:'')).join('、'):''};
     function nasTrackOpen(id,round){
       if(!loggedIn()){toast('請先登入',true);startLogin();return}
@@ -2964,14 +2965,17 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const sib=drSiblings(d.id);if(sib.length<2)return '';
       const names=drFileNames(d);
       const assign=d.dr.assign||(d.dr.assign={});
-      const opts=nm=>sib.map(r=>{const k=idKey(r);return `<option value="${esc(k)}"${(assign[nm]||d.id)===k?' selected':''}>${esc(k+' '+(r['專案名稱']||''))}</option>`}).join('');
-      const rows=names.length?names.map(nm=>`<div class="dr-cls-row"><span class="dr-cls-name">${esc(nm)}</span><select class="input" data-dr-assign="${esc(nm)}" aria-label="${esc(nm)} 屬於哪個專案">${opts(nm)}</select></div>`).join(''):'<div class="empty">圖片備份完成、放進信件後，這裡會列出每個檔案。</div>';
-      return `<div class="notice dr-classify"><b>合併信件：指定每個檔案屬於哪個專案</b><p class="page-sub" style="margin:4px 0 8px">這封信同時回覆 ${sib.length} 個專案。預設全部歸在 ${esc(d.id)}；改選後，寄出並備份完成時會自動把檔案搬到所選專案（NAS 之後的修改也跟著歸過去）。</p>${rows}<div style="margin-top:8px"><button type="button" class="btn" data-mail="dr-cls-write">把分類寫進信件</button></div></div>`;
+      const opts=nm=>sib.map(r=>{const k=idKey(r);return `<option value="${esc(k)}"${(assign[nm]||d.id)===k?' selected':''}>${esc(k+'｜'+(r['專案名稱']||''))}</option>`}).join('');
+      const rows=names.length?names.map(nm=>`<div class="dr-cls-row"><span class="dr-cls-name" title="${esc(nm)}">${esc(nm)}</span><select class="input" data-dr-assign="${esc(nm)}" aria-label="${esc(nm)} 屬於哪個專案">${opts(nm)}</select></div>`).join(''):'<div class="dr-cls-empty">圖片備份完成、放進信件後，這裡會列出每個檔案。</div>';
+      const moved=names.filter(nm=>(assign[nm]||d.id)!==d.id).length;
+      return `<section class="dr-cls" aria-label="合併信件分類"><div class="dr-cls-head"><div><b>合併信件分類</b><span>這封信同時回覆 ${sib.length} 個專案，預設全部歸在 ${esc(d.id)}。</span></div><button type="button" class="btn${d.dr.clsOk?'':' primary'}" data-mail="dr-cls-ok">${d.dr.clsOk?'已確認 ✓':'分類確認'}</button></div>
+        <div class="dr-cls-list">${rows}</div>
+        <div class="dr-cls-foot" id="drClsState">${d.dr.clsOk?`已確認：${moved?`${moved} 個檔案會在寄出、備份完成後搬到所選專案（NAS 之後的修改也跟著歸過去）`:'全部歸在 '+esc(d.id)+'，不會搬移'}`:'選好後按「分類確認」；沒按也會依目前的選擇歸類。'}</div></section>`;
     }
     function drClassifySummary(d){
       const sib=drSiblings(d.id),assign=(d.dr&&d.dr.assign)||{},groups=new Map();
       for(const nm of drFileNames(d)){const k=assign[nm]||d.id;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(nm)}
-      return [...groups].map(([k,list])=>{const r=sib.find(x=>idKey(x)===k);return `<b>${esc(k+' '+(r&&r['專案名稱']||''))}</b>：${list.length} 個（${list.map(esc).join('、')}）`}).join('<br>');
+      return [...groups].map(([k,list])=>{const r=sib.find(x=>idKey(x)===k);return `${k} ${r&&r['專案名稱']||''}：${list.length} 個`}).join('；');
     }
     async function drDistribute(d,round){
       const assign=(d.dr&&d.dr.assign)||{},moves=new Map();
@@ -4203,7 +4207,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(mail==='sched-open'){saveMailDraft();openSchedPage(state.mail.drafts[state.mail.index].id);return}
       if(mail==='sched-abort'){const sid=state.mail.drafts[state.mail.index].id;state.mail=null;openSchedPage(sid);return}
       const sc=t.closest('[data-sched]');if(sc){const k=sc.dataset.sched;if(k==='edit')editSched(sc.dataset.sid);else if(k==='cancel')cancelSched(sc.dataset.sid);else if(k==='back')backToBoard();return}
-      if(mail==='dr-cls-write'){const d=state.mail.drafts[state.mail.index];saveMailDraft();const html=drClassifySummary(d);drMutate(d,root=>{root.querySelector('#v5DrClass')?.remove();const box=root.querySelector('#v5DrImages');const el=document.createElement('div');el.id='v5DrClass';el.innerHTML=html+'<br>';if(box)box.parentNode.insertBefore(el,box);else root.appendChild(el)});saveMailDraft();renderMail();return}
+      if(mail==='dr-cls-ok'){const d=state.mail.drafts[state.mail.index];saveMailDraft();if(d.dr){d.dr.clsOk=true;toast('分類已確認：'+drClassifySummary(d))}renderMail();return}
       if(mail==='dr-track'){const d=state.mail.drafts[state.mail.index];saveMailDraft();nasTrackOpen(d.id,d.dr?d.dr.round:0);return}
       if(mail==='send'){sendCurrent();return}
       if(mail==='skip'){saveMailDraft();const m=state.mail;toast(m&&m.sentCount?`已寄出 ${m.sentCount} 封；其餘案件已建立，可稍後補寄`:'案件已建立，信件稍後再寄');state.mail=null;show(state.home);return}
@@ -4442,7 +4446,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     let dbTick=0,lastInputAt=0;['keydown','input','compositionupdate'].forEach(ev=>document.addEventListener(ev,()=>{lastInputAt=Date.now()},true));
     function bgBusy(){return document.hidden||Date.now()-lastInputAt<1500||Boolean(document.querySelector('.ai-modal:not([hidden]),.cell-pop:not([hidden]),.filter-pop,.rc-pick'))||state.editing||Boolean(state.drag)||Boolean(state.colDrag)||(state.view!=='board'&&state.view!=='projects')}
     setInterval(()=>{if(document.hidden)return;if(state.dirty&&!bgBusy()){state.dirty=false;if(state.view==='board')renderBoard();else if(state.view==='projects')renderProjects();renderTeam()}dbTick=(dbTick+1)%15;if(quietHours()?((state.pushOk?dbTick===0:dbTick%5===0)):(!state.pushOk||dbTick%3===0))loadDatabase(true)},8000);
-    document.addEventListener('change',e=>{const sel=e.target.closest&&e.target.closest('[data-dr-assign]');if(!sel||!state.mail)return;const d=state.mail.drafts[state.mail.index];if(!d||!d.dr)return;(d.dr.assign||(d.dr.assign={}))[sel.dataset.drAssign]=sel.value});
+    document.addEventListener('change',e=>{const sel=e.target.closest&&e.target.closest('[data-dr-assign]');if(!sel||!state.mail)return;const d=state.mail.drafts[state.mail.index];if(!d||!d.dr)return;(d.dr.assign||(d.dr.assign={}))[sel.dataset.drAssign]=sel.value;d.dr.clsOk=false;const st=$('drClsState');if(st)st.textContent='選好後按「分類確認」；沒按也會依目前的選擇歸類。';const bt=document.querySelector('[data-mail="dr-cls-ok"]');if(bt){bt.textContent='分類確認';bt.classList.add('primary')}});
     document.addEventListener('visibilitychange',()=>{if(!document.hidden){loadOffice();renderLogin();pullFilters();loadDatabase(true,true)}});
     /* 分頁在背景時瀏覽器會把計時器與連線降速甚至暫停，系統通知（修改需求、新案、回信）可能晚好幾小時才跳；已開啟系統通知時，背景每分鐘輕量問一次版本號（沒變就不下載）。 */
     setInterval(()=>{try{if(document.hidden&&state.loaded&&loggedIn()&&bnOn())loadDatabase(true)}catch(err){}},60000);

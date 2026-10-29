@@ -69,5 +69,5 @@ test('合併信件的設計師回覆：可指定每個檔案屬於哪個專案�
   assert.match(src, /\$\{drClassifyHtml\(d\)\}/);
   assert.match(src, /await drDistribute\(d,round\)/);
   assert.match(src, /moveCaseDesignImages',\{caseId:d\.id,toCaseId:t,toRound:round/);
-  assert.match(src, /mail==='dr-cls-write'/);
+  assert.match(src, /mail==='dr-cls-ok'/);
 });
