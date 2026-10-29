@@ -2243,7 +2243,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(!loggedIn()){toast('請先登入後再回信',true);startLogin();return}
       if(mode==='designer'&&!opts){openDrChooser(id);return}
       if(!st2.loaded&&loggedIn()){try{await loadUserSettings()}catch(err){}for(let i=0;i<30&&st2.loading;i++)await new Promise(r=>setTimeout(r,100))}
-      const dr=mode==='designer'?{round:opts.round,skip:Boolean(opts.skip),folders:opts.folders||[],fileFolders:{},pending:true}:null;
+      const dr=mode==='designer'?{round:opts.round,skip:Boolean(opts.skip),folders:opts.folders||[],fileFolders:{},pending:true,baseUrls:new Set(((state.mods.get(id)||[]).find(x=>(+x['修改次數']||0)===opts.round)?imageList((state.mods.get(id)||[]).find(x=>(+x['修改次數']||0)===opts.round)):[]).map(i=>i.url))}:null;
       const tplT=st2.templates[st2.tplDefault],tplBody=nm=>tplT?tplT.html.replace(/\{收件人名\}/g,esc(nm)).replace(/\{項目細節\}/g,esc(String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(x=>x&&x!=='急件').join('、'))):'',body=mode==='modification'?(tplBody(greetingName(row['設計負責人']))||'Hi '+esc(greetingName(row['設計負責人']))+',<br><br>'):mode==='designer'?designerReplyBody(row,dr):(tplBody(greetingName(row['專案負責人']))||'<br>');
       const d={id,row,to:'',cc:'',subject:'Re: 【'+id+'】'+row['客戶別']+'_'+row['專案名稱'],body,sent:false,reply:true,mode,existing:true,dr};
       state.mail={drafts:[d],index:0,sending:false,sentCount:0,gmailChecked:false};state.form=null;if(dr)drLive.set(`${id}|${dr.round}`,d);show('mail');loadGmailContext();loadThread(id,true);
@@ -2960,13 +2960,17 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(rec)imageList(rec).forEach(i=>{if(isVideoName(i.fileName))add(i.fileName)});
       return names;
     }
+    function drThumbs(d){
+      const m=new Map();try{const box=document.createElement('div');box.innerHTML=d.body||'';box.querySelectorAll('img').forEach(im=>{const n=String(im.getAttribute('alt')||'').trim(),src=im.getAttribute('src')||'';if(n&&src&&!m.has(n))m.set(n,src)})}catch(e){}
+      return m;
+    }
     function drClassifyHtml(d){
       if(!d.dr||d.mode!=='designer'||d.sent)return '';
       const sib=drSiblings(d.id);if(sib.length<2)return '';
-      const names=drFileNames(d);
+      const names=drFileNames(d),thumbs=drThumbs(d);
       const assign=d.dr.assign||(d.dr.assign={});
       const opts=nm=>sib.map(r=>{const k=idKey(r);return `<option value="${esc(k)}"${(assign[nm]||d.id)===k?' selected':''}>${esc(k+'｜'+(r['專案名稱']||''))}</option>`}).join('');
-      const rows=names.length?names.map(nm=>`<div class="dr-cls-row"><span class="dr-cls-name" title="${esc(nm)}">${esc(nm)}</span><select class="input" data-dr-assign="${esc(nm)}" aria-label="${esc(nm)} 屬於哪個專案">${opts(nm)}</select></div>`).join(''):'<div class="dr-cls-empty">圖片備份完成、放進信件後，這裡會列出每個檔案。</div>';
+      const rows=names.length?names.map(nm=>`<div class="dr-cls-row">${thumbs.get(nm)?`<img class="dr-cls-thumb" src="${esc(thumbs.get(nm))}" alt="">`:`<span class="dr-cls-thumb is-none">${isVideoName(nm)?'影片':'圖'}</span>`}<span class="dr-cls-name" title="${esc(nm)}">${esc(nm)}</span><select class="input" data-dr-assign="${esc(nm)}" aria-label="${esc(nm)} 屬於哪個專案">${opts(nm)}</select></div>`).join(''):'<div class="dr-cls-empty">圖片備份完成、放進信件後，這裡會列出每個檔案。</div>';
       const moved=names.filter(nm=>(assign[nm]||d.id)!==d.id).length;
       return `<section class="dr-cls" aria-label="合併信件分類"><div class="dr-cls-head"><div><b>合併信件分類</b><span>這封信同時回覆 ${sib.length} 個專案，預設全部歸在 ${esc(d.id)}。</span></div><button type="button" class="btn${d.dr.clsOk?'':' primary'}" data-mail="dr-cls-ok">${d.dr.clsOk?'已確認 ✓':'分類確認'}</button></div>
         <div class="dr-cls-list">${rows}</div>
@@ -2976,6 +2980,20 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const sib=drSiblings(d.id),assign=(d.dr&&d.dr.assign)||{},groups=new Map();
       for(const nm of drFileNames(d)){const k=assign[nm]||d.id;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(nm)}
       return [...groups].map(([k,list])=>{const r=sib.find(x=>idKey(x)===k);return `${k} ${r&&r['專案名稱']||''}：${list.length} 個`}).join('；');
+    }
+    /* 按「略過」放棄這封回信：這次回信已經備份進系統的圖片（不在開始回信前的清單裡）一律從紀錄移除；備份還在跑就等它跑完再清。 */
+    async function drDiscard(d){
+      if(!d||!d.dr||d.sent||d.dr.discarding)return;const dr=d.dr;dr.discarding=true;dr.cancelled=true;
+      const id=d.id,round=dr.round;
+      try{
+        if(dr.pending){toast('已略過；背景備份完成後會把這次回信備份的圖片移除');for(let i=0;i<360&&dr.pending;i++)await new Promise(r=>setTimeout(r,500))}
+        await refreshMods(id).catch(()=>{});
+        const rec=(state.mods.get(id)||[]).find(x=>(+x['修改次數']||0)===round),base=dr.baseUrls||new Set();
+        const fresh=rec?imageList(rec).filter(i=>!base.has(i.url)):[];
+        let n=0;for(const i of fresh){try{await api('removeCaseDesignImage',{caseId:id,round,url:i.url});n++}catch(err){}}
+        if(n){await refreshMods(id).catch(()=>{});refreshView();toast(`已移除這次回信備份的 ${n} 張圖片`)}
+      }catch(err){toast(`移除已備份的圖片失敗：${err.message}`,true)}
+      drLive.delete(`${id}|${round}`);
     }
     async function drDistribute(d,round){
       const assign=(d.dr&&d.dr.assign)||{},moves=new Map();
@@ -4210,7 +4228,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(mail==='dr-cls-ok'){const d=state.mail.drafts[state.mail.index];saveMailDraft();if(d.dr){d.dr.clsOk=true;toast('分類已確認：'+drClassifySummary(d))}renderMail();return}
       if(mail==='dr-track'){const d=state.mail.drafts[state.mail.index];saveMailDraft();nasTrackOpen(d.id,d.dr?d.dr.round:0);return}
       if(mail==='send'){sendCurrent();return}
-      if(mail==='skip'){saveMailDraft();const m=state.mail;toast(m&&m.sentCount?`已寄出 ${m.sentCount} 封；其餘案件已建立，可稍後補寄`:'案件已建立，信件稍後再寄');state.mail=null;show(state.home);return}
+      if(mail==='skip'){saveMailDraft();const m=state.mail;for(const x of (m0=>m0?m0.drafts:[])(state.mail))if(x.dr&&x.mode==='designer'&&!x.sent)drDiscard(x);toast(m&&m.sentCount?`已寄出 ${m.sentCount} 封；其餘案件已建立，可稍後補寄`:'案件已建立，信件稍後再寄');state.mail=null;show(state.home);return}
       if(mail==='prev'||mail==='next'){saveMailDraft();state.mail.index+=mail==='next'?1:-1;renderMail();return}
       if(mail==='merge'){mergeSelected();return}
       if(mail==='merge-extra'){mergeExtra();return}

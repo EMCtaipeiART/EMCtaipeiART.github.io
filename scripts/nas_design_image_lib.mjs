@@ -1323,6 +1323,19 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
   const round = computeRound(dbData, caseId);
   const targetImages = computeTargetImages(dbData, caseId, round);
   let reconciledCount = 0;
+  // refresh（回覆時手動備份）：之前備份過、後來被設計師「略過」刪掉紀錄的圖，本機仍標記為已歸這一輪、不會再列為待上傳；
+  // 這裡把「本機說歸這一輪、資料庫這個案件任何一輪都沒有」的檔案補回待上傳清單（搬去別的輪次／案件的不算）。
+  if (refresh) {
+    const have = new Set(pendingPreviews.map(item => item.relPath));
+    const recordedAnywhere = recordedRoundsByBaseName(dbData, caseId);
+    for (const [relPath, entry] of Object.entries(stateFiles || {})) {
+      if (have.has(relPath) || trackedRound(entry?.assignedRound) !== round || !entry?.previewPath) continue;
+      if (recordedAnywhere.has(designImageBaseName(path.basename(relPath)))) continue;
+      try { await fs.access(entry.previewPath); } catch { continue; }
+      pendingPreviews = [...pendingPreviews, { relPath, previewPath: entry.previewPath, mtimeMs: entry.mtimeMs, size: entry.size, pendingAfterRound: null, uploadAttempt: null }];
+      have.add(relPath);
+    }
+  }
   let deferredCount = 0;
   let waitingForNextRoundCount = 0;
   const nowMs = Date.now();

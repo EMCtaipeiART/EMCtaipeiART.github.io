@@ -71,3 +71,13 @@ test('合併信件的設計師回覆：可指定每個檔案屬於哪個專案�
   assert.match(src, /moveCaseDesignImages',\{caseId:d\.id,toCaseId:t,toRound:round/);
   assert.match(src, /mail==='dr-cls-ok'/);
 });
+
+test('略過回信：移除這次回信已備份的圖片；合併分類列有縮圖', async () => {
+  const src = await readFile(new URL('../../site.js', import.meta.url), 'utf8');
+  const lib = await readFile(new URL('../../scripts/nas_design_image_lib.mjs', import.meta.url), 'utf8');
+  assert.match(src, /async function drDiscard\(d\)/);
+  assert.match(src, /drDiscard\(x\)/);
+  assert.match(src, /baseUrls:new Set\(/);
+  assert.match(src, /dr-cls-thumb/);
+  assert.match(lib, /recordedAnywhere\.has/);
+});

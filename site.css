@@ -1505,3 +1505,8 @@ body.arena-on .arena-frame{border-radius:0;box-shadow:none;background:transparen
 .dr-cls-row select{width:100%;min-width:0}
 .dr-cls-empty,.dr-cls-foot{font-size:12.5px;color:var(--muted,#66756c);padding-top:8px}
 @media(max-width:640px){.dr-cls-row{grid-template-columns:1fr;gap:6px}.dr-nas-head,.dr-cls-head{flex-wrap:wrap}}
+
+.dr-cls-row{grid-template-columns:56px minmax(0,1fr) minmax(0,1fr)}
+.dr-cls-thumb{width:56px;height:56px;border-radius:10px;object-fit:cover;background:var(--soft,#f4f7f5);border:1px solid var(--line,#e3e8e5)}
+.dr-cls-thumb.is-none{display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted,#66756c)}
+@media(max-width:640px){.dr-cls-row{grid-template-columns:56px minmax(0,1fr)}.dr-cls-row select{grid-column:1/-1}}
