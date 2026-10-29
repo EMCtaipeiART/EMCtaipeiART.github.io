@@ -27,7 +27,7 @@
   const block = (x, y, w, h) => blocks.push([x, y + OFFY, w, h]);
   let imgs = null; // { rooms, props, furn, desks, toiletPic }
   const spr = (c, name, x, y) => { const r = RM[name]; c.drawImage(imgs.rooms, r[0], r[1], r[2], r[3], Math.round(x), Math.round(y), r[2], r[3]); };
-  const sprite = (name, x, y, depth) => { if (/^projector/.test(name) && RM[name]) (window.__funProj = window.__funProj || []).push({ x, y: y + OFFY, w: RM[name][2], h: RM[name][3], name }); add(depth, c => spr(c, name, x, y)); };
+  const sprite = (name, x, y, depth) => { if (/^projector/.test(name) && RM[name]) (window.__funProj = window.__funProj || []).push({ x, y: y + OFFY, w: RM[name][2], h: RM[name][3], name, f4: true }); add(depth, c => spr(c, name, x, y)); };
   /* 桌子是動態圖層（跟人物依深度排序）：人坐在桌後，下半身被桌子擋住 */
   const table = (kind, x, y, mids, depth) => dyn.push({ depth, draw: c => {
     if (!imgs) return;
