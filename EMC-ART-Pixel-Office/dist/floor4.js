@@ -27,7 +27,7 @@
   const block = (x, y, w, h) => blocks.push([x, y + OFFY, w, h]);
   let imgs = null; // { rooms, props, furn, desks, toiletPic }
   const spr = (c, name, x, y) => { const r = RM[name]; c.drawImage(imgs.rooms, r[0], r[1], r[2], r[3], Math.round(x), Math.round(y), r[2], r[3]); };
-  const sprite = (name, x, y, depth) => add(depth, c => spr(c, name, x, y));
+  const sprite = (name, x, y, depth) => { if (/^projector/.test(name) && RM[name]) (window.__funProj = window.__funProj || []).push({ x, y: y + OFFY, w: RM[name][2], h: RM[name][3], name }); add(depth, c => spr(c, name, x, y)); };
   /* 桌子是動態圖層（跟人物依深度排序）：人坐在桌後，下半身被桌子擋住 */
   const table = (kind, x, y, mids, depth) => dyn.push({ depth, draw: c => {
     if (!imgs) return;
@@ -91,7 +91,7 @@
   {
     const TW = T_W, TH = T_H;
     [['男廁', TX0 + 150 + CORR + HSHIFT], ['女廁', TX0 + 150 + CORR + T_W - RT + HSHIFT]].forEach(([name, rx]) => {
-      glass(rx, TY, TW, TH, [{ side: 'b', c: rx + 262 }]);
+      glass(rx, TY, TW, TH, [{ side: 'b', c: rx + 262 }]);(window.__f4Toilets = window.__f4Toilets || []).push({ x: rx + RT, y: TY + RT + OFFY });
       { const lx = rx + RT, y0 = TY + RT; block(lx + 12, y0 + 8, 44, 264); block(lx + 12, y0 + 8, 164, 44); block(lx + 12, y0 + 120, 164, 44); block(lx + 12, y0 + 236, 164, 36); block(lx + 14, y0 + 282, 67, 94); }
       addStatic(-8990, c => { if (imgs.toiletPic.naturalWidth) { c.save(); c.imageSmoothingEnabled = true; c.drawImage(imgs.toiletPic, rx + RT, TY + RT, TW - 2 * RT, TH - 2 * RT); c.restore(); } });
       label(name, rx, TY - 22, TW);
