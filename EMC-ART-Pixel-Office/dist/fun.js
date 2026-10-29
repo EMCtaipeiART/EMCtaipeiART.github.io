@@ -24,7 +24,7 @@ let sheet=null,rects=null;
 (()=>{const im=new Image();im.onload=()=>{sheet=im;dirty();};im.src='assets/office-fun-v1.webp?v=1';fetch('assets/office-fun-v1.json?v=1').then(r=>r.ok?r.json():null).then(j=>{if(j){rects=j;dirty();}}).catch(()=>{});})();
 const spr=(c,id,cx,cy)=>{const r=rects&&rects[id];if(!sheet||!r)return false;c.save();c.imageSmoothingEnabled=false;c.drawImage(sheet,r.x,r.y,r.w,r.h,Math.round(cx-r.w/2),Math.round(cy-r.h/2),r.w,r.h);c.restore();return true;};
 /* ---------- 馬桶 ---------- */
-const BOWLS=[[92,90],[92,204]];/* 兩格馬桶水面中心（相對廁所內側左上角） */
+const BOWLS=[[84,86],[84,200]];/* 兩格馬桶水面中心（相對廁所內側左上角） */
 const SLOT_P=300000;
 function bowlList(){const g=api().geo(),out=[];(g.toilets||[]).forEach((t,ti)=>BOWLS.forEach((b,bi)=>out.push({key:ti+':'+bi,x:t.x+b[0],y:t.y+b[1]})));return out;}
 function poops(){const sl=Math.floor(Date.now()/SLOT_P),out=[];for(const b of bowlList()){const id='p:'+FL()+':'+sl+':'+b.key,r=rng(id);if(r()<.4)out.push({id,x:b.x,y:b.y,v:r()<.5?1:2});}return out;}
