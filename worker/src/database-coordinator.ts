@@ -2666,7 +2666,36 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     // 稱號跟著狀態一起回：前端不必為了它多打一次 API，改了也會隨輪詢傳到每個人的畫面。
     const avatars: Record<string, number> = {};
     for (const row of this.ctx.storage.sql.exec<{ name: string; updated_at: number }>('SELECT name, updated_at FROM pixel_office_avatar_current').toArray()) avatars[row.name] = Number(row.updated_at) || 0;
-    return { ok: true, action: 'pixelOfficeState', version, people, staff: this.pixelOfficeStaff().map(item => ({ seat: item.seat, name: item.name })), staffMeetings: this.pixelOfficeStaffMeetings(), levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories(), avatars, hours: { dayStart: pixelHours.dayStart, workEnd: pixelHours.workEnd, overtimeStart: pixelHours.overtimeStart, force: pixelForceNow(Date.now()) } };
+    return { ok: true, action: 'pixelOfficeState', version, people, staff: this.pixelOfficeStaff().map(item => ({ seat: item.seat, name: item.name })), staffMeetings: this.pixelOfficeStaffMeetings(), funClaims: this.pixelOfficeFunClaims(), levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories(), avatars, hours: { dayStart: pixelHours.dayStart, workEnd: pixelHours.workEnd, overtimeStart: pixelHours.overtimeStart, force: pixelForceNow(Date.now()) } };
+  }
+
+  /** 辦公室小樂趣（便便、驚喜道具、遺落物、投影機）的「已被處理」紀錄：所有人共用。
+   *  內容由前端依時段亂數決定（每個人算出來都一樣），這裡只記誰先沖了馬桶、撿走了道具、開關了投影機。存 pixel_office_settings.funClaims，變動會更新時間戳讓所有人的輪詢拿到。 */
+  private pixelOfficeFunClaims(): Record<string, [number, number]> {
+    const row = this.ctx.storage.sql.exec<{ value: string }>('SELECT value FROM pixel_office_settings WHERE key = ?', 'funClaims').toArray()[0];
+    try { const m = JSON.parse(row?.value || '{}'); return m && typeof m === 'object' ? m : {}; } catch { return {}; }
+  }
+
+  private pixelOfficeFun(payload: ApiPayload): ApiResult {
+    const id = String(payload.id || '');
+    if (!/^[a-z]:[A-Za-z0-9:._-]{1,70}$/.test(id)) return { ok: false, action: 'pixelOfficeFun', error: 'invalid id' } as ApiResult;
+    const v = Number(payload.v) ? 1 : 0;
+    const now = Date.now();
+    const claims = this.pixelOfficeFunClaims();
+    const old = claims[id];
+    // 撿道具、沖馬桶、撿遺落物只能被處理一次（先到先得）；投影機的開關可以反覆切
+    const once = !id.startsWith('j:');
+    let won = true;
+    if (once && old) won = false;
+    else claims[id] = [v, now];
+    for (const k of Object.keys(claims)) if (now - Number(claims[k][1]) > 90 * 60 * 1000) delete claims[k];
+    const keys = Object.keys(claims);
+    if (keys.length > 400) keys.sort((x, y) => Number(claims[x][1]) - Number(claims[y][1])).slice(0, keys.length - 400).forEach(k => delete claims[k]);
+    if (won) {
+      this.ctx.storage.sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', 'funClaims', JSON.stringify(claims), now);
+      this.pixelVersionMemo = null;
+    }
+    return { ok: true, action: 'pixelOfficeFun', won, funClaims: claims } as ApiResult;
   }
 
   private pixelOfficeUpdate(payload: ApiPayload): ApiResult {
@@ -5216,6 +5245,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'pixelOfficeState') return this.pixelOfficeState(payload);
       if (action === 'pixelOfficeUpdate') return this.pixelOfficeUpdate(payload);
       if (action === 'pixelOfficeStaffBack') return await this.pixelOfficeStaffBack(payload);
+      if (action === 'pixelOfficeFun') return this.pixelOfficeFun(payload);
       if (action === 'pixelOfficeHeartbeat') return await this.pixelOfficeHeartbeat(payload);
       if (action === 'pixelOfficeCalendarStatus') return await this.pixelOfficeCalendarStatus(payload);
       if (action === 'pixelOfficePhoto') return this.pixelOfficePhoto(payload);

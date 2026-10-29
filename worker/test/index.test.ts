@@ -4211,6 +4211,20 @@ describe('凱曜 department prefix', () => {
 });
 
 describe('Pixel Office shared state', () => {
+  it('辦公室小樂趣：先到先得、投影機可反覆切換、狀態回傳所有人共用的紀錄', async () => {
+    const first = await api({ action: 'pixelOfficeFun', id: 'd:5:100:0', v: 1 });
+    expect(first.won).toBe(true);
+    const second = await api({ action: 'pixelOfficeFun', id: 'd:5:100:0', v: 1 });
+    expect(second.won).toBe(false);
+    expect((await api({ action: 'pixelOfficeFun', id: 'j:5:1:2_3', v: 1 })).won).toBe(true);
+    expect((await api({ action: 'pixelOfficeFun', id: 'j:5:1:2_3', v: 0 })).won).toBe(true);
+    expect((await api({ action: 'pixelOfficeFun', id: '../bad', v: 1 })).ok).toBe(false);
+    const state = await api({ action: 'pixelOfficeState' });
+    const claims = state.funClaims as Record<string, number[]>;
+    expect(claims['d:5:100:0'][0]).toBe(1);
+    expect(claims['j:5:1:2_3'][0]).toBe(0);
+  });
+
   it('keeps one set of level titles per team, shared by everyone and carried on the polling response', async () => {
     const initial = await api({ action: 'pixelOfficeLevelTitles' });
     expect(initial).toMatchObject({

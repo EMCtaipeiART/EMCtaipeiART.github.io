@@ -266,7 +266,7 @@ let staffSeated=true;// 編輯／整頁畫面一律含六張同仁桌（沒人�
 const staffStationIndex=seat=>{const g=Math.floor(seat/6);return g?12*g+6+seat%6:6+seat;};/* 座位 0–5 在原本那組，6–17 在往上複製的兩組 */
 /* 座位搬到四樓（2026-10-26）：這三位同仁的座位在四樓左側由上而下第四桌群（g 從 0 算＝3），座位 1～4 上排、5～8 下排由左到右。五樓不再顯示他們、原座位空出來。 */
 const STAFF_F4={'黎子瑄':{g:3,seat:8,face:'down'},'余采馨':{g:3,seat:6,face:'down'},'鄭筱舢':{g:3,seat:7,face:'down'},'王藍庭':{g:4,seat:5,face:'down'}};/* 王藍庭：四樓 E 桌子群 5 號（2026-10-28 使用者指定） */
-function applyStaff(list,meetings){if(meetings&&typeof meetings==='object'){staffMeetings=meetings;markDirty();}/* 企劃／專案同仁今天在哪間會議室（後端依通訊錄信箱比對會議室行事曆） */
+function applyStaff(list,meetings,fun){if(fun&&window.funSetClaims)window.funSetClaims(fun);if(meetings&&typeof meetings==='object'){staffMeetings=meetings;markDirty();}/* 企劃／專案同仁今天在哪間會議室（後端依通訊錄信箱比對會議室行事曆） */
   if(!Array.isArray(list)||!list.length)return;let changed=false;
   for(const item of list){
     const seat=Number(item.seat),name=String(item.name||'');if(!name||!(seat>=0&&seat<STAFF_POS.length))continue;
@@ -1311,10 +1311,10 @@ function applyRemote(list){markDirty();let lookChanged=false;
 }
 {const _applyRemote=applyRemote;applyRemote=function(list){const r=_applyRemote(list);try{const c={};people.forEach(p=>{if(p.look&&typeof p.look==='object')c[p.name]=p.look;});localStorage.setItem('pixelLooksV1',JSON.stringify(c));}catch{}return r;};}
 let pushOpen=false;// 後端推送連線正常時，輪詢只當備援（60 秒）；沒連上就維持原本每 3 秒
-async function pollSync(){try{const early=window.__pixelP&&window.__pixelP.state;if(window.__pixelP)window.__pixelP.state=null;let data=early?await early:null;if(!data||!data.ok)data=await syncCall({action:'pixelOfficeState',since:syncVersion});setSyncStatus(true);if(!data.unchanged){(applyStaff(data.staff,data.staffMeetings),applyRemote(data.people));applyLevelTitles(data);applyHours(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}catch{setSyncStatus(false);}finally{setTimeout(pollSync,pushOpen?60000:(document.hidden?15000:3000));}}
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncCall({action:'pixelOfficeState',since:syncVersion}).then(data=>{if(!data.unchanged){(applyStaff(data.staff,data.staffMeetings),applyRemote(data.people));applyLevelTitles(data);applyHours(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}).catch(()=>{});});
+async function pollSync(){try{const early=window.__pixelP&&window.__pixelP.state;if(window.__pixelP)window.__pixelP.state=null;let data=early?await early:null;if(!data||!data.ok)data=await syncCall({action:'pixelOfficeState',since:syncVersion});setSyncStatus(true);if(!data.unchanged){(applyStaff(data.staff,data.staffMeetings,data.funClaims),applyRemote(data.people));applyLevelTitles(data);applyHours(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}catch{setSyncStatus(false);}finally{setTimeout(pollSync,pushOpen?60000:(document.hidden?15000:3000));}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncCall({action:'pixelOfficeState',since:syncVersion}).then(data=>{if(!data.unchanged){(applyStaff(data.staff,data.staffMeetings,data.funClaims),applyRemote(data.people));applyLevelTitles(data);applyHours(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}).catch(()=>{});});
 // 即時推送：後端（Durable Object）有人改狀態／對話框／音樂／造型／限時動態就通知這裡，馬上重讀，不必等輪詢。
-function syncNow(){return syncCall({action:'pixelOfficeState',since:syncVersion}).then(data=>{if(!data.unchanged){(applyStaff(data.staff,data.staffMeetings),applyRemote(data.people));applyLevelTitles(data);applyHours(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}).catch(()=>{});}
+function syncNow(){return syncCall({action:'pixelOfficeState',since:syncVersion}).then(data=>{if(!data.unchanged){(applyStaff(data.staff,data.staffMeetings,data.funClaims),applyRemote(data.people));applyLevelTitles(data);applyHours(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}).catch(()=>{});}
 (function pushConnect(){
   if(!('WebSocket' in window)||typeof SYNC_API!=='string')return;
   let ws=null,pingTimer=0,retry=0;
@@ -1441,7 +1441,7 @@ function joystickMove(e){const rect=joystick.getBoundingClientRect(),max=rect.wi
 function joystickEnd(e){if(e.pointerId!==joystickPointer)return;joystickPointer=null;joystick.classList.remove('active');joystickKnob.style.transform='';arrowKeys.forEach(key=>keys.delete(key));}
 if(joystick){joystick.addEventListener('pointerdown',e=>{e.preventDefault();joystickPointer=e.pointerId;try{joystick.setPointerCapture(e.pointerId);}catch{}joystick.classList.add('active');joystickMove(e);});joystick.addEventListener('pointermove',e=>{if(e.pointerId!==joystickPointer)return;e.preventDefault();joystickMove(e);});['pointerup','pointercancel','lostpointercapture'].forEach(type=>joystick.addEventListener(type,joystickEnd));joystick.addEventListener('contextmenu',e=>e.preventDefault());joystick.addEventListener('touchstart',e=>e.preventDefault(),{passive:false});}
 /* 辦公室小樂趣（fun.js）：場景幾何與少量操作由這裡提供 */
-window.__funApi={floor:()=>FLOOR4?4:5,toast,blocked,viewY,markDirty:()=>markDirty(),W:()=>W,
+window.__funApi={floor:()=>FLOOR4?4:5,toast,post:b=>syncCall(b),blocked,viewY,markDirty:()=>markDirty(),W:()=>W,
   bounds:()=>({y0:ROOM_MIN_Y,y1:ROOM_MAX_Y,x0:80,x1:W-80}),
   geo:()=>{if(FLOOR4){const sc=window.FLOOR4_SCENE||{},rr=sc.roomRects||{},bl=sc.blocks||[];return{toilets:window.__f4Toilets||[],proj:(window.__funProj||[]).filter(p=>p.f4),rooms:Object.entries(rr).map(([n,r])=>({name:n,x:r.x,y:r.y,w:r.w,h:r.h,tables:bl.filter(b=>b[0]>=r.x&&b[0]<=r.x+r.w&&b[1]>=r.y&&b[1]<=r.y+r.h&&b[2]>=60&&b[3]>=50)}))};}
     return{toilets:[ROOMS[0],ROOMS[1]].map(r=>({x:r[1]+RT,y:r[2]+RT})),proj:(window.__funProj||[]).filter(p=>!p.f4),rooms:ROOMS.slice(2).map(r=>({name:r[0],x:r[1],y:r[2],w:r[3],h:r[4],tables:roomItems.filter(it=>it[0]==='table'&&it[1]>=r[1]&&it[1]<=r[1]+r[3]&&it[2]>=r[2]&&it[2]<=r[2]+r[4]).map(it=>[it[1],it[2],it[3],it[4]])}))};},
