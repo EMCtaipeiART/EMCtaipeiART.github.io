@@ -5138,6 +5138,17 @@ describe('Pixel Office shared state', () => {
   });
 });
 
+describe('Pixel Office calendar: 公出', () => {
+  const base = { eventType: 'default', start: { dateTime: '2026-10-29T09:00:00+08:00' }, end: { dateTime: '2026-10-29T18:00:00+08:00' } };
+  it('marks the owner as 公出 for their own 公出／外出 events, even all-day length', () => {
+    expect(pixelOfficeCalendarEventState({ ...base, summary: '公出', organizer: { email: 'noise@emctaipei.com' } }, 'noise@emctaipei.com', 'Noise')).toBe('out');
+    expect(pixelOfficeCalendarEventState({ ...base, summary: 'Noise 外出拍攝', organizer: { email: 'boss@emctaipei.com' } }, 'noise@emctaipei.com', 'Noise')).toBe('out');
+  });
+  it('ignores a 公出 notice created by someone else that does not name the owner', () => {
+    expect(pixelOfficeCalendarEventState({ ...base, summary: '公出', organizer: { email: 'boss@emctaipei.com' } }, 'noise@emctaipei.com', 'Noise')).not.toBe('out');
+  });
+});
+
 describe('Pixel Office calendar: tagged leave notices', () => {
   const base = { eventType: 'default', start: { dateTime: '2026-10-02T09:00:00+08:00' }, end: { dateTime: '2026-10-02T12:00:00+08:00' } };
   it('ignores a short leave notice created by someone else that does not name the owner', () => {

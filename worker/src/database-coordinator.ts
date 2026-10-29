@@ -247,7 +247,9 @@ function gmailScopesAllowCalendarDetails(scopes: unknown): boolean {
     || scope === 'https://www.googleapis.com/auth/calendar');
 }
 
-type PixelOfficeCalendarState = '' | 'meeting' | 'leave';
+type PixelOfficeCalendarState = '' | 'meeting' | 'leave' | 'out';
+/** 行事曆標題寫了公出／外出／外勤／外訪／拜訪／外拍：顯示成「公出」（優先序：休假 > 公出 > 會議）。 */
+const PIXEL_OFFICE_OUT_KEYWORDS = /公出|外出|外勤|外訪|拜訪|外拍/;
 
 /** freeBusy 的忙碌區段裡，有沒有「現在這一刻正在進行、而且整段不超過 4 小時」的——整天的請假／出差不算會議。 */
 export function pixelOfficeBusyMeetingNow(busy: Row[], nowMs: number): boolean {
@@ -279,6 +281,15 @@ export function pixelOfficeCalendarEventState(event: Row, calendarEmail = '', ca
     // 別人建立、標題是請假、也沒點名這個人：只是被 tag 的休假通知，既不是他的休假、也不是會議。
     // 不能再往下當一般事件算——半天假、外出被 tag 給大家，會讓全組同時顯示「會議中」。
     return '';
+  }
+  if (PIXEL_OFFICE_OUT_KEYWORDS.test(summary)) {
+    // 跟休假一樣：只有建立者本人或標題點名這位同仁才算他公出，避免別人 tag 的通知讓全組一起公出
+    const organizer = event.organizer && typeof event.organizer === 'object' ? event.organizer as Row : {};
+    const organizerEmail = text(organizer.email).toLowerCase();
+    const ownerEmail = calendarEmail.trim().toLowerCase();
+    const ownerAliases = [calendarName.trim(), ownerEmail.split('@')[0] || ''].filter(Boolean);
+    const namesOwner = ownerAliases.some(alias => summary.toLowerCase().includes(alias.toLowerCase()));
+    if (!ownerEmail || organizerEmail === ownerEmail || namesOwner) return 'out';
   }
   // 訂了會議室（受邀者有 meetingroom{a-d}.emc@gmail.com 或文字寫了會議室）的活動一定是實體會議：
   // 就算被設成「空閒／透明」也算（行事曆頁顯示的就是這些活動），照一般會議的長度規則往下判斷。
@@ -339,7 +350,8 @@ function pixelOfficeCalendarEventsState(events: unknown, calendarEmail = '', cal
   for (const event of Array.isArray(events) ? events as Row[] : []) {
     const next = pixelOfficeCalendarEventState(event, calendarEmail, calendarName);
     if (next === 'leave') return 'leave';
-    if (next === 'meeting') state = 'meeting';
+    if (next === 'out') state = 'out';
+    else if (next === 'meeting' && state !== 'out') state = 'meeting';
   }
   return state;
 }
@@ -2137,7 +2149,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   /** 行事曆同步：把某位設計師改成「會議／休假」，或事件結束後交還給電腦自動判斷。
    * 不碰使用者手動指定的狀態（使用者的選擇優先），也不碰後端還沒有資料的人。 */
-  private pixelOfficeApplyCalendar(name: string, desired: PixelOfficeCalendarState, nowMs: number, room = '', endMs = 0): 'meeting' | 'leave' | 'released' | 'unchanged' | 'manual' | 'at-desk' {
+  private pixelOfficeApplyCalendar(name: string, desired: PixelOfficeCalendarState, nowMs: number, room = '', endMs = 0): 'meeting' | 'leave' | 'out' | 'released' | 'unchanged' | 'manual' | 'at-desk' {
     const row = this.ctx.storage.sql.exec<{ state: string; last_seen: number }>(
       'SELECT state, last_seen FROM pixel_office_people WHERE name = ?', name
     ).toArray()[0];
@@ -2174,7 +2186,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       delete state.activeSince;
     } else {
       // 只收回自己設的；使用者手動點的會議／休假要自己取消。
-      if (!['meeting', 'leave'].includes(status) || source !== 'calendar') return 'unchanged';
+      if (!['meeting', 'leave', 'out'].includes(status) || source !== 'calendar') return 'unchanged';
       state.status = pixelOfficeWorkStatus(nowMs);
       state.statusSource = 'auto';
       delete state.meetingRoom; delete state.meetingEnd;
@@ -2366,7 +2378,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     await this.ctx.storage.put('staffMeetEnds', staffEnds);
     if (staffRoomsReadable && pixelHours.meetingRooms) this.pixelOfficeSetStaffMeetings(staffRooms, nowMs);
     else if (!pixelHours.meetingRooms) this.pixelOfficeSetStaffMeetings({}, nowMs);
-    const meeting: string[] = [], leave: string[] = [], released: string[] = [], unreadable: string[] = [];
+    const meeting: string[] = [], leave: string[] = [], out: string[] = [], released: string[] = [], unreadable: string[] = [];
     const detected: Row = {}, manualHeld: string[] = [], atDesk: string[] = [];
     // 人資系統的假單優先於 Google 行事曆：Google 上沒有活動（或設成空閒）的請假也要算休假。
     const femas = await this.femasLeaveNow(nowMs);
@@ -2401,13 +2413,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const result = this.pixelOfficeApplyCalendar(name, desired, nowMs, desired === 'meeting' ? roomHere : '', endHere);
       if (result === 'meeting') meeting.push(name);
       else if (result === 'leave') leave.push(name);
+      else if (result === 'out') out.push(name);
       else if (result === 'released') released.push(name);
       else if (result === 'manual') manualHeld.push(name);
       else if (result === 'at-desk') atDesk.push(name);
     }
     detailUnreadable.sort((a, b) => PIXEL_OFFICE_NAMES.indexOf(a) - PIXEL_OFFICE_NAMES.indexOf(b));
     const rooms: Row = { _roomCalendars: roomCalStatus };for (const name of meeting) rooms[name] = detailRooms.get(name) || roomByName.get(name) || (detailStates.has(name) ? '(會議沒寫會議室)' : '(讀不到活動詳細內容)');
-    const result = { ok: true, detected, rooms, staffRooms, staffCalStatus, meeting, leave, released, manualHeld, atDesk, unreadable, detailUnreadable, femas: { ok: femas.ok, events: femas.events, onLeave: [...femas.names], ...(femas.error ? { error: femas.error } : {}) } };
+    const result = { ok: true, detected, rooms, staffRooms, staffCalStatus, meeting, leave, out, released, manualHeld, atDesk, unreadable, detailUnreadable, femas: { ok: femas.ok, events: femas.events, onLeave: [...femas.names], ...(femas.error ? { error: femas.error } : {}) } };
     await this.rememberCalendarSync(result, nowMs);
     return result;
   }
