@@ -2390,8 +2390,8 @@ window.addEventListener('message',event=>{
     const cx=cam.on?view.left-holder.left+(p.x-cam.left)*sx:view.left-holder.left+p.x*sx,cy=cam.on?view.top-holder.top+(p.y-78-cam.top)*sy:view.top-holder.top+(p.y+OY-78)*sy;
     box.style.left=cx+'px';box.style.top=cy+'px';
     // 同時限制在場景與 iframe 可見範圍，標籤、焦點環也保留安全距離。
-    const x0=Math.max(8,8-holder.left),y0=Math.max(8,8-holder.top);
-    const x1=Math.min(holder.width-8,window.innerWidth-holder.left-8),y1=Math.min(holder.height-8,window.innerHeight-holder.top-8);
+    const x0=FLOOR4?8-holder.left:Math.max(8,8-holder.left),y0=FLOOR4?8-holder.top:Math.max(8,8-holder.top);/* 四樓：只受視窗限制（場景左側有留白，人物在角落時選單才不會被推歪） */
+    const x1=FLOOR4?window.innerWidth-holder.left-8:Math.min(holder.width-8,window.innerWidth-holder.left-8),y1=FLOOR4?window.innerHeight-holder.top-8:Math.min(holder.height-8,window.innerHeight-holder.top-8);
     const width=Math.max(0,x1-x0),height=Math.max(0,y1-y0);
     const clamp=(v,min,max)=>Math.max(min,Math.min(v,Math.max(min,max)));
     if(level===1){
