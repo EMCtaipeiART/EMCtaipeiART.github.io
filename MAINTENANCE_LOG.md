@@ -1166,3 +1166,7 @@
 - 後端：`/minigames/top3`、`/minigames/board` 的 `range` 新增 `all`（歷史，不限日期）；新增 API action `ventArenaTop3`（range＝today／week／all，每人取範圍內最高分取前三，登入者以帳號名字，未登入顯示「未登入使用者」，日界線台北時間）。worker vitest 218／218（新增 ventArenaTop3 與 range=all 測試）。
 - 前台：minigames 選單排行榜新增「歷史」頁籤，並在最上方列出出氣擂台前三名（board.js 新增 arenaTop3）。minigames/index.js v18、app.js v363。
 - 注意：出氣擂台後端只保存「每人每模式的最高分（前 50 名）」，所以「今日／本週」是依「最高分是何時打出的」篩選，不是逐局紀錄；歷史＝全部。
+
+## 2026-10-29 新增 20 款辦公室小物
+- Codex 新畫 assets/office-fun-v2.webp/json（咖啡、甜甜圈、仙人掌、訂書機、滑鼠、隨身碟、耳機、泡麵、珍奶、橡皮擦、計算機、便當、小黃鴨、小風扇、眼鏡、色票扇、繪圖筆、魔術方塊、紙飛機、披薩），各有趣味文案。
+- fun.js：地上驚喜道具池 7→27、會議室遺落物池 5→25；新增 covered()：道具靠近人物（臉／頭上名牌）或投影機／投影畫面附近時不畫、不能點，避免遮擋。fun.js?v=11。
