@@ -2114,8 +2114,8 @@ function drawPunishBadge(p){
   ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,p.x,Math.round(y)+.5);ctx.restore();
 }
 /* 人物名字：離開座位（走動、站在別處、會議室）時顯示在腳下；坐在自己的桌位時桌上已有名牌，不重複 */
-function drawNameTag(p,sel){if(embedMode||!p.name)return;if(stations.some(t=>t.name===p.name&&Math.abs(t.x-p.x)<34&&Math.abs(t.y-p.y)<46))return;
-  ctx.save();ctx.font='700 12px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';const label=String(p.name).slice(0,12),tw=Math.round(ctx.measureText(label).width)+14,x=Math.round(p.x-tw/2),y=Math.round(viewY(p.y)+(sel?30:20));
+function drawNameTag(p,sel){if(embedMode||!p.name)return;if(viewStations.some(t=>t.name===p.name&&Math.abs(t.x-p.x)<34&&Math.abs(t.y-p.y)<46))return;
+  ctx.save();ctx.font='700 12px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';const label=String(p.name).slice(0,12),tw=Math.round(ctx.measureText(label).width)+14,x=Math.round(p.x-tw/2),y=Math.round(p.y+(sel?30:20));/* p 已是畫面座標 */
   ctx.fillStyle=sel?'#159E31':'rgba(255,255,255,.94)';ctx.strokeStyle=sel?'#0c5a1a':'#aab4c2';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect?ctx.roundRect(x,y,tw,20,10):ctx.rect(x,y,tw,20);ctx.fill();ctx.stroke();
   ctx.fillStyle=sel?'#fff':'#223';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,p.x,y+10.5);ctx.restore();}
 function drawOverlay(i,time){const p=viewPeople[i];if(isAway(p))return;drawPunishBadge(p);drawNameTag(p,i===selected);if(musicOf(p)&&String(p.message||'').trim())drawBubble(p,i,'text');drawBubble(p,i);drawStoryBubble(i,time);const mood=moods.find(item=>item.id===p.mood);if(mood){const side=storiesOf(p.name).length?-1:(p.x>W-120?-1:1),x=p.x+side*80,y=p.y-124;drawSymbol(ctx,mood.symbol,x,y,56);}}
