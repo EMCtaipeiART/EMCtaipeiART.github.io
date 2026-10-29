@@ -5,7 +5,7 @@ import {createScoreStore} from './core/score.js';
 import {demoGame} from './games/demo.js';
 import {treasureGame} from './games/treasure.js';
 import {hoopsGame} from './games/hoops.js';
-import {deadlineGame} from './games/deadline.js?v=2';
+import {deadlineGame} from './games/deadline.js?v=3';
 import {hideseekGame} from './games/hideseek.js';
 import {hideseekOnline} from './games/hideseek-online.js';
 import {createLobby} from './core/lobby.js';

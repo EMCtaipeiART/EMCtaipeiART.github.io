@@ -28,9 +28,9 @@ export const deadlineGame={
   },
   answer(ctx,id){
     const s=this.state;
-    /* 兩次作答至少隔 0.15 秒（第一題 0.35 秒）：伺服器驗證的下限是 0.12／0.3 秒；雙擊、觸控連發本來就不該算成兩題，
+    /* 兩次作答至少隔 0.125 秒（第一題 0.31 秒，剛好略高於伺服器下限 0.12／0.3）：伺服器驗證的下限是 0.12／0.3 秒；雙擊、觸控連發本來就不該算成兩題，
        否則整局成績會因為 too-fast 被拒絕、只存在本機 */
-    if((s.log.length===0?s.clock:s.clock-s.lastT)<(s.log.length===0?.35:.15))return;
+    if((s.log.length===0?s.clock:s.clock-s.lastT)<(s.log.length===0?.31:.125))return;
     s.lastT=s.clock;
     const cur=s.deck.get(s.idx),ok=cur.type.isCorrect(cur.puzzle,id),stat=s.byType[cur.type.id];
     if(ok){s.combo++;s.correct++;stat.ok++;s.bestCombo=Math.max(s.bestCombo,s.combo);const pts=pointsForCorrect(s.combo);ctx.addScore(pts);s.flash={t:s.clock,ok:true,text:'+'+pts+(s.combo>1?'  連擊 x'+s.combo:'')};}
