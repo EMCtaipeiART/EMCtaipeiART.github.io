@@ -1455,8 +1455,9 @@ function setZoom(target){const base=Math.max(.34,Math.min(.62,cam.w/760)),s=Math
   if(!document.documentElement.classList.contains('clean-narrow'))return;
   const tps=new Map();let d0=0,s0=0;
   const spread=()=>{const v=[...tps.values()];return Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y);};
-  game.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')return;tps.set(e.pointerId,{x:e.clientX,y:e.clientY});if(tps.size===2){pinching=true;arrowKeys.forEach(k=>keys.delete(k));d0=spread();s0=cam.s;}},true);
-  window.addEventListener('pointermove',e=>{const t=tps.get(e.pointerId);if(!t)return;t.x=e.clientX;t.y=e.clientY;if(pinching&&tps.size>=2&&d0>0)setZoom(s0*spread()/d0);},{passive:true});
+  let c0=null;const centroid=()=>{const v=[...tps.values()];return {x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2};};
+  game.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')return;tps.set(e.pointerId,{x:e.clientX,y:e.clientY});if(tps.size===2){pinching=true;arrowKeys.forEach(k=>keys.delete(k));d0=spread();s0=cam.s;c0=centroid();}},true);
+  window.addEventListener('pointermove',e=>{const t=tps.get(e.pointerId);if(!t)return;t.x=e.clientX;t.y=e.clientY;if(pinching&&tps.size>=2&&d0>0){setZoom(s0*spread()/d0);/* 兩指一起移動＝平移畫面（上下左右都可以） */const c=centroid();if(c0){const bx=cam.free?cam.fx:cam.x,by=cam.free?cam.fy:cam.y;cam.free=true;cam.fx=Math.max(cam.w/2/cam.s,Math.min(Math.max(cam.w/2/cam.s,W-cam.w/2/cam.s),bx-(c.x-c0.x)/cam.s));cam.fy=Math.max(cam.h/2/cam.s-OY,Math.min(H0-cam.h/2/cam.s+120,by-(c.y-c0.y)/cam.s));cam.x=cam.fx;cam.y=cam.fy;markDirty();}c0=c;}},{passive:true});
   const up=e=>{if(!tps.delete(e.pointerId))return;if(tps.size<2)setTimeout(()=>{if(tps.size<2)pinching=false;},200);};
   window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
 })();
