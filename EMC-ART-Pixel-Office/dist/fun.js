@@ -17,7 +17,7 @@ const FL=()=>api().floor();
 /* ---------- 共用的「已處理」紀錄 ---------- */
 let claims={};
 window.funSetClaims=m=>{if(m&&typeof m==='object'){claims=m;dirty();}};
-function claim(id,v){claims[id]=[v?1:0,Date.now()];dirty();try{return api().post({action:'pixelOfficeFun',id,v:v?1:0,token:api().token()}).then(r=>{if(r&&r.funClaims)claims=r.funClaims;dirty();return r;}).catch(()=>null);}catch(e){return Promise.resolve(null);}}
+function claim(id,v){v=Math.max(0,Math.floor(Number(v)||0));claims[id]=[v,Date.now()];dirty();try{return api().post({action:'pixelOfficeFun',id,v,token:api().token()}).then(r=>{if(r&&r.funClaims)claims=r.funClaims;dirty();return r;}).catch(()=>null);}catch(e){return Promise.resolve(null);}}
 const taken=id=>!!claims[id];
 /* ---------- 圖片 ---------- */
 let sheet=null,rects=null;
@@ -43,7 +43,7 @@ function drawPrompt(c,p){const w=150,h=34,x=p.x-w/2,y=p.y-92;c.save();c.fillStyl
 const SLIDES=[['本週進度','▮▮▮▮▮▯▯ 72%'],['午餐投票','🍱 便當　🍜 拉麵　🥗 沙拉'],['今日金句','「改稿是設計師的日常」'],['Q4 目標','客戶滿意度 ↑ 加班 ↓'],['休息一下','☕ 15 分鐘後回來'],['週五提醒','🎉 下班前記得關電腦'],['新需求','「這個 logo 可以再大一點嗎」'],['會議紀錄','結論：下次再討論'],
  ['客戶回饋','「可以再活潑一點，但要高級」'],['修改次數','v1 ▸ v2 ▸ v3 ▸ final ▸ final_final'],['設計師日常','Ctrl+S 是一種信仰'],['今日運勢','🔮 今天交稿大吉，改稿小凶'],['咖啡指數','☕☕☕☕☕ 已達上限'],['急件警報','🚨 「這個明天要，今天能給嗎」'],['色彩小教室','「紅色」到底是哪一種紅？'],['字體大亂鬥','標楷體 vs 黑體：永遠的戰爭'],['準時下班','🕖 目標：19:00 準時打卡（不可能）'],['員工福利','🍰 下午茶蛋糕已抵達茶水間'],['冷知識','像素風其實是最耗時的風格'],['猜謎時間','什麼東西越改越像原稿？'],['謎底','……客戶說「還是第一版好」'],['團隊目標','今年沒有人被叫去重跑一次！'],['小提醒','存檔、存檔、再存檔'],['午休倒數','🍜 距離午餐還有 ∞ 分鐘'],['投票','貓派 🐱　狗派 🐶　（辦公室禁戰）'],['週報','本週完成：開會 × 12'],['吐槽大會','「這個很簡單，你隨便弄一下」'],['歡迎新人','👋 新同事，咖啡機在那邊'],['神秘訊息','🎁 今天茶水間有人偷放零食'],['彩蛋','你發現了投影機的秘密！']],SLIDE_N=SLIDES.length,SLOT_J=360000;
 const pkey=p=>p.x+'_'+p.y;
-function projState(p){const sl=Math.floor(Date.now()/SLOT_J),id='j:'+FL()+':'+sl+':'+pkey(p),r=rng(id),base=r()<.45,ov=claims[id],pic=Math.floor((ov?rng(id+':'+ov[1])():r())*SLIDE_N);/* 每次開啟都換一張（用開啟時間當種子，所有人看到一樣） */return{on:ov?!!ov[0]:base,pic,id};}
+function projState(p){const sl=Math.floor(Date.now()/SLOT_J),id='j:'+FL()+':'+sl+':'+pkey(p),r=rng(id),base=r()<.45,basePic=Math.floor(r()*SLIDE_N),ov=claims[id];/* 開啟的人隨機選畫面並一起記進後端（v＝畫面編號+1），所有人看到同一張、不會跳兩次 */return ov?{on:ov[0]>0,pic:Math.max(0,ov[0]-1)%SLIDE_N,id}:{on:base,pic:basePic,id};}
 function drawProj(c,p){const st=projState(p);if(!st.on)return;const right=/right/.test(p.name),down=/down/.test(p.name),W=170,H=104,oy=p.y+p.h/2;let sx,sy;if(down){sx=p.x+p.w/2-W/2;sy=p.y+p.h+30;}else if(right){sx=p.x+p.w+36;sy=oy-H/2;}else{sx=p.x-36-W;sy=oy-H/2;}
   c.save();c.fillStyle='rgba(255,246,170,.20)';c.beginPath();
   if(down){c.moveTo(p.x+p.w/2-8,p.y+p.h);c.lineTo(p.x+p.w/2+8,p.y+p.h);c.lineTo(sx+W,sy);c.lineTo(sx,sy);}
@@ -91,7 +91,7 @@ window.funSceneClick=(x,y,hit)=>{try{
   if(prompt&&prompt.rect&&x>=prompt.rect[0]&&x<=prompt.rect[0]+prompt.rect[2]&&y>=prompt.rect[1]&&y<=prompt.rect[1]+prompt.rect[3]){const p=prompt.p;prompt=null;flush(p);return true;}
   for(const d of dropsNow()){const vy=api().viewY(d.y);if(Math.abs(x-d.x)<26&&Math.abs(y-(vy-14))<30){collectDrop(d);return true;}}
   for(const n of notesNow()){if(Math.abs(x-n.x)<24&&Math.abs(y-n.y)<20){collectNote(n);return true;}}
-  const g=api().geo();for(const p of g.proj||[]){if(x>=p.x-6&&x<=p.x+p.w+6&&y>=p.y-6&&y<=p.y+p.h+6){const st=projState(p);claim(st.id,!st.on);toast(st.on?'📽️ 投影機關閉':'📽️ 投影機開啟');return true;}}
+  const g=api().geo();for(const p of g.proj||[]){if(x>=p.x-6&&x<=p.x+p.w+6&&y>=p.y-6&&y<=p.y+p.h+6){const st=projState(p);claim(st.id,st.on?0:1+Math.floor(Math.random()*SLIDE_N));toast(st.on?'📽️ 投影機關閉':'📽️ 投影機開啟');return true;}}
   /* 點到廁所裡、馬桶上有便便的人物：跳出「沖馬桶」 */
   const ps=poops().filter(q=>!taken(q.id));
   if(hit&&hit.i!==undefined){const pp=api().people()[hit.i];if(pp){const q=ps.find(q=>Math.abs(pp.x-(q.x+4))<70&&Math.abs(pp.vy-(q.y+32))<70);if(q)prompt={p:q,x:pp.x,y:pp.vy,until:Date.now()+6000};}}

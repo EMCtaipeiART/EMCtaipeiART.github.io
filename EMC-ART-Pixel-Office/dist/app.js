@@ -1668,7 +1668,7 @@ function drawLongDeskGhost(){const st=stations.find(t=>t.big);if(LX&&st&&ghostSe
 const ghostWalkers=()=>stations.filter(s=>s.gm&&s.gm.mode!=='sit'&&ghostSeated(s)).length;
 function ghostBusy(){return !embedMode&&ghostWalkers()>0;}
 function ghostRand(a,b){return a+Math.random()*(b-a);}
-function ghostPick(s){const g=s.gm;for(let n=0;n<20;n++){const tx=s.x+ghostRand(-560,560),ty=s.y+ghostRand(-320,420);if(blocked(tx,ty))continue;let ok=true;const dx=tx-g.x,dy=ty-g.y,len=Math.hypot(dx,dy);for(let k=1;k<=len/20;k++){if(blocked(g.x+dx*k*20/len,g.y+dy*k*20/len)){ok=false;break;}}if(ok){g.tx=tx;g.ty=ty;return true;}}return false;}
+function ghostPick(s){const g=s.gm;for(let n=0;n<20;n++){const tx=s.x+ghostRand(-950,950),ty=s.y+ghostRand(-480,720);if(blocked(tx,ty))continue;let ok=true;const dx=tx-g.x,dy=ty-g.y,len=Math.hypot(dx,dy);for(let k=1;k<=len/20;k++){if(blocked(g.x+dx*k*20/len,g.y+dy*k*20/len)){ok=false;break;}}if(ok){g.tx=tx;g.ty=ty;return true;}}return false;}
 function ghostTick(now){
   if(embedMode)return;/* 四、五樓都會走（2026-10-29：不再固定四分之一，每個空位都可能隨機起身） */
   const open=stations.filter(t=>!t.name&&!t.nochair&&!t.gone);

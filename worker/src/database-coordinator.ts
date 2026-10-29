@@ -2679,7 +2679,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   private async pixelOfficeFun(payload: ApiPayload): Promise<ApiResult> {
     const id = String(payload.id || '');
     if (!/^[a-z]:[A-Za-z0-9:._-]{1,70}$/.test(id)) return { ok: false, action: 'pixelOfficeFun', error: 'invalid id' } as ApiResult;
-    const v = Number(payload.v) ? 1 : 0;
+    // 投影機（j:）的值是 0＝關、1～99＝開且畫面編號（開啟的人決定，所有人看到同一張）；其他是 0／1
+    const v = id.startsWith('j:') ? Math.min(99, Math.max(0, Math.floor(Number(payload.v) || 0))) : (Number(payload.v) ? 1 : 0);
     const now = Date.now();
     const claims = this.pixelOfficeFunClaims();
     const old = claims[id];
