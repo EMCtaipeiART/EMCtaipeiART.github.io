@@ -17,7 +17,7 @@ const { people, card } = new Function(`
   const DESIGNERS=['Anna','Machi','Leona'],SHORT_HEADS=new Set(['Machi']);
   const pixImg=()=>'',personAvatar=()=>'';
   const state={dragOn:false},schedule=()=>({late:false,percent:50}),statusOf=r=>({cls:'st-review',label:r['狀態']}),idKey=r=>r['案件編號'];
-  const typeClass=()=>'',shortRange=()=>'',barStyle=()=>'',revisionCount=()=>0,hasPendingMod=()=>false;const modBtnHtml=()=>'';
+  const typeClass=()=>'',shortRange=()=>'',barStyle=()=>'',revisionCount=()=>0,hasPendingMod=()=>false;const modBtnHtml=()=>'';const projTagsHtml=()=>'';
   ${helpers}
   ${grab('faceHtml')}
   ${grab('cardPeopleHtml')}

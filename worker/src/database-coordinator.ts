@@ -6680,8 +6680,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const touched = new Set<string>(['database', '補充資料連結']);
       for (const source of sources) {
         // 輪替：前台送 expectedDesigner（＝輪替順位第一）時，由伺服器依當下輪替表重算並登記到「平面／影音新開專案」。
-        if (text(source.expectedDesigner)) for (const table of this.applyRotation(draft, source)) touched.add(table);
+        const isNewProject = Boolean(text(source.expectedDesigner));
+        if (isNewProject) for (const table of this.applyRotation(draft, source)) touched.add(table);
         const row = toSheetRow(source, {}, weightRules(draft));
+        if (isNewProject) row['新專案'] = 'v';
         row['案件編號'] ||= nextCaseId(draft.tables.database.rows);
         row['填單時間'] ||= nowTaipei().slice(0, 10).replace(/\//g, '-');
         row['月份'] ||= monthFromDate(row['開始日期']);

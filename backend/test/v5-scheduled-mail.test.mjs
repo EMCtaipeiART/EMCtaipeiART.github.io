@@ -57,7 +57,7 @@ test('v5 schedule picker offers one-click presets, date plus hour/minute selects
 
 test('v5 batch add: every new row inherits the previous row\'s values (including 專案名稱)', async () => {
   const html = await readSite();
-  assert.match(html, /const inheritRow=r=>newRow\(\{client:r\.client,project:r\.project,owner:r\.owner,designer:r\.designer,type:r\.type,stage:r\.stage,qty:r\.qty,start:r\.start,end:r\.end,platforms:\[\.\.\.r\.platforms\],supp:\{\.\.\.r\.supp\},designerTouched:r\.designerTouched\}\)/);
+  assert.match(html, /const inheritRow=r=>newRow\(\{client:r\.client,project:r\.project,owner:r\.owner,designer:r\.designer,type:r\.type,stage:r\.stage,qty:r\.qty,start:r\.start,end:r\.end,platforms:\[\.\.\.r\.platforms\],supp:\{\.\.\.r\.supp\},designerTouched:r\.designerTouched,newProj:r\.newProj\}\)/);
   assert.match(html, /if\(f\.batch&&!f\.extra\.length\)f\.extra\.push\(inheritRow\(f\)\)/);
   assert.match(html, /if\(act==='batch-add'\)\{readRowsSafe\(\);const f=state\.form;f\.extra\.push\(inheritRow\(f\.extra\.length\?f\.extra\[f\.extra\.length-1\]:f\)\)/, '「新增空白一筆」要沿用最後一筆，不是第一筆');
 });

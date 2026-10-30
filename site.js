@@ -650,7 +650,7 @@
     function applyRotationPlan(f){
       const orders={};
       for(const r of [f,...(f.extra||[])]){
-        if(!isNewClient(r.client)){r.rot='';r.sub='';r.subReason='';continue}
+        if(!r.newProj){r.rot='';r.sub='';r.subReason='';continue}
         const g=r.type==='影音'?'影音':'平面',list=orders[g]||(orders[g]=rotationOrder(g));
         r.rot=list[0]||'';
         if(r.sub&&(r.sub===r.rot||!list.includes(r.sub)))r.sub='';
@@ -661,7 +661,7 @@
     /** 「新開專案」＝剛用「新增客戶別」建立的客戶別（只限這次開著系統期間）：階段預設「提案」、負責人走輪替表。既有客戶別維持原本流程（階段新製、設計負責人自選）。 */
     const newClientSet=new Set();
     const isNewClient=c=>Boolean(c)&&newClientSet.has(c);
-    const newStage=(type,client)=>isNewClient(client)&&stagesFor(type).includes('提案')?'提案':defaultStage(type);
+    const newStage=(type,isNew)=>isNew&&stagesFor(type).includes('提案')?'提案':defaultStage(type);
     function designerEmail(name){const row=state.settings.find(r=>norm(r['名字'])===norm(name)||norm(r['顯示名'])===norm(name)),account=String(row?.['帳號']||'').trim();return account||(name?`${String(name).replace(/\s+/g,'').toLowerCase()}@emctaipei.com`:'')}
     function recipientFor(name){const display=RECIPIENT_NAMES[name]||name,email=designerEmail(name);return display&&email?`${display} <${email}>`:email}
     const emailOf=text=>(String(text||'').match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i)||[''])[0].toLowerCase();
@@ -713,13 +713,19 @@
         return `<span class="card-person">${faceHtml(people[0],avatarRole)}<span class="card-person-role">${role}</span><span class="card-person-name" title="${esc(fullName)}">${esc(fullName)}</span></span>`;
       }).join('');
     }
+    /** 專案名稱前的小標籤：新專案（填單時選了「這是新專案」）、急件（開始～結束的上班天數少於 3 天；已完成／暫停中不再提示） */
+    function projTagsHtml(row){
+      const st=String(row['狀態']||'').trim(),isNew=String(row['新專案']||'').trim()!=='',a=parseDay(row['開始日期']),b=parseDay(row['結束日期']);
+      const urgent=!Number.isNaN(a)&&!Number.isNaN(b)&&b>=a&&!['已完成','暫停中'].includes(st)&&rangeDays(a,b)<3;
+      return (isNew?'<span class="pj-tag is-new" title="新專案（設計負責人依輪替順位指定）">新專案🆕</span>':'')+(urgent?'<span class="pj-tag is-urgent" title="工作天少於 3 天">急件🔥</span>':'');
+    }
     function cardHtml(row,inColumn){
       const s=schedule(row),st=statusOf(row),id=idKey(row),qty=String(row['數量']||'').trim(),status=String(row['狀態']||'').trim(),isDoing=['執行中','修改中'].includes(status);
       const late=s.late&&!['過稿中','已完成','暫停中'].includes(status);
       const canDrag=state.dragOn&&inColumn;
       return `<div role="button" tabindex="0" class="card ${st.cls}"${canDrag?' draggable="true" data-dragok="1"':''} data-case="${esc(id)}" aria-label="${esc(id)} ${esc(row['專案名稱']||'')}，${esc(st.label)}">
         <div class="card-top"><span class="id-pill">${esc(id)}</span><span class="card-meta client-pill" title="客戶別">${esc(row['客戶別']||'未填客戶別')}</span>${late?'<span class="chip late">逾期</span>':''}<span class="card-acts">${(status==='已完成'&&String(row['加權']||'').trim()!==''&&!Number.isNaN(+row['加權']))?`<span class="score-badge" title="此案件獲得的加權分數">+${esc(+row['加權'])}</span>`:''}<span class="lt-status card-status ${st.cls}">${esc(st.label)}</span></span></div>
-        <h3 class="card-title">${esc(row['專案名稱']||'未填專案名稱')}</h3>
+        <h3 class="card-title">${projTagsHtml(row)}${esc(row['專案名稱']||'未填專案名稱')}</h3>
         <div class="card-info"><span class="ci-type ${typeClass(row)}">${esc([row['設計種類']||row['設計類型'],row['階段']].filter(Boolean).join('／')||'未填種類')}</span><span class="ci-date">${esc(shortRange(row))}</span>${String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(Boolean).map(d=>`<span class="ci-detail">${esc(d)}</span>`).join('')}</div>
         ${isDoing&&!inColumn?`<div class="progress${s.late?' is-late':''}"><div class="progress-label"><span>進度</span><span>${s.percent}%</span></div><div class="progress-track"><span style="${barStyle(s.percent)}"></span></div></div>`:''}
         <div class="card-foot">
@@ -746,7 +752,7 @@
       {key:'id',label:'案件編號',cell:r=>`<td class="lt-id lt-link" data-case="${esc(idKey(r))}" tabindex="0">${esc(idKey(r))}</td>`},
       {key:'month',label:'月份',cell:r=>`<td>${esc(r['月份']||monthKey(r))}</td>`},
       {key:'client',label:'客戶別',cell:r=>`<td class="lt-link" data-case="${esc(idKey(r))}" tabindex="0">${esc(r['客戶別'])}</td>`},
-      {key:'project',label:'專案名稱',cell:r=>`<td class="l lt-link" data-case="${esc(idKey(r))}" tabindex="0" title="${esc(r['專案名稱'])}"><span class="lt-proj">${esc(r['專案名稱'])}</span></td>`},
+      {key:'project',label:'專案名稱',cell:r=>`<td class="l lt-link" data-case="${esc(idKey(r))}" tabindex="0" title="${esc(r['專案名稱'])}"><span class="lt-proj">${projTagsHtml(r)}${esc(r['專案名稱'])}</span></td>`},
       {key:'qty',label:'數量',cell:r=>`<td class="lt-qty">${esc(r['數量'])}</td>`},
       {key:'designer',label:'設計負責人',cell:(r,ed)=>`<td><span class="lt-name${ed?' lt-edit':''}"${ed?' data-edit="designer"':''}>${esc(r['設計負責人']||'-')}</span></td>`},
       {key:'status',label:'狀態',cell:(r,ed)=>{const st=statusOf(r);return `<td><span class="lt-status ${st.cls}${ed?' lt-edit':''}"${ed?' data-edit="status"':''}>${esc(st.label)}</span></td>`}},
@@ -1633,12 +1639,13 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     /* 專案負責人：管理者與設計部人員可自行填寫，其他人固定為登入者本人 */
     const ownerSelf=()=>{const s=session();return s.name||s.user||''};
     const ownerLocked=()=>loggedIn()&&!isAdminUser()&&!isMachiUser()&&!(SET_LOCKED_DEPT.test(sessionDept())||isDesignerSession());
-    function newRow(o={}){const start=defaultStart(),types=designTypes(),type=o.type||(types.includes('平面')?'平面':types[0]);return {client:'',project:'',owner:'',qty:'1',designer:'',start,end:start,platforms:[],supp:blankSupp(),designerTouched:false,sub:'',subReason:'',rot:'',stage:newStage(type,o.client),...o,type}}
+    function newRow(o={}){const start=defaultStart(),types=designTypes(),type=o.type||(types.includes('平面')?'平面':types[0]);return {client:'',project:'',owner:'',qty:'1',designer:'',start,end:start,platforms:[],supp:blankSupp(),designerTouched:false,sub:'',subReason:'',rot:'',newProj:false,stage:newStage(type,Boolean(o.newProj)),...o,type}}
     const copyRow=r=>({...r,platforms:[...r.platforms],supp:{...r.supp}});
     /** 批次新增下一筆：沿用上一筆的所有欄位值（含專案名稱、客戶別、負責人、設計種類、階段、數量、日期、設計負責人、
      * 使用平台、補充資料）；替代設計師與原因每一筆各自決定，不沿用。 */
-    const inheritRow=r=>newRow({client:r.client,project:r.project,owner:r.owner,designer:r.designer,type:r.type,stage:r.stage,qty:r.qty,start:r.start,end:r.end,platforms:[...r.platforms],supp:{...r.supp},designerTouched:r.designerTouched});
-    function newForm(client){const s=session();return {...newRow({client,owner:s.name||s.user||'',designer:defaultDesignerFor(client)}),batch:false,extra:[],busy:false}}
+    const inheritRow=r=>newRow({client:r.client,project:r.project,owner:r.owner,designer:r.designer,type:r.type,stage:r.stage,qty:r.qty,start:r.start,end:r.end,platforms:[...r.platforms],supp:{...r.supp},designerTouched:r.designerTouched,newProj:r.newProj});
+    /** 新專案：從首頁「新專案找我」進來、或客戶別是剛新增的，預設打開「新專案」（設計負責人依輪替順位自動指定、可選替代設計師並寫原因）；填單頁可以自己切換。 */
+    function newForm(client){const s=session(),np=Boolean(state.startAsNew)||isNewClient(client);state.startAsNew=false;return {...newRow({client,owner:s.name||s.user||'',designer:defaultDesignerFor(client),newProj:np}),batch:false,extra:[],busy:false}}
     /** 階段選單：有「新製」與「再製」時，最後加上「AI判斷(beta)」（跟現行系統一致）。 */
     function stageOptions(type,selected){
       const list=stagesFor(type);
@@ -1648,18 +1655,19 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const list=rotationOrder(r.type),others=list.filter(n=>n!==r.rot);
       return `<div class="field c2"><span class="label">設計負責人（輪替順位第一）</span><input class="input is-locked" value="${esc(r.rot||'無可輪替的設計師')}" readonly tabindex="-1" aria-label="設計負責人" title="依「${esc(r.type==='影音'?'影音':'平面')}輪替表」自動指定，不能更改"></div>
         <div class="field c2"><span class="label">替代設計師（選填）</span><select data-f="sub" aria-label="替代設計師"><option value="">不替代</option>${others.map(n=>`<option value="${esc(n)}"${n===r.sub?' selected':''}>${esc(n)}</option>`).join('')}</select></div>
-        ${r.sub?`<div class="field c4"><span class="label">替代原因 <b>*</b></span><input class="input" data-f="subReason" value="${esc(r.subReason)}" placeholder="例如：${esc(r.rot)} 請假／手上案量已滿" autocomplete="off" aria-label="替代原因"></div>`:''}`;
+        ${r.sub?`<div class="field c4"><span class="label">替代原因 <b>*</b></span><input class="input" data-f="subReason" value="${esc(r.subReason)}" placeholder="例如：${esc(r.rot)} 出國／繁忙" autocomplete="off" aria-label="替代原因"><div class="np-chips" role="group" aria-label="常用原因">${['出國','休假','繁忙／案量已滿','支援其他專案'].map(t=>`<button type="button" class="np-chip" data-np-reason="${esc(t)}" data-np-key="${esc(key)}">${esc(t)}</button>`).join('')}</div></div>`:''}`;
     }
     function rowHtml(r,key,opt={}){
       const names=designerNames(),types=designTypes(),clients=clientNames(),shownClients=!r.client||clients.includes(r.client)?clients:[r.client,...clients];
       return `<div class="${opt.batch?'batch-row':'form-grid'}" data-row="${key}">
         ${opt.title?`<h5><span>${esc(opt.title)}</span>${opt.removable?`<button type="button" class="batch-del" data-batch-del="${key}">移除這一筆</button>`:''}</h5>`:''}
+        ${key==='edit'?'':`<div class="field c6 np-row"><label class="np-toggle${r.newProj?' is-on':''}"><input type="checkbox" data-f="newProj"${r.newProj?' checked':''}><span class="np-ico" aria-hidden="true">🆕</span><span><b>這是新專案</b><small>${r.newProj?'設計負責人依輪替順位自動指定，也可以選替代設計師並寫原因':'打開後，設計負責人會依輪替順位自動指定（輪替表會往後排）'}</small></span></label></div>`}
         <div class="field c2"><span class="label">客戶別 <b>*</b></span><select data-f="client" aria-label="客戶別">${shownClients.map(n=>`<option value="${esc(n)}"${n===r.client?' selected':''}>${esc(n)}</option>`).join('')}<option value="__new__">+ 新增客戶別</option></select></div>
         <div class="field c4"><span class="label">專案名稱 <b>*</b></span><input class="input" data-f="project" value="${esc(r.project)}" placeholder="例如：10月社群貼文＿新品上市" autocomplete="off" aria-label="專案名稱"></div>
         <div class="field c2"><span class="label">專案負責人 <b>*</b></span><input class="input${ownerLocked()?' is-locked':''}" data-f="owner" value="${esc(ownerLocked()?ownerSelf():r.owner)}" autocomplete="off" aria-label="專案負責人"${ownerLocked()?' readonly tabindex="-1" title="專案負責人固定為登入者本人"':''}></div>
         <div class="field c2"><span class="label">設計種類 <b>*</b></span><div class="seg" role="radiogroup" aria-label="設計種類">${types.map(t=>`<label><input type="radio" name="type-${key}" data-f="type" value="${esc(t)}"${t===r.type?' checked':''}>${esc(t)}</label>`).join('')}</div></div>
         <div class="field c2"><span class="label">階段 <b>*</b></span><select data-f="stage" aria-label="階段">${stageOptions(r.type,r.stage)}</select></div>
-        ${key==='edit'||!isNewClient(r.client)?`<div class="field c2"><span class="label">設計負責人 <b>*</b></span><select data-f="designer" aria-label="設計負責人"><option value="">請選擇</option>${(!r.designer||names.includes(r.designer)?names:[r.designer,...names]).map(n=>`<option value="${esc(n)}"${n===r.designer?' selected':''}>${esc(n)}</option>`).join('')}</select></div>`:rotationFields(r,key)}
+        ${key==='edit'||!r.newProj?`<div class="field c2"><span class="label">設計負責人 <b>*</b></span><select data-f="designer" aria-label="設計負責人"><option value="">請選擇</option>${(!r.designer||names.includes(r.designer)?names:[r.designer,...names]).map(n=>`<option value="${esc(n)}"${n===r.designer?' selected':''}>${esc(n)}</option>`).join('')}</select></div>`:rotationFields(r,key)}
         <div class="field c2"><span class="label">數量 <b>*</b></span><input class="input" data-f="qty" value="${esc(r.qty)}" inputmode="numeric" autocomplete="off" aria-label="數量"></div>
         ${opt.status?`<div class="field c2"><span class="label">案件狀態</span><select data-f="status" aria-label="案件狀態">${STATUS_FILTER.map(k=>`<option value="${k}"${k===r.status?' selected':''}>${esc(ST[k].label)}</option>`).join('')}</select></div>`:''}
         <div class="field c4 range"><span class="label">開始／結束時間 <b>*</b></span>
@@ -1678,6 +1686,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         el.querySelectorAll('[data-f]').forEach(input=>{
           const k=input.dataset.f;
           if(k==='platform')return;
+          if(k==='newProj'){r.newProj=input.checked;return}
           if(k==='type'){if(input.checked)r.type=input.value;return}
           if(SUPP_KEYS.includes(k)){r.supp[k]=input.value.trim();return}
           if(input.value==='__ai__'||input.value==='__new__')return;
@@ -1729,7 +1738,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       '設計簡報說明':r.supp.briefNote,'設計簡報連結':r.supp.briefUrl,'客戶素材說明':r.supp.assetNote,'客戶素材連結':r.supp.assetUrl,'參考範例說明':r.supp.referenceNote,'參考範例連結':r.supp.referenceUrl,'其他說明':r.supp.otherNote,'其他連結':r.supp.otherUrl});
     const FORM_HEADERS=['客戶別','專案名稱','專案負責人','設計類型','階段','數量','開始日期','結束日期','設計負責人','使用平台','設計簡報說明','設計簡報連結','客戶素材說明','客戶素材連結','參考範例說明','參考範例連結','其他說明','其他連結'];
     /** Worker 的 add／batchAdd／update 吃前台的欄位 key（跟現行系統 formWriteRow 一致）。 */
-    const payloadRow=r=>({client:r.client,project:r.project,owner:ownerLocked()?ownerSelf():r.owner,type:r.type,stage:r.stage,qty:r.qty,start:ymd(r.start),end:ymd(r.end),designer:r.designer,expectedDesigner:r.rot,replacement:r.sub||'',reason:r.sub?String(r.subReason||'').trim():'',platforms:platformText(r),...r.supp});
+    const payloadRow=r=>({newProject:Boolean(r.newProj),client:r.client,project:r.project,owner:ownerLocked()?ownerSelf():r.owner,type:r.type,stage:r.stage,qty:r.qty,start:ymd(r.start),end:ymd(r.end),designer:r.designer,expectedDesigner:r.rot,replacement:r.sub||'',reason:r.sub?String(r.subReason||'').trim():'',platforms:platformText(r),...r.supp});
     async function submitForm(opts={}){
       readRowsSafe();const f=state.form;if(!f||f.busy)return;
       applyRotationPlan(f);
@@ -3223,6 +3232,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const mvr=t.closest?.('[data-mv-round]');if(mvr){moveSelectedImages(Number(mvr.dataset.mvRound)||0);return}
       if(t.closest?.('[data-mv-case]')){const v=String($('mvCase')&&$('mvCase').value||'').trim();if(v)moveSelectedImages(state.mvCtx?state.mvCtx.crossRound:0,v);return}
       const ra=t.closest?.('[data-rev-addimg]');if(ra){openDrChooser(state.modId,+ra.dataset.revAddimg);return}
+      const npc=t.closest?.('[data-np-reason]');
+      if(npc){const box=npc.closest('[data-row]'),inp=box?.querySelector('[data-f="subReason"]');if(inp){inp.value=npc.dataset.npReason;inp.dispatchEvent(new Event('input',{bubbles:true}));inp.focus()}return}
       const rd=t.closest?.('[data-rev-del]');
       if(rd){
         const inModal=Boolean(rd.closest('#mmList')),id=inModal?state.modId:(rd.closest('[data-case]')?.dataset.case||state.detailId||state.modId),n=+rd.dataset.revDel;if(!id)return;
@@ -3798,7 +3809,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const supp=[['設計簡報','設計簡報說明','設計簡報連結'],['客戶素材','客戶素材說明','客戶素材連結'],['參考範例','參考範例說明','參考範例連結'],['其他','其他說明','其他連結']].filter(([,n,u])=>(row[n]||row[u])&&canSeeSupp(row));
       stage.innerHTML=`<div class="page">
         <div class="page-top"><button type="button" class="back-btn" data-act="back">← 返回案件列表</button></div>
-        <div class="detail-head"><div><div class="card-top" style="margin-bottom:6px"><span class="id-pill">${esc(idKey(row))}</span><span class="client-text">${esc(row['客戶別']||'')}</span></div><h2 class="page-title">${esc(row['專案名稱']||'未填專案名稱')}</h2></div><div class="edit-actions"><span class="lt-status ${st.cls}${editAttr('status')}">${esc(st.label)}</span><span class="detail-acts">${["mail","actions"].map(k=>COL_DEFS.find(c=>c.key===k).cell(row,ed).replace(/^<td>|<\/td>$/g,"")).join("")}</span></div></div>
+        <div class="detail-head"><div><div class="card-top" style="margin-bottom:6px"><span class="id-pill">${esc(idKey(row))}</span><span class="client-text">${esc(row['客戶別']||'')}</span></div><h2 class="page-title">${projTagsHtml(row)}${esc(row['專案名稱']||'未填專案名稱')}</h2></div><div class="edit-actions"><span class="lt-status ${st.cls}${editAttr('status')}">${esc(st.label)}</span><span class="detail-acts">${["mail","actions"].map(k=>COL_DEFS.find(c=>c.key===k).cell(row,ed).replace(/^<td>|<\/td>$/g,"")).join("")}</span></div></div>
         ${['執行中','修改中'].includes(status)?`<div class="progress${s.late?' is-late':''}" style="max-width:420px"><div class="progress-label"><span>進度</span><span>${s.percent}%｜${esc(countdownText(s))}</span></div><div class="progress-track"><span style="${barStyle(s.percent)}"></span></div></div>`:''}
         <dl class="detail-grid">
           ${kv('專案負責人',person(row['專案負責人'],'專案負責人'),true)}${kv('設計負責人',person(row['設計負責人'],'設計負責人'),true)}${kv('設計種類／階段',`<span class="dp-wrap">${(()=>{const t=String(row['設計類型']||row['設計種類']||'').trim(),g=String(row['階段']||'').trim();return (t||ed?`<span class="lt-type lt-type-${esc(t)}${editAttr('type')}">${esc(t||'選擇')}</span>`:'')+(g||ed?`<span class="lt-stage lt-stage-${esc(g)}${editAttr('stage')}">${esc(g||'選擇')}</span>`:'')||'-'})()}</span>`,true)}
@@ -4301,14 +4312,16 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         readRowsSafe();
         if(t.value==='__new__'){const name=await addCustomerFlow();r.client=name||r.client}else r.client=t.value;
         if(key!=='edit'){
-          r.stage=newStage(r.type,r.client);r.sub='';r.subReason='';
-          if(!isNewClient(r.client)&&(!r.designerTouched||!r.designer)){r.designer=defaultDesignerFor(r.client);toast(r.designer?`設計負責人已依客戶別設定帶入：${r.designer}`:'這個客戶別沒有設定偏好設計師，請自行選擇')}
+          if(isNewClient(r.client))r.newProj=true;
+          r.stage=newStage(r.type,r.newProj);r.sub='';r.subReason='';
+          if(!r.newProj&&(!r.designerTouched||!r.designer)){r.designer=defaultDesignerFor(r.client);toast(r.designer?`設計負責人已依客戶別設定帶入：${r.designer}`:'這個客戶別沒有設定偏好設計師，請自行選擇')}
         }
         rerender();return;
       }
       if(field==='designer'){r.designerTouched=true;return}
       if(field==='sub'){readRowsSafe();r.sub=t.value;if(!r.sub)r.subReason='';rerender();return}
-      if(field==='type'){readRowsSafe();r.type=t.value;r.stage=key==='edit'?defaultStage(r.type):newStage(r.type,r.client);r.sub='';r.subReason='';rerender();return}
+      if(field==='type'){readRowsSafe();r.type=t.value;r.stage=key==='edit'?defaultStage(r.type):newStage(r.type,r.newProj);r.sub='';r.subReason='';rerender();return}
+      if(field==='newProj'){readRowsSafe();r.newProj=t.checked;r.sub='';r.subReason='';r.stage=newStage(r.type,r.newProj);if(!r.newProj&&(!r.designerTouched||!r.designer))r.designer=defaultDesignerFor(r.client);rerender();return}
       if(field==='stage'&&t.value==='__ai__'){t.value=r.stage||'';readRowsSafe();openAi(key);return}
     });
     document.addEventListener('submit',e=>{
@@ -4320,6 +4333,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         e.preventDefault();const client=$('clientSelect').value;if(!client||client==='__new__')return;
         if(!loggedIn()){state.pendingStart=client;toast('請先登入才能新增設計需求',true);startLogin();return}
         if(!acc('request.create',true)){toast('此帳號沒有新增需求的權限',true);return}
+        state.startAsNew=Boolean(csState.pickedAsNew);csState.pickedAsNew=false;
         state.form=newForm(client);show('form');
       }
     });
@@ -4384,7 +4398,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     function csPick(v){
       const sel=$('clientSelect'),startOnPick=csState.startOnPick;csOpen(false);if(!sel||!v)return;
       sel.value=v;sel.dispatchEvent(new Event('change',{bubbles:true}));csSync();setTimeout(csSync,400);$('csTrigger').focus();
-      if(startOnPick&&v!=='__new__')$('prompt').requestSubmit();/* 標籤入口選完即填單；新增客戶沿用 change 的送出流程 */
+      if(startOnPick&&v!=='__new__'){csState.pickedAsNew=true;$('prompt').requestSubmit()}/* 標籤入口選完即填單；新增客戶沿用 change 的送出流程 */
     }
     document.addEventListener('click',e=>{
       if(e.target.closest?.('#csTrigger')){csOpen($('csPop').hidden);return}
