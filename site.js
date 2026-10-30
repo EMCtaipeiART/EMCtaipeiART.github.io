@@ -4275,7 +4275,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(nav){state.home=nav;state.form=null;state.mail=null;state.editing=false;closeCal();state.hl=null;show(nav);if(nav==='projects')openNotify();return}
       const dm=t.closest('[data-dm]')?.dataset.dm;
       if(dm==='cancel'){closeDetailModal();return}
-      if(dm==='ok'){const pm=state.pendingMove;if(pm){const picked=[...document.querySelectorAll('#dmList input:checked')].map(i=>i.value).join(', ');closeDetailModal();const rw=allRows().find(x=>idKey(x)===pm.id),parts=picked.split(', ').filter(Boolean);{const fl=rw&&projFlags(rw),for(const tag of fl&&fl.urgent2?['急急件','急件']:fl&&fl.urgent?['急件']:[])if(!parts.includes(tag))parts.push(tag)}applyMove(pm.id,pm.status,parts.join(', '))}return}
+      if(dm==='ok'){const pm=state.pendingMove;if(pm){const picked=[...document.querySelectorAll('#dmList input:checked')].map(i=>i.value).join(', ');closeDetailModal();const rw=allRows().find(x=>idKey(x)===pm.id),parts=picked.split(', ').filter(Boolean);{const fl=rw&&projFlags(rw);for(const tag of fl&&fl.urgent2?['急急件','急件']:fl&&fl.urgent?['急件']:[])if(!parts.includes(tag))parts.push(tag)}applyMove(pm.id,pm.status,parts.join(', '))}return}
       const lp=t.closest('[data-lp]')?.dataset.lp;
       if(lp==='google'){googleStart();return}
       if(lp==='toggle'){login.showPw=!login.showPw;renderLoginPage();return}
