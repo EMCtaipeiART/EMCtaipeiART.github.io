@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 10088,
+  "revision": 10089,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-30T11:32:01.983Z",
+  "updatedAt": "2026-10-30T11:38:02.770Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -2380,7 +2380,8 @@
         {"短碼":"jKf5Rm","原始網址":"https://www.facebook.com/SoundcoreTaiwan/posts/pfbid02KqJnkk4v3G9M1NvgDXvTckHjFs9gFkQAwNxGupkkNkQkQeVQo1GwYbaHtYHJqoZCl?__cft__[0]=AZhYPThsIauOTflIUqDkk3_-Q6qdI8olmOiFO5Pou9g-Tw3ON3O9tLxsVrDViU2C4vKI_rdgle1C1ltYowtgVw-LSNi5f3bysRREkBvQPd6sw7fjmsGj4qmoA321qnd9D0MA0lz8Ie8&__tn__=%2CO%2CP-R","名稱":"1030","專案":"Soundcore","可見範圍":"同組","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/10/30 17:50:17","更新時間":"2026/10/30 17:50:17"},
         {"短碼":"jGchRY","原始網址":"https://www.facebook.com/SoundcoreTaiwan/posts/pfbid0K97qv9auzTgV9si1uXRbBcQD4PAnV43PDjKF97hfP54DGKr3c7hW6NMHbSSRYfBEl?__cft__[0]=AZiuXhF_EmGHQFPuD7-Z_1IuHBcW9PK9AxP9xqh7V3ycRD5ofqGSlxsEUIEFu_kYzpbYP7xRlrteiwbnCvGMElyRxUTUuhNBmHw-4vjfzJHtPecP0Mszbuxbse0ChdPeI0Dei8SiWeY&__tn__=%2CO%2CP-R","名稱":"1031","專案":"Soundcore","可見範圍":"同組","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/10/30 17:50:17","更新時間":"2026/10/30 17:50:17"},
         {"短碼":"vu5F34","原始網址":"https://www.facebook.com/SoundcoreTaiwan/posts/pfbid0gHDkfVzeo4mvjD9vdfWfc9iDgLcYExRrTkMi5Lb5tLsF1nMDaYs687Jg1jhpkUSFl?__cft__[0]=AZjnZSPW7PQkaESB-kMl1L9YXjAPuR-hIsfJXk105x8TG9ILvPww9Vg2VUpJzcOyjl4xl_raFhT96Olvy6j2H0c0Ib1ND2GXLPtGvcS3CbTKNzN9ZdGLOAoDczjKWYIkbXyGV9ydTGo&__tn__=%2CO%2CP-R","名稱":"1101","專案":"Soundcore","可見範圍":"同組","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/10/30 17:50:17","更新時間":"2026/10/30 17:50:17"},
-        {"短碼":"測試","原始網址":"https://www.google.com/search?q=utm&oq=utm+&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIGCAEQRRg8MgYIAhBFGDwyBggDEEUYPDIGCAQQRRhB0gEINDM3MmowajeoAgCwAgA&sourceid=chrome&source=chrome.ob&ie=UTF-8&sei=Tn_kasKQCqvm2roPwrywmA0","名稱":"test","專案":"","可見範圍":"僅自己","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"local:d97dc604-04f6-401f-8f65-478ea8b7ce4b","建立者":"Celine組測試人員","建立時間":"2026/10/30 19:32:01","更新時間":"2026/10/30 19:32:01"}
+        {"短碼":"測試","原始網址":"https://www.google.com/search?q=utm&oq=utm+&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIGCAEQRRg8MgYIAhBFGDwyBggDEEUYPDIGCAQQRRhB0gEINDM3MmowajeoAgCwAgA&sourceid=chrome&source=chrome.ob&ie=UTF-8&sei=Tn_kasKQCqvm2roPwrywmA0","名稱":"test","專案":"","可見範圍":"僅自己","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"local:d97dc604-04f6-401f-8f65-478ea8b7ce4b","建立者":"Celine組測試人員","建立時間":"2026/10/30 19:32:01","更新時間":"2026/10/30 19:32:01"},
+        {"短碼":"麻豆外流影片","原始網址":"https://na.cx/i/YMkbWAr.jpg","名稱":"testestetst","專案":"","可見範圍":"僅自己","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"local:d97dc604-04f6-401f-8f65-478ea8b7ce4b","建立者":"Celine組測試人員","建立時間":"2026/10/30 19:38:02","更新時間":"2026/10/30 19:38:02"}
       ]
     }
   },
