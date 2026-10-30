@@ -1748,7 +1748,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       '設計簡報說明':r.supp.briefNote,'設計簡報連結':r.supp.briefUrl,'客戶素材說明':r.supp.assetNote,'客戶素材連結':r.supp.assetUrl,'參考範例說明':r.supp.referenceNote,'參考範例連結':r.supp.referenceUrl,'其他說明':r.supp.otherNote,'其他連結':r.supp.otherUrl});
     const FORM_HEADERS=['客戶別','專案名稱','專案負責人','設計類型','階段','數量','開始日期','結束日期','設計負責人','使用平台','設計簡報說明','設計簡報連結','客戶素材說明','客戶素材連結','參考範例說明','參考範例連結','其他說明','其他連結'];
     /** Worker 的 add／batchAdd／update 吃前台的欄位 key（跟現行系統 formWriteRow 一致）。 */
-    const payloadRow=r=>({...(rangeDays(r.start,r.end)>0&&rangeDays(r.start,r.end)<3?{details:rangeDays(r.start,r.end)<=1?'急急件, 急件':'急件'}:{}),newProject:Boolean(r.newProj),client:r.client,project:r.project,owner:ownerLocked()?ownerSelf():r.owner,type:r.type,stage:r.stage,qty:r.qty,start:ymd(r.start),end:ymd(r.end),designer:r.designer,expectedDesigner:r.rot,replacement:r.sub||'',reason:r.sub?String(r.subReason||'').trim():'',platforms:platformText(r),...r.supp});
+    const payloadRow=r=>({...(rangeDays(r.start,r.end)>0&&rangeDays(r.start,r.end)<3?{details:'急件'}:{}),newProject:Boolean(r.newProj),client:r.client,project:r.project,owner:ownerLocked()?ownerSelf():r.owner,type:r.type,stage:r.stage,qty:r.qty,start:ymd(r.start),end:ymd(r.end),designer:r.designer,expectedDesigner:r.rot,replacement:r.sub||'',reason:r.sub?String(r.subReason||'').trim():'',platforms:platformText(r),...r.supp});
     async function submitForm(opts={}){
       readRowsSafe();const f=state.form;if(!f||f.busy)return;
       applyRotationPlan(f);
@@ -4275,7 +4275,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(nav){state.home=nav;state.form=null;state.mail=null;state.editing=false;closeCal();state.hl=null;show(nav);if(nav==='projects')openNotify();return}
       const dm=t.closest('[data-dm]')?.dataset.dm;
       if(dm==='cancel'){closeDetailModal();return}
-      if(dm==='ok'){const pm=state.pendingMove;if(pm){const picked=[...document.querySelectorAll('#dmList input:checked')].map(i=>i.value).join(', ');closeDetailModal();const rw=allRows().find(x=>idKey(x)===pm.id),parts=picked.split(', ').filter(Boolean);{const fl=rw&&projFlags(rw);for(const tag of fl&&fl.urgent2?['急急件','急件']:fl&&fl.urgent?['急件']:[])if(!parts.includes(tag))parts.push(tag)}applyMove(pm.id,pm.status,parts.join(', '))}return}
+      if(dm==='ok'){const pm=state.pendingMove;if(pm){const picked=[...document.querySelectorAll('#dmList input:checked')].map(i=>i.value).join(', ');closeDetailModal();const rw=allRows().find(x=>idKey(x)===pm.id),parts=picked.split(', ').filter(Boolean);{const fl=rw&&projFlags(rw);if(fl&&fl.urgent&&!parts.includes('急件'))parts.push('急件')}applyMove(pm.id,pm.status,parts.join(', '))}return}
       const lp=t.closest('[data-lp]')?.dataset.lp;
       if(lp==='google'){googleStart();return}
       if(lp==='toggle'){login.showPw=!login.showPw;renderLoginPage();return}
