@@ -5081,7 +5081,26 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     } finally { this.auditFlushing = false; }
   }
 
+  /** 一次性資料修正（2026-10-30）：項目細節裡短暫出現過的「急急件」一律改回「急件」並重算加權；做完在 _sql_schema_migrations 記 100，之後不再檢查。 */
+  private async fixUrgentDetailsOnce(): Promise<void> {
+    const done = this.ctx.storage.sql.exec('SELECT 1 AS ok FROM _sql_schema_migrations WHERE version = 100').toArray().length > 0;
+    if (done) return;
+    await this.mutate('fixUrgentDetails', null, draft => {
+      let fixed = 0;
+      for (const row of draft.tables.database.rows) {
+        const raw = text(row['項目細節']);
+        if (!raw.includes('急急件')) continue;
+        const parts = raw.split(/[,，、\n]/).map(item => text(item).replace('急急件', '急件')).filter(Boolean);
+        row['項目細節'] = [...new Set(parts)].join(', ');
+        fixed += 1;
+      }
+      if (fixed) recalculateDatabaseWeights(draft);
+      return { result: { ok: true, action: 'fixUrgentDetails', fixed }, changed: fixed > 0, changedTables: fixed ? ['database'] : [] };
+    });
+    this.ctx.storage.sql.exec('INSERT OR IGNORE INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)', 100, new Date().toISOString());
+  }
   async runScheduledDispatch(): Promise<{ processed: number; sent: number; failed: number }> {
+    try { await this.fixUrgentDetailsOnce(); } catch (error) { console.warn('fixUrgentDetails failed', error); }
     const staleBefore = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     this.ctx.storage.sql.exec(
       `UPDATE scheduled_mail SET status = 'pending' WHERE status = 'sending' AND updated_at < ?`, staleBefore
