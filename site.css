@@ -1554,3 +1554,18 @@ body.arena-on .arena-frame{border-radius:0;box-shadow:none;background:transparen
 
     .link-group .link-stat{display:inline-block;margin-left:8px;font-style:normal;font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap}
     .link-group .link-stat b{color:#0f7f27;font-weight:900}.link-group .link-stat b:last-of-type{color:#4338ca}
+
+    .link-group-rows li{grid-template-columns:minmax(0,1.1fr) minmax(0,1.6fr) 84px 96px;align-items:center}
+    .link-group-rows .link-group-head{background:transparent;border-color:transparent;padding-top:0;padding-bottom:0;font-size:11px;font-weight:800;color:var(--muted)}
+    .link-group-rows .link-group-head span:nth-child(n+3){text-align:right}
+    .link-group-rows .link-group-dest{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .link-num{text-align:right;font-size:15px;font-weight:900;font-variant-numeric:tabular-nums}
+    .link-group-rows .link-num{color:#0f7f27}.link-group-rows .link-num-uniq{color:#4338ca}
+    @media(max-width:640px){
+      .link-group-rows li{grid-template-columns:1fr 1fr;gap:4px 10px}
+      .link-group-rows .link-group-head{display:none}
+      .link-group-rows .link-group-dest{grid-column:1/-1}
+      .link-group-rows .link-num{text-align:left}
+      .link-group-rows .link-num-total::before{content:"累計 ";font-size:11px;font-weight:700;color:var(--muted)}
+      .link-group-rows .link-num-uniq::before{content:"不重複 ";font-size:11px;font-weight:700;color:var(--muted)}
+    }
