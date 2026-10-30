@@ -88,3 +88,9 @@ test('合併信件分類寫進後台：寄出時呼叫 classifyCaseFiles', async
   assert.match(src, /api\('classifyCaseFiles',\{caseId:d\.id,assignments:all\}\)/);
   assert.match(src, /await drSaveClassification\(d\)/);
 });
+
+test('設計師回覆：影片截圖預覽一到就先把影片路徑寫進信件，不等備份完成', async () => {
+  const src = await readFile(new URL('../../site.js', import.meta.url), 'utf8');
+  assert.match(src, /dr\.earlyVideos=dr\.earlyVideos\|\|\[\]/);
+  assert.match(src, /isVideoName\(vn\)&&!dr\.earlyVideos\.includes\(vn\)/);
+});

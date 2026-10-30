@@ -3079,6 +3079,17 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       d.images=d.images||{};dr.early=dr.early||new Set();dr.nasIds=dr.nasIds||new Set();
       let total=Object.values(d.images).reduce((n,i)=>n+Math.floor(String(i.base64||'').length*3/4),0);
       const fresh=[];
+      /* 影片的截圖預覽帶有它所在的 NAS 資料夾：不必等備份完成，馬上把「影片路徑」寫進信件 */
+      let vidNew=false;dr.earlyVideos=dr.earlyVideos||[];
+      for(const raw of Array.isArray(items)?items:[]){
+        const vn=String(raw&&raw.fileName||'').trim(),vf=String(raw&&raw.folder||'').trim();
+        if(vn&&vf&&isVideoName(vn)&&!dr.earlyVideos.includes(vn)){dr.fileFolders[vn]=vf;dr.earlyVideos.push(vn);vidNew=true}
+      }
+      if(vidNew)drMutate(d,root=>{
+        const vb=root.querySelector('#v5DrVideo');if(!vb)return;
+        const vids=dr.earlyVideos.map(n=>{const p=dr.fileFolders[n];return p?`${p}/${n}`:''}).filter(Boolean);
+        if(vids.length)vb.innerHTML=`<br> 影片路徑${vids.length>1?`（共 ${vids.length} 支）`:''}`+vids.map(v=>`<br><b>${esc(v)}</b>`).join('');
+      });
       for(const raw of Array.isArray(items)?items:[]){
         const fileName=String(raw&&raw.fileName||'').trim(),base64=String(raw&&raw.base64||'').replace(/\s+/g,''),mimeType=String(raw&&raw.mimeType||'').toLowerCase();
         if(!fileName||!base64||!IMG_TYPES.has(mimeType)||dr.early.has(fileName))continue;
@@ -3086,7 +3097,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(Object.keys(d.images).length>=DR_MAX_IMAGES||total+size>DR_EARLY_MAX_BYTES)continue;
         const cid=newCid();d.images[cid]={contentId:cid,fileName,mimeType,base64};dr.early.add(fileName);dr.nasIds.add(cid);total+=size;fresh.push({cid,fileName,mimeType,base64});
       }
-      if(!fresh.length)return;
+      if(!fresh.length){if(vidNew&&state.view==='mail'&&state.mail.drafts[state.mail.index]===d){saveMailDraft();renderMail()}return}
       drMutate(d,root=>{
         const box=root.querySelector('#v5DrImages');if(!box)return;
         const ph=box.querySelector('.dr-up');
