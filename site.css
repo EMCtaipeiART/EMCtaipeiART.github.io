@@ -1551,3 +1551,6 @@ body.arena-on .arena-frame{border-radius:0;box-shadow:none;background:transparen
     .link-utm .link-hint{margin:8px 0 0}
     .link-utm-line{color:#4338ca}
     @media(max-width:640px){.link-utm-grid{grid-template-columns:1fr}}
+
+    .link-group .link-stat{display:inline-block;margin-left:8px;font-style:normal;font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap}
+    .link-group .link-stat b{color:#0f7f27;font-weight:900}.link-group .link-stat b:last-of-type{color:#4338ca}
