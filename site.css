@@ -1584,3 +1584,5 @@ body.arena-on .arena-frame{border-radius:0;box-shadow:none;background:transparen
 .dc-slot{display:grid;grid-template-columns:64px 1fr;gap:10px;padding:6px 0;border-top:1px solid var(--line)}.dc-slot-t{font-size:13px;font-weight:700;color:var(--muted)}.dc-slot-t em{display:block;font-style:normal;font-size:11px;color:#fff;background:#d64550;border-radius:6px;padding:0 5px;width:max-content;margin-top:2px}
 .dc-slot-b{display:flex;flex-wrap:wrap;gap:6px;min-height:24px;align-items:center}.dc-slot-b .dc-ev{display:inline-block}.dc-slot-b .dc-ev i{font-style:normal;opacity:.7;margin-left:6px}.dc-ev.memo{background:#fff3b8;color:#3a3000}.dc-ev.memo.done{text-decoration:line-through;opacity:.6}.dc-slot-empty{color:var(--muted);opacity:.5}
 .dc-slot.now{background:rgba(214,69,80,.08);border-radius:10px;padding-left:8px;padding-right:8px;border-top-color:transparent}
+
+.dc-memo-add{float:right;font-size:11px;font-weight:700;opacity:0;padding:0 5px;border-radius:6px;background:#fff3b8;color:#6a5200;cursor:pointer}.dc-day:hover .dc-memo-add,.dc-day.sel .dc-memo-add{opacity:1}@media(hover:none){.dc-memo-add{opacity:.8}}

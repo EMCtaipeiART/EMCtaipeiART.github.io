@@ -5597,16 +5597,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'getCalMemos') { this.requireSession(session); return { ok: true, action, memos: await this.calMemos() }; }
       if (action === 'saveCalMemo') {
         const current = this.requireSession(session);
-        const day = text(payload.day), start = text(payload.start), end = text(payload.end), body = text(payload.text).slice(0, 1000);
-        if (!/^d{4}-d{2}-d{2}$/.test(day)) throw new Error('日期格式錯誤');
-        const hm = /^([01]d|2[0-3]):[0-5]d$/;
-        if ((start && !hm.test(start)) || (end && !hm.test(end))) throw new Error('時間格式錯誤');
-        if (start && end && end <= start) throw new Error('結束時間要晚於開始時間');
+        const day = text(payload.day), body = text(payload.text).slice(0, 1000);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new Error('日期格式錯誤');
         if (!body) throw new Error('便條內容不能空白');
         const memos = await this.calMemos(), id = text(payload.id);
         const old = id ? memos.find(m => m.id === id) : undefined;
         if (id && !old) throw new Error('找不到這張便條');
-        const next: Row = { id: old?.id || crypto.randomUUID(), day, start, end, who: text(payload.who).slice(0, 40), text: body, todo: Boolean(payload.todo), done: Boolean(payload.todo) && Boolean(payload.done), by: old?.by || auditActor(current), at: old?.at || Date.now(), upd: Date.now() };
+        const next: Row = { id: old?.id || crypto.randomUUID(), day, text: body, todo: Boolean(payload.todo), done: Boolean(payload.todo) && Boolean(payload.done), by: old?.by || auditActor(current), who: old?.who || auditActor(current), at: old?.at || Date.now(), upd: Date.now() };
         const list = old ? memos.map(m => (m.id === id ? next : m)) : [...memos, next];
         if (list.length > 2000) list.splice(0, list.length - 2000);
         await this.ctx.storage.put('calMemos', list);
