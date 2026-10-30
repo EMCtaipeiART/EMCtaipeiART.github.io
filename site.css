@@ -1535,3 +1535,6 @@ body.arena-on .arena-frame{border-radius:0;box-shadow:none;background:transparen
 .np-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .np-chip{height:28px;padding:0 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
 .np-chip:hover{border-color:var(--brand);background:var(--brand-soft);color:var(--st-done-ink)}
+.issue-reply{margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--panel-soft,rgba(120,120,140,.1));font-size:13px;line-height:1.55;white-space:pre-wrap}
+.issue-reply.is-edit{display:flex;flex-direction:column;gap:6px;align-items:flex-start;white-space:normal}
+.issue-reply.is-edit textarea{width:100%;min-height:56px;padding:8px 10px;resize:vertical}

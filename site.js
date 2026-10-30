@@ -3364,7 +3364,38 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       try{if(bnOn()){localStorage.setItem('v5BrowserNotify','0');toast('已關閉系統通知')}else{const p=Notification.permission==='granted'?'granted':await Notification.requestPermission();if(p==='granted'){localStorage.setItem('v5BrowserNotify','1');toast('已開啟系統通知');try{new Notification('EMC 設計需求',{body:'通知已開啟',icon:'assets/EMC_design_logo.svg'})}catch(err){}}else toast('沒有取得通知權限',true)}}catch(err){toast('無法設定通知',true)}
       if(state.view==='settings')renderSettings();
     });
+    /* 管理者／Machi：有新的「回報中」問題回報時跳提示（每 3 分鐘背景讀一次；第一次只記下現有的，不會一次跳一堆舊的） */
+    const issSeenKey=()=>'v5IssueSeen:'+(selfAccount()||session().user||'');
+    let issNtAt=0,issNtBusy=false;
+    async function checkIssueNotify(force){
+      if(!loggedIn()||!isIssueManager()||issNtBusy||document.hidden)return;
+      if(!force&&Date.now()-issNtAt<180000)return;
+      issNtBusy=true;issNtAt=Date.now();
+      try{
+        const data=await api('listIssueReports'),list=(Array.isArray(data.reports)?data.reports:[]).map(r=>normIssue(r));
+        if(!issues.loaded||state.view==='issues'){issues.list=list;issues.loaded=true}
+        const keys=list.filter(r=>r['狀態']==='回報中').map(r=>'i:'+r.rowNumber+':'+r['時間']);
+        let seen=null;try{seen=JSON.parse(localStorage.getItem(issSeenKey())||'null')}catch(e){}
+        if(!Array.isArray(seen)){try{localStorage.setItem(issSeenKey(),JSON.stringify(keys))}catch(e){}return}
+        const fresh=list.filter(r=>r['狀態']==='回報中'&&!seen.includes('i:'+r.rowNumber+':'+r['時間']));
+        if(!fresh.length)return;
+        if(state.view==='issues'){markIssuesSeen(list);if(issues.loaded)renderIssuesPage(true);return}
+        showIssueToast(fresh);
+        if(bnOn()&&document.hidden){try{new Notification('EMC 設計需求：新問題回報',{body:fresh[0]['內容'].slice(0,80),tag:'emc-issue',icon:'assets/EMC_design_logo.svg'})}catch(e){}}
+        markIssuesSeen(list);
+      }catch(e){}finally{issNtBusy=false}
+    }
+    function markIssuesSeen(list){try{localStorage.setItem(issSeenKey(),JSON.stringify(list.filter(r=>r['狀態']==='回報中').map(r=>'i:'+r.rowNumber+':'+r['時間']).slice(-400)))}catch(e){}}
+    function showIssueToast(items){
+      let reg=$('ntRegion');if(!reg){reg=document.createElement('div');reg.id='ntRegion';reg.className='nt-toast-region';reg.setAttribute('aria-live','polite');document.body.appendChild(reg)}
+      const x=items[0],t=document.createElement('div');t.className='nt-toast';t.setAttribute('role','status');
+      t.innerHTML='<span class="nt-ic">🛠</span><div><span class="nt-eb">新問題回報</span><span class="nt-ti">'+esc((x['姓名']||'未登入')+'：'+x['內容'].slice(0,40))+'</span><div class="nt-me">'+(items.length>1?'另有 '+(items.length-1)+' 則　':'')+'點此查看</div></div><button type="button" class="nt-x" aria-label="關閉">×</button>';
+      const kill=()=>{t.classList.remove('is-visible');setTimeout(()=>t.remove(),320)};
+      t.addEventListener('click',e=>{if(e.target.closest('.nt-x')){kill();return}kill();document.querySelector('[data-ext="issues"]')?.click()});
+      reg.appendChild(t);requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('is-visible')));setTimeout(kill,12000);
+    }
     function checkNtToast(){
+      checkIssueNotify();
       try{const fresh=unseenItems().filter(x=>!ntKnown.has(x.key));fresh.forEach(x=>ntKnown.add(x.key));if(fresh.length&&state.view!=='projects')showNtToast(fresh);if(fresh.length)sysNotify(fresh)}catch(e){}
     }
     function openNotify(){
@@ -3466,13 +3497,25 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     const ISSUE_STATUSES=['回報中','評估中','處理中','已完成','已否決'];
     const issues={list:[],loading:false,loaded:false,error:''};
     const isIssueManager=()=>acc('issue.manage',isAdminAcct());
-    const normIssue=(r,n)=>{const st=ISSUE_STATUSES.includes(String(r['狀態']||'').trim())?String(r['狀態']).trim():'回報中';return {rowNumber:Number(r.rowNumber||n)||0,'姓名':String(r['姓名']||''),'時間':String(r['時間']||''),'內容':String(r['內容']||''),'修改建議':String(r['修改建議']||''),'狀態':st,'狀態更改時間':String(r['狀態更改時間']||r[st]||r['時間']||'')}};
+    const normIssue=(r,n)=>{const st=ISSUE_STATUSES.includes(String(r['狀態']||'').trim())?String(r['狀態']).trim():'回報中';return {rowNumber:Number(r.rowNumber||n)||0,'姓名':String(r['姓名']||''),'時間':String(r['時間']||''),'內容':String(r['內容']||''),'修改建議':String(r['修改建議']||''),'狀態':st,'狀態更改時間':String(r['狀態更改時間']||r[st]||r['時間']||''),'管理者回覆':String(r['管理者回覆']||''),'回覆時間':String(r['回覆時間']||'')}};
     async function loadIssues(force){
       if(issues.loading||(issues.loaded&&!force))return;
       issues.loading=true;issues.error='';if(state.view==='issues')renderIssuesPage();
       try{const data=await api('listIssueReports');issues.list=(Array.isArray(data.reports)?data.reports:[]).map(r=>normIssue(r));issues.loaded=true}
       catch(err){issues.error=err.message||'讀取失敗'}
-      issues.loading=false;if(state.view==='issues')renderIssuesPage(true);
+      issues.loading=false;if(state.view==='issues'){renderIssuesPage(true);if(isIssueManager()&&issues.loaded)markIssuesSeen(issues.list)}
+    }
+    function replyHtml(r,mgr){
+      if(mgr)return `<div class="issue-reply is-edit"><label class="issue-meta">管理者回覆${r['回覆時間']?'（'+esc(r['回覆時間'])+'）':''}</label><textarea class="input" maxlength="500" data-issue-reply-text="${r.rowNumber}" placeholder="寫下處理說明或回覆，儲存後回報人看得到" rows="2">${esc(r['管理者回覆'])}</textarea><button type="button" class="btn" data-issue-reply="${r.rowNumber}">儲存回覆</button></div>`;
+      return r['管理者回覆']?`<div class="issue-reply"><b>管理者回覆</b>${r['回覆時間']?' <span class="issue-meta">'+esc(r['回覆時間'])+'</span>':''}<div>${esc(r['管理者回覆'])}</div></div>`:'';
+    }
+    async function saveIssueReply(btn){
+      if(!isIssueManager()){toast('此帳號沒有回覆的權限',true);return}
+      const n=Number(btn.dataset.issueReply),r=issues.list.find(x=>x.rowNumber===n),ta=document.querySelector('[data-issue-reply-text="'+n+'"]');if(!r||!ta)return;
+      btn.disabled=true;btn.textContent='儲存中…';
+      try{const data=await api('replyIssueReport',{rowNumber:n,reply:ta.value.trim()});Object.assign(r,normIssue(data.row||{...r,'管理者回覆':ta.value.trim()},n));toast('回覆已儲存')}
+      catch(err){toast('回覆儲存失敗：'+err.message,true)}
+      renderIssuesPage(true);
     }
     function issuesListHtml(){
       if(issues.loading&&!issues.list.length)return '<div class="empty">載入中...</div>';
@@ -3481,7 +3524,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const mgr=isIssueManager();
       return issues.list.map(r=>{
         const st=r['狀態'],ctl=mgr?`<select class="issue-status issue-st-${st}" data-issue-row="${r.rowNumber}" aria-label="回報狀態">${ISSUE_STATUSES.map(o=>`<option value="${o}"${o===st?' selected':''}>${o}</option>`).join('')}</select>`:`<span class="issue-status issue-st-${st}">${esc(st)}</span>`;
-        return `<article class="issue-item"><div class="issue-main"><div class="issue-content">${esc(r['內容'])}</div><div class="issue-meta">回報時間：${esc(r['時間']||'-')}${r['姓名']?` ・ ${esc(r['姓名'])}`:''}</div><div class="issue-meta">修改建議：${esc(r['修改建議']||'無')}</div></div><div class="issue-side">${ctl}<div class="issue-meta">狀態更改時間：${esc(r['狀態更改時間']||r['時間']||'-')}</div></div></article>`;
+        return `<article class="issue-item"><div class="issue-main"><div class="issue-content">${esc(r['內容'])}</div><div class="issue-meta">回報時間：${esc(r['時間']||'-')}${r['姓名']?` ・ ${esc(r['姓名'])}`:''}</div><div class="issue-meta">修改建議：${esc(r['修改建議']||'無')}</div>${replyHtml(r,mgr)}</div><div class="issue-side">${ctl}<div class="issue-meta">狀態更改時間：${esc(r['狀態更改時間']||r['時間']||'-')}</div></div></article>`;
       }).join('');
     }
     function renderIssuesPage(keepForm){
@@ -3515,7 +3558,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     document.addEventListener('submit',e=>{if(e.target.id==='issueForm'){e.preventDefault();submitIssue(e.target)}});
     document.addEventListener('input',e=>{const t=e.target;if(t.closest&&t.closest('#issueForm')&&t.name){const c=document.querySelector(`[data-issue-count="${t.name}"]`);if(c)c.textContent=`${t.value.length}/300`}});
     document.addEventListener('change',e=>{const t=e.target;if(t.matches&&t.matches('[data-issue-row]'))changeIssueStatus(t)});
-    document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('[data-issue-reload]')){issues.error='';loadIssues(true)}});
+    document.addEventListener('click',e=>{const rb=e.target.closest&&e.target.closest('[data-issue-reply]');if(rb){saveIssueReply(rb);return}if(e.target.closest&&e.target.closest('[data-issue-reload]')){issues.error='';loadIssues(true)}});
 
 
     /* ---------- 短網址（左側欄「短網址」：建立、命名、自訂短碼、編輯、刪除） ---------- */

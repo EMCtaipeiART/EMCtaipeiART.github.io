@@ -6190,6 +6190,17 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         return { result: { ok: true, action, rowNumber, row: issueRow(row, rowNumber - 2) }, changedTables: ['bug_report'] };
       });
     }
+    if (action === 'replyIssueReport') {
+      const current = this.requireAccess(database, session, 'issue.manage');
+      const rowNumber = Number(payload.rowNumber || payload.id), reply = text(payload.reply);
+      if (!Number.isInteger(rowNumber) || rowNumber < 2 || reply.length > 500) throw new Error('回覆列號不正確或超過 500 字');
+      return this.mutate(action, current, draft => {
+        const row = draft.tables.bug_report.rows[rowNumber - 2];
+        if (!row) throw new Error('找不到要回覆的回報');
+        row['管理者回覆'] = reply; row['回覆時間'] = reply ? nowTaipei() : '';
+        return { result: { ok: true, action, rowNumber, row: issueRow(row, rowNumber - 2) }, changedTables: ['bug_report'] };
+      });
+    }
     if (action === 'addModificationRecord') {
       const record = asRow(payload.record || payload.row || payload.data || payload);
       if (session) this.requireAccess(database, session, 'modification.create');

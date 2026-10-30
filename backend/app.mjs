@@ -19,7 +19,7 @@ const ISSUE_STATUSES = ['回報中', '評估中', '處理中', '已完成', '已
 const WRITE_ACTIONS = new Set([
   'append', 'create', 'add', 'submit', 'save', 'batchAdd', 'batchAppend', 'addRows', 'update', 'batchUpdate',
   'delete', 'saveUserSettings', 'saveDesignerProfiles', 'toggleReelReaction', 'addReelComment', 'markReelViewed',
-  'reportIssue', 'updateIssueReportStatus', 'addModificationRecord', 'deleteModificationRecord', 'updateModificationConfirm', 'createFlatProject', 'logout',
+  'reportIssue', 'updateIssueReportStatus', 'replyIssueReport', 'addModificationRecord', 'deleteModificationRecord', 'updateModificationConfirm', 'createFlatProject', 'logout',
   'uploadDesignerImage', 'uploadUserAvatar', 'deleteDesignerMedia', 'upsertDesignerStories', 'deleteDesignerStories',
   'deleteDesignerMediaFiles',
   'adminAccountSave', 'adminAccountBulkImport', 'adminDesignerSave', 'adminDesignerRemove', 'markSystemAnnouncementRead',
@@ -1124,6 +1124,17 @@ export function createActionHandler(database, options = {}) {
         const time = nowTaipei(); row['狀態'] = status; row['狀態更改時間'] = time; row[status] = time;
         return { ok: true, action, rowNumber, row: issueRow(row, rowNumber - 2) };
       }, 'update issue status');
+    }
+
+    if (action === 'replyIssueReport') {
+      requireCapability(snapshot, payload, 'issue.manage');
+      const rowNumber = Number(payload.rowNumber || payload.id), reply = text(payload.reply);
+      if (!Number.isInteger(rowNumber) || rowNumber < 2 || reply.length > 500) throw new Error('回覆列號不正確或超過 500 字');
+      return database.transaction(draft => {
+        const row = draft.tables.bug_report.rows[rowNumber - 2]; if (!row) throw new Error('找不到要回覆的回報');
+        row['管理者回覆'] = reply; row['回覆時間'] = reply ? nowTaipei() : '';
+        return { ok: true, action, rowNumber, row: issueRow(row, rowNumber - 2) };
+      }, 'reply issue');
     }
 
     if (action === 'addModificationRecord') {
