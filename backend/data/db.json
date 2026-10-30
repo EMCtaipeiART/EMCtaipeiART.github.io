@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 9996,
+  "revision": 9997,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-30T06:18:21.972Z",
+  "updatedAt": "2026-10-30T06:31:15.165Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1403,7 +1403,7 @@
         {"案件編號":"26100064","修改次數":"2","建立日期":"2026/10/30 10:36:00","修改日期":"2026-10-30","修改內容":"大神拍寫，客戶想法很多，她自己排了一版，\n希望調整成這樣（左下）\n\n就...照她的想法吧\n\nhttps://docs.google.com/presentation/d/1LFWtpnJr9bSRF2hHTwikpOIy2GVIUH5PZSlFU7W5GgA/edit?usp=sharing","修改內容連結":"[{\"text\":\"https://docs.google.com/presentation/d/1LFWtpnJr9bSRF2hHTwikpOIy2GVIUH5PZSlFU7W5GgA/edit?usp=sharing\",\"url\":\"https://docs.google.com/presentation/d/1LFWtpnJr9bSRF2hHTwikpOIy2GVIUH5PZSlFU7W5GgA/edit?usp=sharing\"}]","修改人":"李明庭","確認修正日":"","待修改圖片":""},
         {"案件編號":"26100159","修改次數":"2","建立日期":"2026/10/30 10:39:53","修改日期":"2026-10-30","修改內容":"真是抱歉，印表機的墨水用到舊的了QQ\n另外也需要拿掉NEW的標示\n相關素材再請您協助微調，非常感謝！！\n\n(有先對比今年618的素材墨水是正確的\n可以沿用那組哦","修改內容連結":"","修改人":"Carrie Yeh","確認修正日":"2026/10/30 14:15:57","待修改圖片":""},
         {"案件編號":"26100174","修改次數":"2","建立日期":"2026/10/30 12:45:59","修改日期":"2026-10-30","修改內容":"A4、BN，調整一些內容，再麻煩您：\n\nhttps://docs.google.com/presentation/d/13Tzjb_21pPMIjUbQDfU4pGxgXMfP5giOdxvllRe3qHI/edit?usp=sharing\n\n感恩感恩！","修改內容連結":"[{\"text\":\"https://docs.google.com/presentation/d/13Tzjb_21pPMIjUbQDfU4pGxgXMfP5giOdxvllRe3qHI/edit?usp=sharing\",\"url\":\"https://docs.google.com/presentation/d/13Tzjb_21pPMIjUbQDfU4pGxgXMfP5giOdxvllRe3qHI/edit?usp=sharing\"}]","修改人":"李明庭","確認修正日":"","待修改圖片":""},
-        {"案件編號":"26100160","修改次數":"1","建立日期":"2026/10/30 13:10:38","修改日期":"2026-10-30","修改內容":"感謝您支援此設計製作，目前僅有部分地方須請您微調～\n須調整檔案：Pchome-960x1200px的mp4＆960x1200px的png\n\n優惠案型上多放了兩個標籤帶的文字(紅框處) \n\n再請您協助調整了~感謝！","修改內容連結":"","修改人":"Carrie Yeh","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"261029_Epson_標籤機_雙11_CPAS_shopee_1200x1200.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/175NgT1HbhV0rzeIcx37wI3EKNWyDGtWf=w1600\"},{\"fileName\":\"261029_Epson_標籤機_雙11_CPAS_shopee_1200x1200.png\",\"url\":\"https://lh3.googleusercontent.com/d/1uyj2e2ZmCbFTBPS0Q_qvXU43KD-K7jSi=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/30 13:27:36"}
+        {"案件編號":"26100160","修改次數":"1","建立日期":"2026/10/30 13:10:38","修改日期":"2026-10-30","修改內容":"感謝您支援此設計製作，目前僅有部分地方須請您微調～\n須調整檔案：Pchome-960x1200px的mp4＆960x1200px的png\n\n優惠案型上多放了兩個標籤帶的文字(紅框處) \n\n再請您協助調整了~感謝！","修改內容連結":"","修改人":"Carrie Yeh","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"261029_Epson_標籤機_雙11_CPAS_shopee_1200x1200.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/175NgT1HbhV0rzeIcx37wI3EKNWyDGtWf=w1600\"},{\"fileName\":\"261029_Epson_標籤機_雙11_CPAS_shopee_1200x1200.png\",\"url\":\"https://lh3.googleusercontent.com/d/1uyj2e2ZmCbFTBPS0Q_qvXU43KD-K7jSi=w1600\"},{\"fileName\":\"261029_Epson_標籤機_雙11_CPAS_pchome_960x1200.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1VY1-WOnwgaJp2CCAI02gnQxhURshvSYj=w1600\"},{\"fileName\":\"261029_Epson_標籤機_雙11_CPAS_pchome_960x1200.png\",\"url\":\"https://lh3.googleusercontent.com/d/1bclpvNFLRRuaUklXkacCEzxTTdX6tC2I=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/30 14:31:15"}
       ]
     },
     "補充資料連結": {
