@@ -2,6 +2,13 @@
 
 > 每次修改網站後在最上面補一筆（新的在上）。AGENT.md 要求的修改紀錄放這裡。
 
+## 2026-10-30
+
+- 首頁設計師頭像新增「新專案找我」入口（`site.js`、`site.css`）：由 `renderTeam()` 只對 `DESIGNERS[0]` 輸出具 aria-label 的獨立 button，輪值重排後隨渲染移動，休假／出國／下班仍保留。標籤置於頭像左上緣（top -14px、右緣為中心右側 8px），品牌綠 #159E31 細邊、主站深淺色變數、10px 圓角、6px 小尾巴與柔陰影；約 69×26px（手機約 62×26px）。桌面輕移 2px、2 秒共 2 次；720px 以下、觸控與減少動態偏好皆停用動畫，未加入 backdrop-filter，未改頭像本身樣式。
+- 點標籤先停止事件冒泡並收起名片，再沿用登入／request.create 權限檢查；可用時開啟客戶選單並平滑捲到 promptSlot（減少動態時立即捲動），搜尋欄聚焦不干擾捲動。現有一般選單選完既有客戶仍需按「開始填寫」，因此僅標籤入口啟用選完即 requestSubmit；取消會清除該狀態，新增客戶沿用既有 change 流程，不重複送出。負責人與輪替規則沿用原填單流程。
+- 新增 `backend/test/v5-new-project-tag.test.mjs` 6 項測試：實際執行 renderTeam 檢查輪值／離線／按鈕語意與徽章、點擊冒泡／登入／權限／捲動、選單選取及取消、CSS 手機與減少動態規則。未刪改既有測試。`node --check site.js`、`git diff --check` 通過，site.js 維持 LF；已執行 `node tools/stamp.cjs` 更新 `index.html` 快取版本。完整 `node --test backend/test/*.test.mjs` 共 292 項：272 通過、20 項均因環境禁止本機監聽（listen EPERM）失敗，新增 6 項全過，尚未達成全套通過。
+- 預覽 `node .claude/static-server.mjs`（8765）同樣遭 EPERM；離線 Chrome pipe 渲染啟動失敗（Target closed），未取得截圖。需人工確認手機／深色／同時有對話、限動及加班徽章的排版，以及實際登入後選客戶進入填單。未改後端、像素辦公室或其他頁面，未 commit／push／部署；工作區原有變動保留。
+
 ## 2026-10-27
 
 - GitHub 瀏覽器煙霧測試偶發失敗（actions run 40448046505）：04:08 那次是 runner 上 Chrome 啟動逾時（TimeoutError: WS endpoint，30 秒），跟網站程式無關，之後的執行都通過。`tests/smoke/smoke.mjs` 啟動 Chrome 改成逾時 90 秒、加容器用參數（`--disable-dev-shm-usage` 等），失敗自動重試最多 3 次，真的起不來才算失敗。本機煙霧測試通過。

@@ -307,9 +307,10 @@
         const pa=state.pixAvatars&&state.pixAvatars[name],face=away?`<img class="status-icon" src="assets/v5/status/${esc(status)}.webp" alt="">`:(pa&&/^(data:image\/png|https:\/\/machi-design-api\.)/.test(pa.img||'')?`<img class="head pix" src="${pa.img}" alt="">`:headImg(name));
         const say=!away&&pa&&pa.message?`<span class="member-say" title="${esc(pa.message)}"><span class="ms-win"><span class="ms-track">${esc(pa.message)}</span></span></span>`:'',tune=!away&&pa&&pa.music&&/^https:\/\//.test(pa.music.url||'')?`<button type="button" class="member-music${state.musicNow===name?' is-playing':''}" data-music="${esc(name)}" data-music-url="${esc(pa.music.url)}" title="點一下播放／暫停：${esc(pa.music.title||'分享音樂')}"><span class="mm-ic" aria-hidden="true">${musicIcon(state.musicNow===name,state.musicLoading===name)}</span><span class="mm-win"><span class="mm-track">♪ ${esc(pa.music.title||'分享音樂')}</span></span></button>`:'';
         const stBadge=pa&&pa.story&&pa.story.count?`<span class="story-badge${pa.story.unread?' is-new':''}" data-story="${esc(name)}" role="button" tabindex="0" title="限時動態（${pa.story.count}）" aria-label="${esc(name)} 的限時動態"><svg viewBox="0 0 24 20" aria-hidden="true"><path d="M4 1h16a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-6l-5 4v-4H4a3 3 0 0 1-3-3V4a3 3 0 0 1 3-3z"/><circle cx="7.5" cy="8" r="1.4"/><circle cx="12" cy="8" r="1.4"/><circle cx="16.5" cy="8" r="1.4"/></svg></span>`:'';
+        const newProjectTag=name===DESIGNERS[0]?'<button type="button" class="new-project-tag" aria-label="新專案找我：開始填寫設計需求">新專案找我</button>':'';
         const badge=(stBadge)+(status==='overtime'?`<span class="avatar-badge" aria-hidden="true"><img src="assets/v5/status/overtime.webp" alt=""></span>`:'');
         return `<li class="member${away?' is-away':''}${openName===name?' is-open':''}" data-name="${esc(name)}">
-          ${say||(anySay?'<span class="member-say-ph"></span>':'')}<div class="av-wrap"><button type="button" class="avatar-btn" aria-label="${esc(name)}${STATUS_TEXT[status]?'，'+esc(STATUS_TEXT[status]):''}" aria-haspopup="true"><span class="avatar-clip">${face}</span>${badge}</button>${tune}</div>
+          ${say||(anySay?'<span class="member-say-ph"></span>':'')}<div class="av-wrap"><button type="button" class="avatar-btn" aria-label="${esc(name)}${STATUS_TEXT[status]?'，'+esc(STATUS_TEXT[status]):''}" aria-haspopup="true"><span class="avatar-clip">${face}</span>${badge}</button>${newProjectTag}${tune}</div>
           <span class="member-name">${esc(name)}</span>
           <span class="member-status">${esc(STATUS_TEXT[status]||(state.officeLoaded?'':'狀態讀取中…'))}</span>
           ${hoverCardHtml(name)}
@@ -411,12 +412,21 @@
     function setOpen(member,open){document.querySelectorAll('.member.is-open').forEach(el=>{if(el!==member)el.classList.remove('is-open')});if(member)member.classList.toggle('is-open',open);if(open)ensureArchive()}
     function bindTeam(){
       const team=$('team');
-      team.addEventListener('mouseover',e=>{const m=e.target.closest('.member[data-name]');if(e.target.closest('.member-music'))return;if(m&&!m.classList.contains('is-open'))setOpen(m,true)});
+      team.addEventListener('mouseover',e=>{const m=e.target.closest('.member[data-name]');if(e.target.closest('.member-music,.new-project-tag'))return;if(m&&!m.classList.contains('is-open'))setOpen(m,true)});
       team.addEventListener('mouseleave',()=>setOpen(null,false));
       team.addEventListener('mouseout',e=>{const m=e.target.closest('.member[data-name]');if(m&&!m.contains(e.relatedTarget))m.classList.remove('is-open')});
-      team.addEventListener('focusin',e=>{const m=e.target.closest('.member[data-name]');if(m)setOpen(m,true)});
+      team.addEventListener('focusin',e=>{if(e.target.closest('.new-project-tag'))return;const m=e.target.closest('.member[data-name]');if(m)setOpen(m,true)});
       team.addEventListener('focusout',e=>{const m=e.target.closest('.member[data-name]');if(m&&!m.contains(e.relatedTarget))m.classList.remove('is-open')});
       team.addEventListener('click',e=>{
+        if(e.target.closest('.new-project-tag')){
+          e.stopPropagation();setOpen(null,false);
+          if(!loggedIn()){toast('請先登入才能新增設計需求',true);startLogin();return}
+          if(!acc('request.create',true)){toast('此帳號沒有新增需求的權限',true);return}
+          csOpen(true,true);
+          const slot=$('promptSlot')||$('prompt');
+          window.scrollTo({top:Math.max(0,slot.getBoundingClientRect().top+window.scrollY-24),behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});
+          toast('請先選擇客戶別，馬上開始填寫「新專案」需求');return;
+        }
         const sb=e.target.closest('[data-story]');
         if(sb){const br=document.getElementById('avatarBridge');if(br&&br.contentWindow){br.style.cssText='position:fixed;inset:0;width:100%;height:100%;border:0;opacity:1;pointer-events:auto;z-index:300';br.contentWindow.postMessage({type:'pixelOfficeOpenStory',name:sb.dataset.story},location.origin)}return}
         const mu=e.target.closest('[data-music]');
@@ -4351,7 +4361,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     }
     /* 首頁客戶別選單：自訂下拉（可搜尋、有縮寫圖示），底層仍是 #clientSelect，原本的流程不變 */
     const csHue=n=>{let h=0;for(const ch of String(n))h=(h*31+ch.charCodeAt(0))%360;return h};
-    const csState={idx:0,items:[]};
+    const csState={idx:0,items:[],startOnPick:false};
     function csSync(){
       const sel=$('clientSelect'),label=$('csLabel'),tr=$('csTrigger');if(!sel||!label||!tr)return;
       const text=sel.value&&sel.value!=='__new__'?sel.value:'選擇客戶別，開始新增設計需求…';
@@ -4365,14 +4375,16 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         +([...sel.options].some(o=>o.value==='__new__')&&!q?'<button type="button" class="cs-item cs-new" data-cs-v="__new__"><span class="cs-ico">＋</span><span class="cs-name">新增客戶別</span></button>':'');
       list.querySelector('.cs-item.on')?.scrollIntoView({block:'nearest'});
     }
-    function csOpen(open){
+    function csOpen(open,startOnPick=false){
       const pop=$('csPop'),tr=$('csTrigger');if(!pop||!tr)return;
+      csState.startOnPick=open&&startOnPick;
       pop.hidden=!open;tr.setAttribute('aria-expanded',String(open));
-      if(open){const sel=$('clientSelect');$('csSearch').value='';csState.idx=Math.max(0,[...sel.options].filter(o=>o.value&&o.value!=='__new__').findIndex(o=>o.value===sel.value));csRender();setTimeout(()=>$('csSearch').focus(),30)}
+      if(open){const sel=$('clientSelect');$('csSearch').value='';csState.idx=Math.max(0,[...sel.options].filter(o=>o.value&&o.value!=='__new__').findIndex(o=>o.value===sel.value));csRender();setTimeout(()=>{if(!pop.hidden)$('csSearch').focus({preventScroll:startOnPick})},30)}
     }
     function csPick(v){
-      const sel=$('clientSelect');csOpen(false);if(!sel||!v)return;
+      const sel=$('clientSelect'),startOnPick=csState.startOnPick;csOpen(false);if(!sel||!v)return;
       sel.value=v;sel.dispatchEvent(new Event('change',{bubbles:true}));csSync();setTimeout(csSync,400);$('csTrigger').focus();
+      if(startOnPick&&v!=='__new__')$('prompt').requestSubmit();/* 標籤入口選完即填單；新增客戶沿用 change 的送出流程 */
     }
     document.addEventListener('click',e=>{
       if(e.target.closest?.('#csTrigger')){csOpen($('csPop').hidden);return}

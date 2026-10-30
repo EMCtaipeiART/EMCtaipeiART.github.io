@@ -197,6 +197,15 @@
     .member-say .ms-win{display:block;overflow:hidden;white-space:nowrap}.member-say .ms-track{display:inline-block}.member-say .ms-track.is-marquee{animation:mmScroll var(--mt,8s) linear infinite alternate}
     .member-say::after{content:"";position:absolute;left:50%;top:100%;width:0;height:0;margin-left:-6px;border-left:6px solid transparent;border-right:6px solid transparent;border-top:6px solid rgba(255,255,255,.4)}
     .av-wrap{position:relative;display:flex;justify-content:center}
+    /* 新專案輪值入口：獨立按鈕，避開右側限動與加班徽章。 */
+    .new-project-tag{position:absolute;top:-14px;right:calc(50% - 8px);z-index:5;box-sizing:border-box;width:max-content;padding:4px 6px;border:1px solid var(--brand);border-radius:10px;background:var(--brand-soft);color:var(--st-done-ink);box-shadow:var(--shadow);font:inherit;font-size:11px;font-weight:800;line-height:16px;white-space:nowrap;cursor:pointer}
+    .new-project-tag::after{content:"";position:absolute;top:calc(100% - 3px);right:12px;width:6px;height:6px;background:var(--brand-soft);border-right:1px solid var(--brand);border-bottom:1px solid var(--brand);transform:rotate(45deg);pointer-events:none}
+    .new-project-tag:hover{border-color:var(--brand-deep)}
+    .new-project-tag:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+    @keyframes newProjectNudge{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+    @media (min-width:721px) and (hover:hover) and (prefers-reduced-motion:no-preference){.new-project-tag{animation:newProjectNudge 2s ease-in-out 2}}
+    @media (max-width:720px){.new-project-tag{font-size:10px;padding-inline:5px;animation:none}}
+    @media (hover:none), (prefers-reduced-motion:reduce){.new-project-tag{animation:none}}
     .member-music{position:absolute;left:50%;bottom:-12px;transform:translateX(-50%);z-index:3;display:flex;align-items:center;justify-content:center;gap:0;box-sizing:border-box;margin:0;width:26px;height:26px;padding:3px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.28);border:1px solid rgba(255,255,255,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);color:#fff;font:inherit;font-size:11px;font-weight:800;cursor:pointer;text-align:left;transition:width .28s ease,padding .28s ease,gap .28s ease,background .2s}
     .member-music:hover,.member-music:focus-visible{width:84px;justify-content:flex-start;gap:5px;padding:3px 8px 3px 3px}
     .member-music .mm-win{width:0;flex:0 0 auto;opacity:0;transition:opacity .2s ease}
