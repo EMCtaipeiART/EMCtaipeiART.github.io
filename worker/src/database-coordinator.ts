@@ -5603,7 +5603,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const memos = await this.calMemos(), id = text(payload.id);
         const old = id ? memos.find(m => m.id === id) : undefined;
         if (id && !old) throw new Error('找不到這張便條');
-        const next: Row = { id: old?.id || crypto.randomUUID(), day, text: body, todo: Boolean(payload.todo), done: Boolean(payload.todo) && Boolean(payload.done), by: old?.by || auditActor(current), who: old?.who || auditActor(current), at: old?.at || Date.now(), upd: Date.now() };
+        const next: Row = { id: old?.id || crypto.randomUUID(), day, text: body, todo: Boolean(payload.todo), done: Boolean(payload.todo) && Boolean(payload.done), by: old?.by || auditActor(current), who: old?.who || auditActor(current), x: Number.isFinite(Number(payload.x)) && payload.x !== null && payload.x !== '' ? Math.max(-0.6, Math.min(1.6, Number(payload.x))) : old?.x, y: Number.isFinite(Number(payload.y)) && payload.y !== null && payload.y !== '' ? Math.max(-0.6, Math.min(1.6, Number(payload.y))) : old?.y, at: old?.at || Date.now(), upd: Date.now() };
         const list = old ? memos.map(m => (m.id === id ? next : m)) : [...memos, next];
         if (list.length > 2000) list.splice(0, list.length - 2000);
         await this.ctx.storage.put('calMemos', list);
