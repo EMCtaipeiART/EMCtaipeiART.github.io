@@ -1247,3 +1247,4 @@
 - 2026-10-30: 短網址 UTM (plan A): per link / batch optional utm_source, utm_medium, utm_campaign (columns UTM來源/UTM媒介/UTM活動); resolveShortLink appends them to the destination at redirect time (existing params on the destination are never overwritten, #hash kept); collapsible UTM box in create/edit/batch forms with common suggestions; card shows a UTM line. Worker redeployed.
 - 2026-10-30: 短網址 batch group card: every link inside a batch now shows its own 累計 and 不重複 click counts (group total on the right is the sum).
 - 2026-10-30: 短網址 batch group card: per-link rows are now a column table (短網址 / 名稱·網址 / 累計點擊 / 不重複點擊) with headers, stacked on phones; group total stays on the right.
+- 2026-10-30: 短網址 copy/links now use the raw Chinese code (no percent-encoding) per user preference.

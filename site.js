@@ -3583,7 +3583,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     const SHORT_BASE=()=>'https://emc-art.com/';
     const SHORT_CODE_RE=/^(?:[A-Za-z0-9\u3400-\u9fff\uf900-\ufaff]{2,32})$/;
     const validShortCode=c=>SHORT_CODE_RE.test(c)&&(/[\u3400-\u9fff\uf900-\ufaff]/.test(c)||c.length>=3);
-    const shortFull=c=>SHORT_BASE()+encodeURIComponent(c);   /* 複製／連結用百分比編碼（中文短碼在各種通訊軟體才不會被截斷）；畫面上顯示原字 */
+    const shortFull=c=>SHORT_BASE()+c;   /* 複製與連結都用中文原字（不轉成 %E5%A4… 的編碼，瀏覽器開啟時會自己處理） */
     async function loadLinks(force){
       if(links.loading||(links.loaded&&!force))return;
       links.loading=true;links.error='';if(state.view==='links')renderLinksPage(true);
