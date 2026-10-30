@@ -31,7 +31,7 @@
     [hidden]{display:none!important}
 
     /* 左側窄欄 */
-    .rail{position:fixed;inset:0 auto 0 0;width:var(--rail);z-index:50;display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 0;background:var(--panel);border-right:1px solid var(--line)}
+    .rail{position:fixed;inset:0 auto 0 0;width:var(--rail);z-index:50;display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;background:var(--panel);border-right:1px solid var(--line)}
     .rail-logo{width:42px;height:42px;border-radius:12px;margin-bottom:14px;display:block}
     .rail-item{width:60px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 0 7px;border-radius:14px;border:0;background:transparent;color:var(--muted);font-size:11.5px;font-weight:700;text-decoration:none;cursor:pointer}
     .rail-item svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
@@ -1612,3 +1612,4 @@ body.arena-on .arena-frame{border-radius:0;box-shadow:none;background:transparen
 .dc-note-btns{display:flex;gap:4px}.dc-note-btns button{flex:1;height:24px;border:0;border-radius:5px;background:#4a3d00;color:#fff;font-size:11px;font-weight:700;cursor:pointer}.dc-note-btns button:last-child{background:rgba(0,0,0,.15);color:#4a3d00}
 .dc-note{padding-right:22px;min-height:38px}.dc-note.editing{min-height:0;padding-right:7px}
 .dc-note-tools{top:3px;right:3px;gap:2px}.dc-note-tools button{width:15px;height:15px;font-size:9px;border-radius:4px}
+.rail::-webkit-scrollbar{display:none}.rail>*{flex-shrink:0}
