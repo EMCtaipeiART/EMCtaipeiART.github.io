@@ -183,7 +183,7 @@ async function resolveDefaultBrowsePath(mountRoot, defaultBrowseRoot, client, al
  * 沒設定或資料夾不存在，才退回原本「依客戶別名稱／對照猜」的做法。
  */
 async function guessBrowsePath(mountRoot, config, dbData, meta) {
-  const configured = lib.resolveCustomerNasFolder(dbData, meta?.client, meta?.project);
+  const configured = lib.resolveCustomerNasFolder(dbData, meta?.client, meta?.project, meta?.details);
   if (configured) {
     try {
       const dir = resolveSafeDir(mountRoot, path.relative(mountRoot, lib.resolveCaseFolderPath(mountRoot, configured)));

@@ -1002,6 +1002,7 @@ export function findCaseMeta(dbData, caseId) {
     designer: String(row['設計負責人'] || '').trim() || '未指定設計師',
     client: String(row['客戶別'] || '').trim(),
     project: String(row['專案名稱'] || '').trim(),
+    details: String(row['項目細節'] || '').trim(),
     start: String(row['開始日期'] || '').trim(),
     status: String(row['狀態'] || '').trim(),
     folders,
@@ -1667,8 +1668,9 @@ export function suggestKeywordFromNames(names) {
 
 /**
  * 後台「客戶別」設定的 NAS 資料夾：欄位「NAS資料夾」存 JSON 陣列 [{keyword, path}]。
- * 同一個客戶別底下有多個子品牌時（例如欣格家居的迪朗奇／紐粹樂），用「專案名稱含關鍵字」分流到不同資料夾：
- * 關鍵字不分大小寫、取最長的符合者；關鍵字留空的那筆是這個客戶別的預設資料夾。找不到回傳 ''。
+ * 同一個客戶別底下有多個子品牌或不同類型時（例如欣格家居的迪朗奇／紐粹樂；廣告素材／社群貼文），用「專案名稱含關鍵字」
+ * 與／或「項目細節含指定項目」分流到不同資料夾（不分大小寫；兩個條件都填就要同時符合，條件越多越優先）；
+ * 兩個條件都留空的那筆是這個客戶別的預設資料夾。找不到回傳 ''。
  * path 是相對於 NAS 掛載根目錄的路徑（開頭多寫分享名稱也可以，選擇器會處理）。
  */
 export function parseCustomerNasFolders(value) {
@@ -1676,11 +1678,11 @@ export function parseCustomerNasFolders(value) {
   if (typeof raw === 'string') { try { raw = JSON.parse(raw || '[]'); } catch { raw = []; } }
   if (!Array.isArray(raw)) return [];
   return raw
-    .map(item => ({ keyword: String(item?.keyword ?? '').trim(), path: String(item?.path ?? '').trim() }))
+    .map(item => ({ keyword: String(item?.keyword ?? '').trim(), detail: String(item?.detail ?? '').trim(), path: String(item?.path ?? '').trim() }))
     .filter(item => item.path);
 }
 
-export function resolveCustomerNasFolder(dbData, client, projectName) {
+export function resolveCustomerNasFolder(dbData, client, projectName, details = '') {
   const wanted = String(client || '').trim().toLowerCase();
   if (!wanted) return '';
   const rows = dbData?.tables?.['客戶別']?.rows || [];
@@ -1688,10 +1690,18 @@ export function resolveCustomerNasFolder(dbData, client, projectName) {
   if (!row) return '';
   const rules = parseCustomerNasFolders(row['NAS資料夾']);
   const project = String(projectName || '').toLowerCase();
-  const hit = rules
-    .filter(rule => rule.keyword && project.includes(rule.keyword.toLowerCase()))
-    .sort((a, b) => b.keyword.length - a.keyword.length)[0];
-  return (hit || rules.find(rule => !rule.keyword))?.path || '';
+  const detailText = String(details || '').toLowerCase();
+  // 每筆規則的條件（專案名稱含關鍵字、項目細節含指定項目）有填的都要符合；條件越多越優先，同樣多取關鍵字／項目較長的；
+  // 兩個都沒填的是預設資料夾。
+  const scored = rules
+    .map(rule => {
+      const needKeyword = Boolean(rule.keyword), needDetail = Boolean(rule.detail);
+      const ok = (!needKeyword || project.includes(rule.keyword.toLowerCase())) && (!needDetail || detailText.includes(rule.detail.toLowerCase()));
+      return { rule, ok, score: (needKeyword ? 1 : 0) + (needDetail ? 1 : 0), length: rule.keyword.length + rule.detail.length };
+    })
+    .filter(item => item.ok && item.score > 0)
+    .sort((a, b) => b.score - a.score || b.length - a.length);
+  return (scored[0]?.rule || rules.find(rule => !rule.keyword && !rule.detail))?.path || '';
 }
 
 /**
