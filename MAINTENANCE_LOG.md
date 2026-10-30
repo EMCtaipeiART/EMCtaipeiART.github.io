@@ -4,6 +4,10 @@
 
 ## 2026-10-30
 
+- 新專案填單規格：①填單頁最上方多一個「這是新專案」開關（`site.js` 的 `r.newProj`，每一列各自決定）：從首頁「新專案找我」標籤進來、或客戶別是剛新增的，預設打開；打開後階段預設「提案」、設計負責人依輪替順位第一自動指定（灰階不可改），可選「替代設計師」並必填原因（附出國／休假／繁忙／支援其他專案快選）；關掉就是原本的自選設計負責人。②送出帶 `newProject:true`＋`expectedDesigner`，Worker `addRequests` 套用輪替（實際接案的人排到「新專案輪值」最後、其他順位往前一位，並寫進「平面／影音新開專案」表），並在案件新增欄位「新專案」＝v（`backend/schema.mjs` 的 `DATABASE_HEADERS`）。③列表、卡牌、案件詳情的專案名稱最前面加極小標籤：「新專案」（案件有「新專案」欄）與「急件」（開始至結束的上班天數少於 3 天，扣週末與國定假日；已完成／暫停中不顯示急件）。測試 `backend/test/v5-new-project.test.mjs`，並更新 2 項釘死舊寫法的測試。已 stamp、Worker 已部署。
+
+## 2026-10-30
+
 - 首頁設計師頭像新增「新專案找我」入口（`site.js`、`site.css`）：由 `renderTeam()` 只對 `DESIGNERS[0]` 輸出具 aria-label 的獨立 button，輪值重排後隨渲染移動，休假／出國／下班仍保留。標籤置於頭像左上緣（top -14px、右緣為中心右側 8px），品牌綠 #159E31 細邊、主站深淺色變數、10px 圓角、6px 小尾巴與柔陰影；約 69×26px（手機約 62×26px）。桌面輕移 2px、2 秒共 2 次；720px 以下、觸控與減少動態偏好皆停用動畫，未加入 backdrop-filter，未改頭像本身樣式。
 - 點標籤先停止事件冒泡並收起名片，再沿用登入／request.create 權限檢查；可用時開啟客戶選單並平滑捲到 promptSlot（減少動態時立即捲動），搜尋欄聚焦不干擾捲動。現有一般選單選完既有客戶仍需按「開始填寫」，因此僅標籤入口啟用選完即 requestSubmit；取消會清除該狀態，新增客戶沿用既有 change 流程，不重複送出。負責人與輪替規則沿用原填單流程。
 - 新增 `backend/test/v5-new-project-tag.test.mjs` 6 項測試：實際執行 renderTeam 檢查輪值／離線／按鈕語意與徽章、點擊冒泡／登入／權限／捲動、選單選取及取消、CSS 手機與減少動態規則。未刪改既有測試。`node --check site.js`、`git diff --check` 通過，site.js 維持 LF；已執行 `node tools/stamp.cjs` 更新 `index.html` 快取版本。完整 `node --test backend/test/*.test.mjs` 共 292 項：272 通過、20 項均因環境禁止本機監聽（listen EPERM）失敗，新增 6 項全過，尚未達成全套通過。
