@@ -3368,12 +3368,20 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     const issSeenKey=()=>'v5IssueSeen:'+(selfAccount()||session().user||'');
     let issNtAt=0,issNtBusy=false;
     async function checkIssueNotify(force){
-      if(!loggedIn()||!isIssueManager()||issNtBusy||document.hidden)return;
+      if(!loggedIn()||!(isIssueManager()||acc('issue.report',true))||issNtBusy||document.hidden)return;
       if(!force&&Date.now()-issNtAt<180000)return;
       issNtBusy=true;issNtAt=Date.now();
       try{
         const data=await api('listIssueReports'),list=(Array.isArray(data.reports)?data.reports:[]).map(r=>normIssue(r));
         if(!issues.loaded||state.view==='issues'){issues.list=list;issues.loaded=true}
+        {const s0=session(),me=new Set([s0.name,s0.user,selfAccount()].map(x=>String(x||'').trim()).filter(Boolean)),rk=r=>'r:'+r.rowNumber+':'+r['回覆時間'],mine=list.filter(r=>r['管理者回覆']&&me.has(String(r['姓名']).trim())),k2='v5IssueReplySeen:'+(selfAccount()||s0.user||'');
+          let seen2=null;try{seen2=JSON.parse(localStorage.getItem(k2)||'null')}catch(e){}
+          const save2=()=>{try{localStorage.setItem(k2,JSON.stringify(mine.map(rk).slice(-400)))}catch(e){}};
+          if(!Array.isArray(seen2))save2();
+          else{const fresh2=mine.filter(r=>!seen2.includes(rk(r)));
+            if(fresh2.length&&state.view!=='issues'){showIssueReplyToast(fresh2);if(bnOn()&&document.hidden){try{new Notification('EMC 設計需求：管理者回覆了你的問題回報',{body:fresh2[0]['管理者回覆'].slice(0,80),tag:'emc-issue-reply',icon:'assets/EMC_design_logo.svg'})}catch(e){}}}
+            if(fresh2.length)save2()}}
+        if(!isIssueManager())return;
         const keys=list.filter(r=>r['狀態']==='回報中').map(r=>'i:'+r.rowNumber+':'+r['時間']);
         let seen=null;try{seen=JSON.parse(localStorage.getItem(issSeenKey())||'null')}catch(e){}
         if(!Array.isArray(seen)){try{localStorage.setItem(issSeenKey(),JSON.stringify(keys))}catch(e){}return}
@@ -3386,6 +3394,14 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       }catch(e){}finally{issNtBusy=false}
     }
     function markIssuesSeen(list){try{localStorage.setItem(issSeenKey(),JSON.stringify(list.filter(r=>r['狀態']==='回報中').map(r=>'i:'+r.rowNumber+':'+r['時間']).slice(-400)))}catch(e){}}
+    function showIssueReplyToast(items){
+      let reg=$('ntRegion');if(!reg){reg=document.createElement('div');reg.id='ntRegion';reg.className='nt-toast-region';reg.setAttribute('aria-live','polite');document.body.appendChild(reg)}
+      const x=items[0],t=document.createElement('div');t.className='nt-toast';t.setAttribute('role','status');
+      t.innerHTML='<span class="nt-ic">💬</span><div><span class="nt-eb">管理者回覆了你的問題回報</span><span class="nt-ti">'+esc(x['管理者回覆'].slice(0,40))+'</span><div class="nt-me">'+(items.length>1?'另有 '+(items.length-1)+' 則　':'')+'點此查看</div></div><button type="button" class="nt-x" aria-label="關閉">×</button>';
+      const kill=()=>{t.classList.remove('is-visible');setTimeout(()=>t.remove(),320)};
+      t.addEventListener('click',e=>{if(e.target.closest('.nt-x')){kill();return}kill();document.querySelector('[data-ext="issues"]')?.click()});
+      reg.appendChild(t);requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('is-visible')));setTimeout(kill,12000);
+    }
     function showIssueToast(items){
       let reg=$('ntRegion');if(!reg){reg=document.createElement('div');reg.id='ntRegion';reg.className='nt-toast-region';reg.setAttribute('aria-live','polite');document.body.appendChild(reg)}
       const x=items[0],t=document.createElement('div');t.className='nt-toast';t.setAttribute('role','status');
@@ -3503,7 +3519,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       issues.loading=true;issues.error='';if(state.view==='issues')renderIssuesPage();
       try{const data=await api('listIssueReports');issues.list=(Array.isArray(data.reports)?data.reports:[]).map(r=>normIssue(r));issues.loaded=true}
       catch(err){issues.error=err.message||'讀取失敗'}
-      issues.loading=false;if(state.view==='issues'){renderIssuesPage(true);if(isIssueManager()&&issues.loaded)markIssuesSeen(issues.list)}
+      issues.loading=false;if(state.view==='issues'){try{const s0=session(),me=new Set([s0.name,s0.user,selfAccount()].map(x=>String(x||'').trim()).filter(Boolean));localStorage.setItem('v5IssueReplySeen:'+(selfAccount()||s0.user||''),JSON.stringify(issues.list.filter(r=>r['管理者回覆']&&me.has(String(r['姓名']).trim())).map(r=>'r:'+r.rowNumber+':'+r['回覆時間']).slice(-400)))}catch(e){}renderIssuesPage(true);if(isIssueManager()&&issues.loaded)markIssuesSeen(issues.list)}
     }
     function replyHtml(r,mgr){
       if(mgr)return `<div class="issue-reply is-edit"><label class="issue-meta">管理者回覆${r['回覆時間']?'（'+esc(r['回覆時間'])+'）':''}</label><textarea class="input" maxlength="500" data-issue-reply-text="${r.rowNumber}" placeholder="寫下處理說明或回覆，儲存後回報人看得到" rows="2">${esc(r['管理者回覆'])}</textarea><button type="button" class="btn" data-issue-reply="${r.rowNumber}">儲存回覆</button></div>`;

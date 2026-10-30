@@ -17,3 +17,8 @@ test('問題回報：管理者有新的回報中會跳提示（首次只記錄�
   assert.match(site, /isIssueManager\(\)/);
   assert.match(site, /checkNtToast\(\)\{\s*checkIssueNotify\(\)/);
 });
+
+test('問題回報：管理者回覆會通知回報人', () => {
+  assert.match(site, /function showIssueReplyToast/);
+  assert.match(site, /v5IssueReplySeen:/);
+});
