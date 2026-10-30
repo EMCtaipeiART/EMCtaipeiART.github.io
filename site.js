@@ -714,9 +714,19 @@
       }).join('');
     }
     /** 專案名稱前的小標籤：新專案（填單時選了「這是新專案」）、急件（開始～結束的上班天數少於 3 天；已完成／暫停中不再提示） */
-    function projTagsHtml(row){
+    function projFlags(row){
       const st=String(row['狀態']||'').trim(),isNew=String(row['新專案']||'').trim()!=='',a=parseDay(row['開始日期']),b=parseDay(row['結束日期']);
-      const urgent=!Number.isNaN(a)&&!Number.isNaN(b)&&b>=a&&!['已完成','暫停中'].includes(st)&&rangeDays(a,b)<3;
+      return {isNew,urgent:!Number.isNaN(a)&&!Number.isNaN(b)&&b>=a&&!['已完成','暫停中'].includes(st)&&rangeDays(a,b)<3};
+    }
+    /** 信件標題裡的標籤（排在案件編號後面、客戶別前面）：✨新專案、🔥急件；多筆合併時只要有一筆符合就帶。 */
+    function mailSubjectTags(rows){
+      const list=(Array.isArray(rows)?rows:[rows]).map(projFlags),t=[];
+      if(list.some(f=>f.isNew))t.push('✨新專案');
+      if(list.some(f=>f.urgent))t.push('🔥急件');
+      return t.length?t.join(' ')+'｜':'';
+    }
+    function projTagsHtml(row){
+      const {isNew,urgent}=projFlags(row);
       return (isNew?'<span class="pj-tag is-new" title="新專案（設計負責人依輪替順位指定）">新專案✨</span>':'')+(urgent?'<span class="pj-tag is-urgent" title="工作天少於 3 天">急件🔥</span>':'');
     }
     function cardHtml(row,inColumn){
@@ -1734,7 +1744,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     }
     function validateForm(){const f=state.form;return validateRow(f,f.extra.length?'第 1 筆':'')||f.extra.map((r,i)=>validateRow(r,`第 ${i+2} 筆`)).find(Boolean)||''}
     const platformText=r=>PLATFORMS.filter(p=>r.platforms.includes(p)).join(', ');
-    const rowHeaders=r=>({'客戶別':r.client,'專案名稱':r.project,'專案負責人':ownerLocked()?ownerSelf():r.owner,'設計種類':r.type,'階段':r.stage,'數量':String(r.qty),'開始日期':ymd(r.start),'結束日期':ymd(r.end),'設計負責人':r.designer,'使用平台':platformText(r),
+    const rowHeaders=r=>({'新專案':r.newProj?'v':'','客戶別':r.client,'專案名稱':r.project,'專案負責人':ownerLocked()?ownerSelf():r.owner,'設計種類':r.type,'階段':r.stage,'數量':String(r.qty),'開始日期':ymd(r.start),'結束日期':ymd(r.end),'設計負責人':r.designer,'使用平台':platformText(r),
       '設計簡報說明':r.supp.briefNote,'設計簡報連結':r.supp.briefUrl,'客戶素材說明':r.supp.assetNote,'客戶素材連結':r.supp.assetUrl,'參考範例說明':r.supp.referenceNote,'參考範例連結':r.supp.referenceUrl,'其他說明':r.supp.otherNote,'其他連結':r.supp.otherUrl});
     const FORM_HEADERS=['客戶別','專案名稱','專案負責人','設計類型','階段','數量','開始日期','結束日期','設計負責人','使用平台','設計簡報說明','設計簡報連結','客戶素材說明','客戶素材連結','參考範例說明','參考範例連結','其他說明','其他連結'];
     /** Worker 的 add／batchAdd／update 吃前台的欄位 key（跟現行系統 formWriteRow 一致）。 */
@@ -1822,7 +1832,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     function startRowMail(id,reply){
       const row=allRows().find(r=>idKey(r)===id);if(!row)return;
       if(!loggedIn()){toast('請先登入後再寄信',true);startLogin();return}
-      const d={id,row,to:recipientFor(row['設計負責人']),cc:ccFor(row['客戶別'],row['設計負責人']).join(', '),subject:`${reply?'Re: ':''}【${id}】${row['客戶別']}_${row['專案名稱']}`,body:reply?'<br>':mailBodyHtml(row),sent:false,reply:Boolean(reply),existing:true};
+      const d={id,row,to:recipientFor(row['設計負責人']),cc:ccFor(row['客戶別'],row['設計負責人']).join(', '),subject:`${reply?'Re: ':''}【${id}】${reply?'':mailSubjectTags(row)}${row['客戶別']}_${row['專案名稱']}`,body:reply?'<br>':mailBodyHtml(row),sent:false,reply:Boolean(reply),existing:true};
       state.mail={drafts:[d],index:0,sending:false,sentCount:0,gmailChecked:false,candidates:reply?[]:mergeCandidates(row)};state.form=null;show('mail');loadGmailContext();
     }
     /** 同一個客戶別、同一位設計師、還沒寄過需求信的其他案件：開新案件時沒有馬上寄信的，現在可以在編輯器裡勾選併成一封。 */
@@ -1831,7 +1841,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       return allRows().filter(r=>idKey(r)!==id&&norm(r['客戶別'])===client&&norm(r['設計負責人'])===designer&&!String(r['Gmail信件串ID']||'').trim()&&!['已完成','暫停中','已取消'].includes(String(r['狀態']||'').trim())&&canMailRow(r))
         .sort((a,b)=>idKey(a).localeCompare(idKey(b))).slice(0,30);
     }
-    function mailDraftFor(row){const id=idKey(row);return {id,row,to:recipientFor(row['設計負責人']),cc:ccFor(row['客戶別'],row['設計負責人']).join(', '),subject:`【${id}】${row['客戶別']}_${row['專案名稱']}`,body:mailBodyHtml(row),sent:false,reply:false,existing:true}}
+    function mailDraftFor(row){const id=idKey(row);return {id,row,to:recipientFor(row['設計負責人']),cc:ccFor(row['客戶別'],row['設計負責人']).join(', '),subject:`【${id}】${mailSubjectTags(row)}${row['客戶別']}_${row['專案名稱']}`,body:mailBodyHtml(row),sent:false,reply:false,existing:true}}
     function mergeExtra(){
       saveMailDraft();const m=state.mail,picks=[...document.querySelectorAll('[data-merge-extra]:checked')].map(i=>i.dataset.mergeExtra);
       if(!picks.length){toast('請勾選要一起寄出的案件',true);return}
@@ -1877,7 +1887,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     }
     document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('[data-del-confirm],[data-del-restore]');if(!c)return;delReviewRun(c.hasAttribute('data-del-confirm')?'confirm':'restore')});
     function startMail(drafts,{schedule=false}={}){
-      state.mail={drafts:drafts.map(d=>({scheduleOpen:schedule,id:d.id,row:d.row,to:recipientFor(d.row['設計負責人']),cc:ccFor(d.row['客戶別'],d.row['設計負責人']).join(', '),subject:`【${d.id}】${d.row['客戶別']}_${d.row['專案名稱']}`,body:mailBodyHtml(d.row),sent:false})),index:0,sending:false,sentCount:0,gmailChecked:false};
+      state.mail={drafts:drafts.map(d=>({scheduleOpen:schedule,id:d.id,row:d.row,to:recipientFor(d.row['設計負責人']),cc:ccFor(d.row['客戶別'],d.row['設計負責人']).join(', '),subject:`【${d.id}】${mailSubjectTags(d.row)}${d.row['客戶別']}_${d.row['專案名稱']}`,body:mailBodyHtml(d.row),sent:false})),index:0,sending:false,sentCount:0,gmailChecked:false};
       state.form=null;show('mail');loadGmailContext();
     }
     async function loadGmailContext(){
@@ -2776,7 +2786,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const m=state.mail;
       const names=[...new Set(sel.map(x=>String(x.row['專案名稱']||'').trim()).filter(Boolean))],qty=sel.reduce((n,x)=>n+(+x.row['數量']||0),0),ids=sel.map(x=>x.id);
       const row={...sel[0].row,'專案名稱':names.join('、'),'數量':String(qty)};
-      const merged={id:ids[0],ids,row,to:sel[0].to,cc:sel[0].cc,subject:`【${ids.join('、')}】${row['客戶別']}_${names.join('、')}`,body:mailBodyHtml(row,sel.map(x=>x.row)),sent:false,merged:sel};
+      const merged={id:ids[0],ids,row,to:sel[0].to,cc:sel[0].cc,subject:`【${ids.join('、')}】${mailSubjectTags(sel.map(x=>x.row))}${row['客戶別']}_${names.join('、')}`,body:mailBodyHtml(row,sel.map(x=>x.row)),sent:false,merged:sel};
       const at=m.drafts.indexOf(sel[0]);m.drafts=m.drafts.filter(x=>!sel.includes(x));m.drafts.splice(at,0,merged);m.index=at;renderMail();toast(`已合併 ${ids.length} 筆案件為一封信`);
     }
     function unmergeCurrent(){
