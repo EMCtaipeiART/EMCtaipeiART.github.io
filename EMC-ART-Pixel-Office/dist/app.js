@@ -1468,7 +1468,7 @@ function setZoom(target){const base=Math.max(.34,Math.min(.62,cam.w/760)),s=Math
   const spread=()=>{const v=[...tps.values()];return Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y);};
   let c0=null;const centroid=()=>{const v=[...tps.values()];return {x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2};};
   game.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')return;tps.set(e.pointerId,{x:e.clientX,y:e.clientY});if(tps.size===2){pinching=true;arrowKeys.forEach(k=>keys.delete(k));d0=spread();s0=cam.s;c0=centroid();}},true);
-  window.addEventListener('pointermove',e=>{const t=tps.get(e.pointerId);if(!t)return;t.x=e.clientX;t.y=e.clientY;if(pinching&&tps.size>=2&&d0>0){setZoom(s0*spread()/d0);/* 兩指一起移動＝平移畫面（上下左右都可以） */const c=centroid();if(c0){const bx=cam.free?cam.fx:cam.x,by=cam.free?cam.fy:cam.y;cam.free=true;cam.fx=Math.max(cam.w/2/cam.s,Math.min(Math.max(cam.w/2/cam.s,W-cam.w/2/cam.s),bx-(c.x-c0.x)/cam.s));cam.fy=Math.max(cam.h/2/cam.s-OY,Math.min(H0-cam.h/2/cam.s+120,by-(c.y-c0.y)/cam.s));cam.x=cam.fx;cam.y=cam.fy;markDirty();}c0=c;}},{passive:true});
+  window.addEventListener('pointermove',e=>{const t=tps.get(e.pointerId);if(!t)return;t.x=e.clientX;t.y=e.clientY;if(pinching&&tps.size>=2&&d0>0){setZoom(s0*spread()/d0);/* 兩指一起移動＝平移畫面（上下左右都可以） */const c=centroid();if(c0){const bx=cam.free?cam.fx:cam.x,by=cam.free?cam.fy:cam.y;cam.free=true;cam.fx=Math.max(cam.w/2/cam.s,Math.min(Math.max(cam.w/2/cam.s,W-cam.w/2/cam.s),bx-(c.x-c0.x)/cam.s));cam.fy=clampPanY(by-(c.y-c0.y)/cam.s);cam.x=cam.fx;cam.y=cam.fy;markDirty();}c0=c;}},{passive:true});
   const up=e=>{if(!tps.delete(e.pointerId))return;if(tps.size<2)setTimeout(()=>{if(tps.size<2)pinching=false;},200);};
   window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
 })();
@@ -1518,6 +1518,8 @@ function setZoom(target){const base=Math.max(.34,Math.min(.62,cam.w/760)),s=Math
 /* iframe 大小改變（視窗縮放、外層調整高度）或登入身分晚到：重新把畫面對到自己的座位 */
 window.addEventListener('resize',()=>{if(dragPanMode()){followPrev=null;setTimeout(()=>{try{followOwn()}catch(error){}},120);}});
 /* 站內多元宇宙（電腦版 iframe）：滑鼠滾輪可以上下捲動畫面；空白處按住滑鼠拖曳也能平移場景；點人物照舊。 */
+/* 手機單指／雙指平移畫面的上下範圍：要和 updateCamera 的鏡頭範圍一致（整層場景，含會議室、廁所、茶水間），不能用舊場景的 H0（只到桌子群，往下滑會被擋住）。 */
+function clampPanY(y){const half=cam.h/2/cam.s,lo=TOP_BASE-60+half,hi=Math.max(lo,VB+60-half);return Math.max(lo,Math.min(hi,y));}
 const dragPanMode=()=>window.parent!==window&&document.documentElement.classList.contains('clean')&&!embedMode&&!cam.on&&!matchMedia('(max-width:720px)').matches;
 game.addEventListener('pointerdown',e=>{
   if(e.button<=0&&window.fridgeBoxDown&&!roMode){const bp=toScene(e.clientX,e.clientY,game.getBoundingClientRect());if(window.fridgeBoxDown(e,bp)){e.preventDefault();return;}}
@@ -1539,7 +1541,7 @@ game.addEventListener('pointerdown',e=>{
     return;
   }
   const sx=e.clientX,sy=e.clientY,bx=cam.free?cam.fx:cam.x,by=cam.free?cam.fy:cam.y;let dragged=false;
-  const move=m=>{const dx=m.clientX-sx,dy=m.clientY-sy;if(!dragged&&Math.hypot(dx,dy)<10)return;dragged=true;cam.free=true;cam.fx=Math.max(cam.w/2/cam.s,Math.min(W-cam.w/2/cam.s,bx-dx/cam.s));cam.fy=Math.max(cam.h/2/cam.s-OY,Math.min(H0-cam.h/2/cam.s+120,by-dy/cam.s));cam.x=cam.fx;cam.y=cam.fy;m.preventDefault();};
+  const move=m=>{const dx=m.clientX-sx,dy=m.clientY-sy;if(!dragged&&Math.hypot(dx,dy)<10)return;dragged=true;cam.free=true;cam.fx=Math.max(cam.w/2/cam.s,Math.min(W-cam.w/2/cam.s,bx-dx/cam.s));cam.fy=clampPanY(by-dy/cam.s);cam.x=cam.fx;cam.y=cam.fy;m.preventDefault();};
   const up=u=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up);if(!dragged&&u.type==='pointerup')onGamePress(u);};
   window.addEventListener('pointermove',move,{passive:false});window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
 });
