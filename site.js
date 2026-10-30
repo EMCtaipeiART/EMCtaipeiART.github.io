@@ -717,7 +717,7 @@
     function projTagsHtml(row){
       const st=String(row['狀態']||'').trim(),isNew=String(row['新專案']||'').trim()!=='',a=parseDay(row['開始日期']),b=parseDay(row['結束日期']);
       const urgent=!Number.isNaN(a)&&!Number.isNaN(b)&&b>=a&&!['已完成','暫停中'].includes(st)&&rangeDays(a,b)<3;
-      return (isNew?'<span class="pj-tag is-new" title="新專案（設計負責人依輪替順位指定）">新專案🆕</span>':'')+(urgent?'<span class="pj-tag is-urgent" title="工作天少於 3 天">急件🔥</span>':'');
+      return (isNew?'<span class="pj-tag is-new" title="新專案（設計負責人依輪替順位指定）">新專案✨</span>':'')+(urgent?'<span class="pj-tag is-urgent" title="工作天少於 3 天">急件🔥</span>':'');
     }
     function cardHtml(row,inColumn){
       const s=schedule(row),st=statusOf(row),id=idKey(row),qty=String(row['數量']||'').trim(),status=String(row['狀態']||'').trim(),isDoing=['執行中','修改中'].includes(status);
@@ -1661,7 +1661,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const names=designerNames(),types=designTypes(),clients=clientNames(),shownClients=!r.client||clients.includes(r.client)?clients:[r.client,...clients];
       return `<div class="${opt.batch?'batch-row':'form-grid'}" data-row="${key}">
         ${opt.title?`<h5><span>${esc(opt.title)}</span>${opt.removable?`<button type="button" class="batch-del" data-batch-del="${key}">移除這一筆</button>`:''}</h5>`:''}
-        ${key==='edit'?'':`<div class="field c6 np-row"><label class="np-toggle${r.newProj?' is-on':''}"><input type="checkbox" data-f="newProj"${r.newProj?' checked':''}><span class="np-ico" aria-hidden="true">🆕</span><span><b>這是新專案</b><small>${r.newProj?'設計負責人依輪替順位自動指定，也可以選替代設計師並寫原因':'打開後，設計負責人會依輪替順位自動指定（輪替表會往後排）'}</small></span></label></div>`}
+        ${key==='edit'?'':`<div class="field c6 np-row"><label class="np-toggle${r.newProj?' is-on':''}"><input type="checkbox" data-f="newProj"${r.newProj?' checked':''}><span class="np-ico" aria-hidden="true">✨</span><span><b>這是新專案</b><small>${r.newProj?'設計負責人依輪替順位自動指定，也可以選替代設計師並寫原因':'打開後，設計負責人會依輪替順位自動指定（輪替表會往後排）'}</small></span></label></div>`}
         <div class="field c2"><span class="label">客戶別 <b>*</b></span><select data-f="client" aria-label="客戶別">${shownClients.map(n=>`<option value="${esc(n)}"${n===r.client?' selected':''}>${esc(n)}</option>`).join('')}<option value="__new__">+ 新增客戶別</option></select></div>
         <div class="field c4"><span class="label">專案名稱 <b>*</b></span><input class="input" data-f="project" value="${esc(r.project)}" placeholder="例如：10月社群貼文＿新品上市" autocomplete="off" aria-label="專案名稱"></div>
         <div class="field c2"><span class="label">專案負責人 <b>*</b></span><input class="input${ownerLocked()?' is-locked':''}" data-f="owner" value="${esc(ownerLocked()?ownerSelf():r.owner)}" autocomplete="off" aria-label="專案負責人"${ownerLocked()?' readonly tabindex="-1" title="專案負責人固定為登入者本人"':''}></div>

@@ -21,10 +21,10 @@ const tags = new Function(`
   return projTagsHtml;
 `)();
 
-test('專案名稱前的小標籤：新專案🆕、急件🔥（上班天數少於 3 天）', () => {
+test('專案名稱前的小標籤：新專案✨、急件🔥（上班天數少於 3 天）', () => {
   const base = { '狀態': '執行中', '開始日期': '2026/11/02', '結束日期': '2026/11/10' };
   assert.equal(tags(base), '');
-  assert.match(tags({ ...base, '新專案': 'v' }), /新專案🆕/);
+  assert.match(tags({ ...base, '新專案': 'v' }), /新專案✨/);
   assert.match(tags({ ...base, '結束日期': '2026/11/03' }), /急件🔥/);   // 週一到週二：2 個上班天
   assert.doesNotMatch(tags({ ...base, '結束日期': '2026/11/04' }), /急件/); // 3 個上班天不算急件
   assert.match(tags({ ...base, '開始日期': '2026/11/06', '結束日期': '2026/11/09' }), /急件🔥/); // 週五到週一：跨週末只算 2 個上班天
