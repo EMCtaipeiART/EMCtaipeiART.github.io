@@ -1603,3 +1603,10 @@ body.arena-on .arena-frame{border-radius:0;box-shadow:none;background:transparen
 .dc-note.done{opacity:.65;text-decoration:line-through}
 .dc-note.lift{cursor:grabbing;z-index:9;transform:rotate(0deg) scale(1.08);box-shadow:0 14px 22px rgba(0,0,0,.35)}
 .dc-note:hover{z-index:8}
+
+/* 便利貼上的編輯／刪除與就地編輯 */
+.dc-note{padding-right:30px}.dc-note.editing{padding-right:7px;cursor:default;z-index:9}
+.dc-note-tools{position:absolute;top:2px;right:2px;display:grid;gap:2px}.dc-note-tools button{width:22px;height:22px;border:0;border-radius:5px;background:rgba(0,0,0,.08);color:#4a3d00;font-size:12px;line-height:1;cursor:pointer;padding:0}.dc-note-tools button:hover{background:rgba(0,0,0,.2)}
+.dc-note textarea{width:100%;box-sizing:border-box;border:1px solid #cdb400;border-radius:4px;background:#fffbe0;font:inherit;color:#3a3000;padding:4px;resize:vertical}
+.dc-note-todo{display:flex;align-items:center;gap:4px;margin:3px 0;font-size:11px}.dc-note-chk{vertical-align:middle;margin:0 2px 0 0}
+.dc-note-btns{display:flex;gap:4px}.dc-note-btns button{flex:1;height:24px;border:0;border-radius:5px;background:#4a3d00;color:#fff;font-size:11px;font-weight:700;cursor:pointer}.dc-note-btns button:last-child{background:rgba(0,0,0,.15);color:#4a3d00}

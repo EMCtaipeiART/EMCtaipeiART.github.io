@@ -4123,7 +4123,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     const dcCal=state.cal={y:0,m:0,sel:'',mode:'cal',sets:{cal:new Set(),due:new Set()},hidden:null,cache:new Map(),loading:false,error:''};
     const dcAllowed=()=>loggedIn()&&(/設計/.test(sessionDept())||isDesignerSession()||isAdminAcct());
     /* 行事曆便條（MEMO）：誰、哪天、哪個時段、內容，可勾選成待辦事項；存在 Worker（calMemos） */
-    const dcMemo={list:[],loaded:false,busy:false,edit:null};
+    const dcMemo={list:[],loaded:false,busy:false,editId:null,draft:null};
     async function dcMemoLoad(){if(dcMemo.busy||dcMemo.loaded)return;dcMemo.busy=true;try{dcMemo.list=(await api('getCalMemos',{})).memos||[];dcMemo.loaded=true}catch(err){toast('便條讀取失敗：'+(err.message||err),true)}dcMemo.busy=false;if(state.view==='calendar')renderCalendarPage()}
     const dcMemosOn=k=>dcMemo.list.filter(m=>m.day===k&&!dcCal.hidden.has(m.who)).sort((a,b)=>(a.start||'99').localeCompare(b.start||'99')||a.at-b.at);
     const dcPad=n=>String(n).padStart(2,'0');
@@ -4168,9 +4168,6 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const sel=dcCal.sel,selMs=Date.parse(sel+'T00:00:00Z'),selEvs=Number.isNaN(selMs)?[]:dcEventsOn(selMs);
       const dutyMt=Number.isNaN(selMs)?null:dutyMeetings(new Date(selMs).getUTCFullYear(),new Date(selMs).getUTCMonth()).find(x=>x.ms===selMs),dutyBlock=dutyMt?`<div class="dc-row" style="--c:${dcColor(dutyWho(new Date(selMs).getUTCFullYear(),new Date(selMs).getUTCMonth()))}"><span class="dc-dot"></span><div><b>${esc(dutyMt.title)}</b><small>值日生 ${esc(dutyWho(new Date(selMs).getUTCFullYear(),new Date(selMs).getUTCMonth()))}・${esc(dutyNeed)}</small></div></div>`:'';
       const detail=`<div class="dc-detail"><h4>${esc(sel.replace(/-/g,'/'))}${TL_HOLIDAYS.get(sel)?`　${esc(TL_HOLIDAYS.get(sel))}`:''}</h4>${dutyBlock}${selEvs.length?selEvs.map(e=>`<div class="dc-row" style="--c:${e.color||dcColor(e.who)}"><span class="dc-dot"></span><div><b>${esc(e.who)}｜${esc(e.title)}</b><small>${e.kind==='due'?`${e.isEnd?'今天交件・':''}${esc(e.status)}・期間 ${esc(e.period)}`:''}${e.kind==='leave'?'休假・':''}${e.kind==='due'?'':e.allDay?'整天':(dcKey(e.start+8*3600000)!==dcKey(e.end-1+8*3600000)?'跨日':`${dcTime(e.start)}–${dcTime(e.end)}`)}${e.room?`・會議室 ${esc(e.room)}`:''}${e.free?'・顯示為空閒':''}</small></div></div>`).join(''):(dutyBlock?'':'<p class="page-sub" style="margin:0">這一天沒有行程。</p>')}</div>`;
-      const memoRow=m=>`<div class="dc-memo${m.todo?' todo':''}${m.done?' done':''}" style="--c:${dcColor(m.who)}">${m.todo?`<input type="checkbox" data-dc-memo-done="${esc(m.id)}" ${m.done?'checked':''} aria-label="完成">`:'<span class="dc-memo-pin">📝</span>'}<div><b>${esc(m.text)}</b><small>${esc(m.by||m.who||'')}・${new Date(m.at).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false,month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}${m.todo?'・待辦':''}</small></div><span class="dc-memo-act"><button type="button" data-dc-memo-edit="${esc(m.id)}" aria-label="編輯">✎</button><button type="button" data-dc-memo-del="${esc(m.id)}" aria-label="刪除">✕</button></span></div>`;
-      const ed=dcMemo.edit,me0=ownDesignerName(),memoForm=ed?`<form class="dc-memo-form" data-dc-memo-form><input type="hidden" name="id" value="${esc(ed.id||'')}"><textarea name="text" rows="3" maxlength="1000" placeholder="便條內容…" required>${esc(ed.text||'')}</textarea><div class="dc-memo-fields"><label class="dc-memo-chk"><input type="checkbox" name="todo"${ed.todo?' checked':''}> 待辦事項</label></div><div class="dc-memo-btns"><button type="submit" class="btn primary">儲存便條</button><button type="button" class="btn" data-dc-memo-cancel>取消</button></div></form>`:'';
-      const dayMemos=dcMemosOn(sel),memoBlock=`<div class="dc-memos"><div class="dc-memos-h"><h4>便條 MEMO${dcMemo.loaded?'':'（讀取中…）'}</h4><button type="button" class="btn" data-dc-memo-new>＋ 新增便條</button></div>${memoForm}</div>`;
       /* 時段行程：8:00–20:00 每小時一格，列出落在該時段的會議／便條；今天標出「現在」那一格 */
       const tlData=dcCal.cache.get(dcRangeKey())?.data,tlEvs=Number.isNaN(selMs)||!tlData?[]:tlData.events.filter(e=>!dcCal.hidden.has(e.who)&&e.end>selMs-8*3600000&&e.start<selMs+16*3600000);
       const nowTp=new Date(Date.now()+8*3600000),nowH=nowTp.getUTCHours(),isToday=sel===today;
@@ -4179,38 +4176,46 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const es=tlEvs.filter(e=>!e.allDay&&e.kind!=='leave'&&e.end>a&&e.start<b),ms3=[];
         out+=`<div class="dc-slot${isToday&&h===nowH?' now':''}"><span class="dc-slot-t">${dcPad(h)}:00${isToday&&h===nowH?'<em>現在</em>':''}</span><div class="dc-slot-b">${es.map(e=>`<span class="dc-ev" style="--c:${e.color||dcColor(e.who)}">${esc(e.who)} ${esc(e.title)}${e.room?` 〔${esc(e.room)}室〕`:''}<i>${dcTime(e.start)}–${dcTime(e.end)}</i></span>`).join('')}${es.length||ms3.length?'':'<span class="dc-slot-empty">—</span>'}</div></div>`}
         return out})();
-      const allDayEs=tlEvs.filter(e=>e.allDay||e.kind==='leave'),noTime=dayMemos;
+      const allDayEs=tlEvs.filter(e=>e.allDay||e.kind==='leave'),noTime=[];
       const timeline=`<div class="dc-timeline"><h4>${esc(sel.replace(/-/g,'/'))} 時段行程${isToday?'（現在 '+dcPad(nowH)+':'+dcPad(nowTp.getUTCMinutes())+'）':''}</h4>${allDayEs.length||noTime.length?`<div class="dc-slot"><span class="dc-slot-t">整天</span><div class="dc-slot-b">${allDayEs.map(e=>`<span class="dc-ev${e.kind==='leave'?' leave':''}" style="--c:${e.color||dcColor(e.who)}">${e.kind==='leave'?'休 ':''}${esc(e.who)} ${esc(e.title)}</span>`).join('')}</div></div>`:''}${slotRows}</div>`;
       const warn=dcCal.mode==='due'?[]:[dcCal.error?`讀取失敗：${esc(dcCal.error)}`:'',data?.unreadable?.length?`${esc(data.unreadable.join('、'))} 的 Google 行事曆讀不到（可能沒有分享或授權失效）`:'',data&&data.femas===false?'人資系統假單暫時讀不到，只顯示 Google 行事曆上的休假':''].filter(Boolean);
       $('stage').innerHTML=`<div class="page wide-cal"><div class="page-top"><div><h2 class="page-title">行事曆</h2><p class="page-sub">設計部五位設計師串聯的 Google 行事曆與人資系統假單。</p></div></div>
         ${dutyBarHtml()}
         <div class="dc-top"><div class="dc-nav"><button type="button" class="btn" data-dc="prev" aria-label="上個月">‹</button><button type="button" class="btn" data-dc="today">今天</button><button type="button" class="btn" data-dc="next" aria-label="下個月">›</button></div><h3>${dcCal.y} 年 ${dcCal.m+1} 月</h3>${dcCal.loading?'<span class="page-sub" style="margin:0">讀取中…</span>':'<button type="button" class="btn" data-dc="refresh">重新整理</button>'}</div>
         <div class="dc-legend"><span class="dc-mode" role="radiogroup" aria-label="顯示內容"><button type="button" class="dc-chip${dcCal.mode==='cal'?'':' off'}" style="--c:var(--brand)" data-dc-mode="cal"><i></i>行程與請假</button><button type="button" class="dc-chip${dcCal.mode==='due'?'':' off'}" style="--c:#d64550" data-dc-mode="due" title="未執行與執行中的案件，從開始日標到交件日"><i></i>案件交期</button></span>${(()=>{const me=ownDesignerName();const all=dcCal.hidden.size===0;return me&&DC_COLORS[me]?`<button type="button" class="dc-chip" style="--c:var(--muted)" data-dc-who-all="${all?'me':'all'}">${all?'只看我':'顯示全部'}</button>`:`<button type="button" class="dc-chip" style="--c:var(--muted)" data-dc-who-all="all">顯示全部</button>`})()}${names.map(n=>`<button type="button" class="dc-chip${dcCal.hidden.has(n)?' off':''}" style="--c:${dcColor(n)}" data-dc-who="${esc(n)}"><i></i>${esc(n)}</button>`).join('')}</div>
-        ${dcCal.mode==='due'?`<div class="dc-legend">${Object.values(DC_STATUS_COLOR).map(([n,c])=>`<span class="dc-chip" style="--c:${c};cursor:default"><i></i>${n}</span>`).join('')}<span class="dc-chip" style="--c:var(--muted);cursor:default">「交」＝當天交件</span></div>`:''}<div class="dc-gridwrap"><div class="dc-grid">${cells}</div><div class="dc-notes"></div></div>${warn.length?`<p class="dc-note">${warn.join('；')}</p>`:''}${detail}${memoBlock}${timeline}</div>`;
+        ${dcCal.mode==='due'?`<div class="dc-legend">${Object.values(DC_STATUS_COLOR).map(([n,c])=>`<span class="dc-chip" style="--c:${c};cursor:default"><i></i>${n}</span>`).join('')}<span class="dc-chip" style="--c:var(--muted);cursor:default">「交」＝當天交件</span></div>`:''}<div class="dc-gridwrap"><div class="dc-grid">${cells}</div><div class="dc-notes"></div></div>${warn.length?`<p class="dc-note">${warn.join('；')}</p>`:''}${detail}${timeline}</div>`;
       dcPlaceNotes();
     }
-    /* 便利貼浮在月曆上方一層：位置存成「相對於日期格」的比例（x、y），拖到別天就換日期；不拖只點一下＝編輯 */
+    /* 便利貼浮在月曆上方一層：位置存成「相對於日期格」的比例（x、y），拖到別天就換日期。
+       右側有 ✎ 編輯（直接在便利貼上打字）與 ✕ 刪除；日期格的「＋」直接貼一張新的。 */
     function dcPlaceNotes(){
       const layer=document.querySelector('.dc-notes');if(!layer)return;
-      const byDay=new Map();dcMemo.list.forEach(m=>{if(dcCal.hidden.has(m.who))return;if(!byDay.has(m.day))byDay.set(m.day,[]);byDay.get(m.day).push(m)});
+      const byDay=new Map(),all=dcMemo.draft?[...dcMemo.list,dcMemo.draft]:dcMemo.list;
+      all.forEach(m=>{if(m!==dcMemo.draft&&dcCal.hidden.has(m.who))return;if(!byDay.has(m.day))byDay.set(m.day,[]);byDay.get(m.day).push(m)});
       let h='';
       document.querySelectorAll('.dc-day').forEach(cell=>{const list=byDay.get(cell.dataset.dcDay);if(!list)return;
-        list.sort((a,b)=>a.at-b.at).forEach((m,i)=>{
-          const cw=cell.offsetWidth,ch=cell.offsetHeight,w=Math.max(64,cw-12),fx=m.x==null?.04:m.x,fy=m.y==null?Math.min(.36+i*.2,.9):m.y,rot=(((m.id.charCodeAt(0)+m.id.charCodeAt(1))%5)-2)*.9;
-          h+=`<div class="dc-note${m.done?' done':''}" data-dc-note="${esc(m.id)}" title="${esc((m.by||m.who||'')+'：'+m.text)}" style="left:${cell.offsetLeft+fx*cw}px;top:${cell.offsetTop+fy*ch}px;width:${w}px;--r:${rot}deg">${m.todo?(m.done?'☑ ':'☐ '):''}${esc(m.text.slice(0,40))}<i>${esc(m.by||m.who||'')}</i></div>`});
+        list.sort((a,b)=>(a.at||Infinity)-(b.at||Infinity)).forEach((m,i)=>{
+          const cw=cell.offsetWidth,ch=cell.offsetHeight,w=Math.max(64,cw-12),fx=m.x==null?.04:m.x,fy=m.y==null?Math.min(.36+i*.2,.9):m.y,rot=m.id==='new'?0:(((m.id.charCodeAt(0)+m.id.charCodeAt(1))%5)-2)*.9,editing=dcMemo.editId===m.id;
+          const body=editing
+            ?`<textarea rows="3" maxlength="1000" placeholder="寫點什麼…" data-dc-ntext>${esc(m.text||'')}</textarea><label class="dc-note-todo"><input type="checkbox" data-dc-ntodo${m.todo?' checked':''}> 待辦</label><span class="dc-note-btns"><button type="button" data-dc-nsave>儲存</button><button type="button" data-dc-ncancel>取消</button></span>`
+            :`${m.todo?`<input type="checkbox" class="dc-note-chk" data-dc-ndone${m.done?' checked':''} aria-label="完成"> `:''}${esc(m.text)}<i>${esc(m.by||m.who||'')}</i><span class="dc-note-tools"><button type="button" data-dc-nedit aria-label="編輯">✎</button><button type="button" data-dc-ndel aria-label="刪除">✕</button></span>`;
+          h+=`<div class="dc-note${m.done?' done':''}${editing?' editing':''}" data-dc-note="${esc(m.id)}" style="left:${cell.offsetLeft+fx*cw}px;top:${cell.offsetTop+fy*ch}px;width:${editing?Math.max(w,150):w}px;--r:${rot}deg">${body}</div>`});
       });
       layer.innerHTML=h;
+      if(dcMemo.editId)layer.querySelector('[data-dc-ntext]')?.focus();
     }
     window.addEventListener('resize',()=>{if(state.view==='calendar')dcPlaceNotes()});
+    const dcNoteById=id=>id==='new'?dcMemo.draft:dcMemo.list.find(x=>x.id===id);
+    const dcMemoSave=m=>api('saveCalMemo',m).then(d=>{dcMemo.list=d.memos||[];dcMemo.editId=null;dcMemo.draft=null;dcPlaceNotes()}).catch(err=>toast('便條儲存失敗：'+(err.message||err),true));
     document.addEventListener('pointerdown',e=>{
       if(state.view!=='calendar')return;const n=e.target.closest?.('[data-dc-note]');if(!n)return;
-      const m=dcMemo.list.find(x=>x.id===n.dataset.dcNote);if(!m)return;
+      if(e.target.closest('textarea,input,button,label')||dcMemo.editId===n.dataset.dcNote)return;
+      const m=dcNoteById(n.dataset.dcNote);if(!m||m.id==='new')return;
       e.preventDefault();const sx=e.clientX,sy=e.clientY,l0=parseFloat(n.style.left),t0=parseFloat(n.style.top);let moved=false;
-      try{n.setPointerCapture(e.pointerId)}catch{}
       const mv=ev=>{const dx=ev.clientX-sx,dy=ev.clientY-sy;if(!moved&&Math.hypot(dx,dy)<5)return;moved=true;n.classList.add('lift');n.style.left=(l0+dx)+'px';n.style.top=(t0+dy)+'px'};
       const up=()=>{
         document.removeEventListener('pointermove',mv);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',up);n.classList.remove('lift');
-        if(!moved){dcCal.sel=m.day;dcMemo.edit=m;renderCalendarPage();return}
+        if(!moved)return;
         const nr=n.getBoundingClientRect();n.style.pointerEvents='none';
         const hit=document.elementFromPoint(nr.left+nr.width/2,nr.top+20)?.closest?.('[data-dc-day]');n.style.pointerEvents='';
         const cell=hit||document.querySelector('[data-dc-day="'+m.day+'"]'),cr=cell.getBoundingClientRect();
@@ -4220,17 +4225,18 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       };
       document.addEventListener('pointermove',mv);document.addEventListener('pointerup',up);document.addEventListener('pointercancel',up);
     });
-    const dcMemoSave=m=>api('saveCalMemo',m).then(d=>{dcMemo.list=d.memos||[];dcMemo.edit=null;renderCalendarPage()}).catch(err=>toast('便條儲存失敗：'+(err.message||err),true));
-    document.addEventListener('submit',e=>{const f=e.target.closest?.('[data-dc-memo-form]');if(!f)return;e.preventDefault();const g=n=>f.elements[n];dcMemoSave({id:g('id').value,day:dcCal.sel,text:g('text').value,todo:g('todo').checked,done:(dcMemo.list.find(m=>m.id===g('id').value)||{}).done||false})});
     document.addEventListener('click',e=>{
       if(state.view!=='calendar')return;
-      const t=sel=>e.target.closest?.(sel);
-      if(t('[data-dc-memo-new]')){dcMemo.edit={};renderCalendarPage();return}
-      if(t('[data-dc-memo-cancel]')){dcMemo.edit=null;renderCalendarPage();return}
-      let b=t('[data-dc-memo-edit]');if(b){dcMemo.edit=dcMemo.list.find(m=>m.id===b.dataset.dcMemoEdit)||null;renderCalendarPage();return}
-      b=t('[data-dc-memo-del]');if(b){if(confirm('刪除這張便條？'))api('deleteCalMemo',{id:b.dataset.dcMemoDel}).then(d=>{dcMemo.list=d.memos||[];renderCalendarPage()}).catch(err=>toast('刪除失敗：'+(err.message||err),true));return}
-      b=t('[data-dc-memo-done]');if(b){const m=dcMemo.list.find(x=>x.id===b.dataset.dcMemoDone);if(m)dcMemoSave({...m,done:b.checked});return}
-      const addM=e.target.closest?.('[data-dc-memo-add]');if(addM){dcCal.sel=addM.dataset.dcMemoAdd;dcMemo.edit={};renderCalendarPage();setTimeout(()=>document.querySelector('.dc-memo-form textarea')?.focus(),40);return}
+      const t=sel=>e.target.closest?.(sel),note=t('[data-dc-note]'),m=note&&dcNoteById(note.dataset.dcNote);
+      if(note&&m){
+        if(t('[data-dc-nedit]')){dcMemo.editId=m.id;dcPlaceNotes();return}
+        if(t('[data-dc-ndel]')){if(confirm('刪除這張便條？'))api('deleteCalMemo',{id:m.id}).then(d=>{dcMemo.list=d.memos||[];dcPlaceNotes()}).catch(err=>toast('刪除失敗：'+(err.message||err),true));return}
+        if(t('[data-dc-ndone]')){dcMemoSave({...m,done:t('[data-dc-ndone]').checked});return}
+        if(t('[data-dc-ncancel]')){dcMemo.editId=null;dcMemo.draft=null;dcPlaceNotes();return}
+        if(t('[data-dc-nsave]')){const txt=note.querySelector('[data-dc-ntext]').value.trim();if(!txt){toast('便條內容不能空白',true);return}dcMemoSave({...m,id:m.id==='new'?'':m.id,text:txt,todo:note.querySelector('[data-dc-ntodo]').checked});return}
+        return;
+      }
+      const addM=t('[data-dc-memo-add]');if(addM){dcCal.sel=addM.dataset.dcMemoAdd;dcMemo.draft={id:'new',day:dcCal.sel,text:'',todo:false,done:false};dcMemo.editId='new';renderCalendarPage();return}
       const day=e.target.closest?.('[data-dc-day]'),who=e.target.closest?.('[data-dc-who]'),act=e.target.closest?.('[data-dc]')?.dataset.dc;
       if(day){dcCal.sel=day.dataset.dcDay;renderCalendarPage();setTimeout(()=>document.querySelector('.dc-detail')?.scrollIntoView({behavior:'smooth',block:'nearest'}),40);return}
       const allBtn=e.target.closest?.('[data-dc-who-all]');if(allBtn){const me=ownDesignerName();dcCal.hidden.clear();if(allBtn.dataset.dcWhoAll==='me'&&me)Object.keys(DC_COLORS).forEach(n=>{if(n!==me)dcCal.hidden.add(n)});renderCalendarPage();return}
