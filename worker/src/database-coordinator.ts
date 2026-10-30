@@ -1478,6 +1478,15 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           last_at TEXT NOT NULL DEFAULT ''
         );
       `);
+      // 不重複點擊：只存「加鹽雜湊後的訪客指紋」，不存 IP／UA 原文。
+      this.ctx.storage.sql.exec(`
+        CREATE TABLE IF NOT EXISTS short_link_visitors (
+          code TEXT NOT NULL,
+          vhash TEXT NOT NULL,
+          PRIMARY KEY (code, vhash)
+        );
+      `);
+      this.ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS short_link_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);`);
       this.ctx.storage.sql.exec(`
         CREATE TABLE IF NOT EXISTS _sql_schema_migrations (
           version INTEGER PRIMARY KEY,
@@ -5478,10 +5487,21 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       }
       if (action === 'createRequestStatus') return { ok: true, action, pending: !database.internal.idempotency[text(payload.requestId)], result: database.internal.idempotency[text(payload.requestId)] || null };
       if (action === 'resolveShortLink') {
-        const code = text(payload.code).toLowerCase();
+        const code = text(payload.code).normalize('NFC').toLowerCase();
         const record = database.tables['短連結'].rows.find(row => text(row['短碼']).toLowerCase() === code);
         if (!record || !isHttpUrl(record['原始網址'])) throw new Error('找不到這個短連結');
         if (payload.count === true || payload.count === 'true') {
+          const visitor = text(payload.visitor);
+          if (visitor) {
+            let salt = this.ctx.storage.sql.exec<{ value: string }>("SELECT value FROM short_link_meta WHERE key = 'salt'").toArray()[0]?.value;
+            if (!salt) {
+              salt = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
+              this.ctx.storage.sql.exec("INSERT OR IGNORE INTO short_link_meta (key, value) VALUES ('salt', ?)", salt);
+            }
+            const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${salt}|${visitor}`));
+            const vhash = Array.from(new Uint8Array(digest).slice(0, 12), b => b.toString(16).padStart(2, '0')).join('');
+            this.ctx.storage.sql.exec('INSERT OR IGNORE INTO short_link_visitors (code, vhash) VALUES (?, ?)', text(record['短碼']).toLowerCase(), vhash);
+          }
           this.ctx.storage.sql.exec(
             `INSERT INTO short_link_clicks (code, clicks, last_at) VALUES (?, 1, ?)
              ON CONFLICT(code) DO UPDATE SET clicks = clicks + 1, last_at = excluded.last_at`,
@@ -5494,6 +5514,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const current = this.requireSession(session);
         const manager = isManager(database, current), me = canonicalAccount(current.account || current.user);
         const clicks = new Map(this.ctx.storage.sql.exec<{ code: string; clicks: number; last_at: string }>('SELECT code, clicks, last_at FROM short_link_clicks').toArray().map(r => [r.code, r]));
+        const uniques = new Map(this.ctx.storage.sql.exec<{ code: string; n: number }>('SELECT code, COUNT(*) AS n FROM short_link_visitors GROUP BY code').toArray().map(r => [r.code, Number(r.n)]));
         // 隱私：只看得到自己建立的，或「建立者目前的組別」與自己相同的短網址；管理者看全部。
         const groupOf = (account: unknown) => text(settingsRow(database, account)?.['組別']);
         const myGroup = groupOf(me);
@@ -5506,7 +5527,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const links = [...database.tables['短連結'].rows].filter(visible).reverse().map(row => ({
           group: groupOf(row['建立者帳號']), visibility: normalizeShortVisibility(row['可見範圍']),
           code: text(row['短碼']), url: text(row['原始網址']), name: text(row['名稱']), project: text(row['專案']), owner: text(row['建立者']),
-          clicks: Number(clicks.get(text(row['短碼']).toLowerCase())?.clicks || 0), lastClickAt: text(clicks.get(text(row['短碼']).toLowerCase())?.last_at),
+          clicks: Number(clicks.get(text(row['短碼']).toLowerCase())?.clicks || 0), uniqueClicks: uniques.get(text(row['短碼']).toLowerCase()) || 0, lastClickAt: text(clicks.get(text(row['短碼']).toLowerCase())?.last_at),
           createdAt: text(row['建立時間']), updatedAt: text(row['更新時間']),
           canEdit: manager || canonicalAccount(row['建立者帳號']) === me
         }));
@@ -6095,7 +6116,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         }
         return { result: { ok: true, action, deleted, skipped }, changed: deleted.length > 0, changedTables: deleted.length ? ['短連結'] : [] };
       });
-      if (result.ok) for (const code of (result.deleted as string[]) || []) this.ctx.storage.sql.exec('DELETE FROM short_link_clicks WHERE code = ?', code.toLowerCase());
+      if (result.ok) for (const code of (result.deleted as string[]) || []) { this.ctx.storage.sql.exec('DELETE FROM short_link_clicks WHERE code = ?', code.toLowerCase()); this.ctx.storage.sql.exec('DELETE FROM short_link_visitors WHERE code = ?', code.toLowerCase()); }
       return result;
     }
     if (action === 'createShortLinksBatch') {
@@ -6134,8 +6155,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const oldCode = text(payload.code).toLowerCase();
       const result = await this.mutate(action, current, draft => {
         const rows = draft.tables['短連結'].rows;
-        const find = (code: string) => rows.findIndex(row => text(row['短碼']).toLowerCase() === code.toLowerCase());
-        const toLink = (row: Row) => ({ code: text(row['短碼']), url: text(row['原始網址']), name: text(row['名稱']), project: text(row['專案']), visibility: normalizeShortVisibility(row['可見範圍']), clicks: Number(this.ctx.storage.sql.exec<{ clicks: number }>('SELECT clicks FROM short_link_clicks WHERE code = ?', text(row['短碼']).toLowerCase()).toArray()[0]?.clicks || 0), owner: text(row['建立者']), createdAt: text(row['建立時間']), updatedAt: text(row['更新時間']), canEdit: true });
+        const find = (code: string) => rows.findIndex(row => text(row['短碼']).toLowerCase() === code.normalize('NFC').toLowerCase());
+        const toLink = (row: Row) => ({ code: text(row['短碼']), url: text(row['原始網址']), name: text(row['名稱']), project: text(row['專案']), visibility: normalizeShortVisibility(row['可見範圍']), clicks: Number(this.ctx.storage.sql.exec<{ clicks: number }>('SELECT clicks FROM short_link_clicks WHERE code = ?', text(row['短碼']).toLowerCase()).toArray()[0]?.clicks || 0), uniqueClicks: Number(this.ctx.storage.sql.exec<{ n: number }>('SELECT COUNT(*) AS n FROM short_link_visitors WHERE code = ?', text(row['短碼']).toLowerCase()).toArray()[0]?.n || 0), owner: text(row['建立者']), createdAt: text(row['建立時間']), updatedAt: text(row['更新時間']), canEdit: true });
         const time = nowTaipei();
         if (action === 'createShortLink') {
           const url = text(payload.url);
@@ -6174,11 +6195,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       });
       // 點擊數跟著短碼走：改短碼就搬過去，刪除就清掉。
       if (result.ok) {
-        if (action === 'deleteShortLink') this.ctx.storage.sql.exec('DELETE FROM short_link_clicks WHERE code = ?', oldCode);
+        if (action === 'deleteShortLink') { this.ctx.storage.sql.exec('DELETE FROM short_link_clicks WHERE code = ?', oldCode); this.ctx.storage.sql.exec('DELETE FROM short_link_visitors WHERE code = ?', oldCode); }
         else if (action === 'updateShortLink') {
           const next = text((result.link as Row | undefined)?.code).toLowerCase();
           if (next && next !== oldCode) {
             this.ctx.storage.sql.exec('DELETE FROM short_link_clicks WHERE code = ?', next);
+            this.ctx.storage.sql.exec('DELETE FROM short_link_visitors WHERE code = ?', next);
+            this.ctx.storage.sql.exec('UPDATE short_link_visitors SET code = ? WHERE code = ?', next, oldCode);
             this.ctx.storage.sql.exec('UPDATE short_link_clicks SET code = ? WHERE code = ?', next, oldCode);
           }
         }

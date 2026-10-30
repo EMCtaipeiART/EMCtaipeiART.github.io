@@ -83,9 +83,23 @@ function queryPayload(url: URL): ApiPayload {
 
 async function dispatchAction(request: Request, env: Env, action: string, payload: ApiPayload): Promise<ApiResult> {
   const token = tokenFrom(request);
+  // 不重複點擊：訪客指紋＝IP＋瀏覽器；只在計點擊時帶給後端，由後端加鹽雜湊後存（不存原文）。
+  if (action === 'resolveShortLink') {
+    if (payload.count) payload.visitor = `${text(request.headers.get('CF-Connecting-IP'))}|${text(request.headers.get('User-Agent'))}`;
+    else delete payload.visitor;
+  }
   if (token && !payload.editorToken && !payload.token) payload.editorToken = token;
   const stub = env.DATABASE_COORDINATOR.getByName('primary', { locationHint: 'apac' }) as DurableObjectStub<DatabaseCoordinator>;
   return stub.handle(action, payload, contextFor(request));
+}
+
+// 路徑上的短碼（可能是百分比編碼的中文）：單一段、英文數字中文，2～32 個字；不是就回空字串。
+function shortCodeFromPath(pathname: string): string {
+  const raw = pathname.replace(/^\/+|\/+$/g, '');
+  if (!raw || raw.includes('/')) return '';
+  let decoded: string;
+  try { decoded = decodeURIComponent(raw).normalize('NFC'); } catch { return ''; }
+  return /^[A-Za-z0-9\p{Script=Han}]{2,32}$/u.test(decoded) ? decoded : '';
 }
 
 async function handleApi(request: Request, env: Env): Promise<Response> {
@@ -152,9 +166,9 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
     return new Response(bytes, { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=31536000, immutable', 'Access-Control-Allow-Origin': '*' } });
   }
 
-  const shortMatch = path.match(/^\/([A-Za-z0-9]{3,32})$/);
-  if (request.method === 'GET' && shortMatch) {
-    const result = await dispatchAction(request, env, 'resolveShortLink', { code: shortMatch[1], count: true });
+  const shortCode = shortCodeFromPath(path);
+  if (request.method === 'GET' && shortCode) {
+    const result = await dispatchAction(request, env, 'resolveShortLink', { code: shortCode, count: true });
     if (!result.ok || !text(result.url)) {
       if (onShortHost) return new Response('找不到這個短網址', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } });
       return jsonResponse(request, env, result, 404);
@@ -178,10 +192,10 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
 const SITE_HOSTS = new Set(['emc-art.com', 'www.emc-art.com']);
 async function handleSiteHost(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
-  const match = (request.method === 'GET' || request.method === 'HEAD') ? url.pathname.match(/^\/([A-Za-z0-9]{3,32})\/?$/) : null;
-  if (match) {
+  const code = (request.method === 'GET' || request.method === 'HEAD') ? shortCodeFromPath(url.pathname) : '';
+  if (code) {
     try {
-      const result = await dispatchAction(request, env, 'resolveShortLink', { code: match[1], count: request.method === 'GET' });
+      const result = await dispatchAction(request, env, 'resolveShortLink', { code, count: request.method === 'GET' });
       if (result.ok && text(result.url)) return new Response(null, { status: 302, headers: { Location: text(result.url), 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } });
     } catch (error) {
       console.error(JSON.stringify({ event: 'short-host-error', message: error instanceof Error ? error.message : String(error) }));

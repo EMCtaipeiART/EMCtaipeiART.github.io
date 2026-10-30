@@ -1538,3 +1538,8 @@ body.arena-on .arena-frame{border-radius:0;box-shadow:none;background:transparen
 .issue-reply{margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--panel-soft,rgba(120,120,140,.1));font-size:13px;line-height:1.55;white-space:pre-wrap}
 .issue-reply.is-edit{display:flex;flex-direction:column;gap:6px;align-items:flex-start;white-space:normal}
 .issue-reply.is-edit textarea{width:100%;min-height:56px;padding:8px 10px;resize:vertical}
+
+    .link-clicks{min-width:78px}
+    .link-uniq{display:grid;justify-items:center;margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);font-style:normal;width:100%;line-height:1.1}
+    .link-uniq b{font-size:15px;font-weight:900;color:#4338ca}.link-uniq span{color:var(--muted);font-size:11px;font-weight:700}
+    @media(max-width:640px){.link-uniq{margin:0 0 0 12px;padding:0 0 0 12px;border-top:0;border-left:1px dashed var(--line);grid-auto-flow:column;gap:6px;align-items:baseline;width:auto}}

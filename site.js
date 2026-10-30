@@ -3581,7 +3581,9 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     const links={list:[],loading:false,loaded:false,error:'',editing:'',editDraft:null,project:'',selected:new Set(),creating:false,saving:false,batch:{open:false,text:'',p:'',np:'',v:'group',busy:false,result:null}};
     /* 短網址用主站網域 emc-art.com/<短碼>：DNS 走 Cloudflare 代理時由 Worker 直接 302 並計點擊，否則由 404.html 轉址；go.emc-art.com 舊連結仍有效 */
     const SHORT_BASE=()=>'https://emc-art.com/';
-    const SHORT_CODE_RE=/^[A-Za-z0-9]{3,32}$/;
+    const SHORT_CODE_RE=/^(?:[A-Za-z0-9\u3400-\u9fff\uf900-\ufaff]{2,32})$/;
+    const validShortCode=c=>SHORT_CODE_RE.test(c)&&(/[\u3400-\u9fff\uf900-\ufaff]/.test(c)||c.length>=3);
+    const shortFull=c=>SHORT_BASE()+encodeURIComponent(c);   /* 複製／連結用百分比編碼（中文短碼在各種通訊軟體才不會被截斷）；畫面上顯示原字 */
     async function loadLinks(force){
       if(links.loading||(links.loaded&&!force))return;
       links.loading=true;links.error='';if(state.view==='links')renderLinksPage(true);
@@ -3611,15 +3613,15 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${paths[kind]||''}</svg>`;
     }
     function linkCodeField(value,editing){
-      return `<label class="field link-wide"><span class="label">${editing?'短碼':'自訂短碼'} <small>（英文、數字 3～32 碼${editing?'':'；選填'}）</small></span><span class="link-code-row"><span class="link-base">${esc(SHORT_BASE())}</span><input class="input" name="code" maxlength="32" pattern="[A-Za-z0-9]{3,32}"${editing?' required':''} autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="${editing?'summer2026':'留空自動產生'}" value="${esc(value)}"></span></label>`;
+      return `<label class="field link-wide"><span class="label">${editing?'短碼':'自訂短碼'} <small>（英文、數字、中文；英數至少 3 碼，中文至少 2 字${editing?'':'；選填'}）</small></span><span class="link-code-row"><span class="link-base">${esc(SHORT_BASE())}</span><input class="input" name="code" maxlength="32" pattern="[A-Za-z0-9\u3400-\u9fff\uf900-\ufaff]{2,32}"${editing?' required':''} autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="${editing?'夏季活動2026':'留空自動產生，例如：夏季活動2026'}" value="${esc(value)}"></span></label>`;
     }
     function linkCardHtml(l){
-      const full=SHORT_BASE()+l.code;
+      const full=SHORT_BASE()+l.code,fullHref=shortFull(l.code);
       if(links.editing===l.code){
         const draft=links.editDraft&&links.editDraft.key===l.code?links.editDraft:{n:l.name||'',p:l.project?'project:'+l.project:'',np:'',v:linkVisCode(l.visibility),c:l.code,u:l.url};
         return `<form class="link-item link-edit" data-link-edit="${esc(l.code)}"><div class="link-section-head link-wide"><h3>編輯短網址</h3><span class="link-hint">儲存後立即更新</span></div><label class="field"><span class="label">名稱</span><input class="input" name="name" maxlength="60" value="${esc(draft.n)}" placeholder="例如：夏季活動素材"></label>${linkProjectField(draft,'linkEditProject')}${linkVisibilityField(draft,'linkEditVisibility')}${linkCodeField(draft.c,true)}<label class="field link-wide"><span class="label">原始網址 <b>*</b></span><input class="input" name="url" type="url" value="${esc(draft.u)}" required></label><div class="link-form-actions link-wide"><button type="button" class="btn link-btn" data-link-cancel>取消</button><button type="submit" class="btn link-btn link-btn-primary"${links.saving?' disabled':''}>${links.saving?'儲存中…':'儲存變更'}</button></div></form>`;
       }
-      return `<article class="link-item"><div class="link-main"><div class="link-card-heading">${l.canEdit?`<label class="link-check" title="選取"><input type="checkbox" data-link-sel="${esc(l.code)}"${links.selected.has(l.code)?' checked':''} aria-label="選取 ${esc(l.name||l.code)}"></label>`:''}<h3 class="link-name">${esc(l.name||l.code)}</h3><span class="link-tag${l.project?'':' link-tag-none'}">${esc(l.project||'未分類')}</span><span class="link-tag link-tag-vis link-vis-${linkVisCode(l.visibility)}">${linkVisLabel(linkVisCode(l.visibility))}</span></div><a class="link-short" href="${esc(full)}" target="_blank" rel="noopener">${esc(full)}</a><div class="link-meta link-destination" title="${esc(l.url)}">原始網址 · ${esc(l.url)}</div><div class="link-meta">${esc(l.owner||'')}${l.group?` ・ ${esc(l.group)}`:''}${l.owner?' · ':''}${l.updatedAt?'更新於 ':'建立於 '}${esc(l.updatedAt||l.createdAt||'')}</div></div><div class="link-clicks" title="${l.lastClickAt?`最後點擊：${esc(l.lastClickAt)}`:'尚無點擊'}"><b>${Number(l.clicks||0).toLocaleString('zh-TW')}</b><span>累計點擊</span></div><div class="link-actions"><button type="button" class="btn link-btn link-btn-copy" data-link-copy="${esc(l.code)}">${linkIcon('copy')}複製</button>${l.canEdit?`<button type="button" class="btn link-btn link-btn-edit" data-link-editbtn="${esc(l.code)}">${linkIcon('edit')}編輯</button><button type="button" class="btn link-btn link-btn-delete" data-link-del="${esc(l.code)}">${linkIcon('delete')}刪除</button>`:''}</div></article>`;
+      return `<article class="link-item"><div class="link-main"><div class="link-card-heading">${l.canEdit?`<label class="link-check" title="選取"><input type="checkbox" data-link-sel="${esc(l.code)}"${links.selected.has(l.code)?' checked':''} aria-label="選取 ${esc(l.name||l.code)}"></label>`:''}<h3 class="link-name">${esc(l.name||l.code)}</h3><span class="link-tag${l.project?'':' link-tag-none'}">${esc(l.project||'未分類')}</span><span class="link-tag link-tag-vis link-vis-${linkVisCode(l.visibility)}">${linkVisLabel(linkVisCode(l.visibility))}</span></div><a class="link-short" href="${esc(fullHref)}" target="_blank" rel="noopener">${esc(full)}</a><div class="link-meta link-destination" title="${esc(l.url)}">原始網址 · ${esc(l.url)}</div><div class="link-meta">${esc(l.owner||'')}${l.group?` ・ ${esc(l.group)}`:''}${l.owner?' · ':''}${l.updatedAt?'更新於 ':'建立於 '}${esc(l.updatedAt||l.createdAt||'')}</div></div><div class="link-clicks" title="${l.lastClickAt?`最後點擊：${esc(l.lastClickAt)}`:'尚無點擊'}"><b>${Number(l.clicks||0).toLocaleString('zh-TW')}</b><span>累計點擊</span><i class="link-uniq" title="同一個訪客（IP＋瀏覽器）只算一次；上線前的舊點擊沒有訪客紀錄"><b>${Number(l.uniqueClicks||0).toLocaleString('zh-TW')}</b><span>不重複點擊</span></i></div><div class="link-actions"><button type="button" class="btn link-btn link-btn-copy" data-link-copy="${esc(l.code)}">${linkIcon('copy')}複製</button>${l.canEdit?`<button type="button" class="btn link-btn link-btn-edit" data-link-editbtn="${esc(l.code)}">${linkIcon('edit')}編輯</button><button type="button" class="btn link-btn link-btn-delete" data-link-del="${esc(l.code)}">${linkIcon('delete')}刪除</button>`:''}</div></article>`;
     }
     const linkVisible=()=>links.project?links.list.filter(l=>(links.project==='__none'?!l.project:l.project===links.project)):links.list;
     const linkEditable=()=>linkVisible().filter(l=>l.canEdit);
@@ -3644,14 +3646,14 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const done={};
       return shown.map(l=>{const k=gk(l);if(!l.createdAt||cnt[k]<2)return linkCardHtml(l);if(done[k])return '';done[k]=1;return linkGroupHtml(k,shown.filter(x=>gk(x)===k))}).join('');
     }
-    const linkGroupLine=l=>(l.name?l.name+' ':'')+SHORT_BASE()+l.code;
+    const linkGroupLine=l=>(l.name?l.name+' ':'')+shortFull(l.code);
     function linkGroupHtml(key,items){
       const open=!(links.groupClosed&&links.groupClosed.has(key)),head=items[0],canEdit=items.every(l=>l.canEdit);
       if(links.groupEdit===key){
         const text=links.groupDraft!=null?links.groupDraft:items.map(l=>(l.name?l.name+' ':'')+l.url).join(String.fromCharCode(10));
         return `<form class="link-item link-group link-edit" data-group-edit="${esc(key)}"><div class="link-section-head link-wide"><h3>編輯整包（${items.length} 筆）</h3><span class="link-hint">每行對應一筆，格式「名稱 原始網址」，行數需相同</span></div><textarea class="input link-batch-text link-wide" name="gtext" rows="${Math.min(items.length+2,16)}" spellcheck="false">${esc(text)}</textarea><div class="link-form-actions link-wide"><button type="submit" class="btn primary link-btn">儲存整包</button><button type="button" class="btn link-btn" data-group-cancel>取消</button></div></form>`;
       }
-      return `<article class="link-item link-group" data-group="${esc(key)}"><div class="link-main"><div class="link-card-heading"><h3 class="link-name">批次建立 ${items.length} 筆</h3><span class="link-tag">${esc(head.project||'未分類')}</span><span class="link-tag link-tag-vis link-vis-${linkVisCode(head.visibility)}">${linkVisLabel(linkVisCode(head.visibility))}</span></div><div class="link-meta">${esc(head.owner||'')} · ${esc(head.createdAt)}</div>${open?`<ol class="link-batch-list">${items.map(l=>`<li><b><a href="${esc(SHORT_BASE()+l.code)}" target="_blank" rel="noopener">${esc(SHORT_BASE()+l.code)}</a></b><span>${esc(l.name||'')} → ${esc(l.url)}　<em>${Number(l.clicks||0).toLocaleString('zh-TW')} 次點擊</em></span></li>`).join('')}</ol>`:''}</div><div class="link-clicks" title="${items.length} 筆合計"><b>${items.reduce((t,l)=>t+Number(l.clicks||0),0).toLocaleString('zh-TW')}</b><span>累計點擊</span></div><div class="link-actions"><button type="button" class="btn link-btn link-btn-copy" data-group-copy="${esc(key)}">複製整包</button><button type="button" class="btn link-btn" data-group-toggle="${esc(key)}">${open?'收合':'展開'}</button>${canEdit?`<button type="button" class="btn link-btn" data-group-editbtn="${esc(key)}">編輯整包</button><button type="button" class="btn link-btn" data-group-del="${esc(key)}">刪除整包</button>`:''}</div></article>`;
+      return `<article class="link-item link-group" data-group="${esc(key)}"><div class="link-main"><div class="link-card-heading"><h3 class="link-name">批次建立 ${items.length} 筆</h3><span class="link-tag">${esc(head.project||'未分類')}</span><span class="link-tag link-tag-vis link-vis-${linkVisCode(head.visibility)}">${linkVisLabel(linkVisCode(head.visibility))}</span></div><div class="link-meta">${esc(head.owner||'')} · ${esc(head.createdAt)}</div>${open?`<ol class="link-batch-list">${items.map(l=>`<li><b><a href="${esc(SHORT_BASE()+l.code)}" target="_blank" rel="noopener">${esc(SHORT_BASE()+l.code)}</a></b><span>${esc(l.name||'')} → ${esc(l.url)}　<em>${Number(l.clicks||0).toLocaleString('zh-TW')} 次點擊</em></span></li>`).join('')}</ol>`:''}</div><div class="link-clicks" title="${items.length} 筆合計"><b>${items.reduce((t,l)=>t+Number(l.clicks||0),0).toLocaleString('zh-TW')}</b><span>累計點擊</span><i class="link-uniq" title="各筆不重複點擊的合計"><b>${items.reduce((t,l)=>t+Number(l.uniqueClicks||0),0).toLocaleString('zh-TW')}</b><span>不重複點擊</span></i></div><div class="link-actions"><button type="button" class="btn link-btn link-btn-copy" data-group-copy="${esc(key)}">複製整包</button><button type="button" class="btn link-btn" data-group-toggle="${esc(key)}">${open?'收合':'展開'}</button>${canEdit?`<button type="button" class="btn link-btn" data-group-editbtn="${esc(key)}">編輯整包</button><button type="button" class="btn link-btn" data-group-del="${esc(key)}">刪除整包</button>`:''}</div></article>`;
     }
     const linkGroupItems=key=>links.list.filter(l=>l.createdAt&&(l.owner||'')+'|'+l.createdAt===key);
     async function saveLinkGroup(form){
@@ -3698,14 +3700,14 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     async function copyText(t){try{await navigator.clipboard.writeText(t)}catch(err){const i=document.createElement('input');i.value=t;document.body.appendChild(i);i.select();document.execCommand('copy');i.remove()}}
     async function submitLink(form){
       const url=form.elements.url.value.trim(),name=form.elements.name.value.trim(),project=linkProjectValue(form),code=form.elements.code.value.trim();
-      if(code&&!SHORT_CODE_RE.test(code)){toast('短碼只能使用英文與數字，長度 3～32 個字',true);return}
+      if(code&&!validShortCode(code)){toast('短碼只能使用英文、數字與中文；英數至少 3 碼（含中文至少 2 個字），最多 32 個字',true);return}
       if(links.creating)return;
       if(form.elements.project.value==='new'&&!project){toast('請輸入新分類名稱',true);form.elements.newProject.focus();return}
       links.creating=true;const b=$('linkSubmit');b.disabled=true;b.textContent='建立中…';
       try{
         const data=await api('createShortLink',{url,name,code,project,visibility:form.elements.visibility.value});
         links.list=[data.link,...links.list.filter(x=>x.code!==data.link.code)];
-        await copyText(SHORT_BASE()+data.link.code);links.creating=false;toast('短網址已建立並複製到剪貼簿');renderLinksPage();
+        await copyText(shortFull(data.link.code));links.creating=false;toast('短網址已建立並複製到剪貼簿');renderLinksPage();
       }catch(err){links.creating=false;toast(`建立失敗：${err.message}`,true);if(state.view==='links')renderLinksPage(true)}
     }
     async function submitBatch(form){
@@ -3721,7 +3723,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         links.list=[...data.created,...links.list];
         const bad=new Set(data.failed.map(f=>f.index));
         /* 複製內容＝原本那一行，只把網址換成短網址，前後文字（名稱、備註）原樣保留 */
-        const lines=items.filter((_,i)=>!bad.has(i)).map((it,i)=>`${it.before}${SHORT_BASE()}${data.created[i].code}${it.after}`.trim());
+        const lines=items.filter((_,i)=>!bad.has(i)).map((it,i)=>`${it.before}${shortFull(data.created[i].code)}${it.after}`.trim());
         links.batch.result={created:data.created,failed:data.failed,lines};
         if(!data.failed.length)links.batch.text='';
         else links.batch.text=data.failed.map(f=>items[f.index]).map(i=>`${i.name?i.name+' ':''}${i.url}`).join('\n');
@@ -3734,7 +3736,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(links.saving)return;
       const old=form.dataset.linkEdit,code=form.elements.code.value.trim(),project=linkProjectValue(form);
       if(form.elements.project.value==='new'&&!project){toast('請輸入新分類名稱',true);form.elements.newProject.focus();return}
-      if(!SHORT_CODE_RE.test(code)){toast('短碼只能使用英文與數字，長度 3～32 個字',true);return}
+      if(!validShortCode(code)){toast('短碼只能使用英文、數字與中文；英數至少 3 碼（含中文至少 2 個字），最多 32 個字',true);return}
       links.saving=true;const b=form.querySelector('[type=submit]');b.disabled=true;b.textContent='儲存中…';
       try{
         const data=await api('updateShortLink',{code:old,newCode:code,name:form.elements.name.value.trim(),project,visibility:form.elements.visibility.value,url:form.elements.url.value.trim()});
@@ -3777,9 +3779,9 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(t.dataset.groupEditbtn){links.groupEdit=t.dataset.groupEditbtn;links.groupDraft=null;renderLinksPage(true);return}
       if(t.hasAttribute('data-group-cancel')){links.groupEdit='';links.groupDraft=null;renderLinksPage(true);return}
       if(t.dataset.groupDel){const it=linkGroupItems(t.dataset.groupDel);deleteLinks(it.map(l=>l.code),`這一整包 ${it.length} 筆`);return}
-      if(t.hasAttribute('data-batch-copy')){const r=links.batch.result;if(r)copyText((r.lines||r.created.map(l=>SHORT_BASE()+l.code)).join('\n')).then(()=>toast('已複製全部內容（含名稱與短網址）'));return}
+      if(t.hasAttribute('data-batch-copy')){const r=links.batch.result;if(r)copyText((r.lines||r.created.map(l=>shortFull(l.code))).join('\n')).then(()=>toast('已複製全部內容（含名稱與短網址）'));return}
       if(t.hasAttribute('data-batch-clear')){links.batch.result=null;renderLinksPage(true);return}
-      if(t.dataset.linkCopy){copyText(SHORT_BASE()+t.dataset.linkCopy).then(()=>toast('已複製短網址'))}
+      if(t.dataset.linkCopy){copyText(shortFull(t.dataset.linkCopy)).then(()=>toast('已複製短網址'))}
       else if(t.dataset.linkEditbtn!==undefined){links.editing=t.dataset.linkEditbtn;renderLinksPage(true)}
       else if(t.dataset.linkDel){deleteLink(t.dataset.linkDel)}
       else if(t.hasAttribute('data-link-cancel')){links.editing='';renderLinksPage(true)}

@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex">
   <meta name="app-version" content="20261006-short-link-removed-1">
-  <script>if(/^\/(?:[A-Za-z0-9]{3,32}|[a-d]\/\d{8})\/?$/i.test(location.pathname))document.documentElement.style.visibility='hidden'</script>
+  <script>if(/^\/(?:[A-Za-z0-9%]{2,200}|[a-d]\/\d{8})\/?$/i.test(location.pathname))document.documentElement.style.visibility='hidden'</script>
   <title>EMC 連結</title>
   <style>
     :root{font-family:Arial,"Noto Sans TC",sans-serif;color:#1d2924;background:#f3f6f4;letter-spacing:0}
@@ -59,7 +59,9 @@
     (() => {
       const apiUrl = 'https://machi-design-api.machi-chen.workers.dev/api';
       const legacyMatch = location.pathname.match(/^\/([a-d])\/(\d{8})\/?$/i);
-      const shortMatch = location.pathname.match(/^\/([A-Za-z0-9]{3,32})\/?$/);
+      let shortCode = '';
+      try { const raw = decodeURIComponent(location.pathname.replace(/^\/+|\/+$/g, '')).normalize('NFC'); if (/^[A-Za-z0-9\u3400-\u9fff\uf900-\ufaff]{2,32}$/.test(raw)) shortCode = raw; } catch (e) {}
+      const shortMatch = shortCode ? [shortCode, shortCode] : null;
       if (!legacyMatch && !shortMatch) return;
       const request = legacyMatch
         ? { action: 'resolveSupplementLink', id: legacyMatch[2], slot: legacyMatch[1].toLowerCase() }

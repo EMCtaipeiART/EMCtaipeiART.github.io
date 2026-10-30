@@ -627,8 +627,9 @@ export function findReelIndex(rows: Row[], payload: ApiPayload): number {
 export const SHORT_CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 const SHORT_CODE_RESERVED = new Set(['api', 'index', 'legacy', 'v5', 'assets', 'data', 'images', 'upload', 'tools', 'scripts', 'card', 'avatar', 'health', 'ws', 'admin', 'login', 'site', 'robots', 'favicon', 'sitemap']);
 export function normalizeShortCode(value: unknown): string {
-  const code = text(value);
-  if (!/^[A-Za-z0-9]{3,32}$/.test(code)) throw new Error('短碼只能使用英文與數字，長度 3～32 個字');
+  const code = text(value).normalize('NFC');
+  // 英文、數字、中文（漢字）；純英數至少 3 碼，含中文至少 2 個字，最多 32 個字。
+  if (!/^[A-Za-z0-9\p{Script=Han}]{2,32}$/u.test(code) || (!/\p{Script=Han}/u.test(code) && code.length < 3)) throw new Error('短碼只能使用英文、數字與中文，英數至少 3 碼（含中文至少 2 個字），最多 32 個字');
   if (SHORT_CODE_RESERVED.has(code.toLowerCase())) throw new Error('這個短碼是系統保留字，請換一個');
   return code;
 }

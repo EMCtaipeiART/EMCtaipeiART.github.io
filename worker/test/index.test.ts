@@ -505,9 +505,19 @@ describe('Machi Design API Worker', () => {
     expect(bulkDel).toMatchObject({ ok: true, skipped: [] });
     expect(await api({ action: 'resolveShortLink', code: 'Batch2' })).toMatchObject({ ok: false });
     expect(await api({ action: 'deleteShortLinks', codes: [] }, tester)).toMatchObject({ ok: false });
+    // 中文短碼 + 不重複點擊
+    expect(await api({ action: 'createShortLink', url: 'https://example.com/zh', code: '夏季活動' }, tester)).toMatchObject({ ok: true, link: { code: '夏季活動' } });
+    expect(await api({ action: 'createShortLink', url: 'https://example.com/zh', code: '夏' }, tester)).toMatchObject({ ok: false });
+    expect(await api({ action: 'createShortLink', url: 'https://example.com/zh', code: '夏季-活動' }, tester)).toMatchObject({ ok: false });
+    for (const ua of ['UA-A', 'UA-A', 'UA-B']) {
+      const r = await SELF.fetch('https://worker.test/' + encodeURIComponent('夏季活動'), { redirect: 'manual', headers: { 'User-Agent': ua, 'CF-Connecting-IP': '1.2.3.4' } });
+      expect(r.status).toBe(302);
+    }
+    const zh = ((await api({ action: 'listShortLinks' }, tester)).links as Array<{ code: string; clicks: number; uniqueClicks: number }>).find(l => l.code === '夏季活動');
+    expect(zh).toMatchObject({ clicks: 3, uniqueClicks: 2 });
     // 隱私：沒有組別相同的人，別人（非管理者）看不到；管理者看得到全部。
     const adminList = await api({ action: 'listShortLinks' }, String((await api({ action: 'login', account: 'machi.chen@emctaipei.com', password: 'test-admin-password' })).token));
-    expect((adminList.links as unknown[]).length).toBe(3);
+    expect((adminList.links as unknown[]).length).toBe(4);
     const other = String((await api({ action: 'login', account: 'machi.chen@emctaipei.com', password: 'test-admin-password' })).token);
     expect(await api({ action: 'deleteShortLink', code: 'Autumn2026' }, other)).toMatchObject({ ok: true });
     // 另一個沒有組別、非建立者的帳號：看不到管理者建立的短網址
