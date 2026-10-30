@@ -716,18 +716,18 @@
     /** 專案名稱前的小標籤：新專案（填單時選了「這是新專案」）、急件（開始～結束的上班天數少於 3 天；已完成／暫停中不再提示） */
     function projFlags(row){
       const st=String(row['狀態']||'').trim(),isNew=String(row['新專案']||'').trim()!=='',a=parseDay(row['開始日期']),b=parseDay(row['結束日期']);
-      return {isNew,urgent:!Number.isNaN(a)&&!Number.isNaN(b)&&b>=a&&!['已完成','暫停中'].includes(st)&&rangeDays(a,b)<3};
+      return {isNew,urgent:!Number.isNaN(a)&&!Number.isNaN(b)&&b>=a&&!['已完成','暫停中'].includes(st)&&rangeDays(a,b)<3,urgent2:!Number.isNaN(a)&&!Number.isNaN(b)&&b>=a&&!['已完成','暫停中'].includes(st)&&rangeDays(a,b)<=1};
     }
     /** 信件標題裡的標籤（排在案件編號後面、客戶別前面）：✨新專案、🔥急件；多筆合併時只要有一筆符合就帶。 */
     function mailSubjectTags(rows){
       const list=(Array.isArray(rows)?rows:[rows]).map(projFlags),t=[];
       if(list.some(f=>f.isNew))t.push('✨新專案');
-      if(list.some(f=>f.urgent))t.push('🔥急件');
+      if(list.some(f=>f.urgent2))t.push('🔥🔥急急件');else if(list.some(f=>f.urgent))t.push('🔥急件');
       return t.length?t.join(' ')+'｜':'';
     }
     function projTagsHtml(row){
-      const {isNew,urgent}=projFlags(row);
-      return (isNew?'<span class="pj-tag is-new" title="新專案（設計負責人依輪替順位指定）">新專案✨</span>':'')+(urgent?'<span class="pj-tag is-urgent" title="工作天少於 3 天">急件🔥</span>':'');
+      const {isNew,urgent,urgent2}=projFlags(row);
+      return (isNew?'<span class="pj-tag is-new" title="新專案（設計負責人依輪替順位指定）">新專案✨</span>':'')+(urgent2?'<span class="pj-tag is-urgent" title="工作天不到 1 天">急急件🔥🔥</span>':urgent?'<span class="pj-tag is-urgent" title="工作天少於 3 天">急件🔥</span>':'');
     }
     function cardHtml(row,inColumn){
       const s=schedule(row),st=statusOf(row),id=idKey(row),qty=String(row['數量']||'').trim(),status=String(row['狀態']||'').trim(),isDoing=['執行中','修改中'].includes(status);
@@ -1748,7 +1748,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       '設計簡報說明':r.supp.briefNote,'設計簡報連結':r.supp.briefUrl,'客戶素材說明':r.supp.assetNote,'客戶素材連結':r.supp.assetUrl,'參考範例說明':r.supp.referenceNote,'參考範例連結':r.supp.referenceUrl,'其他說明':r.supp.otherNote,'其他連結':r.supp.otherUrl});
     const FORM_HEADERS=['客戶別','專案名稱','專案負責人','設計類型','階段','數量','開始日期','結束日期','設計負責人','使用平台','設計簡報說明','設計簡報連結','客戶素材說明','客戶素材連結','參考範例說明','參考範例連結','其他說明','其他連結'];
     /** Worker 的 add／batchAdd／update 吃前台的欄位 key（跟現行系統 formWriteRow 一致）。 */
-    const payloadRow=r=>({...(rangeDays(r.start,r.end)>0&&rangeDays(r.start,r.end)<3?{details:'急件'}:{}),newProject:Boolean(r.newProj),client:r.client,project:r.project,owner:ownerLocked()?ownerSelf():r.owner,type:r.type,stage:r.stage,qty:r.qty,start:ymd(r.start),end:ymd(r.end),designer:r.designer,expectedDesigner:r.rot,replacement:r.sub||'',reason:r.sub?String(r.subReason||'').trim():'',platforms:platformText(r),...r.supp});
+    const payloadRow=r=>({...(rangeDays(r.start,r.end)>0&&rangeDays(r.start,r.end)<3?{details:rangeDays(r.start,r.end)<=1?'急急件':'急件'}:{}),newProject:Boolean(r.newProj),client:r.client,project:r.project,owner:ownerLocked()?ownerSelf():r.owner,type:r.type,stage:r.stage,qty:r.qty,start:ymd(r.start),end:ymd(r.end),designer:r.designer,expectedDesigner:r.rot,replacement:r.sub||'',reason:r.sub?String(r.subReason||'').trim():'',platforms:platformText(r),...r.supp});
     async function submitForm(opts={}){
       readRowsSafe();const f=state.form;if(!f||f.busy)return;
       applyRotationPlan(f);
@@ -2263,7 +2263,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       return hit?hit.nickname:raw;
     }
     function designerReplyBody(row,dr){
-      const t=st2.templates[st2.tplDefault],details=String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(x=>x&&x!=='急件').join('、'),name=greetingName(row['專案負責人']);
+      const t=st2.templates[st2.tplDefault],details=String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(x=>x&&x!=='急件'&&x!=='急急件').join('、'),name=greetingName(row['專案負責人']);
       let html=t?t.html.replace(/\{收件人名\}/g,esc(name)).replace(/\{項目細節\}/g,esc(details)):'Hi '+esc(name)+',<br><br>附上社群貼文內容，<br>再煩請查收，謝謝。';
       return html+'<br><br>'+drPlaceholders(dr);
     }
@@ -2273,7 +2273,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(mode==='designer'&&!opts){openDrChooser(id);return}
       if(!st2.loaded&&loggedIn()){try{await loadUserSettings()}catch(err){}for(let i=0;i<30&&st2.loading;i++)await new Promise(r=>setTimeout(r,100))}
       const dr=mode==='designer'?{round:opts.round,skip:Boolean(opts.skip),folders:opts.folders||[],fileFolders:{},pending:true,baseUrls:new Set(((state.mods.get(id)||[]).find(x=>(+x['修改次數']||0)===opts.round)?imageList((state.mods.get(id)||[]).find(x=>(+x['修改次數']||0)===opts.round)):[]).map(i=>i.url))}:null;
-      const tplT=st2.templates[st2.tplDefault],tplBody=nm=>tplT?tplT.html.replace(/\{收件人名\}/g,esc(nm)).replace(/\{項目細節\}/g,esc(String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(x=>x&&x!=='急件').join('、'))):'',body=mode==='modification'?(tplBody(greetingName(row['設計負責人']))||'Hi '+esc(greetingName(row['設計負責人']))+',<br><br>'):mode==='designer'?designerReplyBody(row,dr):(tplBody(greetingName(row['專案負責人']))||'<br>');
+      const tplT=st2.templates[st2.tplDefault],tplBody=nm=>tplT?tplT.html.replace(/\{收件人名\}/g,esc(nm)).replace(/\{項目細節\}/g,esc(String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(x=>x&&x!=='急件'&&x!=='急急件').join('、'))):'',body=mode==='modification'?(tplBody(greetingName(row['設計負責人']))||'Hi '+esc(greetingName(row['設計負責人']))+',<br><br>'):mode==='designer'?designerReplyBody(row,dr):(tplBody(greetingName(row['專案負責人']))||'<br>');
       const d={id,row,to:'',cc:'',subject:'Re: 【'+id+'】'+row['客戶別']+'_'+row['專案名稱'],body,sent:false,reply:true,mode,existing:true,dr};
       state.mail={drafts:[d],index:0,sending:false,sentCount:0,gmailChecked:false};state.form=null;if(dr)drLive.set(`${id}|${dr.round}`,d);show('mail');loadGmailContext();loadThread(id,true);
     }
@@ -2869,7 +2869,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       closePicker();const m=state.mail,d=m.drafts[m.index];
       if(kind==='signature'){const p=st2.presets[i];if(p)insertSignatureHtml(p.html);return}
       const t=st2.templates[i];if(!t)return;
-      const first=document.querySelector('[data-chip-field="to"] [data-entry]')?.dataset.entry||'',nm=greetingName((entryLabel(first)||'').replace(/@.*$/,'')||'您好'),details=String(d.row['項目細節']||'').split(/\s*[,，、]\s*/).filter(x=>x&&x!=='急件').join('、');
+      const first=document.querySelector('[data-chip-field="to"] [data-entry]')?.dataset.entry||'',nm=greetingName((entryLabel(first)||'').replace(/@.*$/,'')||'您好'),details=String(d.row['項目細節']||'').split(/\s*[,，、]\s*/).filter(x=>x&&x!=='急件'&&x!=='急急件').join('、');
       const html=t.html.replace(/\{收件人名\}/g,esc(nm)).replace(/\{項目細節\}/g,esc(details));
       restoreMailRange();document.execCommand('insertHTML',false,html);saveMailRange();toast('已插入信件範本');
     }
@@ -4232,7 +4232,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(nav){state.home=nav;state.form=null;state.mail=null;state.editing=false;closeCal();state.hl=null;show(nav);if(nav==='projects')openNotify();return}
       const dm=t.closest('[data-dm]')?.dataset.dm;
       if(dm==='cancel'){closeDetailModal();return}
-      if(dm==='ok'){const pm=state.pendingMove;if(pm){const picked=[...document.querySelectorAll('#dmList input:checked')].map(i=>i.value).join(', ');closeDetailModal();const rw=allRows().find(x=>idKey(x)===pm.id),parts=picked.split(', ').filter(Boolean);if(rw&&projFlags(rw).urgent&&!parts.includes('急件'))parts.push('急件');applyMove(pm.id,pm.status,parts.join(', '))}return}
+      if(dm==='ok'){const pm=state.pendingMove;if(pm){const picked=[...document.querySelectorAll('#dmList input:checked')].map(i=>i.value).join(', ');closeDetailModal();const rw=allRows().find(x=>idKey(x)===pm.id),parts=picked.split(', ').filter(Boolean);{const fl=rw&&projFlags(rw),tag=fl&&fl.urgent2?'急急件':fl&&fl.urgent?'急件':'';if(tag&&!parts.includes(tag))parts.push(tag)}applyMove(pm.id,pm.status,parts.join(', '))}return}
       const lp=t.closest('[data-lp]')?.dataset.lp;
       if(lp==='google'){googleStart();return}
       if(lp==='toggle'){login.showPw=!login.showPw;renderLoginPage();return}
