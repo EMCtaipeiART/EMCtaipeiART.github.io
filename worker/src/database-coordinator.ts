@@ -5,7 +5,7 @@ import {
   VERSION, ACCESS_CAPABILITIES, ACCESS_PAGES, ACCESS_ROLE_TEMPLATES, ISSUE_STATUSES, SUPPLEMENT_SLOTS,
   SHORTCUT_ADMIN_ACCOUNT, SHORTCUT_TESTER_ACCOUNT,
   accessList, accessProfile, activeReel, canonicalAccount, findReelIndex, newCustomerDefaults,
-  generateShortCode, normalizeShortCode, normalizeShortVisibility, hasCapability, hasRowCapability, isHttpUrl, issueRow, monthFromDate, nextCaseId, normalizeSnapshot, pruneIdempotency,
+  generateShortCode, normalizeShortCode, normalizeShortVisibility, shortUtm, withUtm, hasCapability, hasRowCapability, isHttpUrl, issueRow, monthFromDate, nextCaseId, normalizeSnapshot, pruneIdempotency,
   nowTaipei, parseComments, publicReel, recalculateDatabaseModificationCounts, recalculateDatabaseWeights, reelFileId, requireCapability,
   designerRowsForGroup, isDesignerSettingsRow, isManager, matchesCustomerEditRule,
   rowYear, settingsResponse, settingsRow, splitNames, syncSupplementLinks, tableNames,
@@ -5508,7 +5508,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
             text(record['短碼']).toLowerCase(), nowTaipei()
           );
         }
-        return { ok: true, action, code: text(record['短碼']), url: text(record['原始網址']) };
+        return { ok: true, action, code: text(record['短碼']), url: withUtm(text(record['原始網址']), record) };
       }
       if (action === 'listShortLinks') {
         const current = this.requireSession(session);
@@ -5525,7 +5525,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           return range === '同組' && myGroup !== '' && groupOf(row['建立者帳號']) === myGroup;
         };
         const links = [...database.tables['短連結'].rows].filter(visible).reverse().map(row => ({
-          group: groupOf(row['建立者帳號']), visibility: normalizeShortVisibility(row['可見範圍']),
+          group: groupOf(row['建立者帳號']), visibility: normalizeShortVisibility(row['可見範圍']), utmSource: text(row['UTM來源']), utmMedium: text(row['UTM媒介']), utmCampaign: text(row['UTM活動']),
           code: text(row['短碼']), url: text(row['原始網址']), name: text(row['名稱']), project: text(row['專案']), owner: text(row['建立者']),
           clicks: Number(clicks.get(text(row['短碼']).toLowerCase())?.clicks || 0), uniqueClicks: uniques.get(text(row['短碼']).toLowerCase()) || 0, lastClickAt: text(clicks.get(text(row['短碼']).toLowerCase())?.last_at),
           createdAt: text(row['建立時間']), updatedAt: text(row['更新時間']),
@@ -6125,7 +6125,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const items = Array.isArray(payload.items) ? payload.items as Array<Record<string, unknown>> : [];
       if (!items.length) throw new Error('請貼上至少一個網址');
       if (items.length > 200) throw new Error('一次最多 200 筆，請分批貼上');
-      const project = text(payload.project).slice(0, 60), visibility = normalizeShortVisibility(payload.visibility);
+      const project = text(payload.project).slice(0, 60), visibility = normalizeShortVisibility(payload.visibility), utm = shortUtm(payload);
       return this.mutate(action, current, draft => {
         const rows = draft.tables['短連結'].rows;
         const used = new Set(rows.map(row => text(row['短碼']).toLowerCase()));
@@ -6139,9 +6139,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
             const code = wanted ? normalizeShortCode(wanted) : generateShortCode(used);
             if (used.has(code.toLowerCase())) throw new Error(`短碼「${code}」已經被使用`);
             used.add(code.toLowerCase());
-            const row: Row = { '短碼': code, '原始網址': url, '名稱': text(item?.name).slice(0, 60), '專案': project, '可見範圍': visibility, '建立者帳號': me, '建立者': text(current.user || me), '建立時間': time, '更新時間': time };
+            const row: Row = { '短碼': code, '原始網址': url, '名稱': text(item?.name).slice(0, 60), '專案': project, '可見範圍': visibility, 'UTM來源': utm.source, 'UTM媒介': utm.medium, 'UTM活動': utm.campaign, '建立者帳號': me, '建立者': text(current.user || me), '建立時間': time, '更新時間': time };
             rows.push(row);
-            created.push({ code, url, name: text(row['名稱']), project, visibility, clicks: 0, owner: text(row['建立者']), createdAt: time, updatedAt: time, canEdit: true });
+            created.push({ code, url, name: text(row['名稱']), project, visibility, utmSource: utm.source, utmMedium: utm.medium, utmCampaign: utm.campaign, clicks: 0, owner: text(row['建立者']), createdAt: time, updatedAt: time, canEdit: true });
           } catch (error) {
             failed.push({ index, url, error: error instanceof Error ? error.message : String(error) });
           }
@@ -6156,7 +6156,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const result = await this.mutate(action, current, draft => {
         const rows = draft.tables['短連結'].rows;
         const find = (code: string) => rows.findIndex(row => text(row['短碼']).toLowerCase() === code.normalize('NFC').toLowerCase());
-        const toLink = (row: Row) => ({ code: text(row['短碼']), url: text(row['原始網址']), name: text(row['名稱']), project: text(row['專案']), visibility: normalizeShortVisibility(row['可見範圍']), clicks: Number(this.ctx.storage.sql.exec<{ clicks: number }>('SELECT clicks FROM short_link_clicks WHERE code = ?', text(row['短碼']).toLowerCase()).toArray()[0]?.clicks || 0), uniqueClicks: Number(this.ctx.storage.sql.exec<{ n: number }>('SELECT COUNT(*) AS n FROM short_link_visitors WHERE code = ?', text(row['短碼']).toLowerCase()).toArray()[0]?.n || 0), owner: text(row['建立者']), createdAt: text(row['建立時間']), updatedAt: text(row['更新時間']), canEdit: true });
+        const toLink = (row: Row) => ({ code: text(row['短碼']), url: text(row['原始網址']), name: text(row['名稱']), project: text(row['專案']), visibility: normalizeShortVisibility(row['可見範圍']), utmSource: text(row['UTM來源']), utmMedium: text(row['UTM媒介']), utmCampaign: text(row['UTM活動']), clicks: Number(this.ctx.storage.sql.exec<{ clicks: number }>('SELECT clicks FROM short_link_clicks WHERE code = ?', text(row['短碼']).toLowerCase()).toArray()[0]?.clicks || 0), uniqueClicks: Number(this.ctx.storage.sql.exec<{ n: number }>('SELECT COUNT(*) AS n FROM short_link_visitors WHERE code = ?', text(row['短碼']).toLowerCase()).toArray()[0]?.n || 0), owner: text(row['建立者']), createdAt: text(row['建立時間']), updatedAt: text(row['更新時間']), canEdit: true });
         const time = nowTaipei();
         if (action === 'createShortLink') {
           const url = text(payload.url);
@@ -6164,7 +6164,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           const wanted = text(payload.code);
           const code = wanted ? normalizeShortCode(wanted) : generateShortCode(new Set(rows.map(row => text(row['短碼']).toLowerCase())));
           if (find(code) >= 0) throw new Error(`短碼「${code}」已經被使用，請換一個`);
-          const row: Row = { '短碼': code, '原始網址': url, '名稱': text(payload.name).slice(0, 60), '專案': text(payload.project).slice(0, 60), '可見範圍': normalizeShortVisibility(payload.visibility), '建立者帳號': me, '建立者': text(current.user || me), '建立時間': time, '更新時間': time };
+          const row: Row = { '短碼': code, '原始網址': url, '名稱': text(payload.name).slice(0, 60), '專案': text(payload.project).slice(0, 60), '可見範圍': normalizeShortVisibility(payload.visibility), 'UTM來源': shortUtm(payload).source, 'UTM媒介': shortUtm(payload).medium, 'UTM活動': shortUtm(payload).campaign, '建立者帳號': me, '建立者': text(current.user || me), '建立時間': time, '更新時間': time };
           rows.push(row);
           return { result: { ok: true, action, link: toLink(row) }, changedTables: ['短連結'] };
         }
@@ -6184,6 +6184,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         if (payload.name !== undefined) row['名稱'] = text(payload.name).slice(0, 60);
         if (payload.project !== undefined) row['專案'] = text(payload.project).slice(0, 60);
         if (payload.visibility !== undefined) row['可見範圍'] = normalizeShortVisibility(payload.visibility);
+        if (payload.utmSource !== undefined || payload.utmMedium !== undefined || payload.utmCampaign !== undefined) {
+          const utm = shortUtm(payload);
+          row['UTM來源'] = utm.source; row['UTM媒介'] = utm.medium; row['UTM活動'] = utm.campaign;
+        }
         if (payload.newCode !== undefined && text(payload.newCode) && text(payload.newCode) !== text(row['短碼'])) {
           const next = normalizeShortCode(payload.newCode);
           const clash = find(next);

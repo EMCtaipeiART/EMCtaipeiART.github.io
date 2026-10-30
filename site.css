@@ -1543,3 +1543,11 @@ body.arena-on .arena-frame{border-radius:0;box-shadow:none;background:transparen
     .link-uniq{display:grid;justify-items:center;margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);font-style:normal;width:100%;line-height:1.1}
     .link-uniq b{font-size:15px;font-weight:900;color:#4338ca}.link-uniq span{color:var(--muted);font-size:11px;font-weight:700}
     @media(max-width:640px){.link-uniq{margin:0 0 0 12px;padding:0 0 0 12px;border-top:0;border-left:1px dashed var(--line);grid-auto-flow:column;gap:6px;align-items:baseline;width:auto}}
+
+    .link-utm{border:1px dashed var(--line);border-radius:12px;padding:10px 14px;background:transparent}
+    .link-utm>summary{cursor:pointer;font-size:13px;font-weight:800;list-style:none}
+    .link-utm>summary::-webkit-details-marker{display:none}.link-utm>summary::before{content:"＋ ";color:#159E31}.link-utm[open]>summary::before{content:"－ "}
+    .link-utm-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:10px}
+    .link-utm .link-hint{margin:8px 0 0}
+    .link-utm-line{color:#4338ca}
+    @media(max-width:640px){.link-utm-grid{grid-template-columns:1fr}}

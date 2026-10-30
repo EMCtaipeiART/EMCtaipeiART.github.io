@@ -505,6 +505,13 @@ describe('Machi Design API Worker', () => {
     expect(bulkDel).toMatchObject({ ok: true, skipped: [] });
     expect(await api({ action: 'resolveShortLink', code: 'Batch2' })).toMatchObject({ ok: false });
     expect(await api({ action: 'deleteShortLinks', codes: [] }, tester)).toMatchObject({ ok: false });
+    // UTM：自動補在目的網址上，目的網址已有的參數不覆蓋
+    await api({ action: 'createShortLink', url: 'https://example.com/p?utm_medium=keep&x=1#top', code: 'utmtest', utmSource: 'line', utmMedium: 'social', utmCampaign: 'summer 2026' }, tester);
+    const utmResolved = await api({ action: 'resolveShortLink', code: 'utmtest' });
+    const utmUrl = new URL(String(utmResolved.url));
+    expect(Object.fromEntries(utmUrl.searchParams)).toEqual({ utm_medium: 'keep', x: '1', utm_source: 'line', utm_campaign: 'summer 2026' });
+    expect(utmUrl.hash).toBe('#top');
+    await api({ action: 'deleteShortLinks', codes: ['utmtest'] }, tester);
     // 中文短碼 + 不重複點擊
     expect(await api({ action: 'createShortLink', url: 'https://example.com/zh', code: '夏季活動' }, tester)).toMatchObject({ ok: true, link: { code: '夏季活動' } });
     expect(await api({ action: 'createShortLink', url: 'https://example.com/zh', code: '夏' }, tester)).toMatchObject({ ok: false });

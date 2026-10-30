@@ -638,6 +638,20 @@ export function normalizeShortVisibility(value: unknown): '同組' | '全部' | 
   const v = text(value);
   return v === 'all' || v === '全部' ? '全部' : (v === 'self' || v === '僅自己' ? '僅自己' : '同組');
 }
+// UTM：轉址時補到目的網址上（目的網址自己已經有的參數不覆蓋）。
+export function shortUtm(payload: ApiPayload): { source: string; medium: string; campaign: string } {
+  const clean = (value: unknown) => text(value).replace(/\s+/g, ' ').slice(0, 100);
+  return { source: clean(payload.utmSource), medium: clean(payload.utmMedium), campaign: clean(payload.utmCampaign) };
+}
+export function withUtm(target: string, row: Row): string {
+  const pairs: Array<[string, string]> = [['utm_source', text(row['UTM來源'])], ['utm_medium', text(row['UTM媒介'])], ['utm_campaign', text(row['UTM活動'])]];
+  if (!pairs.some(([, v]) => v)) return target;
+  try {
+    const url = new URL(target);
+    for (const [key, value] of pairs) if (value && !url.searchParams.has(key)) url.searchParams.set(key, value);
+    return url.toString();
+  } catch { return target; }
+}
 export function generateShortCode(existing: Set<string>): string {
   for (let attempt = 0; attempt < 40; attempt += 1) {
     const bytes = crypto.getRandomValues(new Uint8Array(6));

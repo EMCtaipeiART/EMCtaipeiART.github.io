@@ -1244,3 +1244,4 @@
 - 驗證：瀏覽器載入頁面後直接呼叫還原／記憶函式確認（客戶別、修改統計表含排序、寫入）；`npm test` 全過；未登入實際重整整個後台流程。
 
 - 2026-10-30: 短網址: unique clicks (不重複點擊) next to the cumulative count — visitor fingerprint = salted SHA-256 of IP+UA stored in DO table short_link_visitors (no raw IP/UA), old clicks have no fingerprint so unique starts at 0; custom codes may now be Chinese (Han) + English + digits (ASCII-only >=3, with Han >=2, max 32, NFC-normalised), routes decode percent-encoded paths (Worker, apex route, 404.html), copy/links use the encoded URL while the page shows the raw characters. Worker redeployed.
+- 2026-10-30: 短網址 UTM (plan A): per link / batch optional utm_source, utm_medium, utm_campaign (columns UTM來源/UTM媒介/UTM活動); resolveShortLink appends them to the destination at redirect time (existing params on the destination are never overwritten, #hash kept); collapsible UTM box in create/edit/batch forms with common suggestions; card shows a UTM line. Worker redeployed.
