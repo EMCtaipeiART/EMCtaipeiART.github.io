@@ -40,7 +40,7 @@ test('專案名稱前的小標籤：新專案✨、急件🔥（上班天數少�
 
 test('新專案：填單頁有開關，輪替／替代設計師跟著這一列的 newProj，送出時帶 newProject', () => {
   assert.match(site, /if\(!r\.newProj\)\{r\.rot='';r\.sub='';r\.subReason='';continue\}/);
-  assert.match(site, /const payloadRow=r=>\(\{newProject:Boolean\(r\.newProj\),client:r\.client,/);
+  assert.match(site, /const payloadRow=r=>\(\{[^\n]*?newProject:Boolean\(r\.newProj\),client:r\.client,/);
   assert.match(site, /data-f="newProj"/);
   assert.match(site, /data-np-reason=/);
   assert.match(site, /csState\.pickedAsNew=true;\$\('prompt'\)\.requestSubmit\(\)/);
