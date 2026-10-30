@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 9950,
+  "revision": 9951,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-30T02:31:07.778Z",
+  "updatedAt": "2026-10-30T02:32:23.747Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1394,7 +1394,7 @@
         {"案件編號":"26100190","修改次數":"2","建立日期":"2026/10/29 19:21:39","修改日期":"2026-10-29","修改內容":"客戶新增一版，\n我數量也 +1 了，\n再麻煩哥！\n\nhttps://docs.google.com/presentation/d/18W2PcIKgw5RnhmgjRAMy47WVXG5hfwLEMJeeWJIXLx0/edit?slide=id.p#slide=id.p","修改內容連結":"[{\"text\":\"https://docs.google.com/presentation/d/18W2PcIKgw5RnhmgjRAMy47WVXG5hfwLEMJeeWJIXLx0/edit?slide=id.p#slide=id.p\",\"url\":\"https://docs.google.com/presentation/d/18W2PcIKgw5RnhmgjRAMy47WVXG5hfwLEMJeeWJIXLx0/edit?slide=id.p#slide=id.p\"}]","修改人":"李明庭","確認修正日":"2026/10/29 19:28:39","待修改圖片":"","圖片連結":"[{\"fileName\":\"261028_360II_包框影片_PChome.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/15MWt2Jfe2QNi6v31ALxvB8WJNleR3EYw=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/29 19:28:12"},
         {"案件編號":"26100197","修改次數":"0","建立日期":"2026/10/29 19:28:58","修改日期":"2026/10/29 19:28:58","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/29 19:28:58","圖片連結":"[{\"fileName\":\"261027_ANKER_A121A_蝦皮_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1WEH-JspqqVmlEPYYujQdQ_pSynmtEsFR=w1600\"},{\"fileName\":\"261027_ANKER_A1638_蝦皮_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1UwDlqXNaTHEx4qJKwOS4fn4nOqIMIFkp=w1600\"},{\"fileName\":\"261021_ANKER_A1638_1_v03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1HrVUQ3VP8QcZJ1yE3fNs-CacpMpdgWrp=w1600\"},{\"fileName\":\"261021_ANKER_A121D_momo_1_v03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1EDVWpcvlxJC4KNuJyUHW8hV_AQkBmVEB=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/29 19:29:40"},
         {"案件編號":"26100176","修改次數":"0","建立日期":"2026/10/29 20:34:40","修改日期":"2026/10/29 20:34:40","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/29 20:34:40","圖片連結":"[{\"fileName\":\"261029_迪朗奇_11月FB貼文_第一篇_雙11啡買不可_影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1dx5p6AcxqVlOdvjyuuiVziqu_WoDoVW8=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/29 20:34:40"},
-        {"案件編號":"26100190","修改次數":"3","建立日期":"2026/10/30 10:15:03","修改日期":"2026-10-30","修改內容":"套裝名稱、價格與原價沒改到拉，\n再麻煩哥：\n\nhttps://docs.google.com/presentation/d/18W2PcIKgw5RnhmgjRAMy47WVXG5hfwLEMJeeWJIXLx0/edit?slide=id.p#slide=id.p","修改內容連結":"[{\"text\":\"https://docs.google.com/presentation/d/18W2PcIKgw5RnhmgjRAMy47WVXG5hfwLEMJeeWJIXLx0/edit?slide=id.p#slide=id.p\",\"url\":\"https://docs.google.com/presentation/d/18W2PcIKgw5RnhmgjRAMy47WVXG5hfwLEMJeeWJIXLx0/edit?slide=id.p#slide=id.p\"}]","修改人":"李明庭","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"261028_360II_包框影片_PChome.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1MjyLqcLLeA0MXlzqJ1-KIu87l8QccrPp=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/30 10:30:40"},
+        {"案件編號":"26100190","修改次數":"3","建立日期":"2026/10/30 10:15:03","修改日期":"2026-10-30","修改內容":"套裝名稱、價格與原價沒改到拉，\n再麻煩哥：\n\nhttps://docs.google.com/presentation/d/18W2PcIKgw5RnhmgjRAMy47WVXG5hfwLEMJeeWJIXLx0/edit?slide=id.p#slide=id.p","修改內容連結":"[{\"text\":\"https://docs.google.com/presentation/d/18W2PcIKgw5RnhmgjRAMy47WVXG5hfwLEMJeeWJIXLx0/edit?slide=id.p#slide=id.p\",\"url\":\"https://docs.google.com/presentation/d/18W2PcIKgw5RnhmgjRAMy47WVXG5hfwLEMJeeWJIXLx0/edit?slide=id.p#slide=id.p\"}]","修改人":"李明庭","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"261028_360II_包框影片_PChome.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1bgOZKUoW5yf4bXclkUfDvXl1OsQMiCbM=w1600\"}]","圖片來源":"nas-refresh","圖片更新時間":"2026/10/30 10:32:23"},
         {"案件編號":"26090204","修改次數":"2","建立日期":"2026/10/30 10:17:25","修改日期":"2026-10-30","修改內容":"文案請改為【11/17(二) 上午10:00 開放預訂】 \n\n謝謝！","修改內容連結":"","修改人":"廖秦葦","確認修正日":"","待修改圖片":""}
       ]
     },
