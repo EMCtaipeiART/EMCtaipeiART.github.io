@@ -1603,3 +1603,10 @@ body.arena-on .arena-frame{border-radius:0;box-shadow:none;background:transparen
 .dc-note.done{opacity:.65;text-decoration:line-through}
 .dc-note.lift{cursor:grabbing;z-index:9;transform:rotate(0deg) scale(1.08);box-shadow:0 14px 22px rgba(0,0,0,.35)}
 .dc-note:hover{z-index:8}
+
+/* 日期格的便條符號與彈出視窗 */
+.dc-memo-badge{float:left;margin:1px 4px 0 0;padding:0 6px;font-size:12px;font-weight:800;line-height:20px;color:#4a3d00;background:linear-gradient(180deg,#ffee7a,#ffe34d);border-radius:4px;box-shadow:0 2px 3px rgba(0,0,0,.25);transform:rotate(-4deg);cursor:pointer}
+.dc-memo-badge b{margin-left:4px;padding:0 4px;border-radius:8px;background:#d64550;color:#fff;font-size:10px}
+.dc-pop-back{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:16px;background:rgba(10,18,30,.35)}
+.dc-pop{width:min(420px,100%);max-height:80vh;overflow:auto;padding:16px 18px;border-radius:16px;background:var(--panel);box-shadow:0 18px 40px rgba(0,0,0,.35)}
+.dc-pop .dc-memos-h h4{margin:0}.dc-pop-btns{display:flex;gap:6px}
