@@ -178,6 +178,21 @@ async function resolveDefaultBrowsePath(mountRoot, defaultBrowseRoot, client, al
   return { relPath: baseDir.relPath, matched: false, baseOk: true, note: `找不到「${trimmedClient}」對應的資料夾，已開啟到上一層` };
 }
 
+/**
+ * 先看後台「客戶別」設定的 NAS 資料夾（可依專案名稱分子品牌）；指到的資料夾存在就直接開到那裡，
+ * 沒設定或資料夾不存在，才退回原本「依客戶別名稱／對照猜」的做法。
+ */
+async function guessBrowsePath(mountRoot, config, dbData, meta) {
+  const configured = lib.resolveCustomerNasFolder(dbData, meta?.client, meta?.project);
+  if (configured) {
+    try {
+      const dir = resolveSafeDir(mountRoot, path.relative(mountRoot, lib.resolveCaseFolderPath(mountRoot, configured)));
+      if (await dirExists(dir.absPath)) return { relPath: dir.relPath, matched: true, note: `已依「${meta.client}」的客戶設定開啟到指定資料夾` };
+    } catch { /* 路徑不合法就退回原本的猜法 */ }
+  }
+  return resolveDefaultBrowsePath(mountRoot, config.defaultBrowseRoot, meta?.client || '', config.clientFolderAliases);
+}
+
 function sendJson(res, status, payload) {
   const body = JSON.stringify(payload);
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': Buffer.byteLength(body) });
@@ -1126,17 +1141,20 @@ async function main() {
         const caseId = url.searchParams.get('caseId') || '';
         let client = '';
         let existingKeyword = '';
+        let guessDb = null;
+        let guessMeta = null;
         if (caseId) {
           try {
             const dbData = await lib.fetchDatabaseWithCase(config, caseId);
             const meta = lib.findCaseMeta(dbData, caseId);
+            guessDb = dbData; guessMeta = meta;
             client = meta?.client || '';
             existingKeyword = meta?.keyword || ''; // 重新開啟選擇器（換資料夾/補填關鍵字）時，先帶出這個案件目前已經存的關鍵字，讓輸入框不是空的
           } catch {
             // 讀不到案件資料庫也不影響瀏覽，只是猜不出預設路徑/既有關鍵字，從 defaultBrowseRoot 或根目錄開始
           }
         }
-        const guess = await resolveDefaultBrowsePath(mountRoot, config.defaultBrowseRoot, client, config.clientFolderAliases);
+        const guess = await guessBrowsePath(mountRoot, config, guessDb, guessMeta || { client });
         sendJson(res, 200, { success: true, relPath: guess.relPath, matched: guess.matched, note: guess.note, keyword: existingKeyword });
       } catch (error) {
         sendJson(res, 200, { success: true, relPath: '', matched: false, note: '', keyword: '' });
@@ -1227,12 +1245,13 @@ async function main() {
         let files = [];
         try { files = JSON.parse(url.searchParams.get('names') || '[]'); } catch { files = []; }
         files = (Array.isArray(files) ? files : []).slice(0, 60).map(item => ({ name: String(item?.name || ''), size: Number(item?.size) || 0 })).filter(item => item.name);
-        let client = '';
+        let guessDb = null;
+        let guessMeta = null;
         const caseId = url.searchParams.get('caseId') || '';
         if (caseId) {
-          try { client = lib.findCaseMeta(await lib.fetchDatabaseWithCase(config, caseId), caseId)?.client || ''; } catch { /* 查不到客戶就從預設根目錄找 */ }
+          try { guessDb = await lib.fetchDatabaseWithCase(config, caseId); guessMeta = lib.findCaseMeta(guessDb, caseId); } catch { /* 查不到客戶就從預設根目錄找 */ }
         }
-        const guess = await resolveDefaultBrowsePath(mountRoot, config.defaultBrowseRoot, client, config.clientFolderAliases);
+        const guess = await guessBrowsePath(mountRoot, config, guessDb, guessMeta);
         const hits = await lib.locateFolderByFiles(mountRoot, guess.relPath, files, { ignore: config.ignoreFolderNames });
         const best = hits[0];
         sendJson(res, 200, {

@@ -26,6 +26,8 @@ test('設定檔範本帶著這份對照，選擇器的兩個入口（預設路�
     林口A7讚商場: 'A7 Mall 早晚商城', 席伊麗: 'Sealy', 新光人壽: '新光銀行', 新安東京: '新安東京海上產險', EMC: '', 測試: ''
   });
   const picker = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');
-  assert.equal((picker.match(/resolveDefaultBrowsePath\(mountRoot, config\.defaultBrowseRoot, client, config\.clientFolderAliases\)/g) || []).length, 2);
+  // 兩個入口都先走 guessBrowsePath（客戶別後台設定的 NAS 資料夾優先），沒設定才退回客戶別對照。
+  assert.equal((picker.match(/await guessBrowsePath\(mountRoot, config, /g) || []).length, 2);
+  assert.match(picker, /resolveDefaultBrowsePath\(mountRoot, config\.defaultBrowseRoot, meta\?\.client \|\| '', config\.clientFolderAliases\)/);
   assert.match(picker, /lib\.resolveClientFolderName\(siblings, trimmedClient, aliases\)/);
 });

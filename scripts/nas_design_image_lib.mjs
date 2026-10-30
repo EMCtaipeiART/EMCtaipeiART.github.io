@@ -1001,6 +1001,7 @@ export function findCaseMeta(dbData, caseId) {
     caseId: String(caseId),
     designer: String(row['設計負責人'] || '').trim() || '未指定設計師',
     client: String(row['客戶別'] || '').trim(),
+    project: String(row['專案名稱'] || '').trim(),
     start: String(row['開始日期'] || '').trim(),
     status: String(row['狀態'] || '').trim(),
     folders,
@@ -1662,6 +1663,35 @@ export function suggestKeywordFromNames(names) {
   }
   cleaned = cleaned.replace(/[\s_\-.]+$/, '').trim();
   return cleaned.length >= 5 ? cleaned : '';
+}
+
+/**
+ * 後台「客戶別」設定的 NAS 資料夾：欄位「NAS資料夾」存 JSON 陣列 [{keyword, path}]。
+ * 同一個客戶別底下有多個子品牌時（例如欣格家居的迪朗奇／紐粹樂），用「專案名稱含關鍵字」分流到不同資料夾：
+ * 關鍵字不分大小寫、取最長的符合者；關鍵字留空的那筆是這個客戶別的預設資料夾。找不到回傳 ''。
+ * path 是相對於 NAS 掛載根目錄的路徑（開頭多寫分享名稱也可以，選擇器會處理）。
+ */
+export function parseCustomerNasFolders(value) {
+  let raw = value;
+  if (typeof raw === 'string') { try { raw = JSON.parse(raw || '[]'); } catch { raw = []; } }
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map(item => ({ keyword: String(item?.keyword ?? '').trim(), path: String(item?.path ?? '').trim() }))
+    .filter(item => item.path);
+}
+
+export function resolveCustomerNasFolder(dbData, client, projectName) {
+  const wanted = String(client || '').trim().toLowerCase();
+  if (!wanted) return '';
+  const rows = dbData?.tables?.['客戶別']?.rows || [];
+  const row = rows.find(item => String(item['客戶別'] || '').trim().toLowerCase() === wanted);
+  if (!row) return '';
+  const rules = parseCustomerNasFolders(row['NAS資料夾']);
+  const project = String(projectName || '').toLowerCase();
+  const hit = rules
+    .filter(rule => rule.keyword && project.includes(rule.keyword.toLowerCase()))
+    .sort((a, b) => b.keyword.length - a.keyword.length)[0];
+  return (hit || rules.find(rule => !rule.keyword))?.path || '';
 }
 
 /**
