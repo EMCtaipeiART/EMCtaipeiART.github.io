@@ -4735,6 +4735,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   }
 
   private dutyReplyWaitMs = 3000;
+  private async calMemos(): Promise<Row[]> { return (await this.ctx.storage.get<Row[]>('calMemos')) || []; }
   private async dutyOverrides(): Promise<DutyOverrides> { return (await this.ctx.storage.get<DutyOverrides>('dutyOverrides')) || {}; }
   /** 當月實際的值日生：有手動替換就用替換的人，否則照輪值表 */
   private async dutyWho(year: number, month0: number): Promise<string> {
@@ -5023,7 +5024,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       at: new Date().toISOString(),
       notebook: { items: await this.notebookRows(), categoryOrder: (await this.ctx.storage.get<string[]>('notebookCategoryOrder')) || [] },
       assignments: (await this.ctx.storage.get<Assignment[]>('assignments')) || [],
-      dutyOverrides: await this.dutyOverrides()
+      dutyOverrides: await this.dutyOverrides(),
+      calMemos: await this.calMemos()
     };
   }
 
@@ -5047,7 +5049,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (!file.content) throw new Error('GitHub 上還沒有備份檔');
     const wrapper = JSON.parse(file.content) as { data?: string };
     if (!wrapper.data) throw new Error('備份檔格式不正確');
-    const data = JSON.parse(await openText(key, wrapper.data)) as { at?: string; notebook?: { items: NotebookItem[]; categoryOrder: string[] }; assignments?: Assignment[]; dutyOverrides?: DutyOverrides };
+    const data = JSON.parse(await openText(key, wrapper.data)) as { at?: string; notebook?: { items: NotebookItem[]; categoryOrder: string[] }; assignments?: Assignment[]; dutyOverrides?: DutyOverrides; calMemos?: Row[] };
     const items = data.notebook?.items || [];
     const sealedRows = await Promise.all(items.map(item => this.sealFields(item.fields)));
     this.ctx.storage.transactionSync(() => {
@@ -5058,6 +5060,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     await this.ctx.storage.put('notebookCategoryOrder', data.notebook?.categoryOrder || []);
     await this.ctx.storage.put('assignments', data.assignments || []);
     await this.ctx.storage.put('dutyOverrides', data.dutyOverrides || {});
+    await this.ctx.storage.put('calMemos', data.calMemos || []);
     await this.queueAudit([{ t: new Date().toISOString(), kind: '欄位修改', actor: auditActor(who), caseId: '備份還原', field: '還原', note: `備份時間 ${data.at || ''}：記事本 ${items.length}、專案分配 ${(data.assignments || []).length}` }]);
     return { ok: true, action: 'restoreBackup', at: data.at || '', notebook: items.length, assignments: (data.assignments || []).length };
   }
@@ -5590,6 +5593,30 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           if (ordered.length) priority[group] = ordered[0].name;
         }
         return { ok: true, action, designers: rows, priority, revision: database.revision };
+      }
+      if (action === 'getCalMemos') { this.requireSession(session); return { ok: true, action, memos: await this.calMemos() }; }
+      if (action === 'saveCalMemo') {
+        const current = this.requireSession(session);
+        const day = text(payload.day), start = text(payload.start), end = text(payload.end), body = text(payload.text).slice(0, 1000);
+        if (!/^d{4}-d{2}-d{2}$/.test(day)) throw new Error('日期格式錯誤');
+        const hm = /^([01]d|2[0-3]):[0-5]d$/;
+        if ((start && !hm.test(start)) || (end && !hm.test(end))) throw new Error('時間格式錯誤');
+        if (start && end && end <= start) throw new Error('結束時間要晚於開始時間');
+        if (!body) throw new Error('便條內容不能空白');
+        const memos = await this.calMemos(), id = text(payload.id);
+        const old = id ? memos.find(m => m.id === id) : undefined;
+        if (id && !old) throw new Error('找不到這張便條');
+        const next: Row = { id: old?.id || crypto.randomUUID(), day, start, end, who: text(payload.who).slice(0, 40), text: body, todo: Boolean(payload.todo), done: Boolean(payload.todo) && Boolean(payload.done), by: old?.by || auditActor(current), at: old?.at || Date.now(), upd: Date.now() };
+        const list = old ? memos.map(m => (m.id === id ? next : m)) : [...memos, next];
+        if (list.length > 2000) list.splice(0, list.length - 2000);
+        await this.ctx.storage.put('calMemos', list);
+        return { ok: true, action, memo: next, memos: list };
+      }
+      if (action === 'deleteCalMemo') {
+        this.requireSession(session);
+        const id = text(payload.id), list = (await this.calMemos()).filter(m => m.id !== id);
+        await this.ctx.storage.put('calMemos', list);
+        return { ok: true, action, memos: list };
       }
       if (action === 'getDutyOverrides') { this.requireSession(session); return { ok: true, action, overrides: await this.dutyOverrides() }; }
       if (action === 'saveDutyOverride') {
