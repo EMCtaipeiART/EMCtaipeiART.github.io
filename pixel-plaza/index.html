@@ -1413,16 +1413,16 @@ function updatePlate(){
   if (!c || !c.holder.visible) { plate.style.display = 'none'; return; }
   const p = c.holder.position.clone(); p.y = .05; p.project(camera);
   if (p.z >= 1) { plate.style.display = 'none'; return; }
-  const st = STATUS[c.status] || STATUS.present, html = iconImg(symOf[c.status] || 'person', 18) + esc(c.name + '（' + st[0] + '）');
+  const st = STATUS[c.status] || STATUS.present, html = esc(c.name + '（' + st[0] + '）');
   if (plate.dataset.h !== html) { plate.innerHTML = html; plate.dataset.h = html; }
   plate.style.display = 'inline-flex'; plate.style.transform = 'translate(-50%,6px) translate(' + ((p.x * .5 + .5) * innerWidth) + 'px,' + ((-p.y * .5 + .5) * innerHeight) + 'px)';
 }
 function updateTags(){
   updatePlate();
   for (const c of Object.values(chars)) {
-    const away = false, m = c.music, nStory = storiesOf(c.name).length;
+    const away = c.status && AWAY.has(c.status) && c !== player && c.home, m = c.music, nStory = storiesOf(c.name).length;
     let p = null, html = '';
-    if (away) { p = new THREE.Vector3(c.home.x, 1.7, c.home.z); html = '<div class="cui-tag">' + iconImg(symOf[c.status], 18) + esc(c.name + '（' + STATUS[c.status][0] + '）') + '</div>'; }
+    if (away) { p = new THREE.Vector3(c.home.x, 1.7, c.home.z); html = '<div class="cui-tag">' + esc(c.name + '（' + STATUS[c.status][0] + '）') + '</div>'; }
     else if (c.holder.visible && (c.message || c.mood || m || nStory)) {
       p = c.holder.position.clone(); p.y += 2.7;
       const playing = musicPlaying.name === c.name && !musicPlaying.paused;
