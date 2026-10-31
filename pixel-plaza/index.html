@@ -16,6 +16,8 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #proj{position:fixed;right:12px;top:12px;z-index:3;display:none;background:#0b0d10;border:3px solid #0b0d10;border-radius:6px;box-shadow:0 4px 14px #0004}
 #proj canvas{position:static;display:block;width:320px;height:180px;image-rendering:pixelated}
 #proj span{display:block;color:#fff;font:700 12px system-ui,'Noto Sans TC',sans-serif;padding:4px 6px}
+#quote{position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:4;display:none;max-width:min(520px,88vw);background:#fffdf5;color:#232b32;border:3px solid #0b0d10;border-radius:8px;padding:10px 14px;font:600 14px/1.5 system-ui,'Noto Sans TC',sans-serif;box-shadow:0 6px 18px #0005}
+#quote b{display:block;font-size:12px;color:#7b4a24;margin-bottom:2px}
 #sit{position:fixed;right:12px;bottom:64px;z-index:3;border:2px solid #fff8;background:#0008;color:#fff;border-radius:6px;padding:8px 12px;font:inherit;font-size:14px;cursor:pointer}
 #load{position:fixed;inset:0;display:grid;place-items:center;background:#1b2a41;color:#fff;font-size:18px;z-index:5}
 #stick{position:fixed;left:18px;bottom:78px;width:110px;height:110px;border-radius:50%;background:#fff3;border:2px solid #fff6;display:none}
@@ -26,6 +28,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <div id="hud"><b>EMC 像素辦公室</b><br>WASD / 方向鍵移動 · Shift 跑步 · 點地面走過去 · 下方切換角色 · 網址加 ?px=1 為復古像素模式</div>
 <div id="stick"><i></i></div>
 <div id="proj"><canvas width="128" height="72"></canvas><span></span></div>
+<div id="quote"><b></b><span></span></div>
 <button id="sit">坐下 / 起身 (E)</button>
 <div id="roster"></div>
 <script type="module">
@@ -142,6 +145,58 @@ function addBillboard(src, cx, z, dw, dh){
   m.geometry.translate(0, dh / 2, 0); m.position.set(cx, 0, z); scene.add(m); billboards.push(m); return m;
 }
 const SNACKS = [['snack_chips', .8], ['snack_cupnoodle', .62], ['snack_cola', .52], ['snack_cookie', .46], ['snack_choco', .42], ['snack_candy', .68]];
+// ---- 隨機道具、語錄、馬桶便便 ----
+const ITEM_TYPES = [
+  {key:'coffee', name:'外帶咖啡', h:.8, quotes:['咖啡因 120mg：足夠讓你再改一版。', '這杯是別人忘了拿的……我先幫它保管。', '第三杯了。你的血液正在轉型成美式咖啡。', '喝完這杯再交稿，不然下一杯就是慶功了。']},
+  {key:'sticky', name:'便利貼', h:.6, quotes:['便利貼：客戶說「再大氣一點」，沒有人知道是什麼意思。', '「Logo 再放大 10%」——第 38 次修改。', '字條：中午吃什麼？（附註：不要再說隨便。）', '寫著：不要刪 final_final2，那是我的底線。']},
+  {key:'redenvelope', name:'紅包', h:.7, quotes:['恭喜發財！紅包裡是一張「案子延期」證明。', '紅包袋內裝：一句「辛苦了」與 0 元，但心意無價。', '年終獎金還沒到，先收下這個心理安慰紅包。', '開運小提醒：今天的設計稿不會被退件（機率 12%）。']},
+  {key:'star', name:'幸運星', h:.7, quotes:['撿到幸運星！今天的色票一次過關。', '許個願：希望客戶一次講完所有需求。', '幸運星 +1：存滿 10 顆可兌換「免改稿券」（尚未發行）。', '閃閃發亮的靈感，保存期限：到下班為止。']},
+  {key:'usb', name:'隨身碟', h:.55, quotes:['標籤寫著「最終版_真的最終」，裡面其實是 2019 年的專案。', '插上去之後跳出：「檔案已損毀」。你並不意外。', '這顆隨身碟裡有 4,382 張參考圖，和 1 張貓。', '警告：未備份的檔案正在看著你。']},
+  {key:'gift', name:'禮物盒', h:.7, quotes:['禮物盒裡是……另一個盒子。再拆一層，還是盒子。', '拆開後：一張手寫卡片「謝謝你昨晚加班」。', '是同事的生日蛋糕券，請記得簽名。', '盒子很輕。裡面應該是「週五提早下班」的概念。']}
+];
+const POOP_QUOTES = ['誰在廁所完成了這件作品？（已沖水）', '便便說：我是今天最準時交付的成果。', '沖水成功！廁所又是一條好漢。', '這坨有 3 層、有造型，可以直接當 icon 嗎？（不行）', '警告：此物不可作為設計提案。已沖走。', '咕嚕嚕……再見了，你這個不請自來的靈感。'];
+const itemSrc = {}, items = [], pickables = [], rnd = a => a[Math.floor(Math.random() * a.length)];
+const quoteBox = document.getElementById('quote'); let quoteTimer = 0;
+function showQuote(title, text){ quoteBox.querySelector('b').textContent = title; quoteBox.querySelector('span').textContent = text; quoteBox.style.display = 'block'; clearTimeout(quoteTimer); quoteTimer = setTimeout(() => { quoteBox.style.display = 'none'; }, 5200); }
+function randomFloorSpot(){ for (let i = 0; i < 60; i++) { const x = 2 + Math.random() * (1201 * U - 4), z = 2 + Math.random() * (1526 * U - 4); if (!blocked(x, z)) return [x, z]; } return null; }
+function spawnItem(){
+  if (items.length >= 6) return;
+  const t = rnd(ITEM_TYPES), src = itemSrc[t.key], spot = randomFloorSpot(); if (!src || !spot) return;
+  const dw = t.h * src.width / src.height, m = addBillboard(src, spot[0], spot[1], dw, t.h); m.userData.pick = {kind:'item', type:t, ref:m};
+  items.push({mesh:m, phase:Math.random() * 6, born:performance.now()}); pickables.push(m);
+}
+function collectItem(m){
+  const i = items.findIndex(it => it.mesh === m); if (i < 0) return;
+  const t = m.userData.pick.type; scene.remove(m); billboards.splice(billboards.indexOf(m), 1); pickables.splice(pickables.indexOf(m), 1); items.splice(i, 1);
+  showQuote('撿到：' + t.name, rnd(t.quotes));
+}
+function makePoop(t){
+  const g = new THREE.Group(); g.position.set(t.x, .56, t.z); scene.add(g);
+  const part = (geo, color, px, py, pz, sx, sy, sz) => { const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color})); m.position.set(px, py, pz); m.scale.set(sx, sy, sz); g.add(m); const h = new THREE.Mesh(geo, outlineMat); h.position.copy(m.position); h.scale.set(sx * 1.12, sy * 1.12, sz * 1.12); h.layers.set(HULL_LAYER); g.add(h); return m; };
+  const S = new THREE.SphereGeometry(1, 14, 10);
+  part(S, 0x7a4a22, 0, .1, 0, .26, .13, .26); part(S, 0x874f25, 0, .24, 0, .19, .11, .19); part(S, 0x935a2c, 0, .36, 0, .12, .1, .12); part(S, 0x9c6430, .02, .46, 0, .05, .06, .05);
+  for (const sz of [-1, 1]) { const e = new THREE.Mesh(new THREE.BoxGeometry(.04, .05, .04), new THREE.MeshBasicMaterial({color:0x0b0d10})); e.position.set(.17, .26, sz * .06); g.add(e); }
+  g.traverse(o => { if (o.isMesh) o.userData.pickRoot = g; });
+  g.userData.pick = {kind:'poop', toilet:t, ref:g}; pickables.push(g); return g;
+}
+function spawnPoop(){
+  const free = toilets.filter(t => !t.poop && !chairSeats.some(st => st.by && Math.hypot(st.x - t.x, st.z - t.z) < .5)); if (!free.length) return;
+  const t = rnd(free); t.poop = makePoop(t);
+}
+function flushPoop(g){
+  const t = g.userData.pick.toilet; scene.remove(g); pickables.splice(pickables.indexOf(g), 1); t.poop = null; showQuote('沖水！', rnd(POOP_QUOTES));
+}
+function startGameplay(){
+  for (let i = 0; i < 3; i++) spawnItem();
+  const loop = (fn, a, b) => { setTimeout(() => { fn(); loop(fn, a, b); }, a + Math.random() * (b - a)); };
+  loop(spawnItem, 14000, 32000); loop(spawnPoop, 25000, 70000);
+  setTimeout(spawnPoop, 6000);
+}
+function updateGameplay(){
+  const t = performance.now() / 1000;
+  for (const it of items) it.mesh.position.y = .06 + Math.sin(t * 2.2 + it.phase) * .06;      // 道具輕輕上下浮動
+  for (const to of toilets) if (to.poop) to.poop.scale.setScalar(1 + Math.sin(t * 5) * .03);   // 便便微微呼吸
+}
 const imgs = {};
 const loadImg = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
 async function buildOffice(){
@@ -159,8 +214,10 @@ async function buildOffice(){
     else rects.push([x * U, (bottom - (o.fh || 30)) * U, (x + w) * U, bottom * U]);
   }
   build3dObjects(T, place);
+  await Promise.all(ITEM_TYPES.map(async t => { const im = await loadImg(ASSET + 'props5/item_' + t.key + '.png'); if (im) itemSrc[t.key] = trimmed(im); }));
   await Promise.all(SNACKS.map(async ([k]) => { imgs[k] = await loadImg(ASSET + 'props4/' + k + '.png'); }));
   if (pantry3d.snackSpot) SNACKS.forEach(([k, h], i) => { const src = imgs[k] && trimmed(imgs[k]); if (!src) return; const dh = h, dw = dh * src.width / src.height, m = addBillboard(src, pantry3d.snackSpot.cx + (-1.55 + i * .62), pantry3d.snackSpot.cz, dw, dh); m.position.y = .95; });
+  startGameplay();
   // 藍色桌組：每組兩排×三張（3D 方塊桌＋小螢幕），三排 × 設計部／同仁區
   const I = v => v * U;
   GROUPS.forEach((xs, gi) => ROW_TOPS.forEach((top, ri) => {
@@ -253,7 +310,7 @@ function keyboard3d(x, z, color){ pbox(.7, .03, .22, color, x, .95, z, false); p
 
 // 椅子（3D、方向固定）：face = 椅面朝向 'N' | 'S' | 'E' | 'W'。每張都登記成「座位」，人物靠近按 E 可坐下
 const FACE_ANGLE = {S:0, N:Math.PI, E:Math.PI / 2, W:-Math.PI / 2};
-const chairSeats = [];
+const chairSeats = [], toilets = [];
 function chairBuilder(x, z, face){
   const g = new THREE.Group();
   const add = (w, h, d, c, px, py, pz, edge = true) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({color:c})); m.position.set(px, py + h / 2, pz); g.add(m); if (edge) hull(g, w, h, d, px, py + h / 2, pz, .035); };
@@ -338,6 +395,7 @@ function build3dObjects(T, place){
       toilet3d(I(327 + dx), I(y));
       rects.push([I(303 + dx), I(y - 15), I(346 + dx), I(y + 15)]);
       chairSeats.push({x:I(327 + dx) + .12, z:I(y), face:FACE_ANGLE.E, by:null, fwd:.42});   // 坐在馬桶上，面朝右
+      toilets.push({x:I(327 + dx) + .1, z:I(y), poop:null});
     }
     sink3d(I(332 + dx), I(250));
     rects.push([I(308 + dx), I(236), I(354 + dx), I(264)]);
@@ -494,7 +552,7 @@ function select(name){
 
 let done = 0;
 Promise.all([buildOffice(), ...NAMES.map((n, i) => addChar(n, i).then(() => { document.getElementById('load').textContent = `載入角色 ${++done}/${NAMES.length}`; }))])
-  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); select('Machi'); document.getElementById('load').remove(); window.__plaza = {chars, camera, seats:chairSeats, blocked}; });
+  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); select('Machi'); document.getElementById('load').remove(); window.__plaza = {chars, camera, seats:chairSeats, blocked, items, toilets, spawnItem, spawnPoop, pickables}; });
 
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
 const TILT = 0, STRETCH = 1 / Math.cos(Math.atan(8.4 / 9.4)), _e = new THREE.Euler(0, 0, 0, 'YXZ');   // 垂直站立：不再後傾（避免穿進桌子、牆），高度拉長 STRETCH 倍抵消俯視縮短
@@ -532,6 +590,8 @@ stick.addEventListener('pointerup', () => { joy.x = joy.y = 0; knob.style.transf
 const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 renderer.domElement.addEventListener('pointerdown', e => {
   ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
+  const hit = ray.intersectObjects(pickables, true)[0];
+  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'item') collectItem(pk.ref); else flushPoop(pk.ref); return; } }
   const p = new THREE.Vector3();
   if (ray.ray.intersectPlane(plane, p) && !blocked(p.x, p.z)) target = p;
 });
@@ -625,7 +685,7 @@ function tick(){
     camPos.lerp(new THREE.Vector3(p.x, 8.4, p.z + 9.4), 1 - Math.pow(.001, dt));
     camera.position.copy(camPos); look.lerp(p, 1 - Math.pow(.001, dt)); camera.lookAt(look.x, 1, look.z);
   } else { camera.position.copy(camPos); camera.lookAt(0, 1, 0); }
-  updateBillboards(); updateLabels(); updateProjectionView();
+  updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay();
   renderFrame();
   requestAnimationFrame(tick);
 }
