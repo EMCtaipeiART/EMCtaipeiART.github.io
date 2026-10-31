@@ -77,8 +77,8 @@ const TABLES = [
 const STALLS = [0,155];
 // 玻璃隔間牆（缺口＝門）
 const WALLS = [
-  [290,48,153,12],[290,48,12,222],[431,48,12,222],[290,258,95,12],
-  [443,48,165,12],[596,48,12,222],[443,258,100,12],
+  [290,48,153,12],[290,48,12,240],[431,48,12,240],[290,276,95,12],
+  [443,48,165,12],[596,48,12,240],[443,276,100,12],
   [660,48,402,12],[1050,48,12,222],[660,258,402,12],[660,48,12,77],[660,210,12,60],
   [82,1045,208,12],[82,1045,12,205],[278,1045,12,73],[278,1170,12,80],[82,1238,208,12],
   [82,1250,208,12],[82,1250,12,210],[278,1250,12,75],[278,1380,12,80],[82,1448,208,12],
@@ -160,16 +160,16 @@ async function buildOffice(){
   GROUPS.forEach((xs, gi) => ROW_TOPS.forEach((top, ri) => {
     if (gi === 1 && ri === 0) {   // 第一排：同仁區第一欄（4 號／10 號桌）移除，中間讓出通道
       deskBlock3d(885.5, top, 2, 0x1d4ba0, 'laptop', false);
-      for (const cx of [938, 1043]) { officeChair3d(I(cx), I(top - 18), 'S'); officeChair3d(I(cx), I(top + 116), 'N'); }
+      for (const cx of [938, 1043]) { officeChair3d(I(cx), I(top - 38), 'S'); officeChair3d(I(cx), I(top + 116), 'N'); }
       return;
     }
     if (gi === 1 && ri === 1) {   // 第二排：同仁區第一欄（4 號／10 號桌）左移，兩側補矮書櫃，整排連成一塊
       deskBlock3d(751.5, top, 1, 0x1d4ba0, 'laptop', false); deskBlock3d(882.5, top, 2, 0x1d4ba0, 'laptop', false);
-      for (const cx of [804, 935, 1040]) { officeChair3d(I(cx), I(top - 18), 'S'); officeChair3d(I(cx), I(top + 116), 'N'); }
+      for (const cx of [804, 935, 1040]) { officeChair3d(I(cx), I(top - 38), 'S'); officeChair3d(I(cx), I(top + 116), 'N'); }
       return;
     }
     deskBlock3d(xs[0] - 52.5, top, 3, 0x1d4ba0, gi === 0 && ri === 2 ? 'imac' : 'laptop', gi === 0 && ri === 2);
-    xs.forEach(cx => { officeChair3d(I(cx), I(top - 18), 'S'); officeChair3d(I(cx), I(top + 116), 'N'); });
+    xs.forEach(cx => { officeChair3d(I(cx), I(top - 38), 'S'); officeChair3d(I(cx), I(top + 116), 'N'); });
   }));
   // 書櫃：靠緊兩張背對背辦公桌的整面層櫃（人物高），開口朝左；白柱填滿兩個桌組之間的縫，紅色工具櫃靠在上排的柱旁
   [355, 592, 828].forEach(top => bookcase3d(388, top, 22, 94));
@@ -177,7 +177,7 @@ async function buildOffice(){
   pillar3d(725.5, 355, 55, 94, 33); cabinet3d(758.5, 355, 22, 94);
   pillar3d(725.5, 828, 55, 94);
   // 米黃桌組（左側上下兩組，各 2×2 合併）：南北兩側都有椅子
-  [355, 592].forEach(top => { deskBlock3d(85, top, 2, 0xe8c795, 'laptop', false); for (const cx of [137.5, 242.5]) { officeChair3d(I(cx), I(top - 18), 'S'); officeChair3d(I(cx), I(top + 116), 'N'); } });
+  [355, 592].forEach(top => { deskBlock3d(85, top, 2, 0xe8c795, 'laptop', false); for (const cx of [137.5, 242.5]) { officeChair3d(I(cx), I(top - 38), 'S'); officeChair3d(I(cx), I(top + 116), 'N'); } });
   officeChair3d(I(222), I(955), 'N');
   // 白色 L 型桌（左下）
   { const I = v => v * U; pbox(I(168), .12, I(45), 0xf3f3ee, I(224), .83, I(850.5)); pbox(I(52), .95, I(102), 0xf3f3ee, I(111), 0, I(879));
@@ -311,9 +311,9 @@ function build3dObjects(T, place){
     for (const x of xs) { chair3d(I(x), I(yn), 'S'); chair3d(I(x), I(ys), 'N'); }
   }
   // 投影機：A 朝右（東）牆；影廳 B、會議室 C 朝左（西）牆；D 朝下（南）投在地板空地
-  projectorRig(I(948), I(158), 'E', {wallX:I(1040) - .02, wallDir:-1, zc:I(160), w:4.3, h:2.3, title:'設計進度 Q4', kind:'bars'});
-  projectorRig(I(160), I(1160), 'W', {wallX:I(104) + .02, wallDir:1, zc:I(1150), w:3.7, h:2.05, title:'影廳', kind:'text'});
-  projectorRig(I(162), I(1360), 'W', {wallX:I(104) + .02, wallDir:1, zc:I(1355), w:3.7, h:2.05, title:'專案會議', kind:'list'});
+  projectorRig(I(948), I(158), 'E', {wallX:I(1040) - .02, wallDir:-1, zc:I(160), w:3.4, h:2.2, title:'設計進度 Q4', kind:'bars'});
+  projectorRig(I(160), I(1160), 'W', {wallX:I(104) + .02, wallDir:1, zc:I(1150), w:3.2, h:1.9, title:'影廳', kind:'text'});
+  projectorRig(I(162), I(1360), 'W', {wallX:I(104) + .02, wallDir:1, zc:I(1355), w:3.2, h:1.9, title:'專案會議', kind:'list'});
   for (const [x0, z0, ww, dd] of [[1038, 84, 10, 150], [94, 1072, 10, 156], [94, 1274, 10, 162]]) {   // 投影用白牆
     pbox(I(ww), 2.3, I(dd), 0xf6f7f9, I(x0 + ww / 2), 0, I(z0 + dd / 2));
   }
@@ -326,16 +326,16 @@ function build3dObjects(T, place){
   for (const y of [1200, 1245, 1292, 1334]) { chair3d(I(650), I(y), 'E'); chair3d(I(1044), I(y), 'W'); }
   pantry3d(333, 1230, 125, 38);
   fridge3d(503, 1232, 36, 34); fridge3d(541, 1232, 36, 34);
-  // 廁所：隔間縮小（寬 62）讓走廊變寬；碰撞只擋馬桶本體與隔板，人可以走進隔間，馬桶也能坐
+  // 廁所：隔間加大（寬 74、深 72），馬桶靠左牆；碰撞只擋馬桶本體與隔板，人走得進隔間，馬桶可坐
   for (const dx of STALLS) {
-    for (const y of [98, 160]) {
-      toilet3d(I(335 + dx), I(y));
-      rects.push([I(311 + dx), I(y - 14), I(354 + dx), I(y + 14)]);
-      chairSeats.push({x:I(335 + dx) + .12, z:I(y), face:FACE_ANGLE.E, by:null});   // 坐在馬桶上，面朝右
+    for (const y of [100, 172]) {
+      toilet3d(I(327 + dx), I(y));
+      rects.push([I(303 + dx), I(y - 15), I(346 + dx), I(y + 15)]);
+      chairSeats.push({x:I(327 + dx) + .12, z:I(y), face:FACE_ANGLE.E, by:null, fwd:.42});   // 坐在馬桶上，面朝右
     }
-    sink3d(I(330 + dx), I(224));
-    rects.push([I(308 + dx), I(212), I(352 + dx), I(238)]);
-    for (const [x, y, w, h] of [[305,64,62,4],[305,126,62,4],[305,188,62,4],[305,64,4,128]]) { pbox(I(w), .7, I(h), 0xd7cfc6, I(x + dx + w / 2), 0, I(y + h / 2)); rects.push([I(x + dx), I(y), I(x + dx + w), I(y + h)]); }
+    sink3d(I(332 + dx), I(250));
+    rects.push([I(308 + dx), I(236), I(354 + dx), I(264)]);
+    for (const [x, y, w, h] of [[305,64,74,4],[305,136,74,4],[305,208,74,4],[305,64,4,148]]) { pbox(I(w), .7, I(h), 0xd7cfc6, I(x + dx + w / 2), 0, I(y + h / 2)); rects.push([I(x + dx), I(y), I(x + dx + w), I(y + h)]); }
   }
 }
 // ---- 茶水間：深色冰箱（兩台）與木紋茶水檯（含零食） ----
@@ -411,9 +411,12 @@ function projectorRig(x, z, face, o){
   if (o.floor) {   // 投在地板的空地
     const f = o.floor, m = new THREE.Mesh(new THREE.PlaneGeometry(f.w, f.d), mat); m.rotation.x = -Math.PI / 2; m.position.set(f.x, .03, f.z); scene.add(m);
     beam(apex, [new THREE.Vector3(f.x - f.w / 2, .03, f.z - f.d / 2), new THREE.Vector3(f.x + f.w / 2, .03, f.z - f.d / 2), new THREE.Vector3(f.x + f.w / 2, .03, f.z + f.d / 2), new THREE.Vector3(f.x - f.w / 2, .03, f.z + f.d / 2)]);
-  } else {         // 投在牆上
-    const yc = 1.3, m = new THREE.Mesh(new THREE.PlaneGeometry(o.w, o.h), mat); m.rotation.y = o.wallDir > 0 ? Math.PI / 2 : -Math.PI / 2; m.position.set(o.wallX, yc, o.zc); scene.add(m);
-    const X = o.wallX; beam(apex, [new THREE.Vector3(X, yc + o.h / 2, o.zc - o.w / 2), new THREE.Vector3(X, yc + o.h / 2, o.zc + o.w / 2), new THREE.Vector3(X, yc - o.h / 2, o.zc + o.w / 2), new THREE.Vector3(X, yc - o.h / 2, o.zc - o.w / 2)]);
+  } else {         // 投在牆上：畫面以靠鏡頭那端貼牆、另一端向房內斜出約 25°，鏡頭才看得到內容
+    const th = .44, yc = 1.3, ph = o.wallDir > 0 ? Math.PI / 2 - th : -(Math.PI / 2 - th), sn = Math.sin(th);
+    const cx = o.wallX - o.wallDir * (o.w / 2) * sn;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(o.w, o.h), mat); m.rotation.y = ph; m.position.set(cx, yc, o.zc); scene.add(m);
+    const u = new THREE.Vector3(Math.cos(ph), 0, -Math.sin(ph)).multiplyScalar(o.w / 2), c0 = new THREE.Vector3(cx, yc, o.zc), up = new THREE.Vector3(0, o.h / 2, 0);
+    beam(apex, [c0.clone().sub(u).add(up), c0.clone().add(u).add(up), c0.clone().add(u).sub(up), c0.clone().sub(u).sub(up)]);
   }
 }
 // 地圖上的文字標籤（DOM，才清楚）
@@ -450,7 +453,7 @@ async function addChar(name, i){
   const seat = SEATS[name], a = i / NAMES.length * Math.PI * 2;
   if (seat) {   // 入座：上排坐在桌後（面向鏡頭）、下排坐在桌前（背對鏡頭）
     const top = ROW_TOPS[seat[1]], cx = GROUPS[seat[0]][seat[2]];
-    holder.position.set(cx * U, 0, (seat[3] === 'top' ? top - 14 : top + 120) * U);
+    holder.position.set(cx * U, 0, (seat[3] === 'top' ? top - 34 : top + 120) * U);
   } else holder.position.set((560 + 42 * (i % 6)) * U, 0, (1085 + 28 * Math.floor(i / 6)) * U);
   scene.add(holder);
   const c = {name, holder, sprite, tex, face:seat ? (seat[3] === 'top' ? 0 : Math.PI) : -a, moving:0, phase:Math.random() * 9, wander:!seat, t:Math.random() * 5, dir:new THREE.Vector3()};
@@ -465,7 +468,7 @@ function sitDown(c){
   for (const st of chairSeats) { if (st.by) continue; const d = Math.hypot(st.x - c.holder.position.x, st.z - c.holder.position.z); if (d < bd) { bd = d; best = st; } }
   if (!best) return false;
   best.by = c; c.sitting = best; c.wander = false; c.moving = 0; c.face = best.face;
-  c.holder.position.set(best.x + Math.sin(best.face) * .32, 0, best.z + Math.cos(best.face) * .32);
+  const fw = best.fwd ?? .32; c.holder.position.set(best.x + Math.sin(best.face) * fw, 0, best.z + Math.cos(best.face) * fw);
   return true;
 }
 function standUp(c){
