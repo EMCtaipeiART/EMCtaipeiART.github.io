@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createRng,dailySeed,dayKey,hashString} from '../EMC-ART-Pixel-Office/dist/minigames/core/rng.js';
-import {createFixedLoop} from '../EMC-ART-Pixel-Office/dist/minigames/core/loop.js';
-import {createScoreStore} from '../EMC-ART-Pixel-Office/dist/minigames/core/score.js';
-import {createMiniGameManager} from '../EMC-ART-Pixel-Office/dist/minigames/core/manager.js';
+import {createRng,dailySeed,dayKey,hashString} from '../archive/EMC-ART-Pixel-Office-2D/dist/minigames/core/rng.js';
+import {createFixedLoop} from '../archive/EMC-ART-Pixel-Office-2D/dist/minigames/core/loop.js';
+import {createScoreStore} from '../archive/EMC-ART-Pixel-Office-2D/dist/minigames/core/score.js';
+import {createMiniGameManager} from '../archive/EMC-ART-Pixel-Office-2D/dist/minigames/core/manager.js';
 
 // ---- 追蹤監聽數量的假 window／document，用來檢查洩漏 ----
 function fakeTarget(){
@@ -84,7 +84,7 @@ test('一次只能開一局，且未註冊的遊戲不會開啟',()=>{
 });
 
 // ---- Phase 2：辦公室尋寶 ----
-import {floorCandidates,pickTreasures,treasureScore} from '../EMC-ART-Pixel-Office/dist/minigames/games/treasure-gen.js';
+import {floorCandidates,pickTreasures,treasureScore} from '../archive/EMC-ART-Pixel-Office-2D/dist/minigames/games/treasure-gen.js';
 const types=['a','b','c','d','e','f','g','h'];
 const free=(x,y)=>x>60&&x<1400&&y>200&&y<900&&!(x>400&&x<700&&y>300&&y<500);
 const cands=floorCandidates({minX:80,maxX:1450,minY:210,maxY:880,isFree:free});
@@ -112,7 +112,7 @@ test('尋寶：計分規則',()=>{
 });
 
 // ---- Phase 3：廢紙投籃 ----
-import {GEO,createBall,stepBall,launchVelocity,pointsFor,previewPath,binXAt,makeWindSchedule,windAt} from '../EMC-ART-Pixel-Office/dist/minigames/games/hoops-sim.js';
+import {GEO,createBall,stepBall,launchVelocity,pointsFor,previewPath,binXAt,makeWindSchedule,windAt} from '../archive/EMC-ART-Pixel-Office-2D/dist/minigames/games/hoops-sim.js';
 function fly(vx,vy,env={binX:GEO.binBaseX,wind:0}){const b=createBall(vx,vy);for(let i=0;i<60*8;i++){const ev=stepBall(b,1/60,env);if(ev)return {...ev,touched:b.touched};}return {type:'timeout'};}
 function search(pred){for(let a=25;a<=80;a+=.5)for(let sp=350;sp<=1190;sp+=5){const r=a*Math.PI/180,res=fly(Math.cos(r)*sp,-Math.sin(r)*sp);if(pred(res))return {a,sp,res};}return null;}
 
@@ -139,7 +139,7 @@ test('投籃：籃框 20 秒前不動、風力由種子決定',()=>{
 });
 
 // ---- Phase 4：截稿倒數 ----
-import {createDeck,TYPES,levelFor,pointsForCorrect,colorType,shapeType,alignType,revisionType} from '../EMC-ART-Pixel-Office/dist/minigames/games/deadline-challenges.js';
+import {createDeck,TYPES,levelFor,pointsForCorrect,colorType,shapeType,alignType,revisionType} from '../archive/EMC-ART-Pixel-Office-2D/dist/minigames/games/deadline-challenges.js';
 const BOX={x:12,y:124,w:700,h:420};
 const overlaps=(a,b)=>a.x<b.x+b.w-1&&b.x<a.x+a.w-1&&a.y<b.y+b.h-1&&b.y<a.y+a.h-1;
 
@@ -180,8 +180,8 @@ test('截稿：排版對齊的位移肉眼可見，且點擊區就是實際畫�
 test('截稿：計分與連擊',()=>{assert.equal(pointsForCorrect(1),100);assert.equal(pointsForCorrect(2),110);assert.equal(pointsForCorrect(50),200);});
 
 // ---- Phase 5：辦公室躲貓貓（單機原型）----
-import {RULES,MAP,TOTAL_SECS,createGame,stepGame,canSee,lineOfSight,zoneAt,zoneCenter,pushOutOfRect,scoreFor,aliveHiders,seekerOf} from '../EMC-ART-Pixel-Office/dist/minigames/games/hideseek-sim.js';
-import {buildNav,findPath,createBot,botInput} from '../EMC-ART-Pixel-Office/dist/minigames/games/hideseek-ai.js';
+import {RULES,MAP,TOTAL_SECS,createGame,stepGame,canSee,lineOfSight,zoneAt,zoneCenter,pushOutOfRect,scoreFor,aliveHiders,seekerOf} from '../archive/EMC-ART-Pixel-Office-2D/dist/minigames/games/hideseek-sim.js';
+import {buildNav,findPath,createBot,botInput} from '../archive/EMC-ART-Pixel-Office-2D/dist/minigames/games/hideseek-ai.js';
 const nav=buildNav();
 const mk=(count=4,seed=1,seekerIndex=0)=>{const rng=createRng(seed),g=createGame({rng,count,seekerIndex});return {g,rng};};
 const run=(g,secs,inputs={})=>{for(let i=0;i<Math.round(secs*60)&&!g.over;i++)stepGame(g,inputs,1/60);};
@@ -225,7 +225,7 @@ test('躲貓貓：2–6 人機器人對戰都能正常結束，且相同種子�
   for(const count of [2,3,4,5,6])for(let seed=1;seed<=6;seed++){const r=play(count,seed*31+count);assert.equal(r.over,true);assert.deepEqual(r,play(count,seed*31+count));}
 });
 // ---- Phase 6：連線客戶端 ----
-import {createNet,createRoomCode,hideSeekServerUrl} from '../EMC-ART-Pixel-Office/dist/minigames/core/net.js';
+import {createNet,createRoomCode,hideSeekServerUrl} from '../archive/EMC-ART-Pixel-Office-2D/dist/minigames/core/net.js';
 function fakeWS(){
   const made=[];
   class FakeWS{constructor(url){this.url=url;this.readyState=0;this.sent=[];made.push(this);}
@@ -266,7 +266,7 @@ test('連線：舊連線的遲來訊息不會干擾新連線',()=>{
 });
 
 // ---- Phase 7+：正式排行榜（客戶端）----
-import {createBoardClient,boardBaseUrl} from '../EMC-ART-Pixel-Office/dist/minigames/core/board.js';
+import {createBoardClient,boardBaseUrl} from '../archive/EMC-ART-Pixel-Office-2D/dist/minigames/core/board.js';
 const tick=()=>new Promise(r=>setTimeout(r,0));
 const rankedGame=(extra={})=>({id:'rk',title:'RK',duration:1,ranked:true,starts:0,start(ctx){this.starts++;this.day=ctx.day;this.seed=ctx.seed;ctx.input.on('down',()=>ctx.addScore(10));},update(){},render(){},log(){return {answers:[{i:0,a:1,t:1}]};},destroy(){},...extra});
 const ticket={ok:true,runId:'a'.repeat(32),device:'b'.repeat(32),day:'2031-01-02',nick:'小明',tag:'bbbb',verification:'full'};
@@ -327,8 +327,8 @@ test('正式排行：伺服器拒絕或連不上時，分數只留本機並說�
 // ---- 入口開關 ----
 import fs from 'node:fs';
 test('入口開關：預設隱藏按鈕、不載入小遊戲程式；只有 ?minigames=1 才啟用',()=>{
-  const html=fs.readFileSync(new URL('../EMC-ART-Pixel-Office/dist/index.html',import.meta.url),'utf8');
-  const css=fs.readFileSync(new URL('../EMC-ART-Pixel-Office/dist/minigames/minigames.css',import.meta.url),'utf8');
+  const html=fs.readFileSync(new URL('../archive/EMC-ART-Pixel-Office-2D/dist/index.html',import.meta.url),'utf8');
+  const css=fs.readFileSync(new URL('../archive/EMC-ART-Pixel-Office-2D/dist/minigames/minigames.css',import.meta.url),'utf8');
   assert.doesNotMatch(html,/<script[^>]*type="module"[^>]*minigames/);// 不再靜態載入
   assert.match(html,/get\('minigames'\)==='1'/);
   assert.match(html,/classList\.contains\('minigames-on'\)/);

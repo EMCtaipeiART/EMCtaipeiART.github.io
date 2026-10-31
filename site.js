@@ -480,10 +480,10 @@
     })();
     function stashViewer(){try{if(loggedIn())localStorage.setItem('pixelViewerHandoff',JSON.stringify(Object.assign({at:Date.now()},viewerPayload())))}catch(err){}}
     setTimeout(stashViewer,1500);setInterval(stashViewer,20*60*1000);
-    function openUniverseTab(){try{localStorage.setItem('pixelViewerHandoff',JSON.stringify(Object.assign({at:Date.now()},viewerPayload())));}catch(err){}try{if(!(matchMedia('(max-width:720px)').matches&&matchMedia('(hover:none)').matches))return false;const edit=canEditUniverse(),w=window.open('EMC-ART-Pixel-Office/dist/'+(edit?'?clean=1&cs=.78&v=121&t=':'?clean=1&ro=1&cs=.78&v=121&t=')+Math.floor(Date.now()/300000),'_blank');return Boolean(w)}catch(err){return false}}
+    function openUniverseTab(){try{localStorage.setItem('pixelViewerHandoff',JSON.stringify(Object.assign({at:Date.now()},viewerPayload())));}catch(err){}try{if(!(matchMedia('(max-width:720px)').matches&&matchMedia('(hover:none)').matches))return false;const edit=canEditUniverse(),w=window.open('pixel-plaza/'+(edit?'?clean=1&cs=.78&v=121&t=':'?clean=1&ro=1&cs=.78&v=121&t=')+Math.floor(Date.now()/300000),'_blank');return Boolean(w)}catch(err){return false}}
     function openUniverse(){if(openUniverseTab())return;state.uniEdit=canEditUniverse();state.form=null;state.mail=null;state.editing=false;show('universe')}
     function closeUniverse(){const u=$('universe');if(u&&!u.hidden)u.hidden=true}
-    const UNI_URL='EMC-ART-Pixel-Office/dist/';
+    const UNI_URL='pixel-plaza/';
     const canEditUniverse=()=>loggedIn()&&(isDesignerSession()||isAdminUser()||isMachiUser()||/^(企劃部|專案部|呈鈺顧問)$/.test(String(sessionDept()||'').trim()));/* 企劃部、專案部同仁有自己的座位，也能進編輯版 */
     /* 上下班時段設定（管理者與 Machi）：可整組關閉時間規則（假日／下班／加班／沒心跳自動下班都不套用），方便測試手動狀態 */
     async function openHoursEditor(){
@@ -4662,7 +4662,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     window.addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.type==='pixelOfficeStoryClosed'){const br=document.getElementById('avatarBridge');if(br)br.style.cssText='position:fixed;width:320px;height:120px;right:0;bottom:0;border:0;opacity:.01;pointer-events:none;z-index:-1'}});
     window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeMusicState')return;state.musicNow=String(e.data.playing||'');state.musicLoading=String(e.data.loading||'');clearTimeout(state.musicWarn);if(state.musicLoading)state.musicWarn=setTimeout(()=>{if(state.musicLoading&&!state.musicNow)toast('瀏覽器擋住了自動播放，請再點一次音樂框')},3500);document.querySelectorAll('.member-music').forEach(b=>{const on=b.dataset.music===state.musicNow,ld=b.dataset.music===state.musicLoading;b.classList.toggle('is-playing',on);const ic=b.querySelector('.mm-ic');if(ic)ic.innerHTML=musicIcon(on,ld)})});
     window.addEventListener('load',()=>setTimeout(ensureArchive,200));/* 等級資料很小，進站就先讀，不等到滑過頭像才開始 */
-    window.addEventListener('load',()=>setTimeout(function mk(){if(document.getElementById('avatarBridge'))return;if(document.getElementById('uniLoading')){setTimeout(mk,800);return}/* 正在進入多元宇宙時先不開這個隱藏的第二份像素辦公室，免得跟主畫面搶頻寬 */const f=document.createElement('iframe');f.id='avatarBridge';f.title='設計師頭像';f.setAttribute('aria-hidden','true');f.tabIndex=-1;f.style.cssText='position:fixed;width:320px;height:120px;right:0;bottom:0;border:0;opacity:.01;pointer-events:none;z-index:-1';f.src='EMC-ART-Pixel-Office/dist/?avatars=1&v=33&t='+Math.floor(Date.now()/300000)+'';document.body.appendChild(f)},300));
+    window.addEventListener('load',()=>setTimeout(function mk(){if(document.getElementById('avatarBridge'))return;if(document.getElementById('uniLoading')){setTimeout(mk,800);return}/* 正在進入多元宇宙時先不開這個隱藏的第二份像素辦公室，免得跟主畫面搶頻寬 */const f=document.createElement('iframe');f.id='avatarBridge';f.title='設計師頭像';f.setAttribute('aria-hidden','true');f.tabIndex=-1;f.style.cssText='position:fixed;width:320px;height:120px;right:0;bottom:0;border:0;opacity:.01;pointer-events:none;z-index:-1';f.src='archive/EMC-ART-Pixel-Office-2D/dist/?avatars=1&v=33&t='+Math.floor(Date.now()/300000)+'';document.body.appendChild(f)},300));
     window.__v5=state; // 方便除錯
   })();
   

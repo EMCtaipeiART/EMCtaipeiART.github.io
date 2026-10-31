@@ -46,3 +46,8 @@
 - 像素辦公室的位置更新 API（`pixelOfficeUpdate`）不驗證身分，只擋了畫面上的操作；後端尚未補身分檢查。
 - 行事曆同步需要 Google 授權能讀活動內容；會議室行事曆（meetingrooma～d）若分享給主帳號，會議室判斷會更準。
 - 「推到 Claude cloud」：等使用者決定 Codex 未提交檔案的處理方式。
+
+## 元宇宙已改為 3D 版（2026-10-31）
+- 網站的「元宇宙」入口、設計師面板內嵌小視窗（`?embed=1`）、出氣擂台返回連結都已指向 `pixel-plaza/`（three.js 3D 版，UI 規範在 `pixel-plaza/UI-SPEC.md`）。
+- 2D 版整包封存在 `archive/EMC-ART-Pixel-Office-2D/`（原路徑 `EMC-ART-Pixel-Office/` 已不存在），git tag `pixel-office-2d-final` 也保存了封存前的最後狀態。封存版仍有檔案供首頁隱藏的頭像橋接 iframe（`?avatars=1`）與相關測試使用，不要刪。
+- 3D 版自己的素材放在 `pixel-plaza/assets/`、`pixel-plaza/snacks/`、`pixel-plaza/fridge/`，不依賴封存資料夾。

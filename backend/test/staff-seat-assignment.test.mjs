@@ -21,7 +21,7 @@ test('three desk groups per side: 18 staff seats, extra groups shifted up by 604
   assert.match(source, /PIXEL_OFFICE_STAFF_SEATS = 18/);
   assert.match(source, /PIXEL_OFFICE_MIN_Y = -1900/);
   assert.match(source, /Math\.floor\(seat \/ 6\) \* 604/);
-  const app = await readFile(new URL('../../EMC-ART-Pixel-Office/dist/app.js', import.meta.url), 'utf8');
+  const app = await readFile(new URL('../../archive/EMC-ART-Pixel-Office-2D/dist/app.js', import.meta.url), 'utf8');
   assert.match(app, /GP=604[^,]*,GPV=497/);
   assert.match(app, /const staffStationIndex=seat=>/);
   // 四樓（?floor=4）的場景不收上排，viewY 直接回傳原座標；三樓維持原本的收攏算法。
@@ -31,7 +31,7 @@ test('three desk groups per side: 18 staff seats, extra groups shifted up by 604
 test('layout 2026-10-19: seats 6 and 9 move 110 left (between the groups), left region widened (LX 300), office extras sheet', async () => {
   assert.match(source, /seat === 6 \|\| seat === 9 \? x - 55 : x/);
   assert.match(source, /applied\.has\(24\)/);
-  const app = await readFile(new URL('../../EMC-ART-Pixel-Office/dist/app.js', import.meta.url), 'utf8');
+  const app = await readFile(new URL('../../archive/EMC-ART-Pixel-Office-2D/dist/app.js', import.meta.url), 'utf8');
   assert.match(app, /\?0:320\/\*/);
   assert.match(app, /stations\[18\]\.x-=55;stations\[21\]\.x-=55;/);
   assert.match(app, /office-extras-v2\.webp\?v=1/);
@@ -39,7 +39,7 @@ test('layout 2026-10-19: seats 6 and 9 move 110 left (between the groups), left 
 });
 
 test('work hours come from the back-office setting (state.hours); overtime mask is overtimeStart..06:00', async () => {
-  const app = await readFile(new URL('../../EMC-ART-Pixel-Office/dist/app.js', import.meta.url), 'utf8');
+  const app = await readFile(new URL('../../archive/EMC-ART-Pixel-Office-2D/dist/app.js', import.meta.url), 'utf8');
   assert.match(app, /let officeHours=\{dayStart:9,workEnd:19,overtimeStart:19\};/);
   assert.match(app, /clock\.hour>=officeHours\.overtimeStart\|\|clock\.hour<6/);
   assert.match(app, /c\.hour>=officeHours\.dayStart&&c\.hour<officeHours\.workEnd/);

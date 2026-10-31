@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const appJs = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../EMC-ART-Pixel-Office/dist/app.js');
+const appJs = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../archive/EMC-ART-Pixel-Office-2D/dist/app.js');
 
 // 2026-10-17：貼圖黑眼圈＋鬼火（會因為每個人眼睛、頭大小不同而錯位）改成程式繪製的
 // 舞台聚光＋整身冷色調＋三簇藍紫鬼火，位置只看腳底與身高比例，完全不碰臉。

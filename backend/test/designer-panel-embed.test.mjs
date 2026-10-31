@@ -8,9 +8,9 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const indexHtml = () => readFile(path.join(root, 'legacy.html'), 'utf8');
-const officeHtml = () => readFile(path.join(root, 'EMC-ART-Pixel-Office/dist/index.html'), 'utf8');
-const officeCss = () => readFile(path.join(root, 'EMC-ART-Pixel-Office/dist/style.css'), 'utf8');
-const officeJs = () => readFile(path.join(root, 'EMC-ART-Pixel-Office/dist/app.js'), 'utf8');
+const officeHtml = () => readFile(path.join(root, 'archive/EMC-ART-Pixel-Office-2D/dist/index.html'), 'utf8');
+const officeCss = () => readFile(path.join(root, 'archive/EMC-ART-Pixel-Office-2D/dist/style.css'), 'utf8');
+const officeJs = () => readFile(path.join(root, 'archive/EMC-ART-Pixel-Office-2D/dist/app.js'), 'utf8');
 
 function renderDesignersSource(html) {
   const start = html.indexOf('function renderDesigners(){');
@@ -22,7 +22,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=57"/);
+  assert.match(source, /src="pixel-plaza\/\?embed=1&amp;v=1"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -482,7 +482,7 @@ test('標題後面的「編輯」開出嵌著完整像素辦公室的小視窗',
   // 面板裡的 iframe 是唯讀預覽（只放行點人物看資料），要改自己的心情／狀態／留言得開完整版。
   assert.match(html, /<div class="designer-title-wrap"><h2>設計部即時動態<\/h2>[\s\S]{0,200}?id="officeEditorOpen"[^>]*>編輯<\/button><\/div>/,
     '膠囊按鈕要接在標題（與說明鈕）後面');
-  assert.match(html, /const OFFICE_EDITOR_URL='https:\/\/emc-art\.com\/EMC-ART-Pixel-Office\/dist\/';/);
+  assert.match(html, /const OFFICE_EDITOR_URL='https:\/\/emc-art\.com\/pixel-plaza\/';/);
   assert.match(html, /<iframe id="officeEditorFrame"/);
   // src 等到打開才給，關掉就拿掉：不然這一頁會在背景一直跑 canvas 與同步輪詢。
   assert.match(html, /if\(frame&&!frame\.getAttribute\('src'\)\)frame\.src=OFFICE_EDITOR_URL; modal\.hidden=false;/);
@@ -783,7 +783,7 @@ test('耳機：背面壓在人物後面、側面用單個耳罩的側面素材',
 
 test('動作「閃身步」：只有 Machi、8 張依序播放、腳下顯示名稱、後端同樣限制', async () => {
   const js = await officeJs();
-  const html = await readFile(new URL('../../EMC-ART-Pixel-Office/dist/index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../archive/EMC-ART-Pixel-Office-2D/dist/index.html', import.meta.url), 'utf8');
   assert.match(js, /dodge:\{label:'閃身步',who:\[4\],src:'assets\/wardrobe-action-dodge\.webp\?v=1',move:'slide',frameMs:125,hold:\[0,4\],holdMs:1500/);
   const grab = id => JSON.parse(js.match(new RegExp(`${id}:\\{label.*?frames:(\\[\\{x:0.*?\\}\\])\\}`, 's'))[1].replace(/([a-z]+):/g, '"$1":'));
   assert.equal(grab('dodge').length, 8);
@@ -819,7 +819,7 @@ test('自訂頭像：遊戲讀公開 API 的 heads、頭那層換成本人的頭
 });
 
 test('人物工具欄：移除名字下方敘述與「全員回座位」按鈕，狀態／造型／動作／音樂／限時動態／想說的話預設收合、滑過展開，在座按鈕讓大家回座位', async () => {
-  const [js, html, css] = await Promise.all([officeJs(), officeHtml(), readFile(new URL('../../EMC-ART-Pixel-Office/dist/style.css', import.meta.url), 'utf8')]);
+  const [js, html, css] = await Promise.all([officeJs(), officeHtml(), readFile(new URL('../../archive/EMC-ART-Pixel-Office-2D/dist/style.css', import.meta.url), 'utf8')]);
   assert.doesNotMatch(html, /id="personDesc"|id="home"|全員回座位/);
   assert.doesNotMatch(js, /personDesc|\$\('home'\)/);
   const order = ['目前狀態', '造型', '動作', '音樂', '限時動態', '想說的一句話'].map(label => html.indexOf(`>${label}<`));

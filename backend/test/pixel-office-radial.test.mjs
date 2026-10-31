@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source = fs.readFileSync(new URL('../../EMC-ART-Pixel-Office/dist/app.js', import.meta.url), 'utf8');
+const source = fs.readFileSync(new URL('../../archive/EMC-ART-Pixel-Office-2D/dist/app.js', import.meta.url), 'utf8');
 const radial = source.slice(source.indexOf('(()=>{', source.indexOf('// 人物四周的圓形選單')));
 
 // Execute the real menu controller with a minimal DOM and deterministic timers.

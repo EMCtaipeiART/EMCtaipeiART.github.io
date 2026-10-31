@@ -20,7 +20,7 @@ on:
       - 'assets/v5/**'
       - '.github/workflows/update-database-archive.yml'
       # Pixel Office 小遊戲也靠這個流程發布到 GitHub Pages，修改後要能自動上線。
-      - 'EMC-ART-Pixel-Office/**'
+      - 'archive/**'
       # 3D 像素辦公室（pixel-plaza）也走同一個流程發布。
       - 'pixel-plaza/**'
       - 'character-studio/vendor/**'

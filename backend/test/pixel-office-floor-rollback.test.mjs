@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const source = fs.readFileSync(new URL('../../EMC-ART-Pixel-Office/dist/app.js', import.meta.url), 'utf8');
+const source = fs.readFileSync(new URL('../../archive/EMC-ART-Pixel-Office-2D/dist/app.js', import.meta.url), 'utf8');
 
 test('搭電梯離開四樓後，四樓頁面不再送位置更新（避免晚到的 floor:4 把人又標回四樓而回朔）', () => {
   const fn = source.slice(source.indexOf('function pushChange('), source.indexOf('function queuePosition('));

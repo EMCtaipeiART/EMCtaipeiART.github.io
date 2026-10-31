@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
-const app = await readFile(new URL('../../EMC-ART-Pixel-Office/dist/app.js', import.meta.url), 'utf8');
-const atlas = JSON.parse(await readFile(new URL('../../EMC-ART-Pixel-Office/dist/assets/staff-gear-v1.json', import.meta.url), 'utf8'));
+const app = await readFile(new URL('../../archive/EMC-ART-Pixel-Office-2D/dist/app.js', import.meta.url), 'utf8');
+const atlas = JSON.parse(await readFile(new URL('../../archive/EMC-ART-Pixel-Office-2D/dist/assets/staff-gear-v1.json', import.meta.url), 'utf8'));
 const gearSource = app.slice(app.indexOf('const staffGearSheet='), app.indexOf('\nfunction drawDesk(s)'));
 const functionSource = name => {
   const start = app.indexOf(`function ${name}(`);
