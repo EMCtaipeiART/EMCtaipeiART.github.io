@@ -283,6 +283,10 @@ button{font-family:inherit}
 .cp-story .th{width:48px!important;height:62px!important}
 @media (max-width:640px){.cp-cols{grid-template-columns:1fr!important}}
 #net{display:none!important}
+#swheel{position:fixed;left:0;top:0;z-index:9;width:0;height:0;pointer-events:none}#swheel[hidden]{display:none}
+.sw-b{position:absolute;left:0;top:0;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;border:2.5px solid var(--ink);background:#fff;color:var(--ink);display:grid;place-items:center;align-content:center;gap:0;padding:0;pointer-events:auto;font:700 10px/1 'Fredoka','Noto Sans TC',sans-serif;box-shadow:0 4px 0 rgba(11,61,30,.4);transform:translate(0,0) scale(.2);opacity:0;transition:transform .28s cubic-bezier(.3,1.5,.5,1) var(--d),opacity .2s var(--d)}
+#swheel.open .sw-b{transform:translate(var(--x),var(--y)) scale(1);opacity:1}
+.sw-b img{width:30px;height:30px}.sw-b b{margin-top:-1px}.sw-b:hover{background:#e8fbe9;border-color:var(--c2)}.sw-b.on{background:var(--yellow)}
 button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .th{cursor:pointer}
 #fridgeP{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:13;width:min(560px,94vw);padding:10px 12px;border-radius:18px;border:2px solid var(--line);background:var(--glass);color:#fff;font-family:'Fredoka','Noto Sans TC',sans-serif;backdrop-filter:blur(8px);box-shadow:0 18px 40px rgba(0,0,0,.4)}#fridgeP[hidden]{display:none}
 .fr-head{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:16px;margin-bottom:6px}.fr-x{height:28px;padding:0 14px;border-radius:999px;border:2px solid var(--line);background:rgba(0,0,0,.35);color:#fff;font:700 12px 'Fredoka','Noto Sans TC',sans-serif}
@@ -1144,8 +1148,8 @@ const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 
 renderer.domElement.addEventListener('pointerdown', e => {
   ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
   const hits = ray.intersectObjects(pickables, true).filter((h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.desk && !pk.c.holder.visible); })), hit = hits.find(h => ((h.object.userData.pickRoot || h.object).userData.pick || {}).kind === 'char') || hits[0];
-  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { clickChar = pk.c; clickUntil = performance.now() + 3000; if (pk.c !== player && player && adminHome) select(pk.c.name); if (false) { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); else if (pk.kind === 'fridge') fridgeInteract(); else if (pk.kind === 'seat') { const st = pk.seat || chairSeats.filter(q => q.kind === 'toilet').sort((a, b) => Math.hypot(a.x - pk.at.x, a.z - pk.at.z) - Math.hypot(b.x - pk.at.x, b.z - pk.at.z))[0]; if (st && player && !st.by && !st.hidden) { wantSeat = st; target = new THREE.Vector3(st.x, 0, st.z); } } return; } }
-  radialClose(); wantSeat = null; fridgeWant = false;
+  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { clickChar = pk.c; clickUntil = performance.now() + 3000; if (pk.c !== player && player && adminHome) select(pk.c.name); if (pk.c === player) wheelOpen(pk.c); else wheelClose(); if (false) { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); else if (pk.kind === 'fridge') fridgeInteract(); else if (pk.kind === 'seat') { const st = pk.seat || chairSeats.filter(q => q.kind === 'toilet').sort((a, b) => Math.hypot(a.x - pk.at.x, a.z - pk.at.z) - Math.hypot(b.x - pk.at.x, b.z - pk.at.z))[0]; if (st && player && !st.by && !st.hidden) { wantSeat = st; target = new THREE.Vector3(st.x, 0, st.z); } } return; } }
+  radialClose(); wantSeat = null; fridgeWant = false; wheelClose();
   const p = new THREE.Vector3();
   if (ray.ray.intersectPlane(plane, p) && !blocked(p.x, p.z)) target = p;
 });
@@ -1427,8 +1431,7 @@ function renderCharPage(){
     <div class="cp-cols">
       <section class="cp-panel p1"><header><h3>狀態</h3></header>
         <div class="cp-cur"><i>${iconImg(symOf[c.status] || 'person', 52)}</i><div><b>${st[0]}</b><small>${STATUS_DESC[c.status] || ''}</small></div></div>
-        <div class="cp-grid" id="cpSt"></div>
-        <div class="cp-chips"><button type="button" id="cpAuto">🤖 交還電腦自動判斷</button></div>
+        <p class="cp-note">點人物會展開狀態輪盤；選「在座」就交還給電腦自動判斷。</p>
         <h4>心情</h4><div class="cp-grid m" id="cpMood"></div>
       </section>
       <div class="cp-stack">
@@ -1450,7 +1453,6 @@ function renderCharPage(){
     </div>
     <details class="cp-fold"><summary>管理者工具</summary><section class="cp-admin" id="cpAdmin"></section></details>
   </div>`;
-  const g = radial.querySelector('#cpSt'); for (const [id, [name]] of Object.entries(STATUS)) { const b = document.createElement('button'); b.type = 'button'; b.className = c.status === id ? 'on' : ''; b.innerHTML = '<i>' + iconImg(symOf[id], 44) + '</i>' + name; b.onclick = () => setOwnStatus(id); g.appendChild(b); }
   const mm = radial.querySelector('#cpMood'); for (const id of Object.keys(MOOD)) { const b = document.createElement('button'); b.type = 'button'; b.className = c.mood === id ? 'on' : ''; b.innerHTML = '<i>' + iconImg(moodSym[id], 36) + '</i>' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[id]; b.onclick = () => setOwnMood(id); mm.appendChild(b); }
   const x = document.createElement('button'); x.type = 'button'; x.innerHTML = '<i>✖</i>清除'; x.onclick = () => setOwnMood(''); mm.appendChild(x);
   const ta = radial.querySelector('#cpMsg'); ta.value = keepMsg != null ? keepMsg : (c.message || ''); 
@@ -1459,7 +1461,7 @@ function renderCharPage(){
   const mp = radial.querySelector('#cpMPlay'); if (mp) mp.onclick = () => toggleMusic(c); const ms = radial.querySelector('#cpMStop'); if (ms) ms.onclick = clearOwnMusic;
   const file = radial.querySelector('#cpFile'); radial.querySelector('#cpPost').onclick = () => file.click(); file.onchange = () => { const f = file.files[0]; file.value = ''; if (f) postStory(f); };
   radial.querySelectorAll('.cp-story .th').forEach(b => b.onclick = () => { radialClose(); openStory(c.name); }); radial.querySelectorAll('.cp-story .rm').forEach(b => b.onclick = () => removeStory(b.dataset.id));
-  radial.querySelector('#cpAuto').onclick = setOwnAuto; radial.querySelector('#cpX').onclick = radialClose;
+  radial.querySelector('#cpX').onclick = radialClose;
   renderAdmin();
 }
 // 管理者工具：全員上班／下班、上下班設定、班長處罰（沿用 2D 版的動作；測試階段全面開放）
@@ -1481,10 +1483,27 @@ async function loadHours(){ try { const r = await adminCall('getPixelHours'); ho
 function radialOpen(who){ if (!player) return; pageChar = who && who !== player ? who : null; radial.hidden = false; renderCharPage(); loadHours(); }
 function radialClose(){ pageChar = null; radial.hidden = true; radial.innerHTML = ''; }
 function placeRadial(){}
-addEventListener('keydown', e => { if (e.key === 'Escape') { if (!fridgePanel.hidden) fridgeClose(); else if (!$('sv').hidden) closeStory(); else if (!radial.hidden) radialClose(); } });
+addEventListener('keydown', e => { if (e.key === 'Escape') { if (!wheel.hidden) wheelClose(); else if (!fridgePanel.hidden) fridgeClose(); else if (!$('sv').hidden) closeStory(); else if (!radial.hidden) radialClose(); } });
 radial.addEventListener('pointerdown', e => { if (e.target === radial) radialClose(); });
 
 // ───────── 人物頭上的介面：對話泡泡、音樂泡泡、心情圖示、限時動態氣泡；離席的人在座位上方顯示狀態牌 ─────────
+// ---- 狀態輪盤：點人物展開一圈九個狀態，人物移動或點別處就收合；選「在座」＝交還電腦自動判斷 ----
+const wheel = document.createElement('div'); wheel.id = 'swheel'; wheel.hidden = true; document.body.appendChild(wheel);
+let wheelChar = null;
+function wheelOpen(c){
+  if (!c || c !== player) return; wheelChar = c; wheel.hidden = false; wheel.classList.remove('open');
+  const ids = Object.keys(STATUS), R = 86;
+  wheel.innerHTML = ids.map((id, i) => { const a = -Math.PI / 2 + i * Math.PI * 2 / ids.length, x = Math.cos(a) * R, y = Math.sin(a) * R;
+    return '<button type="button" class="sw-b' + (c.status === id ? ' on' : '') + '" data-id="' + id + '" style="--x:' + x.toFixed(1) + 'px;--y:' + y.toFixed(1) + 'px;--d:' + (i * 24) + 'ms">' + iconImg(symOf[id], 30) + '<b>' + (id === 'present' ? '在座' : STATUS[id][0]) + '</b></button>'; }).join('');
+  wheel.querySelectorAll('.sw-b').forEach(b => b.onclick = () => { const id = b.dataset.id; wheelClose(); if (id === 'present') setOwnAuto(); else setOwnStatus(id); });
+  requestAnimationFrame(() => requestAnimationFrame(() => wheel.classList.add('open')));
+}
+function wheelClose(){ wheel.hidden = true; wheel.classList.remove('open'); wheelChar = null; }
+function updateWheel(){
+  if (wheel.hidden || !wheelChar) return;
+  const p = wheelChar.holder.position.clone(); p.y = wheelChar.holder.visible ? 1.1 : 1.3; p.project(camera);
+  wheel.style.transform = 'translate(' + ((p.x * .5 + .5) * innerWidth) + 'px,' + ((-p.y * .5 + .5) * innerHeight) + 'px)';
+}
 let hoverChar = null, clickChar = null, clickUntil = 0;
 const plate = document.createElement('div'); plate.className = 'cui-tag'; plate.style.cssText = 'position:fixed;left:0;top:0;z-index:7;display:none;pointer-events:none'; document.body.appendChild(plate);
 function updatePlate(){
@@ -1497,7 +1516,7 @@ function updatePlate(){
   plate.style.display = 'inline-flex'; plate.style.transform = 'translate(-50%,6px) translate(' + ((p.x * .5 + .5) * innerWidth) + 'px,' + ((-p.y * .5 + .5) * innerHeight) + 'px)';
 }
 function updateTags(){
-  updatePlate();
+  updatePlate(); updateWheel();
   for (const c of Object.values(chars)) {
     const away = c.status && AWAY.has(c.status) && c !== player && c.home, m = c.music, nStory = storiesOf(c.name).length;
     let p = null, html = '';
@@ -1586,7 +1605,7 @@ function tick(){
       0,
       (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0) + joy.y);
     const run = keys.ShiftLeft || keys.ShiftRight || Math.hypot(joy.x, joy.y) > .85;
-    if (dir.lengthSq() > .01) { target = null; wantSeat = null; fridgeWant = false; }
+    if (dir.lengthSq() > .01) { target = null; wantSeat = null; fridgeWant = false; wheelClose(); }
     else if (target) { dir.copy(target).sub(player.holder.position); dir.y = 0; if (dir.length() < .2) target = null; }
     if (!radial.hidden || !$('sv').hidden || AWAY.has(player.status)) { dir.set(0, 0, 0); target = null; }   // 角色頁面開著時人物不跟著走
     if (player.sitting && dir.lengthSq() > 1e-4) standUp(player);
