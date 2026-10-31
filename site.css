@@ -819,8 +819,8 @@
     .uni-elev-fx b{position:absolute;left:50%;top:14%;transform:translateX(-50%);padding:6px 18px;background:#1b2027;border:3px solid #0c0c0c;color:#e7bd60;font:900 34px/1.1 ui-monospace,Menlo,monospace;letter-spacing:4px;opacity:0;transition:opacity .2s}
     .uni-elev-fx.show b{opacity:1}.uni-elev-fx.open b{opacity:0}
     .uni-wrap{position:relative;width:min(796px,100%);margin:0 auto}.uni-wrap .uni-frame{width:100%}.uni-page.is-edit .uni-wrap{width:100%}.uni-page.is-edit .uni-wrap .uni-frame{width:100%}
-    .uni-loading{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--bg);transition:opacity .45s ease,visibility .45s ease}.uni-loading.is-done{opacity:0;visibility:hidden;pointer-events:none}.uni-loading b{font-size:15px}.uni-loading small{color:var(--muted,#888)}
-    .uni-spin{width:36px;height:36px;border:4px solid rgba(21,158,49,.2);border-top-color:#159E31;border-radius:50%;animation:spin .8s linear infinite}
+    .uni-loading{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:radial-gradient(900px 520px at 50% 0%,#43d86c 0%,#1aa844 55%,#0b6a2b 100%);color:#fff;transition:opacity .45s ease,visibility .45s ease}.uni-loading.is-done{opacity:0;visibility:hidden;pointer-events:none}.uni-loading b{font-size:15px}.uni-loading small{color:rgba(255,255,255,.85)}
+    .uni-spin{width:36px;height:36px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
     .uni-frame{display:block;width:min(796px,100%);margin:0 auto;aspect-ratio:796/616;height:auto;min-height:340px;border:0;border-radius:0;background:transparent}
     .universe{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:20px;background:rgba(10,20,14,.55)}
     .universe-card{width:min(1040px,100%);border-radius:22px;background:var(--panel);box-shadow:var(--shadow-lg);overflow:hidden}
@@ -1613,3 +1613,6 @@ body.arena-on .arena-frame{border-radius:0;box-shadow:none;background:transparen
 .dc-note{padding-right:22px;min-height:38px}.dc-note.editing{min-height:0;padding-right:7px}
 .dc-note-tools{top:3px;right:3px;gap:2px}.dc-note-tools button{width:15px;height:15px;font-size:9px;border-radius:4px}
 .rail::-webkit-scrollbar{display:none}.rail>*{flex-shrink:0}
+
+/* 進入元宇宙：上方橫幅與填單列整個收起，畫面留給 3D 辦公室 */
+body.uni-on .hero{display:none}
