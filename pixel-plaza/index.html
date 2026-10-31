@@ -13,6 +13,9 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #roster button{flex:none;border:2px solid #fff6;background:#0006;color:#fff;border-radius:6px;padding:6px 10px;font:inherit;font-size:13px;cursor:pointer}
 #roster button.on{background:#ffd23f;color:#222;border-color:#fff}
 .lbl{position:fixed;left:0;top:0;pointer-events:none;background:#232b32;color:#fff;font:700 12px/1 system-ui,'Noto Sans TC',sans-serif;padding:4px 7px;border-radius:3px;white-space:nowrap;z-index:2}
+#proj{position:fixed;right:12px;top:12px;z-index:3;display:none;background:#0b0d10;border:3px solid #0b0d10;border-radius:6px;box-shadow:0 4px 14px #0004}
+#proj canvas{position:static;display:block;width:320px;height:180px;image-rendering:pixelated}
+#proj span{display:block;color:#fff;font:700 12px system-ui,'Noto Sans TC',sans-serif;padding:4px 6px}
 #sit{position:fixed;right:12px;bottom:64px;z-index:3;border:2px solid #fff8;background:#0008;color:#fff;border-radius:6px;padding:8px 12px;font:inherit;font-size:14px;cursor:pointer}
 #load{position:fixed;inset:0;display:grid;place-items:center;background:#1b2a41;color:#fff;font-size:18px;z-index:5}
 #stick{position:fixed;left:18px;bottom:78px;width:110px;height:110px;border-radius:50%;background:#fff3;border:2px solid #fff6;display:none}
@@ -22,6 +25,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <div id="load">載入像素辦公室…</div>
 <div id="hud"><b>EMC 像素辦公室</b><br>WASD / 方向鍵移動 · Shift 跑步 · 點地面走過去 · 下方切換角色 · 網址加 ?px=1 為復古像素模式</div>
 <div id="stick"><i></i></div>
+<div id="proj"><canvas width="128" height="72"></canvas><span></span></div>
 <button id="sit">坐下 / 起身 (E)</button>
 <div id="roster"></div>
 <script type="module">
@@ -60,11 +64,10 @@ addEventListener('resize', resize); resize();
 // 版面圖座標（1201×1526 px）× U = 世界座標。桌子 105 px 寬 ≈ 3.15 單位，與角色身高 2.04 的比例同遊戲內一致。
 const U = 0.03, PPU = HD ? 29.5 * DPR * innerHeight / 300 : 29.5;               // PPU：每單位約幾個螢幕像素（貼圖縮成這個大小才會清楚）
 const ASSET = '../EMC-ART-Pixel-Office/dist/assets/';
-const FILES = {elevator:'props2/elevator.png',plant:'props2/plant_pot.png'};
+const FILES = {elevator:'props2/elevator.png'};
 // [素材, 左上 x, 底部 y, 寬, 選項{h 指定高, fh 碰撞高, col 自訂碰撞[x,y,w,h]}]（版面圖像素）
 const PROPS = [
   ['elevator',165,255,72,{fh:40}],
-  ['plant',600,1320,22,{fh:14}],
 ];
 // 3D 立體物件（像素風：平塗色方塊＋深色邊線，低解析度渲染後就是像素立體）。座標為版面圖像素。
 // 會議桌：[中心 x, 中心 y, 寬, 深, 桌色, 椅子 x 們, 北側椅子腳底 y, 南側椅子腳底 y]
@@ -84,7 +87,7 @@ const WALLS = [
   [82,1250,208,12],[82,1250,12,210],[278,1250,12,75],[278,1380,12,80],[82,1448,208,12],
   [610,1045,210,12],[872,1045,210,12],[610,1045,12,417],[1070,1045,12,417],[610,1450,472,12]
 ];
-const LABELS = [['男廁',370,44],['女廁',526,44],['會議室 A',863,110],['影廳',215,1062],['會議室 C',186,1432],['茶水間',396,1226],['冰箱',538,1208],['會議室 D',845,1285],['電梯',201,262]];
+const LABELS = [['男廁',370,44],['女廁',526,44],['會議室 A',863,110],['影廳',215,1062],['會議室 C',186,1432],['茶水間',368,1226],['冰箱',510,1208],['會議室 D',845,1285],['電梯',201,262]];
 // 藍色桌組：三排（y 為桌面上緣），設計部 x 中心 463/568/673，同仁區 833/938/1043。type：1 有 iMac、7 空桌、4 Mac mini 桌。
 const ROW_TOPS = [355, 592, 828];
 const GROUPS = [[463,568,673],[833,938,1043]];
@@ -138,6 +141,7 @@ function addBillboard(src, cx, z, dw, dh){
   const m = new THREE.Mesh(new THREE.PlaneGeometry(dw, dh), new THREE.MeshBasicMaterial({map:propTexture(src, dw, dh), transparent:true, alphaTest:.5, side:THREE.DoubleSide}));
   m.geometry.translate(0, dh / 2, 0); m.position.set(cx, 0, z); scene.add(m); billboards.push(m); return m;
 }
+const SNACKS = [['snack_chips', .8], ['snack_cupnoodle', .62], ['snack_cola', .52], ['snack_cookie', .46], ['snack_choco', .42], ['snack_candy', .68]];
 const imgs = {};
 const loadImg = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
 async function buildOffice(){
@@ -155,6 +159,8 @@ async function buildOffice(){
     else rects.push([x * U, (bottom - (o.fh || 30)) * U, (x + w) * U, bottom * U]);
   }
   build3dObjects(T, place);
+  await Promise.all(SNACKS.map(async ([k]) => { imgs[k] = await loadImg(ASSET + 'props4/' + k + '.png'); }));
+  if (pantry3d.snackSpot) SNACKS.forEach(([k, h], i) => { const src = imgs[k] && trimmed(imgs[k]); if (!src) return; const dh = h, dw = dh * src.width / src.height, m = addBillboard(src, pantry3d.snackSpot.cx + (-1.55 + i * .62), pantry3d.snackSpot.cz, dw, dh); m.position.y = .95; });
   // 藍色桌組：每組兩排×三張（3D 方塊桌＋小螢幕），三排 × 設計部／同仁區
   const I = v => v * U;
   GROUPS.forEach((xs, gi) => ROW_TOPS.forEach((top, ri) => {
@@ -311,21 +317,21 @@ function build3dObjects(T, place){
     for (const x of xs) { chair3d(I(x), I(yn), 'S'); chair3d(I(x), I(ys), 'N'); }
   }
   // 投影機：A 朝右（東）牆；影廳 B、會議室 C 朝左（西）牆；D 朝下（南）投在地板空地
-  projectorRig(I(948), I(158), 'E', {wallX:I(1040) - .02, wallDir:-1, zc:I(160), w:3.4, h:2.2, title:'設計進度 Q4', kind:'bars'});
-  projectorRig(I(160), I(1160), 'W', {wallX:I(104) + .02, wallDir:1, zc:I(1150), w:3.2, h:1.9, title:'影廳', kind:'text'});
-  projectorRig(I(162), I(1360), 'W', {wallX:I(104) + .02, wallDir:1, zc:I(1355), w:3.2, h:1.9, title:'專案會議', kind:'list'});
-  for (const [x0, z0, ww, dd] of [[1038, 84, 10, 150], [94, 1072, 10, 156], [94, 1274, 10, 162]]) {   // 投影用白牆
+  projectorRig(I(948), I(158), 'E', {room:'A', wallX:I(1046) - .02, wallDir:-1, zc:I(160), w:4.3, h:2.2, title:'設計進度 Q4', kind:'bars'});
+  projectorRig(I(160), I(1160), 'W', {room:'B', wallX:I(98) + .02, wallDir:1, zc:I(1150), w:4.0, h:2.1, title:'影廳', kind:'text'});
+  projectorRig(I(162), I(1360), 'W', {room:'C', wallX:I(98) + .02, wallDir:1, zc:I(1355), w:4.0, h:2.1, title:'專案會議', kind:'list'});
+  for (const [x0, z0, ww, dd] of [[1046, 84, 4, 150], [94, 1072, 4, 156], [94, 1274, 4, 162]]) {   // 投影用白牆
     pbox(I(ww), 2.3, I(dd), 0xf6f7f9, I(x0 + ww / 2), 0, I(z0 + dd / 2));
   }
   // 會議室 D：U 型白色會議桌
   const uc = 0xeeeee4;
   table3d(I(846), I(1196), I(252), I(60), uc); table3d(I(699), I(1256), I(46), I(180), uc); table3d(I(995), I(1256), I(46), I(180), uc);
-  projectorRig(I(846), I(1196), 'S', {floor:{x:I(846), z:I(1334), w:6.2, d:3.6}, title:'歡迎來到 EMC', kind:'bars'});
+  projectorRig(I(846), I(1196), 'S', {room:'D', floor:{x:I(846), z:I(1334), w:6.2, d:3.6}, title:'歡迎來到 EMC', kind:'bars'});
   rects.push([I(720), I(1166), I(972), I(1226)], [I(676), I(1166), I(722), I(1346)], [I(972), I(1166), I(1018), I(1346)]);
   for (const x of [752, 817, 880, 945]) chair3d(I(x), I(1140), 'S');
   for (const y of [1200, 1245, 1292, 1334]) { chair3d(I(650), I(y), 'E'); chair3d(I(1044), I(y), 'W'); }
-  pantry3d(333, 1230, 125, 38);
-  fridge3d(503, 1232, 36, 34); fridge3d(541, 1232, 36, 34);
+  pantry3d(305, 1230, 125, 38);
+  fridge3d(472, 1232, 36, 34); fridge3d(510, 1232, 36, 34);
   // 廁所：隔間加大（寬 74、深 72），馬桶靠左牆；碰撞只擋馬桶本體與隔板，人走得進隔間，馬桶可坐
   for (const dx of STALLS) {
     for (const y of [100, 172]) {
@@ -361,7 +367,7 @@ function pantry3d(x0, z0, w, d){    // 版面圖像素：木紋檯面＋木櫃�
   const base = new THREE.Mesh(new THREE.BoxGeometry(W, .83, D), [side, side, side, side, frontMat, side]); base.position.set(cx, .415, cz); scene.add(base); hull(scene, W, .83, D, cx, .415, cz);
   // 零食：紙箱、藍盒、紅罐、黃袋、杯子
   const snacks = [[-1.5, .5, .42, .32, 0xc58b4a], [-.8, .34, .3, .3, 0x3f7fd0], [-.2, .3, .26, .26, 0xd8483c], [.4, .42, .32, .22, 0xf2c030], [1.0, .34, .26, .26, 0xe9eef2], [1.5, .46, .36, .3, 0xc58b4a]];
-  for (const [dx, h, sw, sd, col] of snacks) pbox(sw, h, sd, col, cx + dx, .95, cz - .05);
+  pantry3d.snackSpot = {cx, cz: cz - .05};
   rects.push([I(x0), I(z0), I(x0 + w), I(z0 + d)]);
 }
 function fridge3d(x0, z0, w, d, h = 1.9){   // 深色冰箱：上冷凍、下冷藏，銀色把手與紅色指示燈
@@ -404,15 +410,16 @@ function beam(apex, c) {   // 從鏡頭到畫面四角的半透明光錐
   const v = []; for (let i = 0; i < 4; i++) v.push(apex.x, apex.y, apex.z, c[i].x, c[i].y, c[i].z, c[(i + 1) % 4].x, c[(i + 1) % 4].y, c[(i + 1) % 4].z);
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); scene.add(new THREE.Mesh(geo, beamMat));
 }
+const slideStore = {};   // 各會議室目前投影的畫面（小視窗放大顯示用）
 function projectorRig(x, z, face, o){
   projector3d(x, z, face);
   const dx = face === 'E' ? 1 : face === 'W' ? -1 : 0, dz = face === 'S' ? 1 : 0, apex = new THREE.Vector3(x + dx * .4, .95 + .15, z + dz * .4);
-  const tex = slideTexture(o.title, o.kind), mat = new THREE.MeshBasicMaterial({map:tex, polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2});
+  const tex = slideTexture(o.title, o.kind); slideStore[o.room] = {canvas:tex.image, title:o.title}; const mat = new THREE.MeshBasicMaterial({map:tex, polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2});
   if (o.floor) {   // 投在地板的空地
     const f = o.floor, m = new THREE.Mesh(new THREE.PlaneGeometry(f.w, f.d), mat); m.rotation.x = -Math.PI / 2; m.position.set(f.x, .03, f.z); scene.add(m);
     beam(apex, [new THREE.Vector3(f.x - f.w / 2, .03, f.z - f.d / 2), new THREE.Vector3(f.x + f.w / 2, .03, f.z - f.d / 2), new THREE.Vector3(f.x + f.w / 2, .03, f.z + f.d / 2), new THREE.Vector3(f.x - f.w / 2, .03, f.z + f.d / 2)]);
-  } else {         // 投在牆上：畫面以靠鏡頭那端貼牆、另一端向房內斜出約 25°，鏡頭才看得到內容
-    const th = .44, yc = 1.3, ph = o.wallDir > 0 ? Math.PI / 2 - th : -(Math.PI / 2 - th), sn = Math.sin(th);
+  } else {         // 投在牆上：畫面平貼在白牆上
+    const th = 0, yc = 1.3, ph = o.wallDir > 0 ? Math.PI / 2 - th : -(Math.PI / 2 - th), sn = Math.sin(th);
     const cx = o.wallX - o.wallDir * (o.w / 2) * sn;
     const m = new THREE.Mesh(new THREE.PlaneGeometry(o.w, o.h), mat); m.rotation.y = ph; m.position.set(cx, yc, o.zc); scene.add(m);
     const u = new THREE.Vector3(Math.cos(ph), 0, -Math.sin(ph)).multiplyScalar(o.w / 2), c0 = new THREE.Vector3(cx, yc, o.zc), up = new THREE.Vector3(0, o.h / 2, 0);
@@ -582,6 +589,16 @@ function renderFrame(){
   for (const o of hidden) o.visible = true;
   renderer.autoClear = false; renderer.render(compScene, compCam); renderer.autoClear = true;
 }
+const ROOMS = [['A', 660, 48, 1062, 270, '會議室 A'], ['B', 82, 1045, 290, 1250, '影廳'], ['C', 82, 1250, 290, 1460, '會議室 C'], ['D', 610, 1045, 1082, 1462, '會議室 D']];
+const projBox = document.getElementById('proj'), projCv = projBox.querySelector('canvas'), projCtx = projCv.getContext('2d'), projTitle = projBox.querySelector('span');
+let projRoom = null;
+function updateProjectionView(){
+  let room = null;
+  if (player) { const px = player.holder.position.x / U, pz = player.holder.position.z / U; for (const r of ROOMS) if (px > r[1] && px < r[3] && pz > r[2] && pz < r[4]) room = r; }
+  const id = room ? room[0] : null;
+  if (id !== projRoom) { projRoom = id; projBox.style.display = id && slideStore[id] ? 'block' : 'none'; if (id && slideStore[id]) projTitle.textContent = room[5] + '・投影中：' + slideStore[id].title; }
+  if (projRoom && slideStore[projRoom]) { projCtx.imageSmoothingEnabled = false; projCtx.drawImage(slideStore[projRoom].canvas, 0, 0, 128, 72); }
+}
 function tick(){
   const dt = Math.min(clock.getDelta(), .05);
   if (player) {
@@ -608,7 +625,7 @@ function tick(){
     camPos.lerp(new THREE.Vector3(p.x, 8.4, p.z + 9.4), 1 - Math.pow(.001, dt));
     camera.position.copy(camPos); look.lerp(p, 1 - Math.pow(.001, dt)); camera.lookAt(look.x, 1, look.z);
   } else { camera.position.copy(camPos); camera.lookAt(0, 1, 0); }
-  updateBillboards(); updateLabels();
+  updateBillboards(); updateLabels(); updateProjectionView();
   renderFrame();
   requestAnimationFrame(tick);
 }
