@@ -1094,7 +1094,7 @@ const isAdmin = () => Boolean(handoff && handoff.monitor && handoff.token);
 const radial = document.createElement('div'); radial.id = 'cpage'; radial.hidden = true; document.body.appendChild(radial);   // 舊名 radial 沿用，指向角色頁面
 let hoursCfg = null, hoursForce = '';
 async function post(payload){   // 後端同一支介面（和 2D 版一樣）；回傳失敗時把後端的錯誤原文丟出來
-  const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify(payload), cache:'no-store'});
+  let r; try { r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify(payload), cache:'no-store'}); } catch (e) { throw new Error('連不上後端：後端只放行 localhost:8787 與 GitHub Pages，目前網址是 ' + location.origin); }
   const d = await r.json(); if (!d.ok) throw new Error(d.error || '後端回覆失敗'); return d;
 }
 async function writeState(c, patch){   // 測試階段：不鎖角色、不跳確認
