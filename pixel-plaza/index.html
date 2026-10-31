@@ -1058,6 +1058,7 @@ function applyStatus(c, force){
   if (c === player && !force) return;               // 正在操控的角色不被即時資料搬動（自己改狀態時除外）
   const key = st === 'meeting' ? st + ':' + (c.meetingRoom || '') : st;
   if (c.appliedStatus === key) return; c.appliedStatus = key;
+  if (c.remote && c !== player) { c.holder.visible = !AWAY.has(st); c.sprite.material.color.set(st === 'overtime' ? 0xa9afd6 : 0xffffff); return; }   // 本人在線上：位置由本人回報，不依狀態擺放
   releaseSeat(c); c.wander = false; c.sprite.material.color.set(st === 'overtime' ? 0xa9afd6 : 0xffffff);
   if (AWAY.has(st)) { c.holder.visible = false; if (c.home) c.holder.position.set(c.home.x, 0, c.home.z); c.moving = 0; if (c === player) target = null; return; }   // 用餐／下班／休假／出國／公出：不在辦公室，人物隱藏（桌面顯示狀態圖示）
   c.holder.visible = true;
@@ -1078,7 +1079,7 @@ async function pollOnce(){
     if (!d.unchanged) {
       live.version = d.version || live.version;
       if (d.hours) { const f = d.hours.force === 'work' || d.hours.force === 'off' ? d.hours.force : ''; if (f !== hoursForce) { hoursForce = f; for (const c of Object.values(chars)) c.appliedStatus = null; } }
-      for (const e of d.people || []) { const c = chars[e.name]; if (!c) continue; const rs = typeof e.status === 'string' ? e.status : 'present'; if (c.autoPendingUntil > Date.now() && rs !== 'present') { c.rawStatus = c.rawStatus || 'present'; } else { c.autoPendingUntil = 0; c.rawStatus = rs; } c.status = forcedStatus(c.rawStatus); c.mood = e.mood || ''; c.message = e.message || ''; c.statusSource = e.statusSource || ''; c.meetingRoom = typeof e.meetingRoom === 'string' ? e.meetingRoom : ''; c.music = e.music && e.music.url ? {url:e.music.url, title:e.music.title || '', provider:e.music.provider || ''} : null; applyStatus(c); }
+      for (const e of d.people || []) { const c = chars[e.name]; if (!c) continue; remoteFromState(c, e); const rs = typeof e.status === 'string' ? e.status : 'present'; if (c.autoPendingUntil > Date.now() && rs !== 'present') { c.rawStatus = c.rawStatus || 'present'; } else { c.autoPendingUntil = 0; c.rawStatus = rs; } c.status = forcedStatus(c.rawStatus); c.mood = e.mood || ''; c.message = e.message || ''; c.statusSource = e.statusSource || ''; c.meetingRoom = typeof e.meetingRoom === 'string' ? e.meetingRoom : ''; c.music = e.music && e.music.url ? {url:e.music.url, title:e.music.title || '', provider:e.music.provider || ''} : null; applyStatus(c); }
       if (d.stories) applyStories(d.stories);
     }
   } catch (err) {
@@ -1087,7 +1088,45 @@ async function pollOnce(){
   }
   setNet();
 }
-function startLiveSync(){ const loop = async () => { await pollOnce(); setTimeout(loop, document.hidden ? 15000 : 3000); }; loop(); }
+// ---- 位置同步：自己走動時回報位置，其他人（含訪客）依後端的位置顯示，大家看到的畫面一致 ----
+// 沿用後端現有欄位（patch: floor/fx/fy/fdir → 存成 floor4At、f4x、f4y、f4dir）：fx < 3000 是五樓（fx=x px、fy=z px）；fx ≥ 3000 是四樓（fx=3000+局部 x+100、fy=z+100）。
+// floor4At 是最後回報時間，超過 3 分鐘沒更新就當作人不在線上，改回依狀態擺放。
+const POS_PUSH_MS = 700, POS_BEAT_MS = 45000, REMOTE_STALE_MS = 180000;
+const posSent = {x:-99, z:-99, t:0};
+const faceDir = f => { const dx = Math.sin(f), dz = Math.cos(f); return Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 'right' : 'left') : (dz > 0 ? 'down' : 'up'); };
+function pushPosition(){
+  const c = player; if (!c || !live.ok || AWAY.has(c.status)) return;
+  const now = performance.now(), p = c.holder.position, moved = Math.hypot(p.x - posSent.x, p.z - posSent.z) > .12;
+  if (!((moved && now - posSent.t > POS_PUSH_MS) || now - posSent.t > POS_BEAT_MS)) return;
+  posSent.x = p.x; posSent.z = p.z; posSent.t = now;
+  const x = p.x / U, z = p.z / U, f4 = floorOf(c) === 4;
+  post({action:'pixelOfficeUpdate', name:c.name, patch:{floor:4, fx:Math.round(f4 ? 3000 + x - FX4 + 100 : x), fy:Math.round(f4 ? z + 100 : z), fdir:faceDir(c.face)}}).catch(() => {});
+}
+addEventListener('pagehide', () => { try { if (player && live.ok) navigator.sendBeacon(API, JSON.stringify({action:'pixelOfficeUpdate', name:player.name, patch:{floor:5}})); } catch (e) {} });
+function remoteFromState(c, e){
+  if (c === player) return;
+  const fresh = e.floor4At && Date.now() - e.floor4At < REMOTE_STALE_MS && Number.isFinite(e.f4x) && Number.isFinite(e.f4y);
+  if (fresh) {
+    const f4 = e.f4x >= 3000, tx = (f4 ? e.f4x - 3100 + FX4 : e.f4x) * U, tz = (f4 ? e.f4y - 100 : e.f4y) * U;
+    const first = !c.remote; c.remote = {x:tx, z:tz, at:e.floor4At, dir:e.f4dir || ''}; c.wander = false;
+    if (first) { releaseSeat(c); c.holder.position.set(tx, 0, tz); }
+  } else if (c.remote) { c.remote = null; c.appliedStatus = null; }
+}
+const sitSpot = st => { const fw = st.fwd ?? (st.face === 0 ? .06 : .32); return {x:st.x + Math.sin(st.face) * fw, z:st.z + Math.cos(st.face) * fw}; };
+function remoteStep(c, dt){
+  const r = c.remote, p = c.holder.position;
+  if (Date.now() - r.at > REMOTE_STALE_MS) { c.remote = null; c.appliedStatus = null; applyStatus(c); return; }
+  let dx = r.x - p.x, dz = r.z - p.z, d = Math.hypot(dx, dz);
+  if (c.sitting) { const sp = sitSpot(c.sitting); if (Math.hypot(sp.x - r.x, sp.z - r.z) > .35) standUp(c); else { c.moving = 0; return; } dx = r.x - p.x; dz = r.z - p.z; d = Math.hypot(dx, dz); }
+  if (d > 14) { p.x = r.x; p.z = r.z; d = 0; }
+  if (d > .06) { const step = Math.min(d, 4.8 * dt); p.x += dx / d * step; p.z += dz / d * step; c.face = Math.atan2(dx, dz); c.moving = d > 1.6 ? 4.8 : 2.4; }
+  else {
+    c.moving = 0;
+    const st = chairSeats.find(q => !q.by && !q.hidden && Math.hypot(sitSpot(q).x - p.x, sitSpot(q).z - p.z) < .2);
+    if (st) sitDown(c); else if (r.dir) c.face = ({down:0, up:Math.PI, right:Math.PI / 2, left:-Math.PI / 2})[r.dir] ?? c.face;
+  }
+}
+function startLiveSync(){ const loop = async () => { await pollOnce(); setTimeout(loop, document.hidden ? 15000 : 1200); }; loop(); }
 // ---- 冰箱：點冰箱走過去開門（門真的轉開、露出架上零食），點零食拿一個；庫存與排行在後端 /minigames/fridge（和 2D 版同一份）----
 const FOODS = {
   chips:['洋芋片', '🥔 喀滋喀滋！洋芋片超涮嘴', 'happy'], cookie:['餅乾', '🍪 酥脆餅乾，配咖啡剛好', 'happy'], candy:['糖果', '🍬 含顆糖，心情甜甜的', 'joy'],
@@ -1260,7 +1299,7 @@ function standUp(c){
 let wantSeat = null;   // 點椅子／馬桶：走過去自動坐下；要起身直接走動
 function sitAt(c, st){ c.holder.position.set(st.x, 0, st.z); sitDown(c); }
 function select(name){
-  const prev = player; player = chars[name]; target = null; player.holder.visible = !AWAY.has(player.status);
+  const prev = player; player = chars[name]; player.remote = null; posSent.t = 0; target = null; player.holder.visible = !AWAY.has(player.status);
   { const p = player.holder.position; camPos.set(p.x, 10.9, p.z + 12.2); look.copy(p); }   // 換人時鏡頭直接跳過去（人物可能在另一層）
   if (prev && prev !== player) { prev.appliedStatus = null; applyStatus(prev); }
   for (const c of Object.values(chars)) { c.btn.classList.toggle('on', c === player); c.wander = c !== player && !SEATS[c.name] && !c.sitting; }
@@ -1787,7 +1826,8 @@ function tick(){
     if (wantSeat) { const st = wantSeat; if (st.by || st.hidden || player.sitting) wantSeat = null; else if (Math.hypot(st.x - player.holder.position.x, st.z - player.holder.position.z) < 1.0) { wantSeat = null; target = null; sitAt(player, st); } }
   }
   for (const c of Object.values(chars)) {
-    if (c.wander && !c.sitting) {                                   // 其他角色隨機閒晃
+    if (c.remote && c !== player) remoteStep(c, dt);
+    else if (c.wander && !c.sitting) {                                   // 其他角色隨機閒晃
       c.t -= dt;
       if (c.t < 0) { c.t = 1.5 + Math.random() * 4; const a = Math.random() * 6.283; c.dir.set(Math.random() < .4 ? 0 : Math.cos(a), 0, Math.sin(a)); }
       moveChar(c, c.dir.clone(), 1.6, dt);
@@ -1800,7 +1840,7 @@ function tick(){
     camPos.lerp(new THREE.Vector3(p.x, 10.9, p.z + 12.2), 1 - Math.pow(.001, dt));
     camera.position.copy(camPos); look.lerp(p, 1 - Math.pow(.001, dt)); camera.lookAt(look.x, 1, look.z);
   } else { const k = 1 - Math.pow(.0005, dt); camPos.lerp(new THREE.Vector3(guestAt.x, 10.9, guestAt.z + 12.2), k); camera.position.copy(camPos); look.lerp(new THREE.Vector3(guestAt.x, 1, guestAt.z), k); camera.lookAt(look); }   // 沒登入：滾輪／左鍵拖曳平移畫面，點電梯換看另一層
-  updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay(); updateTags(); placeRadial(); updateFridge(); updateElev();
+  updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay(); updateTags(); placeRadial(); updateFridge(); updateElev(); pushPosition();
   renderFrame();
   requestAnimationFrame(tick);
 }
