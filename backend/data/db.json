@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 10105,
+  "revision": 10106,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-31T12:49:20.111Z",
+  "updatedAt": "2026-10-31T12:49:23.709Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1973,7 +1973,7 @@
         {"名字":"Machi","限時動態連結":"https://lh3.googleusercontent.com/d/15o6Dxhi_F0Q0lXhjGYecUeXEn2IJwz7S=w1600","保留期限":"24小時","到期時間":"2026-10-13T13:05:47.415Z","按讚":"","倒讚":"","留言":"[]","狀態":"下架","已讀":"Machi , Odin組測試人員"},
         {"名字":"李明庭","限時動態連結":"https://machi-design-api.machi-chen.workers.dev/pixel-story/e7f3a28e-9224-48af-9541-424b6bd9222f","保留期限":"24小時","到期時間":"2026-10-17T02:47:19.562Z","按讚":"","倒讚":"","留言":"[{\"id\":\"a4a6419c-3ade-4dce-b165-1a1083397a29\",\"name\":\"Machi\",\"avatar\":\"\",\"text\":\"噁男 下去\",\"createdAt\":\"2026-10-16T03:11:09.130Z\"}]","狀態":"","已讀":"李明庭 , Machi , Odin組測試人員 , 吳冠賢 , 余采馨 , 鄭筱舢 , 廖秦葦 , Celine組測試人員"},
         {"名字":"李明庭","限時動態連結":"https://machi-design-api.machi-chen.workers.dev/pixel-story/95ee5d0d-b557-4089-a19b-d8d98486d162","保留期限":"24小時","到期時間":"2026-10-20T02:06:09.598Z","按讚":"","倒讚":"","留言":"[]","狀態":"","已讀":"李明庭 , Machi , 吳冠賢 , 廖秦葦 , 鄭筱舢"},
-        {"名字":"Machi","限時動態連結":"https://machi-design-api.machi-chen.workers.dev/pixel-story/8883bf09-c9a8-4049-aca2-cc588d597848","保留期限":"24小時","到期時間":"2026-11-01T12:49:05.082Z","按讚":"Machi","倒讚":"","留言":"[]","狀態":"","已讀":"Machi"}
+        {"名字":"Machi","限時動態連結":"https://machi-design-api.machi-chen.workers.dev/pixel-story/8883bf09-c9a8-4049-aca2-cc588d597848","保留期限":"24小時","到期時間":"2026-11-01T12:49:05.082Z","按讚":"Machi","倒讚":"","留言":"[{\"id\":\"7d71d501-33bd-481c-ab80-ab24489abe89\",\"name\":\"Machi\",\"avatar\":\"\",\"text\":\"test\",\"createdAt\":\"2026-10-31T12:49:21.371Z\"}]","狀態":"","已讀":"Machi"}
       ]
     },
     "bug_report": {
