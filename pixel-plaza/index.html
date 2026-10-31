@@ -157,12 +157,17 @@ async function buildOffice(){
   // 藍色桌組：每組兩排×三張（3D 方塊桌＋小螢幕），三排 × 設計部／同仁區
   const I = v => v * U;
   GROUPS.forEach((xs, gi) => ROW_TOPS.forEach((top, ri) => {
+    if (gi === 1 && ri === 1) {   // 第二排：同仁區第一欄（4 號／10 號桌）左移，兩側補矮書櫃，整排連成一塊
+      deskBlock3d(751.5, top, 1, 0x1d4ba0, 'imac', false); deskBlock3d(882.5, top, 2, 0x1d4ba0, 'imac', false);
+      for (const cx of [804, 935, 1040]) { officeChair3d(I(cx), I(top - 18), 'S'); officeChair3d(I(cx), I(top + 116), 'N'); }
+      return;
+    }
     deskBlock3d(xs[0] - 52.5, top, 3, 0x1d4ba0, 'imac', gi === 0 && ri === 2);
     xs.forEach(cx => { officeChair3d(I(cx), I(top - 18), 'S'); officeChair3d(I(cx), I(top + 116), 'N'); });
   }));
   // 書櫃：靠緊兩張背對背辦公桌的整面層櫃（人物高），開口朝左；白柱填滿兩個桌組之間的縫，紅色工具櫃靠在上排的柱旁
   [355, 592, 828].forEach(top => bookcase3d(388, top, 22, 94));
-  bookcase3d(725.5 - 22, 592, 22, 94);
+  bookcase3d(725.5, 592, 26, 94, .8); bookcase3d(856.5, 592, 26, 94, .8);   // 矮書櫃（低於藍桌桌面）
   pillar3d(725.5, 355, 55, 94, 33); cabinet3d(758.5, 355, 22, 94);
   pillar3d(725.5, 828, 55, 94);
   // 米黃桌組（左側上下兩組，各 2×2 合併）：南北兩側都有椅子
