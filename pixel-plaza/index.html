@@ -306,7 +306,7 @@ html.embed #hud,html.embed #dock,html.embed #proj,html.embed .lbl{display:none!i
 #elevFx{position:fixed;inset:0;z-index:50;pointer-events:none;font-family:'Fredoka','Noto Sans TC',sans-serif;color:#fff}
 #elevFx.on,#elevFx.out{pointer-events:auto}
 .ef-grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(var(--cols),1fr);grid-template-rows:repeat(var(--rows),1fr)}
-.ef-c{display:block;transform:scale(0);box-shadow:inset 0 -5px 0 rgba(0,0,0,.2),inset 0 5px 0 rgba(255,255,255,.22),inset 0 0 0 2px rgba(11,61,30,.35);transition:transform .14s steps(3)}
+.ef-c{display:block;background:#2fbf57;transform:scale(0);box-shadow:inset 0 -3px 0 rgba(0,0,0,.18),inset 0 3px 0 rgba(255,255,255,.2),inset 0 0 0 1px rgba(11,61,30,.4);transition:transform .08s steps(2)}
 #elevFx.on .ef-c{transform:scale(1.03)}
 .ef-txt{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:4px;opacity:0;transition:opacity .15s .22s}#elevFx.on .ef-txt{opacity:1}
 .ef-txt b{font-size:54px}.ef-txt span{font-size:34px;font-weight:700;color:var(--yellow);text-shadow:0 3px 0 rgba(11,61,30,.6)}
@@ -1222,16 +1222,16 @@ let elevBusy = false;
 const elevFx = document.createElement('div'); elevFx.id = 'elevFx'; document.body.appendChild(elevFx);
 const EF_GREENS = ['#43d86c', '#2fbf57', '#1aa844', '#12853a', '#7af09b'];
 function elevCover(label, mid, done){   // 綠色像素方塊由下往上快速堆滿畫面 → 換樓層 → 方塊由上往下散開
-  const size = Math.max(44, Math.round(Math.min(innerWidth, innerHeight) / 11)), cols = Math.ceil(innerWidth / size), rows = Math.ceil(innerHeight / size);
+  const size = Math.max(24, Math.round(Math.min(innerWidth, innerHeight) / 24)), cols = Math.ceil(innerWidth / size), rows = Math.ceil(innerHeight / size);
   elevFx.style.setProperty('--cols', cols); elevFx.style.setProperty('--rows', rows);
   const cells = []; let html = '<div class="ef-grid">';
-  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) { html += '<i class="ef-c" style="background:' + EF_GREENS[Math.floor(Math.random() * EF_GREENS.length)] + '"></i>'; }
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) { html += '<i class="ef-c"></i>'; }
   elevFx.innerHTML = html + '</div><div class="ef-txt"><b>🛗</b><span>' + label + '</span></div>';
-  const els = [...elevFx.querySelectorAll('.ef-c')]; els.forEach((el, n) => { const r = Math.floor(n / cols); cells.push({el, r}); el.style.transitionDelay = ((rows - 1 - r) * 16 + Math.random() * 70) + 'ms'; });
+  const els = [...elevFx.querySelectorAll('.ef-c')]; els.forEach((el, n) => { const r = Math.floor(n / cols); cells.push({el, r}); el.style.transitionDelay = ((rows - 1 - r) * 8 + Math.random() * 45) + 'ms'; });
   elevFx.classList.add('on');
-  setTimeout(() => { mid(); }, 520);
-  setTimeout(() => { cells.forEach(({el, r}) => { el.style.transitionDelay = (r * 16 + Math.random() * 70) + 'ms'; }); elevFx.classList.add('out'); elevFx.classList.remove('on'); }, 760);
-  setTimeout(() => { elevFx.classList.remove('out'); elevFx.innerHTML = ''; done(); }, 1400);
+  setTimeout(() => { mid(); }, 460);
+  setTimeout(() => { cells.forEach(({el, r}) => { el.style.transitionDelay = (r * 8 + Math.random() * 45) + 'ms'; }); elevFx.classList.add('out'); elevFx.classList.remove('on'); }, 620);
+  setTimeout(() => { elevFx.classList.remove('out'); elevFx.innerHTML = ''; done(); }, 1100);
 }
 function elevGo(to){
   if (elevBusy || !player) return; wantElev = false; elevArmed = false; target = null; elevBusy = true; wheelClose(); fridgeClose();
