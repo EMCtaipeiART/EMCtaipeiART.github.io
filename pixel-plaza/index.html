@@ -1009,7 +1009,7 @@ function updateLabels(){
 // ---------- 角色（平面像素 billboard） ----------
 const chars = {};   // name -> {holder, sprite, tex, ...}
 const roster = document.getElementById('roster');
-let player = null, target = null;
+let player = null, target = null, routeFor = null, routePts = [];
 const ANGLES = 12, ROWS = 1, CELL_W = 60, CELL_H = 60, WORLD_H = 2.04;   // 圖集：由三視圖合成的 12 個面向（每 30°）
 const loadTex = src => new Promise((res, rej) => new THREE.TextureLoader().load(src, t => {
   t.magFilter = t.minFilter = HD ? THREE.LinearFilter : THREE.NearestFilter; t.generateMipmaps = false; t.colorSpace = THREE.SRGBColorSpace;
@@ -1347,6 +1347,7 @@ function standUp(c){
   for (const k of [-1, 1]) { const x = st.x + fx * k * 1.0, z = st.z + fz * k * 1.0; if (!blocked(x, z)) { c.holder.position.set(x, 0, z); break; } }
   st.by = null; c.sitting = null;
 }
+let routeStuck = {t:0, x:0, z:0};
 let wantSeat = null;   // 點椅子／馬桶：走過去自動坐下；要起身直接走動
 function sitAt(c, st){ c.holder.position.set(st.x, 0, st.z); sitDown(c); }
 function select(name){
@@ -1358,7 +1359,7 @@ function select(name){
 
 let done = 0;
 Promise.all([buildOffice(), loadIcons(), ...NAMES.map((n, i) => addChar(n, i).then(() => { setLoad('載入角色 ' + (++done) + '/' + NAMES.length, done / NAMES.length); }))])
-  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); startLiveSync(); showTitleCard(); window.__plaza = {guestAt, guestGoFloor, updateElev, elevGo, floorOf, elevInteract, fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
+  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); startLiveSync(); showTitleCard(); window.__plaza = {findPath, guestAt, guestGoFloor, updateElev, elevGo, floorOf, elevInteract, fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
 
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
 const TILT = 0, STRETCH = 1 / Math.cos(Math.atan(8.4 / 9.4)), _e = new THREE.Euler(0, 0, 0, 'YXZ');   // 垂直站立：不再後傾（避免穿進桌子、牆），高度拉長 STRETCH 倍抵消俯視縮短
@@ -1423,6 +1424,43 @@ renderer.domElement.addEventListener('pointerleave', () => { hoverChar = null; }
 // ---------- 主迴圈 ----------
 const clock = new THREE.Clock(), camPos = new THREE.Vector3(20, 10.9, 36), look = new THREE.Vector3();
 const up = new THREE.Vector3(0, 1, 0);
+const PATH_CELL = .4, pathGrids = {};
+function pathGrid(f){
+  if (pathGrids[f]) return pathGrids[f];
+  const b = f === 4 ? {x0:(FX4 + F4_X0) * U, x1:(FX4 + F4_X1) * U, z0:F4_Z0 * U, z1:F4_Z1 * U} : {x0:0, x1:1201 * U, z0:0, z1:1526 * U};
+  const w = Math.ceil((b.x1 - b.x0) / PATH_CELL), h = Math.ceil((b.z1 - b.z0) / PATH_CELL), wall = new Uint8Array(w * h);
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) wall[j * w + i] = blocked(b.x0 + (i + .5) * PATH_CELL, b.z0 + (j + .5) * PATH_CELL) ? 1 : 0;
+  return pathGrids[f] = {b, w, h, wall};
+}
+const walkLine = (ax, az, bx, bz) => { const n = Math.ceil(Math.hypot(bx - ax, bz - az) / .2); for (let k = 1; k <= n; k++) if (blocked(ax + (bx - ax) * k / n, az + (bz - az) * k / n)) return false; return true; };
+function findPath(from, to, floor){
+  if (walkLine(from.x, from.z, to.x, to.z)) return [{x:to.x, z:to.z}];
+  const g = pathGrid(floor), {b, w, h, wall} = g, cell = (x, z) => ({i:Math.max(0, Math.min(w - 1, Math.floor((x - b.x0) / PATH_CELL))), j:Math.max(0, Math.min(h - 1, Math.floor((z - b.z0) / PATH_CELL)))});
+  const nearestFree = c => { if (!wall[c.j * w + c.i]) return c; for (let r = 1; r < 14; r++) { let best = null, bd = 1e9; for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) { if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue; const i = c.i + di, j = c.j + dj; if (i < 0 || j < 0 || i >= w || j >= h || wall[j * w + i]) continue; const d = di * di + dj * dj; if (d < bd) { bd = d; best = {i, j}; } } if (best) return best; } return null; };
+  const s0 = nearestFree(cell(from.x, from.z)), g0 = nearestFree(cell(to.x, to.z)); if (!s0 || !g0) return [{x:to.x, z:to.z}];
+  const N = w * h, gs = new Float32Array(N).fill(1e9), from_ = new Int32Array(N).fill(-1), closed = new Uint8Array(N), open = [];
+  const idx = (i, j) => j * w + i, hh = (i, j) => { const dx = Math.abs(i - g0.i), dz = Math.abs(j - g0.j); return (dx + dz) + (1.414 - 2) * Math.min(dx, dz); };
+  const push = (k, f) => { open.push([f, k]); let c = open.length - 1; while (c > 0) { const p = (c - 1) >> 1; if (open[p][0] <= open[c][0]) break; [open[p], open[c]] = [open[c], open[p]]; c = p; } };
+  const pop = () => { const top = open[0], last = open.pop(); if (open.length) { open[0] = last; let c = 0; for (;;) { const l = 2 * c + 1, r = l + 1; let m = c; if (l < open.length && open[l][0] < open[m][0]) m = l; if (r < open.length && open[r][0] < open[m][0]) m = r; if (m === c) break; [open[m], open[c]] = [open[c], open[m]]; c = m; } } return top[1]; };
+  const sk = idx(s0.i, s0.j), gk = idx(g0.i, g0.j); gs[sk] = 0; push(sk, hh(s0.i, s0.j));
+  let found = false;
+  while (open.length) {
+    const k = pop(); if (closed[k]) continue; closed[k] = 1; if (k === gk) { found = true; break; }
+    const ci = k % w, cj = (k / w) | 0;
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+      if (!di && !dj) continue; const ni = ci + di, nj = cj + dj; if (ni < 0 || nj < 0 || ni >= w || nj >= h) continue; const nk = idx(ni, nj); if (wall[nk] || closed[nk]) continue;
+      if (di && dj && (wall[idx(ci + di, cj)] || wall[idx(ci, cj + dj)])) continue;   // 不切牆角
+      const ng = gs[k] + (di && dj ? 1.414 : 1); if (ng < gs[nk]) { gs[nk] = ng; from_[nk] = k; push(nk, ng + hh(ni, nj)); }
+    }
+  }
+  if (!found) return [{x:to.x, z:to.z}];
+  const pts = []; for (let k = gk; k !== -1; k = from_[k]) pts.push({x:b.x0 + ((k % w) + .5) * PATH_CELL, z:b.z0 + (((k / w) | 0) + .5) * PATH_CELL}); pts.reverse();
+  // 拉直：能直接走到的點就跳過中間的格子
+  const out = []; let cur = {x:from.x, z:from.z}, i = 0;
+  while (i < pts.length) { let far = i; for (let k = pts.length - 1; k > i; k--) if (walkLine(cur.x, cur.z, pts[k].x, pts[k].z)) { far = k; break; } out.push(pts[far]); cur = pts[far]; i = far + 1; }
+  out.push({x:to.x, z:to.z});
+  return out;
+}
 function moveChar(c, dir, speed, dt){
   if (dir.lengthSq() < 1e-4) { c.moving = 0; return; }
   dir.normalize();
@@ -1871,7 +1909,12 @@ function tick(){
       (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0) + joy.y);
     const run = keys.ShiftLeft || keys.ShiftRight || Math.hypot(joy.x, joy.y) > .85;
     if (dir.lengthSq() > .01) { target = null; wantSeat = null; fridgeWant = false; wantElev = false; wheelClose(); }
-    else if (target) { dir.copy(target).sub(player.holder.position); dir.y = 0; if (dir.length() < .2) target = null; }
+    else if (target) {
+      if (routeFor !== target) { routeFor = target; routePts = findPath(player.holder.position, target, floorOf(player)); routeStuck = {t:performance.now(), x:player.holder.position.x, z:player.holder.position.z}; }
+      const wp = routePts[0] || target; dir.set(wp.x - player.holder.position.x, 0, wp.z - player.holder.position.z);
+      if (dir.length() < (routePts.length > 1 ? .3 : .2)) { if (routePts.length) routePts.shift(); if (!routePts.length) target = null; dir.set(0, 0, 0); }
+      else if (performance.now() - routeStuck.t > 900) { const moved = Math.hypot(player.holder.position.x - routeStuck.x, player.holder.position.z - routeStuck.z); routeStuck = {t:performance.now(), x:player.holder.position.x, z:player.holder.position.z}; if (moved < .15) { routePts = findPath(player.holder.position, target, floorOf(player)); } }
+    }
     if (!radial.hidden || !$('sv').hidden || AWAY.has(player.status) || elevBusy) { dir.set(0, 0, 0); target = null; }   // 角色頁面開著時人物不跟著走
     if (player.sitting && dir.lengthSq() > 1e-4) standUp(player);
     if (!player.sitting) moveChar(player, dir, run ? 5 : 2.4, dt);
