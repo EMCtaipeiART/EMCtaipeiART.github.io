@@ -25,7 +25,7 @@ import * as THREE from 'three';
 
 const PIXEL = 3;                       // 每個像素放大倍率
 const NAMES = ['Amber','Anna','Leona','Machi','Noise','余采馨','吳冠賢','廖秦葦','李明庭','鄭筱舢','黎子瑄'];
-const url = (n, v) => `../character-studio/references/${/^[A-Za-z]+$/.test(n) ? 'designer' : 'staff'}_${n}_${v}.png`;
+const url = n => `sprites/${n}.png`;
 
 const renderer = new THREE.WebGLRenderer({antialias:false});
 renderer.shadowMap.enabled = true;
@@ -90,38 +90,25 @@ for (let i = 0; i < 26; i++) {
 const chars = {};   // name -> {holder, sprite, tex, ...}
 const roster = document.getElementById('roster');
 let player = null, target = null;
-const SPRITE_H = 56, WORLD_H = 1.9;   // 像素貼圖高度 / 世界高度
-
-function pixelTex(img){
-  // 縮成小點陣圖並降色，再用 nearest 放大，變成真正的像素角色
-  const h = SPRITE_H, w = Math.round(img.width / img.height * h);
-  const c = document.createElement('canvas'); c.width = w; c.height = h;
-  const g = c.getContext('2d', {willReadFrequently:true}); g.imageSmoothingQuality = 'high'; g.drawImage(img, 0, 0, w, h);
-  const d = g.getImageData(0, 0, w, h), p = d.data;
-  for (let i = 0; i < p.length; i += 4) {
-    p[i + 3] = p[i + 3] > 110 ? 255 : 0;
-    for (let k = 0; k < 3; k++) p[i + k] = Math.round(p[i + k] / 24) * 24;
-  }
-  g.putImageData(d, 0, 0);
-  const t = new THREE.CanvasTexture(c); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false;
-  t.colorSpace = THREE.SRGBColorSpace; t.userData = {aspect:w / h}; return t;
-}
-const loadImg = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+const ANGLES = 16, ROWS = 9, WALK = 8, CELL_W = 64, CELL_H = 80, WORLD_H = 2.05;   // 圖集：16 方向 × (待機 + 8 格走路)
+const loadTex = src => new Promise((res, rej) => new THREE.TextureLoader().load(src, t => {
+  t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; t.colorSpace = THREE.SRGBColorSpace;
+  t.repeat.set(1 / ANGLES, 1 / ROWS); res(t);
+}, undefined, rej));
 const shadowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 16; const g = c.getContext('2d'); g.fillStyle = '#000'; g.beginPath(); g.ellipse(8, 8, 7, 5, 0, 0, 7); g.fill(); const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; return t; })();
 
 async function addChar(name, i){
-  const [front, side, back] = await Promise.all(['front', 'side', 'back'].map(v => loadImg(url(name, v)).then(pixelTex)));
-  const aspect = front.userData.aspect;
-  const sprite = new THREE.Mesh(new THREE.PlaneGeometry(WORLD_H * aspect, WORLD_H),
-    new THREE.MeshBasicMaterial({map:front, transparent:true, alphaTest:.5, side:THREE.DoubleSide}));
-  sprite.geometry.translate(0, WORLD_H / 2, 0);
+  const tex = await loadTex(url(name));
+  const sprite = new THREE.Mesh(new THREE.PlaneGeometry(WORLD_H * CELL_W / CELL_H, WORLD_H),
+    new THREE.MeshBasicMaterial({map:tex, transparent:true, alphaTest:.5, side:THREE.DoubleSide}));
+  sprite.geometry.translate(0, WORLD_H / 2 - .03, 0);
   const blob = new THREE.Mesh(new THREE.PlaneGeometry(1.1, .8), new THREE.MeshBasicMaterial({map:shadowTex, transparent:true, opacity:.28, depthWrite:false}));
   blob.rotation.x = -Math.PI / 2; blob.position.y = .02;
   const holder = new THREE.Group(); holder.add(blob, sprite);
   const a = i / NAMES.length * Math.PI * 2;
   holder.position.set(Math.cos(a) * 5, 0, Math.sin(a) * 5);
   scene.add(holder);
-  const c = {name, holder, sprite, tex:{front, side, back}, face:-a, moving:0, phase:Math.random() * 9, wander:i > 0, t:Math.random() * 5, dir:new THREE.Vector3()};
+  const c = {name, holder, sprite, tex, face:-a, moving:0, phase:Math.random() * 9, wander:i > 0, t:Math.random() * 5, dir:new THREE.Vector3()};
   chars[name] = c;
   const b = document.createElement('button'); b.textContent = name;
   b.onclick = () => select(name); roster.appendChild(b); c.btn = b;
@@ -137,17 +124,15 @@ Promise.all(NAMES.map((n, i) => addChar(n, i).then(() => { document.getElementBy
 
 const _cam = new THREE.Vector3();
 function updateSprite(c, dt){
-  // 依角色朝向與鏡頭的相對角度，挑選正面／側面／背面（側面左右翻轉）
+  // 依角色朝向與鏡頭的相對角度，挑選 16 方向中最接近的一格，並播放走路影格
   c.holder.getWorldPosition(_cam); _cam.subVectors(camera.position, _cam);
   const toCam = Math.atan2(_cam.x, _cam.z);
-  let rel = Math.atan2(Math.sin(c.face - toCam), Math.cos(c.face - toCam));   // 0=面向鏡頭
-  const ar = Math.abs(rel);
-  const m = c.sprite.material, view = ar < Math.PI / 4 ? 'front' : ar > Math.PI * .75 ? 'back' : 'side';
-  m.map = c.tex[view]; c.sprite.scale.x = view === 'side' && rel < 0 ? -1 : 1;
+  const rel = Math.atan2(Math.sin(c.face - toCam), Math.cos(c.face - toCam));   // 0 = 面向鏡頭
+  const col = (Math.round(rel / (Math.PI * 2) * ANGLES) + ANGLES) % ANGLES;
+  c.phase += dt * (c.moving > 3.5 ? 14 : 8);
+  const row = c.moving > 0 ? 1 + Math.floor(c.phase) % WALK : 0;
+  c.tex.offset.set(col / ANGLES, 1 - (row + 1) / ROWS);
   c.sprite.rotation.y = toCam;                                      // 圓柱形 billboard
-  c.phase += dt * (c.moving > 3.5 ? 14 : 9) * (c.moving > 0 ? 1 : 0);
-  const hop = c.moving > 0 ? Math.abs(Math.sin(c.phase)) * (c.moving > 3.5 ? .22 : .12) : 0;
-  c.sprite.position.y = hop; c.sprite.rotation.z = c.moving > 0 ? Math.sin(c.phase) * .06 : 0;
 }
 
 // ---------- 輸入 ----------

@@ -1,0 +1,50 @@
+<!doctype html><meta charset="utf-8"><title>bake</title>
+<script type="importmap">{"imports":{"three":"../character-studio/vendor/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {GLTFLoader} from '../character-studio/vendor/GLTFLoader.js';
+const ANGLES = 16, WALK = 8, W = 64, H = 80, S = 2;
+const loader = new GLTFLoader();
+const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true});
+renderer.setSize(W * S, H * S, false); renderer.setClearColor(0, 0);
+const scene = new THREE.Scene();
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 1.8));
+const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(2, 5, 6); scene.add(key);
+const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, .1, 50);
+const out = document.createElement('canvas'); out.width = W * ANGLES; out.height = H * (1 + WALK);
+const og = out.getContext('2d', {willReadFrequently:true});
+const tmp = document.createElement('canvas'); tmp.width = W; tmp.height = H;
+const tg = tmp.getContext('2d', {willReadFrequently:true}); tg.imageSmoothingQuality = 'high';
+
+window.bake = async name => {
+  const gltf = await loader.loadAsync(`../character-studio/models/EMC_${name}_prototype.glb`);
+  const root = gltf.scene, holder = new THREE.Group(); holder.add(root); scene.add(holder);
+  const mixer = new THREE.AnimationMixer(root);
+  const clip = n => gltf.animations.find(c => c.name.toLowerCase() === n);
+  const idle = mixer.clipAction(clip('idle')), walk = mixer.clipAction(clip('walk'));
+  idle.play(); mixer.setTime(0);
+  const bb = new THREE.Box3().setFromObject(root), h = bb.max.y - bb.min.y;
+  const view = h * 1.12, el = 0.42;              // 視角：略微俯視
+  cam.left = -view * W / H / 2; cam.right = view * W / H / 2; cam.top = view / 2 + h * .05; cam.bottom = -view / 2 + h * .05; cam.updateProjectionMatrix();
+  const cy = bb.min.y + h / 2;
+  cam.position.set(0, cy + Math.sin(el) * 10, Math.cos(el) * 10); cam.lookAt(0, cy, 0);
+  for (let row = 0; row <= WALK; row++) {
+    if (row === 0) { walk.stop(); idle.play(); mixer.setTime(0); }
+    else { idle.stop(); walk.play(); mixer.setTime((row - 1) / WALK * walk.getClip().duration); }
+    for (let k = 0; k < ANGLES; k++) {
+      holder.rotation.y = k / ANGLES * Math.PI * 2;
+      renderer.render(scene, cam);
+      tg.clearRect(0, 0, W, H); tg.drawImage(renderer.domElement, 0, 0, W, H);
+      const d = tg.getImageData(0, 0, W, H), p = d.data;
+      for (let i = 0; i < p.length; i += 4) {
+        p[i + 3] = p[i + 3] > 120 ? 255 : 0;
+        for (let c = 0; c < 3; c++) p[i + c] = Math.min(255, Math.round(p[i + c] / 20) * 20);
+      }
+      og.putImageData(d, k * W, row * H);
+    }
+  }
+  scene.remove(holder);
+  return out.toDataURL('image/png');
+};
+window.ready = true;
+</script>
