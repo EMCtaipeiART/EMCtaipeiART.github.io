@@ -283,6 +283,7 @@ button{font-family:inherit}
 .cp-story .th{width:48px!important;height:62px!important}
 @media (max-width:640px){.cp-cols{grid-template-columns:1fr!important}}
 #net{display:none!important}
+html.embed #hud,html.embed #dock,html.embed #proj,html.embed .lbl{display:none!important}   /* ?embed=1：嵌在網站設計師面板裡的精簡畫面 */
 #elevFx{position:fixed;inset:0;z-index:50;background:#0b1410;opacity:0;pointer-events:none;display:grid;place-items:center;transition:opacity .38s ease;font-family:'Fredoka','Noto Sans TC',sans-serif;color:#fff}
 #elevFx.on{opacity:1;pointer-events:auto}
 #elevFx div{display:grid;justify-items:center;gap:4px;transform:scale(.8);transition:transform .38s cubic-bezier(.3,1.5,.5,1)}#elevFx.on div{transform:scale(1)}
@@ -305,6 +306,7 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 @media (max-width:640px){.hp-card{min-width:0}.hp-clock{top:84px;font-size:13px}#net{top:122px}#proj{top:150px}.hp-top button{padding:7px 11px}}
 
 </style></head><body>
+<script>if(/[?&]embed=1/.test(location.search))document.documentElement.classList.add('embed')</script>
 <div id="title">
   <div class="t-inner">
     <div class="t-logo"><span>EMC</span><span class="y">Office</span></div>
@@ -376,7 +378,7 @@ addEventListener('resize', resize); resize();
 // ---------- 辦公室整層（依使用者提供的平面配置圖） ----------
 // 版面圖座標（1201×1526 px）× U = 世界座標。桌子 105 px 寬 ≈ 3.15 單位，與角色身高 2.04 的比例同遊戲內一致。
 const U = 0.03, PPU = HD ? 29.5 * DPR * innerHeight / 300 : 29.5;               // PPU：每單位約幾個螢幕像素（貼圖縮成這個大小才會清楚）
-const ASSET = '../EMC-ART-Pixel-Office/dist/assets/';
+const ASSET = 'assets/';
 const FILES = {elevator:'props2/elevator.png'};
 // [素材, 左上 x, 底部 y, 寬, 選項{h 指定高, fh 碰撞高, col 自訂碰撞[x,y,w,h]}]（版面圖像素）
 const PROPS = [
