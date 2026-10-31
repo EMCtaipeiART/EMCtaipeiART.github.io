@@ -398,9 +398,9 @@ const WALLS = [
 ];
 const LABELS = [['男廁',370,44],['女廁',526,44],['會議室 A',863,110],['影廳',215,1062],['會議室 C',186,1432],['茶水間',368,1226],['冰箱',510,1208],['會議室 D',845,1285],['電梯',201,262]];
 // ===== 四樓：版面取自 2D 版 floor4.js（座標 ×0.5，套用五樓同一套家具尺寸），整層放在五樓右邊 FX4 px 處 =====
-const FX4 = 1400, F4_Z1 = 1560;
+const FX4 = 3600, F4_Z1 = 1700, F4_X0 = -100, F4_X1 = 1430, F4_Z0 = -100;   // 四樓離五樓很遠（視野內看不到五樓）；四邊各留 70 px 走廊
 const F4 = {EX:122.5, EY:149, toilets:[['男廁', 451.5], ['女廁', 612.5]], TY:30, TW:173, TH:219,
-  H:{x:598, y:369, w:598, h:344}, O1:{x:598, y:763, w:284, h:510.5}, O2:{x:912, y:763, w:284, h:510.5}, F:{x:598, y:1323.5, w:234, h:219}, G:{x:912, y:1323.5, w:234, h:219}};
+  H:{x:598, y:369, w:598, h:344}, O1:{x:598, y:763, w:330, h:510.5}, O2:{x:958, y:763, w:330, h:510.5}, F:{x:598, y:1323.5, w:234, h:219}, G:{x:912, y:1323.5, w:234, h:219}};
 function glassWalls(x, y, w, h, doors){   // 玻璃屋：四面牆，door ＝ {side:'t'|'b'|'l'|'r', c:門中心座標}（寬 60）
   const RT = 12, d = 30, gap = k => doors.find(o => o.side === k);
   const seg = (a, b, g) => { if (!g) return [[a, b]]; const o = [], g0 = g.c - d, g1 = g.c + d; if (a < g0) o.push([a, Math.min(b, g0)]); if (b > g1) o.push([Math.max(a, g1), b]); return o; };
@@ -425,7 +425,7 @@ const SEATS = {Leona:[0,2,0,'top'],Amber:[0,2,1,'top'],Noise:[0,2,2,'top'],Anna:
 
 const FLOOR_X0 = -3, FLOOR_X1 = 1201 * U + 3, FLOOR_Z0 = -3, FLOOR_Z1 = 1526 * U + 3;
 // 地板：淺灰藍方格（五樓、四樓各一塊）
-for (const [FLOOR_X0, FLOOR_X1, FLOOR_Z0, FLOOR_Z1] of [[-3, 1201 * U + 3, -3, 1526 * U + 3], [FX4 * U - 3, (FX4 + 1201) * U + 3, -3, F4_Z1 * U + 3]]) {
+for (const [FLOOR_X0, FLOOR_X1, FLOOR_Z0, FLOOR_Z1] of [[-3, 1201 * U + 3, -3, 1526 * U + 3], [(FX4 + F4_X0) * U, (FX4 + F4_X1) * U, F4_Z0 * U, F4_Z1 * U]]) {
   const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d');
   g.fillStyle = '#e4eaef'; g.fillRect(0, 0, 32, 32); g.fillStyle = '#dde4ea'; g.fillRect(0, 0, 16, 16); g.fillRect(16, 16, 16, 16);
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.NearestFilter; t.colorSpace = THREE.SRGBColorSpace;
@@ -444,7 +444,7 @@ for (const [x, y, w, h] of WALLS) {
 }
 const R_PLAYER = .5;
 function blocked(x, z){
-  const in5 = x > 1 && x < 1201 * U - 1 && z > 1 && z < 1526 * U - 1, in4 = x > FX4 * U + 1 && x < (FX4 + 1201) * U - 1 && z > 1 && z < F4_Z1 * U - 1;
+  const in5 = x > 1 && x < 1201 * U - 1 && z > 1 && z < 1526 * U - 1, in4 = x > (FX4 + F4_X0) * U + 1 && x < (FX4 + F4_X1) * U - 1 && z > F4_Z0 * U + 1 && z < F4_Z1 * U - 1;
   if (!in5 && !in4) return true;
   return rects.some(([a, b, c, d]) => x > a - R_PLAYER && x < c + R_PLAYER && z > b - R_PLAYER * .55 && z < d + R_PLAYER * .55);
 }
@@ -596,15 +596,11 @@ const loadImg = src => new Promise(res => { const i = new Image(); i.onload = ()
 // ---- 四樓家具（版面來自 2D floor4.js，×0.5；家具尺寸與五樓相同）----
 function elevPick(x, z, w, h, d){ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false})); m.position.set(x, h / 2, z); m.userData.pick = {kind:'elev'}; scene.add(m); pickables.push(m); }
 const F4_WHITE = 0xeeeee4, F4_BEIGE = 0xe8c795;
-function buildFloor4(){
+function buildFloor4(T, place){
   const I = v => v * U, X = v => (v + FX4) * U;
   elevPick(I(201), I(235), 2.4, 3.2, 1.6);   // 五樓電梯的點選範圍
-  // 電梯（左上）
-  { const e = F4.EX, y = F4.EY; pbox(I(75), 3.3, I(65), 0xb9c1c9, X(e + 37.5), 0, I(y + 67.5));
-    const zf = I(y + 100) + .02; for (const dx of [-1, 1]) pbox(I(32), 2.7, .04, 0x8f99a3, X(e + 37.5) + dx * I(17), 0, zf, false);
-    const c = document.createElement('canvas'); c.width = 96; c.height = 48; const g = c.getContext('2d'); g.fillStyle = '#1b2027'; g.fillRect(0, 0, 96, 48); g.fillStyle = '#e7bd60'; g.font = 'bold 30px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('4F', 48, 26);
-    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.1, .55), new THREE.MeshBasicMaterial({map:t})); sg.position.set(X(e + 37.5), 3.0, zf + .01); scene.add(sg);
-    rects.push([X(e), I(y + 35), X(e + 75), I(y + 100)]); elevPick(X(e + 37.5), I(y + 67.5), I(75), 3.3, I(65)); }
+  // 電梯（左上）：和五樓同一張 2D 電梯圖
+  { const x = F4.EX + 2, bottom = F4.EY + 100; place(T.elevator, x + FX4, bottom, 72, {fh:40}); rects.push([X(x), I(bottom - 40), X(x + 72), I(bottom)]); elevPick(X(x + 36), I(bottom - 25), I(72), 3.3, I(50)); }
   // 男廁、女廁（隔間比照五樓：原點 (290,48) 的相對位置）
   for (const [, rx] of F4.toilets) {
     const ty = F4.TY;
@@ -640,11 +636,11 @@ function buildFloor4(){
     pbox(I(4), 2.3, I(150), 0xf6f7f9, X(wx + 2), 0, I(pz));
     projectorRig(X(xC + 163), I(pz), 'E', {room:'H', wallX:X(wx) - .02, wallDir:-1, zc:I(pz), w:4.3, h:2.2, title:'設計進度', kind:'bars'}); }
   // 兩間玻璃辦公室：各兩群 2×2 米黃桌
-  for (const k of ['O1', 'O2']) { const o = F4[k], x0 = o.x + 32;
+  for (const k of ['O1', 'O2']) { const o = F4[k], x0 = o.x + (o.w - 210) / 2;
     for (let g = 0; g < 2; g++) { const top = o.y + 100 + g * 232.5; deskBlock3d(x0 + FX4, top, 2, F4_BEIGE, 'laptop', false);
       for (let c = 0; c < 2; c++) { const cx = x0 + 52.5 + 105 * c; officeChair3d(X(cx), I(top - 38), 'S'); officeChair3d(X(cx), I(top + 116), 'N'); } } }
   // 會議室 F、G：黑色會議桌（一桌兩椅×2），F 投影機朝左、G 朝右
-  for (const [k, face] of [['F', 'W'], ['G', 'E']]) { const r = F4[k], tx = r.x + 47, cz = r.y + r.h / 2, tw = 140, id = k;
+  for (const [k, face] of [['F', 'W'], ['G', 'E']]) { const r = F4[k], tx = r.x + 47, cz = r.y + r.h / 2, tw = 120, id = k;
     table3d(X(tx + tw / 2), I(cz), I(tw), I(50), 0x23282e); rects.push([X(tx), I(cz - 25), X(tx + tw), I(cz + 25)]);
     for (const j of [0, 1]) { const cx = tx + tw * (2 * j + 1) / 4; chair3d(X(cx), I(cz - 52), 'S'); chair3d(X(cx), I(cz + 52), 'N'); }
     if (face === 'W') { const wx = r.x + 12; pbox(I(4), 2.3, I(r.h - 24), 0xf6f7f9, X(wx + 2), 0, I(cz)); projectorRig(X(tx + 28), I(cz), 'W', {room:id, wallX:X(wx + 4) + .02, wallDir:1, zc:I(cz), w:4.0, h:2.1, title:'專案會議', kind:'list'}); }
@@ -694,7 +690,7 @@ async function buildOffice(){
   // 米黃桌組（左側上下兩組，各 2×2 合併）：南北兩側都有椅子
   [355, 592].forEach(top => { deskBlock3d(85, top, 2, 0xe8c795, 'laptop', false); for (const cx of [137.5, 242.5]) { officeChair3d(I(cx), I(top - 38), 'S'); officeChair3d(I(cx), I(top + 116), 'N'); } });
   officeChair3d(I(222), I(955), 'N');
-  buildFloor4();
+  buildFloor4(T, place);
   // 白色 L 型桌（左下）
   { const I = v => v * U; pbox(I(168), .12, I(45), 0xf3f3ee, I(224), .83, I(850.5)); pbox(I(52), .95, I(102), 0xf3f3ee, I(111), 0, I(879));
     for (const [x, z] of [[300, 836], [300, 866], [150, 836], [150, 866]]) pbox(.12, .83, .12, 0x14181c, I(x), 0, I(z), false);
@@ -1134,8 +1130,15 @@ function elevInteract(){
   if (Math.hypot(sp.x - player.holder.position.x, sp.z - player.holder.position.z) < 2.0) { elevGo(here === 5 ? 4 : 5); return; }
   wantElev = true; target = new THREE.Vector3(sp.x, 0, sp.z);
 }
+let elevArmed = true;
+function updateElev(){   // 人物貼近電梯就直接上下樓；剛到達時要先走開才會再次觸發
+  if (!player || AWAY.has(player.status) || player.sitting) return;
+  const sp = elevSpot(floorOf(player)), d = Math.hypot(sp.x - player.holder.position.x, sp.z - player.holder.position.z);
+  if (!elevArmed) { if (d > 3) elevArmed = true; return; }
+  if (d < 1.3) elevGo(floorOf(player) === 5 ? 4 : 5);
+}
 function elevGo(to){
-  wantElev = false; target = null; if (!player) return; releaseSeat(player); wheelClose(); fridgeClose();
+  wantElev = false; elevArmed = false; target = null; if (!player) return; releaseSeat(player); wheelClose(); fridgeClose();
   const sp = elevSpot(to); player.holder.position.set(sp.x, 0, sp.z + .6); player.face = 0;
   camPos.set(sp.x, 10.9, sp.z + 12.8); look.set(sp.x, 0, sp.z); showQuote('', '🛗 到了 ' + to + ' 樓');
 }
@@ -1208,7 +1211,7 @@ function select(name){
 
 let done = 0;
 Promise.all([buildOffice(), loadIcons(), ...NAMES.map((n, i) => addChar(n, i).then(() => { setLoad('載入角色 ' + (++done) + '/' + NAMES.length, done / NAMES.length); }))])
-  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); startLiveSync(); showTitleCard(); window.__plaza = {elevGo, floorOf, elevInteract, fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
+  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); startLiveSync(); showTitleCard(); window.__plaza = {updateElev, elevGo, floorOf, elevInteract, fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
 
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
 const TILT = 0, STRETCH = 1 / Math.cos(Math.atan(8.4 / 9.4)), _e = new THREE.Euler(0, 0, 0, 'YXZ');   // 垂直站立：不再後傾（避免穿進桌子、牆），高度拉長 STRETCH 倍抵消俯視縮短
@@ -1730,7 +1733,7 @@ function tick(){
     camPos.lerp(new THREE.Vector3(p.x, 10.9, p.z + 12.2), 1 - Math.pow(.001, dt));
     camera.position.copy(camPos); look.lerp(p, 1 - Math.pow(.001, dt)); camera.lookAt(look.x, 1, look.z);
   } else { camPos.lerp(new THREE.Vector3(18, 15, 36), 1 - Math.pow(.001, dt)); camera.position.copy(camPos); look.lerp(new THREE.Vector3(18, 0, 22), 1 - Math.pow(.001, dt)); camera.lookAt(look); }   // 沒登入：固定的辦公室全景
-  updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay(); updateTags(); placeRadial(); updateFridge();
+  updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay(); updateTags(); placeRadial(); updateFridge(); updateElev();
   renderFrame();
   requestAnimationFrame(tick);
 }
