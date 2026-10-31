@@ -885,14 +885,14 @@ const loadTex = src => new Promise((res, rej) => new THREE.TextureLoader().load(
   t.magFilter = t.minFilter = HD ? THREE.LinearFilter : THREE.NearestFilter; t.generateMipmaps = false; t.colorSpace = THREE.SRGBColorSpace;
   t.repeat.set(1 / ANGLES, 1 / ROWS); res(t);
 }, undefined, rej));
-const shadowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 16; const g = c.getContext('2d'); g.fillStyle = '#000'; g.beginPath(); g.ellipse(8, 8, 7, 5, 0, 0, 7); g.fill(); const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; return t; })();
+const shadowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), r = g.createRadialGradient(64, 64, 4, 64, 64, 62); r.addColorStop(0, 'rgba(0,0,0,1)'); r.addColorStop(.55, 'rgba(0,0,0,.65)'); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 128, 128); const t = new THREE.CanvasTexture(c); t.anisotropy = 4; t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter; return t; })();
 
 async function addChar(name, i){
   const tex = await loadTex(url(name));
   const sprite = new THREE.Mesh(new THREE.PlaneGeometry(WORLD_H * CELL_W / CELL_H, WORLD_H),
     new THREE.MeshBasicMaterial({map:tex, transparent:true, alphaTest:.5, side:THREE.DoubleSide}));
   sprite.geometry.translate(0, WORLD_H / 2 - .03, 0);
-  const blob = new THREE.Mesh(new THREE.PlaneGeometry(1.1, .8), new THREE.MeshBasicMaterial({map:shadowTex, transparent:true, opacity:.28, depthWrite:false}));
+  const blob = new THREE.Mesh(new THREE.PlaneGeometry(1.1, .8), new THREE.MeshBasicMaterial({map:shadowTex, transparent:true, opacity:.34, depthWrite:false}));
   blob.rotation.x = -Math.PI / 2; blob.position.y = .02;
   const holder = new THREE.Group(); holder.add(blob, sprite);
   const seat = SEATS[name], a = i / NAMES.length * Math.PI * 2;
@@ -1064,12 +1064,23 @@ stick.addEventListener('pointerup', () => { joy.x = joy.y = 0; knob.style.transf
 const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 renderer.domElement.addEventListener('pointerdown', e => {
   ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
-  const hit = ray.intersectObjects(pickables, true).find(h => (h.object.userData.pickRoot || h.object).visible !== false);
-  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { if (pk.c === player) radialOpen(); else if (player && (player.name === 'Machi' || isAdmin())) { select(pk.c.name); radialOpen(); } else { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); else if (pk.kind === 'seat') { const st = pk.seat || chairSeats.filter(q => q.kind === 'toilet').sort((a, b) => Math.hypot(a.x - pk.at.x, a.z - pk.at.z) - Math.hypot(b.x - pk.at.x, b.z - pk.at.z))[0]; if (st && player && !st.by && !st.hidden) { wantSeat = st; target = new THREE.Vector3(st.x, 0, st.z); } } return; } }
+  const hits = ray.intersectObjects(pickables, true).filter((h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.c.holder.visible); })), hit = hits.find(h => ((h.object.userData.pickRoot || h.object).userData.pick || {}).kind === 'char') || hits[0];
+  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { clickChar = pk.c; clickUntil = performance.now() + 3000; if (pk.c !== player && player && (player.name === 'Machi' || isAdmin())) select(pk.c.name); if (false) { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); else if (pk.kind === 'seat') { const st = pk.seat || chairSeats.filter(q => q.kind === 'toilet').sort((a, b) => Math.hypot(a.x - pk.at.x, a.z - pk.at.z) - Math.hypot(b.x - pk.at.x, b.z - pk.at.z))[0]; if (st && player && !st.by && !st.hidden) { wantSeat = st; target = new THREE.Vector3(st.x, 0, st.z); } } return; } }
   radialClose(); wantSeat = null;
   const p = new THREE.Vector3();
   if (ray.ray.intersectPlane(plane, p) && !blocked(p.x, p.z)) target = p;
 });
+
+let hoverBusy = false;
+renderer.domElement.addEventListener('pointermove', e => {
+  if (hoverBusy) return; hoverBusy = true;
+  requestAnimationFrame(() => {
+    hoverBusy = false; ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
+    const hits = ray.intersectObjects(pickables, true).filter((h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.c.holder.visible); })), hit = hits.find(h => ((h.object.userData.pickRoot || h.object).userData.pick || {}).kind === 'char') || hits[0], pk = hit && (hit.object.userData.pickRoot || hit.object).userData.pick;
+    hoverChar = pk && pk.kind === 'char' ? pk.c : null;
+  });
+});
+renderer.domElement.addEventListener('pointerleave', () => { hoverChar = null; });
 
 // ---------- 主迴圈 ----------
 const clock = new THREE.Clock(), camPos = new THREE.Vector3(20, 10.9, 36), look = new THREE.Vector3();
@@ -1395,7 +1406,19 @@ addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('sv').hidden
 radial.addEventListener('pointerdown', e => { if (e.target === radial) radialClose(); });
 
 // ───────── 人物頭上的介面：對話泡泡、音樂泡泡、心情圖示、限時動態氣泡；離席的人在座位上方顯示狀態牌 ─────────
+let hoverChar = null, clickChar = null, clickUntil = 0;
+const plate = document.createElement('div'); plate.className = 'cui-tag'; plate.style.cssText = 'position:fixed;left:0;top:0;z-index:7;display:none;pointer-events:none'; document.body.appendChild(plate);
+function updatePlate(){
+  const c = hoverChar || (performance.now() < clickUntil ? clickChar : null);
+  if (!c || !c.holder.visible) { plate.style.display = 'none'; return; }
+  const p = c.holder.position.clone(); p.y = .05; p.project(camera);
+  if (p.z >= 1) { plate.style.display = 'none'; return; }
+  const st = STATUS[c.status] || STATUS.present, html = iconImg(symOf[c.status] || 'person', 18) + esc(c.name + '（' + st[0] + '）');
+  if (plate.dataset.h !== html) { plate.innerHTML = html; plate.dataset.h = html; }
+  plate.style.display = 'inline-flex'; plate.style.transform = 'translate(-50%,6px) translate(' + ((p.x * .5 + .5) * innerWidth) + 'px,' + ((-p.y * .5 + .5) * innerHeight) + 'px)';
+}
 function updateTags(){
+  updatePlate();
   for (const c of Object.values(chars)) {
     const away = false, m = c.music, nStory = storiesOf(c.name).length;
     let p = null, html = '';
@@ -1403,9 +1426,9 @@ function updateTags(){
     else if (c.holder.visible && (c.message || c.mood || m || nStory)) {
       p = c.holder.position.clone(); p.y += 2.7;
       const playing = musicPlaying.name === c.name && !musicPlaying.paused;
-      const bub = [];
-      if (c.message) bub.push('<div class="cui-bub">' + esc(c.message) + '</div>');
-      if (m) bub.push('<div class="cui-bub music"><button type="button" class="mplay" data-n="' + esc(c.name) + '">' + (playing ? '⏸' : '▶') + '</button><span class="mt"><i>♪ ' + esc(m.title || '音樂') + '</i></span></div>');
+      const bub = [], showMusic = m && (!c.message || playing || Math.floor(performance.now() / 3500) % 2 === 1);   // 對話與音樂共用一個泡泡，同時存在時每 3.5 秒輪流顯示
+      if (c.message && !showMusic) bub.push('<div class="cui-bub">' + esc(c.message) + '</div>');
+      if (showMusic) bub.push('<div class="cui-bub music"><button type="button" class="mplay" data-n="' + esc(c.name) + '">' + (playing ? '⏸' : '▶') + '</button><span class="mt"><i>♪ ' + esc(m.title || '音樂') + '</i></span></div>');
       const ico = (nStory ? '<button type="button" class="cui-story" data-n="' + esc(c.name) + '" title="查看 ' + esc(c.name) + ' 的動態"><img alt="" src="' + storyIconURL + '">' + (storyUnread(c.name) ? '<b></b>' : '') + '</button>' : '') + (c.mood ? '<img class="cui-mood ' + c.mood + '" alt="" src="' + (ICON[moodSym[c.mood]] || '') + '">' : '');
       if (!ico && bub.length) bub[bub.length - 1] = bub[bub.length - 1].replace('class="cui-bub', 'class="cui-bub tail');
       html = '<div class="cui-stack">' + bub.join('') + (ico ? '<div class="cui-ico">' + ico + '</div>' : '') + '</div>';
