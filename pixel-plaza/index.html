@@ -99,7 +99,7 @@ const FLOOR_X0 = -3, FLOOR_X1 = 1201 * U + 3, FLOOR_Z0 = -3, FLOOR_Z1 = 1526 * U
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.NearestFilter; t.colorSpace = THREE.SRGBColorSpace;
   t.repeat.set((FLOOR_X1 - FLOOR_X0) / 2, (FLOOR_Z1 - FLOOR_Z0) / 2);
   const f = new THREE.Mesh(new THREE.PlaneGeometry(FLOOR_X1 - FLOOR_X0, FLOOR_Z1 - FLOOR_Z0), new THREE.MeshLambertMaterial({map:t}));
-  f.rotation.x = -Math.PI / 2; f.position.set((FLOOR_X0 + FLOOR_X1) / 2, 0, (FLOOR_Z0 + FLOOR_Z1) / 2); scene.add(f);
+  f.rotation.x = -Math.PI / 2; f.position.set((FLOOR_X0 + FLOOR_X1) / 2, 0, (FLOOR_Z0 + FLOOR_Z1) / 2); scene.add(f); f.userData.noMask = true;
 }
 // 玻璃牆：半透明方塊加深色邊線
 const rects = [];     // 碰撞：[x0, z0, x1, z1]（世界座標）
@@ -235,7 +235,7 @@ function laptop3d(x, z, dir){   // 黑色筆電：dir = 螢幕朝向（-1 朝北
   const mats = [body, body, body, body, dir > 0 ? face : body, dir > 0 ? body : face];
   const sy = .95 + .04 + .24, sz = z - dir * .25, tilt = -dir * .22;
   const m = new THREE.Mesh(new THREE.BoxGeometry(.72, .48, .03), mats); m.position.set(x, sy, sz); m.rotation.x = tilt; scene.add(m);
-  const h = new THREE.Mesh(new THREE.BoxGeometry(.8, .56, .11), outlineMat); h.position.copy(m.position); h.rotation.x = tilt; scene.add(h);
+  const h = new THREE.Mesh(new THREE.BoxGeometry(.8, .56, .11), outlineMat); h.position.copy(m.position); h.rotation.x = tilt; h.layers.set(HULL_LAYER); scene.add(h);
 }
 function monitor3d(x, z, dir, color){   // 螢幕：背面為機身色、正面（朝 dir）為深色螢幕
   const body = new THREE.MeshLambertMaterial({color}), face = new THREE.MeshLambertMaterial({color:color === 0x15181c ? 0x23303f : 0x2a3340});
@@ -271,8 +271,8 @@ function officeChair3d(x, z, face){   // 辦公室：有扶手、五爪腳輪的
   for (const [px, pz] of [[.42, 0], [-.42, 0], [0, .42], [0, -.42]]) add(.12, .1, .12, black, px, 0, pz, false);
 }
 // ---- 像素風 3D 物件 ----
-const OUT_T = .04, outlineMat = new THREE.MeshBasicMaterial({color:0x0b0d10, side:THREE.BackSide});   // 外框粗細（世界單位）
-function hull(parent, w, h, d, px, py, pz, t = OUT_T){ const m = new THREE.Mesh(new THREE.BoxGeometry(w + 2 * t, h + 2 * t, d + 2 * t), outlineMat); m.position.set(px, py, pz); parent.add(m); return m; }
+const OUT_T = .06, HULL_LAYER = 1, outlineMat = new THREE.MeshBasicMaterial({color:0x0b0d10, side:THREE.BackSide});   // 外框粗細（世界單位）；外框物件放在 layer 1
+function hull(parent, w, h, d, px, py, pz, t = OUT_T){ const m = new THREE.Mesh(new THREE.BoxGeometry(w + 2 * t, h + 2 * t, d + 2 * t), outlineMat); m.position.set(px, py, pz); m.layers.set(HULL_LAYER); parent.add(m); return m; }
 function pbox(w, h, d, color, x, y, z, edge = true){
   const geo = new THREE.BoxGeometry(w, h, d), m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color}));
   m.position.set(x, y + h / 2, z); scene.add(m);
@@ -283,24 +283,24 @@ function table3d(cx, cz, w, d, color, h = .95){   // 世界座標；桌面＋四
   pbox(w, .14, d, color, cx, h - .14, cz);
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) pbox(.14, h - .14, .14, 0x14181c, cx + sx * (w / 2 - .18), 0, cz + sz * (d / 2 - .18), false);
 }
-function pmesh(geo, color, x, y, z, sx = 1, sy = 1, sz = 1, outline = true){   // 圓形／圓角物件：外殼放大一點當黑色粗外框
+function pmesh(geo, color, x, y, z, sx = 1, sy = 1, sz = 1, outline = true, k = 1.14){   // 圓形／圓角物件：外殼放大一點當黑色粗外框
   const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color})); m.position.set(x, y, z); m.scale.set(sx, sy, sz); scene.add(m);
-  if (outline) { const h = new THREE.Mesh(geo, outlineMat); h.position.copy(m.position); h.scale.set(sx * 1.07, sy * 1.07, sz * 1.07); scene.add(h); }
+  if (outline) { const h = new THREE.Mesh(geo, outlineMat); h.position.copy(m.position); h.scale.set(sx * k, sy * k, sz * k); h.layers.set(HULL_LAYER); scene.add(h); }
   return m;
 }
 const G_TANK = new RoundedBoxGeometry(.4, .9, .86, 4, .13), G_BOWL = new THREE.CylinderGeometry(.44, .36, .46, 28), G_SEAT = new THREE.CylinderGeometry(.42, .42, .07, 28), G_WATER = new THREE.CylinderGeometry(.27, .27, .02, 24);
 const G_PED = new THREE.CylinderGeometry(.14, .18, .66, 16), G_BASIN = new THREE.CylinderGeometry(.5, .36, .22, 28), G_SINKW = new THREE.CylinderGeometry(.34, .34, .02, 24), G_FAUCET = new THREE.CylinderGeometry(.05, .05, .24, 10);
 function toilet3d(x, z){   // 朝右（+x）：圓角水箱在左、橢圓馬桶在右
-  pmesh(G_TANK, 0xf4f6f8, x - .52, .45, z);
-  pmesh(G_BOWL, 0xffffff, x + .1, .23, z, 1.12, 1, .92);
-  pmesh(G_SEAT, 0xe3e9ee, x + .12, .495, z, 1.1, 1, .9);
+  pmesh(G_TANK, 0xf4f6f8, x - .52, .45, z, 1, 1, 1, true, 1.2);
+  pmesh(G_BOWL, 0xffffff, x + .1, .23, z, 1.12, 1, .92, true, 1.2);
+  pmesh(G_SEAT, 0xe3e9ee, x + .12, .495, z, 1.1, 1, .9, true, 1.2);
   pmesh(G_WATER, 0x45a9ff, x + .14, .54, z, 1.05, 1, .85, false);
 }
 function sink3d(x, z){     // 朝右：圓柱腳、橢圓臉盆，水龍頭在左
-  pmesh(G_PED, 0xf3f6f8, x, .33, z);
-  pmesh(G_BASIN, 0xffffff, x + .02, .77, z, 1, 1, .82);
+  pmesh(G_PED, 0xf3f6f8, x, .33, z, 1, 1, 1, true, 1.28);
+  pmesh(G_BASIN, 0xffffff, x + .02, .77, z, 1, 1, .82, true, 1.2);
   pmesh(G_SINKW, 0x9fd3ff, x + .06, .89, z, 1, 1, .8, false);
-  pmesh(G_FAUCET, 0xb9c2cc, x - .4, 1.0, z);
+  pmesh(G_FAUCET, 0xb9c2cc, x - .4, 1.0, z, 1, 1, 1, true, 1.5);
 }
 const chairsAt = [];   // 等素材載入後再放椅子
 function build3dObjects(T, place){
@@ -324,12 +324,16 @@ function build3dObjects(T, place){
   rects.push([I(720), I(1166), I(972), I(1226)], [I(676), I(1166), I(722), I(1346)], [I(972), I(1166), I(1018), I(1346)]);
   for (const x of [752, 817, 880, 945]) chair3d(I(x), I(1140), 'S');
   for (const y of [1200, 1245, 1292, 1334]) { chair3d(I(650), I(y), 'E'); chair3d(I(1044), I(y), 'W'); }
-  // 廁所
+  // 廁所：隔間縮小（寬 62）讓走廊變寬；碰撞只擋馬桶本體與隔板，人可以走進隔間，馬桶也能坐
   for (const dx of STALLS) {
-    toilet3d(I(342 + dx), I(98)); toilet3d(I(342 + dx), I(160));
-    sink3d(I(334 + dx), I(224));
-    rects.push([I(308 + dx), I(76), I(388 + dx), I(182)], [I(308 + dx), I(206), I(360 + dx), I(240)]);
-    for (const [x, y, w, h] of [[305,64,83,4],[305,126,83,4],[305,188,83,4],[305,64,4,128]]) pbox(I(w), .7, I(h), 0xd7cfc6, I(x + dx + w / 2), 0, I(y + h / 2));
+    for (const y of [98, 160]) {
+      toilet3d(I(335 + dx), I(y));
+      rects.push([I(311 + dx), I(y - 14), I(354 + dx), I(y + 14)]);
+      chairSeats.push({x:I(335 + dx) + .12, z:I(y), face:FACE_ANGLE.E, by:null});   // 坐在馬桶上，面朝右
+    }
+    sink3d(I(330 + dx), I(224));
+    rects.push([I(308 + dx), I(212), I(352 + dx), I(238)]);
+    for (const [x, y, w, h] of [[305,64,62,4],[305,126,62,4],[305,188,62,4],[305,64,4,128]]) { pbox(I(w), .7, I(h), 0xd7cfc6, I(x + dx + w / 2), 0, I(y + h / 2)); rects.push([I(x + dx), I(y), I(x + dx + w), I(y + h)]); }
   }
 }
 // 地圖上的文字標籤（DOM，才清楚）
@@ -454,6 +458,46 @@ function moveChar(c, dir, speed, dt){
   const want = Math.atan2(dir.x, dir.z);
   c.face = want; c.moving = speed;
 }
+// 像素色塊外框：主畫面不畫外框（layer 1），另用低解析遮罩 pass 畫出「外框／實體剪影」，
+// 以最近鄰放大後只把黑色格子疊回高清畫面——轉角就會是一格一格的像素色塊。復古模式（?px=1）直接畫外框。
+const BLOCK = 3;                          // 外框像素格大小（CSS 像素）
+if (!HD) camera.layers.enable(HULL_LAYER);
+const maskWhite = new THREE.MeshBasicMaterial({color:0xffffff});
+const compScene = new THREE.Scene(), compCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+const compMat = new THREE.ShaderMaterial({uniforms:{t:{value:null}}, depthTest:false, depthWrite:false,
+  vertexShader:'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+  fragmentShader:'varying vec2 vUv; uniform sampler2D t; void main(){ vec4 c = texture2D(t, vUv); if (c.a < .5 || c.r > .5) discard; gl_FragColor = vec4(.035, .04, .05, 1.0); }'});
+compScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), compMat));
+let maskRT = null;
+function maskMaterialFor(m){
+  if (m.userData.mm) return m.userData.mm;
+  const o = m.material; let mm = maskWhite;
+  if (Array.isArray(o)) mm = o.map(() => maskWhite);   // 多材質（螢幕）：每面都是白色剪影
+  else if (o.map) { mm = o.clone(); mm.color.set(0xffffff); mm.transparent = false; mm.side = o.side;
+    mm.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', 'vec4 sd = texture2D( map, vMapUv ); diffuseColor = vec4(1.0, 1.0, 1.0, sd.a * opacity);'); };
+    mm.customProgramCacheKey = () => 'maskwhite'; }
+  m.userData.mm = mm; return mm;
+}
+function renderFrame(){
+  renderer.render(scene, camera);
+  if (!HD) return;
+  const sz = renderer.getDrawingBufferSize(new THREE.Vector2()), px = BLOCK * DPR, w = Math.max(8, Math.floor(sz.x / px)), h = Math.max(8, Math.floor(sz.y / px));
+  if (!maskRT || maskRT.width !== w || maskRT.height !== h) { if (maskRT) maskRT.dispose(); maskRT = new THREE.WebGLRenderTarget(w, h, {minFilter:THREE.NearestFilter, magFilter:THREE.NearestFilter, depthBuffer:true}); compMat.uniforms.t.value = maskRT.texture; }
+  const swapped = [], hidden = [];
+  scene.traverse(o => {
+    if (!o.isMesh || !o.visible) return;
+    if (o.layers.isEnabled(HULL_LAYER)) return;                       // 外框本身：照畫
+    const mt = o.material;
+    if (o.userData.noMask || (mt && mt.isLineMaterial) || (mt && mt.transparent && !(mt.alphaTest > 0))) { o.visible = false; hidden.push(o); return; }   // 地板、玻璃牆、影子：不參與
+    swapped.push([o, mt]); o.material = maskMaterialFor(o);
+  });
+  const bg = scene.background; scene.background = null; camera.layers.enable(HULL_LAYER);
+  renderer.setRenderTarget(maskRT); renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(scene, camera);
+  renderer.setRenderTarget(null); renderer.setClearColor(0x000000, 1); camera.layers.disable(HULL_LAYER); scene.background = bg;
+  for (const [o, mt] of swapped) o.material = mt;
+  for (const o of hidden) o.visible = true;
+  renderer.autoClear = false; renderer.render(compScene, compCam); renderer.autoClear = true;
+}
 function tick(){
   const dt = Math.min(clock.getDelta(), .05);
   if (player) {
@@ -481,7 +525,7 @@ function tick(){
     camera.position.copy(camPos); look.lerp(p, 1 - Math.pow(.001, dt)); camera.lookAt(look.x, 1, look.z);
   } else { camera.position.copy(camPos); camera.lookAt(0, 1, 0); }
   updateBillboards(); updateLabels();
-  renderer.render(scene, camera);
+  renderFrame();
   requestAnimationFrame(tick);
 }
 tick();
