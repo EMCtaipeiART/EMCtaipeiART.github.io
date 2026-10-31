@@ -15,7 +15,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #roster button.on{background:#ffd23f;color:#222;border-color:#fff}
 .lbl{position:fixed;left:0;top:0;pointer-events:none;background:#232b32;color:#fff;font:700 12px/1 system-ui,'Noto Sans TC',sans-serif;padding:4px 7px;border-radius:3px;white-space:nowrap;z-index:2}
 #proj{position:fixed;right:12px;top:12px;z-index:3;display:none;background:#0b0d10;border:3px solid #0b0d10;border-radius:6px;box-shadow:0 4px 14px #0004}
-#proj canvas{position:static;display:block;width:320px;height:180px;image-rendering:pixelated}
+#proj canvas{position:static;display:block;width:320px;height:180px}
 #proj span{display:block;color:#fff;font:700 12px system-ui,'Noto Sans TC',sans-serif;padding:4px 6px}
 #quote{position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:4;display:none;max-width:min(520px,88vw);background:#fffdf5;color:#232b32;border:3px solid #0b0d10;border-radius:8px;padding:10px 14px;font:600 14px/1.5 system-ui,'Noto Sans TC',sans-serif;box-shadow:0 6px 18px #0005}
 #quote b{display:block;font-size:12px;color:#7b4a24;margin-bottom:2px}
@@ -134,7 +134,7 @@ button{font-family:inherit}
 .t-pick button.on{border-color:var(--yellow);background:rgba(255,199,51,.2);box-shadow:0 0 0 2px var(--yellow) inset}
 .t-pick img,.hp-av img,.dr-av{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#1b6b3a}
 [hidden]{display:none!important}
-#drawer{display:none!important}
+
 .t-me{display:flex;gap:12px;align-items:center;background:rgba(255,255,255,.08);border-radius:14px;padding:10px 12px}
 .t-av{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#1b6b3a;display:grid;place-items:center;font-size:26px;flex:none}
 .t-me b{display:block;font-size:16px}
@@ -283,6 +283,13 @@ button{font-family:inherit}
 .cp-story .th{width:48px!important;height:62px!important}
 @media (max-width:640px){.cp-cols{grid-template-columns:1fr!important}}
 #net{display:none!important}
+button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .th{cursor:pointer}
+#fridgeP{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:13;width:min(560px,94vw);padding:10px 12px;border-radius:18px;border:2px solid var(--line);background:var(--glass);color:#fff;font-family:'Fredoka','Noto Sans TC',sans-serif;backdrop-filter:blur(8px);box-shadow:0 18px 40px rgba(0,0,0,.4)}#fridgeP[hidden]{display:none}
+.fr-head{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:16px;margin-bottom:6px}.fr-x{height:28px;padding:0 14px;border-radius:999px;border:2px solid var(--line);background:rgba(0,0,0,.35);color:#fff;font:700 12px 'Fredoka','Noto Sans TC',sans-serif}
+.fr-cols{display:grid;grid-template-columns:1fr 1fr;gap:8px}.fr-door{padding:6px;border-radius:12px;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.12)}.fr-door h4{margin:0 0 6px;font-size:12px;color:var(--yellow)}
+.fr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.fr-it{position:relative;display:grid;justify-items:center;gap:1px;padding:4px 2px;border-radius:10px;border:2px solid var(--line);background:rgba(255,255,255,.08);color:#fff;font:700 11px 'Fredoka','Noto Sans TC',sans-serif}
+.fr-it i{width:45px;height:45px;background:url('fridge/office-foods-v1.webp') 0 0/auto 45px no-repeat;image-rendering:pixelated}.fr-it u{position:absolute;right:3px;top:2px;text-decoration:none;background:var(--yellow);color:var(--ink);border-radius:999px;padding:0 6px;font-size:10px}
+.fr-it:hover{background:rgba(255,255,255,.18)}.fr-it.no{opacity:.4}.fr-note{margin:6px 2px 0;font-size:11px;opacity:.75}
 @media (max-width:640px){.hp-card{min-width:0}.hp-clock{top:84px;font-size:13px}#net{top:122px}#proj{top:150px}.hp-top button{padding:7px 11px}}
 
 </style></head><body>
@@ -307,11 +314,11 @@ button{font-family:inherit}
 <div id="hud">
   <div class="hp-card"><div class="hp-av" id="pAv"></div><div class="hp-info"><div class="hp-name" id="pName">—</div><div class="hp-st" id="pSt"></div><div class="hp-exp"><i id="pExp"></i></div><div class="hp-lv" id="pLv"></div></div></div>
   <div class="hp-clock" id="pClock">🕒 …</div>
-  <div class="hp-top"><button id="bDex" type="button">📖 圖鑑</button><button id="bHelp" type="button">❓ 說明</button></div>
+  <div class="hp-top"><button id="bDex" type="button">📖 圖鑑</button><button id="bHelp" type="button">❓ 說明</button><button id="bPeople" type="button" hidden>👥 切換人物</button></div>
   <div id="dock"><button id="bWheel" type="button">🎮 角色頁面</button></div>
 </div>
 <div id="stick"><i></i></div>
-<div id="proj"><canvas width="128" height="72"></canvas><span></span></div>
+<div id="proj"><canvas width="1024" height="576"></canvas><span></span></div>
 <div id="quote"><b></b><span></span></div>
 <div id="net">連線中…</div>
 <div id="sv" hidden><div class="sv-box"><div class="sv-prog" id="svProg"></div><div class="sv-top"><b id="svName"></b><button type="button" id="svMute">開聲音</button><button type="button" id="svClose">✕</button></div>
@@ -575,7 +582,7 @@ async function buildOffice(){
   await loadFunArt();
   await Promise.all(SNACKS.map(async ([k]) => { imgs[k] = await loadImg(ASSET + 'props4/' + k + '.png'); }));
   if (pantry3d.snackSpot) SNACKS.forEach(([k, h], i) => { const src = imgs[k] && trimmed(imgs[k]); if (!src) return; const dh = h * .75, dw = dh * src.width / src.height, m = addBillboard(src, pantry3d.snackSpot.cx + (-1.55 + i * .62), pantry3d.snackSpot.cz, dw, dh); m.position.y = .95; });
-  startGameplay();
+  startGameplay(); loadImg('fridge/office-foods-v1.webp').then(im => { foodSheet = im; fridges.forEach((fr, i) => { const t = fr.inner.userData.tex; fr.inner.material.map = fridgeInner(1, 1, FRIDGE_SHELVES[i % 2]).material.map; fr.inner.material.needsUpdate = true; }); });
   // 藍色桌組：每組兩排×三張（3D 方塊桌＋小螢幕），三排 × 設計部／同仁區
   const I = v => v * U;
   GROUPS.forEach((xs, gi) => ROW_TOPS.forEach((top, ri) => {
@@ -789,13 +796,17 @@ function pantry3d(x0, z0, w, d){    // 版面圖像素：木紋檯面＋木櫃�
   pantry3d.snackSpot = {cx, cz: cz - .05};
   rects.push([I(x0), I(z0), I(x0 + w), I(z0 + d)]);
 }
-function fridge3d(x0, z0, w, d, h = 1.9){   // 深色冰箱：上冷凍、下冷藏，銀色把手與紅色指示燈
-  const I = v => v * U, W = I(w), D = I(d), cx = I(x0 + w / 2), cz = I(z0 + d / 2), zf = I(z0 + d) + .02;
+function fridge3d(x0, z0, w, d, h = 1.9){   // 深色冰箱：上冷凍、下冷藏；門可以轉開（點冰箱走過去開）
+  const I = v => v * U, W = I(w), D = I(d), cx = I(x0 + w / 2), cz = I(z0 + d / 2), zf = I(z0 + d) + .02, n0 = scene.children.length, f = fridges.length;
   pbox(W, h, D, 0x2f3b4b, cx, 0, cz);
-  pbox(W - .1, h * .34, .04, 0x3a4a5e, cx, h * .62 - .04, zf);          // 上門
-  pbox(W - .1, h * .56, .04, 0x3a4a5e, cx, .08, zf);                    // 下門
-  pbox(.06, h * .2, .06, 0xc7ced6, cx + W / 2 - .22, h * .66, zf + .05, false); pbox(.06, h * .3, .06, 0xc7ced6, cx + W / 2 - .22, h * .24, zf + .05, false);
+  const inner = fridgeInner(W - .12, h - .12, FRIDGE_SHELVES[f % 2]); inner.position.set(cx, h / 2, zf - .012); inner.visible = false; scene.add(inner);
+  const pivots = [], door = (hh, y) => { const pv = new THREE.Group(); pv.position.set(cx - W / 2 + .05, y, zf); const dw = W - .1, m = new THREE.Mesh(new THREE.BoxGeometry(dw, hh, .04), new THREE.MeshLambertMaterial({color:0x3a4a5e})); m.position.set(dw / 2, hh / 2, 0); pv.add(m); hull(pv, dw, hh, .04, dw / 2, hh / 2, 0, .03);
+    const hd = new THREE.Mesh(new THREE.BoxGeometry(.06, Math.min(.6, hh * .5), .06), new THREE.MeshLambertMaterial({color:0xc7ced6})); hd.position.set(dw - .14, hh * .5, .05); pv.add(hd); scene.add(pv); pivots.push(pv); };
+  door(h * .34, h * .62 - .04); door(h * .56, .08);
   pbox(.1, .1, .04, 0xe04646, cx - W / 2 + .2, h * .86, zf + .03, false);
+  fridges.push({cx, cz, zf, pivots, inner, open:0});
+  const root = new THREE.Object3D(); root.userData.pick = {kind:'fridge'};
+  scene.children.slice(n0).forEach(o => { o.traverse(m => { if (m.isMesh && m.layers.mask === 1) { m.userData.pickRoot = root; pickables.push(m); } }); });
   rects.push([I(x0), I(z0), I(x0 + w), I(z0 + d)]);
 }
 // ---- 投影機 ----
@@ -823,10 +834,10 @@ function wrapLines(g, text, maxW){
   if (line) out.push(line); return out.slice(0, 3);
 }
 function slideCanvas(sl, canvas){   // 2D 版的簡報卡：藍色標題列＋一句話
-  const c = canvas || document.createElement('canvas'); c.width = 128; c.height = 72; const g = c.getContext('2d');
-  g.fillStyle = '#f8fbff'; g.fillRect(0, 0, 128, 72); g.fillStyle = '#2f6fd6'; g.fillRect(0, 0, 128, 13);
-  g.fillStyle = '#fff'; g.font = 'bold 9px sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'left'; g.fillText(sl[0], 5, 7);
-  g.fillStyle = '#223'; g.font = 'bold 8px sans-serif'; g.textAlign = 'center'; const L = wrapLines(g, sl[1], 116); L.forEach((t, i) => g.fillText(t, 64, 42 - (L.length - 1) * 6 + i * 12));
+  const K = 8, c = canvas || document.createElement('canvas'); c.width = 128 * K; c.height = 72 * K; const g = c.getContext('2d'); g.scale(K, K); g.imageSmoothingEnabled = true;   // 高清：1024x576，座標仍用 128x72
+  g.fillStyle = '#f8fbff'; g.fillRect(0, 0, 128, 72); const hg = g.createLinearGradient(0, 0, 128, 0); hg.addColorStop(0, '#2f6fd6'); hg.addColorStop(1, '#4a8cf0'); g.fillStyle = hg; g.fillRect(0, 0, 128, 13); g.fillStyle = '#ffc733'; g.fillRect(0, 13, 128, 1.2);
+  g.fillStyle = '#fff'; g.font = 'bold 8px "Noto Sans TC", "Microsoft JhengHei", sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'left'; g.fillText(sl[0], 5, 7);
+  g.fillStyle = '#223'; g.font = 'bold 7.5px "Noto Sans TC", "Microsoft JhengHei", sans-serif'; g.textAlign = 'center'; const L = wrapLines(g, sl[1], 116); L.forEach((t, i) => g.fillText(t, 64, 42 - (L.length - 1) * 6 + i * 12));
   return c;
 }
 const beamMat = new THREE.MeshBasicMaterial({color:0xd5e6ff, transparent:true, opacity:.13, depthWrite:false, side:THREE.DoubleSide});
@@ -852,7 +863,7 @@ function updateProjectors(force){
 }
 function projectorRig(x, z, face, o){
   const pg = projector3d(x, z, face), canvas = document.createElement('canvas'); slideCanvas(SLIDES[0], canvas);
-  const tex = new THREE.CanvasTexture(canvas); tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false; tex.colorSpace = THREE.SRGBColorSpace;
+  const tex = new THREE.CanvasTexture(canvas); tex.magFilter = tex.minFilter = THREE.LinearFilter; tex.generateMipmaps = false; tex.anisotropy = 4; tex.colorSpace = THREE.SRGBColorSpace;
   const dx = face === 'E' ? 1 : face === 'W' ? -1 : 0, dz = face === 'S' ? 1 : 0, apex = new THREE.Vector3(x + dx * .4, .95 + .15, z + dz * .4);
   const mat = new THREE.MeshBasicMaterial({map:tex, polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2}), p = {key:o.room, room:o.room, canvas, tex, last:''};
   if (o.floor) {   // 投在地板的空地
@@ -958,6 +969,73 @@ async function pollOnce(){
   setNet();
 }
 function startLiveSync(){ const loop = async () => { await pollOnce(); setTimeout(loop, document.hidden ? 15000 : 3000); }; loop(); }
+// ---- 冰箱：點冰箱走過去開門（門真的轉開、露出架上零食），點零食拿一個；庫存與排行在後端 /minigames/fridge（和 2D 版同一份）----
+const FOODS = {
+  chips:['洋芋片', '🥔 喀滋喀滋！洋芋片超涮嘴', 'happy'], cookie:['餅乾', '🍪 酥脆餅乾，配咖啡剛好', 'happy'], candy:['糖果', '🍬 含顆糖，心情甜甜的', 'joy'],
+  pudding:['布丁', '🍮 Q彈布丁，幸福感滿格', 'joy'], yogurt:['優格', '🥄 清爽優格，腸胃說謝謝', 'happy'], drink:['汽水', '🥤 噗嗤～汽水氣泡好爽', 'happy'],
+  rare:['限量金布丁', '✨ 抽到限量金布丁！今天運氣爆棚', 'joy'], expired:['過期優格', '🤢 吃到過期優格……', 'sad'],
+  boba:['珍珠奶茶', '🧋 珍奶來一口，加班也有力氣', 'joy'], bento:['便當', '🍱 開動！便當是午餐的靈魂', 'happy'], onigiri:['御飯糰', '🍙 御飯糰，簡單的幸福', 'happy'],
+  sandwich:['三明治', '🥪 三明治，趕稿的好夥伴', 'happy'], energy:['提神飲料', '⚡ 灌下提神飲料，血條回滿！', 'happy'], egg:['茶葉蛋', '🥚 香噴噴茶葉蛋，整層樓都聞得到', 'happy'],
+  noodle:['泡麵', '🍜 泡麵三分鐘，等待的時間最漫長', 'happy'], coffee:['咖啡', '☕ 咖啡續命，今天也要戰鬥', 'happy'], cake:['蛋糕', '🍰 草莓蛋糕，有人過生日嗎？', 'joy'],
+  donut:['甜甜圈', '🍩 甜甜圈，熱量不算熱量', 'joy'], choco:['巧克力', '🍫 巧克力讓大腦重新開機', 'joy']};
+const FOOD_IDX = {chips:0, cookie:1, candy:2, pudding:3, yogurt:4, drink:5, rare:6, expired:7, boba:8, bento:9, onigiri:10, sandwich:11, energy:12, egg:13, noodle:14, coffee:15, cake:16, donut:17, choco:18};
+const FRIDGE_SHELVES = [[['boba', 'bento', 'onigiri'], ['sandwich', 'yogurt', 'pudding'], ['drink', 'energy', 'egg']], [['chips', 'cookie', 'candy'], ['noodle', 'coffee', 'cake'], ['donut', 'choco', 'rare']]];
+const FRIDGE_API = API.replace(/\/api$/, '') + '/minigames/fridge', fridges = [];
+let fridgeState = null, fridgeOpenAt = 0, fridgeWant = false, fridgeBusy = false, foodSheet = null;
+const fridgePanel = document.createElement('div'); fridgePanel.id = 'fridgeP'; fridgePanel.hidden = true; document.body.appendChild(fridgePanel);
+const fridgeFront = () => { const a = fridges[0], b = fridges[1]; return a && b ? {x:(a.cx + b.cx) / 2, z:Math.max(a.zf, b.zf) + 2.0} : null; };
+function fridgeInteract(){
+  if (!player || !fridges.length) return;
+  if (AWAY.has(player.status)) return;
+  const f = fridgeFront(), d = Math.hypot(f.x - player.holder.position.x, f.z - player.holder.position.z);
+  if (d < 2.2) { fridgeOpen(); return; }
+  fridgeWant = true; target = new THREE.Vector3(f.x, 0, f.z);
+}
+async function fridgeCall(body){
+  const r = await fetch(FRIDGE_API + (body ? '' : '?floor=5'), {method:body ? 'POST' : 'GET', headers:body ? {'Content-Type':'application/json'} : undefined, body:body ? JSON.stringify({...body, floor:5, nick:player ? player.name : '匿名'}) : undefined, cache:'no-store'});
+  return {status:r.status, ...(await r.json().catch(() => ({ok:false})))};
+}
+async function fridgeOpen(){
+  if (fridgeOpenAt) return; fridgeOpenAt = performance.now(); fridgePanel.hidden = false; renderFridge();
+  try { const r = await fridgeCall({action:'open'}); if (r && r.stock) { fridgeState = r; renderFridge(); } } catch (e) { showQuote('', '冰箱連不上後端：' + (live.ok ? e.message : '目前網址未被後端放行')); }
+}
+function fridgeClose(){ fridgeOpenAt = 0; fridgePanel.hidden = true; fridgeWant = false; }
+function renderFridge(){
+  const st = (fridgeState && fridgeState.stock) || {};
+  const cell = id => { const q = st[id] || 0, i = FOOD_IDX[id]; return '<button type="button" class="fr-it' + (q ? '' : ' no') + '" data-id="' + id + '"><i style="background-position:-' + (i * 28 * 1.6) + 'px 0"></i><b>' + FOODS[id][0] + '</b><u>' + q + '</u></button>'; };
+  fridgePanel.innerHTML = '<div class="fr-head"><span>🧊 冰箱</span><button type="button" class="fr-x" id="frX">關閉</button></div><div class="fr-cols">' +
+    FRIDGE_SHELVES.map((rows, f) => '<div class="fr-door"><h4>' + (f ? '右冰箱' : '左冰箱') + '</h4><div class="fr-grid">' + rows.flat().filter(id => id !== 'rare' || (st.rare || 0)).map(cell).join('') + '</div></div>').join('') + '</div>' +
+    '<p class="fr-note">點一樣東西拿一個；下班後偷吃會被抓到喔。' + (fridgeState ? '' : '（讀取庫存中…）') + '</p>';
+  fridgePanel.querySelector('#frX').onclick = fridgeClose;
+  fridgePanel.querySelectorAll('.fr-it').forEach(b => b.onclick = () => fridgeTake(b.dataset.id));
+}
+async function fridgeTake(slot){
+  if (fridgeBusy || !player) return; fridgeBusy = true;
+  try {
+    const r = await fridgeCall({action:'take', slot}); if (r && r.stock) { fridgeState = r; renderFridge(); }
+    const f = FOODS[slot];
+    if (r.ok) {
+      let text = f[1], mood = f[2];
+      if (r.caught) { text = '🚨 被抓到下班偷吃「' + f[0] + '」！'; mood = 'angry'; } else if (r.surprise === 'rare') { text = FOODS.rare[1]; mood = 'joy'; } else if (r.surprise === 'expired') { text = FOODS.expired[1]; mood = 'sad'; }
+      showQuote('', text); const c = player, prev = c.mood; c.mood = mood; moodFx(c, mood); setTimeout(() => { if (c.mood === mood) c.mood = prev; }, 3200);
+    } else showQuote('', r.error === 'empty' ? '😢 空了……等人補貨' : r.error === 'full-stomach' ? '🤰 你今天吃太多了' : '發生一點問題，等等再試');
+  } catch (e) { showQuote('', '連線失敗：' + (live.ok ? e.message : '目前網址未被後端放行')); } finally { fridgeBusy = false; }
+}
+function updateFridge(){
+  const p = fridgeOpenAt ? Math.min(1, (performance.now() - fridgeOpenAt) / 450) : 0;
+  for (const fr of fridges) { const cur = fr.open + ((fridgeOpenAt ? 1 : 0) - fr.open) * .18; fr.open = Math.abs(cur - (fridgeOpenAt ? 1 : 0)) < .005 ? (fridgeOpenAt ? 1 : 0) : cur; fr.pivots.forEach(pv => { pv.rotation.y = -fr.open * 1.75; }); fr.inner.visible = fr.open > .05; }
+  if (fridgeWant && player) { const f = fridgeFront(); if (Math.hypot(f.x - player.holder.position.x, f.z - player.holder.position.z) < 1.8) { fridgeWant = false; target = null; fridgeOpen(); } }
+  if (fridgeOpenAt && player) { const f = fridgeFront(); if (Math.hypot(f.x - player.holder.position.x, f.z - player.holder.position.z) > 5 || AWAY.has(player.status)) { fridgeClose(); showQuote('', '你走遠了，冰箱門自動關上'); } }
+}
+function fridgeInner(w, h, shelves){   // 開門後看到的內部：深色內牆＋三層架＋零食
+  const c = document.createElement('canvas'); c.width = 168; c.height = 260; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+  g.fillStyle = '#e9eef3'; g.fillRect(0, 0, 168, 260); g.fillStyle = '#c4ccd6'; g.fillRect(0, 0, 8, 260); g.fillRect(160, 0, 8, 260);
+  [58, 122, 186].forEach(y => { g.fillStyle = '#8f9aa8'; g.fillRect(8, y, 152, 5); g.fillStyle = '#6a7482'; g.fillRect(8, y + 5, 152, 3); });
+  const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; t.colorSpace = THREE.SRGBColorSpace;
+  if (foodSheet) { const g2 = c.getContext('2d'); shelves.forEach((row, r) => row.forEach((id, k) => { if (FOOD_IDX[id] == null) return; g2.drawImage(foodSheet, FOOD_IDX[id] * 28, 0, 28, 28, 16 + k * 48, [30, 94, 158][r] - 6, 44, 44); })); t.needsUpdate = true; }
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({map:t})); m.userData.tex = t; return m;
+}
+
 // ---- 座位現場：不在座位的狀態（用餐／會議／休假／下班／廁所／出國／公出）椅子與桌上電腦收起、桌面變灰、桌上放狀態圖示；加班有紫色聚光燈與三團鬼火 ----
 const AWAY_DESK = new Set(['lunch', 'meeting', 'leave', 'offwork', 'toilet', 'abroad', 'out']), iconTex = {};
 function flameTex(){ const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), r = g.createRadialGradient(32, 40, 2, 32, 38, 28); r.addColorStop(0, 'rgba(255,240,255,1)'); r.addColorStop(.35, 'rgba(190,120,255,.95)'); r.addColorStop(1, 'rgba(110,40,220,0)'); g.fillStyle = r; g.beginPath(); g.moveTo(32, 2); g.bezierCurveTo(48, 22, 56, 34, 50, 46); g.bezierCurveTo(46, 58, 18, 58, 14, 46); g.bezierCurveTo(8, 34, 22, 24, 32, 2); g.fill(); g.fillStyle = '#2a0a55'; g.fillRect(24, 36, 4, 6); g.fillRect(37, 36, 4, 6); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
@@ -1026,7 +1104,7 @@ function select(name){
 
 let done = 0;
 Promise.all([buildOffice(), loadIcons(), ...NAMES.map((n, i) => addChar(n, i).then(() => { setLoad('載入角色 ' + (++done) + '/' + NAMES.length, done / NAMES.length); }))])
-  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); startLiveSync(); showTitleCard(); window.__plaza = {stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
+  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); startLiveSync(); showTitleCard(); window.__plaza = {fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
 
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
 const TILT = 0, STRETCH = 1 / Math.cos(Math.atan(8.4 / 9.4)), _e = new THREE.Euler(0, 0, 0, 'YXZ');   // 垂直站立：不再後傾（避免穿進桌子、牆），高度拉長 STRETCH 倍抵消俯視縮短
@@ -1065,8 +1143,8 @@ const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 
 renderer.domElement.addEventListener('pointerdown', e => {
   ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
   const hits = ray.intersectObjects(pickables, true).filter((h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.c.holder.visible); })), hit = hits.find(h => ((h.object.userData.pickRoot || h.object).userData.pick || {}).kind === 'char') || hits[0];
-  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { clickChar = pk.c; clickUntil = performance.now() + 3000; if (pk.c !== player && player && (player.name === 'Machi' || isAdmin())) select(pk.c.name); if (false) { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); else if (pk.kind === 'seat') { const st = pk.seat || chairSeats.filter(q => q.kind === 'toilet').sort((a, b) => Math.hypot(a.x - pk.at.x, a.z - pk.at.z) - Math.hypot(b.x - pk.at.x, b.z - pk.at.z))[0]; if (st && player && !st.by && !st.hidden) { wantSeat = st; target = new THREE.Vector3(st.x, 0, st.z); } } return; } }
-  radialClose(); wantSeat = null;
+  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { clickChar = pk.c; clickUntil = performance.now() + 3000; if (pk.c !== player && player && adminHome) select(pk.c.name); if (false) { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); else if (pk.kind === 'fridge') fridgeInteract(); else if (pk.kind === 'seat') { const st = pk.seat || chairSeats.filter(q => q.kind === 'toilet').sort((a, b) => Math.hypot(a.x - pk.at.x, a.z - pk.at.z) - Math.hypot(b.x - pk.at.x, b.z - pk.at.z))[0]; if (st && player && !st.by && !st.hidden) { wantSeat = st; target = new THREE.Vector3(st.x, 0, st.z); } } return; } }
+  radialClose(); wantSeat = null; fridgeWant = false;
   const p = new THREE.Vector3();
   if (ray.ray.intersectPlane(plane, p) && !blocked(p.x, p.z)) target = p;
 });
@@ -1077,7 +1155,7 @@ renderer.domElement.addEventListener('pointermove', e => {
   requestAnimationFrame(() => {
     hoverBusy = false; ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
     const hits = ray.intersectObjects(pickables, true).filter((h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.c.holder.visible); })), hit = hits.find(h => ((h.object.userData.pickRoot || h.object).userData.pick || {}).kind === 'char') || hits[0], pk = hit && (hit.object.userData.pickRoot || hit.object).userData.pick;
-    hoverChar = pk && pk.kind === 'char' ? pk.c : null;
+    hoverChar = pk && pk.kind === 'char' ? pk.c : null; renderer.domElement.style.cursor = pk ? 'pointer' : '';
   });
 });
 renderer.domElement.addEventListener('pointerleave', () => { hoverChar = null; });
@@ -1145,7 +1223,7 @@ function updateProjectionView(){
   if (!sl) { if (projBox.style.display !== 'none') projBox.style.display = 'none'; return; }
   if (projBox.style.display !== 'block') projBox.style.display = 'block';
   const t = room[5] + '・投影中：' + sl.title; if (projTitle.textContent !== t) projTitle.textContent = t;
-  projCtx.imageSmoothingEnabled = false; projCtx.drawImage(sl.canvas, 0, 0, 128, 72);
+  projCtx.imageSmoothingEnabled = true; projCtx.drawImage(sl.canvas, 0, 0, projCv.width, projCv.height);
 }
 // ---- 角色頁面（取代功能轉盤）：遊戲感的暫停／角色資料畫面，版型參考 PokéBonk 的暫停畫面 ----
 const symOf = {present:'person', overtime:'moon', lunch:'bowl', meeting:'meeting', leave:'calendar', offwork:'power', toilet:'toilet', abroad:'plane', out:'briefcase'}, moodSym = {happy:'sun', angry:'burst', sad:'drop', joy:'heart'};
@@ -1402,7 +1480,7 @@ async function loadHours(){ try { const r = await adminCall('getPixelHours'); ho
 function radialOpen(who){ if (!player) return; pageChar = who && who !== player ? who : null; radial.hidden = false; renderCharPage(); loadHours(); }
 function radialClose(){ pageChar = null; radial.hidden = true; radial.innerHTML = ''; }
 function placeRadial(){}
-addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('sv').hidden) closeStory(); else if (!radial.hidden) radialClose(); } });
+addEventListener('keydown', e => { if (e.key === 'Escape') { if (!fridgePanel.hidden) fridgeClose(); else if (!$('sv').hidden) closeStory(); else if (!radial.hidden) radialClose(); } });
 radial.addEventListener('pointerdown', e => { if (e.target === radial) radialClose(); });
 
 // ───────── 人物頭上的介面：對話泡泡、音樂泡泡、心情圖示、限時動態氣泡；離席的人在座位上方顯示狀態牌 ─────────
@@ -1454,7 +1532,10 @@ function avatarURL(c){   // 取角色正面圖的頭肩部分當大頭貼
 const meName = () => handoff ? (NAMES.find(n => n.toLowerCase() === String(handoff.name).toLowerCase()) || null) : null;
 function showTitleCard(){ for (const c of Object.values(chars)) c.avatar = avatarURL(c); startGame(); }   // 不再有登入頁：載完直接進入（有網站登入身分就用該人物，否則預設 Machi）
 function updateTitleNet(){ const e = $('tNet'); if (e) e.textContent = live.ok ? '已連線到「凱曜設計部」伺服器，出勤狀態即時更新' : '目前離線：依時間規則模擬出勤狀態'; }
+let adminHome = false;   // 登入身分是 Machi／管理者：可以切換、操控任何人（就算被切成離開辦公室而看不到人物）
 function startGame(){
+  adminHome = (meName() || 'Machi') === 'Machi' || isAdmin(); $('bPeople').hidden = !adminHome;
+  $('bPeople').onclick = () => { $('drawer').hidden = !$('drawer').hidden; }; $('roster').addEventListener('click', e => { if (e.target.closest('button')) $('drawer').hidden = true; });
   select(meName() || 'Machi');
   $('title').classList.add('gone'); setTimeout(() => { $('title').style.display = 'none'; }, 450);
 }
@@ -1504,7 +1585,7 @@ function tick(){
       0,
       (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0) + joy.y);
     const run = keys.ShiftLeft || keys.ShiftRight || Math.hypot(joy.x, joy.y) > .85;
-    if (dir.lengthSq() > .01) { target = null; wantSeat = null; }
+    if (dir.lengthSq() > .01) { target = null; wantSeat = null; fridgeWant = false; }
     else if (target) { dir.copy(target).sub(player.holder.position); dir.y = 0; if (dir.length() < .2) target = null; }
     if (!radial.hidden || !$('sv').hidden || AWAY.has(player.status)) { dir.set(0, 0, 0); target = null; }   // 角色頁面開著時人物不跟著走
     if (player.sitting && dir.lengthSq() > 1e-4) standUp(player);
@@ -1525,7 +1606,7 @@ function tick(){
     camPos.lerp(new THREE.Vector3(p.x, 10.9, p.z + 12.2), 1 - Math.pow(.001, dt));
     camera.position.copy(camPos); look.lerp(p, 1 - Math.pow(.001, dt)); camera.lookAt(look.x, 1, look.z);
   } else { camPos.lerp(new THREE.Vector3(18, 15, 36), 1 - Math.pow(.001, dt)); camera.position.copy(camPos); look.lerp(new THREE.Vector3(18, 0, 22), 1 - Math.pow(.001, dt)); camera.lookAt(look); }   // 沒登入：固定的辦公室全景
-  updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay(); updateTags(); placeRadial();
+  updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay(); updateTags(); placeRadial(); updateFridge();
   renderFrame();
   requestAnimationFrame(tick);
 }
