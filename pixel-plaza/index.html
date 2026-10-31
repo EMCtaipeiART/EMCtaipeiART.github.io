@@ -522,6 +522,9 @@ const pickables = [], rnd = a => a[Math.floor(Math.random() * a.length)];
 let stat = {flush:0, found:0, notes:0}; try { Object.assign(stat, JSON.parse(localStorage.getItem('pixelFun') || '{}')); } catch (e) {}
 const saveStat = () => { try { localStorage.setItem('pixelFun', JSON.stringify(stat)); } catch (e) {} };
 const claims = {}, taken = id => !!claims[id];
+// 驚喜道具、遺落物、馬桶便便、投影機開關的「已處理」紀錄和 2D 版共用同一份後端（pixelOfficeFun／funClaims），所有人看到一樣
+function fnClaim(id, v){ if (typeof live !== 'undefined' && live.ok) post({action:'pixelOfficeFun', id, v, token:adminToken()}).catch(() => {}); }
+function applyFunClaims(m){ let ch = false; for (const id of Object.keys(m || {})) { const v = m[id]; if (!Array.isArray(v)) continue; const cur = claims[id]; if (!cur || Number(v[1]) > Number(cur[1]) || (cur[0] !== Number(v[0]) && Number(v[1]) >= Number(cur[1]))) { claims[id] = [Number(v[0]), Number(v[1])]; ch = true; } } if (ch) { try { syncFun(); updateProjectors(true); } catch (e) {} } }
 const quoteBox = document.getElementById('quote'); let quoteTimer = 0;
 function showQuote(title, text){ const b = quoteBox.querySelector('b'); b.textContent = title; b.style.display = title ? 'block' : 'none'; quoteBox.querySelector('span').textContent = text; quoteBox.style.display = 'block'; clearTimeout(quoteTimer); quoteTimer = setTimeout(() => { quoteBox.style.display = 'none'; }, 5200); }
 const sheets = {}, funRects = {}, spriteCache = {};
@@ -599,9 +602,9 @@ function syncFun(){
     pickables.push(mesh); floorMeshes.set(id, {kind:w.kind, mesh, phase:Math.random() * 6});
   }
 }
-function collectDrop(d){ claims[d.id] = [1, Date.now()]; stat.found++; saveStat(); const fresh = dexAdd('d', d.k); showQuote('', (fresh ? '🆕 新發現！' : '✨ ') + ITEMS[d.k][2] + '（累計撿到 ' + stat.found + ' 個）'); floatAt(d.x, 1.2, d.z, fresh ? '+1 新圖鑑！' : '+1'); syncFun(); }
-function collectNote(n){ claims[n.id] = [1, Date.now()]; stat.notes++; saveStat(); const fresh = dexAdd('n', n.k); showQuote('', (fresh ? '🆕 ' : '') + NOTES[n.k][1] + '（累計 ' + stat.notes + ' 件）'); floatAt(n.x, 1.8, n.z, fresh ? '+1 新圖鑑！' : '+1'); syncFun(); }
-function flushPoop(p){ claims[p.id] = [1, Date.now()]; stat.flush++; saveStat(); floatAt(p.t.x, 1.4, p.t.z, '+1 衛生之星'); showQuote('', rnd(['🚽 嘩～沖乾淨了！衛生之星 +1', '🚽 順手沖馬桶，同事感謝你！', '🚽 清潔小天使上線，今天運氣 +1', '🚽 沖水成功！廁所又恢復清爽']) + '（累計 ' + stat.flush + ' 次）'); syncFun(); }
+function collectDrop(d){ claims[d.id] = [1, Date.now()]; fnClaim(d.id, 1); stat.found++; saveStat(); const fresh = dexAdd('d', d.k); showQuote('', (fresh ? '🆕 新發現！' : '✨ ') + ITEMS[d.k][2] + '（累計撿到 ' + stat.found + ' 個）'); floatAt(d.x, 1.2, d.z, fresh ? '+1 新圖鑑！' : '+1'); syncFun(); }
+function collectNote(n){ claims[n.id] = [1, Date.now()]; fnClaim(n.id, 1); stat.notes++; saveStat(); const fresh = dexAdd('n', n.k); showQuote('', (fresh ? '🆕 ' : '') + NOTES[n.k][1] + '（累計 ' + stat.notes + ' 件）'); floatAt(n.x, 1.8, n.z, fresh ? '+1 新圖鑑！' : '+1'); syncFun(); }
+function flushPoop(p){ claims[p.id] = [1, Date.now()]; fnClaim(p.id, 1); stat.flush++; saveStat(); floatAt(p.t.x, 1.4, p.t.z, '+1 衛生之星'); showQuote('', rnd(['🚽 嘩～沖乾淨了！衛生之星 +1', '🚽 順手沖馬桶，同事感謝你！', '🚽 清潔小天使上線，今天運氣 +1', '🚽 沖水成功！廁所又恢復清爽']) + '（累計 ' + stat.flush + ' 次）'); syncFun(); }
 function startGameplay(){ syncFun(); setInterval(syncFun, 1000); }
 let lastCollect = 0;
 function updateGameplay(){
@@ -967,7 +970,7 @@ function projState(p){   // 2D 版規則：每 6 分鐘一個時段，約 45% �
   const sl = Math.floor(Date.now() / SLOT_J), id = 'j:3d:' + sl + ':' + p.key, r = rng(id), base = r() < .45, basePic = Math.floor(r() * SLIDE_N), ov = claims[id];
   return ov ? {on:ov[0] > 0, pic:Math.max(0, ov[0] - 1) % SLIDE_N, id} : {on:base, pic:basePic, id};
 }
-function toggleProjector(p){ const st = projState(p); claims[st.id] = [st.on ? 0 : 1 + Math.floor(Math.random() * SLIDE_N), Date.now()]; showQuote('', st.on ? '📽️ 投影機關閉' : '📽️ 投影機開啟'); updateProjectors(true); }
+function toggleProjector(p){ const st = projState(p); claims[st.id] = [st.on ? 0 : 1 + Math.floor(Math.random() * SLIDE_N), Date.now()]; fnClaim(st.id, claims[st.id][0]); showQuote('', st.on ? '📽️ 投影機關閉' : '📽️ 投影機開啟'); updateProjectors(true); }
 let lastProj = 0;
 function updateProjectors(force){
   if (!force && performance.now() - lastProj < 800) return; lastProj = performance.now();
@@ -1081,6 +1084,7 @@ async function pollOnce(){
       if (d.hours) { const f = d.hours.force === 'work' || d.hours.force === 'off' ? d.hours.force : ''; if (f !== hoursForce) { hoursForce = f; for (const c of Object.values(chars)) c.appliedStatus = null; } }
       for (const e of d.people || []) { const c = chars[e.name]; if (!c) continue; remoteFromState(c, e); const rs = typeof e.status === 'string' ? e.status : 'present'; if (c.autoPendingUntil > Date.now() && rs !== 'present') { c.rawStatus = c.rawStatus || 'present'; } else { c.autoPendingUntil = 0; c.rawStatus = rs; } c.status = forcedStatus(c.rawStatus); c.mood = e.mood || ''; c.message = e.message || ''; c.statusSource = e.statusSource || ''; c.meetingRoom = typeof e.meetingRoom === 'string' ? e.meetingRoom : ''; c.music = e.music && e.music.url ? {url:e.music.url, title:e.music.title || '', provider:e.music.provider || ''} : null; applyStatus(c); }
       if (d.stories) applyStories(d.stories);
+      if (d.funClaims) applyFunClaims(d.funClaims);
     }
   } catch (err) {
     live.ok = false;
@@ -1126,9 +1130,25 @@ function remoteStep(c, dt){
     if (st) sitDown(c); else if (r.dir) c.face = ({down:0, up:Math.PI, right:Math.PI / 2, left:-Math.PI / 2})[r.dir] ?? c.face;
   }
 }
-// 輪詢節奏：有人在動（狀態有變化）就連續快速輪詢 350ms 約 8 秒，安靜時 1.5 秒；分頁在背景 15 秒
-let hotUntil = 0;
-function startLiveSync(){ const loop = async () => { const v0 = live.version; await pollOnce(); if (live.version !== v0) hotUntil = performance.now() + 8000; setTimeout(loop, document.hidden ? 15000 : (performance.now() < hotUntil || (player && player.moving) ? 350 : 1500)); }; loop(); }
+// 即時推送：後端每次有人寫入（狀態、位置、留言…）就透過 WebSocket 通知所有連線，收到通知立刻重讀，不必等輪詢。
+// 輪詢只當備援：推送連得上時 5 秒一次，連不上時有變化就 350ms 連續輪詢、安靜時 1.5 秒。
+let hotUntil = 0, pushOpen = false, pollBusy = false, pollAgain = false;
+async function pollNow(){ if (pollBusy) { pollAgain = true; return; } pollBusy = true; try { do { pollAgain = false; await pollOnce(); } while (pollAgain); } finally { pollBusy = false; } }
+(function pushConnect(){
+  if (!('WebSocket' in window)) return;
+  let ws = null, ping = 0, retry = 0; const url = API.replace(/^http/i, 'ws').replace(/\/api\/?$/, '') + '/ws';
+  const connect = () => {
+    if (ws && ws.readyState <= 1) return;
+    try { ws = new WebSocket(url); } catch (e) { return; }
+    ws.onopen = () => { retry = 0; pushOpen = true; clearInterval(ping); ping = setInterval(() => { try { if (ws.readyState === 1) ws.send('ping'); } catch (e) {} }, 25000); };
+    ws.onmessage = ev => { let m = null; try { m = JSON.parse(ev.data); } catch (e) { return; } if (m && m.type === 'pixel') pollNow(); };
+    ws.onclose = () => { pushOpen = false; clearInterval(ping); setTimeout(connect, Math.min(30000, 1000 * Math.pow(2, retry++))); };
+    ws.onerror = () => { try { ws.close(); } catch (e) {} };
+  };
+  connect(); document.addEventListener('visibilitychange', () => { if (!document.hidden && (!ws || ws.readyState > 1)) connect(); });
+  window.__pushWS = {get open(){ return pushOpen; }, trigger:() => pollNow()};
+})();
+function startLiveSync(){ const loop = async () => { const v0 = live.version; await pollNow(); if (live.version !== v0) hotUntil = performance.now() + 8000; setTimeout(loop, document.hidden ? 15000 : pushOpen ? 5000 : (performance.now() < hotUntil || (player && player.moving) ? 350 : 1500)); }; loop(); }
 // ---- 冰箱：點冰箱走過去開門（門真的轉開、露出架上零食），點零食拿一個；庫存與排行在後端 /minigames/fridge（和 2D 版同一份）----
 const FOODS = {
   chips:['洋芋片', '🥔 喀滋喀滋！洋芋片超涮嘴', 'happy'], cookie:['餅乾', '🍪 酥脆餅乾，配咖啡剛好', 'happy'], candy:['糖果', '🍬 含顆糖，心情甜甜的', 'joy'],
@@ -1181,9 +1201,38 @@ async function fridgeTake(slot){
     } else showQuote('', r.error === 'empty' ? '😢 空了……等人補貨' : r.error === 'full-stomach' ? '🤰 你今天吃太多了' : '發生一點問題，等等再試');
   } catch (e) { showQuote('', '連線失敗：' + (live.ok ? e.message : '目前網址未被後端放行')); } finally { fridgeBusy = false; }
 }
+// 其他人開冰箱／拿東西：和 2D 版同一份後端事件（/minigames/fridge?floor=…&since=…），收到就在自己的畫面重演（門打開、顯示誰拿了什麼）
+const fridgeEv = {5:null, 4:null}, fridgeRemote = {5:0, 4:0};
+async function fridgeEventsOnce(){
+  if (document.hidden) return;
+  for (const f of [5, 4]) {
+    try {
+      const r = await fetch(FRIDGE_API + '?floor=' + f + (fridgeEv[f] === null ? '' : '&since=' + fridgeEv[f]), {cache:'no-store'}).then(x => x.json());
+      if (!r || !r.ok) continue; const first = fridgeEv[f] === null; if (typeof r.evMax === 'number') fridgeEv[f] = r.evMax;
+      if (first) continue;   // 第一次只記下進度，不重演舊事件
+      for (const e of r.events || []) {
+        if (player && e.nick === player.name) continue;
+        fridgeRemote[f] = performance.now() + (e.kind === 'take' || e.kind === 'box' ? 9000 : 7000);
+        if (e.kind === 'take' || e.kind === 'box') {
+          const food = FOODS[e.slot] || FOODS.chips; let text = e.nick + '：' + food[1], mood = food[2];
+          if (e.kind === 'box') { text = '🦸 ' + e.nick + ' 補貨「' + food[0] + '」+3！'; mood = 'joy'; }
+          else if (e.flag === 'caught') { text = '🚨 ' + e.nick + ' 下班偷吃「' + food[0] + '」被抓到！'; mood = 'angry'; }
+          else if (e.flag === 'rare') { text = '✨ ' + e.nick + ' 抽到限量金布丁！'; mood = 'joy'; }
+          else if (e.flag === 'expired') { text = '🤢 ' + e.nick + ' 吃到過期優格⋯'; mood = 'sad'; }
+          if (player && floorOf(player) === f) showQuote('', text);
+          const c = chars[e.nick]; if (c) { moodFx(c, mood); }
+        }
+      }
+      if (r.stock && fridgeState && player && floorOf(player) === f) { fridgeState = r; if (!fridgePanel.hidden) renderFridge(); }
+    } catch (e) { /* 下一輪再試 */ }
+  }
+}
+setInterval(fridgeEventsOnce, 2500);
 function updateFridge(){
   const p = fridgeOpenAt ? Math.min(1, (performance.now() - fridgeOpenAt) / 450) : 0;
-  for (const fr of fridges) { const cur = fr.open + ((fridgeOpenAt ? 1 : 0) - fr.open) * .18; fr.open = Math.abs(cur - (fridgeOpenAt ? 1 : 0)) < .005 ? (fridgeOpenAt ? 1 : 0) : cur; fr.pivots.forEach(pv => { pv.rotation.y = -fr.open * 1.75; }); fr.inner.visible = fr.open > .05; }
+  const myFloor = player ? floorOf(player) : 0, nowT = performance.now();
+  fridges.forEach((fr, i) => { const f = i >= 2 ? 4 : 5; fr.want = (fridgeOpenAt && f === myFloor) || nowT < fridgeRemote[f] ? 1 : 0; });
+  for (const fr of fridges) { const cur = fr.open + (fr.want - fr.open) * .18; fr.open = Math.abs(cur - fr.want) < .005 ? fr.want : cur; fr.pivots.forEach(pv => { pv.rotation.y = -fr.open * 1.75; }); fr.inner.visible = fr.open > .05; }
   if (fridgeWant && player) { const f = fridgeFront(); if (f && Math.hypot(f.x - player.holder.position.x, f.z - player.holder.position.z) < 1.8) { fridgeWant = false; target = null; fridgeOpen(); } }
   if (fridgeOpenAt && player) { const f = fridgeFront(); if (!f || Math.hypot(f.x - player.holder.position.x, f.z - player.holder.position.z) > 5 || AWAY.has(player.status)) { fridgeClose(); showQuote('', '你走遠了，冰箱門自動關上'); } }
 }
