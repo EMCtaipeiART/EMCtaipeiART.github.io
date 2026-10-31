@@ -109,10 +109,10 @@ for (const [x, y, w, h] of WALLS) {
   const lm = new LineMaterial({color:0x14202a, linewidth:HD ? 3 * DPR : 1.6}), le = new LineSegments2(new LineSegmentsGeometry().fromEdgesGeometry(new THREE.EdgesGeometry(geo)), lm); le.position.copy(m.position); scene.add(le); lineMats.push(lm); lm.resolution.set(renderer.domElement.width, renderer.domElement.height);
   rects.push([x * U, y * U, (x + w) * U, (y + h) * U]);
 }
-const R_PLAYER = .35;
+const R_PLAYER = .75;
 function blocked(x, z){
   if (x < 1 || x > 1201 * U - 1 || z < 1 || z > 1526 * U - 1) return true;
-  return rects.some(([a, b, c, d]) => x > a - R_PLAYER && x < c + R_PLAYER && z > b - R_PLAYER * .6 && z < d + R_PLAYER * .6);
+  return rects.some(([a, b, c, d]) => x > a - R_PLAYER && x < c + R_PLAYER && z > b - R_PLAYER * .55 && z < d + R_PLAYER * .55);
 }
 
 // 道具與桌組的 billboard：先把素材縮成螢幕上實際的像素大小（才會是清楚的像素風）
@@ -218,8 +218,8 @@ function deskBlock3d(x0, top, cols, color, kind, miniDesk){
 function monitor3d(x, z, dir, color){   // 螢幕：背面為機身色、正面（朝 dir）為深色螢幕
   const body = new THREE.MeshLambertMaterial({color}), face = new THREE.MeshLambertMaterial({color:color === 0x15181c ? 0x23303f : 0x2a3340});
   const mats = [body, body, body, body, dir > 0 ? face : body, dir > 0 ? body : face];
-  const m = new THREE.Mesh(new THREE.BoxGeometry(.9, .56, .08), mats); m.position.set(x, .95 + .16 + .28, z); scene.add(m); hull(scene, .9, .56, .08, x, .95 + .16 + .28, z);
-  pbox(.16, .16, .14, color, x, .95, z, false); pbox(.38, .02, .24, color, x, .95, z, false);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(.9, .46, .08), mats); m.position.set(x, .95 + .1 + .23, z); scene.add(m); hull(scene, .9, .46, .08, x, .95 + .1 + .23, z);
+  pbox(.16, .1, .14, color, x, .95, z, false); pbox(.38, .02, .24, color, x, .95, z, false);
 }
 function keyboard3d(x, z, color){ pbox(.7, .03, .22, color, x, .95, z, false); pbox(.1, .03, .14, color, x + .55, .95, z, false); }
 
@@ -345,7 +345,7 @@ async function addChar(name, i){
   const b = document.createElement('button'); b.textContent = name;
   b.onclick = () => select(name); roster.appendChild(b); c.btn = b;
 }
-const SIT_DROP = .42;
+const SIT_DROP = .2;
 function sitDown(c){
   if (c.sitting) return false;
   let best = null, bd = 2.2;
@@ -374,8 +374,9 @@ Promise.all([buildOffice(), ...NAMES.map((n, i) => addChar(n, i).then(() => { do
   .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); select('Machi'); document.getElementById('load').remove(); window.__plaza = {chars, camera, seats:chairSeats}; });
 
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
-const TILT = .38, _e = new THREE.Euler(0, 0, 0, 'YXZ');   // 後傾約 22°：夠像站著的人，又不會讓上半身穿進後方物件
-function updateBillboards(){ _e.set(-TILT, 0, 0); for (const m of billboards) m.quaternion.setFromEuler(_e); }   // 道具方向固定（永遠朝南），只有人物會轉向
+const TILT = 0, STRETCH = 1 / Math.cos(Math.atan(8.4 / 9.4)), _e = new THREE.Euler(0, 0, 0, 'YXZ');   // 垂直站立：不再後傾（避免穿進桌子、牆），高度拉長 STRETCH 倍抵消俯視縮短
+   // 後傾約 22°：夠像站著的人，又不會讓上半身穿進後方物件
+function updateBillboards(){ _e.set(-TILT, 0, 0); for (const m of billboards) { m.quaternion.setFromEuler(_e); m.scale.y = STRETCH; } }   // 道具方向固定（永遠朝南），只有人物會轉向
 function updateSprite(c, dt){
   // 依角色朝向與鏡頭的相對角度，挑選 12 個面向中最接近的一格
   c.holder.getWorldPosition(_cam); _cam.subVectors(camera.position, _cam);
@@ -386,7 +387,7 @@ function updateSprite(c, dt){
   c.phase += dt * (c.moving > 3.5 ? 16 : 10) * (c.moving > 0 ? 1 : 0);   // 沒有走路影格，以彈跳加搖擺表現
   const sw = Math.sin(c.phase);
   c.sprite.position.y = (c.sitting ? -SIT_DROP : 0) + (c.moving > 0 ? Math.abs(sw) * (c.moving > 3.5 ? .2 : .1) : 0);
-  _e.set(-TILT, toCam, 0); c.sprite.quaternion.setFromEuler(_e).multiply(_tilt.setFromAxisAngle(_z, c.moving > 0 ? sw * .07 : 0));   // 面向鏡頭，走路時輕微搖擺
+  c.sprite.scale.y = STRETCH; _e.set(-TILT, toCam, 0); c.sprite.quaternion.setFromEuler(_e).multiply(_tilt.setFromAxisAngle(_z, c.moving > 0 ? sw * .07 : 0));   // 面向鏡頭，走路時輕微搖擺
 }
 
 // ---------- 輸入 ----------
