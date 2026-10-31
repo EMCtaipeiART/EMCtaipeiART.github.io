@@ -280,6 +280,7 @@ button{font-family:inherit}
 .cp-btns .cp-go{padding:8px 28px!important;font-size:15px!important;border-bottom-width:4px!important}
 .cp-story .th{width:48px!important;height:62px!important}
 @media (max-width:640px){.cp-cols{grid-template-columns:1fr!important}}
+#net{display:none!important}
 @media (max-width:640px){.hp-card{min-width:0}.hp-clock{top:84px;font-size:13px}#net{top:122px}#proj{top:150px}.hp-top button{padding:7px 11px}}
 
 </style></head><body>
@@ -909,7 +910,7 @@ async function addChar(name, i){
 // ---- 出勤狀態：讀「凱曜設計部」後端的即時狀態（只讀，不寫入）；連不上時依時間規則模擬 ----
 const API = 'https://machi-design-api.machi-chen.workers.dev/api';
 const STATUS = {present:['在座', '🙂'], overtime:['加班', '🌙'], lunch:['用餐', '🍱'], meeting:['會議', '📅'], leave:['休假', '🏖'], offwork:['下班', '🏠'], toilet:['廁所', '🚽'], abroad:['出國', '✈'], out:['公出', '💼']};
-const MOOD = {happy:'☀️', angry:'💢', sad:'💧', joy:'❤️'}, AWAY = new Set(['offwork', 'leave', 'abroad', 'out']);
+const MOOD = {happy:'☀️', angry:'💢', sad:'💧', joy:'❤️'}, AWAY = new Set(['lunch', 'offwork', 'leave', 'abroad', 'out']);
 const live = {ok:false, version:0, at:0, simAt:0}, netEl = document.getElementById('net');
 const isMeetSeat = st => st.z < 270 * U && st.x > 660 * U && st.x < 1062 * U;
 function taipeiNow(){ const f = new Intl.DateTimeFormat('en-GB', {timeZone:'Asia/Taipei', hour:'numeric', weekday:'short', hour12:false}).formatToParts(new Date()); return {h:+f.find(p => p.type === 'hour').value % 24, weekend:['Sat', 'Sun'].includes(f.find(p => p.type === 'weekday').value)}; }
@@ -923,14 +924,17 @@ function applyStatus(c, force){
   const st = STATUS[c.status] ? c.status : 'present';
   c.btn.textContent = c.name + ' ' + STATUS[st][1];
   if (c === player && !force) return;               // 正在操控的角色不被即時資料搬動（自己改狀態時除外）
-  if (c.appliedStatus === st) return; c.appliedStatus = st;
+  const key = st === 'meeting' ? st + ':' + (c.meetingRoom || '') : st;
+  if (c.appliedStatus === key) return; c.appliedStatus = key;
   releaseSeat(c); c.wander = false; c.sprite.material.color.set(st === 'overtime' ? 0xa9afd6 : 0xffffff);
-  if (AWAY.has(st)) { c.holder.visible = false; return; }   // 下班／休假／出國／公出：不在辦公室（座位上方顯示狀態牌）
+  if (AWAY.has(st)) { c.holder.visible = false; if (c.home) c.holder.position.set(c.home.x, 0, c.home.z); c.moving = 0; if (c === player) target = null; return; }   // 用餐／下班／休假／出國／公出：不在辦公室，人物隱藏（桌面顯示狀態圖示）
   c.holder.visible = true;
   if ((st === 'present' || st === 'overtime') && c.home) { c.holder.position.set(c.home.x, 0, c.home.z); c.face = c.home.face; sitDown(c); }
-  else if (st === 'lunch') { c.holder.position.set((340 + Math.random() * 150) * U, 0, 1298 * U); c.face = Math.PI; }
   else if (st === 'toilet') seatIn(c, x => x.kind === 'toilet');
-  else if (st === 'meeting') seatIn(c, isMeetSeat);
+  else if (st === 'meeting') {   // 依行事曆：後端 meetingRoom（A～D）指定會議室，就把人放進那間
+    const R = ROOMS.find(r => r[0] === c.meetingRoom), inR = R ? (q => q.x / U > R[1] && q.x / U < R[3] && q.z / U > R[2] && q.z / U < R[4]) : isMeetSeat;
+    if (!seatIn(c, q => !q.kind && inR(q))) { if (R) { c.holder.position.set(((R[1] + R[3]) / 2 + (Math.random() - .5) * (R[3] - R[1]) * .5) * U, 0, ((R[2] + R[4]) / 2 + (Math.random() - .5) * (R[4] - R[2]) * .4) * U); c.face = Math.PI; } else seatIn(c, isMeetSeat); }
+  }
   else if (c.home) { c.holder.position.set(c.home.x, 0, c.home.z); c.face = c.home.face; sitDown(c); }
 }
 function setNet(){ const t = new Date().toLocaleTimeString('zh-TW', {hour12:false, timeZone:'Asia/Taipei'}); netEl.textContent = live.ok ? '● 即時連線：凱曜設計部後端（' + t + '）' : '○ 離線：依時間規則模擬（' + t + '）'; netEl.style.color = live.ok ? '#8dffb0' : '#ffd98a'; }
@@ -942,7 +946,7 @@ async function pollOnce(){
     if (!d.unchanged) {
       live.version = d.version || live.version;
       if (d.hours) { const f = d.hours.force === 'work' || d.hours.force === 'off' ? d.hours.force : ''; if (f !== hoursForce) { hoursForce = f; for (const c of Object.values(chars)) c.appliedStatus = null; } }
-      for (const e of d.people || []) { const c = chars[e.name]; if (!c) continue; c.rawStatus = typeof e.status === 'string' ? e.status : 'present'; c.status = forcedStatus(c.rawStatus); c.mood = e.mood || ''; c.message = e.message || ''; c.statusSource = e.statusSource || ''; c.music = e.music && e.music.url ? {url:e.music.url, title:e.music.title || '', provider:e.music.provider || ''} : null; applyStatus(c); }
+      for (const e of d.people || []) { const c = chars[e.name]; if (!c) continue; c.rawStatus = typeof e.status === 'string' ? e.status : 'present'; c.status = forcedStatus(c.rawStatus); c.mood = e.mood || ''; c.message = e.message || ''; c.statusSource = e.statusSource || ''; c.meetingRoom = typeof e.meetingRoom === 'string' ? e.meetingRoom : ''; c.music = e.music && e.music.url ? {url:e.music.url, title:e.music.title || '', provider:e.music.provider || ''} : null; applyStatus(c); }
       if (d.stories) applyStories(d.stories);
     }
   } catch (err) {
@@ -960,9 +964,9 @@ let FLAME = null, GLOW = null;
 function makeOvertimeFx(){
   FLAME = FLAME || flameTex(); GLOW = GLOW || glowTex();
   const g = new THREE.Group(), add = {transparent:true, blending:THREE.AdditiveBlending, depthWrite:false};
-  const beam = new THREE.Mesh(new THREE.CylinderGeometry(.5, 1.5, 4.6, 28, 1, true), new THREE.MeshBasicMaterial({color:0xa65cff, opacity:.2, side:THREE.DoubleSide, ...add})); beam.position.y = 2.3; g.add(beam);
-  const pool = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 3.6), new THREE.MeshBasicMaterial({map:GLOW, ...add})); pool.rotation.x = -Math.PI / 2; pool.position.y = .03; g.add(pool);
-  const fires = [0, 1, 2].map(i => { const f = new THREE.Sprite(new THREE.SpriteMaterial({map:FLAME, ...add})); f.scale.set(.75, .92, 1); g.add(f); return f; });
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(.3, 1.0, 4.2, 28, 1, true), new THREE.MeshBasicMaterial({color:0xa65cff, opacity:.1, side:THREE.DoubleSide, ...add})); beam.position.y = 2.1; g.add(beam);
+  const pool = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 2.3), new THREE.MeshBasicMaterial({map:GLOW, opacity:.55, ...add})); pool.rotation.x = -Math.PI / 2; pool.position.y = .03; g.add(pool);
+  const fires = [0, 1, 2].map(i => { const f = new THREE.Sprite(new THREE.SpriteMaterial({map:FLAME, ...add})); f.scale.set(1.0, 1.25, 1); g.add(f); return f; });
   g.userData = {fires, beam}; scene.add(g); return g;
 }
 function iconSprite(cell, sym){
@@ -990,8 +994,8 @@ function stationFx(c, dt){
   if (ot && !c.fx) c.fx = makeOvertimeFx();
   if (c.fx) {
     c.fx.visible = ot && c.holder.visible;
-    if (c.fx.visible) { const t = performance.now() / 1000, {fires, beam} = c.fx.userData; c.fx.position.set(c.holder.position.x, 0, c.holder.position.z); beam.material.opacity = .17 + Math.sin(t * 2) * .04;
-      fires.forEach((f, i) => { const a = t * 1.1 + i * 2.094; f.position.set(Math.cos(a) * 1.1, 1.35 + Math.sin(t * 2.4 + i * 2) * .25, Math.sin(a) * .8); f.material.opacity = .75 + Math.sin(t * 5 + i) * .2; }); }
+    if (c.fx.visible) { const t = performance.now() / 1000, {fires, beam} = c.fx.userData; c.fx.position.set(c.holder.position.x, 0, c.holder.position.z); beam.material.opacity = .085 + Math.sin(t * 2) * .02;
+      fires.forEach((f, i) => { const a = t * 1.1 + i * 2.094; f.position.set(Math.cos(a) * 1.1, 1.35 + Math.sin(t * 2.4 + i * 2) * .25, Math.sin(a) * .8); f.material.opacity = 1; }); }
   }
 }
 const SIT_DROP = .1;
@@ -1014,7 +1018,7 @@ function toggleSit(){ if (player && !player.sitting) sitDown(player); }   // 只
 addEventListener('keydown', e => { if (e.code === 'KeyE') toggleSit(); });
 document.getElementById('sit').addEventListener('click', toggleSit);
 function select(name){
-  const prev = player; player = chars[name]; target = null; player.holder.visible = true;
+  const prev = player; player = chars[name]; target = null; player.holder.visible = !AWAY.has(player.status);
   if (prev && prev !== player) { prev.appliedStatus = null; applyStatus(prev); }
   for (const c of Object.values(chars)) { c.btn.classList.toggle('on', c === player); c.wander = c !== player && !SEATS[c.name] && !c.sitting; }
 }
@@ -1060,7 +1064,7 @@ const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 
 renderer.domElement.addEventListener('pointerdown', e => {
   ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
   const hit = ray.intersectObjects(pickables, true).find(h => (h.object.userData.pickRoot || h.object).visible !== false);
-  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { if (pk.c === player) radialOpen(); else { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); return; } }
+  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { if (pk.c === player) radialOpen(); else if (player && (player.name === 'Machi' || isAdmin())) radialOpen(pk.c); else { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); return; } }
   radialClose();
   const p = new THREE.Vector3();
   if (ray.ray.intersectPlane(plane, p) && !blocked(p.x, p.z)) target = p;
@@ -1162,7 +1166,7 @@ if (!handoff) { try {   // 沒有交接資料時，直接讀網站首頁的登�
 const adminToken = () => (handoff && handoff.token) || '';
 const isAdmin = () => Boolean(handoff && handoff.monitor && handoff.token);
 const radial = document.createElement('div'); radial.id = 'cpage'; radial.hidden = true; document.body.appendChild(radial);   // 舊名 radial 沿用，指向角色頁面
-let hoursCfg = null, hoursForce = '';
+let hoursCfg = null, hoursForce = '', pageChar = null;
 async function post(payload){   // 後端同一支介面（和 2D 版一樣）；回傳失敗時把後端的錯誤原文丟出來
   let r; try { r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify(payload), cache:'no-store'}); } catch (e) { throw new Error('連不上後端：後端只放行 localhost:8787 與 GitHub Pages，目前網址是 ' + location.origin); }
   const d = await r.json(); if (!d.ok) throw new Error(d.error || '後端回覆失敗'); return d;
@@ -1176,10 +1180,10 @@ function hopChar(c){ c.hopAt = performance.now(); }
 function moodFx(c, m){   // 設定心情時：頭上的心情圖示彈出、人物跳一下、飄出心情字
   hopChar(c); const w = ({happy:'好開心！', angry:'氣噗噗！', sad:'好難過…', joy:'愛心滿格！'})[m]; if (w) floatAt(c.holder.position.x, 2.7, c.holder.position.z, w);
 }
-async function setOwnStatus(st){ const c = player; if (!c || !(await writeState(c, {status:st}))) return; c.rawStatus = st; c.status = forcedStatus(st); c.appliedStatus = null; applyStatus(c, true); showQuote('', c.name + '：' + STATUS[st][0]); renderCharPage(); }
-async function setOwnMood(m){ const c = player; if (!c || !(await writeState(c, {mood:m}))) return; c.mood = m; if (m) moodFx(c, m); showQuote('', m ? c.name + '的心情：' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[m] : '已清除心情'); renderCharPage(); }
-async function setOwnMessage(t){ const c = player; if (!c || !(await writeState(c, {message:t}))) return; c.message = t; showQuote('', t ? '已更新留言' : '已清除留言'); renderCharPage(); }
-async function setOwnAuto(){ const c = player; if (!c || !(await writeState(c, {status:'auto'}))) return; showQuote('', '已交還給電腦自動判斷，幾秒內會更新'); live.version = 0; }
+async function setOwnStatus(st){ const c = pageChar || player; if (!c || !(await writeState(c, {status:st}))) return; c.rawStatus = st; c.status = forcedStatus(st); c.appliedStatus = null; applyStatus(c, true); showQuote('', c.name + '：' + STATUS[st][0]); renderCharPage(); }
+async function setOwnMood(m){ const c = pageChar || player; if (!c || !(await writeState(c, {mood:m}))) return; c.mood = m; if (m) moodFx(c, m); showQuote('', m ? c.name + '的心情：' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[m] : '已清除心情'); renderCharPage(); }
+async function setOwnMessage(t){ const c = pageChar || player; if (!c || !(await writeState(c, {message:t}))) return; c.message = t; showQuote('', t ? '已更新留言' : '已清除留言'); renderCharPage(); }
+async function setOwnAuto(){ const c = pageChar || player; if (!c || !(await writeState(c, {status:'auto'}))) return; showQuote('', '已交還給電腦自動判斷，幾秒內會更新'); live.version = 0; }
 const forcedStatus = raw => hoursForce === 'off' ? 'offwork' : (hoursForce === 'work' && raw === 'offwork' ? 'present' : raw);   // 管理者的「全員上班／下班」
 function applyForce(){ for (const c of Object.values(chars)) { c.status = forcedStatus(c.rawStatus || c.status || 'present'); c.appliedStatus = null; applyStatus(c, c === player); } }
 const STATUS_DESC = {present:'在座工作中', overtime:'加班中（晚上 7 點後的在座）', lunch:'用餐中', meeting:'開會中', leave:'休假中', offwork:'已下班', toilet:'去廁所', abroad:'出國中', out:'公出工作中'};
@@ -1236,12 +1240,12 @@ async function toggleMusic(c){
   } catch (e) { stopMusic(); showQuote('', '無法播放：' + (e && e.message ? e.message : '請點歌名到網頁收聽')); }
 }
 async function setOwnMusic(url){
-  const c = player; if (!c) return; const info = musicInfo(url);
+  const c = pageChar || player; if (!c) return; const info = musicInfo(url);
   if (!info) { showQuote('', '請貼 Spotify（單曲、專輯、歌單、Podcast）或 Apple Music 歌曲的網址'); return; }
   const meta = await musicMetadata(info); if (!(await writeState(c, {music:{url:info.url, title:meta.title}}))) return;
   c.music = {url:info.url, provider:info.provider, title:meta.title}; showQuote('', '🎧 開始分享：' + meta.title); renderCharPage();
 }
-async function clearOwnMusic(){ const c = player; if (!c || !(await writeState(c, {music:''}))) return; c.music = null; if (musicPlaying.name === c.name) stopMusic(); showQuote('', '已停止分享音樂'); renderCharPage(); }
+async function clearOwnMusic(){ const c = pageChar || player; if (!c || !(await writeState(c, {music:''}))) return; c.music = null; if (musicPlaying.name === c.name) stopMusic(); showQuote('', '已停止分享音樂'); renderCharPage(); }
 
 // ───────── 限時動態（沿用 2D 版：照片／GIF／影片，24 小時自動下架，可按讚留言；人物右上角的像素訊息氣泡）─────────
 const STORY_SECONDS = 6, STORY_MAX_ACTIVE = 5, STORY_GIF_MAX = 5 * 1024 * 1024, STORY_VIDEO_MAX = 10 * 1024 * 1024, STORY_VIDEO_SECONDS = 30;
@@ -1254,7 +1258,7 @@ const storyIconURL = (() => { const c = document.createElement('canvas'), k = 2;
 const readDataURL = f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(Error('無法讀取這個檔案')); r.readAsDataURL(f); });
 const loadMedia = (el, ev) => new Promise((res, rej) => { el.addEventListener(ev, res, {once:true}); el.addEventListener('error', () => rej(Error('無法讀取這個檔案，請換一個再試')), {once:true}); });
 async function postStory(file){
-  const c = player; if (!c) return; if (storiesOf(c.name).length >= STORY_MAX_ACTIVE) { showQuote('', '最多同時 ' + STORY_MAX_ACTIVE + ' 則限時動態，請先下架一則'); return; }
+  const c = pageChar || player; if (!c) return; if (storiesOf(c.name).length >= STORY_MAX_ACTIVE) { showQuote('', '最多同時 ' + STORY_MAX_ACTIVE + ' 則限時動態，請先下架一則'); return; }
   const type = file.type, url = URL.createObjectURL(file);
   try {
     let media;
@@ -1311,7 +1315,7 @@ async function removeStory(id){ try { applyStories((await post({action:'pixelOff
 
 // ───────── 頁面 ─────────
 function renderCharPage(){
-  const c = player; if (!c) return; const st = STATUS[c.status] || STATUS.present, total = stat.found + stat.notes + stat.flush, lv = 1 + Math.floor(total / 5);
+  const c = pageChar || player; if (!c) return; const st = STATUS[c.status] || STATUS.present, total = stat.found + stat.notes + stat.flush, lv = 1 + Math.floor(total / 5);
   const moodPct = {happy:90, joy:100, sad:35, angry:20}[c.mood] ?? 60, moodTxt = c.mood ? (iconImg(moodSym[c.mood], 18) + ' ' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[c.mood]) : '— 未設定';
   const keepMsg = radial.querySelector('#cpMsg') ? radial.querySelector('#cpMsg').value : null, keepMusic = radial.querySelector('#cpMusic') ? radial.querySelector('#cpMusic').value : '';
   const mine = storiesOf(c.name), m = c.music;
@@ -1319,7 +1323,7 @@ function renderCharPage(){
     <div class="cp-head">
       <div class="cp-av"><img alt="" src="${c.avatar || ''}"><b class="cp-lv">Lv.${lv}</b></div>
       <div class="cp-main">
-        <div class="cp-tag"><span class="cp-pill">${live.ok ? '即時' : '模擬'}</span><span>凱曜設計部 · 5F · ${esc(roomOf(c))}</span></div>
+        <div class="cp-tag"><span class="cp-pill">${live.ok ? '即時' : '模擬'}</span><span>凱曜設計部 · 5F · ${esc(roomOf(c))}</span>${c !== player ? '<span class="cp-pill">管理者代操作</span>' : ''}</div>
         <div class="cp-name">${esc(c.name)} <span class="cp-type">${iconImg(symOf[c.status] || 'person', 20)} ${st[0]}</span></div>
       </div>
     </div>
@@ -1332,8 +1336,7 @@ function renderCharPage(){
       </section>
       <div class="cp-stack">
         <section class="cp-panel p2"><header><h3>想說的話</h3></header>
-          <div class="cp-chat"><div class="cp-prev"><span id="cpPrev"></span></div>
-            <form class="cp-chat-in" id="cpForm"><img alt="" src="${c.avatar || ''}"><input id="cpMsg" type="text" maxlength="60" placeholder="說點什麼…" autocomplete="off"><button type="submit" class="send" title="送出">➤</button></form>
+          <div class="cp-chat"><form class="cp-chat-in" id="cpForm"><img alt="" src="${c.avatar || ''}"><input id="cpMsg" type="text" maxlength="60" placeholder="說點什麼…" autocomplete="off"><button type="submit" class="send" title="送出">➤</button></form>
             <div class="cp-chips"><button type="button" id="cpClr">清除對話</button></div></div>
         </section>
         <section class="cp-panel p4"><header><h3>音樂</h3></header>
@@ -1354,7 +1357,7 @@ function renderCharPage(){
   const g = radial.querySelector('#cpSt'); for (const [id, [name]] of Object.entries(STATUS)) { const b = document.createElement('button'); b.type = 'button'; b.className = c.status === id ? 'on' : ''; b.innerHTML = '<i>' + iconImg(symOf[id], 44) + '</i>' + name; b.onclick = () => setOwnStatus(id); g.appendChild(b); }
   const mm = radial.querySelector('#cpMood'); for (const id of Object.keys(MOOD)) { const b = document.createElement('button'); b.type = 'button'; b.className = c.mood === id ? 'on' : ''; b.innerHTML = '<i>' + iconImg(moodSym[id], 36) + '</i>' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[id]; b.onclick = () => setOwnMood(id); mm.appendChild(b); }
   const x = document.createElement('button'); x.type = 'button'; x.innerHTML = '<i>✖</i>清除'; x.onclick = () => setOwnMood(''); mm.appendChild(x);
-  const ta = radial.querySelector('#cpMsg'), prev = radial.querySelector('#cpPrev'); ta.value = keepMsg != null ? keepMsg : (c.message || ''); const showPrev = () => { prev.textContent = ta.value.trim() || '（頭上沒有對話）'; prev.parentElement.classList.toggle('empty', !ta.value.trim()); }; ta.oninput = showPrev; showPrev();
+  const ta = radial.querySelector('#cpMsg'); ta.value = keepMsg != null ? keepMsg : (c.message || ''); 
   radial.querySelector('#cpForm').onsubmit = e => { e.preventDefault(); setOwnMessage(ta.value.trim()); }; radial.querySelector('#cpClr').onclick = () => { ta.value = ''; setOwnMessage(''); };
   radial.querySelector('#cpMusic').value = keepMusic; radial.querySelector('#cpMForm').onsubmit = e => { e.preventDefault(); setOwnMusic(radial.querySelector('#cpMusic').value); };
   const mp = radial.querySelector('#cpMPlay'); if (mp) mp.onclick = () => toggleMusic(c); const ms = radial.querySelector('#cpMStop'); if (ms) ms.onclick = clearOwnMusic;
@@ -1380,8 +1383,8 @@ function renderAdmin(){
   box.querySelector('#pnGo').onclick = () => punish(Number(box.querySelector('#pnDays').value) || 1); box.querySelector('#pnOff').onclick = () => punish(0);
 }
 async function loadHours(){ try { const r = await adminCall('getPixelHours'); hoursCfg = r.config || null; hoursForce = r.force || hoursForce; if (!radial.hidden) renderAdmin(); } catch (e) {} }
-function radialOpen(){ if (!player) return; radial.hidden = false; renderCharPage(); loadHours(); }
-function radialClose(){ radial.hidden = true; radial.innerHTML = ''; }
+function radialOpen(who){ if (!player) return; pageChar = who && who !== player ? who : null; radial.hidden = false; renderCharPage(); loadHours(); }
+function radialClose(){ pageChar = null; radial.hidden = true; radial.innerHTML = ''; }
 function placeRadial(){}
 addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('sv').hidden) closeStory(); else if (!radial.hidden) radialClose(); } });
 radial.addEventListener('pointerdown', e => { if (e.target === radial) radialClose(); });
@@ -1389,7 +1392,7 @@ radial.addEventListener('pointerdown', e => { if (e.target === radial) radialClo
 // ───────── 人物頭上的介面：對話泡泡、音樂泡泡、心情圖示、限時動態氣泡；離席的人在座位上方顯示狀態牌 ─────────
 function updateTags(){
   for (const c of Object.values(chars)) {
-    const away = c.status && AWAY.has(c.status) && c !== player && c.home, m = c.music, nStory = storiesOf(c.name).length;
+    const away = false, m = c.music, nStory = storiesOf(c.name).length;
     let p = null, html = '';
     if (away) { p = new THREE.Vector3(c.home.x, 1.7, c.home.z); html = '<div class="cui-tag">' + iconImg(symOf[c.status], 18) + esc(c.name + '（' + STATUS[c.status][0] + '）') + '</div>'; }
     else if (c.holder.visible && (c.message || c.mood || m || nStory)) {
@@ -1473,7 +1476,7 @@ function tick(){
     const run = keys.ShiftLeft || keys.ShiftRight || Math.hypot(joy.x, joy.y) > .85;
     if (dir.lengthSq() > .01) target = null;
     else if (target) { dir.copy(target).sub(player.holder.position); dir.y = 0; if (dir.length() < .2) target = null; }
-    if (!radial.hidden || !$('sv').hidden) dir.set(0, 0, 0);   // 角色頁面開著時人物不跟著走
+    if (!radial.hidden || !$('sv').hidden || AWAY.has(player.status)) { dir.set(0, 0, 0); target = null; }   // 角色頁面開著時人物不跟著走
     if (player.sitting && dir.lengthSq() > 1e-4) standUp(player);
     if (!player.sitting) moveChar(player, dir, run ? 5 : 2.4, dt);
   }
