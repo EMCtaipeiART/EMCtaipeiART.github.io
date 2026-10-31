@@ -428,7 +428,7 @@ const LABELS = [['男廁',370,44],['女廁',526,44],['會議室 A',863,110],['�
 // ===== 四樓：版面取自 2D 版 floor4.js（座標 ×0.5，套用五樓同一套家具尺寸），整層放在五樓右邊 FX4 px 處 =====
 const FX4 = 3600, F4_Z1 = 1700, F4_X0 = -100, F4_X1 = 1430, F4_Z0 = -100;   // 四樓離五樓很遠（視野內看不到五樓）；四邊各留 70 px 走廊
 const F4 = {EX:122.5, EY:149, toilets:[['男廁', 451.5], ['女廁', 612.5]], TY:30, TW:173, TH:219,
-  H:{x:598, y:369, w:598, h:344}, O1:{x:598, y:763, w:330, h:510.5}, O2:{x:958, y:763, w:330, h:510.5}, F:{x:598, y:1323.5, w:234, h:219}, G:{x:912, y:1323.5, w:234, h:219}};
+  H:{x:598, y:369, w:598, h:344}, OFF:{x:598, y:763, w:690, h:510.5}, O1:{x:598, y:763, w:339, h:510.5}, O2:{x:949, y:763, w:339, h:510.5}, F:{x:598, y:1323.5, w:234, h:219}, G:{x:912, y:1323.5, w:234, h:219}};
 function glassWalls(x, y, w, h, doors){   // 玻璃屋：四面牆，door ＝ {side:'t'|'b'|'l'|'r', c:門中心座標}（寬 60）
   const RT = 12, d = 30, gap = k => doors.find(o => o.side === k);
   const seg = (a, b, g) => { if (!g) return [[a, b]]; const o = [], g0 = g.c - d, g1 = g.c + d; if (a < g0) o.push([a, Math.min(b, g0)]); if (b > g1) o.push([Math.max(a, g1), b]); return o; };
@@ -439,9 +439,10 @@ function glassWalls(x, y, w, h, doors){   // 玻璃屋：四面牆，door ＝ {s
 }
 for (const [, rx] of F4.toilets) glassWalls(rx, F4.TY, F4.TW, F4.TH, [{side:'b', c:rx + 131}]);
 { const H = F4.H; glassWalls(H.x, H.y, H.w, H.h, [{side:'t', c:H.x + 107}, {side:'b', c:H.x + H.w / 2}]); }
-for (const [k, side] of [['O1', 'l'], ['O2', 'r']]) { const o = F4[k]; glassWalls(o.x, o.y, o.w, o.h, [{side:'t', c:o.x + o.w / 2}, {side, c:o.y + o.h / 2}]); }
+{ const o = F4.OFF, mid = o.y + o.h / 2; glassWalls(o.x, o.y, o.w, o.h, [{side:'t', c:o.x + 170}, {side:'b', c:o.x + 520}, {side:'l', c:mid}, {side:'r', c:mid}]);   // 兩間合併成一間：上下左右各一道門
+  WALLS.push([F4.O1.x + F4.O1.w + FX4, o.y + 12, 12, mid - 30 - (o.y + 12)], [F4.O1.x + F4.O1.w + FX4, mid + 30, 12, o.y + o.h - 12 - (mid + 30)]); }   // 中間隔一道玻璃牆，正中央留開口
 glassWalls(F4.F.x, F4.F.y, F4.F.w, F4.F.h, [{side:'r', c:F4.F.y + F4.F.h / 2}]); glassWalls(F4.G.x, F4.G.y, F4.G.w, F4.G.h, [{side:'l', c:F4.G.y + F4.G.h / 2}]);
-LABELS.push(['男廁', F4.toilets[0][1] + 86 + FX4, 44], ['女廁', F4.toilets[1][1] + 86 + FX4, 44], ['4F 電梯', F4.EX + 37 + FX4, F4.EY + 20], ['會議室 H', F4.H.x + 300 + FX4, F4.H.y + 40], ['辦公室', F4.O1.x + 142 + FX4, F4.O1.y + 24], ['辦公室', F4.O2.x + 142 + FX4, F4.O2.y + 24],
+LABELS.push(['男廁', F4.toilets[0][1] + 86 + FX4, 44], ['女廁', F4.toilets[1][1] + 86 + FX4, 44], ['4F 電梯', F4.EX + 37 + FX4, F4.EY + 20], ['會議室 H', F4.H.x + 300 + FX4, F4.H.y + 40], ['辦公室', F4.OFF.x + 345 + FX4, F4.OFF.y + 24],
   ['會議室 F', F4.F.x + 117 + FX4, F4.F.y + 40], ['會議室 G', F4.G.x + 117 + FX4, F4.G.y + 40], ['茶水間', 930 + FX4, 40], ['冰箱', 1030 + FX4, 20]);
 
 // 藍色桌組：三排（y 為桌面上緣），設計部 x 中心 463/568/673，同仁區 833/938/1043。type：1 有 iMac、7 空桌、4 Mac mini 桌。
@@ -471,7 +472,7 @@ for (const [x, y, w, h] of WALLS) {
   const lm = new LineMaterial({color:0x14202a, linewidth:HD ? 3 * DPR : 1.6}), le = new LineSegments2(new LineSegmentsGeometry().fromEdgesGeometry(new THREE.EdgesGeometry(geo)), lm); le.position.copy(m.position); scene.add(le); lineMats.push(lm); lm.resolution.set(renderer.domElement.width, renderer.domElement.height);
   rects.push([x * U, y * U, (x + w) * U, (y + h) * U]);
 }
-const R_PLAYER = .5;
+const R_PLAYER = .45;
 function blocked(x, z){
   const in5 = x > 1 && x < 1201 * U - 1 && z > 1 && z < 1526 * U - 1, in4 = x > (FX4 + F4_X0) * U + 1 && x < (FX4 + F4_X1) * U - 1 && z > F4_Z0 * U + 1 && z < F4_Z1 * U - 1;
   if (!in5 && !in4) return true;
@@ -480,6 +481,12 @@ function blocked(x, z){
 
 // 道具與桌組的 billboard：先把素材縮成螢幕上實際的像素大小（才會是清楚的像素風）
 const billboards = [];
+function outlined(src, thick){   // 在零食圖外圍描一圈黑色粗線（像素風的黑外框）
+  const pad = thick + 1, c = document.createElement('canvas'); c.width = src.width + pad * 2; c.height = src.height + pad * 2; const g = c.getContext('2d');
+  const sil = document.createElement('canvas'); sil.width = src.width; sil.height = src.height; const sg = sil.getContext('2d'); sg.drawImage(src, 0, 0); sg.globalCompositeOperation = 'source-in'; sg.fillStyle = '#0b0d10'; sg.fillRect(0, 0, sil.width, sil.height);
+  for (let a = 0; a < 24; a++) { const ang = a / 24 * Math.PI * 2; for (let r = 1; r <= thick; r++) g.drawImage(sil, pad + Math.round(Math.cos(ang) * r), pad + Math.round(Math.sin(ang) * r)); }
+  g.drawImage(src, pad, pad); return c;
+}
 function trimmed(img, sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight){
   const c = document.createElement('canvas'); c.width = sw; c.height = sh; const g = c.getContext('2d', {willReadFrequently:true}); g.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
   const d = g.getImageData(0, 0, sw, sh).data; let x0 = sw, x1 = -1, y0 = sh, y1 = -1;
@@ -680,7 +687,7 @@ function buildFloor4(T, place){
     for (const j of [0, 1]) { const cx = tx + tw * (2 * j + 1) / 4; chair3d(X(cx), I(cz - 52), 'S'); chair3d(X(cx), I(cz + 52), 'N'); }
     if (face === 'W') { const wx = r.x + 12; pbox(I(4), 2.3, I(r.h - 24), 0xf6f7f9, X(wx + 2), 0, I(cz)); projectorRig(X(tx + 28), I(cz), 'W', {room:id, wallX:X(wx + 4) + .02, wallDir:1, zc:I(cz), w:4.0, h:2.1, title:'專案會議', kind:'list'}); }
     else { const wx = r.x + r.w - 16; pbox(I(4), 2.3, I(r.h - 24), 0xf6f7f9, X(wx + 2), 0, I(cz)); projectorRig(X(tx + tw - 28), I(cz), 'E', {room:id, wallX:X(wx) - .02, wallDir:-1, zc:I(cz), w:4.0, h:2.1, title:'專案會議', kind:'text'}); } }
-  if (F4.snackSpot) SNACKS.forEach(([k, h], i) => { const src = imgs[k] && trimmed(imgs[k]); if (!src) return; const dh = h * .75, dw = dh * src.width / src.height, m = addBillboard(src, F4.snackSpot.cx + (-1.62 + i * .46), F4.snackSpot.cz, dw, dh); m.position.y = .95; });
+  if (F4.snackSpot) SNACKS.forEach(([k, h], i) => { const raw = imgs[k] && trimmed(imgs[k]); if (!raw) return; const src = outlined(raw, 26), dh = h * .64 * src.height / raw.height, dw = dh * src.width / src.height, m = addBillboard(src, F4.snackSpot.cx + (-1.75 + i * .5), F4.snackSpot.cz, dw, dh); m.position.y = .95; });
 }
 async function buildOffice(){
   await Promise.all(Object.entries(FILES).map(async ([k, f]) => { imgs[k] = await loadImg(ASSET + f); }));
@@ -699,7 +706,7 @@ async function buildOffice(){
   build3dObjects(T, place);
   await loadFunArt();
   await Promise.all(SNACKS.map(async ([k]) => { imgs[k] = await loadImg('snacks/' + k + '.png'); }));
-  if (pantry3d.snackSpot) SNACKS.forEach(([k, h], i) => { const src = imgs[k] && trimmed(imgs[k]); if (!src) return; const dh = h * .75, dw = dh * src.width / src.height, m = addBillboard(src, pantry3d.snackSpot.cx + (-1.62 + i * .46), pantry3d.snackSpot.cz, dw, dh); m.position.y = .95; });
+  if (pantry3d.snackSpot) SNACKS.forEach(([k, h], i) => { const raw = imgs[k] && trimmed(imgs[k]); if (!raw) return; const src = outlined(raw, 26), dh = h * .64 * src.height / raw.height, dw = dh * src.width / src.height, m = addBillboard(src, pantry3d.snackSpot.cx + (-1.75 + i * .5), pantry3d.snackSpot.cz, dw, dh); m.position.y = .95; });
   loadImg('fridge/office-foods-v1.webp').then(im => { foodSheet = im; fridges.forEach((fr, i) => { const t = fr.inner.userData.tex; fr.inner.material.map = fridgeInner(1, 1, FRIDGE_SHELVES[i % 2]).material.map; fr.inner.material.needsUpdate = true; }); });
   // 藍色桌組：每組兩排×三張（3D 方塊桌＋小螢幕），三排 × 設計部／同仁區
   const I = v => v * U;
@@ -1462,6 +1469,10 @@ function findPath(from, to, floor){
   out.push({x:to.x, z:to.z});
   return out;
 }
+function unstick(c){   // 人物卡在碰撞範圍裡（傳送、換樓層、牆邊）時，推到最近的可走位置
+  const p = c.holder.position; if (!blocked(p.x, p.z)) return;
+  for (let r = .15; r <= 2.4; r += .15) for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2, x = p.x + Math.cos(a) * r, z = p.z + Math.sin(a) * r; if (!blocked(x, z)) { p.x = x; p.z = z; return; } }
+}
 function moveChar(c, dir, speed, dt){
   if (dir.lengthSq() < 1e-4) { c.moving = 0; return; }
   dir.normalize();
@@ -1918,7 +1929,7 @@ function tick(){
     }
     if (!radial.hidden || !$('sv').hidden || AWAY.has(player.status) || elevBusy) { dir.set(0, 0, 0); target = null; }   // 角色頁面開著時人物不跟著走
     if (player.sitting && dir.lengthSq() > 1e-4) standUp(player);
-    if (!player.sitting) moveChar(player, dir, run ? 5 : 2.4, dt);
+    if (!player.sitting) { unstick(player); moveChar(player, dir, run ? 5 : 2.4, dt); }
     if (wantElev) { const sp = elevSpot(floorOf(player)); if (Math.hypot(sp.x - player.holder.position.x, sp.z - player.holder.position.z) < 1.6) elevGo(floorOf(player) === 5 ? 4 : 5); }
     if (wantSeat) { const st = wantSeat; if (st.by || st.hidden || player.sitting) wantSeat = null; else if (Math.hypot(st.x - player.holder.position.x, st.z - player.holder.position.z) < 1.0) { wantSeat = null; target = null; sitAt(player, st); } }
   }
