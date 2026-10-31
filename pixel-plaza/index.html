@@ -60,11 +60,11 @@ addEventListener('resize', resize); resize();
 // 版面圖座標（1201×1526 px）× U = 世界座標。桌子 105 px 寬 ≈ 3.15 單位，與角色身高 2.04 的比例同遊戲內一致。
 const U = 0.03, PPU = HD ? 29.5 * DPR * innerHeight / 300 : 29.5;               // PPU：每單位約幾個螢幕像素（貼圖縮成這個大小才會清楚）
 const ASSET = '../EMC-ART-Pixel-Office/dist/assets/';
-const FILES = {elevator:'props2/elevator.png',pantry:'props2/pantry_counter.png',fridge:'props2/fridge_double.png',plant:'props2/plant_pot.png'};
+const FILES = {elevator:'props2/elevator.png',plant:'props2/plant_pot.png'};
 // [素材, 左上 x, 底部 y, 寬, 選項{h 指定高, fh 碰撞高, col 自訂碰撞[x,y,w,h]}]（版面圖像素）
 const PROPS = [
   ['elevator',165,255,72,{fh:40}],
-  ['pantry',333,1268,125,{fh:34}],['fridge',503,1285,73,{fh:50}],['plant',600,1320,22,{fh:14}],
+  ['plant',600,1320,22,{fh:14}],
 ];
 // 3D 立體物件（像素風：平塗色方塊＋深色邊線，低解析度渲染後就是像素立體）。座標為版面圖像素。
 // 會議桌：[中心 x, 中心 y, 寬, 深, 桌色, 椅子 x 們, 北側椅子腳底 y, 南側椅子腳底 y]
@@ -271,7 +271,7 @@ function officeChair3d(x, z, face){   // 辦公室：有扶手、五爪腳輪的
   for (const [px, pz] of [[.42, 0], [-.42, 0], [0, .42], [0, -.42]]) add(.12, .1, .12, black, px, 0, pz, false);
 }
 // ---- 像素風 3D 物件 ----
-const OUT_T = .06, HULL_LAYER = 1, outlineMat = new THREE.MeshBasicMaterial({color:0x0b0d10, side:THREE.BackSide});   // 外框粗細（世界單位）；外框物件放在 layer 1
+const OUT_T = .035, HULL_LAYER = 1, outlineMat = new THREE.MeshBasicMaterial({color:0x0b0d10, side:THREE.BackSide});   // 外框粗細（世界單位）；外框物件放在 layer 1
 function hull(parent, w, h, d, px, py, pz, t = OUT_T){ const m = new THREE.Mesh(new THREE.BoxGeometry(w + 2 * t, h + 2 * t, d + 2 * t), outlineMat); m.position.set(px, py, pz); m.layers.set(HULL_LAYER); parent.add(m); return m; }
 function pbox(w, h, d, color, x, y, z, edge = true){
   const geo = new THREE.BoxGeometry(w, h, d), m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color}));
@@ -283,7 +283,7 @@ function table3d(cx, cz, w, d, color, h = .95){   // 世界座標；桌面＋四
   pbox(w, .14, d, color, cx, h - .14, cz);
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) pbox(.14, h - .14, .14, 0x14181c, cx + sx * (w / 2 - .18), 0, cz + sz * (d / 2 - .18), false);
 }
-function pmesh(geo, color, x, y, z, sx = 1, sy = 1, sz = 1, outline = true, k = 1.14){   // 圓形／圓角物件：外殼放大一點當黑色粗外框
+function pmesh(geo, color, x, y, z, sx = 1, sy = 1, sz = 1, outline = true, k = 1.07){   // 圓形／圓角物件：外殼放大一點當黑色粗外框
   const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color})); m.position.set(x, y, z); m.scale.set(sx, sy, sz); scene.add(m);
   if (outline) { const h = new THREE.Mesh(geo, outlineMat); h.position.copy(m.position); h.scale.set(sx * k, sy * k, sz * k); h.layers.set(HULL_LAYER); scene.add(h); }
   return m;
@@ -291,16 +291,16 @@ function pmesh(geo, color, x, y, z, sx = 1, sy = 1, sz = 1, outline = true, k = 
 const G_TANK = new RoundedBoxGeometry(.4, .9, .86, 4, .13), G_BOWL = new THREE.CylinderGeometry(.44, .36, .46, 28), G_SEAT = new THREE.CylinderGeometry(.42, .42, .07, 28), G_WATER = new THREE.CylinderGeometry(.27, .27, .02, 24);
 const G_PED = new THREE.CylinderGeometry(.14, .18, .66, 16), G_BASIN = new THREE.CylinderGeometry(.5, .36, .22, 28), G_SINKW = new THREE.CylinderGeometry(.34, .34, .02, 24), G_FAUCET = new THREE.CylinderGeometry(.05, .05, .24, 10);
 function toilet3d(x, z){   // 朝右（+x）：圓角水箱在左、橢圓馬桶在右
-  pmesh(G_TANK, 0xf4f6f8, x - .52, .45, z, 1, 1, 1, true, 1.2);
-  pmesh(G_BOWL, 0xffffff, x + .1, .23, z, 1.12, 1, .92, true, 1.2);
-  pmesh(G_SEAT, 0xe3e9ee, x + .12, .495, z, 1.1, 1, .9, true, 1.2);
+  pmesh(G_TANK, 0xf4f6f8, x - .52, .45, z, 1, 1, 1, true, 1.1);
+  pmesh(G_BOWL, 0xffffff, x + .1, .23, z, 1.12, 1, .92, true, 1.1);
+  pmesh(G_SEAT, 0xe3e9ee, x + .12, .495, z, 1.1, 1, .9, true, 1.1);
   pmesh(G_WATER, 0x45a9ff, x + .14, .54, z, 1.05, 1, .85, false);
 }
 function sink3d(x, z){     // 朝右：圓柱腳、橢圓臉盆，水龍頭在左
-  pmesh(G_PED, 0xf3f6f8, x, .33, z, 1, 1, 1, true, 1.28);
-  pmesh(G_BASIN, 0xffffff, x + .02, .77, z, 1, 1, .82, true, 1.2);
+  pmesh(G_PED, 0xf3f6f8, x, .33, z, 1, 1, 1, true, 1.35);
+  pmesh(G_BASIN, 0xffffff, x + .02, .77, z, 1, 1, .82, true, 1.1);
   pmesh(G_SINKW, 0x9fd3ff, x + .06, .89, z, 1, 1, .8, false);
-  pmesh(G_FAUCET, 0xb9c2cc, x - .4, 1.0, z, 1, 1, 1, true, 1.5);
+  pmesh(G_FAUCET, 0xb9c2cc, x - .4, 1.0, z, 1, 1, 1, true, 1.7);
 }
 const chairsAt = [];   // 等素材載入後再放椅子
 function build3dObjects(T, place){
@@ -324,6 +324,8 @@ function build3dObjects(T, place){
   rects.push([I(720), I(1166), I(972), I(1226)], [I(676), I(1166), I(722), I(1346)], [I(972), I(1166), I(1018), I(1346)]);
   for (const x of [752, 817, 880, 945]) chair3d(I(x), I(1140), 'S');
   for (const y of [1200, 1245, 1292, 1334]) { chair3d(I(650), I(y), 'E'); chair3d(I(1044), I(y), 'W'); }
+  pantry3d(333, 1230, 125, 38);
+  fridge3d(503, 1232, 36, 34); fridge3d(541, 1232, 36, 34);
   // 廁所：隔間縮小（寬 62）讓走廊變寬；碰撞只擋馬桶本體與隔板，人可以走進隔間，馬桶也能坐
   for (const dx of STALLS) {
     for (const y of [98, 160]) {
@@ -335,6 +337,41 @@ function build3dObjects(T, place){
     rects.push([I(308 + dx), I(212), I(352 + dx), I(238)]);
     for (const [x, y, w, h] of [[305,64,62,4],[305,126,62,4],[305,188,62,4],[305,64,4,128]]) { pbox(I(w), .7, I(h), 0xd7cfc6, I(x + dx + w / 2), 0, I(y + h / 2)); rects.push([I(x + dx), I(y), I(x + dx + w), I(y + h)]); }
   }
+}
+// ---- 茶水間：深色冰箱（兩台）與木紋茶水檯（含零食） ----
+function woodTexture(){
+  const c = document.createElement('canvas'); c.width = 64; c.height = 24; const g = c.getContext('2d');
+  g.fillStyle = '#b98a50'; g.fillRect(0, 0, 64, 24);
+  const tones = ['#a77a44', '#c89a5d', '#9c6f3b', '#bf9154'];
+  for (let y = 0; y < 24; y += 3) { g.fillStyle = tones[(y / 3) % tones.length | 0]; g.fillRect(0, y, 64, 1); }
+  g.fillStyle = '#8a5f30'; for (let i = 0; i < 9; i++) { const x = (i * 23 + 7) % 60, y = (i * 11 + 4) % 22; g.fillRect(x, y, 5, 1); g.fillRect(x + 2, y + 1, 3, 1); }
+  const t = new THREE.CanvasTexture(c); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function cabinetFrontTexture(){
+  const c = document.createElement('canvas'); c.width = 64; c.height = 24; const g = c.getContext('2d');
+  g.fillStyle = '#8c5f33'; g.fillRect(0, 0, 64, 24);
+  g.fillStyle = '#6e4825'; for (const x of [0, 21, 42, 63]) g.fillRect(x, 0, 1, 24); g.fillRect(0, 0, 64, 1);
+  g.fillStyle = '#d9d2c4'; for (const x of [17, 25, 38, 46]) g.fillRect(x, 6, 2, 6);
+  const t = new THREE.CanvasTexture(c); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function pantry3d(x0, z0, w, d){    // 版面圖像素：木紋檯面＋木櫃＋零食
+  const I = v => v * U, W = I(w), D = I(d), cx = I(x0 + w / 2), cz = I(z0 + d / 2), wood = new THREE.MeshLambertMaterial({color:0xb98a50});
+  const topMat = new THREE.MeshLambertMaterial({map:woodTexture()}), frontMat = new THREE.MeshLambertMaterial({map:cabinetFrontTexture()}), side = new THREE.MeshLambertMaterial({color:0x8c5f33});
+  const top = new THREE.Mesh(new THREE.BoxGeometry(W + .1, .12, D + .1), [wood, wood, topMat, wood, wood, wood]); top.position.set(cx, .83 + .06, cz); scene.add(top); hull(scene, W + .1, .12, D + .1, cx, .89, cz);
+  const base = new THREE.Mesh(new THREE.BoxGeometry(W, .83, D), [side, side, side, side, frontMat, side]); base.position.set(cx, .415, cz); scene.add(base); hull(scene, W, .83, D, cx, .415, cz);
+  // 零食：紙箱、藍盒、紅罐、黃袋、杯子
+  const snacks = [[-1.5, .5, .42, .32, 0xc58b4a], [-.8, .34, .3, .3, 0x3f7fd0], [-.2, .3, .26, .26, 0xd8483c], [.4, .42, .32, .22, 0xf2c030], [1.0, .34, .26, .26, 0xe9eef2], [1.5, .46, .36, .3, 0xc58b4a]];
+  for (const [dx, h, sw, sd, col] of snacks) pbox(sw, h, sd, col, cx + dx, .95, cz - .05);
+  rects.push([I(x0), I(z0), I(x0 + w), I(z0 + d)]);
+}
+function fridge3d(x0, z0, w, d, h = 1.9){   // 深色冰箱：上冷凍、下冷藏，銀色把手與紅色指示燈
+  const I = v => v * U, W = I(w), D = I(d), cx = I(x0 + w / 2), cz = I(z0 + d / 2), zf = I(z0 + d) + .02;
+  pbox(W, h, D, 0x2f3b4b, cx, 0, cz);
+  pbox(W - .1, h * .34, .04, 0x3a4a5e, cx, h * .62 - .04, zf);          // 上門
+  pbox(W - .1, h * .56, .04, 0x3a4a5e, cx, .08, zf);                    // 下門
+  pbox(.06, h * .2, .06, 0xc7ced6, cx + W / 2 - .22, h * .66, zf + .05, false); pbox(.06, h * .3, .06, 0xc7ced6, cx + W / 2 - .22, h * .24, zf + .05, false);
+  pbox(.1, .1, .04, 0xe04646, cx - W / 2 + .2, h * .86, zf + .03, false);
+  rects.push([I(x0), I(z0), I(x0 + w), I(z0 + d)]);
 }
 // 地圖上的文字標籤（DOM，才清楚）
 const labelEls = LABELS.map(([t, ix, iy]) => { const e = document.createElement('div'); e.className = 'lbl'; e.textContent = t; document.body.appendChild(e); return {e, p:new THREE.Vector3(ix * U, 2.6, iy * U)}; });
