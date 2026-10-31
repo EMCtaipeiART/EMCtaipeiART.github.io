@@ -293,6 +293,15 @@ button{font-family:inherit}
 .hp-top .pk-red{background:linear-gradient(90deg,#e8486a,#ff8a5f)!important}
 .hp-top .pk-dark{width:44px;padding:0!important;justify-content:center;background:rgba(14,24,32,.82)!important;font-size:20px!important}
 .hp-top button:hover{transform:translateY(-2px);filter:brightness(1.08)}
+/* 收合式按鈕：平常只有圓形＋小圖示，滑鼠移上去才展開中文字；說明放右下角 */
+.hp-br{position:absolute;right:12px;bottom:12px;display:flex;pointer-events:auto}
+.hp-top button,.hp-br button{position:relative;height:44px;min-width:44px;padding:0 7px!important;border:0!important;border-radius:999px!important;font:700 16px/1 'Fredoka','Noto Sans TC',sans-serif!important;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;gap:0;overflow:hidden;pointer-events:auto;cursor:pointer;box-shadow:inset 0 2px 0 rgba(255,255,255,.4),inset 0 -3px 0 rgba(0,0,0,.18),0 6px 14px rgba(0,0,0,.28)!important;transition:padding .28s ease,filter .15s,transform .15s}
+.hp-br button i{font-style:normal;flex:none;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.22);display:grid;place-items:center;font-size:18px;text-shadow:none}
+.hp-top button span,.hp-br button span{max-width:0;opacity:0;margin-left:0;white-space:nowrap;overflow:hidden;transition:max-width .3s ease,opacity .2s ease,margin .3s ease}
+.hp-top button:hover,.hp-br button:hover,.hp-top button:focus-visible,.hp-br button:focus-visible{padding:0 18px 0 7px!important;transform:translateY(-2px);filter:brightness(1.08)}
+.hp-top button:hover span,.hp-br button:hover span,.hp-top button:focus-visible span,.hp-br button:focus-visible span{max-width:90px;opacity:1;margin-left:8px}
+.hp-br .pk-purple{background:linear-gradient(90deg,#7b4de3,#3f8ef5)!important}
+.hp-top .pk-dark{width:auto!important;background:rgba(14,24,32,.82)!important}
 html.embed #hud,html.embed #dock,html.embed #proj,html.embed .lbl{display:none!important}   /* ?embed=1：嵌在網站設計師面板裡的精簡畫面 */
 #elevFx{position:fixed;inset:0;z-index:50;background:#0b1410;opacity:0;pointer-events:none;display:grid;place-items:center;transition:opacity .38s ease;font-family:'Fredoka','Noto Sans TC',sans-serif;color:#fff}
 #elevFx.on{opacity:1;pointer-events:auto}
@@ -338,7 +347,8 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 <div id="hud">
   <div class="hp-card"><div class="hp-av" id="pAv"></div><div class="hp-info"><div class="hp-name" id="pName">—</div><div class="hp-st" id="pSt"></div><div class="hp-exp"><i id="pExp"></i></div><div class="hp-lv" id="pLv"></div></div></div>
   <div class="hp-clock" id="pClock">🕒 …</div>
-  <div class="hp-top"><button id="bPeople" type="button" class="pk-dark" hidden>👥</button><button id="bWheel" type="button" class="pk-orange"><i>🎮</i>角色</button><button id="bDex" type="button" class="pk-green"><i>📖</i>圖鑑</button><button id="bHelp" type="button" class="pk-purple"><i>❓</i>說明</button><button id="bClose" type="button" class="pk-red" hidden><i>✕</i>關閉</button></div>
+  <div class="hp-top"><button id="bPeople" type="button" class="pk-dark" hidden title="切換人物"><i>👥</i><span>切換人物</span></button><button id="bWheel" type="button" class="pk-orange" title="角色"><i>🎮</i><span>角色</span></button><button id="bDex" type="button" class="pk-green" title="圖鑑"><i>📖</i><span>圖鑑</span></button><button id="bClose" type="button" class="pk-red" hidden title="關閉"><i>✕</i><span>關閉</span></button></div>
+  <div class="hp-br"><button id="bHelp" type="button" class="pk-purple" title="說明"><i>❓</i><span>說明</span></button></div>
 </div>
 <div id="stick"><i></i></div>
 <div id="proj"><canvas width="1024" height="576"></canvas><span></span></div>
