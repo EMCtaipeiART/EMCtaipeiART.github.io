@@ -689,7 +689,7 @@ function buildFloor4(T, place){
     for (const j of [0, 1]) { const cx = tx + tw * (2 * j + 1) / 4; chair3d(X(cx), I(cz - 52), 'S'); chair3d(X(cx), I(cz + 52), 'N'); }
     if (face === 'W') { const wx = r.x + 12; pbox(I(4), 2.3, I(r.h - 24), 0xf6f7f9, X(wx + 2), 0, I(cz)); projectorRig(X(tx + 28), I(cz), 'W', {room:id, wallX:X(wx + 4) + .02, wallDir:1, zc:I(cz), w:4.0, h:2.1, title:'專案會議', kind:'list'}); }
     else { const wx = r.x + r.w - 16; pbox(I(4), 2.3, I(r.h - 24), 0xf6f7f9, X(wx + 2), 0, I(cz)); projectorRig(X(tx + tw - 28), I(cz), 'E', {room:id, wallX:X(wx) - .02, wallDir:-1, zc:I(cz), w:4.0, h:2.1, title:'專案會議', kind:'text'}); } }
-  if (F4.snackSpot) SNACKS.forEach(([k, h], i) => { const raw = imgs[k] && trimmed(imgs[k]); if (!raw) return; const src = outlined(raw, 26), dh = h * .64 * src.height / raw.height, dw = dh * src.width / src.height, m = addBillboard(src, F4.snackSpot.cx + (-1.75 + i * .5), F4.snackSpot.cz, dw, dh); m.position.y = .95; });
+  if (F4.snackSpot) SNACKS.forEach(([k, h], i) => { const raw = imgs[k] && trimmed(imgs[k]); if (!raw) return; const src = outlined(raw, 18), dh = h * .64 * src.height / raw.height, dw = dh * src.width / src.height, m = addBillboard(src, F4.snackSpot.cx + (-1.75 + i * .5), F4.snackSpot.cz, dw, dh); m.position.y = .95; });
 }
 async function buildOffice(){
   await Promise.all(Object.entries(FILES).map(async ([k, f]) => { imgs[k] = await loadImg(ASSET + f); }));
@@ -708,7 +708,7 @@ async function buildOffice(){
   build3dObjects(T, place);
   await loadFunArt();
   await Promise.all(SNACKS.map(async ([k]) => { imgs[k] = await loadImg('snacks/' + k + '.png'); }));
-  if (pantry3d.snackSpot) SNACKS.forEach(([k, h], i) => { const raw = imgs[k] && trimmed(imgs[k]); if (!raw) return; const src = outlined(raw, 26), dh = h * .64 * src.height / raw.height, dw = dh * src.width / src.height, m = addBillboard(src, pantry3d.snackSpot.cx + (-1.75 + i * .5), pantry3d.snackSpot.cz, dw, dh); m.position.y = .95; });
+  if (pantry3d.snackSpot) SNACKS.forEach(([k, h], i) => { const raw = imgs[k] && trimmed(imgs[k]); if (!raw) return; const src = outlined(raw, 18), dh = h * .64 * src.height / raw.height, dw = dh * src.width / src.height, m = addBillboard(src, pantry3d.snackSpot.cx + (-1.75 + i * .5), pantry3d.snackSpot.cz, dw, dh); m.position.y = .95; });
   loadImg('fridge/office-foods-v1.webp').then(im => { foodSheet = im; fridges.forEach((fr, i) => { const t = fr.inner.userData.tex; fr.inner.material.map = fridgeInner(1, 1, FRIDGE_SHELVES[i % 2]).material.map; fr.inner.material.needsUpdate = true; }); });
   // 藍色桌組：每組兩排×三張（3D 方塊桌＋小螢幕），三排 × 設計部／同仁區
   const I = v => v * U;
