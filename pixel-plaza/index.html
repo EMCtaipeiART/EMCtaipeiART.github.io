@@ -262,7 +262,7 @@ button{font-family:inherit}
 .cp-wrap{position:relative;width:min(700px,100%)!important;gap:8px!important;padding:12px!important;border-radius:18px!important}
 .cp-x{position:absolute;right:10px;top:10px;z-index:2;height:30px;padding:0 16px;border-radius:999px;border:2px solid var(--line);background:rgba(0,0,0,.35);color:#fff;font:700 13px 'Fredoka','Noto Sans TC',sans-serif;cursor:pointer}
 .cp-x:hover{background:#e8486a}
-.cp-head{padding:10px 48px 10px 12px!important;gap:12px!important}
+.cp-head{padding:10px 12px!important;gap:12px!important}
 .cp-av{width:60px!important;height:60px!important}.cp-lv{font-size:10px!important;line-height:16px!important;bottom:-6px!important}
 .cp-name{font-size:24px!important}.cp-type{font-size:12px!important}
 .cp-cols{grid-template-columns:1fr 1fr!important;gap:8px!important}
@@ -283,6 +283,15 @@ button{font-family:inherit}
 .cp-story .th{width:48px!important;height:62px!important}
 @media (max-width:640px){.cp-cols{grid-template-columns:1fr!important}}
 #net{display:none!important}
+/* PokéBonk 式右上按鈕：高 44px 的膠囊、漸層底、白字粗體、左側小圖示 */
+.hp-top{gap:10px!important;align-items:center}
+.hp-top button{height:44px;padding:0 20px 0 12px!important;border:0!important;border-radius:999px!important;font:700 16px/1 'Fredoka','Noto Sans TC',sans-serif!important;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.28);display:flex;align-items:center;gap:8px;box-shadow:inset 0 2px 0 rgba(255,255,255,.4),inset 0 -3px 0 rgba(0,0,0,.18),0 6px 14px rgba(0,0,0,.28)!important;backdrop-filter:none!important}
+.hp-top button i{font-style:normal;width:30px;height:30px;border-radius:10px;background:rgba(255,255,255,.22);display:grid;place-items:center;font-size:18px;text-shadow:none}
+.hp-top .pk-orange{background:linear-gradient(90deg,#ff5f7a,#ffb23f)!important}
+.hp-top .pk-green{background:linear-gradient(90deg,#27b85c,#7be07a)!important}
+.hp-top .pk-purple{background:linear-gradient(90deg,#7b4de3,#3f8ef5)!important}
+.hp-top .pk-dark{width:44px;padding:0!important;justify-content:center;background:rgba(14,24,32,.82)!important;font-size:20px!important}
+.hp-top button:hover{transform:translateY(-2px);filter:brightness(1.08)}
 html.embed #hud,html.embed #dock,html.embed #proj,html.embed .lbl{display:none!important}   /* ?embed=1：嵌在網站設計師面板裡的精簡畫面 */
 #elevFx{position:fixed;inset:0;z-index:50;background:#0b1410;opacity:0;pointer-events:none;display:grid;place-items:center;transition:opacity .38s ease;font-family:'Fredoka','Noto Sans TC',sans-serif;color:#fff}
 #elevFx.on{opacity:1;pointer-events:auto}
@@ -328,8 +337,7 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 <div id="hud">
   <div class="hp-card"><div class="hp-av" id="pAv"></div><div class="hp-info"><div class="hp-name" id="pName">—</div><div class="hp-st" id="pSt"></div><div class="hp-exp"><i id="pExp"></i></div><div class="hp-lv" id="pLv"></div></div></div>
   <div class="hp-clock" id="pClock">🕒 …</div>
-  <div class="hp-top"><button id="bDex" type="button">📖 圖鑑</button><button id="bHelp" type="button">❓ 說明</button><button id="bPeople" type="button" hidden>👥 切換人物</button></div>
-  <div id="dock"><button id="bWheel" type="button">🎮 角色頁面</button></div>
+  <div class="hp-top"><button id="bPeople" type="button" class="pk-dark" hidden>👥</button><button id="bWheel" type="button" class="pk-orange"><i>🎮</i>角色</button><button id="bDex" type="button" class="pk-green"><i>📖</i>圖鑑</button><button id="bHelp" type="button" class="pk-purple"><i>❓</i>說明</button></div>
 </div>
 <div id="stick"><i></i></div>
 <div id="proj"><canvas width="1024" height="576"></canvas><span></span></div>
@@ -1386,6 +1394,7 @@ if (!handoff) { try {   // 沒有交接資料時，直接讀網站首頁的登�
     const user = get('designRequestEditorUser'), name = get('designRequestEditorDisplayName') || user;
     handoff = {name, token:get('designRequestEditorToken'), staff:false, monitor:user === 'Machi' || name.toLowerCase() === 'machi', at:Date.now(), fromSite:true};
   } } catch (e) {} }
+if (!handoff) { const as = new URLSearchParams(location.search).get('as'); if (as && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) handoff = {name:as, staff:false, monitor:as === 'Machi', at:Date.now(), dev:true}; }   // 只有本機開發才能用 ?as=名字 假裝登入
 const adminToken = () => (handoff && handoff.token) || '';
 const isAdmin = () => Boolean(handoff && handoff.monitor && handoff.token);
 const radial = document.createElement('div'); radial.id = 'cpage'; radial.hidden = true; document.body.appendChild(radial);   // 舊名 radial 沿用，指向角色頁面
@@ -1547,7 +1556,7 @@ function renderCharPage(){
   const moodPct = {happy:90, joy:100, sad:35, angry:20}[c.mood] ?? 60, moodTxt = c.mood ? (iconImg(moodSym[c.mood], 18) + ' ' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[c.mood]) : '— 未設定';
   const keepMsg = radial.querySelector('#cpMsg') ? radial.querySelector('#cpMsg').value : null, keepMusic = radial.querySelector('#cpMusic') ? radial.querySelector('#cpMusic').value : '';
   const mine = storiesOf(c.name), m = c.music;
-  radial.innerHTML = `<div class="cp-wrap"><button type="button" class="cp-x" id="cpX" title="關閉">關閉</button>
+  radial.innerHTML = `<div class="cp-wrap">
     <div class="cp-head">
       <div class="cp-av"><img alt="" src="${c.avatar || ''}"><b class="cp-lv">Lv.${lv}</b></div>
       <div class="cp-main">
@@ -1576,7 +1585,6 @@ function renderCharPage(){
         </section>
       </div>
     </div>
-    <details class="cp-fold"><summary>管理者工具</summary><section class="cp-admin" id="cpAdmin"></section></details>
   </div>`;
   const mm = radial.querySelector('#cpMood'); for (const id of Object.keys(MOOD)) { const b = document.createElement('button'); b.type = 'button'; b.className = c.mood === id ? 'on' : ''; b.innerHTML = '<i>' + iconImg(moodSym[id], 44) + '</i>' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[id]; b.onclick = () => setOwnMood(id); mm.appendChild(b); }
   const x = document.createElement('button'); x.type = 'button'; x.className = 'clr'; x.innerHTML = '清除心情'; x.onclick = () => setOwnMood(''); mm.appendChild(x);
@@ -1586,8 +1594,6 @@ function renderCharPage(){
   const mp = radial.querySelector('#cpMPlay'); if (mp) mp.onclick = () => toggleMusic(c); const ms = radial.querySelector('#cpMStop'); if (ms) ms.onclick = clearOwnMusic;
   const file = radial.querySelector('#cpFile'); radial.querySelector('#cpPost').onclick = () => file.click(); file.onchange = () => { const f = file.files[0]; file.value = ''; if (f) postStory(f); };
   radial.querySelectorAll('.cp-story .th').forEach(b => b.onclick = () => { radialClose(); openStory(c.name); }); radial.querySelectorAll('.cp-story .rm').forEach(b => b.onclick = () => removeStory(b.dataset.id));
-  radial.querySelector('#cpX').onclick = radialClose;
-  renderAdmin();
 }
 // 管理者工具：全員上班／下班、上下班設定、班長處罰（沿用 2D 版的動作；測試階段全面開放）
 function renderAdmin(){
@@ -1605,7 +1611,7 @@ function renderAdmin(){
   box.querySelector('#pnGo').onclick = () => punish(Number(box.querySelector('#pnDays').value) || 1); box.querySelector('#pnOff').onclick = () => punish(0);
 }
 async function loadHours(){ try { const r = await adminCall('getPixelHours'); hoursCfg = r.config || null; hoursForce = r.force || hoursForce; if (!radial.hidden) renderAdmin(); } catch (e) {} }
-function radialOpen(who){ if (!player) return; pageChar = who && who !== player ? who : null; radial.hidden = false; renderCharPage(); loadHours(); }
+function radialOpen(who){ if (!player) return; pageChar = who && who !== player ? who : null; radial.hidden = false; renderCharPage(); }
 function radialClose(){ pageChar = null; radial.hidden = true; radial.innerHTML = ''; }
 function placeRadial(){}
 addEventListener('keydown', e => { if (e.key === 'Escape') { if (!wheel.hidden) wheelClose(); else if (!fridgePanel.hidden) fridgeClose(); else if (!$('sv').hidden) closeStory(); else if (!radial.hidden) radialClose(); } });
@@ -1675,13 +1681,18 @@ function avatarURL(c){   // 取角色正面圖的頭肩部分當大頭貼
 }
 // 登入：沿用網站首頁登入後留下的身分（localStorage pixelViewerHandoff，24 小時內有效），依登入帳號操作人物；沒登入只能參觀
 const meName = () => handoff ? (NAMES.find(n => n.toLowerCase() === String(handoff.name).toLowerCase()) || null) : null;
-function showTitleCard(){ for (const c of Object.values(chars)) c.avatar = avatarURL(c); startGame(); }   // 不再有登入頁：載完直接進入（有網站登入身分就用該人物，否則預設 Machi）
+function showTitleCard(){
+  for (const c of Object.values(chars)) c.avatar = avatarURL(c);
+  if (meName()) { startGame(); return; }
+  $('tLoad').style.display = 'none'; $('tCard').hidden = false; $('tGo').hidden = true; $('tGuest').hidden = true; $('tLogin').hidden = false;   // 沒登入：不能進入，只提示登入（人物與帳號綁定）
+  $('tMe').textContent = handoff ? '這個帳號（' + handoff.name + '）沒有對應的設計部人物，無法進入元宇宙。' : '請先登入網站，登入後會自動綁定你的人物。';
+}   // 不再有登入頁：載完直接進入（有網站登入身分就用該人物，否則預設 Machi）
 function updateTitleNet(){ const e = $('tNet'); if (e) e.textContent = live.ok ? '已連線到「凱曜設計部」伺服器，出勤狀態即時更新' : '目前離線：依時間規則模擬出勤狀態'; }
 let adminHome = false;   // 登入身分是 Machi／管理者：可以切換、操控任何人（就算被切成離開辦公室而看不到人物）
 function startGame(){
-  adminHome = (meName() || 'Machi') === 'Machi' || isAdmin(); $('bPeople').hidden = !adminHome;
+  adminHome = Boolean(handoff && handoff.monitor); $('bPeople').hidden = !adminHome;   // 只有管理者帳號能切換、操控其他人物
   $('bPeople').onclick = () => { $('drawer').hidden = !$('drawer').hidden; }; $('roster').addEventListener('click', e => { if (e.target.closest('button')) $('drawer').hidden = true; });
-  select(meName() || 'Machi');
+  select(meName());
   $('title').classList.add('gone'); setTimeout(() => { $('title').style.display = 'none'; }, 450);
 }
 $('tGo').onclick = startGame; $('tGuest').onclick = startGame;
