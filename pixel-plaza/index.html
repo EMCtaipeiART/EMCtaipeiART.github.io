@@ -1040,15 +1040,10 @@ function avatarURL(c){   // 取角色正面圖的頭肩部分當大頭貼
 }
 // 登入：沿用網站首頁登入後留下的身分（localStorage pixelViewerHandoff，24 小時內有效），依登入帳號操作人物；沒登入只能參觀
 const meName = () => handoff ? (NAMES.find(n => n.toLowerCase() === String(handoff.name).toLowerCase()) || null) : null;
-function showTitleCard(){
-  $('tLoad').style.display = 'none'; $('tCard').hidden = false; for (const c of Object.values(chars)) c.avatar = avatarURL(c); updateTitleNet();
-  const me = meName();
-  if (me) { $('tMe').innerHTML = '<img class="t-av" alt="" src="' + chars[me].avatar + '"><div><b>已登入：' + me + '</b><small>將依登入帳號操作你的人物</small></div>'; $('tGo').hidden = false; $('tLogin').hidden = true; $('tGuest').hidden = true; }
-  else { $('tMe').innerHTML = '<div class="t-av">🔒</div><div><b>尚未登入</b><small>' + (handoff ? '登入帳號「' + handoff.name + '」不在辦公室名單內' : '請先在網站首頁登入，再從頭像進入多元宇宙') + '</small></div>'; $('tGo').hidden = true; $('tLogin').hidden = false; $('tGuest').hidden = false; }
-}
+function showTitleCard(){ for (const c of Object.values(chars)) c.avatar = avatarURL(c); startGame(); }   // 不再有登入頁：載完直接進入（有網站登入身分就用該人物，否則預設 Machi）
 function updateTitleNet(){ const e = $('tNet'); if (e) e.textContent = live.ok ? '已連線到「凱曜設計部」伺服器，出勤狀態即時更新' : '目前離線：依時間規則模擬出勤狀態'; }
 function startGame(){
-  const me = meName(); if (me) select(me);
+  select(meName() || 'Machi');
   $('title').classList.add('gone'); setTimeout(() => { $('title').style.display = 'none'; }, 450);
 }
 $('tGo').onclick = startGame; $('tGuest').onclick = startGame;
