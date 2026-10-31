@@ -443,7 +443,7 @@ function addBillboard(src, cx, z, dw, dh){
   const m = new THREE.Mesh(new THREE.PlaneGeometry(dw, dh), new THREE.MeshBasicMaterial({map:propTexture(src, dw, dh), transparent:true, alphaTest:.5, side:THREE.DoubleSide}));
   m.geometry.translate(0, dh / 2, 0); m.position.set(cx, 0, z); scene.add(m); billboards.push(m); return m;
 }
-const SNACKS = [['snack_chips', .8], ['snack_cupnoodle', .62], ['snack_cola', .52], ['snack_cookie', .46], ['snack_choco', .42], ['snack_candy', .68]];
+const SNACKS = [['snack_kuaikuai', .86], ['snack_peacock', .62], ['snack_kolaguo', .78], ['snack_puff', .7], ['snack_77', .66], ['snack_sarsaparilla', .74], ['snack_maixiang', .7], ['snack_yakult', .56]];   // 台灣經典零食與飲料（Codex 生成的像素圖，pixel-plaza/snacks/）
 // ---- 辦公室小樂趣（移植自 2D 版 fun.js）：投影機隨機畫面、會議室遺落物、地上的驚喜道具、馬桶便便 ----
 // 出現什麼、在哪裡，用「時段＋種子」算出來；沖掉／撿走／開關投影機只記在這個瀏覽器（本機），不寫回後端。
 const SLIDES=[['本週進度','▮▮▮▮▮▯▯ 72%'],['午餐投票','🍱 便當　🍜 拉麵　🥗 沙拉'],['今日金句','「改稿是設計師的日常」'],['Q4 目標','客戶滿意度 ↑ 加班 ↓'],['休息一下','☕ 15 分鐘後回來'],['週五提醒','🎉 下班前記得關電腦'],['新需求','「這個 logo 可以再大一點嗎」'],['會議紀錄','結論：下次再討論'],
@@ -580,8 +580,8 @@ async function buildOffice(){
   }
   build3dObjects(T, place);
   await loadFunArt();
-  await Promise.all(SNACKS.map(async ([k]) => { imgs[k] = await loadImg(ASSET + 'props4/' + k + '.png'); }));
-  if (pantry3d.snackSpot) SNACKS.forEach(([k, h], i) => { const src = imgs[k] && trimmed(imgs[k]); if (!src) return; const dh = h * .75, dw = dh * src.width / src.height, m = addBillboard(src, pantry3d.snackSpot.cx + (-1.55 + i * .62), pantry3d.snackSpot.cz, dw, dh); m.position.y = .95; });
+  await Promise.all(SNACKS.map(async ([k]) => { imgs[k] = await loadImg('snacks/' + k + '.png'); }));
+  if (pantry3d.snackSpot) SNACKS.forEach(([k, h], i) => { const src = imgs[k] && trimmed(imgs[k]); if (!src) return; const dh = h * .75, dw = dh * src.width / src.height, m = addBillboard(src, pantry3d.snackSpot.cx + (-1.62 + i * .46), pantry3d.snackSpot.cz, dw, dh); m.position.y = .95; });
   startGameplay(); loadImg('fridge/office-foods-v1.webp').then(im => { foodSheet = im; fridges.forEach((fr, i) => { const t = fr.inner.userData.tex; fr.inner.material.map = fridgeInner(1, 1, FRIDGE_SHELVES[i % 2]).material.map; fr.inner.material.needsUpdate = true; }); });
   // 藍色桌組：每組兩排×三張（3D 方塊桌＋小螢幕），三排 × 設計部／同仁區
   const I = v => v * U;
