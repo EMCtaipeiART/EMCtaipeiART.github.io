@@ -1091,7 +1091,7 @@ async function pollOnce(){
 // ---- 位置同步：自己走動時回報位置，其他人（含訪客）依後端的位置顯示，大家看到的畫面一致 ----
 // 沿用後端現有欄位（patch: floor/fx/fy/fdir → 存成 floor4At、f4x、f4y、f4dir）：fx < 3000 是五樓（fx=x px、fy=z px）；fx ≥ 3000 是四樓（fx=3000+局部 x+100、fy=z+100）。
 // floor4At 是最後回報時間，超過 3 分鐘沒更新就當作人不在線上，改回依狀態擺放。
-const POS_PUSH_MS = 700, POS_BEAT_MS = 45000, REMOTE_STALE_MS = 180000;
+const POS_PUSH_MS = 220, POS_BEAT_MS = 45000, REMOTE_STALE_MS = 180000;
 const posSent = {x:-99, z:-99, t:0};
 const faceDir = f => { const dx = Math.sin(f), dz = Math.cos(f); return Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 'right' : 'left') : (dz > 0 ? 'down' : 'up'); };
 function pushPosition(){
@@ -1119,14 +1119,16 @@ function remoteStep(c, dt){
   let dx = r.x - p.x, dz = r.z - p.z, d = Math.hypot(dx, dz);
   if (c.sitting) { const sp = sitSpot(c.sitting); if (Math.hypot(sp.x - r.x, sp.z - r.z) > .35) standUp(c); else { c.moving = 0; return; } dx = r.x - p.x; dz = r.z - p.z; d = Math.hypot(dx, dz); }
   if (d > 14) { p.x = r.x; p.z = r.z; d = 0; }
-  if (d > .06) { const step = Math.min(d, 4.8 * dt); p.x += dx / d * step; p.z += dz / d * step; c.face = Math.atan2(dx, dz); c.moving = d > 1.6 ? 4.8 : 2.4; }
+  if (d > .06) { const step = Math.min(d, Math.max(4.8, d * 3.2) * dt); p.x += dx / d * step; p.z += dz / d * step; c.face = Math.atan2(dx, dz); c.moving = d > 1.6 ? 4.8 : 2.4; }
   else {
     c.moving = 0;
     const st = chairSeats.find(q => !q.by && !q.hidden && Math.hypot(sitSpot(q).x - p.x, sitSpot(q).z - p.z) < .2);
     if (st) sitDown(c); else if (r.dir) c.face = ({down:0, up:Math.PI, right:Math.PI / 2, left:-Math.PI / 2})[r.dir] ?? c.face;
   }
 }
-function startLiveSync(){ const loop = async () => { await pollOnce(); setTimeout(loop, document.hidden ? 15000 : 1200); }; loop(); }
+// 輪詢節奏：有人在動（狀態有變化）就連續快速輪詢 350ms 約 8 秒，安靜時 1.5 秒；分頁在背景 15 秒
+let hotUntil = 0;
+function startLiveSync(){ const loop = async () => { const v0 = live.version; await pollOnce(); if (live.version !== v0) hotUntil = performance.now() + 8000; setTimeout(loop, document.hidden ? 15000 : (performance.now() < hotUntil || (player && player.moving) ? 350 : 1500)); }; loop(); }
 // ---- 冰箱：點冰箱走過去開門（門真的轉開、露出架上零食），點零食拿一個；庫存與排行在後端 /minigames/fridge（和 2D 版同一份）----
 const FOODS = {
   chips:['洋芋片', '🥔 喀滋喀滋！洋芋片超涮嘴', 'happy'], cookie:['餅乾', '🍪 酥脆餅乾，配咖啡剛好', 'happy'], candy:['糖果', '🍬 含顆糖，心情甜甜的', 'joy'],
