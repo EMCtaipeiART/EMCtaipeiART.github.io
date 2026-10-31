@@ -255,6 +255,31 @@ button{font-family:inherit}
 .sv-bar #svLike{font:700 14px 'Fredoka',sans-serif;color:#fff;background:rgba(255,255,255,.1);border:2px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer}.sv-bar #svLike.on{background:#e8486a;border-color:#fff}
 .sv-bar input{flex:1;min-width:0;padding:8px 12px;border-radius:999px;border:2px solid var(--line);background:rgba(0,0,0,.3);color:#fff;font:600 14px 'Fredoka','Noto Sans TC',sans-serif}
 
+
+/* 精簡版角色頁面 */
+.cp-wrap{position:relative;width:min(700px,100%)!important;gap:8px!important;padding:12px!important;border-radius:18px!important}
+.cp-x{position:absolute;right:10px;top:10px;z-index:2;width:30px;height:30px;border-radius:50%;border:2px solid var(--line);background:rgba(0,0,0,.35);color:#fff;font:700 14px sans-serif;cursor:pointer}
+.cp-x:hover{background:#e8486a}
+.cp-head{padding:10px 48px 10px 12px!important;gap:12px!important}
+.cp-av{width:60px!important;height:60px!important}.cp-lv{font-size:10px!important;line-height:16px!important;bottom:-6px!important}
+.cp-name{font-size:24px!important}.cp-type{font-size:12px!important}
+.cp-cols{grid-template-columns:1fr 1fr!important;gap:8px!important}
+.cp-stack{gap:8px!important}
+.cp-panel header{padding:5px 12px!important}.cp-panel header h3{font-size:15px!important}
+.cp-panel>:not(header){margin:8px 12px 0!important}.cp-panel>:last-child{margin-bottom:10px!important}
+.cp-cur{padding:6px 10px!important}.cp-cur i img{width:34px;height:34px}.cp-cur b{font-size:16px!important}
+.cp-grid{gap:5px!important}.cp-grid button{padding:5px 2px!important;font-size:12px!important;border-radius:11px!important}
+.cp-grid button i img{width:28px;height:28px}.cp-grid.m button i img{width:24px;height:24px}
+.cp-chips button{padding:5px 11px!important;font-size:12px!important}
+.cp-prev span{font-size:13px!important;padding:5px 11px!important}
+.cp-fold{border-radius:12px;border:2px solid var(--line);background:rgba(4,32,18,.84)}
+.cp-fold summary{padding:7px 12px;font-weight:700;font-size:14px;cursor:pointer}
+.cp-fold .cp-admin{border:0;background:none}.cp-fold .cp-admin>:not(header){margin:0 10px 10px!important}
+.cp-adm-grid{grid-template-columns:1fr!important}
+.cp-btns{gap:8px!important}.cp-btns button{padding:7px 14px!important;font-size:13px!important}
+.cp-btns .cp-go{padding:8px 28px!important;font-size:15px!important;border-bottom-width:4px!important}
+.cp-story .th{width:48px!important;height:62px!important}
+@media (max-width:640px){.cp-cols{grid-template-columns:1fr!important}}
 @media (max-width:640px){.hp-card{min-width:0}.hp-clock{top:84px;font-size:13px}#net{top:122px}#proj{top:150px}.hp-top button{padding:7px 11px}}
 
 </style></head><body>
@@ -280,7 +305,7 @@ button{font-family:inherit}
   <div class="hp-card"><div class="hp-av" id="pAv"></div><div class="hp-info"><div class="hp-name" id="pName">—</div><div class="hp-st" id="pSt"></div><div class="hp-exp"><i id="pExp"></i></div><div class="hp-lv" id="pLv"></div></div></div>
   <div class="hp-clock" id="pClock">🕒 …</div>
   <div class="hp-top"><button id="bDex" type="button">📖 圖鑑</button><button id="bHelp" type="button">❓ 說明</button></div>
-  <div id="dock"><button id="bWheel" type="button">🎮 角色頁面</button><button id="sit" type="button">🪑 坐下 / 起身 (E)</button></div>
+  <div id="dock"><button id="bWheel" type="button">🎮 角色頁面</button><button id="sit" type="button">🪑 坐下 (E)</button></div>
 </div>
 <div id="stick"><i></i></div>
 <div id="proj"><canvas width="128" height="72"></canvas><span></span></div>
@@ -924,14 +949,14 @@ async function pollOnce(){
   setNet();
 }
 function startLiveSync(){ const loop = async () => { await pollOnce(); setTimeout(loop, document.hidden ? 15000 : 3000); }; loop(); }
-const SIT_DROP = .2;
+const SIT_DROP = .1;
 function sitDown(c){
   if (c.sitting) return false;
   let best = null, bd = 2.2;
   for (const st of chairSeats) { if (st.by) continue; const d = Math.hypot(st.x - c.holder.position.x, st.z - c.holder.position.z); if (d < bd) { bd = d; best = st; } }
   if (!best) return false;
   best.by = c; c.sitting = best; c.wander = false; c.moving = 0; c.face = best.face;
-  const fw = best.fwd ?? .32; c.holder.position.set(best.x + Math.sin(best.face) * fw, 0, best.z + Math.cos(best.face) * fw);
+  const fw = best.fwd ?? (best.face === 0 ? .06 : .32); c.holder.position.set(best.x + Math.sin(best.face) * fw, 0, best.z + Math.cos(best.face) * fw);
   return true;
 }
 function standUp(c){
@@ -940,7 +965,7 @@ function standUp(c){
   for (const k of [-1, 1]) { const x = st.x + fx * k * 1.0, z = st.z + fz * k * 1.0; if (!blocked(x, z)) { c.holder.position.set(x, 0, z); break; } }
   st.by = null; c.sitting = null;
 }
-function toggleSit(){ if (!player) return; if (player.sitting) standUp(player); else sitDown(player); }
+function toggleSit(){ if (player && !player.sitting) sitDown(player); }   // 只有坐下；要起身直接走動
 addEventListener('keydown', e => { if (e.code === 'KeyE') toggleSit(); });
 document.getElementById('sit').addEventListener('click', toggleSit);
 function select(name){
@@ -1245,44 +1270,40 @@ function renderCharPage(){
   const moodPct = {happy:90, joy:100, sad:35, angry:20}[c.mood] ?? 60, moodTxt = c.mood ? (iconImg(moodSym[c.mood], 18) + ' ' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[c.mood]) : '— 未設定';
   const keepMsg = radial.querySelector('#cpMsg') ? radial.querySelector('#cpMsg').value : null, keepMusic = radial.querySelector('#cpMusic') ? radial.querySelector('#cpMusic').value : '';
   const mine = storiesOf(c.name), m = c.music;
-  radial.innerHTML = `<div class="cp-wrap">
+  radial.innerHTML = `<div class="cp-wrap"><button type="button" class="cp-x" id="cpX" title="關閉">✕</button>
     <div class="cp-head">
       <div class="cp-av"><img alt="" src="${c.avatar || ''}"><b class="cp-lv">Lv.${lv}</b></div>
       <div class="cp-main">
         <div class="cp-tag"><span class="cp-pill">${live.ok ? '即時' : '模擬'}</span><span>凱曜設計部 · 5F · ${esc(roomOf(c))}</span></div>
         <div class="cp-name">${esc(c.name)} <span class="cp-type">${iconImg(symOf[c.status] || 'person', 20)} ${st[0]}</span></div>
-        <div class="cp-bar"><label>心情</label><div><i style="width:${moodPct}%"></i></div><span>${moodTxt}</span></div>
-        <div class="cp-bar xp"><label>經驗</label><div><i style="width:${(total % 5) / 5 * 100}%"></i></div><span>${total % 5}/5</span></div>
       </div>
     </div>
     <div class="cp-cols">
-      <section class="cp-panel p1"><header><h3>狀態</h3><em>共 9 種</em></header>
+      <section class="cp-panel p1"><header><h3>狀態</h3></header>
         <div class="cp-cur"><i>${iconImg(symOf[c.status] || 'person', 52)}</i><div><b>${st[0]}</b><small>${STATUS_DESC[c.status] || ''}</small></div></div>
         <div class="cp-grid" id="cpSt"></div>
         <div class="cp-chips"><button type="button" id="cpAuto">🤖 交還電腦自動判斷</button></div>
-        <h4>現在的心情</h4><div class="cp-grid m" id="cpMood"></div>
+        <h4>心情</h4><div class="cp-grid m" id="cpMood"></div>
       </section>
       <div class="cp-stack">
-        <section class="cp-panel p2"><header><h3>想說的話</h3><em>顯示在頭上・60 字</em></header>
+        <section class="cp-panel p2"><header><h3>想說的話</h3></header>
           <div class="cp-chat"><div class="cp-prev"><span id="cpPrev"></span></div>
             <form class="cp-chat-in" id="cpForm"><img alt="" src="${c.avatar || ''}"><input id="cpMsg" type="text" maxlength="60" placeholder="說點什麼…" autocomplete="off"><button type="submit" class="send" title="送出">➤</button></form>
             <div class="cp-chips"><button type="button" id="cpClr">清除對話</button></div></div>
         </section>
-        <section class="cp-panel p4"><header><h3>音樂</h3><em>${m ? '分享中' : 'Spotify／Apple Music'}</em></header>
+        <section class="cp-panel p4"><header><h3>音樂</h3></header>
           ${m ? '<div class="cp-music"><span class="note">🎧</span><div><b>' + esc(m.title || '音樂') + '</b><small>' + esc(m.url) + '</small></div><button type="button" id="cpMPlay">▶</button></div>' : ''}
           <form class="cp-chat-in" id="cpMForm"><input id="cpMusic" type="text" placeholder="貼上 Spotify 或 Apple Music 網址" autocomplete="off"><button type="submit" class="send" title="分享">♪</button></form>
           <div class="cp-chips">${m ? '<button type="button" id="cpMStop">停止分享</button>' : ''}</div>
-          <p class="cp-note">分享後頭上會出現音樂泡泡，點 ▶ 就能聽（Apple Music 試聽 30 秒；Spotify 開小播放器）。</p>
         </section>
-        <section class="cp-panel p3"><header><h3>限時動態</h3><em>${mine.length}/${STORY_MAX_ACTIVE}・24 小時</em></header>
+        <section class="cp-panel p3"><header><h3>限時動態</h3><em>${mine.length}/${STORY_MAX_ACTIVE}</em></header>
           <div class="cp-chips"><button type="button" class="primary" id="cpPost">＋ 貼出照片／GIF／影片</button></div>
           <input type="file" id="cpFile" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" hidden>
-          <div class="cp-stories">${mine.map(s => '<div class="cp-story"><button type="button" class="th" data-id="' + esc(s.id) + '">' + (s.mediaType === 'video' ? '<video src="' + esc(mediaUrl(s.imageUrl)) + '" muted></video>' : '<img alt="" src="' + esc(mediaUrl(s.imageUrl)) + '">') + '</button><small>❤ ' + (s.likes || []).length + '・💬 ' + (s.comments || []).length + '</small><button type="button" class="rm" data-id="' + esc(s.id) + '">下架</button></div>').join('') || '<p class="cp-note">還沒有限時動態。貼出後人物右上角會出現小訊息氣泡，同事點它就能看。</p>'}</div>
+          <div class="cp-stories">${mine.map(s => '<div class="cp-story"><button type="button" class="th" data-id="' + esc(s.id) + '">' + (s.mediaType === 'video' ? '<video src="' + esc(mediaUrl(s.imageUrl)) + '" muted></video>' : '<img alt="" src="' + esc(mediaUrl(s.imageUrl)) + '">') + '</button><small>❤ ' + (s.likes || []).length + '・💬 ' + (s.comments || []).length + '</small><button type="button" class="rm" data-id="' + esc(s.id) + '">下架</button></div>').join('') || '<p class="cp-note">還沒有限時動態</p>'}</div>
         </section>
       </div>
     </div>
-    <section class="cp-admin" id="cpAdmin"></section>
-    <div class="cp-keys"><kbd>Esc</kbd> 繼續 · <kbd>WASD</kbd> 移動 · <kbd>Shift</kbd> 跑步 · <kbd>E</kbd> 坐下／起身 · 點人物頭上的泡泡看動態、聽音樂 · 點地上道具撿取 · 點馬桶沖水 · 點投影機開關</div>
+    <details class="cp-fold"><summary>管理者工具</summary><section class="cp-admin" id="cpAdmin"></section></details>
     <div class="cp-btns"><button type="button" id="cpDex">📖 圖鑑</button><button type="button" id="cpHelp">❓ 說明</button><button type="button" class="cp-go" id="cpGo">繼續</button></div>
   </div>`;
   const g = radial.querySelector('#cpSt'); for (const [id, [name]] of Object.entries(STATUS)) { const b = document.createElement('button'); b.type = 'button'; b.className = c.status === id ? 'on' : ''; b.innerHTML = '<i>' + iconImg(symOf[id], 44) + '</i>' + name; b.onclick = () => setOwnStatus(id); g.appendChild(b); }
@@ -1294,7 +1315,7 @@ function renderCharPage(){
   const mp = radial.querySelector('#cpMPlay'); if (mp) mp.onclick = () => toggleMusic(c); const ms = radial.querySelector('#cpMStop'); if (ms) ms.onclick = clearOwnMusic;
   const file = radial.querySelector('#cpFile'); radial.querySelector('#cpPost').onclick = () => file.click(); file.onchange = () => { const f = file.files[0]; file.value = ''; if (f) postStory(f); };
   radial.querySelectorAll('.cp-story .th').forEach(b => b.onclick = () => { radialClose(); openStory(c.name); }); radial.querySelectorAll('.cp-story .rm').forEach(b => b.onclick = () => removeStory(b.dataset.id));
-  radial.querySelector('#cpAuto').onclick = setOwnAuto; radial.querySelector('#cpGo').onclick = radialClose;
+  radial.querySelector('#cpAuto').onclick = setOwnAuto; radial.querySelector('#cpGo').onclick = radialClose; radial.querySelector('#cpX').onclick = radialClose;
   radial.querySelector('#cpDex').onclick = () => { radialClose(); $('bDex').click(); }; radial.querySelector('#cpHelp').onclick = () => { radialClose(); $('bHelp').click(); };
   renderAdmin();
 }
@@ -1302,7 +1323,7 @@ function renderCharPage(){
 function renderAdmin(){
   const box = radial.querySelector('#cpAdmin'); if (!box) return;
   const rows = [['dayStart', '上班開始'], ['lunchStart', '午休開始'], ['lunchEnd', '午休結束'], ['workEnd', '下班'], ['overtimeStart', '加班開始']], cfg = hoursCfg || {};
-  box.innerHTML = '<header><h3>管理者工具</h3><em>' + esc((player && player.name) || '') + '・測試階段全面開放</em></header><div class="cp-adm-grid">' +
+  box.innerHTML = '<div class="cp-adm-grid">' +
     '<div class="cp-card"><h4>全員上班／下班</h4><p class="cp-note">目前：<b>' + (hoursForce === 'work' ? '全員上班' : hoursForce === 'off' ? '全員下班' : '依時段自動') + '</b>。按一下切換，所有人的畫面一起改變。</p><div class="cp-chips"><button type="button" class="primary" id="adWork">' + (hoursForce === 'work' ? '切換成全員下班' : '切換成全員上班') + '</button></div></div>' +
     '<div class="cp-card"><h4>上下班設定</h4><label class="cp-f"><input type="checkbox" id="fhOn"' + (cfg.enabled !== false ? ' checked' : '') + '> 套用上下班時段規則</label><label class="cp-f"><input type="checkbox" id="fhRooms"' + (cfg.meetingRooms !== false ? ' checked' : '') + '> 行事曆有會議時依會議室入座</label>' +
       rows.map(r => '<label class="cp-f"><span>' + r[1] + '</span><input type="number" min="0" max="23" id="fh_' + r[0] + '" value="' + (cfg[r[0]] ?? '') + '"></label>').join('') + '<div class="cp-chips"><button type="button" class="primary" id="fhSave">儲存</button></div></div>' +
