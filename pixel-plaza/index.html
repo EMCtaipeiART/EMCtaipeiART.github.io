@@ -1111,6 +1111,9 @@ const posSent = {x:-99, z:-99, t:0};
 const faceDir = f => { const dx = Math.sin(f), dz = Math.cos(f); return Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 'right' : 'left') : (dz > 0 ? 'down' : 'up'); };
 function pushPosition(){
   const c = player; if (!c || !live.ok || AWAY.has(c.status)) return;
+  if (c.home && c.sitting && Math.hypot(c.holder.position.x - c.home.x, c.holder.position.z - c.home.z) < .6) {   // 坐在自己的座位上：不用回報位置（別人依狀態就會把他放在這），並清掉先前的回報
+    if (!posSent.home) { posSent.home = true; posSent.x = -99; post({action:'pixelOfficeUpdate', name:c.name, patch:{floor:5}}).catch(() => {}); } return; }
+  posSent.home = false;
   const now = performance.now(), p = c.holder.position, moved = Math.hypot(p.x - posSent.x, p.z - posSent.z) > .12;
   if (!((moved && now - posSent.t > POS_PUSH_MS) || now - posSent.t > POS_BEAT_MS)) return;
   posSent.x = p.x; posSent.z = p.z; posSent.t = now;
@@ -1299,6 +1302,12 @@ function elevGo(to){
   if (elevBusy || !player) return; wantElev = false; elevArmed = false; target = null; elevBusy = true; wheelClose(); fridgeClose();
   elevCover(to + 'F', () => { releaseSeat(player); const sp = elevSpot(to); player.holder.position.set(sp.x, 0, sp.z + .6); player.face = 0; camPos.set(sp.x, 10.9, sp.z + 12.8); look.set(sp.x, 0, sp.z); }, () => { elevBusy = false; showQuote('', '🛗 到了 ' + to + ' 樓'); });
 }
+// ---- 自動更新：網站有新版本時（ETag 變了），分頁自己重新載入，避免有人開著舊版一直回報舊的座位／位置 ----
+(function autoUpdate(){
+  const url = location.pathname, tag = async () => { try { const r = await fetch(url, {method:'HEAD', cache:'no-store'}); return r.headers.get('etag') || r.headers.get('last-modified') || ''; } catch (e) { return ''; } };
+  let base = null; tag().then(t => { base = t; });
+  setInterval(async () => { if (document.hidden && Math.random() < .5) return; const t = await tag(); if (base && t && t !== base) { showQuote('', '🔄 有新版本，馬上更新'); setTimeout(() => location.reload(), 2500); base = t; } else if (!base) base = t; }, 60000);
+})();
 // ---- 座位現場：不在座位的狀態（用餐／會議／休假／下班／廁所／出國／公出）椅子與桌上電腦收起、桌面變灰、桌上放狀態圖示；加班有紫色聚光燈與三團鬼火 ----
 const AWAY_DESK = new Set(['lunch', 'meeting', 'leave', 'offwork', 'toilet', 'abroad', 'out']), iconTex = {};
 function flameTex(){ const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), r = g.createRadialGradient(32, 40, 2, 32, 38, 28); r.addColorStop(0, 'rgba(255,240,255,1)'); r.addColorStop(.35, 'rgba(190,120,255,.95)'); r.addColorStop(1, 'rgba(110,40,220,0)'); g.fillStyle = r; g.beginPath(); g.moveTo(32, 2); g.bezierCurveTo(48, 22, 56, 34, 50, 46); g.bezierCurveTo(46, 58, 18, 58, 14, 46); g.bezierCurveTo(8, 34, 22, 24, 32, 2); g.fill(); g.fillStyle = '#2a0a55'; g.fillRect(24, 36, 4, 6); g.fillRect(37, 36, 4, 6); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
