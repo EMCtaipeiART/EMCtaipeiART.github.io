@@ -1660,6 +1660,7 @@ function renderCharPage(){
         </section>
       </div>
     </div>
+    ${adminHome ? '<details class="cp-fold"><summary>班長工具</summary><section class="cp-admin" id="cpAdmin"></section></details>' : ''}
   </div>`;
   const mm = radial.querySelector('#cpMood'); for (const id of Object.keys(MOOD)) { const b = document.createElement('button'); b.type = 'button'; b.className = c.mood === id ? 'on' : ''; b.innerHTML = '<i>' + iconImg(moodSym[id], 44) + '</i>' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[id]; b.onclick = () => setOwnMood(id); mm.appendChild(b); }
   const x = document.createElement('button'); x.type = 'button'; x.className = 'clr'; x.innerHTML = '清除心情'; x.onclick = () => setOwnMood(''); mm.appendChild(x);
@@ -1668,20 +1669,14 @@ function renderCharPage(){
   radial.querySelector('#cpMusic').value = keepMusic; radial.querySelector('#cpMForm').onsubmit = e => { e.preventDefault(); setOwnMusic(radial.querySelector('#cpMusic').value); };
   const mp = radial.querySelector('#cpMPlay'); if (mp) mp.onclick = () => toggleMusic(c); const ms = radial.querySelector('#cpMStop'); if (ms) ms.onclick = clearOwnMusic;
   const file = radial.querySelector('#cpFile'); radial.querySelector('#cpPost').onclick = () => file.click(); file.onchange = () => { const f = file.files[0]; file.value = ''; if (f) postStory(f); };
-  radial.querySelectorAll('.cp-story .th').forEach(b => b.onclick = () => { radialClose(); openStory(c.name); }); radial.querySelectorAll('.cp-story .rm').forEach(b => b.onclick = () => removeStory(b.dataset.id));
+  radial.querySelectorAll('.cp-story .th').forEach(b => b.onclick = () => { radialClose(); openStory(c.name); });
+  renderAdmin(); radial.querySelectorAll('.cp-story .rm').forEach(b => b.onclick = () => removeStory(b.dataset.id));
 }
 // 管理者工具：全員上班／下班、上下班設定、班長處罰（沿用 2D 版的動作；測試階段全面開放）
-function renderAdmin(){
+function renderAdmin(){   // 班長工具：處罰／解除處罰（全員上下班與上下班設定已拿掉）；只有管理者帳號看得到
   const box = radial.querySelector('#cpAdmin'); if (!box) return;
-  const rows = [['dayStart', '上班開始'], ['lunchStart', '午休開始'], ['lunchEnd', '午休結束'], ['workEnd', '下班'], ['overtimeStart', '加班開始']], cfg = hoursCfg || {};
-  box.innerHTML = '<div class="cp-adm-grid">' +
-    '<div class="cp-card"><h4>全員上班／下班</h4><p class="cp-note">目前：<b>' + (hoursForce === 'work' ? '全員上班' : hoursForce === 'off' ? '全員下班' : '依時段自動') + '</b>。按一下切換，所有人的畫面一起改變。</p><div class="cp-chips"><button type="button" class="primary" id="adWork">' + (hoursForce === 'work' ? '切換成全員下班' : '切換成全員上班') + '</button></div></div>' +
-    '<div class="cp-card"><h4>上下班設定</h4><label class="cp-f"><input type="checkbox" id="fhOn"' + (cfg.enabled !== false ? ' checked' : '') + '> 套用上下班時段規則</label><label class="cp-f"><input type="checkbox" id="fhRooms"' + (cfg.meetingRooms !== false ? ' checked' : '') + '> 行事曆有會議時依會議室入座</label>' +
-      rows.map(r => '<label class="cp-f"><span>' + r[1] + '</span><input type="number" min="0" max="23" id="fh_' + r[0] + '" value="' + (cfg[r[0]] ?? '') + '"></label>').join('') + '<div class="cp-chips"><button type="button" class="primary" id="fhSave">儲存</button></div></div>' +
-    '<div class="cp-card"><h4>班長：處罰</h4><label class="cp-f col"><span>對象</span><select id="pnWho">' + NAMES.map(n => '<option>' + n + '</option>').join('') + '</select></label><label class="cp-f col"><span>原因（最多 30 字）</span><input type="text" id="pnWhy" maxlength="30" placeholder="例如：上班時間遲到"></label>' +
-      '<label class="cp-f col"><span>天數</span><select id="pnDays">' + [1, 2, 3, 5, 7, 14, 30].map(n => '<option value="' + n + '">' + n + ' 天</option>').join('') + '</select></label><div class="cp-chips"><button type="button" class="primary" id="pnGo">處罰</button><button type="button" id="pnOff">解除處罰</button></div></div></div>';
-  box.querySelector('#adWork').onclick = async () => { const mode = hoursForce === 'work' ? 'off' : 'work'; try { await adminCall('pixelOfficeAllWork', {mode}); hoursForce = mode; applyForce(); live.version = 0; showQuote('', mode === 'work' ? '已切換：全員上班' : '已切換：全員下班'); radialClose(); } catch (e) { showQuote('', '切換失敗：' + e.message); } };
-  box.querySelector('#fhSave').onclick = async () => { const body = {enabled:box.querySelector('#fhOn').checked, meetingRooms:box.querySelector('#fhRooms').checked}; rows.forEach(r => { body[r[0]] = Number(box.querySelector('#fh_' + r[0]).value); }); try { await adminCall('savePixelHours', body); hoursCfg = {...cfg, ...body}; showQuote('', '已儲存上下班時段'); radialClose(); } catch (e) { showQuote('', '儲存失敗：' + e.message); } };
+  box.innerHTML = '<div class="cp-adm-grid"><div class="cp-card"><h4>班長：處罰</h4><label class="cp-f col"><span>對象</span><select id="pnWho">' + NAMES.map(n => '<option>' + n + '</option>').join('') + '</select></label><label class="cp-f col"><span>原因（最多 30 字）</span><input type="text" id="pnWhy" maxlength="30" placeholder="例如：上班時間遲到"></label>' +
+    '<label class="cp-f col"><span>天數</span><select id="pnDays">' + [1, 2, 3, 5, 7, 14, 30].map(n => '<option value="' + n + '">' + n + ' 天</option>').join('') + '</select></label><div class="cp-chips"><button type="button" class="primary" id="pnGo">處罰</button><button type="button" id="pnOff">解除處罰</button></div></div></div>';
   const punish = async days => { const name = box.querySelector('#pnWho').value, reason = box.querySelector('#pnWhy').value.trim(); if (days && reason.length < 2) { showQuote('', '請先寫處罰原因（至少 2 個字）'); return; } try { await adminCall('pixelOfficePunish', {name, reason, days}); showQuote('', days ? '已處罰 ' + name + '：' + reason + '，' + days + ' 天' : '已解除 ' + name + ' 的處罰'); radialClose(); } catch (e) { showQuote('', '處罰失敗：' + e.message); } };
   box.querySelector('#pnGo').onclick = () => punish(Number(box.querySelector('#pnDays').value) || 1); box.querySelector('#pnOff').onclick = () => punish(0);
 }
