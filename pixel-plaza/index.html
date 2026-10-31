@@ -629,17 +629,20 @@ function cabinet3d(x, z, w, d, h = 1.6){   // 紅色工具櫃：抽屜在右側�
   rects.push([I(x), I(z), I(x + w), I(z + d)]);
 }
 // 整塊辦公桌：cols 欄 × 2 排（上排人坐北側、螢幕朝北；下排人坐南側、螢幕朝南），桌腳在外緣與欄界
+const deskCells = [];
+const cellOf = (n0, x, z) => { const items = scene.children.slice(n0), top = items[0]; return {x, z, top, items:items.slice(2), color:top.material.color.getHex(), icon:null, sym:''}; };
 function deskBlock3d(x0, top, cols, color, kind, miniDesk){
   const I = v => v * U, W = 105, D = 47;
   for (let r = 0; r < 2; r++) for (let c = 0; c < cols; c++) {
-    const cx = x0 + W * c + W / 2, cz = top + D * r + D / 2;
+    const cx = x0 + W * c + W / 2, cz = top + D * r + D / 2, n0 = scene.children.length;
     pbox(I(W), .12, I(D), color, I(cx), .83, I(cz));
     const dir = r === 0 ? -1 : 1;            // 螢幕朝向：-1 朝北、1 朝南
-    if (kind === 'laptop') { laptop3d(I(cx), I(cz), dir); continue; }
+    if (kind === 'laptop') { laptop3d(I(cx), I(cz), dir); deskCells.push(cellOf(n0, I(cx), I(cz))); continue; }
     const mz = cz - dir * D * .12;           // 螢幕靠桌後緣
     if (miniDesk && r === 1 && c === 0) { monitor3d(I(cx + 8), I(mz), dir, 0x15181c); pbox(.3, .17, .3, 0xf2f4f6, I(cx - 32), .95, I(cz)); }
     else monitor3d(I(cx), I(mz), dir, kind === 'imac' ? 0xe3e6ea : 0x15181c);
     keyboard3d(I(cx), I(cz + dir * D * .22), kind === 'imac' ? 0xf0f0f0 : 0x20242a);
+    deskCells.push(cellOf(n0, I(cx), I(cz)));
   }
   const lx = k => x0 + W * k, zs = [top + 3, top + D * 2 - 3];
   for (let k = 0; k <= cols; k++) for (const z of zs) pbox(.12, .83, .12, 0x14181c, I(lx(k)) + (k === 0 ? .1 : k === cols ? -.1 : 0), 0, I(z), false);
@@ -670,7 +673,7 @@ function chairBuilder(x, z, face){
   const g = new THREE.Group();
   const add = (w, h, d, c, px, py, pz, edge = true) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({color:c})); m.position.set(px, py + h / 2, pz); g.add(m); if (edge) hull(g, w, h, d, px, py + h / 2, pz, .035); };
   g.position.set(x, 0, z); g.rotation.y = FACE_ANGLE[face]; scene.add(g);
-  chairSeats.push({x, z, face:FACE_ANGLE[face], by:null});
+  chairSeats.push({x, z, face:FACE_ANGLE[face], by:null, group:g});
   return add;
 }
 function chair3d(x, z, face){   // 會議室：簡單黑色折疊椅（沒有扶手）
@@ -913,7 +916,7 @@ function taipeiNow(){ const f = new Intl.DateTimeFormat('en-GB', {timeZone:'Asia
 function simStatus(){ const {h, weekend} = taipeiNow(); if (weekend) return 'offwork'; if (h >= 12 && h < 14) return 'lunch'; if (h >= 9 && h < 19) return 'present'; if (h >= 19 && h < 22) return 'overtime'; return 'offwork'; }
 function releaseSeat(c){ if (c.sitting) { c.sitting.by = null; c.sitting = null; } }
 function seatIn(c, pred){
-  const free = chairSeats.filter(st => !st.by && pred(st)); if (!free.length) return false;
+  const free = chairSeats.filter(st => !st.by && !st.hidden && pred(st)); if (!free.length) return false;
   const st = rnd(free); c.holder.position.set(st.x, 0, st.z); return sitDown(c);
 }
 function applyStatus(c, force){
@@ -949,11 +952,53 @@ async function pollOnce(){
   setNet();
 }
 function startLiveSync(){ const loop = async () => { await pollOnce(); setTimeout(loop, document.hidden ? 15000 : 3000); }; loop(); }
+// ---- 座位現場：不在座位的狀態（用餐／會議／休假／下班／廁所／出國／公出）椅子與桌上電腦收起、桌面變灰、桌上放狀態圖示；加班有紫色聚光燈與三團鬼火 ----
+const AWAY_DESK = new Set(['lunch', 'meeting', 'leave', 'offwork', 'toilet', 'abroad', 'out']), iconTex = {};
+function flameTex(){ const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), r = g.createRadialGradient(32, 40, 2, 32, 38, 28); r.addColorStop(0, 'rgba(255,240,255,1)'); r.addColorStop(.35, 'rgba(190,120,255,.95)'); r.addColorStop(1, 'rgba(110,40,220,0)'); g.fillStyle = r; g.beginPath(); g.moveTo(32, 2); g.bezierCurveTo(48, 22, 56, 34, 50, 46); g.bezierCurveTo(46, 58, 18, 58, 14, 46); g.bezierCurveTo(8, 34, 22, 24, 32, 2); g.fill(); g.fillStyle = '#2a0a55'; g.fillRect(24, 36, 4, 6); g.fillRect(37, 36, 4, 6); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
+function glowTex(){ const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), r = g.createRadialGradient(64, 64, 4, 64, 64, 62); r.addColorStop(0, 'rgba(210,150,255,.85)'); r.addColorStop(.6, 'rgba(150,80,255,.4)'); r.addColorStop(1, 'rgba(120,40,255,0)'); g.fillStyle = r; g.fillRect(0, 0, 128, 128); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
+let FLAME = null, GLOW = null;
+function makeOvertimeFx(){
+  FLAME = FLAME || flameTex(); GLOW = GLOW || glowTex();
+  const g = new THREE.Group(), add = {transparent:true, blending:THREE.AdditiveBlending, depthWrite:false};
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(.5, 1.5, 4.6, 28, 1, true), new THREE.MeshBasicMaterial({color:0xa65cff, opacity:.2, side:THREE.DoubleSide, ...add})); beam.position.y = 2.3; g.add(beam);
+  const pool = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 3.6), new THREE.MeshBasicMaterial({map:GLOW, ...add})); pool.rotation.x = -Math.PI / 2; pool.position.y = .03; g.add(pool);
+  const fires = [0, 1, 2].map(i => { const f = new THREE.Sprite(new THREE.SpriteMaterial({map:FLAME, ...add})); f.scale.set(.75, .92, 1); g.add(f); return f; });
+  g.userData = {fires, beam}; scene.add(g); return g;
+}
+function iconSprite(cell, sym){
+  if (!ICON[sym]) return false;
+  if (!iconTex[sym]) { iconTex[sym] = new THREE.TextureLoader().load(ICON[sym]); iconTex[sym].colorSpace = THREE.SRGBColorSpace; }
+  if (!cell.icon) { cell.icon = new THREE.Sprite(new THREE.SpriteMaterial({map:iconTex[sym], transparent:true, depthTest:false})); cell.icon.scale.set(1.05, 1.05, 1); cell.icon.position.set(cell.x, 1.55, cell.z); cell.icon.renderOrder = 5; scene.add(cell.icon); }
+  cell.icon.material.map = iconTex[sym]; cell.icon.material.needsUpdate = true; cell.icon.visible = true; return true;
+}
+function stationOf(c){
+  if (c.station) return c.station;
+  if (!c.home || !deskCells.length) return null;
+  let seat = null, bd = 2.2; for (const st of chairSeats) { if (st.kind) continue; const d = Math.hypot(st.x - c.home.x, st.z - c.home.z); if (d < bd) { bd = d; seat = st; } }
+  let cell = null, cd = 3; if (seat) for (const k of deskCells) { const d = Math.hypot(k.x - seat.x, k.z - seat.z); if (d < cd) { cd = d; cell = k; } }
+  return seat ? (c.station = {seat, cell}) : null;
+}
+function stationFx(c, dt){
+  const away = AWAY_DESK.has(c.status), ot = c.status === 'overtime', stn = stationOf(c), key = (away ? 'a:' : '') + c.status;
+  if (stn && c.stnKey !== key) {
+    const {seat, cell} = stn, ok = !away || !cell || iconSprite(cell, symOf[c.status] || 'person');
+    if (ok) {
+      c.stnKey = key; seat.hidden = away; seat.group.visible = !away;
+      if (cell) { cell.items.forEach(m => { m.visible = !away; }); cell.top.material.color.setHex(away ? 0x8d949b : cell.color); if (!away && cell.icon) cell.icon.visible = false; }
+    }
+  }
+  if (ot && !c.fx) c.fx = makeOvertimeFx();
+  if (c.fx) {
+    c.fx.visible = ot && c.holder.visible;
+    if (c.fx.visible) { const t = performance.now() / 1000, {fires, beam} = c.fx.userData; c.fx.position.set(c.holder.position.x, 0, c.holder.position.z); beam.material.opacity = .17 + Math.sin(t * 2) * .04;
+      fires.forEach((f, i) => { const a = t * 1.1 + i * 2.094; f.position.set(Math.cos(a) * 1.1, 1.35 + Math.sin(t * 2.4 + i * 2) * .25, Math.sin(a) * .8); f.material.opacity = .75 + Math.sin(t * 5 + i) * .2; }); }
+  }
+}
 const SIT_DROP = .1;
 function sitDown(c){
   if (c.sitting) return false;
   let best = null, bd = 2.2;
-  for (const st of chairSeats) { if (st.by) continue; const d = Math.hypot(st.x - c.holder.position.x, st.z - c.holder.position.z); if (d < bd) { bd = d; best = st; } }
+  for (const st of chairSeats) { if (st.by || st.hidden) continue; const d = Math.hypot(st.x - c.holder.position.x, st.z - c.holder.position.z); if (d < bd) { bd = d; best = st; } }
   if (!best) return false;
   best.by = c; c.sitting = best; c.wander = false; c.moving = 0; c.face = best.face;
   const fw = best.fwd ?? (best.face === 0 ? .06 : .32); c.holder.position.set(best.x + Math.sin(best.face) * fw, 0, best.z + Math.cos(best.face) * fw);
@@ -976,7 +1021,7 @@ function select(name){
 
 let done = 0;
 Promise.all([buildOffice(), loadIcons(), ...NAMES.map((n, i) => addChar(n, i).then(() => { setLoad('載入角色 ' + (++done) + '/' + NAMES.length, done / NAMES.length); }))])
-  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); startLiveSync(); showTitleCard(); window.__plaza = {chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
+  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); startLiveSync(); showTitleCard(); window.__plaza = {stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
 
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
 const TILT = 0, STRETCH = 1 / Math.cos(Math.atan(8.4 / 9.4)), _e = new THREE.Euler(0, 0, 0, 'YXZ');   // 垂直站立：不再後傾（避免穿進桌子、牆），高度拉長 STRETCH 倍抵消俯視縮短
@@ -1438,7 +1483,7 @@ function tick(){
       if (c.t < 0) { c.t = 1.5 + Math.random() * 4; const a = Math.random() * 6.283; c.dir.set(Math.random() < .4 ? 0 : Math.cos(a), 0, Math.sin(a)); }
       moveChar(c, c.dir.clone(), 1.6, dt);
     }
-    updateSprite(c, dt);
+    updateSprite(c, dt); stationFx(c, dt);
     if (c.hopAt) { const k = (performance.now() - c.hopAt) / 600; if (k >= 1) { c.hopAt = 0; c.holder.position.y = 0; } else c.holder.position.y = Math.abs(Math.sin(k * Math.PI * 2)) * .6 * (1 - k); }
   }
   if (player) {
