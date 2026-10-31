@@ -70,7 +70,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 .cp-chips button{padding:9px 14px;border-radius:999px;border:2px solid var(--line);background:rgba(255,255,255,.08)}
 .cp-chips button.primary{background:linear-gradient(var(--cta1),var(--cta2));border-color:#0c6a26}
 .cp-note{margin:0;font-size:12px;line-height:1.6;opacity:.75;font-weight:600}
-#cpage textarea,#cpage input[type=text],#cpage input[type=number],#cpage select{width:100%;box-sizing:border-box;padding:9px 12px;border-radius:12px;border:2px solid var(--line);background:rgba(0,0,0,.28);color:#fff;font:600 14px 'Fredoka','Noto Sans TC',sans-serif}
+#cpage textarea,#cpage input[type=text],#cpage input[type=password],#cpage input[type=number],#cpage select{width:100%;box-sizing:border-box;padding:9px 12px;border-radius:12px;border:2px solid var(--line);background:rgba(0,0,0,.28);color:#fff;font:600 14px 'Fredoka','Noto Sans TC',sans-serif}
 #cpage textarea{width:calc(100% - 28px);min-height:78px;resize:none;line-height:1.5}
 #cpage select option{color:#111}
 .cp-locked{display:grid;gap:8px}
@@ -1030,7 +1030,15 @@ async function loadIcons(){
 }
 const iconImg = (sym, px) => ICON[sym] ? '<img class="ico" alt="" src="' + ICON[sym] + '" width="' + px + '" height="' + px + '">' : '';
 let handoff = null; try { const h = JSON.parse(localStorage.getItem('pixelViewerHandoff') || 'null'); if (h && h.name && Date.now() - Number(h.at) < 86400000) handoff = h; } catch (e) {}
+if (!handoff) { try {   // 沒有交接資料時，直接讀網站首頁的登入狀態（designRequestEditor*）
+  const get = k => localStorage.getItem(k) || sessionStorage.getItem(k) || '';
+  if (localStorage.getItem('designRequestEditorLoggedOut') !== '1' && get('designRequestEditorToken')) {
+    const user = get('designRequestEditorUser'), name = get('designRequestEditorDisplayName') || user;
+    handoff = {name, token:get('designRequestEditorToken'), staff:false, monitor:user === 'Machi' || name.toLowerCase() === 'machi', at:Date.now(), fromSite:true};
+  } } catch (e) {} }
+const adminToken = () => (handoff && handoff.token) || (() => { try { return localStorage.getItem('pixelAdminToken') || ''; } catch (e) { return ''; } })();
 const isAdmin = () => Boolean(handoff && handoff.monitor && handoff.token);   // 管理者（含 Machi）：登入身分帶 monitor 旗標與權杖
+const canSeeAdmin = () => Boolean(isAdmin() || (player && player.name === 'Machi') || adminToken());   // 操作 Machi 時一律顯示管理者工具（沒權杖就先貼上權杖）
 const radial = document.createElement('div'); radial.id = 'cpage'; radial.hidden = true; document.body.appendChild(radial);   // 舊名 radial 沿用，指向角色頁面
 let writeOK = false, hoursCfg = null, hoursForce = '';
 async function writeState(c, patch){   // 寫到真實後端（和 2D 版同一支介面）；第一次先確認
@@ -1041,7 +1049,8 @@ async function writeState(c, patch){   // 寫到真實後端（和 2D 版同一�
   catch (e) { showQuote('', '同步失敗：' + e.message); return false; }
 }
 async function adminCall(action, extra){   // 管理者工具（和 2D 版同一組動作）：帶登入身分的權杖
-  const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify({action, ...(extra || {}), editorToken:handoff.token, token:handoff.token}), cache:'no-store'});
+  if (!adminToken()) throw new Error('需要管理者權杖（請先登入網站首頁，或在下方貼上權杖）');
+  const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify({action, ...(extra || {}), editorToken:adminToken(), token:adminToken()}), cache:'no-store'});
   const d = await r.json(); if (!d.ok) throw new Error(d.error || '失敗'); return d;
 }
 async function setOwnStatus(st){ const c = player; if (!c || !(await writeState(c, {status:st}))) return; c.status = st; c.appliedStatus = null; applyStatus(c, true); showQuote('', c.name + '：' + STATUS[st][1] + ' ' + STATUS[st][0]); renderCharPage(); }
@@ -1089,7 +1098,7 @@ function renderCharPage(){
           ${row('等級', 'Lv.' + lv)}${row('地上的驚喜', dex.d.length + '/' + DROP_IDS.length)}${row('會議室遺落物', dex.n.length + '/' + NOTE_IDS.length)}${row('撿到總數', stat.found)}${row('遺落物總數', stat.notes)}${row('沖馬桶', stat.flush)}
           <h4>出勤</h4>
           ${row('目前狀態', st[1] + ' ' + st[0])}${row('狀態來源', c.statusSource === 'manual' ? '手動設定' : c.statusSource === 'calendar' ? '行事曆' : '自動判斷')}${row('所在位置', esc(roomOf(c)))}${row('座位', c.sitting ? '坐著' : '站著')}
-          <h4>連線</h4>${row('資料來源', live.ok ? '即時（後端）' : '模擬（時間規則）')}${row('身分', handoff ? esc(handoff.name) + (isAdmin() ? '（管理者）' : '') : '未登入')}
+          <h4>連線</h4>${row('資料來源', live.ok ? '即時（後端）' : '模擬（時間規則）')}${row('身分', handoff ? esc(handoff.name) + (isAdmin() ? '（管理者）' : '') : '未登入（以預設人物參觀）')}
         </div></section>
     </div>
     <section class="cp-admin" id="cpAdmin"></section>
@@ -1108,20 +1117,21 @@ function renderCharPage(){
 // 管理者工具：全員上班／下班、上下班設定、班長處罰（沿用 2D 版的動作與權限）
 function renderAdmin(){
   const box = radial.querySelector('#cpAdmin'); if (!box) return;
-  if (!isAdmin()) { box.innerHTML = '<div class="cp-lock"><i>🔒</i><div><b>管理者工具</b><small>全員上班／下班、上下班時間設定、班長處罰。需要管理者（含 Machi）登入網站首頁後才會出現；本機請從 <a href="../index.html">網站首頁</a> 登入再進來。</small></div></div>'; return; }
+  if (!canSeeAdmin()) { box.innerHTML = '<div class="cp-lock"><i>🔒</i><div><b>管理者工具</b><small>全員上班／下班、上下班時間設定、班長處罰。管理者與 Machi 才會出現；請先登入網站首頁。</small></div></div>'; return; }
   const rows = [['dayStart', '上班開始'], ['lunchStart', '午休開始'], ['lunchEnd', '午休結束'], ['workEnd', '下班'], ['overtimeStart', '加班開始']], cfg = hoursCfg || {};
-  box.innerHTML = '<header><h3>管理者工具</h3><em>' + esc(handoff.name) + '</em></header><div class="cp-adm-grid">' +
+  box.innerHTML = '<header><h3>管理者工具</h3><em>' + esc(handoff ? handoff.name : (player ? player.name : '')) + (adminToken() ? '' : '・尚未取得權杖') + '</em></header>' + (adminToken() ? '' : '<div class="cp-card" style="grid-template-columns:1fr auto;align-items:end"><div><h4>管理者權杖</h4><p class="cp-note">操作需要權杖：先從網站首頁登入（本頁會自動讀取），或把登入後的權杖貼在這裡（只存在這個瀏覽器）。</p><input type="password" id="adTok" placeholder="貼上權杖" autocomplete="off"></div><div class="cp-chips"><button type="button" class="primary" id="adTokSave">儲存</button></div></div>') + '<div class="cp-adm-grid">' +
     '<div class="cp-card"><h4>全員上班／下班</h4><p class="cp-note">目前：<b>' + (hoursForce === 'work' ? '全員上班' : hoursForce === 'off' ? '全員下班' : '依時段自動') + '</b>。切換會讓所有人的畫面一起改變。</p><div class="cp-chips"><button type="button" id="adWork">切換全員上班／下班</button></div></div>' +
     '<div class="cp-card"><h4>上下班設定</h4><label class="cp-f"><input type="checkbox" id="fhOn"' + (cfg.enabled !== false ? ' checked' : '') + '> 套用上下班時段規則</label><label class="cp-f"><input type="checkbox" id="fhRooms"' + (cfg.meetingRooms !== false ? ' checked' : '') + '> 行事曆有會議時依會議室入座</label>' +
       rows.map(r => '<label class="cp-f"><span>' + r[1] + '</span><input type="number" min="0" max="23" id="fh_' + r[0] + '" value="' + (cfg[r[0]] ?? '') + '"></label>').join('') + '<div class="cp-chips"><button type="button" class="primary" id="fhSave">儲存</button></div></div>' +
     '<div class="cp-card"><h4>班長：處罰</h4><label class="cp-f col"><span>對象</span><select id="pnWho">' + NAMES.map(n => '<option>' + n + '</option>').join('') + '</select></label><label class="cp-f col"><span>原因（最多 30 字）</span><input type="text" id="pnWhy" maxlength="30" placeholder="例如：上班時間遲到"></label>' +
       '<label class="cp-f col"><span>天數</span><select id="pnDays">' + [1, 2, 3, 5, 7, 14, 30].map(n => '<option value="' + n + '">' + n + ' 天</option>').join('') + '</select></label><div class="cp-chips"><button type="button" class="primary" id="pnGo">處罰</button><button type="button" id="pnOff">解除處罰</button></div></div></div>';
+  const tokBtn = box.querySelector('#adTokSave'); if (tokBtn) tokBtn.onclick = () => { const v = box.querySelector('#adTok').value.trim(); if (!v) return; try { localStorage.setItem('pixelAdminToken', v); } catch (e) {} showQuote('', '已儲存權杖，正在讀取上下班設定…'); loadHours(); renderAdmin(); };
   box.querySelector('#adWork').onclick = async () => { const mode = hoursForce === 'work' ? 'off' : 'work'; if (!confirm('要切換成「' + (mode === 'work' ? '全員上班' : '全員下班') + '」嗎？所有人的畫面都會改變。')) return; try { await adminCall('pixelOfficeAllWork', {mode}); hoursForce = mode; showQuote('', mode === 'work' ? '已切換：全員上班' : '已切換：全員下班'); renderAdmin(); } catch (e) { showQuote('', '失敗：' + e.message); } };
   box.querySelector('#fhSave').onclick = async () => { const body = {enabled:box.querySelector('#fhOn').checked, meetingRooms:box.querySelector('#fhRooms').checked}; rows.forEach(r => { body[r[0]] = Number(box.querySelector('#fh_' + r[0]).value); }); if (!confirm('要儲存新的上下班時段嗎？會影響所有人。')) return; try { await adminCall('savePixelHours', body); hoursCfg = {...cfg, ...body}; showQuote('', '已儲存上下班時段'); } catch (e) { showQuote('', '儲存失敗：' + e.message); } };
   const punish = async days => { const name = box.querySelector('#pnWho').value, reason = box.querySelector('#pnWhy').value.trim(); if (days && reason.length < 2) { showQuote('', '請先寫處罰原因（至少 2 個字）'); return; } if (!confirm(days ? '要處罰「' + name + '」' + days + ' 天嗎？' : '要解除「' + name + '」的處罰嗎？')) return; try { await adminCall('pixelOfficePunish', {name, reason, days}); showQuote('', days ? '已處罰 ' + name + '：' + reason + '，' + days + ' 天' : '已解除 ' + name + ' 的處罰'); } catch (e) { showQuote('', '處罰失敗：' + e.message); } };
   box.querySelector('#pnGo').onclick = () => punish(Number(box.querySelector('#pnDays').value) || 1); box.querySelector('#pnOff').onclick = () => punish(0);
 }
-async function loadHours(){ if (!isAdmin()) return; try { const r = await adminCall('getPixelHours'); hoursCfg = r.config || null; hoursForce = r.force || ''; if (!radial.hidden) renderAdmin(); } catch (e) {} }
+async function loadHours(){ if (!adminToken()) return; try { const r = await adminCall('getPixelHours'); hoursCfg = r.config || null; hoursForce = r.force || ''; if (!radial.hidden) renderAdmin(); } catch (e) {} }
 function radialOpen(){ if (!player) return; radial.hidden = false; renderCharPage(); loadHours(); }
 function radialClose(){ radial.hidden = true; radial.innerHTML = ''; }
 function placeRadial(){ if (!radial.hidden) { const t = radial.querySelector('#cpTime'); if (t) t.textContent = new Intl.DateTimeFormat('zh-TW', {timeZone:'Asia/Taipei', hour:'2-digit', minute:'2-digit', hour12:false}).format(new Date()); } }
