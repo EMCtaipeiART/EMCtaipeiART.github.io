@@ -1616,3 +1616,6 @@ body.arena-on .arena-frame{border-radius:0;box-shadow:none;background:transparen
 
 /* 進入元宇宙：上方橫幅與填單列整個收起，畫面留給 3D 辦公室 */
 body.uni-on .hero{display:none}
+/* 元宇宙載入畫面改用 3D 辦公室自己的「EMC Office」綠底遊戲感載入頁，網站不再另外蓋一層 */
+.uni-loading{display:none!important}
+.uni-wrap{background:linear-gradient(135deg,#43d86c 0%,#1aa844 46%,#0b6a2b 100%)}
