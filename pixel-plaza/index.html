@@ -48,15 +48,14 @@ addEventListener('resize', resize); resize();
 // 版面圖座標（1201×1526 px）× U = 世界座標。桌子 105 px 寬 ≈ 3.15 單位，與角色身高 2.04 的比例同遊戲內一致。
 const U = 0.03, PPU = 29.5;               // PPU：每單位約幾個螢幕像素（貼圖縮成這個大小才會清楚）
 const ASSET = '../EMC-ART-Pixel-Office/dist/assets/';
-const FILES = {elevator:'props2/elevator.png',stall:'props2/toilet_stall.png',sink:'props2/pedestal_sink.png',tableA:'props2/meeting_table_black_6.png',table4:'props2/meeting_table_black_4.png',tableU:'props2/meeting_table_white_U.png',pantry:'props2/pantry_counter.png',fridge:'props2/fridge_double.png',plant:'props2/plant_pot.png',deskBeige:'props2/desk_beige_front.png',deskL:'props3/white_L_v2.png',blueBlock:'props3/blue_block_6.png',shelf:'props2/bookshelf_black_small.png',pillarCab:'props2/pillar_cabinet.png',chair:'props/chair_black.png',pillar:'props/pillar_white.png',sheet:'furniture-v4.webp',beigePod:'props3/beige_pod_v2.png'};
+const FILES = {elevator:'props2/elevator.png',pantry:'props2/pantry_counter.png',fridge:'props2/fridge_double.png',plant:'props2/plant_pot.png',shelf:'props2/bookshelf_black_small.png',pillarCab:'props2/pillar_cabinet.png',chair:'props/chair_black.png',pillar:'props/pillar_white.png'};
 // [素材, 左上 x, 底部 y, 寬, 選項{h 指定高, fh 碰撞高, col 自訂碰撞[x,y,w,h]}]（版面圖像素）
 const PROPS = [
   ['elevator',165,255,72,{fh:40}],
   ['pantry',333,1268,125,{fh:34}],['fridge',477,1285,73,{fh:50}],['plant',570,1320,22,{fh:14}],
-  // 米黃桌組：四張合併成一整塊（上下兩組），椅子在下緣
-  ['beigePod',85,450,210,{fh:78}],['beigePod',85,687,210,{fh:78}],
-  ...[0,237].flatMap(dy=>[['chair',118,512+dy,38,{fh:16}],['chair',222,512+dy,38,{fh:16}]]),
-  ['deskL',85,930,223,{fh:56}],['chair',198,952,38,{fh:16}],
+  // 米黃桌組與白色 L 桌的椅子（桌子本身是 3D 方塊）
+  ...[0,237].flatMap(dy=>[['chair',118,512+dy,34,{fh:14}],['chair',222,512+dy,34,{fh:14}]]),
+  ['chair',205,968,34,{fh:14}],
   ['shelf',388,445,22,{fh:90,h:90}],['shelf',388,682,22,{fh:90,h:90}],['shelf',388,920,22,{fh:90,h:90}],
   ['shelf',872,445,20,{fh:70,h:70}],['shelf',725,682,26,{fh:56,h:57}],['shelf',850,682,30,{fh:56,h:57}],
   ['pillarCab',730,445,70,{fh:90}],['pillar',730,920,42,{fh:90,h:92}]
@@ -81,7 +80,6 @@ const WALLS = [
 ];
 const LABELS = [['男廁',370,44],['女廁',526,44],['會議室 A',863,110],['影廳',215,1062],['會議室 C',186,1432],['茶水間',396,1226],['冰箱',512,1208],['會議室 D',845,1285],['電梯',201,262]];
 // 藍色桌組：三排（y 為桌面上緣），設計部 x 中心 463/568/673，同仁區 833/938/1043。type：1 有 iMac、7 空桌、4 Mac mini 桌。
-const SHEET_RECT = {1:[0,328,517,328],7:[0,1913,517,291],4:[0,1306,520,316]};
 const ROW_TOPS = [355, 592, 828];
 const GROUPS = [[463,568,673],[833,938,1043]];
 // 入座：名字 → [組, 排, 欄, 上排/下排]（僅設計部最下面那排有人）
@@ -139,9 +137,7 @@ const loadImg = src => new Promise(res => { const i = new Image(); i.onload = ()
 async function buildOffice(){
   await Promise.all(Object.entries(FILES).map(async ([k, f]) => { imgs[k] = await loadImg(ASSET + f); }));
   const T = {};      // 裁邊後的素材
-  for (const k of Object.keys(FILES)) if (k !== 'sheet' && imgs[k]) T[k] = trimmed(imgs[k]);
-  const sheet = {};  // 藍桌：從家具圖集裁出
-  for (const [t, [x, y, w, h]] of Object.entries(SHEET_RECT)) if (imgs.sheet) { const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(imgs.sheet, x, y, w, h, 0, 0, w, h); sheet[t] = c; }
+  for (const k of Object.keys(FILES)) if (imgs[k]) T[k] = trimmed(imgs[k]);
   const place = (src, x, bottom, w, o = {}) => {
     if (!src) return;
     const dh = o.h ? o.h * U : w * U * src.height / src.width, dw = dh * src.width / src.height;
@@ -153,13 +149,52 @@ async function buildOffice(){
     else rects.push([x * U, (bottom - (o.fh || 30)) * U, (x + w) * U, bottom * U]);
   }
   build3dObjects(T, place);
-  // 藍色桌組：每組兩排×三張，設計部最下面那排有人入座
+  // 藍色桌組：每組兩排×三張（3D 方塊桌＋小螢幕），三排 × 設計部／同仁區
   GROUPS.forEach((xs, gi) => ROW_TOPS.forEach((top, ri) => {
-    place(T.blueBlock, xs[0] - 52.5, top + 108, 315);
-    xs.forEach(cx => { place(T.chair, cx - 19, top - 42, 38); place(T.chair, cx - 19, top + 140, 38); });
-    const x0 = xs[0] - 52;
-    rects.push([x0 * U, (top + 58) * U, (x0 + 315) * U, (top + 108) * U]);
+    deskBlock3d(xs[0] - 52.5, top, 3, 0x1d4ba0, 'imac', gi === 0 && ri === 2);
+    xs.forEach(cx => { place(T.chair, cx - 17, top - 18, 34); place(T.chair, cx - 17, top + 112, 34); });
   }));
+  // 米黃桌組（左側上下兩組，各 2×2 合併）
+  [355, 592].forEach(top => deskBlock3d(85, top, 2, 0xe8c795, 'black', false));
+  // 白色 L 型桌（左下）
+  { const I = v => v * U; pbox(I(168), .12, I(45), 0xf3f3ee, I(224), .83, I(850.5)); pbox(I(52), .95, I(102), 0xf3f3ee, I(111), 0, I(879));
+    for (const [x, z] of [[300, 836], [300, 866], [150, 836], [150, 866]]) pbox(.12, .83, .12, 0x14181c, I(x), 0, I(z), false);
+    monitor3d(I(224), I(850), -1, 0x15181c); keyboard3d(I(224), I(858), 0xf0f0f0);
+    rects.push([I(85), I(828), I(137), I(930)], [I(137), I(828), I(308), I(873)]); }
+}
+// 整塊辦公桌：cols 欄 × 2 排（上排人坐北側、螢幕朝北；下排人坐南側、螢幕朝南），桌腳在外緣與欄界
+function deskBlock3d(x0, top, cols, color, kind, miniDesk){
+  const I = v => v * U, W = 105, D = 47;
+  for (let r = 0; r < 2; r++) for (let c = 0; c < cols; c++) {
+    const cx = x0 + W * c + W / 2, cz = top + D * r + D / 2;
+    pbox(I(W), .12, I(D), color, I(cx), .83, I(cz));
+    const dir = r === 0 ? -1 : 1;            // 螢幕朝向：-1 朝北、1 朝南
+    const mz = cz - dir * D * .12;           // 螢幕靠桌後緣
+    if (miniDesk && r === 1 && c === 0) { monitor3d(I(cx + 8), I(mz), dir, 0x15181c); pbox(.3, .17, .3, 0xf2f4f6, I(cx - 32), .95, I(cz)); }
+    else monitor3d(I(cx), I(mz), dir, kind === 'imac' ? 0xe3e6ea : 0x15181c);
+    keyboard3d(I(cx), I(cz + dir * D * .22), kind === 'imac' ? 0xf0f0f0 : 0x20242a);
+  }
+  const lx = k => x0 + W * k, zs = [top + 3, top + D * 2 - 3];
+  for (let k = 0; k <= cols; k++) for (const z of zs) pbox(.12, .83, .12, 0x14181c, I(lx(k)) + (k === 0 ? .1 : k === cols ? -.1 : 0), 0, I(z), false);
+  rects.push([I(x0), I(top + 16), I(x0 + W * cols), I(top + D * 2)]);
+}
+function monitor3d(x, z, dir, color){   // 螢幕：背面為機身色、正面（朝 dir）為深色螢幕
+  const body = new THREE.MeshLambertMaterial({color}), face = new THREE.MeshLambertMaterial({color:color === 0x15181c ? 0x23303f : 0x2a3340});
+  const mats = [body, body, body, body, dir > 0 ? face : body, dir > 0 ? body : face];
+  const m = new THREE.Mesh(new THREE.BoxGeometry(.9, .56, .08), mats); m.position.set(x, .95 + .16 + .28, z); scene.add(m);
+  pbox(.16, .16, .14, color, x, .95, z, false); pbox(.38, .02, .24, color, x, .95, z, false);
+}
+function keyboard3d(x, z, color){ pbox(.7, .03, .22, color, x, .95, z, false); pbox(.1, .03, .14, color, x + .55, .95, z, false); }
+
+// 會議室用的簡單黑色折疊椅（沒有扶手）；face：椅面朝向 'N' | 'S' | 'E' | 'W'
+function chair3d(x, z, face){
+  const g = new THREE.Group(), black = 0x1c2026, leg = 0x2a2f36;
+  const add = (w, h, d, c, px, py, pz, edge) => { const geo = new THREE.BoxGeometry(w, h, d), m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color:c})); m.position.set(px, py + h / 2, pz); g.add(m);
+    if (edge) { const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({color:0x0b0d10})); e.position.copy(m.position); g.add(e); } };
+  add(.52, .06, .5, black, 0, .44, 0, true);                         // 椅面
+  add(.52, .42, .05, black, 0, .52, -.23, true);                     // 椅背（在後方）
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(.05, .44, .05, leg, sx * .22, 0, sz * .21, false);
+  g.position.set(x, 0, z); g.rotation.y = {S:0, N:Math.PI, E:Math.PI / 2, W:-Math.PI / 2}[face]; scene.add(g);
 }
 // ---- 像素風 3D 物件 ----
 function pbox(w, h, d, color, x, y, z, edge = true){
@@ -191,7 +226,7 @@ function build3dObjects(T, place){
     table3d(I(cx), I(cy), I(w), I(d), col);
     pbox(.5, .16, .4, 0xf2f2f2, I(cx + w / 2 - 40), .95, I(cy));      // 投影機
     rects.push([I(cx - w / 2), I(cy - d / 2), I(cx + w / 2), I(cy + d / 2)]);
-    for (const x of xs) { place(T.chair, x - 19, yn, 38); place(T.chair, x - 19, ys, 38); }
+    for (const x of xs) { chair3d(I(x), I(yn), 'S'); chair3d(I(x), I(ys), 'N'); }
   }
   // 影廳螢幕（北牆前）
   { const c = document.createElement('canvas'); c.width = 64; c.height = 40; const g = c.getContext('2d');
@@ -204,8 +239,8 @@ function build3dObjects(T, place){
   table3d(I(846), I(1196), I(252), I(60), uc); table3d(I(699), I(1256), I(46), I(180), uc); table3d(I(995), I(1256), I(46), I(180), uc);
   pbox(.55, .16, .4, 0xf2f2f2, I(846), .95, I(1196));
   rects.push([I(720), I(1166), I(972), I(1226)], [I(676), I(1166), I(722), I(1346)], [I(972), I(1166), I(1018), I(1346)]);
-  for (const x of [752, 817, 880, 945]) place(T.chair, x - 19, 1160, 38);
-  for (const y of [1200, 1245, 1292, 1334]) { place(T.chair, 646 - 19, y, 38); place(T.chair, 1048 - 19, y, 38); }
+  for (const x of [752, 817, 880, 945]) chair3d(I(x), I(1160), 'S');
+  for (const y of [1200, 1245, 1292, 1334]) { chair3d(I(654), I(y), 'E'); chair3d(I(1040), I(y), 'W'); }
   // 廁所
   for (const dx of STALLS) {
     toilet3d(I(342 + dx), I(98)); toilet3d(I(342 + dx), I(160));
@@ -248,7 +283,7 @@ async function addChar(name, i){
   const seat = SEATS[name], a = i / NAMES.length * Math.PI * 2;
   if (seat) {   // 入座：上排坐在桌後（面向鏡頭）、下排坐在桌前（背對鏡頭）
     const top = ROW_TOPS[seat[1]], cx = GROUPS[seat[0]][seat[2]];
-    holder.position.set(cx * U, 0, (seat[3] === 'top' ? top - 38 : top + 138) * U);
+    holder.position.set(cx * U, 0, (seat[3] === 'top' ? top - 14 : top + 114) * U);
   } else holder.position.set((560 + 42 * (i % 6)) * U, 0, (1085 + 28 * Math.floor(i / 6)) * U);
   scene.add(holder);
   const c = {name, holder, sprite, tex, face:seat ? (seat[3] === 'top' ? 0 : Math.PI) : -a, moving:0, phase:Math.random() * 9, wander:!seat, t:Math.random() * 5, dir:new THREE.Vector3()};
