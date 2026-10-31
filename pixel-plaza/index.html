@@ -21,36 +21,81 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #quote b{display:block;font-size:12px;color:#7b4a24;margin-bottom:2px}
 .ctag{position:fixed;left:0;top:0;z-index:2;pointer-events:none;display:none;background:#fffdf5;border:2px solid #0b0d10;border-radius:6px;padding:2px 6px;font:600 12px/1.35 system-ui,'Noto Sans TC',sans-serif;color:#232b32;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #net{position:fixed;left:12px;bottom:64px;z-index:3;background:#0008;color:#fff;border-radius:6px;padding:4px 8px;font:12px system-ui,'Noto Sans TC',sans-serif}
-#radial{position:fixed;--r-brand:#159e31;--r-green:#0f7f27;--r-soft:#e8f6ec;--r-panel:#fff;--r-bg:#f5f7f6;--r-line:#e3e9e5;--r-ink:#17211d;--r-muted:#6b7772;--r-shadow:0 12px 32px rgba(18,38,28,.14);z-index:6;width:0;height:0;pointer-events:none;color:var(--r-ink);font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC",sans-serif;font-size:12px;font-weight:700}
-#radial[hidden],.radial-btn[hidden],.radial-panel[hidden],.radial-ring[hidden]{display:none}
-.radial-ring,.radial-panel{pointer-events:auto}
-.radial-btn{position:absolute;left:-26px;top:-26px;width:52px;height:52px;border-radius:50%;border:1px solid var(--r-line);background:var(--r-panel);color:var(--r-green);display:grid;place-items:center;cursor:pointer;box-shadow:var(--r-shadow),inset 0 1px 0 #ffffff80;padding:0;transform:translate(var(--rx),var(--ry));transition:background .16s,border-color .16s,box-shadow .16s,translate .16s}
-.radial-btn svg,.radial-back svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.radial-btn span{position:absolute;top:56px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:11px;line-height:18px;font-weight:800;color:var(--r-ink);background:var(--r-panel);border:1px solid var(--r-line);border-radius:999px;padding:1px 8px;box-shadow:0 4px 12px rgba(18,38,28,.08);pointer-events:none;text-shadow:none}
-.radial-ring.is-small .radial-btn{width:44px;height:44px;left:-22px;top:-22px}
-.radial-ring.is-small .radial-btn span{top:48px}
-.radial-ring:not(.is-closing) .radial-btn{animation:radial-in .3s cubic-bezier(.2,.8,.25,1.12) both;animation-delay:var(--enter-delay)}
-.radial-ring.is-closing .radial-btn{animation:radial-out .18s ease-in both;animation-delay:var(--exit-delay);pointer-events:none}
-@keyframes radial-in{from{opacity:0;transform:translate(0,0) scale(.35)}to{opacity:1;transform:translate(var(--rx),var(--ry)) scale(1)}}
-@keyframes radial-out{from{opacity:1;transform:translate(var(--rx),var(--ry)) scale(1)}to{opacity:0;transform:translate(0,0) scale(.35)}}
-.radial-panel{position:absolute;display:flex;flex-direction:column;width:292px;overflow:hidden;border-radius:18px;background:var(--r-panel);border:1px solid var(--r-line);box-shadow:0 20px 48px rgba(18,38,28,.18);color:var(--r-ink);font-size:12px;animation:radial-panel-in .18s ease-out}
-@keyframes radial-panel-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-.radial-panel.is-closing{opacity:0;transition:opacity .16s}
-.radial-head{display:flex;align-items:center;gap:12px;flex:none;padding:8px 14px;border-bottom:1px solid var(--r-line)}
-.radial-title{font-size:14px;font-weight:800;line-height:1.4}
-.radial-back{display:inline-flex;align-items:center;justify-content:center;gap:2px;min-width:72px;min-height:44px;padding:0 10px;border:1px solid var(--r-line);border-radius:999px;background:var(--r-bg);color:var(--r-green);font:inherit;cursor:pointer}
-.radial-back svg{width:18px;height:18px}
-.radial-body{min-height:0;overflow:auto;overscroll-behavior:contain;padding:14px;scrollbar-width:thin;scrollbar-color:var(--r-line) transparent}
-.rp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.rp-grid button{display:grid;gap:2px;justify-items:center;border-radius:16px!important;padding:8px 4px!important;font-size:12px}
-.rp-grid button i{font-style:normal;font-size:20px;line-height:1}
-.rp-label{display:block;margin:14px 0 6px;font-size:12px;color:var(--r-muted)}
-.rp-label:first-child{margin-top:0}
-.radial-panel textarea{width:100%;box-sizing:border-box;min-height:84px;padding:10px 12px;border-radius:12px;border:1px solid var(--r-line);background:var(--r-bg);color:var(--r-ink);font:inherit;font-size:14px;line-height:1.5;resize:none}
-.rp-note{margin:0 0 12px;font-size:12px;line-height:1.6;color:var(--r-muted);font-weight:600}
-.rp-row{display:flex;gap:8px;margin-top:10px}
-.radial-panel .primary{background:var(--r-green);border-color:var(--r-green);color:#fff}
-.radial-panel a.rp-link{display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:999px;background:var(--r-green);color:#fff;text-decoration:none;font-weight:800;font-size:13px}
+/* ===== 角色頁面（版型參考 PokéBonk 暫停畫面；配色維持綠色主色系）===== */
+#cpage{position:fixed;inset:0;z-index:14;display:grid;place-items:center;padding:12px;box-sizing:border-box;background:rgba(4,36,18,.62);backdrop-filter:blur(3px);font-family:'Fredoka','Noto Sans TC',system-ui,sans-serif;color:#fff}
+#cpage[hidden]{display:none}
+.cp-wrap{width:min(1180px,100%);max-height:calc(100vh - 24px);overflow:auto;display:grid;gap:12px;padding:14px;box-sizing:border-box;border-radius:22px;border:2px solid var(--line);background:linear-gradient(180deg,rgba(10,62,36,.97),rgba(5,38,22,.98));box-shadow:0 24px 60px rgba(0,0,0,.5);scrollbar-width:thin}
+.cp-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;align-items:center;padding:14px 16px;border-radius:18px;border:2px solid rgba(255,255,255,.18);background:repeating-linear-gradient(135deg,rgba(255,255,255,.07) 0 16px,transparent 16px 32px),linear-gradient(135deg,#1c9a48,#12856b 60%,#0f6e5e)}
+.cp-av{position:relative;width:92px;height:92px;border-radius:50%;padding:4px;background:linear-gradient(135deg,var(--yellow),#fff);box-shadow:0 6px 0 rgba(4,36,18,.35)}
+.cp-av img{width:100%;height:100%;border-radius:50%;object-fit:cover;background:#1b6b3a;display:block}
+.cp-lv{position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);background:var(--ink);border:2px solid #fff;border-radius:999px;padding:0 10px;font-size:12px;line-height:20px}
+.cp-main{min-width:0;display:grid;gap:5px}
+.cp-tag{display:flex;gap:8px;align-items:center;font-size:12px;font-weight:600;opacity:.95}
+.cp-pill{background:var(--ink);border-radius:999px;padding:1px 9px;font-size:11px}
+.cp-name{font-size:34px;font-weight:700;line-height:1.1;text-shadow:0 3px 0 rgba(4,36,18,.4);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cp-type{font-size:14px;color:var(--ink);background:var(--yellow);border-radius:999px;padding:2px 12px;text-shadow:none}
+.cp-bar{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:8px;align-items:center;font-size:12px;font-weight:600}
+.cp-bar div{height:12px;border-radius:999px;background:rgba(0,0,0,.35);border:2px solid rgba(255,255,255,.22);overflow:hidden}
+.cp-bar i{display:block;height:100%;background:linear-gradient(#7af09b,#2fbf57);transition:width .4s}
+.cp-bar.xp i{background:linear-gradient(#ffd75e,#ffa61f)}
+.cp-tiles{display:grid;grid-template-columns:repeat(6,minmax(70px,1fr));gap:8px}
+.cp-tiles div{display:grid;place-items:center;text-align:center;padding:8px 10px;border-radius:14px;background:rgba(4,30,16,.82);border:2px solid rgba(255,255,255,.14)}
+.cp-tiles b{font-size:24px;line-height:1.1}
+.cp-tiles small{font-size:11px;opacity:.75;font-weight:600}
+.cp-cols{display:grid;grid-template-columns:1fr 1fr 1.1fr;gap:12px;align-items:start}
+.cp-panel,.cp-admin{border-radius:16px;border:2px solid var(--line);background:rgba(4,32,18,.84);overflow:hidden}
+.cp-panel header,.cp-admin header{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;font-weight:700}
+.cp-panel header h3,.cp-admin header h3{margin:0;font-size:18px;text-shadow:0 2px 0 rgba(4,36,18,.4)}
+.cp-panel header em,.cp-admin header em{font-style:normal;font-size:12px;opacity:.9}
+.p1 header,.cp-admin header{background:repeating-linear-gradient(135deg,#1fa84a 0 14px,#2dbf5a 14px 28px)}
+.p2 header{background:repeating-linear-gradient(135deg,#d99a1a 0 14px,#f2b52c 14px 28px)}
+.p3 header{background:repeating-linear-gradient(135deg,#12917f 0 14px,#1db39c 14px 28px)}
+.cp-panel>:not(header){margin:12px 14px 0}.cp-panel>:last-child{margin-bottom:14px}
+.cp-panel h4,.cp-card h4{margin:6px 0 0;font-size:12px;color:var(--yellow);font-weight:700}
+.cp-cur{display:flex;gap:12px;align-items:center;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.14)}
+.cp-cur i{font-style:normal;font-size:34px}.cp-cur b{display:block;font-size:20px}.cp-cur small{opacity:.8;font-weight:600;font-size:12px}
+.ico{display:inline-block;vertical-align:middle;object-fit:contain}
+.cp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cp-grid.m{grid-template-columns:repeat(5,1fr)}
+.cp-grid button,.cp-chips button,.cp-btns button,.cp-btns .cp-link{font:700 13px 'Fredoka','Noto Sans TC',sans-serif;color:#fff;cursor:pointer}
+.cp-grid button{display:grid;justify-items:center;gap:2px;padding:8px 4px;border-radius:14px;border:2px solid var(--line);background:rgba(255,255,255,.07);transition:transform .1s,background .1s}
+.cp-grid button i{font-style:normal;line-height:1;display:grid;place-items:center;height:46px}
+.cp-grid.m button i{height:38px}
+.cp-grid button{padding:10px 4px 8px}
+.hp-st .ico,.cp-type .ico{margin-right:2px}
+.ctag .ico{margin-right:4px;vertical-align:-4px}
+.cp-grid button:hover{transform:translateY(-2px);background:rgba(255,255,255,.15)}
+.cp-grid button.on{border-color:var(--yellow);background:rgba(255,199,51,.2);box-shadow:0 0 0 2px var(--yellow) inset}
+.cp-chips{display:flex;gap:8px;flex-wrap:wrap}
+.cp-chips button{padding:9px 14px;border-radius:999px;border:2px solid var(--line);background:rgba(255,255,255,.08)}
+.cp-chips button.primary{background:linear-gradient(var(--cta1),var(--cta2));border-color:#0c6a26}
+.cp-note{margin:0;font-size:12px;line-height:1.6;opacity:.75;font-weight:600}
+#cpage textarea,#cpage input[type=text],#cpage input[type=number],#cpage select{width:100%;box-sizing:border-box;padding:9px 12px;border-radius:12px;border:2px solid var(--line);background:rgba(0,0,0,.28);color:#fff;font:600 14px 'Fredoka','Noto Sans TC',sans-serif}
+#cpage textarea{width:calc(100% - 28px);min-height:78px;resize:none;line-height:1.5}
+#cpage select option{color:#111}
+.cp-locked{display:grid;gap:8px}
+.cp-locked a{display:flex;gap:10px;align-items:center;padding:8px 12px;border-radius:14px;background:rgba(255,255,255,.06);border:2px dashed rgba(255,255,255,.22);color:#fff;text-decoration:none}
+.cp-locked i{font-style:normal;font-size:24px}.cp-locked div{flex:1}.cp-locked b{display:block;font-size:14px}.cp-locked small{opacity:.7;font-size:11px;font-weight:600}
+.cp-locked u{text-decoration:none;font-size:11px;background:var(--yellow);color:var(--ink);border-radius:999px;padding:1px 8px}
+.cp-stats{display:grid;gap:4px}
+.cp-row{display:flex;justify-content:space-between;gap:10px;padding:7px 12px;border-radius:10px;background:rgba(255,255,255,.06);font-size:13px;font-weight:600}
+.cp-row b{color:var(--yellow)}
+.cp-admin>:not(header){margin:12px 14px}
+.cp-adm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.cp-card{display:grid;gap:8px;align-content:start;padding:12px;border-radius:14px;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.12)}
+.cp-f{display:flex;gap:10px;align-items:center;justify-content:space-between;font-size:13px;font-weight:600}
+.cp-f.col{display:grid;gap:4px;justify-content:stretch}
+.cp-f span{white-space:nowrap}
+#cpage .cp-f input[type=number]{width:84px}
+.cp-lock{display:flex;gap:12px;align-items:center;padding:12px 14px;margin:0!important;opacity:.85}
+.cp-lock i{font-style:normal;font-size:28px}.cp-lock b{display:block}.cp-lock small{font-size:12px;font-weight:600;opacity:.8;line-height:1.6}.cp-lock a{color:var(--yellow)}
+.cp-keys{font-size:12px;font-weight:600;opacity:.8;line-height:1.9}
+kbd{background:rgba(255,255,255,.14);border:1px solid var(--line);border-radius:6px;padding:0 6px;font:700 11px 'Fredoka',sans-serif}
+.cp-btns{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;align-items:center}
+.cp-btns button,.cp-btns .cp-link{padding:12px 20px;border-radius:999px;border:2px solid var(--line);background:rgba(255,255,255,.08);text-decoration:none;font-size:15px}
+.cp-btns .cp-go{background:linear-gradient(var(--cta1),var(--cta2));border:0;border-bottom:5px solid #0c6a26;border-radius:16px;padding:14px 46px;font-size:20px;text-shadow:0 2px 0 rgba(0,0,0,.25);box-shadow:inset 0 2px 0 rgba(255,255,255,.35),0 8px 18px rgba(26,168,68,.4)}
+@media (max-width:980px){.cp-head{grid-template-columns:auto minmax(0,1fr)}.cp-tiles{grid-column:1/-1;grid-template-columns:repeat(3,1fr)}.cp-cols,.cp-adm-grid{grid-template-columns:1fr}}
+@media (max-width:520px){.cp-name{font-size:26px}.cp-av{width:72px;height:72px}.cp-grid.m{grid-template-columns:repeat(3,1fr)}}
 #sit{position:fixed;right:12px;bottom:64px;z-index:3;border:2px solid #fff8;background:#0008;color:#fff;border-radius:6px;padding:8px 12px;font:inherit;font-size:14px;cursor:pointer}
 #load{position:fixed;inset:0;display:grid;place-items:center;background:#1b2a41;color:#fff;font-size:18px;z-index:5}
 #stick{position:fixed;left:18px;bottom:78px;width:110px;height:110px;border-radius:50%;background:#fff3;border:2px solid #fff6;display:none}
@@ -176,7 +221,7 @@ button{font-family:inherit}
   <div class="hp-card"><div class="hp-av" id="pAv"></div><div class="hp-info"><div class="hp-name" id="pName">—</div><div class="hp-st" id="pSt"></div><div class="hp-exp"><i id="pExp"></i></div><div class="hp-lv" id="pLv"></div></div></div>
   <div class="hp-clock" id="pClock">🕒 …</div>
   <div class="hp-top"><button id="bDex" type="button">📖 圖鑑</button><button id="bHelp" type="button">❓ 說明</button></div>
-  <div id="dock"><button id="bWheel" type="button">🎛️ 功能轉盤</button><button id="sit" type="button">🪑 坐下 / 起身 (E)</button></div>
+  <div id="dock"><button id="bWheel" type="button">🎮 角色頁面</button><button id="sit" type="button">🪑 坐下 / 起身 (E)</button></div>
 </div>
 <div id="stick"><i></i></div>
 <div id="proj"><canvas width="128" height="72"></canvas><span></span></div>
@@ -185,7 +230,7 @@ button{font-family:inherit}
 <div id="drawer" hidden><div class="dr-head"><span>選擇角色</span></div><div id="roster"></div></div>
 <div id="dexPanel" hidden><div class="px-head"><span>📖 辦公室圖鑑</span><button class="px-x" type="button">✕</button></div><div id="dexBody"></div></div>
 <div id="helpPanel" hidden><div class="px-head"><span>❓ 操作說明</span><button class="px-x" type="button">✕</button></div>
-  <div class="help-list"><div>🕹️ WASD／方向鍵移動，Shift 跑步，點地面走過去（手機用左下搖桿）</div><div>🪑 靠近椅子或馬桶按 E 坐下，再按一次起身</div><div>🎛️ 點人物或按「功能轉盤」：在座、目前狀態、想說的話…</div><div>✨ 撿地上的道具、沖馬桶、點投影機，圖鑑會記錄你的發現，每 5 個升一級</div><div>📡 角色依「凱曜設計部」的即時出勤狀態行動（在座／加班／用餐／廁所／會議／下班…）</div></div></div>
+  <div class="help-list"><div>🕹️ WASD／方向鍵移動，Shift 跑步，點地面走過去（手機用左下搖桿）</div><div>🪑 靠近椅子或馬桶按 E 坐下，再按一次起身</div><div>🎮 點自己的人物或按「角色頁面」：狀態、心情、想說的話、統計（管理者另有全員上下班與班長工具）</div><div>✨ 撿地上的道具、沖馬桶、點投影機，圖鑑會記錄你的發現，每 5 個升一級</div><div>📡 角色依「凱曜設計部」的即時出勤狀態行動（在座／加班／用餐／廁所／會議／下班…）</div></div></div>
 <script type="module">
 import * as THREE from 'three';
 import {RoundedBoxGeometry} from '../character-studio/vendor/RoundedBoxGeometry.js';
@@ -816,12 +861,12 @@ async function pollOnce(){
 function startLiveSync(){ const loop = async () => { await pollOnce(); setTimeout(loop, document.hidden ? 15000 : 3000); }; loop(); }
 function updateTags(){
   for (const c of Object.values(chars)) {
-    let text = '', p = null;
-    if (c.status && AWAY.has(c.status) && c !== player && c.home) { text = c.name + '（' + STATUS[c.status][0] + '）'; p = new THREE.Vector3(c.home.x, 1.7, c.home.z); }
-    else if (c.holder.visible && (c.message || c.mood)) { text = (MOOD[c.mood] || '') + (c.message ? ' ' + c.message : ''); p = c.holder.position.clone(); p.y += 2.6; }
-    if (!text || !p) { c.tag.style.display = 'none'; continue; }
+    let text = '', p = null, ico = '';
+    if (c.status && AWAY.has(c.status) && c !== player && c.home) { text = c.name + '（' + STATUS[c.status][0] + '）'; ico = iconImg(symOf[c.status], 18); p = new THREE.Vector3(c.home.x, 1.7, c.home.z); }
+    else if (c.holder.visible && (c.message || c.mood)) { text = c.message || ''; ico = c.mood ? iconImg(moodSym[c.mood], 18) : ''; p = c.holder.position.clone(); p.y += 2.6; }
+    if ((!text && !ico) || !p) { c.tag.style.display = 'none'; continue; }
     p.project(camera); const vis = p.z < 1 && Math.abs(p.x) < 1.1 && Math.abs(p.y) < 1.1;
-    c.tag.style.display = vis ? 'block' : 'none'; c.tag.textContent = text;
+    c.tag.style.display = vis ? 'block' : 'none'; const html = ico + esc(text); if (c.tag.dataset.h !== html) { c.tag.innerHTML = html; c.tag.dataset.h = html; }
     if (vis) c.tag.style.transform = 'translate(-50%,-100%) translate(' + ((p.x * .5 + .5) * innerWidth) + 'px,' + ((-p.y * .5 + .5) * innerHeight) + 'px)';
   }
 }
@@ -851,7 +896,7 @@ function select(name){
 }
 
 let done = 0;
-Promise.all([buildOffice(), ...NAMES.map((n, i) => addChar(n, i).then(() => { setLoad('載入角色 ' + (++done) + '/' + NAMES.length, done / NAMES.length); }))])
+Promise.all([buildOffice(), loadIcons(), ...NAMES.map((n, i) => addChar(n, i).then(() => { setLoad('載入角色 ' + (++done) + '/' + NAMES.length, done / NAMES.length); }))])
   .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); startLiveSync(); showTitleCard(); window.__plaza = {chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
 
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
@@ -962,24 +1007,32 @@ function updateProjectionView(){
   const t = room[5] + '・投影中：' + sl.title; if (projTitle.textContent !== t) projTitle.textContent = t;
   projCtx.imageSmoothingEnabled = false; projCtx.drawImage(sl.canvas, 0, 0, 128, 72);
 }
-// ---- 人物功能轉盤（沿用 2D 版的樣式與八個功能入口）----
-const RICONS = {
-  seat:'<path d="M8 4v8h8M8 12l-1.5 8M16 12l1.5 8M8 8h-2"/>',
-  status:'<circle cx="12" cy="12" r="8.5"/><path d="M8.5 13.5c1 1.6 2.2 2.3 3.5 2.3s2.5-.7 3.5-2.3M9 9.5h.01M15 9.5h.01"/>',
-  look:'<path d="M8 4 4 7l2.5 3L8 9v11h8V9l1.5 1L20 7l-4-3c-.6 1.5-2 2.3-4 2.3S8.6 5.5 8 4z"/>',
-  action:'<circle cx="14.5" cy="5" r="2"/><path d="m9 21 2.5-6-2-2.5 1-4 3.5 2 3 .5M7 11l3-3M11.5 15l4 2.5"/>',
-  music:'<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>',
-  story:'<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.7"/><path d="m4 17 5-4.5 3.5 3 3-2.5 4.5 4"/>',
-  say:'<path d="M4 5.5h16v10H12l-4.5 4v-4H4z"/>',
-  punish:'<path d="M12 3 5 6v5c0 4.5 3 8 7 9 4-1 7-4.5 7-9V6z"/><path d="M9 12l2 2 4-4"/>'};
-const RDEFS = [['seat', '在座'], ['status', '目前狀態'], ['look', '造型'], ['action', '動作'], ['music', '音樂'], ['story', '限時動態'], ['say', '想說的話'], ['punish', '班長']];
+// ---- 角色頁面（取代功能轉盤）：遊戲感的暫停／角色資料畫面，版型參考 PokéBonk 的暫停畫面 ----
 const TWO_D_URL = '../EMC-ART-Pixel-Office/dist/?clean=1';
+// ---- 狀態／心情圖示（2D 版原本的像素圖示）----
+const symOf = {present:'person', overtime:'moon', lunch:'bowl', meeting:'meeting', leave:'calendar', offwork:'power', toilet:'toilet', abroad:'plane', out:'briefcase'}, moodSym = {happy:'sun', angry:'burst', sad:'drop', joy:'heart'};
+const ICON = {};
+function moonIcon(px){   // 加班：月牙＋星星（2D 版也是程式畫的）
+  const c = document.createElement('canvas'), sc = 2; c.width = c.height = px * sc; const g = c.getContext('2d'); g.scale(sc, sc);
+  const cx = px * .46, cy = px * .52, r = px * .34, f = g.createLinearGradient(cx - r, cy - r, cx + r, cy + r); f.addColorStop(0, '#ffe58a'); f.addColorStop(1, '#f2a93b');
+  g.fillStyle = f; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
+  g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.arc(cx + r * .5, cy - r * .32, r * .86, 0, Math.PI * 2); g.fill(); g.globalCompositeOperation = 'source-over';
+  g.strokeStyle = '#b8741d'; g.lineWidth = Math.max(1, px * .03); g.lineJoin = 'round'; g.beginPath(); g.arc(cx, cy, r, Math.PI * .42, Math.PI * 1.18); g.stroke();
+  const star = (x, y, rad) => { g.fillStyle = '#fff3b8'; g.strokeStyle = '#e0a030'; g.lineWidth = Math.max(.8, px * .02); g.beginPath(); for (let i = 0; i < 8; i++) { const a = -Math.PI / 2 + i * Math.PI / 4, d = i % 2 ? rad * .42 : rad; g[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * d, y + Math.sin(a) * d); } g.closePath(); g.fill(); g.stroke(); };
+  star(px * .78, px * .28, px * .13); star(px * .86, px * .62, px * .08); return c;
+}
+async function loadIcons(){
+  const [main, extra] = await Promise.all([loadImg(ASSET + 'icons-v3.webp'), loadImg(ASSET + 'icons-status-v4.webp')]);
+  const cut = (im, cols, i) => { const cell = im.naturalWidth / cols, c = document.createElement('canvas'); c.width = c.height = 96; const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(im, (i % cols) * cell, Math.floor(i / cols) * cell, cell, cell, 0, 0, 96, 96); return c.toDataURL(); };
+  if (main) ['sun', 'burst', 'drop', 'heart', 'person', 'power', 'toilet', 'plane', 'briefcase'].forEach((k, i) => { ICON[k] = cut(main, 3, i); });
+  if (extra) ['meeting', 'bowl', 'calendar'].forEach((k, i) => { ICON[k] = cut(extra, 3, i); });
+  ICON.moon = moonIcon(96).toDataURL();
+}
+const iconImg = (sym, px) => ICON[sym] ? '<img class="ico" alt="" src="' + ICON[sym] + '" width="' + px + '" height="' + px + '">' : '';
 let handoff = null; try { const h = JSON.parse(localStorage.getItem('pixelViewerHandoff') || 'null'); if (h && h.name && Date.now() - Number(h.at) < 86400000) handoff = h; } catch (e) {}
-const radial = document.createElement('div'); radial.id = 'radial'; radial.hidden = true;
-const rRing = document.createElement('div'), rPanel = document.createElement('div'), rBack = document.createElement('button'), rTitle = document.createElement('strong'), rBody = document.createElement('div'), rBtns = {};
-rRing.className = 'radial-ring'; rPanel.className = 'radial-panel'; rPanel.hidden = true; rBack.type = 'button'; rBack.className = 'radial-back'; rBack.innerHTML = '<svg viewBox="0 0 24 24"><path d="M14.5 6 8.5 12l6 6"/></svg><span>返回</span>'; rTitle.className = 'radial-title'; rBody.className = 'radial-body';
-const rHead = document.createElement('div'); rHead.className = 'radial-head'; rHead.append(rBack, rTitle); rPanel.append(rHead, rBody); radial.append(rRing, rPanel); document.body.appendChild(radial);
-let rLevel = 0, rCur = '', writeOK = false;
+const isAdmin = () => Boolean(handoff && handoff.monitor && handoff.token);   // 管理者（含 Machi）：登入身分帶 monitor 旗標與權杖
+const radial = document.createElement('div'); radial.id = 'cpage'; radial.hidden = true; document.body.appendChild(radial);   // 舊名 radial 沿用，指向角色頁面
+let writeOK = false, hoursCfg = null, hoursForce = '';
 async function writeState(c, patch){   // 寫到真實後端（和 2D 版同一支介面）；第一次先確認
   if (handoff && handoff.staff && handoff.name !== c.name) { showQuote('', '你只能操控自己的人物'); return false; }
   if (!live.ok) { showQuote('', '目前是離線模擬（來源未被後端放行），只在這個畫面生效，沒有寫入後端'); return true; }
@@ -987,51 +1040,94 @@ async function writeState(c, patch){   // 寫到真實後端（和 2D 版同一�
   try { const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify({action:'pixelOfficeUpdate', name:c.name, patch}), cache:'no-store'}); const d = await r.json(); if (!d.ok) throw new Error(d.error || '同步失敗'); return true; }
   catch (e) { showQuote('', '同步失敗：' + e.message); return false; }
 }
-async function setOwnStatus(st){ const c = player; if (!c || !(await writeState(c, {status:st}))) return; c.status = st; c.appliedStatus = null; applyStatus(c, true); radialClose(); showQuote('', c.name + '：' + STATUS[st][1] + ' ' + STATUS[st][0]); }
-async function setOwnMood(m){ const c = player; if (!c || !(await writeState(c, {mood:m}))) return; c.mood = m; showQuote('', c.name + '的心情：' + (MOOD[m] || '（清除）')); renderRadialPanel(); }
-async function setOwnMessage(t){ const c = player; if (!c || !(await writeState(c, {message:t}))) return; c.message = t; showQuote('', t ? '已更新留言：' + t : '已清除留言'); radialClose(); }
-function renderRadialPanel(){
-  const k = rCur, c = player; rBody.innerHTML = '';
-  const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
-  if (k === 'status') {
-    rBody.append(el('span', 'rp-label', '出勤狀態'));
-    const g = el('div', 'rp-grid'); for (const [id, [name, icon]] of Object.entries(STATUS)) { const b = el('button', c.status === id ? 'active' : '', '<i>' + icon + '</i>' + name); b.type = 'button'; b.onclick = () => setOwnStatus(id); g.appendChild(b); } rBody.appendChild(g);
-    rBody.append(el('span', 'rp-label', '現在的心情'));
-    const m = el('div', 'rp-grid'); for (const [id, icon] of Object.entries(MOOD)) { const b = el('button', c.mood === id ? 'active' : '', '<i>' + icon + '</i>' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[id]); b.type = 'button'; b.onclick = () => setOwnMood(id); m.appendChild(b); }
-    const x = el('button', '', '<i>✖</i>清除'); x.type = 'button'; x.onclick = () => setOwnMood(''); m.appendChild(x); rBody.appendChild(m);
-  } else if (k === 'say') {
-    const t = el('textarea'); t.maxLength = 60; t.placeholder = '想對同事說的話（最多 60 字）'; t.value = c.message || ''; rBody.appendChild(t);
-    const r = el('div', 'rp-row'), ok = el('button', 'primary', '送出'), clr = el('button', '', '清除'); ok.type = clr.type = 'button'; ok.onclick = () => setOwnMessage(t.value.trim()); clr.onclick = () => setOwnMessage(''); r.append(ok, clr); rBody.appendChild(r);
-  } else {
-    const note = { look:'換造型要用到更衣間的圖集，這版 3D 辦公室還沒有。', action:'動作（閃身步、狗熊哆嗦毛、浪子踢球）目前只有 2D 版的 Machi 有。', music:'分享音樂（Spotify／Apple Music）還沒有接進 3D 版。', story:'限時動態（24 小時照片）需要上傳與登入，這版 3D 辦公室還沒有。', punish:'班長處罰只有管理者與 Machi 能用，需要登入身分，這版 3D 辦公室還沒有。' }[k];
-    rBody.append(el('p', 'rp-note', note + '請先到 2D 版操作。')); const a = el('a', 'rp-link', '開啟 2D 版'); a.href = TWO_D_URL; a.target = '_blank'; a.rel = 'noopener'; rBody.appendChild(a);
-  }
+async function adminCall(action, extra){   // 管理者工具（和 2D 版同一組動作）：帶登入身分的權杖
+  const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify({action, ...(extra || {}), editorToken:handoff.token, token:handoff.token}), cache:'no-store'});
+  const d = await r.json(); if (!d.ok) throw new Error(d.error || '失敗'); return d;
 }
-function showRadialPanel(k){ rCur = k; rLevel = 2; rTitle.textContent = RDEFS.find(d => d[0] === k)[1]; rPanel.hidden = false; rRing.hidden = true; renderRadialPanel(); }
-function toRadialRing(){ rLevel = 1; rCur = ''; rPanel.hidden = true; rRing.hidden = true; void rRing.offsetWidth; rRing.hidden = false; }
-rBack.onclick = toRadialRing;
-RDEFS.forEach(([k, t]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'radial-btn'; b.title = t; b.innerHTML = '<svg viewBox="0 0 24 24">' + RICONS[k] + '</svg><span>' + t + '</span>';
-  b.onclick = () => { if (k === 'seat') { setOwnStatus('present'); return; } showRadialPanel(k); }; rRing.appendChild(b); rBtns[k] = b; });
-function radialOpen(){ if (!player) return; radial.hidden = false; toRadialRing(); }
-function radialClose(){ radial.hidden = true; rLevel = 0; }
-const _rp = new THREE.Vector3();
-function placeRadial(){
-  if (radial.hidden || !player) return;
-  _rp.copy(player.holder.position); _rp.y += 1.1; _rp.project(camera);
-  const cx = (_rp.x * .5 + .5) * innerWidth, cy = (-_rp.y * .5 + .5) * innerHeight, clamp = (v, a, b) => Math.max(a, Math.min(v, Math.max(a, b)));
-  radial.style.left = cx + 'px'; radial.style.top = cy + 'px';
-  const x0 = 8, y0 = 8, x1 = innerWidth - 8, y1 = innerHeight - 60;
-  if (rLevel === 1) {
-    const n = RDEFS.length, R = Math.min(130, Math.max(100, (y1 - y0) * .28), (x1 - x0 - 80) / 2), ry = Math.min(R, (y1 - y0 - 84) / 2);
-    const ox = clamp(cx, x0 + R + 40, x1 - R - 40) - cx, oy = clamp(cy, y0 + ry + 30, y1 - ry - 54) - cy;
-    RDEFS.forEach(([k], j) => { const a = -Math.PI / 2 + j * 2 * Math.PI / n, b = rBtns[k]; b.style.setProperty('--rx', Math.round(ox + Math.cos(a) * R) + 'px'); b.style.setProperty('--ry', Math.round(oy + Math.sin(a) * ry) + 'px'); b.style.setProperty('--enter-delay', j * 35 + 'ms'); b.style.setProperty('--exit-delay', (n - 1 - j) * 35 + 'ms'); });
-  } else if (rLevel === 2) {
-    const w = Math.min(292, x1 - x0); rPanel.style.width = w + 'px'; rPanel.style.maxHeight = (y1 - y0) + 'px';
-    const preferRight = x1 - cx >= w + 44 || x1 - cx >= cx - x0; rPanel.style.left = (clamp(preferRight ? cx + 44 : cx - 44 - w, x0, x1 - w) - cx) + 'px';
-    const h = rPanel.offsetHeight; rPanel.style.top = (clamp(cy - h / 2, y0, y1 - h) - cy) + 'px';
-  }
+async function setOwnStatus(st){ const c = player; if (!c || !(await writeState(c, {status:st}))) return; c.status = st; c.appliedStatus = null; applyStatus(c, true); showQuote('', c.name + '：' + STATUS[st][1] + ' ' + STATUS[st][0]); renderCharPage(); }
+async function setOwnMood(m){ const c = player; if (!c || !(await writeState(c, {mood:m}))) return; c.mood = m; showQuote('', c.name + '的心情：' + (MOOD[m] || '（清除）')); renderCharPage(); }
+async function setOwnMessage(t){ const c = player; if (!c || !(await writeState(c, {message:t}))) return; c.message = t; showQuote('', t ? '已更新留言：' + t : '已清除留言'); renderCharPage(); }
+async function setOwnAuto(){ const c = player; if (!c || !(await writeState(c, {status:'auto'}))) return; showQuote('', '已交還給電腦自動判斷，幾秒內會更新'); live.version = 0; }
+const STATUS_DESC = {present:'在座工作中', overtime:'加班中（晚上 7 點後的在座）', lunch:'用餐中', meeting:'開會中', leave:'休假中', offwork:'已下班', toilet:'去廁所', abroad:'出國中', out:'公出工作中'};
+const roomOf = c => { const x = c.holder.position.x / U, z = c.holder.position.z / U; for (const r of ROOMS) if (x > r[1] && x < r[3] && z > r[2] && z < r[4]) return r[5]; if (x > 290 && x < 608 && z < 275) return '廁所'; if (x > 300 && x < 600 && z > 1190 && z < 1340) return '茶水間'; return '辦公區'; };
+const esc = t => String(t).replace(/[&<>"]/g, m => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;'}[m]));
+function renderCharPage(){
+  const c = player; if (!c) return; const st = STATUS[c.status] || STATUS.present, total = stat.found + stat.notes + stat.flush, lv = 1 + Math.floor(total / 5), nowT = new Intl.DateTimeFormat('zh-TW', {timeZone:'Asia/Taipei', hour:'2-digit', minute:'2-digit', hour12:false}).format(new Date());
+  const moodPct = {happy:90, joy:100, sad:35, angry:20}[c.mood] ?? 60, moodTxt = c.mood ? (iconImg(moodSym[c.mood], 18) + ' ' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[c.mood]) : '— 未設定';
+  const row = (k, v) => '<div class="cp-row"><span>' + k + '</span><b>' + v + '</b></div>';
+  const keep = radial.querySelector('textarea') ? radial.querySelector('textarea').value : null;
+  radial.innerHTML = `<div class="cp-wrap">
+    <div class="cp-head">
+      <div class="cp-av"><img alt="" src="${c.avatar || ''}"><b class="cp-lv">Lv.${lv}</b></div>
+      <div class="cp-main">
+        <div class="cp-tag"><span class="cp-pill">${live.ok ? '即時' : '模擬'}</span><span>凱曜設計部 · 5F · ${esc(roomOf(c))}</span></div>
+        <div class="cp-name">${esc(c.name)} <span class="cp-type">${iconImg(symOf[c.status] || 'person', 20)} ${st[0]}</span></div>
+        <div class="cp-bar"><label>心情</label><div><i style="width:${moodPct}%"></i></div><span>${moodTxt}</span></div>
+        <div class="cp-bar xp"><label>經驗</label><div><i style="width:${(total % 5) / 5 * 100}%"></i></div><span>${total % 5}/5</span></div>
+      </div>
+      <div class="cp-tiles">
+        <div><b id="cpTime">${nowT}</b><small>台北時間</small></div><div><b>${dex.d.length + dex.n.length}</b><small>圖鑑</small></div><div><b>${stat.found}</b><small>撿到</small></div>
+        <div><b>${stat.notes}</b><small>遺落物</small></div><div><b>${stat.flush}</b><small>沖馬桶</small></div><div><b>Lv.${lv}</b><small>等級</small></div>
+      </div>
+    </div>
+    <div class="cp-cols">
+      <section class="cp-panel p1"><header><h3>狀態</h3><em>共 9 種</em></header>
+        <div class="cp-cur"><i>${iconImg(symOf[c.status] || 'person', 52)}</i><div><b>${st[0]}</b><small>${STATUS_DESC[c.status] || ''}</small></div></div>
+        <div class="cp-grid" id="cpSt"></div>
+        <div class="cp-chips"><button type="button" id="cpAuto">🤖 交還電腦自動判斷</button></div>
+        <p class="cp-note">手動設定的狀態會暫停自動判斷（心跳、行事曆），直到你按「交還」或電腦關機重開。</p>
+        <h4>現在的心情</h4><div class="cp-grid m" id="cpMood"></div>
+      </section>
+      <section class="cp-panel p2"><header><h3>想說的話</h3><em>最多 60 字</em></header>
+        <textarea id="cpMsg" maxlength="60" placeholder="想對同事說的話（會顯示在頭上）"></textarea>
+        <div class="cp-chips"><button type="button" class="primary" id="cpSend">送出</button><button type="button" id="cpClr">清除</button></div>
+        <h4>更多功能</h4>
+        <div class="cp-locked">${[['👕', '造型', '換衣服、帽子、眼鏡'], ['🏃', '動作', '閃身步等特殊動作'], ['🎵', '音樂', '分享 Spotify／Apple Music'], ['🖼️', '限時動態', '24 小時照片']].map(x => '<a href="' + TWO_D_URL + '" target="_blank" rel="noopener"><i>' + x[0] + '</i><div><b>' + x[1] + '</b><small>' + x[2] + '</small></div><u>2D 版</u></a>').join('')}</div>
+      </section>
+      <section class="cp-panel p3"><header><h3>統計</h3><em>本機記錄</em></header>
+        <div class="cp-stats"><h4>收集</h4>
+          ${row('等級', 'Lv.' + lv)}${row('地上的驚喜', dex.d.length + '/' + DROP_IDS.length)}${row('會議室遺落物', dex.n.length + '/' + NOTE_IDS.length)}${row('撿到總數', stat.found)}${row('遺落物總數', stat.notes)}${row('沖馬桶', stat.flush)}
+          <h4>出勤</h4>
+          ${row('目前狀態', st[1] + ' ' + st[0])}${row('狀態來源', c.statusSource === 'manual' ? '手動設定' : c.statusSource === 'calendar' ? '行事曆' : '自動判斷')}${row('所在位置', esc(roomOf(c)))}${row('座位', c.sitting ? '坐著' : '站著')}
+          <h4>連線</h4>${row('資料來源', live.ok ? '即時（後端）' : '模擬（時間規則）')}${row('身分', handoff ? esc(handoff.name) + (isAdmin() ? '（管理者）' : '') : '未登入')}
+        </div></section>
+    </div>
+    <section class="cp-admin" id="cpAdmin"></section>
+    <div class="cp-keys"><kbd>Esc</kbd> 繼續 · <kbd>WASD</kbd> 移動 · <kbd>Shift</kbd> 跑步 · <kbd>E</kbd> 坐下／起身 · 點人物看資料 · 點地上道具撿取 · 點馬桶沖水 · 點投影機開關</div>
+    <div class="cp-btns"><button type="button" id="cpDex">📖 圖鑑</button><button type="button" id="cpHelp">❓ 說明</button><a href="${TWO_D_URL}" target="_blank" rel="noopener" class="cp-link">🖥️ 開啟 2D 版</a><button type="button" class="cp-go" id="cpGo">繼續</button></div>
+  </div>`;
+  const g = radial.querySelector('#cpSt'); for (const [id, [name, icon]] of Object.entries(STATUS)) { const b = document.createElement('button'); b.type = 'button'; b.className = c.status === id ? 'on' : ''; b.innerHTML = '<i>' + iconImg(symOf[id], 44) + '</i>' + name; b.onclick = () => setOwnStatus(id); g.appendChild(b); }
+  const m = radial.querySelector('#cpMood'); for (const [id, icon] of Object.entries(MOOD)) { const b = document.createElement('button'); b.type = 'button'; b.className = c.mood === id ? 'on' : ''; b.innerHTML = '<i>' + iconImg(moodSym[id], 36) + '</i>' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[id]; b.onclick = () => setOwnMood(id); m.appendChild(b); }
+  const x = document.createElement('button'); x.type = 'button'; x.innerHTML = '<i>✖</i>清除'; x.onclick = () => setOwnMood(''); m.appendChild(x);
+  const ta = radial.querySelector('#cpMsg'); ta.value = keep != null ? keep : (c.message || '');
+  radial.querySelector('#cpSend').onclick = () => setOwnMessage(ta.value.trim()); radial.querySelector('#cpClr').onclick = () => { ta.value = ''; setOwnMessage(''); };
+  radial.querySelector('#cpAuto').onclick = setOwnAuto; radial.querySelector('#cpGo').onclick = radialClose;
+  radial.querySelector('#cpDex').onclick = () => { radialClose(); $('bDex').click(); }; radial.querySelector('#cpHelp').onclick = () => { radialClose(); $('bHelp').click(); };
+  renderAdmin();
 }
-addEventListener('keydown', e => { if (e.key === 'Escape') radialClose(); });
+// 管理者工具：全員上班／下班、上下班設定、班長處罰（沿用 2D 版的動作與權限）
+function renderAdmin(){
+  const box = radial.querySelector('#cpAdmin'); if (!box) return;
+  if (!isAdmin()) { box.innerHTML = '<div class="cp-lock"><i>🔒</i><div><b>管理者工具</b><small>全員上班／下班、上下班時間設定、班長處罰。需要管理者（含 Machi）登入網站首頁後才會出現；本機請從 <a href="../index.html">網站首頁</a> 登入再進來。</small></div></div>'; return; }
+  const rows = [['dayStart', '上班開始'], ['lunchStart', '午休開始'], ['lunchEnd', '午休結束'], ['workEnd', '下班'], ['overtimeStart', '加班開始']], cfg = hoursCfg || {};
+  box.innerHTML = '<header><h3>管理者工具</h3><em>' + esc(handoff.name) + '</em></header><div class="cp-adm-grid">' +
+    '<div class="cp-card"><h4>全員上班／下班</h4><p class="cp-note">目前：<b>' + (hoursForce === 'work' ? '全員上班' : hoursForce === 'off' ? '全員下班' : '依時段自動') + '</b>。切換會讓所有人的畫面一起改變。</p><div class="cp-chips"><button type="button" id="adWork">切換全員上班／下班</button></div></div>' +
+    '<div class="cp-card"><h4>上下班設定</h4><label class="cp-f"><input type="checkbox" id="fhOn"' + (cfg.enabled !== false ? ' checked' : '') + '> 套用上下班時段規則</label><label class="cp-f"><input type="checkbox" id="fhRooms"' + (cfg.meetingRooms !== false ? ' checked' : '') + '> 行事曆有會議時依會議室入座</label>' +
+      rows.map(r => '<label class="cp-f"><span>' + r[1] + '</span><input type="number" min="0" max="23" id="fh_' + r[0] + '" value="' + (cfg[r[0]] ?? '') + '"></label>').join('') + '<div class="cp-chips"><button type="button" class="primary" id="fhSave">儲存</button></div></div>' +
+    '<div class="cp-card"><h4>班長：處罰</h4><label class="cp-f col"><span>對象</span><select id="pnWho">' + NAMES.map(n => '<option>' + n + '</option>').join('') + '</select></label><label class="cp-f col"><span>原因（最多 30 字）</span><input type="text" id="pnWhy" maxlength="30" placeholder="例如：上班時間遲到"></label>' +
+      '<label class="cp-f col"><span>天數</span><select id="pnDays">' + [1, 2, 3, 5, 7, 14, 30].map(n => '<option value="' + n + '">' + n + ' 天</option>').join('') + '</select></label><div class="cp-chips"><button type="button" class="primary" id="pnGo">處罰</button><button type="button" id="pnOff">解除處罰</button></div></div></div>';
+  box.querySelector('#adWork').onclick = async () => { const mode = hoursForce === 'work' ? 'off' : 'work'; if (!confirm('要切換成「' + (mode === 'work' ? '全員上班' : '全員下班') + '」嗎？所有人的畫面都會改變。')) return; try { await adminCall('pixelOfficeAllWork', {mode}); hoursForce = mode; showQuote('', mode === 'work' ? '已切換：全員上班' : '已切換：全員下班'); renderAdmin(); } catch (e) { showQuote('', '失敗：' + e.message); } };
+  box.querySelector('#fhSave').onclick = async () => { const body = {enabled:box.querySelector('#fhOn').checked, meetingRooms:box.querySelector('#fhRooms').checked}; rows.forEach(r => { body[r[0]] = Number(box.querySelector('#fh_' + r[0]).value); }); if (!confirm('要儲存新的上下班時段嗎？會影響所有人。')) return; try { await adminCall('savePixelHours', body); hoursCfg = {...cfg, ...body}; showQuote('', '已儲存上下班時段'); } catch (e) { showQuote('', '儲存失敗：' + e.message); } };
+  const punish = async days => { const name = box.querySelector('#pnWho').value, reason = box.querySelector('#pnWhy').value.trim(); if (days && reason.length < 2) { showQuote('', '請先寫處罰原因（至少 2 個字）'); return; } if (!confirm(days ? '要處罰「' + name + '」' + days + ' 天嗎？' : '要解除「' + name + '」的處罰嗎？')) return; try { await adminCall('pixelOfficePunish', {name, reason, days}); showQuote('', days ? '已處罰 ' + name + '：' + reason + '，' + days + ' 天' : '已解除 ' + name + ' 的處罰'); } catch (e) { showQuote('', '處罰失敗：' + e.message); } };
+  box.querySelector('#pnGo').onclick = () => punish(Number(box.querySelector('#pnDays').value) || 1); box.querySelector('#pnOff').onclick = () => punish(0);
+}
+async function loadHours(){ if (!isAdmin()) return; try { const r = await adminCall('getPixelHours'); hoursCfg = r.config || null; hoursForce = r.force || ''; if (!radial.hidden) renderAdmin(); } catch (e) {} }
+function radialOpen(){ if (!player) return; radial.hidden = false; renderCharPage(); loadHours(); }
+function radialClose(){ radial.hidden = true; radial.innerHTML = ''; }
+function placeRadial(){ if (!radial.hidden) { const t = radial.querySelector('#cpTime'); if (t) t.textContent = new Intl.DateTimeFormat('zh-TW', {timeZone:'Asia/Taipei', hour:'2-digit', minute:'2-digit', hour12:false}).format(new Date()); } }
+addEventListener('keydown', e => { if (e.key === 'Escape' && !radial.hidden) radialClose(); });
+radial.addEventListener('pointerdown', e => { if (e.target === radial) radialClose(); });
+
 // ---- PokéBonk 風格介面：標題／選角、HUD、圖鑑、浮動文字 ----
 const $ = id => document.getElementById(id);
 function setLoad(text, pct){ $('tText').textContent = text; if (pct != null) $('tFill').style.width = Math.round(pct * 100) + '%'; }
@@ -1078,7 +1174,7 @@ function updateHud(){
   if (!c) { $('pName').textContent = '訪客'; $('pSt').textContent = '👀 參觀中（登入後才能操作人物）'; $('pAv').innerHTML = ''; $('pExp').style.width = '0%'; $('pLv').textContent = ''; $('pClock').textContent = '🕒 ' + fmtTime.format(new Date()).replace(/^(\S+)\s+(\S+)$/, '$2 $1') + '（台北）'; updateTitleNet(); return; }
   const st = STATUS[c.status] || STATUS.present, total = stat.found + stat.notes + stat.flush, lv = 1 + Math.floor(total / 5);
   if ($('pName').textContent !== c.name) { $('pName').textContent = c.name; if (c.avatar) $('pAv').innerHTML = '<img alt="" src="' + c.avatar + '">'; }
-  $('pSt').textContent = st[1] + ' ' + st[0] + (c.mood ? '　' + (MOOD[c.mood] || '') : '');
+  $('pSt').innerHTML = iconImg(symOf[c.status] || 'person', 18) + ' ' + st[0] + (c.mood ? '　' + iconImg(moodSym[c.mood], 16) : '');
   $('pExp').style.width = ((total % 5) / 5 * 100) + '%'; $('pLv').textContent = 'Lv.' + lv + '　圖鑑 ' + (dex.d.length + dex.n.length) + '/' + (DROP_IDS.length + NOTE_IDS.length);
   $('pClock').textContent = '🕒 ' + fmtTime.format(new Date()).replace(/^(\S+)\s+(\S+)$/, '$2 $1') + '（台北）'; updateTitleNet();
 }
@@ -1094,7 +1190,7 @@ function tick(){
     const run = keys.ShiftLeft || keys.ShiftRight || Math.hypot(joy.x, joy.y) > .85;
     if (dir.lengthSq() > .01) target = null;
     else if (target) { dir.copy(target).sub(player.holder.position); dir.y = 0; if (dir.length() < .2) target = null; }
-    if (dir.lengthSq() > 1e-4 && !radial.hidden) radialClose();
+    if (!radial.hidden) dir.set(0, 0, 0);   // 角色頁面開著時人物不跟著走
     if (player.sitting && dir.lengthSq() > 1e-4) standUp(player);
     if (!player.sitting) moveChar(player, dir, run ? 5 : 2.4, dt);
   }
