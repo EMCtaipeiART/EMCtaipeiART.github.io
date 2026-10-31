@@ -1929,6 +1929,7 @@ function tick(){
       if (c.t < 0) { c.t = 1.5 + Math.random() * 4; const a = Math.random() * 6.283; c.dir.set(Math.random() < .4 ? 0 : Math.cos(a), 0, Math.sin(a)); }
       moveChar(c, c.dir.clone(), 1.6, dt);
     }
+    if (c.sitting) { const sp = sitSpot(c.sitting); if (Math.hypot(sp.x - c.holder.position.x, sp.z - c.holder.position.z) > .6 || (c.moving > 0 && c === player)) releaseSeat(c); }   // 走動中就不是坐著：離開座位的人一律解除入座
     updateSprite(c, dt); stationFx(c, dt);
     if (c.hopAt) { const k = (performance.now() - c.hopAt) / 600; if (k >= 1) { c.hopAt = 0; c.holder.position.y = 0; } else c.holder.position.y = Math.abs(Math.sin(k * Math.PI * 2)) * .6 * (1 - k); }
   }
