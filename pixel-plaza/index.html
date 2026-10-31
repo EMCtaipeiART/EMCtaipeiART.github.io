@@ -303,10 +303,13 @@ button{font-family:inherit}
 .hp-br .pk-purple{background:linear-gradient(90deg,#7b4de3,#3f8ef5)!important}
 .hp-top .pk-dark{width:auto!important;background:rgba(14,24,32,.82)!important}
 html.embed #hud,html.embed #dock,html.embed #proj,html.embed .lbl{display:none!important}   /* ?embed=1：嵌在網站設計師面板裡的精簡畫面 */
-#elevFx{position:fixed;inset:0;z-index:50;background:#0b1410;opacity:0;pointer-events:none;display:grid;place-items:center;transition:opacity .38s ease;font-family:'Fredoka','Noto Sans TC',sans-serif;color:#fff}
-#elevFx.on{opacity:1;pointer-events:auto}
-#elevFx div{display:grid;justify-items:center;gap:4px;transform:scale(.8);transition:transform .38s cubic-bezier(.3,1.5,.5,1)}#elevFx.on div{transform:scale(1)}
-#elevFx b{font-size:54px}#elevFx span{font-size:30px;font-weight:700;color:var(--yellow)}
+#elevFx{position:fixed;inset:0;z-index:50;pointer-events:none;font-family:'Fredoka','Noto Sans TC',sans-serif;color:#fff}
+#elevFx.on,#elevFx.out{pointer-events:auto}
+.ef-grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(var(--cols),1fr);grid-template-rows:repeat(var(--rows),1fr)}
+.ef-c{display:block;transform:scale(0);box-shadow:inset 0 -5px 0 rgba(0,0,0,.2),inset 0 5px 0 rgba(255,255,255,.22),inset 0 0 0 2px rgba(11,61,30,.35);transition:transform .14s steps(3)}
+#elevFx.on .ef-c{transform:scale(1.03)}
+.ef-txt{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:4px;opacity:0;transition:opacity .15s .22s}#elevFx.on .ef-txt{opacity:1}
+.ef-txt b{font-size:54px}.ef-txt span{font-size:34px;font-weight:700;color:var(--yellow);text-shadow:0 3px 0 rgba(11,61,30,.6)}
 .cp-grid.mood{grid-template-columns:1fr 1fr!important;gap:8px!important}
 .cp-grid.mood button{padding:12px 6px!important;font-size:15px!important;border-radius:14px!important}
 .cp-grid.mood button i img{width:44px!important;height:44px!important}
@@ -1156,8 +1159,15 @@ function fridgeInner(w, h, shelves){   // 開門後看到的內部：深色內�
 const floorOf = c => c.holder.position.x > (FX4 - 100) * U ? 4 : 5;
 const elevSpot = f => f === 4 ? {x:(FX4 + F4.EX + 37.5) * U, z:(F4.EY + 125) * U} : {x:201 * U, z:292 * U};
 let wantElev = false;
+let guestFloor = 5; const guestAt = {x:18, z:22};
+function guestGoFloor(){   // 訪客點電梯：換看另一層（鏡頭跳過去）
+  if (elevBusy) return; const to = guestFloor === 5 ? 4 : 5; elevBusy = true;
+  elevCover(to + 'F', () => { guestFloor = to; const sp = elevSpot(to); guestAt.x = sp.x; guestAt.z = sp.z + 4; camPos.set(guestAt.x, 10.9, guestAt.z + 12.2); look.set(guestAt.x, 0, guestAt.z); }, () => { elevBusy = false; });
+}
+function guestClamp(){ if (guestFloor === 4) { guestAt.x = Math.max((FX4 + F4_X0) * U, Math.min((FX4 + F4_X1) * U, guestAt.x)); guestAt.z = Math.max(F4_Z0 * U, Math.min(F4_Z1 * U, guestAt.z)); } else { guestAt.x = Math.max(0, Math.min(1201 * U, guestAt.x)); guestAt.z = Math.max(0, Math.min(1526 * U, guestAt.z)); } }
 function elevInteract(){
-  if (!player || AWAY.has(player.status)) return;
+  if (!player) { guestGoFloor(); return; }
+  if (AWAY.has(player.status)) return;
   const here = floorOf(player), sp = elevSpot(here);
   if (Math.hypot(sp.x - player.holder.position.x, sp.z - player.holder.position.z) < 2.0) { elevGo(here === 5 ? 4 : 5); return; }
   wantElev = true; target = new THREE.Vector3(sp.x, 0, sp.z);
@@ -1171,12 +1181,22 @@ function updateElev(){   // 人物貼近電梯就直接上下樓；剛到達時�
 }
 let elevBusy = false;
 const elevFx = document.createElement('div'); elevFx.id = 'elevFx'; document.body.appendChild(elevFx);
-function elevGo(to){   // 過場：門關起來（畫面轉暗＋樓層數字）→ 換樓層 → 門打開
+const EF_GREENS = ['#43d86c', '#2fbf57', '#1aa844', '#12853a', '#7af09b'];
+function elevCover(label, mid, done){   // 綠色像素方塊由下往上快速堆滿畫面 → 換樓層 → 方塊由上往下散開
+  const size = Math.max(44, Math.round(Math.min(innerWidth, innerHeight) / 11)), cols = Math.ceil(innerWidth / size), rows = Math.ceil(innerHeight / size);
+  elevFx.style.setProperty('--cols', cols); elevFx.style.setProperty('--rows', rows);
+  const cells = []; let html = '<div class="ef-grid">';
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) { html += '<i class="ef-c" style="background:' + EF_GREENS[Math.floor(Math.random() * EF_GREENS.length)] + '"></i>'; }
+  elevFx.innerHTML = html + '</div><div class="ef-txt"><b>🛗</b><span>' + label + '</span></div>';
+  const els = [...elevFx.querySelectorAll('.ef-c')]; els.forEach((el, n) => { const r = Math.floor(n / cols); cells.push({el, r}); el.style.transitionDelay = ((rows - 1 - r) * 16 + Math.random() * 70) + 'ms'; });
+  elevFx.classList.add('on');
+  setTimeout(() => { mid(); }, 520);
+  setTimeout(() => { cells.forEach(({el, r}) => { el.style.transitionDelay = (r * 16 + Math.random() * 70) + 'ms'; }); elevFx.classList.add('out'); elevFx.classList.remove('on'); }, 760);
+  setTimeout(() => { elevFx.classList.remove('out'); elevFx.innerHTML = ''; done(); }, 1400);
+}
+function elevGo(to){
   if (elevBusy || !player) return; wantElev = false; elevArmed = false; target = null; elevBusy = true; wheelClose(); fridgeClose();
-  elevFx.innerHTML = '<div><b>🛗</b><span>' + to + 'F</span></div>'; elevFx.classList.add('on');
-  setTimeout(() => { releaseSeat(player); const sp = elevSpot(to); player.holder.position.set(sp.x, 0, sp.z + .6); player.face = 0; camPos.set(sp.x, 10.9, sp.z + 12.8); look.set(sp.x, 0, sp.z); }, 420);
-  setTimeout(() => { elevFx.classList.remove('on'); showQuote('', '🛗 到了 ' + to + ' 樓'); }, 1000);
-  setTimeout(() => { elevBusy = false; }, 1450);
+  elevCover(to + 'F', () => { releaseSeat(player); const sp = elevSpot(to); player.holder.position.set(sp.x, 0, sp.z + .6); player.face = 0; camPos.set(sp.x, 10.9, sp.z + 12.8); look.set(sp.x, 0, sp.z); }, () => { elevBusy = false; showQuote('', '🛗 到了 ' + to + ' 樓'); });
 }
 // ---- 座位現場：不在座位的狀態（用餐／會議／休假／下班／廁所／出國／公出）椅子與桌上電腦收起、桌面變灰、桌上放狀態圖示；加班有紫色聚光燈與三團鬼火 ----
 const AWAY_DESK = new Set(['lunch', 'meeting', 'leave', 'offwork', 'toilet', 'abroad', 'out']), iconTex = {};
@@ -1248,7 +1268,7 @@ function select(name){
 
 let done = 0;
 Promise.all([buildOffice(), loadIcons(), ...NAMES.map((n, i) => addChar(n, i).then(() => { setLoad('載入角色 ' + (++done) + '/' + NAMES.length, done / NAMES.length); }))])
-  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); startLiveSync(); showTitleCard(); window.__plaza = {updateElev, elevGo, floorOf, elevInteract, fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
+  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); startLiveSync(); showTitleCard(); window.__plaza = {guestAt, guestGoFloor, updateElev, elevGo, floorOf, elevInteract, fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
 
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
 const TILT = 0, STRETCH = 1 / Math.cos(Math.atan(8.4 / 9.4)), _e = new THREE.Euler(0, 0, 0, 'YXZ');   // 垂直站立：不再後傾（避免穿進桌子、牆），高度拉長 STRETCH 倍抵消俯視縮短
@@ -1284,7 +1304,12 @@ stick.addEventListener('pointermove', e => { if (e.buttons) joyMove(e); });
 stick.addEventListener('pointerup', () => { joy.x = joy.y = 0; knob.style.transform = ''; });
 
 const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-renderer.domElement.addEventListener('pointerdown', e => {
+let guestDrag = null;
+renderer.domElement.addEventListener('pointerdown', e => { if (player) { onPick(e); return; } guestDrag = {x:e.clientX, y:e.clientY, moved:false}; try { renderer.domElement.setPointerCapture(e.pointerId); } catch (err) {} });
+renderer.domElement.addEventListener('pointermove', e => { if (player || !guestDrag || !(e.buttons & 1)) return; const dx = e.clientX - guestDrag.x, dy = e.clientY - guestDrag.y; if (!guestDrag.moved && Math.hypot(dx, dy) < 5) return; guestDrag.moved = true; guestAt.x -= (e.movementX || 0) * .045; guestAt.z -= (e.movementY || 0) * .07; guestClamp(); renderer.domElement.style.cursor = 'grabbing'; });
+renderer.domElement.addEventListener('pointerup', e => { if (player || !guestDrag) return; const was = guestDrag; guestDrag = null; renderer.domElement.style.cursor = ''; if (!was.moved) onPick(e); });
+renderer.domElement.addEventListener('wheel', e => { if (player) return; e.preventDefault(); guestAt.z += e.deltaY * .03; guestAt.x += e.deltaX * .03; guestClamp(); }, {passive:false});
+function onPick(e){
   if (!wheel.hidden) { wheelClose(); return; }   // 輪盤開著時，點外面只收合輪盤，人物先不動；下一下才移動
   ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
   const hits = ray.intersectObjects(pickables, true).filter((h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.desk && !pk.c.holder.visible); })), hit = hits.find(h => ((h.object.userData.pickRoot || h.object).userData.pick || {}).kind === 'char') || hits[0];
@@ -1292,7 +1317,7 @@ renderer.domElement.addEventListener('pointerdown', e => {
   radialClose(); wantSeat = null; fridgeWant = false; wantElev = false; wheelClose();
   const p = new THREE.Vector3();
   if (ray.ray.intersectPlane(plane, p) && !blocked(p.x, p.z)) target = p;
-});
+}
 
 let hoverBusy = false;
 renderer.domElement.addEventListener('pointermove', e => {
@@ -1774,7 +1799,7 @@ function tick(){
     const p = player.holder.position;
     camPos.lerp(new THREE.Vector3(p.x, 10.9, p.z + 12.2), 1 - Math.pow(.001, dt));
     camera.position.copy(camPos); look.lerp(p, 1 - Math.pow(.001, dt)); camera.lookAt(look.x, 1, look.z);
-  } else { camPos.lerp(new THREE.Vector3(18, 15, 36), 1 - Math.pow(.001, dt)); camera.position.copy(camPos); look.lerp(new THREE.Vector3(18, 0, 22), 1 - Math.pow(.001, dt)); camera.lookAt(look); }   // 沒登入：固定的辦公室全景
+  } else { const k = 1 - Math.pow(.0005, dt); camPos.lerp(new THREE.Vector3(guestAt.x, 10.9, guestAt.z + 12.2), k); camera.position.copy(camPos); look.lerp(new THREE.Vector3(guestAt.x, 1, guestAt.z), k); camera.lookAt(look); }   // 沒登入：滾輪／左鍵拖曳平移畫面，點電梯換看另一層
   updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay(); updateTags(); placeRadial(); updateFridge(); updateElev();
   renderFrame();
   requestAnimationFrame(tick);
