@@ -79,7 +79,7 @@
   - 狀態：目前狀態大卡、九種狀態的 3×3 格子（**像素圖示在上、名稱在下**，選中＝黃框＋淡黃底）、「交還電腦自動判斷」、五格心情（喜怒哀樂＋清除）。
   - 想說的話：輸入框（60 字）＋送出／清除；下方「更多功能」是虛線卡片，造型／動作／音樂／限時動態 3D 版還沒有，標「2D 版」並連到 2D，**不要做假按鈕**。
   - 統計：收集、出勤、連線三組鍵值列（左標籤右黃色數值）。
-- **管理者工具**（整列，標題綠色斜紋）：全員上班／下班切換、上下班設定（上班開始、午休開始／結束、下班、加班開始，加兩個勾選）、班長處罰（對象、原因 30 字內、天數、處罰／解除）。**只有登入身分帶管理者旗標（`handoff.monitor`，含 Machi）與權杖才顯示**，動作沿用 2D 版：`pixelOfficeAllWork`、`getPixelHours`／`savePixelHours`、`pixelOfficePunish`；一律先跳確認視窗；未登入顯示鎖頭說明卡。
+- **管理者工具**（整列，標題綠色斜紋）：全員上班／下班切換、上下班設定（上班開始、午休開始／結束、下班、加班開始，加兩個勾選）、班長處罰（對象、原因 30 字內、天數、處罰／解除）。**測試階段（2026-10-31 起）全面開放：任何人都看得到、不鎖身分、不要權杖、不跳確認視窗。上線前必須恢復：只有管理者（含 Machi）看得到、帶 `editorToken`、全員動作先確認。**動作沿用 2D 版：`pixelOfficeAllWork`、`getPixelHours`／`savePixelHours`、`pixelOfficePunish`；後端若拒絕，把後端回的錯誤原文顯示出來。
 - **底部**：操作提示列（`<kbd>` 鍵帽樣式）＋按鈕列（圖鑑、說明、開啟 2D 版、綠色大按鈕「繼續」）。
 - 新增個人功能放進對應欄位的面板，不要再開新彈窗。
 
@@ -127,7 +127,7 @@
 ## 9. 資料與安全
 
 - 出勤狀態：每 3 秒（背景 15 秒）讀 `pixelOfficeState`（只讀）；後端只放行 `localhost:8787` 與 GitHub Pages 來源，本機請用 `http://localhost:8787/pixel-plaza/index.html`。
-- 寫入（`pixelOfficeUpdate`：狀態、心情、留言）只能改**自己登入的角色**；第一次寫入跳確認視窗；離線模式不寫入。
+- 寫入（`pixelOfficeUpdate`：狀態、心情、留言）：**測試階段不鎖角色、不跳確認**（上線前恢復：只能改自己登入的角色、第一次寫入要確認）；離線模式（來源未被後端放行）不寫入。
 - 投影機開關、道具撿取、便便沖掉**只記在本機**（`localStorage`），不寫後端。
 - 角色素材來源：`character-studio/references/`（正、側、背三視圖）→ Codex 補 8 個中間角度（`pixel-plaza/ai-views/`）→ `node pixel-plaza/bake.mjs`（低解析）與 `HD=1 node pixel-plaza/bake.mjs`（高清）烘焙到 `sprites/`、`sprites-hd/`。新造型的三視圖可由 2D 版 `wardrobeFrame()` 擷取（公開服裝 API：`emc-ai-stage-classifier…/api/public/outfits`）。
 
