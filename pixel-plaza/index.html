@@ -22,11 +22,10 @@ canvas{position:fixed;inset:0;width:100%;height:100%;image-rendering:pixelated;d
 <div id="roster"></div>
 <script type="module">
 import * as THREE from 'three';
-import {GLTFLoader} from '../character-studio/vendor/GLTFLoader.js';
 
 const PIXEL = 3;                       // 每個像素放大倍率
 const NAMES = ['Amber','Anna','Leona','Machi','Noise','余采馨','吳冠賢','廖秦葦','李明庭','鄭筱舢','黎子瑄'];
-const url = n => `../character-studio/models/EMC_${n}_prototype.glb`;
+const url = (n, v) => `../character-studio/references/${/^[A-Za-z]+$/.test(n) ? 'designer' : 'staff'}_${n}_${v}.png`;
 
 const renderer = new THREE.WebGLRenderer({antialias:false});
 renderer.shadowMap.enabled = true;
@@ -87,42 +86,43 @@ for (let i = 0; i < 26; i++) {
   box(.5, 1.5, .5, 0x7a5230, x, 0, z); box(2, 1.6, 2, 0x2f8f46, x, 1.5, z); box(1.2, 1, 1.2, 0x3aa655, x, 3, z);
 }
 
-// ---------- 角色 ----------
-const loader = new GLTFLoader();
-const chars = {};   // name -> {root, mixer, actions, cur}
+// ---------- 角色（平面像素 billboard） ----------
+const chars = {};   // name -> {holder, sprite, tex, ...}
 const roster = document.getElementById('roster');
 let player = null, target = null;
+const SPRITE_H = 56, WORLD_H = 1.9;   // 像素貼圖高度 / 世界高度
 
-function pixelate(root){
-  root.traverse(o => {
-    if (!o.isMesh) return;
-    o.castShadow = true;
-    (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => {
-      for (const k of ['map','emissiveMap']) if (m[k]) { m[k].magFilter = m[k].minFilter = THREE.NearestFilter; m[k].generateMipmaps = false; m[k].needsUpdate = true; }
-    });
-  });
+function pixelTex(img){
+  // 縮成小點陣圖並降色，再用 nearest 放大，變成真正的像素角色
+  const h = SPRITE_H, w = Math.round(img.width / img.height * h);
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d', {willReadFrequently:true}); g.imageSmoothingQuality = 'high'; g.drawImage(img, 0, 0, w, h);
+  const d = g.getImageData(0, 0, w, h), p = d.data;
+  for (let i = 0; i < p.length; i += 4) {
+    p[i + 3] = p[i + 3] > 110 ? 255 : 0;
+    for (let k = 0; k < 3; k++) p[i + k] = Math.round(p[i + k] / 24) * 24;
+  }
+  g.putImageData(d, 0, 0);
+  const t = new THREE.CanvasTexture(c); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false;
+  t.colorSpace = THREE.SRGBColorSpace; t.userData = {aspect:w / h}; return t;
 }
-function setAnim(c, name){
-  if (c.cur === name) return;
-  const next = c.actions[name]; if (!next) return;
-  const prev = c.actions[c.cur];
-  next.reset().fadeIn(.18).play(); if (prev) prev.fadeOut(.18);
-  c.cur = name;
-}
-function addChar(name, gltf, i){
-  const root = gltf.scene;
-  const box3 = new THREE.Box3().setFromObject(root);
-  root.scale.setScalar(1.7 / (box3.max.y - box3.min.y));    // 統一身高約 1.7
-  pixelate(root);
-  const holder = new THREE.Group(); holder.add(root);
+const loadImg = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+const shadowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 16; const g = c.getContext('2d'); g.fillStyle = '#000'; g.beginPath(); g.ellipse(8, 8, 7, 5, 0, 0, 7); g.fill(); const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; return t; })();
+
+async function addChar(name, i){
+  const [front, side, back] = await Promise.all(['front', 'side', 'back'].map(v => loadImg(url(name, v)).then(pixelTex)));
+  const aspect = front.userData.aspect;
+  const sprite = new THREE.Mesh(new THREE.PlaneGeometry(WORLD_H * aspect, WORLD_H),
+    new THREE.MeshBasicMaterial({map:front, transparent:true, alphaTest:.5, side:THREE.DoubleSide}));
+  sprite.geometry.translate(0, WORLD_H / 2, 0);
+  const blob = new THREE.Mesh(new THREE.PlaneGeometry(1.1, .8), new THREE.MeshBasicMaterial({map:shadowTex, transparent:true, opacity:.28, depthWrite:false}));
+  blob.rotation.x = -Math.PI / 2; blob.position.y = .02;
+  const holder = new THREE.Group(); holder.add(blob, sprite);
   const a = i / NAMES.length * Math.PI * 2;
   holder.position.set(Math.cos(a) * 5, 0, Math.sin(a) * 5);
-  holder.rotation.y = -a;
   scene.add(holder);
-  const mixer = new THREE.AnimationMixer(root), actions = {};
-  gltf.animations.forEach(cl => actions[cl.name.toLowerCase()] = mixer.clipAction(cl));
-  const c = {name, holder, mixer, actions, cur:null, wander:i > 0, t:Math.random() * 5, dir:new THREE.Vector3()};
-  chars[name] = c; setAnim(c, 'idle');
+  const c = {name, holder, sprite, tex:{front, side, back}, face:-a, moving:0, phase:Math.random() * 9, wander:i > 0, t:Math.random() * 5, dir:new THREE.Vector3()};
+  chars[name] = c;
   const b = document.createElement('button'); b.textContent = name;
   b.onclick = () => select(name); roster.appendChild(b); c.btn = b;
 }
@@ -132,8 +132,23 @@ function select(name){
 }
 
 let done = 0;
-Promise.all(NAMES.map((n, i) => loader.loadAsync(url(n)).then(g => { addChar(n, g, i); document.getElementById('load').textContent = `載入角色 ${++done}/${NAMES.length}`; })))
+Promise.all(NAMES.map((n, i) => addChar(n, i).then(() => { document.getElementById('load').textContent = `載入角色 ${++done}/${NAMES.length}`; })))
   .then(() => { select('Amber'); document.getElementById('load').remove(); window.__plaza = {chars, camera}; });
+
+const _cam = new THREE.Vector3();
+function updateSprite(c, dt){
+  // 依角色朝向與鏡頭的相對角度，挑選正面／側面／背面（側面左右翻轉）
+  c.holder.getWorldPosition(_cam); _cam.subVectors(camera.position, _cam);
+  const toCam = Math.atan2(_cam.x, _cam.z);
+  let rel = Math.atan2(Math.sin(c.face - toCam), Math.cos(c.face - toCam));   // 0=面向鏡頭
+  const ar = Math.abs(rel);
+  const m = c.sprite.material, view = ar < Math.PI / 4 ? 'front' : ar > Math.PI * .75 ? 'back' : 'side';
+  m.map = c.tex[view]; c.sprite.scale.x = view === 'side' && rel < 0 ? -1 : 1;
+  c.sprite.rotation.y = toCam;                                      // 圓柱形 billboard
+  c.phase += dt * (c.moving > 3.5 ? 14 : 9) * (c.moving > 0 ? 1 : 0);
+  const hop = c.moving > 0 ? Math.abs(Math.sin(c.phase)) * (c.moving > 3.5 ? .22 : .12) : 0;
+  c.sprite.position.y = hop; c.sprite.rotation.z = c.moving > 0 ? Math.sin(c.phase) * .06 : 0;
+}
 
 // ---------- 輸入 ----------
 const keys = {};
@@ -162,14 +177,12 @@ renderer.domElement.addEventListener('pointerdown', e => {
 const clock = new THREE.Clock(), camPos = new THREE.Vector3(0, 12, 14), look = new THREE.Vector3();
 const up = new THREE.Vector3(0, 1, 0);
 function moveChar(c, dir, speed, dt){
-  if (dir.lengthSq() < 1e-4) { setAnim(c, 'idle'); return; }
+  if (dir.lengthSq() < 1e-4) { c.moving = 0; return; }
   dir.normalize();
   c.holder.position.addScaledVector(dir, speed * dt);
   const len = c.holder.position.length(); if (len > R - 1) c.holder.position.multiplyScalar((R - 1) / len);
   const want = Math.atan2(dir.x, dir.z);
-  let d = want - c.holder.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d));
-  c.holder.rotation.y += d * Math.min(1, dt * 12);
-  setAnim(c, speed > 3.5 ? 'run' : 'walk');
+  c.face = want; c.moving = speed;
 }
 function tick(){
   const dt = Math.min(clock.getDelta(), .05);
@@ -189,7 +202,7 @@ function tick(){
       if (c.t < 0) { c.t = 1.5 + Math.random() * 4; const a = Math.random() * 6.283; c.dir.set(Math.random() < .4 ? 0 : Math.cos(a), 0, Math.sin(a)); }
       moveChar(c, c.dir.clone(), 1.6, dt);
     }
-    c.mixer.update(dt);
+    updateSprite(c, dt);
   }
   if (player) {
     const p = player.holder.position;
