@@ -57,7 +57,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #stick i{position:absolute;left:35px;top:35px;width:40px;height:40px;border-radius:50%;background:#fffc}
 @media (pointer:coarse){#stick{display:block}}
 /* ===== PokéBonk 風格介面：糖果色漸層斜紋、粗描邊字、深色玻璃卡片、紅色大按鈕、圓角膠囊 ===== */
-:root{--c1:#ff8a5c;--c2:#ff4f7b;--c3:#8b5cff;--ink:#241f4d;--glass:rgba(27,22,64,.82);--line:rgba(255,255,255,.16);--yellow:#ffc733;--red1:#ff6b6b;--red2:#e8404f}
+:root{--c1:#8ae99b;--c2:#2fbf57;--c3:#0b6a2b;--ink:#0b3d1e;--glass:rgba(7,50,28,.84);--line:rgba(255,255,255,.16);--yellow:#ffc733;--cta1:#43d86c;--cta2:#1aa844}
 body{font-family:'Fredoka','Noto Sans TC',system-ui,sans-serif}
 button{font-family:inherit}
 #hud,#dock,#drawer,#dexPanel,#helpPanel,#title,#quote,#net{font-family:'Fredoka','Noto Sans TC',system-ui,sans-serif}
@@ -66,20 +66,20 @@ button{font-family:inherit}
 #title::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.08) 0 16px,transparent 16px 32px);pointer-events:none}
 #title.gone{opacity:0;pointer-events:none}
 .t-inner{position:relative;display:grid;justify-items:center;gap:14px;padding:24px 16px;width:min(560px,100%);box-sizing:border-box}
-.t-logo{font-size:clamp(54px,12vw,96px);font-weight:700;letter-spacing:1px;line-height:1;transform:rotate(-3deg);display:flex;gap:14px;filter:drop-shadow(0 6px 0 rgba(36,31,77,.55))}
+.t-logo{font-size:clamp(54px,12vw,96px);font-weight:700;letter-spacing:1px;line-height:1;transform:rotate(-3deg);display:flex;gap:14px;filter:drop-shadow(0 6px 0 rgba(11,61,30,.55))}
 .t-logo span{-webkit-text-stroke:9px var(--ink);paint-order:stroke fill;color:#fff}
 .t-logo .y{color:var(--yellow)}
-.t-sub{color:#fff;font-weight:700;font-size:15px;text-shadow:0 2px 0 rgba(36,31,77,.5)}
+.t-sub{color:#fff;font-weight:700;font-size:15px;text-shadow:0 2px 0 rgba(11,61,30,.5)}
 .t-load{display:flex;align-items:center;gap:12px;width:min(360px,90%);margin-top:8px}
-.t-ball{flex:none;width:44px;height:44px;border-radius:50%;background:linear-gradient(#ff5a5a 0 46%,#2b2b4a 46% 54%,#fff 54%);border:4px solid #2b2b4a;position:relative;animation:spin 1.2s linear infinite;box-shadow:0 3px 0 rgba(36,31,77,.4)}
-.t-ball::after{content:'';position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#fff;border:4px solid #2b2b4a;box-sizing:border-box}
+.t-ball{flex:none;width:44px;height:44px;border-radius:50%;background:linear-gradient(#43d86c 0 46%,#0b3d1e 46% 54%,#fff 54%);border:4px solid #0b3d1e;position:relative;animation:spin 1.2s linear infinite;box-shadow:0 3px 0 rgba(11,61,30,.4)}
+.t-ball::after{content:'';position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#fff;border:4px solid #0b3d1e;box-sizing:border-box}
 @keyframes spin{to{transform:rotate(360deg)}}
-.t-bar{position:relative;flex:1;height:26px;border-radius:999px;background:#fff;border:3px solid var(--ink);overflow:hidden;box-shadow:0 4px 0 rgba(36,31,77,.35)}
+.t-bar{position:relative;flex:1;height:26px;border-radius:999px;background:#fff;border:3px solid var(--ink);overflow:hidden;box-shadow:0 4px 0 rgba(11,61,30,.35)}
 .t-bar i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(#ffd75e,#ffb62e);transition:width .25s}
 .t-bar b{position:absolute;inset:0;display:grid;place-items:center;font-size:12px;color:var(--ink)}
-.t-card{width:100%;border-radius:22px;background:var(--glass);border:2px solid var(--line);box-shadow:0 24px 50px rgba(20,10,60,.45);overflow:hidden;color:#fff;transform:rotate(-1.2deg);backdrop-filter:blur(8px)}
+.t-card{width:100%;border-radius:22px;background:var(--glass);border:2px solid var(--line);box-shadow:0 24px 50px rgba(4,36,18,.45);overflow:hidden;color:#fff;transform:rotate(-1.2deg);backdrop-filter:blur(8px)}
 .t-card[hidden]{display:none}
-.t-head{padding:12px 18px;font-size:19px;font-weight:700;background:repeating-linear-gradient(135deg,#ff7a3d 0 14px,#ff9a4d 14px 28px);text-shadow:0 2px 0 rgba(36,31,77,.45)}
+.t-head{padding:12px 18px;font-size:19px;font-weight:700;background:repeating-linear-gradient(135deg,#1fa84a 0 14px,#2dbf5a 14px 28px);text-shadow:0 2px 0 rgba(11,61,30,.45)}
 .t-body{padding:16px;display:grid;gap:12px}
 .t-row{display:flex;gap:10px;align-items:center;background:rgba(255,255,255,.07);border-radius:14px;padding:10px 12px;font-size:13px;font-weight:600}
 .t-row p{margin:0}
@@ -87,15 +87,23 @@ button{font-family:inherit}
 .t-pick button{display:grid;justify-items:center;gap:4px;border:2px solid var(--line);background:rgba(255,255,255,.08);color:#fff;border-radius:14px;padding:8px 4px;font-weight:600;font-size:12px;cursor:pointer;transition:transform .12s,background .12s}
 .t-pick button:hover{transform:translateY(-2px);background:rgba(255,255,255,.16)}
 .t-pick button.on{border-color:var(--yellow);background:rgba(255,199,51,.2);box-shadow:0 0 0 2px var(--yellow) inset}
-.t-pick img,.hp-av img,.dr-av{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#4a3f8f}
-.btn-red{border:0;border-bottom:5px solid #b32a3a;border-radius:16px;padding:14px;font:700 19px/1 'Fredoka','Noto Sans TC',sans-serif;color:#fff;cursor:pointer;background:linear-gradient(var(--red1),var(--red2));text-shadow:0 2px 0 rgba(0,0,0,.25);box-shadow:inset 0 2px 0 rgba(255,255,255,.35),0 8px 18px rgba(232,64,79,.4);transition:transform .1s,filter .1s}
+.t-pick img,.hp-av img,.dr-av{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#1b6b3a}
+[hidden]{display:none!important}
+#drawer{display:none!important}
+.t-me{display:flex;gap:12px;align-items:center;background:rgba(255,255,255,.08);border-radius:14px;padding:10px 12px}
+.t-av{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#1b6b3a;display:grid;place-items:center;font-size:26px;flex:none}
+.t-me b{display:block;font-size:16px}
+.t-me small{display:block;color:rgba(255,255,255,.72);font-weight:600;font-size:12px;margin-top:2px}
+.btn-ghost{display:block;text-align:center;box-sizing:border-box;border:2px solid var(--line);background:rgba(255,255,255,.08);color:#fff;border-radius:14px;padding:12px;font:700 15px/1.2 'Fredoka','Noto Sans TC',sans-serif;text-decoration:none;cursor:pointer}
+.btn-ghost:hover{background:rgba(255,255,255,.16)}
+.btn-red{border:0;border-bottom:5px solid #0c6a26;border-radius:16px;padding:14px;font:700 19px/1 'Fredoka','Noto Sans TC',sans-serif;color:#fff;cursor:pointer;background:linear-gradient(var(--cta1),var(--cta2));text-shadow:0 2px 0 rgba(0,0,0,.25);box-shadow:inset 0 2px 0 rgba(255,255,255,.35),0 8px 18px rgba(26,168,68,.4);transition:transform .1s,filter .1s}
 .btn-red:hover{filter:brightness(1.08);transform:translateY(-1px)}
 .btn-red:active{transform:translateY(2px);border-bottom-width:3px}
 .t-foot{font-size:11px;color:rgba(255,255,255,.65);text-align:center;font-weight:600}
 /* 遊戲中 HUD */
 #hud{position:fixed;inset:0;pointer-events:none;z-index:5;color:#fff}
 #hud button{pointer-events:auto}
-.hp-card{position:absolute;left:12px;top:12px;display:flex;gap:10px;align-items:center;padding:8px 14px 8px 8px;background:var(--glass);border:2px solid var(--line);border-radius:20px;box-shadow:0 8px 20px rgba(20,10,60,.3);backdrop-filter:blur(6px);min-width:190px}
+.hp-card{position:absolute;left:12px;top:12px;display:flex;gap:10px;align-items:center;padding:8px 14px 8px 8px;background:var(--glass);border:2px solid var(--line);border-radius:20px;box-shadow:0 8px 20px rgba(4,36,18,.3);backdrop-filter:blur(6px);min-width:190px}
 .hp-av{width:60px;height:60px;border-radius:50%;padding:3px;background:linear-gradient(135deg,var(--yellow),var(--c2));flex:none}
 .hp-av img{width:100%;height:100%}
 .hp-info{display:grid;gap:3px;min-width:0}
@@ -104,20 +112,20 @@ button{font-family:inherit}
 .hp-exp{height:10px;border-radius:999px;background:rgba(0,0,0,.35);overflow:hidden;border:2px solid rgba(255,255,255,.2)}
 .hp-exp i{display:block;height:100%;width:0;background:linear-gradient(#ffd75e,#ffa61f);transition:width .4s}
 .hp-lv{font-size:11px;font-weight:700;color:var(--yellow)}
-.hp-clock{position:absolute;left:50%;top:12px;transform:translateX(-50%);padding:6px 16px;background:var(--glass);border:2px solid var(--line);border-radius:999px;font-weight:700;font-size:15px;box-shadow:0 6px 16px rgba(20,10,60,.3);white-space:nowrap}
+.hp-clock{position:absolute;left:50%;top:12px;transform:translateX(-50%);padding:6px 16px;background:var(--glass);border:2px solid var(--line);border-radius:999px;font-weight:700;font-size:15px;box-shadow:0 6px 16px rgba(4,36,18,.3);white-space:nowrap}
 .hp-top{position:absolute;right:12px;top:12px;display:flex;gap:8px}
-.hp-top button,#dock button{border:2px solid var(--line);background:var(--glass);color:#fff;border-radius:999px;padding:9px 15px;font:700 14px 'Fredoka','Noto Sans TC',sans-serif;cursor:pointer;box-shadow:0 6px 14px rgba(20,10,60,.3);backdrop-filter:blur(6px);transition:transform .1s,background .1s}
-.hp-top button:hover,#dock button:hover{transform:translateY(-2px);background:rgba(60,48,130,.9)}
+.hp-top button,#dock button{border:2px solid var(--line);background:var(--glass);color:#fff;border-radius:999px;padding:9px 15px;font:700 14px 'Fredoka','Noto Sans TC',sans-serif;cursor:pointer;box-shadow:0 6px 14px rgba(4,36,18,.3);backdrop-filter:blur(6px);transition:transform .1s,background .1s}
+.hp-top button:hover,#dock button:hover{transform:translateY(-2px);background:rgba(18,90,52,.92)}
 #dock{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:max-content;max-width:calc(100vw - 24px);pointer-events:none}
 #dock button{pointer-events:auto}
 #dock #sit{position:static;right:auto;bottom:auto;padding:9px 15px;font-size:14px}
-#dock #bWheel{background:linear-gradient(var(--red1),var(--red2));border-color:#b32a3a}
+#dock #bWheel{background:linear-gradient(var(--cta1),var(--cta2));border-color:#0c6a26}
 #net{position:fixed;left:50%;top:56px;transform:translateX(-50%);z-index:5;background:var(--glass);border:2px solid var(--line);border-radius:999px;padding:2px 12px;font-size:11px;font-weight:600;bottom:auto}
 #proj{top:104px;border-radius:14px;border:3px solid var(--ink);background:var(--ink)}
 #proj canvas{border-radius:8px}
 #proj span{font-family:inherit}
 /* 角色抽屜、圖鑑、說明 */
-#drawer,#dexPanel,#helpPanel{position:fixed;z-index:12;background:var(--glass);border:2px solid var(--line);border-radius:22px;box-shadow:0 24px 50px rgba(20,10,60,.5);color:#fff;backdrop-filter:blur(10px)}
+#drawer,#dexPanel,#helpPanel{position:fixed;z-index:12;background:var(--glass);border:2px solid var(--line);border-radius:22px;box-shadow:0 24px 50px rgba(4,36,18,.5);color:#fff;backdrop-filter:blur(10px)}
 #drawer[hidden],#dexPanel[hidden],#helpPanel[hidden]{display:none}
 #drawer{left:50%;bottom:70px;transform:translateX(-50%);width:min(560px,94vw);padding:12px}
 .dr-head,.px-head{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:17px;padding:2px 6px 10px}
@@ -137,7 +145,7 @@ button{font-family:inherit}
 .help-list{display:grid;gap:8px;font-size:14px;font-weight:600;line-height:1.5}
 .help-list div{background:rgba(255,255,255,.07);border-radius:12px;padding:8px 12px}
 /* 提示框與浮動文字 */
-#quote{bottom:92px;background:#fff;color:var(--ink);border:3px solid var(--ink);border-radius:18px;box-shadow:0 6px 0 rgba(36,31,77,.35);font-family:'Fredoka','Noto Sans TC',sans-serif;font-weight:700;z-index:8}
+#quote{bottom:92px;background:#fff;color:var(--ink);border:3px solid var(--ink);border-radius:18px;box-shadow:0 6px 0 rgba(11,61,30,.35);font-family:'Fredoka','Noto Sans TC',sans-serif;font-weight:700;z-index:8}
 #quote b{color:var(--c2)}
 .ftx{position:fixed;left:0;top:0;z-index:7;pointer-events:none;font:700 22px 'Fredoka','Noto Sans TC',sans-serif;color:var(--yellow);-webkit-text-stroke:5px var(--ink);paint-order:stroke fill;animation:floatup 1.3s ease-out forwards;white-space:nowrap}
 @keyframes floatup{from{opacity:1;margin-top:0;scale:.6}15%{scale:1.15}to{opacity:0;margin-top:-70px;scale:1}}
@@ -155,10 +163,11 @@ button{font-family:inherit}
       <div class="t-head">歡迎，同事！</div>
       <div class="t-body">
         <div class="t-row"><span>📡</span><p id="tNet">連線中…</p></div>
-        <div class="t-row"><span>👤</span><p>選一位角色進入辦公室，之後隨時可以按「換人」。</p></div>
-        <div class="t-pick" id="tPick"></div>
-        <button class="btn-red" id="tGo" type="button">進入辦公室！</button>
-        <div class="t-foot">WASD／方向鍵移動 · Shift 跑步 · 點地面走過去 · E 坐下 · 網址加 ?px=1 為復古像素模式</div>
+        <div class="t-me" id="tMe"></div>
+        <button class="btn-red" id="tGo" type="button" hidden>進入辦公室！</button>
+        <a class="btn-ghost" id="tLogin" href="../index.html" hidden>前往網站首頁登入</a>
+        <button class="btn-ghost" id="tGuest" type="button" hidden>以訪客參觀（不能操作人物）</button>
+        <div class="t-foot">已登入會依登入帳號操作你的人物 · WASD／方向鍵移動 · Shift 跑步 · E 坐下</div>
       </div>
     </div>
   </div>
@@ -167,7 +176,7 @@ button{font-family:inherit}
   <div class="hp-card"><div class="hp-av" id="pAv"></div><div class="hp-info"><div class="hp-name" id="pName">—</div><div class="hp-st" id="pSt"></div><div class="hp-exp"><i id="pExp"></i></div><div class="hp-lv" id="pLv"></div></div></div>
   <div class="hp-clock" id="pClock">🕒 …</div>
   <div class="hp-top"><button id="bDex" type="button">📖 圖鑑</button><button id="bHelp" type="button">❓ 說明</button></div>
-  <div id="dock"><button id="bWheel" type="button">🎛️ 功能轉盤</button><button id="sit" type="button">🪑 坐下 / 起身 (E)</button><button id="bPeople" type="button">👥 換人</button></div>
+  <div id="dock"><button id="bWheel" type="button">🎛️ 功能轉盤</button><button id="sit" type="button">🪑 坐下 / 起身 (E)</button></div>
 </div>
 <div id="stick"><i></i></div>
 <div id="proj"><canvas width="128" height="72"></canvas><span></span></div>
@@ -187,7 +196,7 @@ import {LineMaterial} from '../character-studio/vendor/lines/LineMaterial.js';
 const PIXEL_MODE = new URLSearchParams(location.search).get('px') === '1';   // ?px=1：復古低解析像素模式
 const HD = !PIXEL_MODE, DPR = Math.min(devicePixelRatio || 1, 2);
 const RH = 300;                        // 復古模式的內部渲染高度（像素）
-const NAMES = ['Amber','Anna','Leona','Machi','Noise','余采馨','吳冠賢','廖秦葦','李明庭','鄭筱舢','黎子瑄'];
+const NAMES = ['Amber','Anna','Leona','Machi','Noise','余采馨','吳冠賢','廖秦葦','李明庭','鄭筱舢','黎子瑄','王藍庭'];
 const url = n => (HD ? 'sprites-hd/' : 'sprites/') + n + '.png';
 
 if (PIXEL_MODE) document.documentElement.classList.add('px');
@@ -242,7 +251,7 @@ const ROW_TOPS = [355, 592, 828];
 const GROUPS = [[463,568,673],[833,938,1043]];
 // 入座：名字 → [組, 排, 欄, 上排/下排]（僅設計部最下面那排有人）
 const SEATS = {Leona:[0,2,0,'top'],Amber:[0,2,1,'top'],Noise:[0,2,2,'top'],Anna:[0,2,1,'bottom'],Machi:[0,2,2,'bottom'],
-  余采馨:[1,2,0,'top'],吳冠賢:[1,2,1,'top'],廖秦葦:[1,2,2,'top'],李明庭:[1,2,0,'bottom'],鄭筱舢:[1,2,1,'bottom'],黎子瑄:[1,2,2,'bottom']};
+  余采馨:[1,2,0,'top'],吳冠賢:[1,2,1,'top'],廖秦葦:[1,2,2,'top'],李明庭:[1,2,0,'bottom'],鄭筱舢:[1,2,1,'bottom'],黎子瑄:[1,2,2,'bottom'],王藍庭:[1,1,1,'top']};
 
 const FLOOR_X0 = -3, FLOOR_X1 = 1201 * U + 3, FLOOR_Z0 = -3, FLOOR_Z1 = 1526 * U + 3;
 // 地板：淺灰藍方格
@@ -328,27 +337,29 @@ function pixelSprite(canvas, x, y, z, k){   // 原始像素圖：最近鄰放大
 }
 function removeMesh(m){ scene.remove(m); const i = billboards.indexOf(m); if (i >= 0) billboards.splice(i, 1); }
 // 掉落物（地上）：每 8 分鐘一個時段、1–2 個，位置由種子決定
-const dropCache = new Map();
+const dropCache = new Map(), inSlideZone = (x, z) => Math.abs(x - 846 * U) < 4.3 && Math.abs(z - 1334 * U) < 3.2;   // 會議室 D 地板上的投影畫面範圍
 function dropsNow(){
   const sl = Math.floor(Date.now() / SLOT_D), out = [];
   for (const s of [sl - 1, sl]) {
     let L = dropCache.get(s);
     if (!L) { L = []; const r = rng('d:3d:' + s), n = 1 + Math.floor(r() * 2);
       for (let i = 0; i < n; i++) for (let k = 0; k < 60; k++) { const x = 2 + r() * (1201 * U - 4), z = 2 + r() * (1526 * U - 4);
-        if (blocked(x, z) || blocked(x + 1, z) || blocked(x - 1, z) || blocked(x, z + 1) || blocked(x, z - 1)) continue; L.push({id:'d:' + s + ':' + i, x, z, k:Math.floor(r() * ITEMS.length)}); break; }
+        if (inSlideZone(x, z) || blocked(x, z) || blocked(x + 1, z) || blocked(x - 1, z) || blocked(x, z + 1) || blocked(x, z - 1)) continue; L.push({id:'d:' + s + ':' + i, x, z, k:Math.floor(r() * ITEMS.length)}); break; }
       dropCache.set(s, L); }
     L.forEach(q => { if (!taken(q.id)) out.push(q); });
   }
   return out;
 }
 // 會議室遺落物：每 12 分鐘一個時段、0–3 件，放在會議桌上
-const NOTE_TABLES = [[863, 158, 250, 56], [184, 1160, 120, 50], [186, 1360, 116, 50], [846, 1196, 252, 60]], noteCache = new Map();
+const PROJ_POS = [[948, 158], [160, 1160], [162, 1360], [846, 1196]], NOTE_TABLES = [[863, 158, 250, 56], [184, 1160, 120, 50], [186, 1360, 116, 50], [846, 1196, 252, 60]], noteCache = new Map();
 function notesNow(){
   const sl = Math.floor(Date.now() / SLOT_N), out = [];
   for (const s of [sl - 1, sl]) {
     let L = noteCache.get(s);
     if (!L) { L = []; const r = rng('n:3d:' + s), n = Math.floor(r() * 4);
-      for (let i = 0; i < n; i++) { const t = NOTE_TABLES[Math.floor(r() * NOTE_TABLES.length)]; L.push({id:'n:' + s + ':' + i, x:(t[0] - t[2] / 2 + 20 + r() * (t[2] - 40)) * U, z:(t[1] - t[3] / 2 + 12 + r() * (t[3] - 24)) * U, k:Math.floor(r() * NOTE_IDS.length)}); }
+      for (let i = 0; i < n; i++) for (let a = 0; a < 10; a++) {   // 遺落物避開桌上的投影機
+        const t = NOTE_TABLES[Math.floor(r() * NOTE_TABLES.length)], px = t[0] - t[2] / 2 + 20 + r() * (t[2] - 40), py = t[1] - t[3] / 2 + 12 + r() * (t[3] - 24), k = Math.floor(r() * NOTE_IDS.length);
+        if (PROJ_POS.some(q => Math.abs(q[0] - px) < 62 && Math.abs(q[1] - py) < 46)) continue; L.push({id:'n:' + s + ':' + i, x:px * U, z:py * U, k}); break; }
       noteCache.set(s, L); }
     L.forEach(q => { if (!taken(q.id)) out.push(q); });
   }
@@ -379,8 +390,8 @@ function syncFun(){
   for (const [id, w] of want) {
     if (floorMeshes.has(id)) continue;
     let mesh;
-    if (w.kind === 'drop') { const cv = spriteCanvas(DROP_IDS[w.d.k]) || emojiCanvas(ITEMS[w.d.k][0]); mesh = pixelSprite(cv, w.d.x, 0, w.d.z, .03); mesh.userData.pick = {kind:'drop', d:w.d}; }
-    else if (w.kind === 'note') { const cv = spriteCanvas(NOTE_IDS[w.n.k]) || emojiCanvas('📝'); mesh = pixelSprite(cv, w.n.x, .95, w.n.z, .018); mesh.userData.pick = {kind:'note', n:w.n}; }
+    if (w.kind === 'drop') { const cv = spriteCanvas(DROP_IDS[w.d.k]) || emojiCanvas(ITEMS[w.d.k][0]); mesh = pixelSprite(cv, w.d.x, 0, w.d.z, .021); mesh.userData.pick = {kind:'drop', d:w.d}; }
+    else if (w.kind === 'note') { const cv = spriteCanvas(NOTE_IDS[w.n.k]) || emojiCanvas('📝'); mesh = pixelSprite(cv, w.n.x, .95, w.n.z, .012); mesh.userData.pick = {kind:'note', n:w.n}; }
     else { mesh = makePoop(w.p.t, w.p.v); mesh.userData.pick = {kind:'poop', p:w.p}; }
     pickables.push(mesh); floorMeshes.set(id, {kind:w.kind, mesh, phase:Math.random() * 6});
   }
@@ -394,7 +405,19 @@ function updateGameplay(){
   const t = performance.now() / 1000;
   for (const [, o] of floorMeshes) { if (o.kind === 'drop') o.mesh.position.y = .05 + Math.sin(t * 2.2 + o.phase) * .06; else if (o.kind === 'poop') o.mesh.scale.setScalar(o.mesh.userData.baseScale * (1 + Math.sin(t * 5) * .03)); }
   if (player && !player.sitting && performance.now() - lastCollect > 600) { lastCollect = performance.now(); for (const d of dropsNow()) if (Math.hypot(player.holder.position.x - d.x, player.holder.position.z - d.z) < 1.4) { collectDrop(d); break; } }   // 走過去也能撿
-  updateProjectors();
+  updateProjectors(); updateCover();
+}
+// 道具不蓋到人物的臉／身體：畫面上落在某個人物範圍內就先藏起來（也不能點）
+const _cv1 = new THREE.Vector3(), _cv2 = new THREE.Vector3(); let lastCover = 0;
+function updateCover(){
+  if (performance.now() - lastCover < 250) return; lastCover = performance.now();
+  const rs = [];
+  for (const c of Object.values(chars)) { if (!c.holder.visible) continue;
+    _cv1.copy(c.holder.position).project(camera); _cv2.copy(c.holder.position); _cv2.y = WORLD_H * STRETCH; _cv2.project(camera);
+    const fy = (-_cv1.y * .5 + .5) * innerHeight, hy = (-_cv2.y * .5 + .5) * innerHeight, h = Math.max(20, fy - hy); rs.push([(_cv1.x * .5 + .5) * innerWidth, hy - h * .1, fy + h * .08, h * .42]); }
+  for (const [, o] of floorMeshes) { if (o.kind === 'poop') continue;
+    _cv1.copy(o.mesh.position); _cv1.y += .25; _cv1.project(camera); const x = (_cv1.x * .5 + .5) * innerWidth, y = (-_cv1.y * .5 + .5) * innerHeight;
+    o.mesh.visible = !rs.some(r => Math.abs(x - r[0]) < r[3] && y > r[1] && y < r[2]); }
 }
 const imgs = {};
 const loadImg = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
@@ -415,7 +438,7 @@ async function buildOffice(){
   build3dObjects(T, place);
   await loadFunArt();
   await Promise.all(SNACKS.map(async ([k]) => { imgs[k] = await loadImg(ASSET + 'props4/' + k + '.png'); }));
-  if (pantry3d.snackSpot) SNACKS.forEach(([k, h], i) => { const src = imgs[k] && trimmed(imgs[k]); if (!src) return; const dh = h, dw = dh * src.width / src.height, m = addBillboard(src, pantry3d.snackSpot.cx + (-1.55 + i * .62), pantry3d.snackSpot.cz, dw, dh); m.position.y = .95; });
+  if (pantry3d.snackSpot) SNACKS.forEach(([k, h], i) => { const src = imgs[k] && trimmed(imgs[k]); if (!src) return; const dh = h * .75, dw = dh * src.width / src.height, m = addBillboard(src, pantry3d.snackSpot.cx + (-1.55 + i * .62), pantry3d.snackSpot.cz, dw, dh); m.position.y = .95; });
   startGameplay();
   // 藍色桌組：每組兩排×三張（3D 方塊桌＋小螢幕），三排 × 設計部／同仁區
   const I = v => v * U;
@@ -829,7 +852,7 @@ function select(name){
 
 let done = 0;
 Promise.all([buildOffice(), ...NAMES.map((n, i) => addChar(n, i).then(() => { setLoad('載入角色 ' + (++done) + '/' + NAMES.length, done / NAMES.length); }))])
-  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); select(handoff && chars[handoff.name] ? handoff.name : 'Machi'); startLiveSync(); showTitleCard(); window.__plaza = {chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
+  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); startLiveSync(); showTitleCard(); window.__plaza = {chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
 
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
 const TILT = 0, STRETCH = 1 / Math.cos(Math.atan(8.4 / 9.4)), _e = new THREE.Euler(0, 0, 0, 'YXZ');   // 垂直站立：不再後傾（避免穿進桌子、牆），高度拉長 STRETCH 倍抵消俯視縮短
@@ -867,15 +890,15 @@ stick.addEventListener('pointerup', () => { joy.x = joy.y = 0; knob.style.transf
 const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 renderer.domElement.addEventListener('pointerdown', e => {
   ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
-  const hit = ray.intersectObjects(pickables, true)[0];
-  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { if (pk.c !== player) select(pk.c.name); radialOpen(); } else if (pk.kind === 'poop') flushPoop(pk.p); return; } }
+  const hit = ray.intersectObjects(pickables, true).find(h => (h.object.userData.pickRoot || h.object).visible !== false);
+  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { if (pk.c === player) radialOpen(); else { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); return; } }
   radialClose();
   const p = new THREE.Vector3();
   if (ray.ray.intersectPlane(plane, p) && !blocked(p.x, p.z)) target = p;
 });
 
 // ---------- 主迴圈 ----------
-const clock = new THREE.Clock(), camPos = new THREE.Vector3(20, 8.4, 33), look = new THREE.Vector3();
+const clock = new THREE.Clock(), camPos = new THREE.Vector3(20, 10.9, 36), look = new THREE.Vector3();
 const up = new THREE.Vector3(0, 1, 0);
 function moveChar(c, dir, speed, dt){
   if (dir.lengthSq() < 1e-4) { c.moving = 0; return; }
@@ -1015,20 +1038,20 @@ function setLoad(text, pct){ $('tText').textContent = text; if (pct != null) $('
 function avatarURL(c){   // 取角色正面圖的頭肩部分當大頭貼
   try { const im = c.tex.image, cw = im.height, cv = document.createElement('canvas'); cv.width = cv.height = 96; const g = cv.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(im, cw * .17, cw * .0, cw * .66, cw * .66, 0, 0, 96, 96); return cv.toDataURL(); } catch (e) { return ''; }
 }
-let pickName = (handoff && handoff.name) || (() => { try { return localStorage.getItem('pixelLastChar'); } catch (e) { return null; } })() || 'Machi';
-function buildTitleCard(){
-  const pick = $('tPick'); pick.innerHTML = '';
-  for (const n of NAMES) { const c = chars[n]; if (!c) continue; c.avatar = avatarURL(c);
-    const b = document.createElement('button'); b.type = 'button'; b.dataset.n = n; b.className = n === pickName ? 'on' : ''; b.innerHTML = '<img alt="" src="' + c.avatar + '"><span>' + n + '</span>'; b.onclick = () => { pickName = n; pick.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); }; pick.appendChild(b); }
-  const dr = $('roster'); dr.querySelectorAll('button').forEach(b => { const n = b.dataset.name; if (n && chars[n]) { const im = document.createElement('img'); im.className = 'dr-av'; im.alt = ''; im.src = chars[n].avatar; b.prepend(im); } });
+// 登入：沿用網站首頁登入後留下的身分（localStorage pixelViewerHandoff，24 小時內有效），依登入帳號操作人物；沒登入只能參觀
+const meName = () => handoff ? (NAMES.find(n => n.toLowerCase() === String(handoff.name).toLowerCase()) || null) : null;
+function showTitleCard(){
+  $('tLoad').style.display = 'none'; $('tCard').hidden = false; for (const c of Object.values(chars)) c.avatar = avatarURL(c); updateTitleNet();
+  const me = meName();
+  if (me) { $('tMe').innerHTML = '<img class="t-av" alt="" src="' + chars[me].avatar + '"><div><b>已登入：' + me + '</b><small>將依登入帳號操作你的人物</small></div>'; $('tGo').hidden = false; $('tLogin').hidden = true; $('tGuest').hidden = true; }
+  else { $('tMe').innerHTML = '<div class="t-av">🔒</div><div><b>尚未登入</b><small>' + (handoff ? '登入帳號「' + handoff.name + '」不在辦公室名單內' : '請先在網站首頁登入，再從頭像進入多元宇宙') + '</small></div>'; $('tGo').hidden = true; $('tLogin').hidden = false; $('tGuest').hidden = false; }
 }
-function showTitleCard(){ $('tLoad').style.display = 'none'; $('tCard').hidden = false; buildTitleCard(); updateTitleNet(); }
 function updateTitleNet(){ const e = $('tNet'); if (e) e.textContent = live.ok ? '已連線到「凱曜設計部」伺服器，出勤狀態即時更新' : '目前離線：依時間規則模擬出勤狀態'; }
 function startGame(){
-  try { localStorage.setItem('pixelLastChar', pickName); } catch (e) {}
-  select(pickName); $('title').classList.add('gone'); setTimeout(() => { $('title').style.display = 'none'; }, 450);
+  const me = meName(); if (me) select(me);
+  $('title').classList.add('gone'); setTimeout(() => { $('title').style.display = 'none'; }, 450);
 }
-$('tGo').onclick = startGame;
+$('tGo').onclick = startGame; $('tGuest').onclick = startGame;
 // 圖鑑（本機記錄撿到過什麼）
 let dex = {d:[], n:[]}; try { const x = JSON.parse(localStorage.getItem('pixelDex') || 'null'); if (x && x.d && x.n) dex = x; } catch (e) {}
 function dexAdd(kind, k){ if (dex[kind].includes(k)) return false; dex[kind].push(k); try { localStorage.setItem('pixelDex', JSON.stringify(dex)); } catch (e) {} return true; }
@@ -1047,9 +1070,7 @@ function renderDex(){
 $('bDex').onclick = () => { renderDex(); $('dexPanel').hidden = false; $('helpPanel').hidden = true; };
 $('bHelp').onclick = () => { $('helpPanel').hidden = false; $('dexPanel').hidden = true; };
 document.querySelectorAll('.px-x').forEach(b => b.onclick = () => { $('dexPanel').hidden = true; $('helpPanel').hidden = true; });
-$('bPeople').onclick = () => { $('drawer').hidden = !$('drawer').hidden; };
-$('roster').addEventListener('click', e => { if (e.target.closest('button')) $('drawer').hidden = true; });
-$('bWheel').onclick = () => { if (radial.hidden) radialOpen(); else radialClose(); };
+$('bWheel').onclick = () => { if (!player) { showQuote('', '請先登入才能操作人物'); return; } if (radial.hidden) radialOpen(); else radialClose(); };
 // 浮動文字（撿到東西時 +1 往上飄）
 function floatAt(x, y, z, text){
   const v = new THREE.Vector3(x, y, z).project(camera), e = document.createElement('div'); e.className = 'ftx'; e.textContent = text;
@@ -1058,7 +1079,8 @@ function floatAt(x, y, z, text){
 // HUD 更新
 const fmtTime = new Intl.DateTimeFormat('zh-TW', {timeZone:'Asia/Taipei', hour:'2-digit', minute:'2-digit', hour12:false, weekday:'short'});
 function updateHud(){
-  const c = player; if (!c) return;
+  const c = player;
+  if (!c) { $('pName').textContent = '訪客'; $('pSt').textContent = '👀 參觀中（登入後才能操作人物）'; $('pAv').innerHTML = ''; $('pExp').style.width = '0%'; $('pLv').textContent = ''; $('pClock').textContent = '🕒 ' + fmtTime.format(new Date()).replace(/^(\S+)\s+(\S+)$/, '$2 $1') + '（台北）'; updateTitleNet(); return; }
   const st = STATUS[c.status] || STATUS.present, total = stat.found + stat.notes + stat.flush, lv = 1 + Math.floor(total / 5);
   if ($('pName').textContent !== c.name) { $('pName').textContent = c.name; if (c.avatar) $('pAv').innerHTML = '<img alt="" src="' + c.avatar + '">'; }
   $('pSt').textContent = st[1] + ' ' + st[0] + (c.mood ? '　' + (MOOD[c.mood] || '') : '');
@@ -1091,9 +1113,9 @@ function tick(){
   }
   if (player) {
     const p = player.holder.position;
-    camPos.lerp(new THREE.Vector3(p.x, 8.4, p.z + 9.4), 1 - Math.pow(.001, dt));
+    camPos.lerp(new THREE.Vector3(p.x, 10.9, p.z + 12.2), 1 - Math.pow(.001, dt));
     camera.position.copy(camPos); look.lerp(p, 1 - Math.pow(.001, dt)); camera.lookAt(look.x, 1, look.z);
-  } else { camera.position.copy(camPos); camera.lookAt(0, 1, 0); }
+  } else { camPos.lerp(new THREE.Vector3(18, 15, 36), 1 - Math.pow(.001, dt)); camera.position.copy(camPos); look.lerp(new THREE.Vector3(18, 0, 22), 1 - Math.pow(.001, dt)); camera.lookAt(look); }   // 沒登入：固定的辦公室全景
   updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay(); updateTags(); placeRadial();
   renderFrame();
   requestAnimationFrame(tick);

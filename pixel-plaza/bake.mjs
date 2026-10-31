@@ -4,7 +4,7 @@ import puppeteer from 'puppeteer-core';
 import fs from 'node:fs';
 const port = process.env.PORT || 4190;
 const only = process.argv.slice(2);
-const people = [['designer','Amber'],['designer','Anna'],['designer','Leona'],['designer','Machi'],['designer','Noise'],['staff','余采馨'],['staff','吳冠賢'],['staff','廖秦葦'],['staff','李明庭'],['staff','鄭筱舢'],['staff','黎子瑄']].filter(([, n]) => !only.length || only.includes(n));
+const people = [['designer','Amber'],['designer','Anna'],['designer','Leona'],['designer','Machi'],['designer','Noise'],['staff','余采馨'],['staff','吳冠賢'],['staff','廖秦葦'],['staff','李明庭'],['staff','鄭筱舢'],['staff','黎子瑄'],['staff','王藍庭']].filter(([, n]) => !only.length || only.includes(n));
 const hd = !!process.env.HD, dir = hd ? 'pixel-plaza/sprites-hd' : 'pixel-plaza/sprites';
 fs.mkdirSync(dir, {recursive:true});
 const b = await puppeteer.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe', headless:true, args:['--no-sandbox']});
