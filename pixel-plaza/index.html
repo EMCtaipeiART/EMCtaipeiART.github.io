@@ -700,7 +700,7 @@ async function buildOffice(){
   await loadFunArt();
   await Promise.all(SNACKS.map(async ([k]) => { imgs[k] = await loadImg('snacks/' + k + '.png'); }));
   if (pantry3d.snackSpot) SNACKS.forEach(([k, h], i) => { const src = imgs[k] && trimmed(imgs[k]); if (!src) return; const dh = h * .75, dw = dh * src.width / src.height, m = addBillboard(src, pantry3d.snackSpot.cx + (-1.62 + i * .46), pantry3d.snackSpot.cz, dw, dh); m.position.y = .95; });
-  startGameplay(); loadImg('fridge/office-foods-v1.webp').then(im => { foodSheet = im; fridges.forEach((fr, i) => { const t = fr.inner.userData.tex; fr.inner.material.map = fridgeInner(1, 1, FRIDGE_SHELVES[i % 2]).material.map; fr.inner.material.needsUpdate = true; }); });
+  loadImg('fridge/office-foods-v1.webp').then(im => { foodSheet = im; fridges.forEach((fr, i) => { const t = fr.inner.userData.tex; fr.inner.material.map = fridgeInner(1, 1, FRIDGE_SHELVES[i % 2]).material.map; fr.inner.material.needsUpdate = true; }); });
   // 藍色桌組：每組兩排×三張（3D 方塊桌＋小螢幕），三排 × 設計部／同仁區
   const I = v => v * U;
   GROUPS.forEach((xs, gi) => ROW_TOPS.forEach((top, ri) => {
@@ -731,6 +731,7 @@ async function buildOffice(){
     for (const [x, z] of [[300, 836], [300, 866], [150, 836], [150, 866]]) pbox(.12, .83, .12, 0x14181c, I(x), 0, I(z), false);
     laptop3d(I(224), I(852), -1);
     rects.push([I(85), I(828), I(137), I(930)], [I(137), I(828), I(308), I(873)]); }
+  dropCache.clear(); noteCache.clear(); startGameplay();   // 場景（含四樓）全部蓋好、碰撞都齊了才開始算道具：否則每個人載入的時間點不同，算出來的位置會不一樣
 }
 function bookcase3d(x, z, w, d, h = 2.0){   // 版面圖像素；層櫃開口朝左（-x），其餘面是黑色側板
   const I = v => v * U, cx = I(x + w / 2), cz = I(z + d / 2), black = 0x23272d;
