@@ -306,8 +306,8 @@ html.embed #hud,html.embed #dock,html.embed #proj,html.embed .lbl{display:none!i
 #elevFx{position:fixed;inset:0;z-index:50;pointer-events:none;font-family:'Fredoka','Noto Sans TC',sans-serif;color:#fff}
 #elevFx.on,#elevFx.out{pointer-events:auto}
 .ef-grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(var(--cols),1fr);grid-template-rows:repeat(var(--rows),1fr)}
-.ef-c{display:block;background:#2fbf57;transform:scale(0);box-shadow:inset 0 -3px 0 rgba(0,0,0,.18),inset 0 3px 0 rgba(255,255,255,.2),inset 0 0 0 1px rgba(11,61,30,.4);transition:transform .08s steps(2)}
-#elevFx.on .ef-c{transform:scale(1.03)}
+.ef-c{display:block;background:#2fbf57;transform:scale(0);transition:transform .08s steps(2)}
+#elevFx.on .ef-c{transform:scale(1.08)}
 .ef-txt{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:4px;opacity:0;transition:opacity .15s .22s}#elevFx.on .ef-txt{opacity:1}
 .ef-txt b{font-size:54px}.ef-txt span{font-size:34px;font-weight:700;color:var(--yellow);text-shadow:0 3px 0 rgba(11,61,30,.6)}
 .cp-grid.mood{grid-template-columns:1fr 1fr!important;gap:8px!important}
@@ -1100,7 +1100,7 @@ function pushPosition(){
   if (!((moved && now - posSent.t > POS_PUSH_MS) || now - posSent.t > POS_BEAT_MS)) return;
   posSent.x = p.x; posSent.z = p.z; posSent.t = now;
   const x = p.x / U, z = p.z / U, f4 = floorOf(c) === 4;
-  post({action:'pixelOfficeUpdate', name:c.name, patch:{floor:4, fx:Math.round(f4 ? 3000 + x - FX4 + 100 : x), fy:Math.round(f4 ? z + 100 : z), fdir:faceDir(c.face)}}).catch(() => {});
+  post({action:'pixelOfficeUpdate', name:c.name, patch:{floor:4, fx:Math.round(f4 ? 3000 + x - FX4 + 100 : x), fy:Math.round(f4 ? z + 100 : z), fdir:faceDir(c.face)}}).catch(e => { if (performance.now() - (pushPosition.errAt || 0) > 20000) { pushPosition.errAt = performance.now(); showQuote('', '位置同步失敗：' + (e && e.message ? e.message : e)); } });
 }
 addEventListener('pagehide', () => { try { if (player && live.ok) navigator.sendBeacon(API, JSON.stringify({action:'pixelOfficeUpdate', name:player.name, patch:{floor:5}})); } catch (e) {} });
 function remoteFromState(c, e){
