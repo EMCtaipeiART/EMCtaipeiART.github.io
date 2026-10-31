@@ -4012,10 +4012,10 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const s=session(),on=loggedIn(),name=s.name||s.user,url=on?(pixImg(name)||pixImg(s.user)||personAvatar(name)||personAvatar(s.user)||personAvatar(s.account)):'';
       const face=on?(url?`<img src="${esc(url)}" alt="" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode('${esc(initial(name))}'))">`:esc(initial(name))):'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20c.9-3.6 3.8-5.5 7.5-5.5s6.6 1.9 7.5 5.5"/></svg>';
       const menuHtml=state.loginMenu&&on?`<div class="login-menu" role="menu"><b>${esc(name)}</b><small>${esc(s.account||s.user||'')}</small>${acc('profile.edit',true)?'<button type="button" data-login="settings" role="menuitem">個人設定</button>':''}<button type="button" data-gmail-connect role="menuitem">串接 Gmail</button>${RAIL_EXT.filter(x=>x.menu&&x.ok()).map(x=>`<button type="button" data-login="ext" data-ext-key="${x.k}" role="menuitem">${x.title}</button>`).join('')}${isAdminAcct()?'<button type="button" data-login="reloadall" role="menuitem">全員重整</button>':''}<button type="button" data-login="logout" role="menuitem">登出</button></div>`:'',mobile=matchMedia('(max-width:720px)').matches;
-      box.innerHTML=`<button type="button" class="login-avatar${on?' is-in':''}" data-login="toggle" aria-haspopup="true" aria-label="${on?`${esc(name)}，帳號選單`:'登入'}">${face}</button><span class="login-label">${on?esc(name):'登入'}</span>${mobile?'':menuHtml}`;
+      box.innerHTML=`<button type="button" class="login-avatar${on?' is-in':''}" data-login="toggle" aria-haspopup="true" aria-label="${on?`${esc(name)}，帳號選單`:'登入'}">${face}</button><span class="login-label">${on?esc(name):'登入'}</span>`;
       /* 手機：下方選單列是可橫向捲動的容器，裡面的選單會被它的堆疊層與裁切影響（登出按鈕被壓在下面點不到），所以改掛在 body 最外層、層級最高 */
       let host=document.getElementById('loginMenuHost');
-      if(mobile){if(!host){host=document.createElement('div');host.id='loginMenuHost';document.body.appendChild(host)}host.innerHTML=menuHtml}else if(host)host.remove();
+      if(menuHtml){if(!host){host=document.createElement('div');host.id='loginMenuHost';document.body.appendChild(host)}host.innerHTML=menuHtml}else if(host)host.remove();
       $('promptHint').textContent=on?'':'登入後才能新增設計需求（點左下角頭像登入）';
     }
     async function logout(){
