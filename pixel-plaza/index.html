@@ -283,6 +283,8 @@ button{font-family:inherit}
 .cp-story .th{width:48px!important;height:62px!important}
 @media (max-width:640px){.cp-cols{grid-template-columns:1fr!important}}
 #net{display:none!important}
+.t-ball::after{display:none!important}
+.t-ball{width:56px!important;height:56px!important;border:0!important;border-radius:0!important;box-shadow:none!important;background-color:transparent!important;background-position:center!important;background-size:contain!important;background-repeat:no-repeat!important;image-rendering:pixelated;animation:spin 1.1s steps(8) infinite!important}
 /* PokéBonk 式右上按鈕：高 44px 的膠囊、漸層底、白字粗體、左側小圖示 */
 .hp-top{gap:10px!important;align-items:center}
 .hp-top button{height:44px;padding:0 20px 0 12px!important;border:0!important;border-radius:999px!important;font:700 16px/1 'Fredoka','Noto Sans TC',sans-serif!important;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.28);display:flex;align-items:center;gap:8px;box-shadow:inset 0 2px 0 rgba(255,255,255,.4),inset 0 -3px 0 rgba(0,0,0,.18),0 6px 14px rgba(0,0,0,.28)!important;backdrop-filter:none!important}
@@ -1093,6 +1095,7 @@ async function pollOnce(){
       for (const e of d.people || []) { const c = chars[e.name]; if (!c) continue; remoteFromState(c, e); const rs = typeof e.status === 'string' ? e.status : 'present'; if (c.autoPendingUntil > Date.now() && rs !== 'present') { c.rawStatus = c.rawStatus || 'present'; } else { c.autoPendingUntil = 0; c.rawStatus = rs; } c.status = forcedStatus(c.rawStatus); c.mood = e.mood || ''; c.message = e.message || ''; c.statusSource = e.statusSource || ''; c.meetingRoom = typeof e.meetingRoom === 'string' ? e.meetingRoom : ''; c.music = e.music && e.music.url ? {url:e.music.url, title:e.music.title || '', provider:e.music.provider || ''} : null; applyStatus(c); }
       if (d.stories) applyStories(d.stories);
       if (d.funClaims) applyFunClaims(d.funClaims);
+      if (entryRelease && player) { entryRelease = false; if (player.status === 'offwork' && hoursForce !== 'off') { setOwnStatus('present'); showQuote('', '歡迎進來，已解除下班狀態'); } }   // 登入後進入辦公室：解除下班（全員下班時除外）
     }
   } catch (err) {
     live.ok = false;
@@ -1407,7 +1410,8 @@ let guestDrag = null;
 renderer.domElement.addEventListener('pointerdown', e => { if (player) { onPick(e); return; } guestDrag = {x:e.clientX, y:e.clientY, moved:false}; try { renderer.domElement.setPointerCapture(e.pointerId); } catch (err) {} });
 renderer.domElement.addEventListener('pointermove', e => { if (player || !guestDrag || !(e.buttons & 1)) return; const dx = e.clientX - guestDrag.x, dy = e.clientY - guestDrag.y; if (!guestDrag.moved && Math.hypot(dx, dy) < 5) return; guestDrag.moved = true; guestAt.x -= (e.movementX || 0) * .045; guestAt.z -= (e.movementY || 0) * .07; guestClamp(); renderer.domElement.style.cursor = 'grabbing'; });
 renderer.domElement.addEventListener('pointerup', e => { if (player || !guestDrag) return; const was = guestDrag; guestDrag = null; renderer.domElement.style.cursor = ''; if (!was.moved) onPick(e); });
-renderer.domElement.addEventListener('wheel', e => { if (player) return; e.preventDefault(); guestAt.z += e.deltaY * .03; guestAt.x += e.deltaX * .03; guestClamp(); }, {passive:false});
+let camZoom = 1;
+renderer.domElement.addEventListener('wheel', e => { if (player) { e.preventDefault(); camZoom = Math.max(.5, Math.min(1.9, camZoom * (1 + e.deltaY * .0012))); return; } e.preventDefault(); guestAt.z += e.deltaY * .03; guestAt.x += e.deltaX * .03; guestClamp(); }, {passive:false});
 function onPick(e){
   if (!wheel.hidden) { wheelClose(); return; }   // 輪盤開著時，點外面只收合輪盤，人物先不動；下一下才移動
   ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
@@ -1548,6 +1552,7 @@ function moonIcon(px){   // 加班：月牙＋星星（2D 版也是程式畫的�
   const star = (x, y, rad) => { g.fillStyle = '#fff3b8'; g.strokeStyle = '#e0a030'; g.lineWidth = Math.max(.8, px * .02); g.beginPath(); for (let i = 0; i < 8; i++) { const a = -Math.PI / 2 + i * Math.PI / 4, d = i % 2 ? rad * .42 : rad; g[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * d, y + Math.sin(a) * d); } g.closePath(); g.fill(); g.stroke(); };
   star(px * .78, px * .28, px * .13); star(px * .86, px * .62, px * .08); return c;
 }
+document.querySelector('.t-ball').style.setProperty('background-image', 'url(' + chairIcon() + ')', 'important');   // 載入畫面：旋轉的像素辦公椅
 function chairIcon(){   // 「在座」：黑線框像素椅子
   const rows = ['................', '....kkkkkkkk....', '...kbbbbbbbbk...', '...kbhhbbbbbk...', '...kbbbbbbbbk...', '...kbbbbbbbbk...', '...kkkkkkkkkk...', '..kkbbbbbbbbkk..', '..kbhhbbbbbbbk..', '..kkkkkkkkkkkk..', '.......kk.......', '.......kk.......', '......kkkk......', '..kkkkkkkkkkkk..', '..kk..kkkk..kk..', '................'];
   const c = document.createElement('canvas'), k = 6; c.width = c.height = 16 * k; const g = c.getContext('2d'), col = {k:'#111418', b:'#4f6b8f', h:'#8fb0d6'};
@@ -1865,13 +1870,13 @@ function showTitleCard(){
   if (!meName()) setTimeout(() => showQuote('', handoff ? '這個帳號沒有對應的設計部人物，只能參觀' : '目前是參觀模式：登入後會綁定你的人物，才能操作'), 700);
 }   // 不再有登入頁：載完直接進入（有網站登入身分就用該人物，否則預設 Machi）
 function updateTitleNet(){ const e = $('tNet'); if (e) e.textContent = live.ok ? '已連線到「凱曜設計部」伺服器，出勤狀態即時更新' : '目前離線：依時間規則模擬出勤狀態'; }
-let adminHome = false;   // 登入身分是 Machi／管理者：可以切換、操控任何人（就算被切成離開辦公室而看不到人物）
+let adminHome = false, entryRelease = false;   // 登入身分是 Machi／管理者：可以切換、操控任何人（就算被切成離開辦公室而看不到人物）
 function startGame(){
   $('bClose').hidden = !(window.parent !== window && !/[?&]embed=1/.test(location.search));   // 嵌在網站元宇宙頁面裡時，右上角有「關閉」回網站
   $('bClose').onclick = () => { try { parent.postMessage({type:'pixelUniverseClose'}, location.origin); } catch (e) {} };
   adminHome = Boolean(handoff && handoff.monitor); $('bPeople').hidden = !adminHome;   // 只有管理者帳號能切換、操控其他人物
   $('bPeople').onclick = () => { $('drawer').hidden = !$('drawer').hidden; }; $('roster').addEventListener('click', e => { if (e.target.closest('button')) $('drawer').hidden = true; });
-  if (meName()) select(meName());
+  if (meName()) { select(meName()); entryRelease = true; }
   $('title').classList.add('gone'); setTimeout(() => { $('title').style.display = 'none'; }, 450);
 }
 $('tGo').onclick = startGame; $('tGuest').onclick = startGame;
@@ -1946,7 +1951,7 @@ function tick(){
   }
   if (player) {
     const p = player.holder.position;
-    camPos.lerp(new THREE.Vector3(p.x, 10.9, p.z + 12.2), 1 - Math.pow(.001, dt));
+    camPos.lerp(new THREE.Vector3(p.x, 10.9 * camZoom, p.z + 12.2 * camZoom), 1 - Math.pow(.001, dt));
     camera.position.copy(camPos); look.lerp(p, 1 - Math.pow(.001, dt)); camera.lookAt(look.x, 1, look.z);
   } else { const k = 1 - Math.pow(.0005, dt); camPos.lerp(new THREE.Vector3(guestAt.x, 10.9, guestAt.z + 12.2), k); camera.position.copy(camPos); look.lerp(new THREE.Vector3(guestAt.x, 1, guestAt.z), k); camera.lookAt(look); }   // 沒登入：滾輪／左鍵拖曳平移畫面，點電梯換看另一層
   updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay(); updateTags(); placeRadial(); updateFridge(); updateElev(); pushPosition();
