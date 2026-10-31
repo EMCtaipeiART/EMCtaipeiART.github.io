@@ -283,6 +283,10 @@ button{font-family:inherit}
 .cp-story .th{width:48px!important;height:62px!important}
 @media (max-width:640px){.cp-cols{grid-template-columns:1fr!important}}
 #net{display:none!important}
+#elevFx{position:fixed;inset:0;z-index:50;background:#0b1410;opacity:0;pointer-events:none;display:grid;place-items:center;transition:opacity .38s ease;font-family:'Fredoka','Noto Sans TC',sans-serif;color:#fff}
+#elevFx.on{opacity:1;pointer-events:auto}
+#elevFx div{display:grid;justify-items:center;gap:4px;transform:scale(.8);transition:transform .38s cubic-bezier(.3,1.5,.5,1)}#elevFx.on div{transform:scale(1)}
+#elevFx b{font-size:54px}#elevFx span{font-size:30px;font-weight:700;color:var(--yellow)}
 .cp-grid.mood{grid-template-columns:1fr 1fr!important;gap:8px!important}
 .cp-grid.mood button{padding:12px 6px!important;font-size:15px!important;border-radius:14px!important}
 .cp-grid.mood button i img{width:44px!important;height:44px!important}
@@ -420,8 +424,9 @@ LABELS.push(['男廁', F4.toilets[0][1] + 86 + FX4, 44], ['女廁', F4.toilets[1
 const ROW_TOPS = [355, 592, 828];
 const GROUPS = [[463,568,673],[833,938,1043]];
 // 入座：名字 → [組, 排, 欄, 上排/下排]（僅設計部最下面那排有人）
+const SEATS4 = {黎子瑄:[3, 8], 余采馨:[3, 6], 鄭筱舢:[3, 7], 王藍庭:[4, 5]};   // 2D 版四樓固定座位：[桌子群 0～4（由上往下）, 座位 1～8（1～4 上排由左到右、5～8 下排）]
 const SEATS = {Leona:[0,2,0,'top'],Amber:[0,2,1,'top'],Noise:[0,2,2,'top'],Anna:[0,2,1,'bottom'],Machi:[0,2,2,'bottom'],
-  余采馨:[1,2,0,'top'],吳冠賢:[1,2,1,'top'],廖秦葦:[1,2,2,'top'],李明庭:[1,2,0,'bottom'],鄭筱舢:[1,2,1,'bottom'],黎子瑄:[1,2,2,'bottom'],王藍庭:[1,1,1,'top']};
+  余采馨:['f4',0,0,'bottom'],吳冠賢:[1,2,1,'top'],廖秦葦:[1,2,2,'top'],李明庭:[1,2,0,'bottom'],鄭筱舢:['f4',0,0,'bottom'],黎子瑄:['f4',0,0,'bottom'],王藍庭:['f4',0,0,'bottom']};
 
 const FLOOR_X0 = -3, FLOOR_X1 = 1201 * U + 3, FLOOR_Z0 = -3, FLOOR_Z1 = 1526 * U + 3;
 // 地板：淺灰藍方格（五樓、四樓各一塊）
@@ -513,8 +518,8 @@ function dropsNow(){
   const sl = Math.floor(Date.now() / SLOT_D), out = [];
   for (const s of [sl - 1, sl]) {
     let L = dropCache.get(s);
-    if (!L) { L = []; const r = rng('d:3d:' + s), n = 1 + Math.floor(r() * 2);
-      for (let i = 0; i < n; i++) for (let k = 0; k < 60; k++) { const x = 2 + r() * (1201 * U - 4), z = 2 + r() * (1526 * U - 4);
+    if (!L) { L = []; const r = rng('d:3d:' + s), n = 2 + Math.floor(r() * 3);   // 兩層樓合計 2～4 件；時段與種子相同，所有人看到的一樣
+      for (let i = 0; i < n; i++) for (let k = 0; k < 60; k++) { const f4 = r() < .5, x = f4 ? (FX4 + F4_X0 + 20 + r() * (F4_X1 - F4_X0 - 40)) * U : 2 + r() * (1201 * U - 4), z = f4 ? (F4_Z0 + 20 + r() * (F4_Z1 - F4_Z0 - 40)) * U : 2 + r() * (1526 * U - 4);
         if (inSlideZone(x, z) || blocked(x, z) || blocked(x + 1, z) || blocked(x - 1, z) || blocked(x, z + 1) || blocked(x, z - 1)) continue; L.push({id:'d:' + s + ':' + i, x, z, k:Math.floor(r() * ITEMS.length)}); break; }
       dropCache.set(s, L); }
     L.forEach(q => { if (!taken(q.id)) out.push(q); });
@@ -522,12 +527,15 @@ function dropsNow(){
   return out;
 }
 // 會議室遺落物：每 12 分鐘一個時段、0–3 件，放在會議桌上
-const PROJ_POS = [[948, 158], [160, 1160], [162, 1360], [846, 1196]], NOTE_TABLES = [[863, 158, 250, 56], [184, 1160, 120, 50], [186, 1360, 116, 50], [846, 1196, 252, 60]], noteCache = new Map();
+const F4_NOTE = (() => { const t = [], H = F4.H, xC = H.x + 276 + 50, y0 = H.y + 87; for (const k of [0, 1]) { t.push([xC + 97.5 * k + 48.75 + FX4, y0 + 32, 97.5, 50], [xC + 97.5 * k + 48.75 + FX4, y0 + 167, 97.5, 50]); } for (const q of [F4.F, F4.G]) t.push([q.x + 47 + 60 + FX4, q.y + q.h / 2, 120, 50]); return t; })();
+const F4_PROJ = [[H_PROJ_X(), F4.H.y + 187], [F4.F.x + 47 + 28 + FX4, F4.F.y + F4.F.h / 2], [F4.G.x + 47 + 120 - 28 + FX4, F4.G.y + F4.G.h / 2]];
+function H_PROJ_X(){ return F4.H.x + 276 + 50 + 163 + FX4; }
+const PROJ_POS = [[948, 158], [160, 1160], [162, 1360], [846, 1196], ...F4_PROJ], NOTE_TABLES = [[863, 158, 250, 56], [184, 1160, 120, 50], [186, 1360, 116, 50], [846, 1196, 252, 60], ...F4_NOTE], noteCache = new Map();
 function notesNow(){
   const sl = Math.floor(Date.now() / SLOT_N), out = [];
   for (const s of [sl - 1, sl]) {
     let L = noteCache.get(s);
-    if (!L) { L = []; const r = rng('n:3d:' + s), n = Math.floor(r() * 4);
+    if (!L) { L = []; const r = rng('n:3d:' + s), n = Math.floor(r() * 6);
       for (let i = 0; i < n; i++) for (let a = 0; a < 10; a++) {   // 遺落物避開桌上的投影機
         const t = NOTE_TABLES[Math.floor(r() * NOTE_TABLES.length)], px = t[0] - t[2] / 2 + 20 + r() * (t[2] - 40), py = t[1] - t[3] / 2 + 12 + r() * (t[3] - 24), k = Math.floor(r() * NOTE_IDS.length);
         if (PROJ_POS.some(q => Math.abs(q[0] - px) < 62 && Math.abs(q[1] - py) < 46)) continue; L.push({id:'n:' + s + ':' + i, x:px * U, z:py * U, k}); break; }
@@ -607,7 +615,7 @@ function buildFloor4(T, place){
     for (const y of [52, 124]) {
       toilet3d(X(rx + 37), I(ty + y));
       rects.push([X(rx + 13), I(ty + y - 15), X(rx + 56), I(ty + y + 15)]);
-      chairSeats.push({x:X(rx + 37) + .12, z:I(ty + y), face:FACE_ANGLE.E, by:null, fwd:.42, kind:'toilet'});
+      chairSeats.push({x:X(rx + 37) + .12, z:I(ty + y), face:FACE_ANGLE.E, by:null, fwd:.42, kind:'toilet'}); toilets.push({x:X(rx + 37) + .1, z:I(ty + y), poop:null});
     }
     sink3d(X(rx + 42), I(ty + 202)); rects.push([X(rx + 18), I(ty + 188), X(rx + 64), I(ty + 216)]);
     for (const [x, y, w, h] of [[15, 16, 74, 4], [15, 88, 74, 4], [15, 160, 74, 4], [15, 16, 4, 148]]) { pbox(I(w), .7, I(h), 0xd7cfc6, X(rx + x + w / 2), 0, I(ty + y + h / 2)); rects.push([X(rx + x), I(ty + y), X(rx + x + w), I(ty + y + h)]); }
@@ -990,8 +998,11 @@ async function addChar(name, i){
   const blob = new THREE.Mesh(new THREE.PlaneGeometry(1.1, .8), new THREE.MeshBasicMaterial({map:shadowTex, transparent:true, opacity:.34, depthWrite:false}));
   blob.rotation.x = -Math.PI / 2; blob.position.y = .02;
   const holder = new THREE.Group(); holder.add(blob, sprite);
-  const seat = SEATS[name], a = i / NAMES.length * Math.PI * 2;
-  if (seat) {   // 入座：上排坐在桌後（面向鏡頭）、下排坐在桌前（背對鏡頭）
+  const s4 = SEATS4[name], seat = SEATS[name] || (s4 ? ['f4', 0, 0, s4[1] > 4 ? 'bottom' : 'top'] : null), a = i / NAMES.length * Math.PI * 2;
+  if (s4) {   // 四樓座位（人物腳底位置＝椅子位置）
+    const edge = 382.5 + 232.5 * s4[0] + 40, k = (s4[1] - 1) % 4, cx = 39 + 52.5 + 105 * k + FX4;
+    holder.position.set(cx * U, 0, (s4[1] > 4 ? edge + 120 : edge - 34) * U);
+  } else if (seat) {   // 入座：上排坐在桌後（面向鏡頭）、下排坐在桌前（背對鏡頭）
     const top = ROW_TOPS[seat[1]], cx = GROUPS[seat[0]][seat[2]];
     holder.position.set(cx * U, 0, (seat[3] === 'top' ? top - 34 : top + 120) * U);
   } else holder.position.set((560 + 42 * (i % 6)) * U, 0, (1085 + 28 * Math.floor(i / 6)) * U);
@@ -1134,13 +1145,17 @@ let elevArmed = true;
 function updateElev(){   // 人物貼近電梯就直接上下樓；剛到達時要先走開才會再次觸發
   if (!player || AWAY.has(player.status) || player.sitting) return;
   const sp = elevSpot(floorOf(player)), d = Math.hypot(sp.x - player.holder.position.x, sp.z - player.holder.position.z);
-  if (!elevArmed) { if (d > 3) elevArmed = true; return; }
+  if (elevBusy) return; if (!elevArmed) { if (d > 3) elevArmed = true; return; }
   if (d < 1.3) elevGo(floorOf(player) === 5 ? 4 : 5);
 }
-function elevGo(to){
-  wantElev = false; elevArmed = false; target = null; if (!player) return; releaseSeat(player); wheelClose(); fridgeClose();
-  const sp = elevSpot(to); player.holder.position.set(sp.x, 0, sp.z + .6); player.face = 0;
-  camPos.set(sp.x, 10.9, sp.z + 12.8); look.set(sp.x, 0, sp.z); showQuote('', '🛗 到了 ' + to + ' 樓');
+let elevBusy = false;
+const elevFx = document.createElement('div'); elevFx.id = 'elevFx'; document.body.appendChild(elevFx);
+function elevGo(to){   // 過場：門關起來（畫面轉暗＋樓層數字）→ 換樓層 → 門打開
+  if (elevBusy || !player) return; wantElev = false; elevArmed = false; target = null; elevBusy = true; wheelClose(); fridgeClose();
+  elevFx.innerHTML = '<div><b>🛗</b><span>' + to + 'F</span></div>'; elevFx.classList.add('on');
+  setTimeout(() => { releaseSeat(player); const sp = elevSpot(to); player.holder.position.set(sp.x, 0, sp.z + .6); player.face = 0; camPos.set(sp.x, 10.9, sp.z + 12.8); look.set(sp.x, 0, sp.z); }, 420);
+  setTimeout(() => { elevFx.classList.remove('on'); showQuote('', '🛗 到了 ' + to + ' 樓'); }, 1000);
+  setTimeout(() => { elevBusy = false; }, 1450);
 }
 // ---- 座位現場：不在座位的狀態（用餐／會議／休假／下班／廁所／出國／公出）椅子與桌上電腦收起、桌面變灰、桌上放狀態圖示；加班有紫色聚光燈與三團鬼火 ----
 const AWAY_DESK = new Set(['lunch', 'meeting', 'leave', 'offwork', 'toilet', 'abroad', 'out']), iconTex = {};
@@ -1205,6 +1220,7 @@ let wantSeat = null;   // 點椅子／馬桶：走過去自動坐下；要起身
 function sitAt(c, st){ c.holder.position.set(st.x, 0, st.z); sitDown(c); }
 function select(name){
   const prev = player; player = chars[name]; target = null; player.holder.visible = !AWAY.has(player.status);
+  { const p = player.holder.position; camPos.set(p.x, 10.9, p.z + 12.2); look.copy(p); }   // 換人時鏡頭直接跳過去（人物可能在另一層）
   if (prev && prev !== player) { prev.appliedStatus = null; applyStatus(prev); }
   for (const c of Object.values(chars)) { c.btn.classList.toggle('on', c === player); c.wander = c !== player && !SEATS[c.name] && !c.sitting; }
 }
@@ -1713,7 +1729,7 @@ function tick(){
     const run = keys.ShiftLeft || keys.ShiftRight || Math.hypot(joy.x, joy.y) > .85;
     if (dir.lengthSq() > .01) { target = null; wantSeat = null; fridgeWant = false; wantElev = false; wheelClose(); }
     else if (target) { dir.copy(target).sub(player.holder.position); dir.y = 0; if (dir.length() < .2) target = null; }
-    if (!radial.hidden || !$('sv').hidden || AWAY.has(player.status)) { dir.set(0, 0, 0); target = null; }   // 角色頁面開著時人物不跟著走
+    if (!radial.hidden || !$('sv').hidden || AWAY.has(player.status) || elevBusy) { dir.set(0, 0, 0); target = null; }   // 角色頁面開著時人物不跟著走
     if (player.sitting && dir.lengthSq() > 1e-4) standUp(player);
     if (!player.sitting) moveChar(player, dir, run ? 5 : 2.4, dt);
     if (wantElev) { const sp = elevSpot(floorOf(player)); if (Math.hypot(sp.x - player.holder.position.x, sp.z - player.holder.position.z) < 1.6) elevGo(floorOf(player) === 5 ? 4 : 5); }
