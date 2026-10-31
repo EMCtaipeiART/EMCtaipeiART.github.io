@@ -47,7 +47,7 @@
     .login-avatar img{width:100%;height:100%;object-fit:cover}
     .login-avatar.is-in{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-deep)}
     .login-label{font-size:10.5px;color:var(--muted);font-weight:700;max-width:68px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .login-menu{position:absolute;left:calc(100% + 10px);bottom:0;min-width:190px;padding:12px;border-radius:14px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow-lg);z-index:60}
+    .login-menu{position:fixed;left:calc(var(--rail) + 10px);bottom:12px;min-width:190px;padding:12px;border-radius:14px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow-lg);z-index:60}
     .login-menu b{display:block;font-size:14px;font-weight:900}
     .login-menu small{display:block;margin:2px 0 10px;color:var(--muted);font-weight:700;font-size:12px}
     .login-menu button{width:100%;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--panel);font-weight:800;font-size:13px;cursor:pointer;margin-top:6px}
