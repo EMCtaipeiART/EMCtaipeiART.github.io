@@ -18,6 +18,8 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #proj span{display:block;color:#fff;font:700 12px system-ui,'Noto Sans TC',sans-serif;padding:4px 6px}
 #quote{position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:4;display:none;max-width:min(520px,88vw);background:#fffdf5;color:#232b32;border:3px solid #0b0d10;border-radius:8px;padding:10px 14px;font:600 14px/1.5 system-ui,'Noto Sans TC',sans-serif;box-shadow:0 6px 18px #0005}
 #quote b{display:block;font-size:12px;color:#7b4a24;margin-bottom:2px}
+.ctag{position:fixed;left:0;top:0;z-index:2;pointer-events:none;display:none;background:#fffdf5;border:2px solid #0b0d10;border-radius:6px;padding:2px 6px;font:600 12px/1.35 system-ui,'Noto Sans TC',sans-serif;color:#232b32;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#net{position:fixed;left:12px;bottom:64px;z-index:3;background:#0008;color:#fff;border-radius:6px;padding:4px 8px;font:12px system-ui,'Noto Sans TC',sans-serif}
 #sit{position:fixed;right:12px;bottom:64px;z-index:3;border:2px solid #fff8;background:#0008;color:#fff;border-radius:6px;padding:8px 12px;font:inherit;font-size:14px;cursor:pointer}
 #load{position:fixed;inset:0;display:grid;place-items:center;background:#1b2a41;color:#fff;font-size:18px;z-index:5}
 #stick{position:fixed;left:18px;bottom:78px;width:110px;height:110px;border-radius:50%;background:#fff3;border:2px solid #fff6;display:none}
@@ -29,6 +31,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <div id="stick"><i></i></div>
 <div id="proj"><canvas width="128" height="72"></canvas><span></span></div>
 <div id="quote"><b></b><span></span></div>
+<div id="net">連線中…</div>
 <button id="sit">坐下 / 起身 (E)</button>
 <div id="roster"></div>
 <script type="module">
@@ -95,7 +98,8 @@ const LABELS = [['男廁',370,44],['女廁',526,44],['會議室 A',863,110],['�
 const ROW_TOPS = [355, 592, 828];
 const GROUPS = [[463,568,673],[833,938,1043]];
 // 入座：名字 → [組, 排, 欄, 上排/下排]（僅設計部最下面那排有人）
-const SEATS = {Leona:[0,2,0,'top'],Amber:[0,2,1,'top'],Noise:[0,2,2,'top'],Anna:[0,2,1,'bottom'],Machi:[0,2,2,'bottom']};
+const SEATS = {Leona:[0,2,0,'top'],Amber:[0,2,1,'top'],Noise:[0,2,2,'top'],Anna:[0,2,1,'bottom'],Machi:[0,2,2,'bottom'],
+  余采馨:[1,2,0,'top'],吳冠賢:[1,2,1,'top'],廖秦葦:[1,2,2,'top'],李明庭:[1,2,0,'bottom'],鄭筱舢:[1,2,1,'bottom'],黎子瑄:[1,2,2,'bottom']};
 
 const FLOOR_X0 = -3, FLOOR_X1 = 1201 * U + 3, FLOOR_Z0 = -3, FLOOR_Z1 = 1526 * U + 3;
 // 地板：淺灰藍方格
@@ -394,7 +398,7 @@ function build3dObjects(T, place){
     for (const y of [100, 172]) {
       toilet3d(I(327 + dx), I(y));
       rects.push([I(303 + dx), I(y - 15), I(346 + dx), I(y + 15)]);
-      chairSeats.push({x:I(327 + dx) + .12, z:I(y), face:FACE_ANGLE.E, by:null, fwd:.42});   // 坐在馬桶上，面朝右
+      chairSeats.push({x:I(327 + dx) + .12, z:I(y), face:FACE_ANGLE.E, by:null, fwd:.42, kind:'toilet'});   // 坐在馬桶上，面朝右
       toilets.push({x:I(327 + dx) + .1, z:I(y), poop:null});
     }
     sink3d(I(332 + dx), I(250));
@@ -523,8 +527,66 @@ async function addChar(name, i){
   scene.add(holder);
   const c = {name, holder, sprite, tex, face:seat ? (seat[3] === 'top' ? 0 : Math.PI) : -a, moving:0, phase:Math.random() * 9, wander:!seat, t:Math.random() * 5, dir:new THREE.Vector3()};
   chars[name] = c;
+  c.home = seat ? {x:holder.position.x, z:holder.position.z, face:c.face} : null; c.status = 'present';
+  sprite.userData.pick = {kind:'char', c}; pickables.push(sprite);
+  const tag = document.createElement('div'); tag.className = 'ctag'; document.body.appendChild(tag); c.tag = tag;
   const b = document.createElement('button'); b.textContent = name;
   b.onclick = () => select(name); roster.appendChild(b); c.btn = b;
+}
+// ---- 出勤狀態：讀「凱曜設計部」後端的即時狀態（只讀，不寫入）；連不上時依時間規則模擬 ----
+const API = 'https://machi-design-api.machi-chen.workers.dev/api';
+const STATUS = {present:['在座', '🙂'], overtime:['加班', '🌙'], lunch:['用餐', '🍱'], meeting:['會議', '📅'], leave:['休假', '🏖'], offwork:['下班', '🏠'], toilet:['廁所', '🚽'], abroad:['出國', '✈'], out:['公出', '💼']};
+const MOOD = {happy:'☀️', angry:'💢', sad:'💧', joy:'❤️'}, AWAY = new Set(['offwork', 'leave', 'abroad', 'out']);
+const live = {ok:false, version:0, at:0, simAt:0}, netEl = document.getElementById('net');
+const isMeetSeat = st => st.z < 270 * U && st.x > 660 * U && st.x < 1062 * U;
+function taipeiNow(){ const f = new Intl.DateTimeFormat('en-GB', {timeZone:'Asia/Taipei', hour:'numeric', weekday:'short', hour12:false}).formatToParts(new Date()); return {h:+f.find(p => p.type === 'hour').value % 24, weekend:['Sat', 'Sun'].includes(f.find(p => p.type === 'weekday').value)}; }
+function simStatus(){ const {h, weekend} = taipeiNow(); if (weekend) return 'offwork'; if (h >= 12 && h < 14) return 'lunch'; if (h >= 9 && h < 19) return 'present'; if (h >= 19 && h < 22) return 'overtime'; return 'offwork'; }
+function releaseSeat(c){ if (c.sitting) { c.sitting.by = null; c.sitting = null; } }
+function seatIn(c, pred){
+  const free = chairSeats.filter(st => !st.by && pred(st)); if (!free.length) return false;
+  const st = rnd(free); c.holder.position.set(st.x, 0, st.z); return sitDown(c);
+}
+function applyStatus(c){
+  const st = STATUS[c.status] ? c.status : 'present';
+  c.btn.textContent = c.name + ' ' + STATUS[st][1];
+  if (c === player) return;                         // 正在操控的角色不被狀態搬動
+  if (c.appliedStatus === st) return; c.appliedStatus = st;
+  releaseSeat(c); c.wander = false; c.sprite.material.color.set(st === 'overtime' ? 0xa9afd6 : 0xffffff);
+  if (AWAY.has(st)) { c.holder.visible = false; return; }   // 下班／休假／出國／公出：不在辦公室（座位上方顯示狀態牌）
+  c.holder.visible = true;
+  if ((st === 'present' || st === 'overtime') && c.home) { c.holder.position.set(c.home.x, 0, c.home.z); c.face = c.home.face; sitDown(c); }
+  else if (st === 'lunch') { c.holder.position.set((340 + Math.random() * 150) * U, 0, 1298 * U); c.face = Math.PI; }
+  else if (st === 'toilet') seatIn(c, x => x.kind === 'toilet');
+  else if (st === 'meeting') seatIn(c, isMeetSeat);
+  else if (c.home) { c.holder.position.set(c.home.x, 0, c.home.z); c.face = c.home.face; sitDown(c); }
+}
+function setNet(){ const t = new Date().toLocaleTimeString('zh-TW', {hour12:false, timeZone:'Asia/Taipei'}); netEl.textContent = live.ok ? '● 即時連線：凱曜設計部後端（' + t + '）' : '○ 離線：依時間規則模擬（' + t + '）'; netEl.style.color = live.ok ? '#8dffb0' : '#ffd98a'; }
+async function pollOnce(){
+  try {
+    const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify({action:'pixelOfficeState', since:live.version}), cache:'no-store'});
+    const d = await r.json(); if (!d || !d.ok) throw new Error('bad response');
+    live.ok = true; live.at = Date.now();
+    if (!d.unchanged) {
+      live.version = d.version || live.version;
+      for (const e of d.people || []) { const c = chars[e.name]; if (!c) continue; c.status = typeof e.status === 'string' ? e.status : 'present'; c.mood = e.mood || ''; c.message = e.message || ''; c.statusSource = e.statusSource || ''; applyStatus(c); }
+    }
+  } catch (err) {
+    live.ok = false;
+    if (Date.now() - live.simAt > 30000) { live.simAt = Date.now(); const st = simStatus(); for (const c of Object.values(chars)) { c.status = st; applyStatus(c); } }
+  }
+  setNet();
+}
+function startLiveSync(){ const loop = async () => { await pollOnce(); setTimeout(loop, document.hidden ? 15000 : 3000); }; loop(); }
+function updateTags(){
+  for (const c of Object.values(chars)) {
+    let text = '', p = null;
+    if (c.status && AWAY.has(c.status) && c !== player && c.home) { text = c.name + '（' + STATUS[c.status][0] + '）'; p = new THREE.Vector3(c.home.x, 1.7, c.home.z); }
+    else if (c.holder.visible && (c.message || c.mood)) { text = (MOOD[c.mood] || '') + (c.message ? ' ' + c.message : ''); p = c.holder.position.clone(); p.y += 2.6; }
+    if (!text || !p) { c.tag.style.display = 'none'; continue; }
+    p.project(camera); const vis = p.z < 1 && Math.abs(p.x) < 1.1 && Math.abs(p.y) < 1.1;
+    c.tag.style.display = vis ? 'block' : 'none'; c.tag.textContent = text;
+    if (vis) c.tag.style.transform = 'translate(-50%,-100%) translate(' + ((p.x * .5 + .5) * innerWidth) + 'px,' + ((-p.y * .5 + .5) * innerHeight) + 'px)';
+  }
 }
 const SIT_DROP = .2;
 function sitDown(c){
@@ -546,13 +608,14 @@ function toggleSit(){ if (!player) return; if (player.sitting) standUp(player); 
 addEventListener('keydown', e => { if (e.code === 'KeyE') toggleSit(); });
 document.getElementById('sit').addEventListener('click', toggleSit);
 function select(name){
-  player = chars[name]; target = null;
+  const prev = player; player = chars[name]; target = null; player.holder.visible = true;
+  if (prev && prev !== player) { prev.appliedStatus = null; applyStatus(prev); }
   for (const c of Object.values(chars)) { c.btn.classList.toggle('on', c === player); c.wander = c !== player && !SEATS[c.name] && !c.sitting; }
 }
 
 let done = 0;
 Promise.all([buildOffice(), ...NAMES.map((n, i) => addChar(n, i).then(() => { document.getElementById('load').textContent = `載入角色 ${++done}/${NAMES.length}`; }))])
-  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); select('Machi'); document.getElementById('load').remove(); window.__plaza = {chars, camera, seats:chairSeats, blocked, items, toilets, spawnItem, spawnPoop, pickables}; });
+  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); select('Machi'); startLiveSync(); document.getElementById('load').remove(); window.__plaza = {chars, camera, seats:chairSeats, blocked, items, toilets, spawnItem, spawnPoop, pickables, applyStatus}; });
 
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
 const TILT = 0, STRETCH = 1 / Math.cos(Math.atan(8.4 / 9.4)), _e = new THREE.Euler(0, 0, 0, 'YXZ');   // 垂直站立：不再後傾（避免穿進桌子、牆），高度拉長 STRETCH 倍抵消俯視縮短
@@ -591,7 +654,7 @@ const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 
 renderer.domElement.addEventListener('pointerdown', e => {
   ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
   const hit = ray.intersectObjects(pickables, true)[0];
-  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'item') collectItem(pk.ref); else flushPoop(pk.ref); return; } }
+  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'item') collectItem(pk.ref); else if (pk.kind === 'char') { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : '', live.ok ? '（即時資料）' : '（模擬資料）'].filter(Boolean).join('　')); } else flushPoop(pk.ref); return; } }
   const p = new THREE.Vector3();
   if (ray.ray.intersectPlane(plane, p) && !blocked(p.x, p.z)) target = p;
 });
@@ -685,7 +748,7 @@ function tick(){
     camPos.lerp(new THREE.Vector3(p.x, 8.4, p.z + 9.4), 1 - Math.pow(.001, dt));
     camera.position.copy(camPos); look.lerp(p, 1 - Math.pow(.001, dt)); camera.lookAt(look.x, 1, look.z);
   } else { camera.position.copy(camPos); camera.lookAt(0, 1, 0); }
-  updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay();
+  updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay(); updateTags();
   renderFrame();
   requestAnimationFrame(tick);
 }
