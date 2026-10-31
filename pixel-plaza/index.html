@@ -1092,10 +1092,10 @@ async function pollOnce(){
     if (!d.unchanged) {
       live.version = d.version || live.version;
       if (d.hours) { const f = d.hours.force === 'work' || d.hours.force === 'off' ? d.hours.force : ''; if (f !== hoursForce) { hoursForce = f; for (const c of Object.values(chars)) c.appliedStatus = null; } }
-      for (const e of d.people || []) { const c = chars[e.name]; if (!c) continue; remoteFromState(c, e); const rs = typeof e.status === 'string' ? e.status : 'present'; if (c.autoPendingUntil > Date.now() && rs !== 'present') { c.rawStatus = c.rawStatus || 'present'; } else { c.autoPendingUntil = 0; c.rawStatus = rs; } c.status = forcedStatus(c.rawStatus); c.mood = e.mood || ''; c.message = e.message || ''; c.statusSource = e.statusSource || ''; c.meetingRoom = typeof e.meetingRoom === 'string' ? e.meetingRoom : ''; c.music = e.music && e.music.url ? {url:e.music.url, title:e.music.title || '', provider:e.music.provider || ''} : null; applyStatus(c); }
+      for (const e of d.people || []) { const c = chars[e.name]; if (!c) continue; remoteFromState(c, e); const rs = typeof e.status === 'string' ? e.status : 'present'; if (c.autoPendingUntil > Date.now() && rs !== 'present') { c.rawStatus = c.rawStatus || 'present'; } else { c.autoPendingUntil = 0; c.rawStatus = rs; } c.status = forcedStatus(c.rawStatus, c); c.mood = e.mood || ''; c.message = e.message || ''; c.statusSource = e.statusSource || ''; c.meetingRoom = typeof e.meetingRoom === 'string' ? e.meetingRoom : ''; c.music = e.music && e.music.url ? {url:e.music.url, title:e.music.title || '', provider:e.music.provider || ''} : null; applyStatus(c); }
       if (d.stories) applyStories(d.stories);
       if (d.funClaims) applyFunClaims(d.funClaims);
-      if (entryRelease && player) { entryRelease = false; if (player.status === 'offwork' && hoursForce !== 'off') { setOwnStatus('present'); showQuote('', '歡迎進來，已解除下班狀態'); } }   // 登入後進入辦公室：解除下班（全員下班時除外）
+      if (entryRelease && player) { entryRelease = false; player.entered = true; if (player.status === 'offwork' || player.rawStatus === 'offwork') { setOwnStatus('present'); showQuote('', '歡迎進來，已解除下班狀態'); } }   // 登入後進入辦公室：解除下班（全員下班時除外）
     }
   } catch (err) {
     live.ok = false;
@@ -1593,17 +1593,17 @@ function hopChar(c){ c.hopAt = performance.now(); }
 function moodFx(c, m){   // 設定心情時：頭上的心情圖示彈出、人物跳一下、飄出心情字
   hopChar(c); const w = ({happy:'好開心！', angry:'氣噗噗！', sad:'好難過…', joy:'愛心滿格！'})[m]; if (w) floatAt(c.holder.position.x, 2.7, c.holder.position.z, w);
 }
-async function setOwnStatus(st){ const c = pageChar || player; if (!c || !(await writeState(c, {status:st}))) return; c.rawStatus = st; c.status = forcedStatus(st); c.appliedStatus = null; applyStatus(c, true); showQuote('', c.name + '：' + STATUS[st][0]); radialClose(); }
+async function setOwnStatus(st){ const c = pageChar || player; if (!c || !(await writeState(c, {status:st}))) return; c.rawStatus = st; c.status = forcedStatus(st, c); c.appliedStatus = null; applyStatus(c, true); showQuote('', c.name + '：' + STATUS[st][0]); radialClose(); }
 async function setOwnMood(m){ const c = pageChar || player; if (!c || !(await writeState(c, {mood:m}))) return; c.mood = m; if (m) moodFx(c, m); showQuote('', m ? c.name + '的心情：' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[m] : '已清除心情'); radialClose(); }
 async function setOwnMessage(t){ const c = pageChar || player; if (!c || !(await writeState(c, {message:t}))) return; c.message = t; showQuote('', t ? '已更新留言' : '已清除留言'); radialClose(); }
 async function setOwnAuto(){
   const c = pageChar || player; if (!c) return;
-  c.rawStatus = 'present'; c.status = forcedStatus('present'); c.appliedStatus = null; applyStatus(c, true); c.autoPendingUntil = Date.now() + 25000;   // 先回座位；電腦在背景判斷，結果出來前不會把人物收掉
+  c.rawStatus = 'present'; c.status = forcedStatus('present', c); c.appliedStatus = null; applyStatus(c, true); c.autoPendingUntil = Date.now() + 25000;   // 先回座位；電腦在背景判斷，結果出來前不會把人物收掉
   showQuote('', c.name + '：在座'); radialClose();
   writeState(c, {status:'auto'}).then(ok => { if (ok) live.version = 0; }); setTimeout(() => { live.version = 0; }, 26000);
 }
-const forcedStatus = raw => hoursForce === 'off' ? 'offwork' : (hoursForce === 'work' && raw === 'offwork' ? 'present' : raw);   // 管理者的「全員上班／下班」
-function applyForce(){ for (const c of Object.values(chars)) { c.status = forcedStatus(c.rawStatus || c.status || 'present'); c.appliedStatus = null; applyStatus(c, c === player); } }
+const forcedStatus = (raw, c) => hoursForce === 'off' && !(c && (c.entered || c.remote)) ? 'offwork' : (hoursForce === 'work' && raw === 'offwork' ? 'present' : raw);   // 全員下班時，人已經進來辦公室（本人、或別人看到的在線者）不算下班   // 管理者的「全員上班／下班」
+function applyForce(){ for (const c of Object.values(chars)) { c.status = forcedStatus(c.rawStatus || c.status || 'present', c); c.appliedStatus = null; applyStatus(c, c === player); } }
 const STATUS_DESC = {present:'在座工作中', overtime:'加班中（晚上 7 點後的在座）', lunch:'用餐中', meeting:'開會中', leave:'休假中', offwork:'已下班', toilet:'去廁所', abroad:'出國中', out:'公出工作中'};
 const roomOf = c => { const x = c.holder.position.x / U, z = c.holder.position.z / U; for (const r of ROOMS) if (x > r[1] && x < r[3] && z > r[2] && z < r[4]) return r[5]; if (x > 290 && x < 608 && z < 275) return '廁所'; if (x > 300 && x < 600 && z > 1190 && z < 1340) return '茶水間'; return '辦公區'; };
 const esc = t => String(t).replace(/[&<>"]/g, m => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;'}[m]));
