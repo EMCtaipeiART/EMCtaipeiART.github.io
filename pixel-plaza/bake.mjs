@@ -1,9 +1,10 @@
-// 由 character-studio/references 的三視圖合成 12 面向像素圖集到 sprites/。
+// 由三視圖＋ai-views 內 Codex 生成的中間角度，合成 12 面向像素圖集到 sprites/。可帶角色名稱只重烘部分。
 // 先在專案根目錄啟動靜態伺服器（預設 4190），再執行：node pixel-plaza/bake.mjs
 import puppeteer from 'puppeteer-core';
 import fs from 'node:fs';
 const port = process.env.PORT || 4190;
-const people = [['designer','Amber'],['designer','Anna'],['designer','Leona'],['designer','Machi'],['designer','Noise'],['staff','余采馨'],['staff','吳冠賢'],['staff','廖秦葦'],['staff','李明庭'],['staff','鄭筱舢'],['staff','黎子瑄']];
+const only = process.argv.slice(2);
+const people = [['designer','Amber'],['designer','Anna'],['designer','Leona'],['designer','Machi'],['designer','Noise'],['staff','余采馨'],['staff','吳冠賢'],['staff','廖秦葦'],['staff','李明庭'],['staff','鄭筱舢'],['staff','黎子瑄']].filter(([, n]) => !only.length || only.includes(n));
 fs.mkdirSync('pixel-plaza/sprites', {recursive:true});
 const b = await puppeteer.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe', headless:true, args:['--no-sandbox']});
 try {
