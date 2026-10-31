@@ -290,6 +290,7 @@ button{font-family:inherit}
 .hp-top .pk-orange{background:linear-gradient(90deg,#ff5f7a,#ffb23f)!important}
 .hp-top .pk-green{background:linear-gradient(90deg,#27b85c,#7be07a)!important}
 .hp-top .pk-purple{background:linear-gradient(90deg,#7b4de3,#3f8ef5)!important}
+.hp-top .pk-red{background:linear-gradient(90deg,#e8486a,#ff8a5f)!important}
 .hp-top .pk-dark{width:44px;padding:0!important;justify-content:center;background:rgba(14,24,32,.82)!important;font-size:20px!important}
 .hp-top button:hover{transform:translateY(-2px);filter:brightness(1.08)}
 html.embed #hud,html.embed #dock,html.embed #proj,html.embed .lbl{display:none!important}   /* ?embed=1：嵌在網站設計師面板裡的精簡畫面 */
@@ -337,7 +338,7 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 <div id="hud">
   <div class="hp-card"><div class="hp-av" id="pAv"></div><div class="hp-info"><div class="hp-name" id="pName">—</div><div class="hp-st" id="pSt"></div><div class="hp-exp"><i id="pExp"></i></div><div class="hp-lv" id="pLv"></div></div></div>
   <div class="hp-clock" id="pClock">🕒 …</div>
-  <div class="hp-top"><button id="bPeople" type="button" class="pk-dark" hidden>👥</button><button id="bWheel" type="button" class="pk-orange"><i>🎮</i>角色</button><button id="bDex" type="button" class="pk-green"><i>📖</i>圖鑑</button><button id="bHelp" type="button" class="pk-purple"><i>❓</i>說明</button></div>
+  <div class="hp-top"><button id="bPeople" type="button" class="pk-dark" hidden>👥</button><button id="bWheel" type="button" class="pk-orange"><i>🎮</i>角色</button><button id="bDex" type="button" class="pk-green"><i>📖</i>圖鑑</button><button id="bHelp" type="button" class="pk-purple"><i>❓</i>說明</button><button id="bClose" type="button" class="pk-red" hidden><i>✕</i>關閉</button></div>
 </div>
 <div id="stick"><i></i></div>
 <div id="proj"><canvas width="1024" height="576"></canvas><span></span></div>
@@ -1690,6 +1691,8 @@ function showTitleCard(){
 function updateTitleNet(){ const e = $('tNet'); if (e) e.textContent = live.ok ? '已連線到「凱曜設計部」伺服器，出勤狀態即時更新' : '目前離線：依時間規則模擬出勤狀態'; }
 let adminHome = false;   // 登入身分是 Machi／管理者：可以切換、操控任何人（就算被切成離開辦公室而看不到人物）
 function startGame(){
+  $('bClose').hidden = !(window.parent !== window && !/[?&]embed=1/.test(location.search));   // 嵌在網站元宇宙頁面裡時，右上角有「關閉」回網站
+  $('bClose').onclick = () => { try { parent.postMessage({type:'pixelUniverseClose'}, location.origin); } catch (e) {} };
   adminHome = Boolean(handoff && handoff.monitor); $('bPeople').hidden = !adminHome;   // 只有管理者帳號能切換、操控其他人物
   $('bPeople').onclick = () => { $('drawer').hidden = !$('drawer').hidden; }; $('roster').addEventListener('click', e => { if (e.target.closest('button')) $('drawer').hidden = true; });
   select(meName());

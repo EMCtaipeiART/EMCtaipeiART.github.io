@@ -522,7 +522,7 @@
       fitArenaFrame();[150,600,1500].forEach(t=>setTimeout(()=>{try{fitArenaFrame()}catch(err){}},t));
     }
     /* 像素辦公室隱藏小視窗送來的「全身正面快照」：存起來，轉給出氣擂台（遊戲開啟時也會來要） */
-    window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;
+    window.addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.type==='pixelUniverseClose'){const cb=document.querySelector('[data-uni-close]');if(cb)cb.click();return}if(e.origin!==location.origin||!e.data)return;
       if(e.data.type==='pixelOfficeBodies'&&e.data.list){state.pixBodies=Object.assign(state.pixBodies||{},e.data.list);const f=$('arenaFrame');try{f&&f.contentWindow&&f.contentWindow.postMessage({type:'ventArenaBodies',list:e.data.list},location.origin)}catch(err){}}
       else if(e.data.type==='ventArenaBodiesRequest'){const f=$('arenaFrame');if(f&&e.source===f.contentWindow&&state.pixBodies){try{e.source.postMessage({type:'ventArenaBodies',list:state.pixBodies},location.origin)}catch(err){}}}
     });
@@ -552,7 +552,7 @@
     function renderUniversePage(){
       if(state.uniFloor===undefined){try{state.uniFloor=Number(sessionStorage.getItem('uniFloor'))===4?4:5;state.uniHero=sessionStorage.getItem('uniHero')||state.uniHero;state.uniView=sessionStorage.getItem('uniView')==='1'}catch(err){state.uniFloor=5}}/* 重新整理後停留在原本的樓層 */
       const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=uniFrameSrc(state.uniFloor===4?4:5);
-      $('stage').innerHTML='<div class="uni-page is-edit"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+(loggedIn()&&(isAdminUser()||isMachiUser())?'<button type="button" class="btn" data-uni-allwork>'+uniAllWorkLabel()+'</button><button type="button" class="btn" data-uni-hours>上下班設定</button>':'')+'<button type="button" class="btn" data-uni-floor>'+(state.uniFloor===4?'回五樓':'四樓')+'</button><button type="button" class="btn" data-uni-minigames>小遊戲</button><button type="button" class="btn" data-uni-close>關閉</button></div></div><div class="uni-wrap"><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe><div class="uni-loading" id="uniLoading" role="status" aria-live="polite"><span class="uni-spin" aria-hidden="true"></span><b>正在進入凱曜多元宇宙…</b><small>載入像素辦公室</small></div></div></div>';
+      $('stage').innerHTML='<div class="uni-page is-edit"><button type="button" data-uni-close hidden aria-hidden="true" tabindex="-1"></button><div class="uni-wrap"><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe><div class="uni-loading" id="uniLoading" role="status" aria-live="polite"><span class="uni-spin" aria-hidden="true"></span><b>正在進入凱曜多元宇宙…</b><small>載入像素辦公室</small></div></div></div>';
       watchUniLoading();loadAllWorkBtn();fitUniFrame();[120,500,1200,2500].forEach(t=>setTimeout(()=>{try{fitUniFrame()}catch(err){}},t));{const f=$('uniFrame');if(f)f.addEventListener('load',()=>{try{fitUniFrame()}catch(err){}});}
     }
     /* 電腦版：整頁鎖定在一個畫面——iframe 高度＝視窗剩下的高度，標題與右上按鈕、右下＋／－一直看得到；場景用滑鼠按住拖曳平移，不靠滾輪 */
