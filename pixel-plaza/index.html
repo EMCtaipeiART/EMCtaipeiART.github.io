@@ -1066,6 +1066,7 @@ function stationFx(c, dt){
   const away = AWAY_DESK.has(c.status), ot = c.status === 'overtime', stn = stationOf(c), key = (away ? 'a:' : '') + c.status;
   if (stn && c.stnKey !== key) {
     const {seat, cell} = stn, ok = !away || !cell || iconSprite(cell, symOf[c.status] || 'person');
+    if (away && cell && cell.icon) { cell.icon.userData.pick = {kind:'char', c, desk:true}; if (!cell.icon.userData.pickable) { cell.icon.userData.pickable = true; pickables.push(cell.icon); } }
     if (ok) {
       c.stnKey = key; seat.hidden = away; seat.group.visible = !away;
       if (cell) { cell.items.forEach(m => { m.visible = !away; }); cell.top.material.color.setHex(away ? 0x8d949b : cell.color); if (!away && cell.icon) cell.icon.visible = false; }
@@ -1142,7 +1143,7 @@ stick.addEventListener('pointerup', () => { joy.x = joy.y = 0; knob.style.transf
 const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 renderer.domElement.addEventListener('pointerdown', e => {
   ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
-  const hits = ray.intersectObjects(pickables, true).filter((h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.c.holder.visible); })), hit = hits.find(h => ((h.object.userData.pickRoot || h.object).userData.pick || {}).kind === 'char') || hits[0];
+  const hits = ray.intersectObjects(pickables, true).filter((h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.desk && !pk.c.holder.visible); })), hit = hits.find(h => ((h.object.userData.pickRoot || h.object).userData.pick || {}).kind === 'char') || hits[0];
   if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { clickChar = pk.c; clickUntil = performance.now() + 3000; if (pk.c !== player && player && adminHome) select(pk.c.name); if (false) { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); else if (pk.kind === 'fridge') fridgeInteract(); else if (pk.kind === 'seat') { const st = pk.seat || chairSeats.filter(q => q.kind === 'toilet').sort((a, b) => Math.hypot(a.x - pk.at.x, a.z - pk.at.z) - Math.hypot(b.x - pk.at.x, b.z - pk.at.z))[0]; if (st && player && !st.by && !st.hidden) { wantSeat = st; target = new THREE.Vector3(st.x, 0, st.z); } } return; } }
   radialClose(); wantSeat = null; fridgeWant = false;
   const p = new THREE.Vector3();
@@ -1154,7 +1155,7 @@ renderer.domElement.addEventListener('pointermove', e => {
   if (hoverBusy) return; hoverBusy = true;
   requestAnimationFrame(() => {
     hoverBusy = false; ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
-    const hits = ray.intersectObjects(pickables, true).filter((h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.c.holder.visible); })), hit = hits.find(h => ((h.object.userData.pickRoot || h.object).userData.pick || {}).kind === 'char') || hits[0], pk = hit && (hit.object.userData.pickRoot || hit.object).userData.pick;
+    const hits = ray.intersectObjects(pickables, true).filter((h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.desk && !pk.c.holder.visible); })), hit = hits.find(h => ((h.object.userData.pickRoot || h.object).userData.pick || {}).kind === 'char') || hits[0], pk = hit && (hit.object.userData.pickRoot || hit.object).userData.pick;
     hoverChar = pk && pk.kind === 'char' ? pk.c : null; renderer.domElement.style.cursor = pk ? 'pointer' : '';
   });
 });
@@ -1488,7 +1489,7 @@ let hoverChar = null, clickChar = null, clickUntil = 0;
 const plate = document.createElement('div'); plate.className = 'cui-tag'; plate.style.cssText = 'position:fixed;left:0;top:0;z-index:7;display:none;pointer-events:none'; document.body.appendChild(plate);
 function updatePlate(){
   const c = hoverChar || (performance.now() < clickUntil ? clickChar : null);
-  if (!c || !c.holder.visible) { plate.style.display = 'none'; return; }
+  if (!c || !(c.holder.visible || AWAY.has(c.status))) { plate.style.display = 'none'; return; }
   const p = c.holder.position.clone(); p.y = .05; p.project(camera);
   if (p.z >= 1) { plate.style.display = 'none'; return; }
   const st = STATUS[c.status] || STATUS.present, html = esc(c.name + '（' + st[0] + '）');
