@@ -223,14 +223,16 @@ button{font-family:inherit}
 .cui-tag{display:inline-flex;gap:4px;align-items:center;background:#fffdf5;border:2px solid var(--ink);border-radius:999px;padding:2px 8px;font:600 12px 'Fredoka','Noto Sans TC',sans-serif;color:#232b32;white-space:nowrap}
 .ctag>div,.ctag>img,.ctag>button{pointer-events:auto}
 .cui-wrap{position:relative;display:flex;flex-direction:column;align-items:center}
-.cui-bub{position:relative;max-width:190px;background:#fff;color:var(--ink);border:2.5px solid var(--ink);border-radius:14px;padding:4px 10px;font:700 12.5px/1.4 'Fredoka','Noto Sans TC',sans-serif;word-break:break-all;box-shadow:0 3px 0 rgba(0,0,0,.25);margin-bottom:10px}
+.cui-bub{position:relative;max-width:190px;background:#fff;color:var(--ink);border:2.5px solid var(--ink);border-radius:14px;padding:4px 10px;font:700 12.5px/1.4 'Fredoka','Noto Sans TC',sans-serif;word-break:break-all;box-shadow:0 3px 0 rgba(0,0,0,.25);margin-bottom:0}
+.cui-stack{display:flex;flex-direction:column;align-items:center;gap:5px}.cui-ico{display:flex;gap:8px;align-items:center}
+.cui-bub:not(.tail):after{display:none}
 .cui-bub:after{content:'';position:absolute;left:50%;bottom:-8px;width:10px;height:10px;margin-left:-5px;background:#fff;border-right:2.5px solid var(--ink);border-bottom:2.5px solid var(--ink);transform:rotate(45deg)}
 .cui-bub.music{display:flex;align-items:center;gap:6px;background:#efe6ff;pointer-events:auto;width:150px}
 .cui-bub.music:after{background:#efe6ff}
 .cui-bub .mplay{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid var(--ink);background:#9166ec;color:#fff;font-size:10px;cursor:pointer;padding:0}
 .cui-bub .mt{flex:1;overflow:hidden;white-space:nowrap}.cui-bub .mt i{display:inline-block;font-style:normal;padding-left:100%;animation:mq 7s linear infinite}
 @keyframes mq{to{transform:translateX(-100%)}}
-.cui-mood{position:absolute;left:100%;top:-6px;width:34px;height:34px;margin-left:-4px;animation:mpop 1.6s ease-in-out infinite;pointer-events:none!important;filter:drop-shadow(0 2px 0 rgba(0,0,0,.35))}
+.cui-mood{position:static;width:30px;height:30px;animation:mpop 1.6s ease-in-out infinite;pointer-events:none!important;filter:drop-shadow(0 2px 0 rgba(0,0,0,.35))}
 .cui-mood.angry{animation:mshake .5s linear infinite}
 .cui-mood.sad{animation:mdrip 1.8s ease-in infinite}
 .cui-mood.joy{animation:mbeat .9s ease-in-out infinite}
@@ -238,7 +240,7 @@ button{font-family:inherit}
 @keyframes mshake{0%,100%{transform:translateX(0) rotate(0)}25%{transform:translateX(-3px) rotate(-8deg)}75%{transform:translateX(3px) rotate(8deg)}}
 @keyframes mdrip{0%{transform:translateY(-4px)}70%,100%{transform:translateY(6px);opacity:.6}}
 @keyframes mbeat{0%,100%{transform:scale(1)}40%{transform:scale(1.28)}}
-.cui-story{position:absolute;right:100%;top:-4px;margin-right:-4px;width:34px;height:26px;padding:0;border:0;background:none;cursor:pointer;animation:mpop 2.2s ease-in-out infinite}
+.cui-story{position:relative;width:32px;height:24px;padding:0;border:0;background:none;cursor:pointer;animation:mpop 2.2s ease-in-out infinite}
 .cui-story img{width:100%;height:100%;image-rendering:pixelated}
 .cui-story b{position:absolute;right:-2px;top:-2px;width:10px;height:10px;border-radius:50%;background:#2fdc5a;border:2px solid #fff}
 #spotifyDock{position:fixed;right:12px;bottom:12px;width:min(340px,86vw);z-index:25;border-radius:14px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.4)}#spotifyDock[hidden]{display:none}
@@ -258,7 +260,7 @@ button{font-family:inherit}
 
 /* 精簡版角色頁面 */
 .cp-wrap{position:relative;width:min(700px,100%)!important;gap:8px!important;padding:12px!important;border-radius:18px!important}
-.cp-x{position:absolute;right:10px;top:10px;z-index:2;width:30px;height:30px;border-radius:50%;border:2px solid var(--line);background:rgba(0,0,0,.35);color:#fff;font:700 14px sans-serif;cursor:pointer}
+.cp-x{position:absolute;right:10px;top:10px;z-index:2;height:30px;padding:0 16px;border-radius:999px;border:2px solid var(--line);background:rgba(0,0,0,.35);color:#fff;font:700 13px 'Fredoka','Noto Sans TC',sans-serif;cursor:pointer}
 .cp-x:hover{background:#e8486a}
 .cp-head{padding:10px 48px 10px 12px!important;gap:12px!important}
 .cp-av{width:60px!important;height:60px!important}.cp-lv{font-size:10px!important;line-height:16px!important;bottom:-6px!important}
@@ -306,7 +308,7 @@ button{font-family:inherit}
   <div class="hp-card"><div class="hp-av" id="pAv"></div><div class="hp-info"><div class="hp-name" id="pName">—</div><div class="hp-st" id="pSt"></div><div class="hp-exp"><i id="pExp"></i></div><div class="hp-lv" id="pLv"></div></div></div>
   <div class="hp-clock" id="pClock">🕒 …</div>
   <div class="hp-top"><button id="bDex" type="button">📖 圖鑑</button><button id="bHelp" type="button">❓ 說明</button></div>
-  <div id="dock"><button id="bWheel" type="button">🎮 角色頁面</button><button id="sit" type="button">🪑 坐下 (E)</button></div>
+  <div id="dock"><button id="bWheel" type="button">🎮 角色頁面</button></div>
 </div>
 <div id="stick"><i></i></div>
 <div id="proj"><canvas width="128" height="72"></canvas><span></span></div>
@@ -319,7 +321,7 @@ button{font-family:inherit}
 <div id="drawer" hidden><div class="dr-head"><span>選擇角色</span></div><div id="roster"></div></div>
 <div id="dexPanel" hidden><div class="px-head"><span>📖 辦公室圖鑑</span><button class="px-x" type="button">✕</button></div><div id="dexBody"></div></div>
 <div id="helpPanel" hidden><div class="px-head"><span>❓ 操作說明</span><button class="px-x" type="button">✕</button></div>
-  <div class="help-list"><div>🕹️ WASD／方向鍵移動，Shift 跑步，點地面走過去（手機用左下搖桿）</div><div>🪑 靠近椅子或馬桶按 E 坐下，再按一次起身</div><div>🎮 點自己的人物或按「角色頁面」：狀態、心情、想說的話、音樂、限時動態（管理者另有全員上下班與班長工具）</div><div>✨ 撿地上的道具、沖馬桶、點投影機，圖鑑會記錄你的發現，每 5 個升一級</div><div>📡 角色依「凱曜設計部」的即時出勤狀態行動（在座／加班／用餐／廁所／會議／下班…）</div></div></div>
+  <div class="help-list"><div>🕹️ WASD／方向鍵移動，Shift 跑步，點地面走過去（手機用左下搖桿）</div><div>🪑 點椅子或馬桶，人物會走過去坐下；要起身直接走動</div><div>🎮 點自己的人物或按「角色頁面」：狀態、心情、想說的話、音樂、限時動態（管理者另有全員上下班與班長工具）</div><div>✨ 撿地上的道具、沖馬桶、點投影機，圖鑑會記錄你的發現，每 5 個升一級</div><div>📡 角色依「凱曜設計部」的即時出勤狀態行動（在座／加班／用餐／廁所／會議／下班…）</div></div></div>
 <script type="module">
 import * as THREE from 'three';
 import {RoundedBoxGeometry} from '../character-studio/vendor/RoundedBoxGeometry.js';
@@ -672,9 +674,9 @@ const FACE_ANGLE = {S:0, N:Math.PI, E:Math.PI / 2, W:-Math.PI / 2};
 const chairSeats = [], toilets = [];
 function chairBuilder(x, z, face){
   const g = new THREE.Group();
-  const add = (w, h, d, c, px, py, pz, edge = true) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({color:c})); m.position.set(px, py + h / 2, pz); g.add(m); if (edge) hull(g, w, h, d, px, py + h / 2, pz, .035); };
+  const add = (w, h, d, c, px, py, pz, edge = true) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({color:c})); m.position.set(px, py + h / 2, pz); m.userData.pickRoot = g; g.add(m); if (edge) hull(g, w, h, d, px, py + h / 2, pz, .035); };
   g.position.set(x, 0, z); g.rotation.y = FACE_ANGLE[face]; scene.add(g);
-  chairSeats.push({x, z, face:FACE_ANGLE[face], by:null, group:g});
+  { const seat = {x, z, face:FACE_ANGLE[face], by:null, group:g}; chairSeats.push(seat); g.userData.pick = {kind:'seat', seat}; pickables.push(g); }
   return add;
 }
 function chair3d(x, z, face){   // 會議室：簡單黑色折疊椅（沒有扶手）
@@ -714,7 +716,7 @@ const G_TANK = new RoundedBoxGeometry(.4, .9, .86, 4, .13), G_BOWL = new THREE.C
 const G_PED = new THREE.CylinderGeometry(.14, .18, .66, 16), G_BASIN = new THREE.CylinderGeometry(.5, .36, .22, 28), G_SINKW = new THREE.CylinderGeometry(.34, .34, .02, 24), G_FAUCET = new THREE.CylinderGeometry(.05, .05, .24, 10);
 function toilet3d(x, z){   // 朝右（+x）：圓角水箱在左、橢圓馬桶在右
   pmesh(G_TANK, 0xf4f6f8, x - .52, .45, z, 1, 1, 1, true, 1.1);
-  pmesh(G_BOWL, 0xffffff, x + .1, .23, z, 1.12, 1, .92, true, 1.1);
+  { const bowl = pmesh(G_BOWL, 0xffffff, x + .1, .23, z, 1.12, 1, .92, true, 1.1); bowl.userData.pick = {kind:'seat', at:{x:x + .12, z}}; pickables.push(bowl); }
   pmesh(G_SEAT, 0xe3e9ee, x + .12, .495, z, 1.1, 1, .9, true, 1.1);
   pmesh(G_WATER, 0x45a9ff, x + .14, .54, z, 1.05, 1, .85, false);
 }
@@ -1014,9 +1016,8 @@ function standUp(c){
   for (const k of [-1, 1]) { const x = st.x + fx * k * 1.0, z = st.z + fz * k * 1.0; if (!blocked(x, z)) { c.holder.position.set(x, 0, z); break; } }
   st.by = null; c.sitting = null;
 }
-function toggleSit(){ if (player && !player.sitting) sitDown(player); }   // 只有坐下；要起身直接走動
-addEventListener('keydown', e => { if (e.code === 'KeyE') toggleSit(); });
-document.getElementById('sit').addEventListener('click', toggleSit);
+let wantSeat = null;   // 點椅子／馬桶：走過去自動坐下；要起身直接走動
+function sitAt(c, st){ c.holder.position.set(st.x, 0, st.z); sitDown(c); }
 function select(name){
   const prev = player; player = chars[name]; target = null; player.holder.visible = !AWAY.has(player.status);
   if (prev && prev !== player) { prev.appliedStatus = null; applyStatus(prev); }
@@ -1064,8 +1065,8 @@ const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 
 renderer.domElement.addEventListener('pointerdown', e => {
   ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
   const hit = ray.intersectObjects(pickables, true).find(h => (h.object.userData.pickRoot || h.object).visible !== false);
-  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { if (pk.c === player) radialOpen(); else if (player && (player.name === 'Machi' || isAdmin())) radialOpen(pk.c); else { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); return; } }
-  radialClose();
+  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { if (pk.c === player) radialOpen(); else if (player && (player.name === 'Machi' || isAdmin())) { select(pk.c.name); radialOpen(); } else { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); else if (pk.kind === 'seat') { const st = pk.seat || chairSeats.filter(q => q.kind === 'toilet').sort((a, b) => Math.hypot(a.x - pk.at.x, a.z - pk.at.z) - Math.hypot(b.x - pk.at.x, b.z - pk.at.z))[0]; if (st && player && !st.by && !st.hidden) { wantSeat = st; target = new THREE.Vector3(st.x, 0, st.z); } } return; } }
+  radialClose(); wantSeat = null;
   const p = new THREE.Vector3();
   if (ray.ray.intersectPlane(plane, p) && !blocked(p.x, p.z)) target = p;
 });
@@ -1147,12 +1148,18 @@ function moonIcon(px){   // 加班：月牙＋星星（2D 版也是程式畫的�
   const star = (x, y, rad) => { g.fillStyle = '#fff3b8'; g.strokeStyle = '#e0a030'; g.lineWidth = Math.max(.8, px * .02); g.beginPath(); for (let i = 0; i < 8; i++) { const a = -Math.PI / 2 + i * Math.PI / 4, d = i % 2 ? rad * .42 : rad; g[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * d, y + Math.sin(a) * d); } g.closePath(); g.fill(); g.stroke(); };
   star(px * .78, px * .28, px * .13); star(px * .86, px * .62, px * .08); return c;
 }
+function chairIcon(){   // 「在座」：黑線框像素椅子
+  const rows = ['................', '....kkkkkkkk....', '...kbbbbbbbbk...', '...kbhhbbbbbk...', '...kbbbbbbbbk...', '...kbbbbbbbbk...', '...kkkkkkkkkk...', '..kkbbbbbbbbkk..', '..kbhhbbbbbbbk..', '..kkkkkkkkkkkk..', '.......kk.......', '.......kk.......', '......kkkk......', '..kkkkkkkkkkkk..', '..kk..kkkk..kk..', '................'];
+  const c = document.createElement('canvas'), k = 6; c.width = c.height = 16 * k; const g = c.getContext('2d'), col = {k:'#111418', b:'#4f6b8f', h:'#8fb0d6'};
+  rows.forEach((r, y) => [...r].forEach((ch, x) => { if (ch === '.') return; g.fillStyle = col[ch]; g.fillRect(x * k, y * k, k, k); })); return c.toDataURL();
+}
 async function loadIcons(){
   const [main, extra] = await Promise.all([loadImg(ASSET + 'icons-v3.webp'), loadImg(ASSET + 'icons-status-v4.webp')]);
   const cut = (im, cols, i) => { const cell = im.naturalWidth / cols, c = document.createElement('canvas'); c.width = c.height = 96; const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(im, (i % cols) * cell, Math.floor(i / cols) * cell, cell, cell, 0, 0, 96, 96); return c.toDataURL(); };
   if (main) ['sun', 'burst', 'drop', 'heart', 'person', 'power', 'toilet', 'plane', 'briefcase'].forEach((k, i) => { ICON[k] = cut(main, 3, i); });
   if (extra) ['meeting', 'bowl', 'calendar'].forEach((k, i) => { ICON[k] = cut(extra, 3, i); });
   ICON.moon = moonIcon(96).toDataURL();
+  ICON.person = chairIcon();
 }
 const iconImg = (sym, px) => ICON[sym] ? '<img class="ico" alt="" src="' + ICON[sym] + '" width="' + px + '" height="' + px + '">' : '';
 const $ = id => document.getElementById(id);
@@ -1180,10 +1187,10 @@ function hopChar(c){ c.hopAt = performance.now(); }
 function moodFx(c, m){   // 設定心情時：頭上的心情圖示彈出、人物跳一下、飄出心情字
   hopChar(c); const w = ({happy:'好開心！', angry:'氣噗噗！', sad:'好難過…', joy:'愛心滿格！'})[m]; if (w) floatAt(c.holder.position.x, 2.7, c.holder.position.z, w);
 }
-async function setOwnStatus(st){ const c = pageChar || player; if (!c || !(await writeState(c, {status:st}))) return; c.rawStatus = st; c.status = forcedStatus(st); c.appliedStatus = null; applyStatus(c, true); showQuote('', c.name + '：' + STATUS[st][0]); renderCharPage(); }
-async function setOwnMood(m){ const c = pageChar || player; if (!c || !(await writeState(c, {mood:m}))) return; c.mood = m; if (m) moodFx(c, m); showQuote('', m ? c.name + '的心情：' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[m] : '已清除心情'); renderCharPage(); }
-async function setOwnMessage(t){ const c = pageChar || player; if (!c || !(await writeState(c, {message:t}))) return; c.message = t; showQuote('', t ? '已更新留言' : '已清除留言'); renderCharPage(); }
-async function setOwnAuto(){ const c = pageChar || player; if (!c || !(await writeState(c, {status:'auto'}))) return; showQuote('', '已交還給電腦自動判斷，幾秒內會更新'); live.version = 0; }
+async function setOwnStatus(st){ const c = pageChar || player; if (!c || !(await writeState(c, {status:st}))) return; c.rawStatus = st; c.status = forcedStatus(st); c.appliedStatus = null; applyStatus(c, true); showQuote('', c.name + '：' + STATUS[st][0]); radialClose(); }
+async function setOwnMood(m){ const c = pageChar || player; if (!c || !(await writeState(c, {mood:m}))) return; c.mood = m; if (m) moodFx(c, m); showQuote('', m ? c.name + '的心情：' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[m] : '已清除心情'); radialClose(); }
+async function setOwnMessage(t){ const c = pageChar || player; if (!c || !(await writeState(c, {message:t}))) return; c.message = t; showQuote('', t ? '已更新留言' : '已清除留言'); radialClose(); }
+async function setOwnAuto(){ const c = pageChar || player; if (!c || !(await writeState(c, {status:'auto'}))) return; showQuote('', '已交還給電腦自動判斷，幾秒內會更新'); live.version = 0; radialClose(); }
 const forcedStatus = raw => hoursForce === 'off' ? 'offwork' : (hoursForce === 'work' && raw === 'offwork' ? 'present' : raw);   // 管理者的「全員上班／下班」
 function applyForce(){ for (const c of Object.values(chars)) { c.status = forcedStatus(c.rawStatus || c.status || 'present'); c.appliedStatus = null; applyStatus(c, c === player); } }
 const STATUS_DESC = {present:'在座工作中', overtime:'加班中（晚上 7 點後的在座）', lunch:'用餐中', meeting:'開會中', leave:'休假中', offwork:'已下班', toilet:'去廁所', abroad:'出國中', out:'公出工作中'};
@@ -1243,9 +1250,9 @@ async function setOwnMusic(url){
   const c = pageChar || player; if (!c) return; const info = musicInfo(url);
   if (!info) { showQuote('', '請貼 Spotify（單曲、專輯、歌單、Podcast）或 Apple Music 歌曲的網址'); return; }
   const meta = await musicMetadata(info); if (!(await writeState(c, {music:{url:info.url, title:meta.title}}))) return;
-  c.music = {url:info.url, provider:info.provider, title:meta.title}; showQuote('', '🎧 開始分享：' + meta.title); renderCharPage();
+  c.music = {url:info.url, provider:info.provider, title:meta.title}; showQuote('', '🎧 開始分享：' + meta.title); radialClose();
 }
-async function clearOwnMusic(){ const c = pageChar || player; if (!c || !(await writeState(c, {music:''}))) return; c.music = null; if (musicPlaying.name === c.name) stopMusic(); showQuote('', '已停止分享音樂'); renderCharPage(); }
+async function clearOwnMusic(){ const c = pageChar || player; if (!c || !(await writeState(c, {music:''}))) return; c.music = null; if (musicPlaying.name === c.name) stopMusic(); showQuote('', '已停止分享音樂'); radialClose(); }
 
 // ───────── 限時動態（沿用 2D 版：照片／GIF／影片，24 小時自動下架，可按讚留言；人物右上角的像素訊息氣泡）─────────
 const STORY_SECONDS = 6, STORY_MAX_ACTIVE = 5, STORY_GIF_MAX = 5 * 1024 * 1024, STORY_VIDEO_MAX = 10 * 1024 * 1024, STORY_VIDEO_SECONDS = 30;
@@ -1274,7 +1281,7 @@ async function postStory(file){
       const cv = document.createElement('canvas'), sc = Math.min(1, 1200 / Math.max(img.width, img.height)); cv.width = Math.round(img.width * sc); cv.height = Math.round(img.height * sc); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); media = cv.toDataURL('image/jpeg', .8);
     } else throw Error('請選擇照片、GIF 或 MP4 影片');
     if (!live.ok) { showQuote('', '目前是離線模擬，沒有貼出（來源未被後端放行）'); return; }
-    const d = await post({action:'pixelOfficeStoryAdd', name:c.name, media, token:adminToken()}); applyStories(d.stories); showQuote('', '限時動態已貼出，24 小時後自動下架');
+    const d = await post({action:'pixelOfficeStoryAdd', name:c.name, media, token:adminToken()}); applyStories(d.stories); showQuote('', '限時動態已貼出，24 小時後自動下架'); radialClose();
   } catch (e) { showQuote('', e && e.message ? e.message : '貼出失敗'); } finally { URL.revokeObjectURL(url); }
 }
 let sv = {name:'', id:'', elapsed:0, paused:false, timer:0, last:0, muted:true};
@@ -1319,7 +1326,7 @@ function renderCharPage(){
   const moodPct = {happy:90, joy:100, sad:35, angry:20}[c.mood] ?? 60, moodTxt = c.mood ? (iconImg(moodSym[c.mood], 18) + ' ' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[c.mood]) : '— 未設定';
   const keepMsg = radial.querySelector('#cpMsg') ? radial.querySelector('#cpMsg').value : null, keepMusic = radial.querySelector('#cpMusic') ? radial.querySelector('#cpMusic').value : '';
   const mine = storiesOf(c.name), m = c.music;
-  radial.innerHTML = `<div class="cp-wrap"><button type="button" class="cp-x" id="cpX" title="關閉">✕</button>
+  radial.innerHTML = `<div class="cp-wrap"><button type="button" class="cp-x" id="cpX" title="關閉">關閉</button>
     <div class="cp-head">
       <div class="cp-av"><img alt="" src="${c.avatar || ''}"><b class="cp-lv">Lv.${lv}</b></div>
       <div class="cp-main">
@@ -1352,7 +1359,6 @@ function renderCharPage(){
       </div>
     </div>
     <details class="cp-fold"><summary>管理者工具</summary><section class="cp-admin" id="cpAdmin"></section></details>
-    <div class="cp-btns"><button type="button" id="cpDex">📖 圖鑑</button><button type="button" id="cpHelp">❓ 說明</button><button type="button" class="cp-go" id="cpGo">繼續</button></div>
   </div>`;
   const g = radial.querySelector('#cpSt'); for (const [id, [name]] of Object.entries(STATUS)) { const b = document.createElement('button'); b.type = 'button'; b.className = c.status === id ? 'on' : ''; b.innerHTML = '<i>' + iconImg(symOf[id], 44) + '</i>' + name; b.onclick = () => setOwnStatus(id); g.appendChild(b); }
   const mm = radial.querySelector('#cpMood'); for (const id of Object.keys(MOOD)) { const b = document.createElement('button'); b.type = 'button'; b.className = c.mood === id ? 'on' : ''; b.innerHTML = '<i>' + iconImg(moodSym[id], 36) + '</i>' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[id]; b.onclick = () => setOwnMood(id); mm.appendChild(b); }
@@ -1363,8 +1369,7 @@ function renderCharPage(){
   const mp = radial.querySelector('#cpMPlay'); if (mp) mp.onclick = () => toggleMusic(c); const ms = radial.querySelector('#cpMStop'); if (ms) ms.onclick = clearOwnMusic;
   const file = radial.querySelector('#cpFile'); radial.querySelector('#cpPost').onclick = () => file.click(); file.onchange = () => { const f = file.files[0]; file.value = ''; if (f) postStory(f); };
   radial.querySelectorAll('.cp-story .th').forEach(b => b.onclick = () => { radialClose(); openStory(c.name); }); radial.querySelectorAll('.cp-story .rm').forEach(b => b.onclick = () => removeStory(b.dataset.id));
-  radial.querySelector('#cpAuto').onclick = setOwnAuto; radial.querySelector('#cpGo').onclick = radialClose; radial.querySelector('#cpX').onclick = radialClose;
-  radial.querySelector('#cpDex').onclick = () => { radialClose(); $('bDex').click(); }; radial.querySelector('#cpHelp').onclick = () => { radialClose(); $('bHelp').click(); };
+  radial.querySelector('#cpAuto').onclick = setOwnAuto; radial.querySelector('#cpX').onclick = radialClose;
   renderAdmin();
 }
 // 管理者工具：全員上班／下班、上下班設定、班長處罰（沿用 2D 版的動作；測試階段全面開放）
@@ -1377,9 +1382,9 @@ function renderAdmin(){
       rows.map(r => '<label class="cp-f"><span>' + r[1] + '</span><input type="number" min="0" max="23" id="fh_' + r[0] + '" value="' + (cfg[r[0]] ?? '') + '"></label>').join('') + '<div class="cp-chips"><button type="button" class="primary" id="fhSave">儲存</button></div></div>' +
     '<div class="cp-card"><h4>班長：處罰</h4><label class="cp-f col"><span>對象</span><select id="pnWho">' + NAMES.map(n => '<option>' + n + '</option>').join('') + '</select></label><label class="cp-f col"><span>原因（最多 30 字）</span><input type="text" id="pnWhy" maxlength="30" placeholder="例如：上班時間遲到"></label>' +
       '<label class="cp-f col"><span>天數</span><select id="pnDays">' + [1, 2, 3, 5, 7, 14, 30].map(n => '<option value="' + n + '">' + n + ' 天</option>').join('') + '</select></label><div class="cp-chips"><button type="button" class="primary" id="pnGo">處罰</button><button type="button" id="pnOff">解除處罰</button></div></div></div>';
-  box.querySelector('#adWork').onclick = async () => { const mode = hoursForce === 'work' ? 'off' : 'work'; try { await adminCall('pixelOfficeAllWork', {mode}); hoursForce = mode; applyForce(); live.version = 0; showQuote('', mode === 'work' ? '已切換：全員上班' : '已切換：全員下班'); renderAdmin(); } catch (e) { showQuote('', '切換失敗：' + e.message); } };
-  box.querySelector('#fhSave').onclick = async () => { const body = {enabled:box.querySelector('#fhOn').checked, meetingRooms:box.querySelector('#fhRooms').checked}; rows.forEach(r => { body[r[0]] = Number(box.querySelector('#fh_' + r[0]).value); }); try { await adminCall('savePixelHours', body); hoursCfg = {...cfg, ...body}; showQuote('', '已儲存上下班時段'); } catch (e) { showQuote('', '儲存失敗：' + e.message); } };
-  const punish = async days => { const name = box.querySelector('#pnWho').value, reason = box.querySelector('#pnWhy').value.trim(); if (days && reason.length < 2) { showQuote('', '請先寫處罰原因（至少 2 個字）'); return; } try { await adminCall('pixelOfficePunish', {name, reason, days}); showQuote('', days ? '已處罰 ' + name + '：' + reason + '，' + days + ' 天' : '已解除 ' + name + ' 的處罰'); } catch (e) { showQuote('', '處罰失敗：' + e.message); } };
+  box.querySelector('#adWork').onclick = async () => { const mode = hoursForce === 'work' ? 'off' : 'work'; try { await adminCall('pixelOfficeAllWork', {mode}); hoursForce = mode; applyForce(); live.version = 0; showQuote('', mode === 'work' ? '已切換：全員上班' : '已切換：全員下班'); radialClose(); } catch (e) { showQuote('', '切換失敗：' + e.message); } };
+  box.querySelector('#fhSave').onclick = async () => { const body = {enabled:box.querySelector('#fhOn').checked, meetingRooms:box.querySelector('#fhRooms').checked}; rows.forEach(r => { body[r[0]] = Number(box.querySelector('#fh_' + r[0]).value); }); try { await adminCall('savePixelHours', body); hoursCfg = {...cfg, ...body}; showQuote('', '已儲存上下班時段'); radialClose(); } catch (e) { showQuote('', '儲存失敗：' + e.message); } };
+  const punish = async days => { const name = box.querySelector('#pnWho').value, reason = box.querySelector('#pnWhy').value.trim(); if (days && reason.length < 2) { showQuote('', '請先寫處罰原因（至少 2 個字）'); return; } try { await adminCall('pixelOfficePunish', {name, reason, days}); showQuote('', days ? '已處罰 ' + name + '：' + reason + '，' + days + ' 天' : '已解除 ' + name + ' 的處罰'); radialClose(); } catch (e) { showQuote('', '處罰失敗：' + e.message); } };
   box.querySelector('#pnGo').onclick = () => punish(Number(box.querySelector('#pnDays').value) || 1); box.querySelector('#pnOff').onclick = () => punish(0);
 }
 async function loadHours(){ try { const r = await adminCall('getPixelHours'); hoursCfg = r.config || null; hoursForce = r.force || hoursForce; if (!radial.hidden) renderAdmin(); } catch (e) {} }
@@ -1398,10 +1403,12 @@ function updateTags(){
     else if (c.holder.visible && (c.message || c.mood || m || nStory)) {
       p = c.holder.position.clone(); p.y += 2.7;
       const playing = musicPlaying.name === c.name && !musicPlaying.paused;
-      if (m) html += '<div class="cui-bub music"><button type="button" class="mplay" data-n="' + esc(c.name) + '">' + (playing ? '⏸' : '▶') + '</button><span class="mt"><i>♪ ' + esc(m.title || '音樂') + '</i></span></div>';
-      else if (c.message) html += '<div class="cui-bub">' + esc(c.message) + '</div>';
-      if (c.mood) html += '<img class="cui-mood' + (nStory ? ' l' : '') + ' ' + c.mood + '" alt="" src="' + (ICON[moodSym[c.mood]] || '') + '">';
-      if (nStory) html += '<button type="button" class="cui-story" data-n="' + esc(c.name) + '" title="查看 ' + esc(c.name) + ' 的動態"><img alt="" src="' + storyIconURL + '">' + (storyUnread(c.name) ? '<b></b>' : '') + '</button>';
+      const bub = [];
+      if (c.message) bub.push('<div class="cui-bub">' + esc(c.message) + '</div>');
+      if (m) bub.push('<div class="cui-bub music"><button type="button" class="mplay" data-n="' + esc(c.name) + '">' + (playing ? '⏸' : '▶') + '</button><span class="mt"><i>♪ ' + esc(m.title || '音樂') + '</i></span></div>');
+      const ico = (nStory ? '<button type="button" class="cui-story" data-n="' + esc(c.name) + '" title="查看 ' + esc(c.name) + ' 的動態"><img alt="" src="' + storyIconURL + '">' + (storyUnread(c.name) ? '<b></b>' : '') + '</button>' : '') + (c.mood ? '<img class="cui-mood ' + c.mood + '" alt="" src="' + (ICON[moodSym[c.mood]] || '') + '">' : '');
+      if (!ico && bub.length) bub[bub.length - 1] = bub[bub.length - 1].replace('class="cui-bub', 'class="cui-bub tail');
+      html = '<div class="cui-stack">' + bub.join('') + (ico ? '<div class="cui-ico">' + ico + '</div>' : '') + '</div>';
     }
     if (!html || !p) { c.tag.style.display = 'none'; continue; }
     p.project(camera); const vis = p.z < 1 && Math.abs(p.x) < 1.1 && Math.abs(p.y) < 1.1;
@@ -1474,11 +1481,12 @@ function tick(){
       0,
       (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0) + joy.y);
     const run = keys.ShiftLeft || keys.ShiftRight || Math.hypot(joy.x, joy.y) > .85;
-    if (dir.lengthSq() > .01) target = null;
+    if (dir.lengthSq() > .01) { target = null; wantSeat = null; }
     else if (target) { dir.copy(target).sub(player.holder.position); dir.y = 0; if (dir.length() < .2) target = null; }
     if (!radial.hidden || !$('sv').hidden || AWAY.has(player.status)) { dir.set(0, 0, 0); target = null; }   // 角色頁面開著時人物不跟著走
     if (player.sitting && dir.lengthSq() > 1e-4) standUp(player);
     if (!player.sitting) moveChar(player, dir, run ? 5 : 2.4, dt);
+    if (wantSeat) { const st = wantSeat; if (st.by || st.hidden || player.sitting) wantSeat = null; else if (Math.hypot(st.x - player.holder.position.x, st.z - player.holder.position.z) < 1.0) { wantSeat = null; target = null; sitAt(player, st); } }
   }
   for (const c of Object.values(chars)) {
     if (c.wander && !c.sitting) {                                   // 其他角色隨機閒晃
