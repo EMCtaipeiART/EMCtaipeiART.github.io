@@ -48,7 +48,7 @@ addEventListener('resize', resize); resize();
 // 版面圖座標（1201×1526 px）× U = 世界座標。桌子 105 px 寬 ≈ 3.15 單位，與角色身高 2.04 的比例同遊戲內一致。
 const U = 0.03, PPU = 29.5;               // PPU：每單位約幾個螢幕像素（貼圖縮成這個大小才會清楚）
 const ASSET = '../EMC-ART-Pixel-Office/dist/assets/';
-const FILES = {elevator:'props2/elevator.png',stall:'props2/toilet_stall.png',sink:'props2/pedestal_sink.png',tableA:'props2/meeting_table_black_6.png',table4:'props2/meeting_table_black_4.png',tableU:'props2/meeting_table_white_U.png',pantry:'props2/pantry_counter.png',fridge:'props2/fridge_double.png',plant:'props2/plant_pot.png',deskBeige:'props2/desk_beige_front.png',deskL:'props2/desk_white_L.png',shelf:'props2/bookshelf_black_small.png',pillarCab:'props2/pillar_cabinet.png',chair:'props/chair_black.png',pillar:'props/pillar_white.png',sheet:'furniture-v4.webp',planA:'props3/plan_meeting_6.png',plan4:'props3/plan_meeting_4.png',planU:'props3/plan_meeting_U.png',toilet:'props3/plan_toilet_right.png',sinkP:'props3/plan_sink_right.png',beigePod:'props3/beige_pod_front.png'};
+const FILES = {elevator:'props2/elevator.png',stall:'props2/toilet_stall.png',sink:'props2/pedestal_sink.png',tableA:'props2/meeting_table_black_6.png',table4:'props2/meeting_table_black_4.png',tableU:'props2/meeting_table_white_U.png',pantry:'props2/pantry_counter.png',fridge:'props2/fridge_double.png',plant:'props2/plant_pot.png',deskBeige:'props2/desk_beige_front.png',deskL:'props3/white_L_v2.png',blueBlock:'props3/blue_block_6.png',shelf:'props2/bookshelf_black_small.png',pillarCab:'props2/pillar_cabinet.png',chair:'props/chair_black.png',pillar:'props/pillar_white.png',sheet:'furniture-v4.webp',beigePod:'props3/beige_pod_v2.png'};
 // [素材, 左上 x, 底部 y, 寬, 選項{h 指定高, fh 碰撞高, col 自訂碰撞[x,y,w,h]}]（版面圖像素）
 const PROPS = [
   ['elevator',165,255,72,{fh:40}],
@@ -61,16 +61,15 @@ const PROPS = [
   ['shelf',872,445,20,{fh:70,h:70}],['shelf',725,682,26,{fh:56,h:57}],['shelf',850,682,30,{fh:56,h:57}],
   ['pillarCab',730,445,70,{fh:90}],['pillar',730,920,42,{fh:90,h:92}]
 ];
-// 平放在地板上的俯視素材：[素材, 中心 x, 中心 y, 寬, 高(省略＝依素材比例), 碰撞[x,y,w,h]（省略＝不擋）]（版面圖像素）
-const FLATS = [
-  ['planA',863,158,262,null,[742,125,244,64]],
-  ['plan4',184,1160,132,null,[124,1128,120,64]],['plan4',186,1360,130,null,[128,1328,116,64]],
-  ['planU',846,1250,380,200,[676,1166,340,40]],
-  // 廁所：每間兩個馬桶朝右（水箱在左）、洗手台朝右
-  ...[0,155].flatMap(dx=>[['toilet',340+dx,96,64,null,[310+dx,78,60,38]],['toilet',340+dx,158,64,null,[310+dx,140,60,38]],['sinkP',334+dx,222,52,null,[308+dx,204,52,36]]])
+// 3D 立體物件（像素風：平塗色方塊＋深色邊線，低解析度渲染後就是像素立體）。座標為版面圖像素。
+// 會議桌：[中心 x, 中心 y, 寬, 深, 桌色, 椅子 x 們, 北側椅子腳底 y, 南側椅子腳底 y]
+const TABLES = [
+  [863,158,250,56,0x23282e,[790,863,935],128,214],
+  [184,1160,120,50,0x23282e,[150,218],1118,1204],
+  [186,1360,116,50,0x23282e,[152,218],1318,1404]
 ];
-// 馬桶隔板（低矮實心）：[x, y, w, h]
-const PARTS = [...[0,155].flatMap(dx=>[[305+dx,64,83,5],[305+dx,126,83,5],[305+dx,189,83,5],[305+dx,64,5,130]])];
+// 馬桶隔間（兩間）：dx 為男廁 0／女廁 155。馬桶朝右（水箱在左）。
+const STALLS = [0,155];
 // 玻璃隔間牆（缺口＝門）
 const WALLS = [
   [290,48,153,12],[290,48,12,222],[431,48,12,222],[290,258,95,12],
@@ -153,33 +152,67 @@ async function buildOffice(){
     if (o.col) rects.push([o.col[0] * U, o.col[1] * U, (o.col[0] + o.col[2]) * U, (o.col[1] + o.col[3]) * U]);
     else rects.push([x * U, (bottom - (o.fh || 30)) * U, (x + w) * U, bottom * U]);
   }
-  for (const [key, cx, cy, w, h, col] of FLATS) {
-    const src = T[key]; if (!src) continue;
-    const dw = w * U, dh = (h ? h : w * src.height / src.width) * U;
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(dw, dh), new THREE.MeshBasicMaterial({map:propTexture(src, dw, dh), transparent:true, alphaTest:.5}));
-    m.rotation.x = -Math.PI / 2; m.position.set(cx * U, .03, cy * U); scene.add(m);
-    if (col) rects.push([col[0] * U, col[1] * U, (col[0] + col[2]) * U, (col[1] + col[3]) * U]);
-  }
-  const partMat = new THREE.MeshLambertMaterial({color:0xcfc7bf});
-  for (const [x, y, w, h] of PARTS) {
-    const geo = new THREE.BoxGeometry(w * U, .5, h * U), m = new THREE.Mesh(geo, partMat);
-    m.position.set((x + w / 2) * U, .25, (y + h / 2) * U); scene.add(m);
-    const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({color:0x6a615a})); e.position.copy(m.position); scene.add(e);
-    rects.push([x * U, y * U, (x + w) * U, (y + h) * U]);
-  }
+  build3dObjects(T, place);
   // 藍色桌組：每組兩排×三張，設計部最下面那排有人入座
   GROUPS.forEach((xs, gi) => ROW_TOPS.forEach((top, ri) => {
-    xs.forEach((cx, ci) => {
-      [['top', top + 60], ['bottom', top + 108]].forEach(([side, bottomY]) => {
-        const occupied = gi === 0 && ri === 2 && Object.values(SEATS).some(s => s[3] === side && s[2] === ci);
-        const miniDesk = gi === 0 && ri === 2 && side === 'bottom' && ci === 0;
-        place(sheet[occupied ? 1 : miniDesk ? 4 : 7], cx - 52.5, bottomY, 105.6);
-        place(T.chair, cx - 19, side === 'top' ? top + 14 : top + 140, 38);
-      });
-    });
+    place(T.blueBlock, xs[0] - 52.5, top + 108, 315);
+    xs.forEach(cx => { place(T.chair, cx - 19, top - 42, 38); place(T.chair, cx - 19, top + 140, 38); });
     const x0 = xs[0] - 52;
-    rects.push([x0 * U, (top + 30) * U, (x0 + 315) * U, (top + 108) * U]);
+    rects.push([x0 * U, (top + 58) * U, (x0 + 315) * U, (top + 108) * U]);
   }));
+}
+// ---- 像素風 3D 物件 ----
+function pbox(w, h, d, color, x, y, z, edge = true){
+  const geo = new THREE.BoxGeometry(w, h, d), m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color}));
+  m.position.set(x, y + h / 2, z); scene.add(m);
+  if (edge) { const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({color:0x1b1f24})); e.position.copy(m.position); scene.add(e); }
+  return m;
+}
+function table3d(cx, cz, w, d, color, h = .95){   // 世界座標；桌面＋四支桌腳
+  pbox(w, .14, d, color, cx, h - .14, cz);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) pbox(.14, h - .14, .14, 0x14181c, cx + sx * (w / 2 - .18), 0, cz + sz * (d / 2 - .18), false);
+}
+function toilet3d(x, z){   // 朝右（+x）：水箱在左、馬桶在右
+  pbox(.4, .9, .86, 0xf4f6f8, x - .52, 0, z);
+  pbox(.9, .46, .8, 0xffffff, x + .08, 0, z);
+  pbox(.84, .07, .76, 0xe3e9ee, x + .1, .46, z);
+  pbox(.48, .02, .42, 0x45a9ff, x + .14, .53, z, false);
+}
+function sink3d(x, z){     // 朝右：水龍頭在左、臉盆在右
+  pbox(.32, .66, .32, 0xf3f6f8, x, 0, z);
+  pbox(.98, .22, .76, 0xffffff, x + .02, .66, z);
+  pbox(.62, .02, .46, 0x9fd3ff, x + .1, .88, z, false);
+  pbox(.12, .2, .12, 0xb9c2cc, x - .36, .88, z);
+}
+const chairsAt = [];   // 等素材載入後再放椅子
+function build3dObjects(T, place){
+  const I = v => v * U;
+  for (const [cx, cy, w, d, col, xs, yn, ys] of TABLES) {
+    table3d(I(cx), I(cy), I(w), I(d), col);
+    pbox(.5, .16, .4, 0xf2f2f2, I(cx + w / 2 - 40), .95, I(cy));      // 投影機
+    rects.push([I(cx - w / 2), I(cy - d / 2), I(cx + w / 2), I(cy + d / 2)]);
+    for (const x of xs) { place(T.chair, x - 19, yn, 38); place(T.chair, x - 19, ys, 38); }
+  }
+  // 影廳螢幕（北牆前）
+  { const c = document.createElement('canvas'); c.width = 64; c.height = 40; const g = c.getContext('2d');
+    g.fillStyle = '#2f64c8'; g.fillRect(0, 0, 64, 8); g.fillStyle = '#fff'; g.fillRect(0, 8, 64, 32); g.fillStyle = '#fff'; g.font = 'bold 7px sans-serif'; g.fillText('影廳', 3, 6);
+    g.fillStyle = '#334'; g.font = '6px sans-serif'; g.fillText('你發現了投影機的秘密！', 3, 26);
+    const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; t.colorSpace = THREE.SRGBColorSpace;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(I(84), I(52)), new THREE.MeshBasicMaterial({map:t})); m.position.set(I(184), 1.9, I(1062)); scene.add(m); }
+  // 會議室 D：U 型白色會議桌
+  const uc = 0xeeeee4;
+  table3d(I(846), I(1196), I(252), I(60), uc); table3d(I(699), I(1256), I(46), I(180), uc); table3d(I(995), I(1256), I(46), I(180), uc);
+  pbox(.55, .16, .4, 0xf2f2f2, I(846), .95, I(1196));
+  rects.push([I(720), I(1166), I(972), I(1226)], [I(676), I(1166), I(722), I(1346)], [I(972), I(1166), I(1018), I(1346)]);
+  for (const x of [752, 817, 880, 945]) place(T.chair, x - 19, 1160, 38);
+  for (const y of [1200, 1245, 1292, 1334]) { place(T.chair, 646 - 19, y, 38); place(T.chair, 1048 - 19, y, 38); }
+  // 廁所
+  for (const dx of STALLS) {
+    toilet3d(I(342 + dx), I(98)); toilet3d(I(342 + dx), I(160));
+    sink3d(I(334 + dx), I(224));
+    rects.push([I(308 + dx), I(76), I(388 + dx), I(182)], [I(308 + dx), I(206), I(360 + dx), I(240)]);
+    for (const [x, y, w, h] of [[305,64,83,4],[305,126,83,4],[305,188,83,4],[305,64,4,128]]) pbox(I(w), .7, I(h), 0xd7cfc6, I(x + dx + w / 2), 0, I(y + h / 2));
+  }
 }
 // 地圖上的文字標籤（DOM，才清楚）
 const labelEls = LABELS.map(([t, ix, iy]) => { const e = document.createElement('div'); e.className = 'lbl'; e.textContent = t; document.body.appendChild(e); return {e, p:new THREE.Vector3(ix * U, 2.6, iy * U)}; });
@@ -215,7 +248,7 @@ async function addChar(name, i){
   const seat = SEATS[name], a = i / NAMES.length * Math.PI * 2;
   if (seat) {   // 入座：上排坐在桌後（面向鏡頭）、下排坐在桌前（背對鏡頭）
     const top = ROW_TOPS[seat[1]], cx = GROUPS[seat[0]][seat[2]];
-    holder.position.set(cx * U, 0, (seat[3] === 'top' ? top + 22 : top + 138) * U);
+    holder.position.set(cx * U, 0, (seat[3] === 'top' ? top - 38 : top + 138) * U);
   } else holder.position.set((560 + 42 * (i % 6)) * U, 0, (1085 + 28 * Math.floor(i / 6)) * U);
   scene.add(holder);
   const c = {name, holder, sprite, tex, face:seat ? (seat[3] === 'top' ? 0 : Math.PI) : -a, moving:0, phase:Math.random() * 9, wander:!seat, t:Math.random() * 5, dir:new THREE.Vector3()};
