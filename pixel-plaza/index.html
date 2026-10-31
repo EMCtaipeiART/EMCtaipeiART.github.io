@@ -1,0 +1,1433 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>EMC · 像素辦公室</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<script type="importmap">{"imports":{"three":"../character-studio/vendor/three.module.js"}}</script>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#cfd9e0;font-family:system-ui,"Noto Sans TC",sans-serif;touch-action:none}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+.px canvas{image-rendering:pixelated}
+#hud{position:fixed;left:12px;top:10px;color:#233;text-shadow:0 1px 0 #fff8;font-size:14px;pointer-events:none;line-height:1.5}
+#hud b{font-size:18px}
+#roster{position:fixed;left:0;right:0;bottom:0;display:flex;gap:6px;overflow-x:auto;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:#0008}
+#roster button{flex:none;border:2px solid #fff6;background:#0006;color:#fff;border-radius:6px;padding:6px 10px;font:inherit;font-size:13px;cursor:pointer}
+#roster button.on{background:#ffd23f;color:#222;border-color:#fff}
+.lbl{position:fixed;left:0;top:0;pointer-events:none;background:#232b32;color:#fff;font:700 12px/1 system-ui,'Noto Sans TC',sans-serif;padding:4px 7px;border-radius:3px;white-space:nowrap;z-index:2}
+#proj{position:fixed;right:12px;top:12px;z-index:3;display:none;background:#0b0d10;border:3px solid #0b0d10;border-radius:6px;box-shadow:0 4px 14px #0004}
+#proj canvas{position:static;display:block;width:320px;height:180px;image-rendering:pixelated}
+#proj span{display:block;color:#fff;font:700 12px system-ui,'Noto Sans TC',sans-serif;padding:4px 6px}
+#quote{position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:4;display:none;max-width:min(520px,88vw);background:#fffdf5;color:#232b32;border:3px solid #0b0d10;border-radius:8px;padding:10px 14px;font:600 14px/1.5 system-ui,'Noto Sans TC',sans-serif;box-shadow:0 6px 18px #0005}
+#quote b{display:block;font-size:12px;color:#7b4a24;margin-bottom:2px}
+.ctag{position:fixed;left:0;top:0;z-index:2;pointer-events:none;display:none;background:#fffdf5;border:2px solid #0b0d10;border-radius:6px;padding:2px 6px;font:600 12px/1.35 system-ui,'Noto Sans TC',sans-serif;color:#232b32;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#net{position:fixed;left:12px;bottom:64px;z-index:3;background:#0008;color:#fff;border-radius:6px;padding:4px 8px;font:12px system-ui,'Noto Sans TC',sans-serif}
+/* ===== 角色頁面（版型參考 PokéBonk 暫停畫面；配色維持綠色主色系）===== */
+#cpage{position:fixed;inset:0;z-index:14;display:grid;place-items:center;padding:12px;box-sizing:border-box;background:rgba(4,36,18,.62);backdrop-filter:blur(3px);font-family:'Fredoka','Noto Sans TC',system-ui,sans-serif;color:#fff}
+#cpage[hidden]{display:none}
+.cp-wrap{width:min(1180px,100%);max-height:calc(100vh - 24px);overflow:auto;display:grid;gap:12px;padding:14px;box-sizing:border-box;border-radius:22px;border:2px solid var(--line);background:linear-gradient(180deg,rgba(10,62,36,.97),rgba(5,38,22,.98));box-shadow:0 24px 60px rgba(0,0,0,.5);scrollbar-width:thin}
+.cp-head{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center;padding:14px 16px;border-radius:18px;border:2px solid rgba(255,255,255,.18);background:repeating-linear-gradient(135deg,rgba(255,255,255,.07) 0 16px,transparent 16px 32px),linear-gradient(135deg,#1c9a48,#12856b 60%,#0f6e5e)}
+.cp-av{position:relative;width:92px;height:92px;border-radius:50%;padding:4px;background:linear-gradient(135deg,var(--yellow),#fff);box-shadow:0 6px 0 rgba(4,36,18,.35)}
+.cp-av img{width:100%;height:100%;border-radius:50%;object-fit:cover;background:#1b6b3a;display:block}
+.cp-lv{position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);background:var(--ink);border:2px solid #fff;border-radius:999px;padding:0 10px;font-size:12px;line-height:20px}
+.cp-main{min-width:0;display:grid;gap:5px}
+.cp-tag{display:flex;gap:8px;align-items:center;font-size:12px;font-weight:600;opacity:.95}
+.cp-pill{background:var(--ink);border-radius:999px;padding:1px 9px;font-size:11px}
+.cp-name{font-size:34px;font-weight:700;line-height:1.1;text-shadow:0 3px 0 rgba(4,36,18,.4);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cp-type{font-size:14px;color:var(--ink);background:var(--yellow);border-radius:999px;padding:2px 12px;text-shadow:none}
+.cp-bar{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:8px;align-items:center;font-size:12px;font-weight:600}
+.cp-bar div{height:12px;border-radius:999px;background:rgba(0,0,0,.35);border:2px solid rgba(255,255,255,.22);overflow:hidden}
+.cp-bar i{display:block;height:100%;background:linear-gradient(#7af09b,#2fbf57);transition:width .4s}
+.cp-bar.xp i{background:linear-gradient(#ffd75e,#ffa61f)}
+.cp-tiles{display:grid;grid-template-columns:repeat(6,minmax(70px,1fr));gap:8px}
+.cp-tiles div{display:grid;place-items:center;text-align:center;padding:8px 10px;border-radius:14px;background:rgba(4,30,16,.82);border:2px solid rgba(255,255,255,.14)}
+.cp-tiles b{font-size:24px;line-height:1.1}
+.cp-tiles small{font-size:11px;opacity:.75;font-weight:600}
+.cp-cols{display:grid;grid-template-columns:1fr 1.15fr;gap:12px;align-items:start}
+.cp-panel,.cp-admin{border-radius:16px;border:2px solid var(--line);background:rgba(4,32,18,.84);overflow:hidden}
+.cp-panel header,.cp-admin header{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;font-weight:700}
+.cp-panel header h3,.cp-admin header h3{margin:0;font-size:18px;text-shadow:0 2px 0 rgba(4,36,18,.4)}
+.cp-panel header em,.cp-admin header em{font-style:normal;font-size:12px;opacity:.9}
+.p1 header,.cp-admin header{background:repeating-linear-gradient(135deg,#1fa84a 0 14px,#2dbf5a 14px 28px)}
+.p2 header{background:repeating-linear-gradient(135deg,#d99a1a 0 14px,#f2b52c 14px 28px)}
+.p3 header{background:repeating-linear-gradient(135deg,#12917f 0 14px,#1db39c 14px 28px)}
+.cp-panel>:not(header){margin:12px 14px 0}.cp-panel>:last-child{margin-bottom:14px}
+.cp-panel h4,.cp-card h4{margin:6px 0 0;font-size:12px;color:var(--yellow);font-weight:700}
+.cp-cur{display:flex;gap:12px;align-items:center;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.14)}
+.cp-cur i{font-style:normal;font-size:34px}.cp-cur b{display:block;font-size:20px}.cp-cur small{opacity:.8;font-weight:600;font-size:12px}
+.ico{display:inline-block;vertical-align:middle;object-fit:contain}
+.cp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cp-grid.m{grid-template-columns:repeat(5,1fr)}
+.cp-grid button,.cp-chips button,.cp-btns button,.cp-btns .cp-link{font:700 13px 'Fredoka','Noto Sans TC',sans-serif;color:#fff;cursor:pointer}
+.cp-grid button{display:grid;justify-items:center;gap:2px;padding:8px 4px;border-radius:14px;border:2px solid var(--line);background:rgba(255,255,255,.07);transition:transform .1s,background .1s}
+.cp-grid button i{font-style:normal;line-height:1;display:grid;place-items:center;height:46px}
+.cp-grid.m button i{height:38px}
+.cp-grid button{padding:10px 4px 8px}
+.hp-st .ico,.cp-type .ico{margin-right:2px}
+.ctag .ico{margin-right:4px;vertical-align:-4px}
+.cp-grid button:hover{transform:translateY(-2px);background:rgba(255,255,255,.15)}
+.cp-grid button.on{border-color:var(--yellow);background:rgba(255,199,51,.2);box-shadow:0 0 0 2px var(--yellow) inset}
+.cp-chips{display:flex;gap:8px;flex-wrap:wrap}
+.cp-chips button{padding:9px 14px;border-radius:999px;border:2px solid var(--line);background:rgba(255,255,255,.08)}
+.cp-chips button.primary{background:linear-gradient(var(--cta1),var(--cta2));border-color:#0c6a26}
+.cp-note{margin:0;font-size:12px;line-height:1.6;opacity:.75;font-weight:600}
+#cpage textarea,#cpage input[type=text],#cpage input[type=password],#cpage input[type=number],#cpage select{width:100%;box-sizing:border-box;padding:9px 12px;border-radius:12px;border:2px solid var(--line);background:rgba(0,0,0,.28);color:#fff;font:600 14px 'Fredoka','Noto Sans TC',sans-serif}
+#cpage textarea{width:calc(100% - 28px);min-height:78px;resize:none;line-height:1.5}
+#cpage select option{color:#111}
+.cp-locked{display:grid;gap:8px}
+.cp-locked a{display:flex;gap:10px;align-items:center;padding:8px 12px;border-radius:14px;background:rgba(255,255,255,.06);border:2px dashed rgba(255,255,255,.22);color:#fff;text-decoration:none}
+.cp-locked i{font-style:normal;font-size:24px}.cp-locked div{flex:1}.cp-locked b{display:block;font-size:14px}.cp-locked small{opacity:.7;font-size:11px;font-weight:600}
+.cp-locked u{text-decoration:none;font-size:11px;background:var(--yellow);color:var(--ink);border-radius:999px;padding:1px 8px}
+.cp-stats{display:grid;gap:4px}
+.cp-row{display:flex;justify-content:space-between;gap:10px;padding:7px 12px;border-radius:10px;background:rgba(255,255,255,.06);font-size:13px;font-weight:600}
+.cp-row b{color:var(--yellow)}
+.cp-admin>:not(header){margin:12px 14px}
+.cp-adm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.cp-card{display:grid;gap:8px;align-content:start;padding:12px;border-radius:14px;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.12)}
+.cp-f{display:flex;gap:10px;align-items:center;justify-content:space-between;font-size:13px;font-weight:600}
+.cp-f.col{display:grid;gap:4px;justify-content:stretch}
+.cp-f span{white-space:nowrap}
+#cpage .cp-f input[type=number]{width:84px}
+.cp-lock{display:flex;gap:12px;align-items:center;padding:12px 14px;margin:0!important;opacity:.85}
+.cp-lock i{font-style:normal;font-size:28px}.cp-lock b{display:block}.cp-lock small{font-size:12px;font-weight:600;opacity:.8;line-height:1.6}.cp-lock a{color:var(--yellow)}
+.cp-keys{font-size:12px;font-weight:600;opacity:.8;line-height:1.9}
+kbd{background:rgba(255,255,255,.14);border:1px solid var(--line);border-radius:6px;padding:0 6px;font:700 11px 'Fredoka',sans-serif}
+.cp-btns{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;align-items:center}
+.cp-btns button,.cp-btns .cp-link{padding:12px 20px;border-radius:999px;border:2px solid var(--line);background:rgba(255,255,255,.08);text-decoration:none;font-size:15px}
+.cp-btns .cp-go{background:linear-gradient(var(--cta1),var(--cta2));border:0;border-bottom:5px solid #0c6a26;border-radius:16px;padding:14px 46px;font-size:20px;text-shadow:0 2px 0 rgba(0,0,0,.25);box-shadow:inset 0 2px 0 rgba(255,255,255,.35),0 8px 18px rgba(26,168,68,.4)}
+@media (max-width:980px){.cp-head{grid-template-columns:auto minmax(0,1fr)}.cp-cols,.cp-adm-grid{grid-template-columns:1fr}}
+@media (max-width:520px){.cp-name{font-size:26px}.cp-av{width:72px;height:72px}.cp-grid.m{grid-template-columns:repeat(3,1fr)}}
+#sit{position:fixed;right:12px;bottom:64px;z-index:3;border:2px solid #fff8;background:#0008;color:#fff;border-radius:6px;padding:8px 12px;font:inherit;font-size:14px;cursor:pointer}
+#load{position:fixed;inset:0;display:grid;place-items:center;background:#1b2a41;color:#fff;font-size:18px;z-index:5}
+#stick{position:fixed;left:18px;bottom:78px;width:110px;height:110px;border-radius:50%;background:#fff3;border:2px solid #fff6;display:none}
+#stick i{position:absolute;left:35px;top:35px;width:40px;height:40px;border-radius:50%;background:#fffc}
+@media (pointer:coarse){#stick{display:block}}
+/* ===== PokéBonk 風格介面：糖果色漸層斜紋、粗描邊字、深色玻璃卡片、紅色大按鈕、圓角膠囊 ===== */
+:root{--c1:#8ae99b;--c2:#2fbf57;--c3:#0b6a2b;--ink:#0b3d1e;--glass:rgba(7,50,28,.84);--line:rgba(255,255,255,.16);--yellow:#ffc733;--cta1:#43d86c;--cta2:#1aa844}
+body{font-family:'Fredoka','Noto Sans TC',system-ui,sans-serif}
+button{font-family:inherit}
+#hud,#dock,#drawer,#dexPanel,#helpPanel,#title,#quote,#net{font-family:'Fredoka','Noto Sans TC',system-ui,sans-serif}
+/* 標題／載入／選角 */
+#title{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:linear-gradient(135deg,var(--c1) 0%,var(--c2) 46%,var(--c3) 100%);overflow:auto;transition:opacity .4s}
+#title::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.08) 0 16px,transparent 16px 32px);pointer-events:none}
+#title.gone{opacity:0;pointer-events:none}
+.t-inner{position:relative;display:grid;justify-items:center;gap:14px;padding:24px 16px;width:min(560px,100%);box-sizing:border-box}
+.t-logo{font-size:clamp(54px,12vw,96px);font-weight:700;letter-spacing:1px;line-height:1;transform:rotate(-3deg);display:flex;gap:14px;filter:drop-shadow(0 6px 0 rgba(11,61,30,.55))}
+.t-logo span{-webkit-text-stroke:9px var(--ink);paint-order:stroke fill;color:#fff}
+.t-logo .y{color:var(--yellow)}
+.t-sub{color:#fff;font-weight:700;font-size:15px;text-shadow:0 2px 0 rgba(11,61,30,.5)}
+.t-load{display:flex;align-items:center;gap:12px;width:min(360px,90%);margin-top:8px}
+.t-ball{flex:none;width:44px;height:44px;border-radius:50%;background:linear-gradient(#43d86c 0 46%,#0b3d1e 46% 54%,#fff 54%);border:4px solid #0b3d1e;position:relative;animation:spin 1.2s linear infinite;box-shadow:0 3px 0 rgba(11,61,30,.4)}
+.t-ball::after{content:'';position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#fff;border:4px solid #0b3d1e;box-sizing:border-box}
+@keyframes spin{to{transform:rotate(360deg)}}
+.t-bar{position:relative;flex:1;height:26px;border-radius:999px;background:#fff;border:3px solid var(--ink);overflow:hidden;box-shadow:0 4px 0 rgba(11,61,30,.35)}
+.t-bar i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(#ffd75e,#ffb62e);transition:width .25s}
+.t-bar b{position:absolute;inset:0;display:grid;place-items:center;font-size:12px;color:var(--ink)}
+.t-card{width:100%;border-radius:22px;background:var(--glass);border:2px solid var(--line);box-shadow:0 24px 50px rgba(4,36,18,.45);overflow:hidden;color:#fff;transform:rotate(-1.2deg);backdrop-filter:blur(8px)}
+.t-card[hidden]{display:none}
+.t-head{padding:12px 18px;font-size:19px;font-weight:700;background:repeating-linear-gradient(135deg,#1fa84a 0 14px,#2dbf5a 14px 28px);text-shadow:0 2px 0 rgba(11,61,30,.45)}
+.t-body{padding:16px;display:grid;gap:12px}
+.t-row{display:flex;gap:10px;align-items:center;background:rgba(255,255,255,.07);border-radius:14px;padding:10px 12px;font-size:13px;font-weight:600}
+.t-row p{margin:0}
+.t-pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:8px;max-height:min(330px,44vh);overflow:auto;padding:2px}
+.t-pick button{display:grid;justify-items:center;gap:4px;border:2px solid var(--line);background:rgba(255,255,255,.08);color:#fff;border-radius:14px;padding:8px 4px;font-weight:600;font-size:12px;cursor:pointer;transition:transform .12s,background .12s}
+.t-pick button:hover{transform:translateY(-2px);background:rgba(255,255,255,.16)}
+.t-pick button.on{border-color:var(--yellow);background:rgba(255,199,51,.2);box-shadow:0 0 0 2px var(--yellow) inset}
+.t-pick img,.hp-av img,.dr-av{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#1b6b3a}
+[hidden]{display:none!important}
+#drawer{display:none!important}
+.t-me{display:flex;gap:12px;align-items:center;background:rgba(255,255,255,.08);border-radius:14px;padding:10px 12px}
+.t-av{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#1b6b3a;display:grid;place-items:center;font-size:26px;flex:none}
+.t-me b{display:block;font-size:16px}
+.t-me small{display:block;color:rgba(255,255,255,.72);font-weight:600;font-size:12px;margin-top:2px}
+.btn-ghost{display:block;text-align:center;box-sizing:border-box;border:2px solid var(--line);background:rgba(255,255,255,.08);color:#fff;border-radius:14px;padding:12px;font:700 15px/1.2 'Fredoka','Noto Sans TC',sans-serif;text-decoration:none;cursor:pointer}
+.btn-ghost:hover{background:rgba(255,255,255,.16)}
+.btn-red{border:0;border-bottom:5px solid #0c6a26;border-radius:16px;padding:14px;font:700 19px/1 'Fredoka','Noto Sans TC',sans-serif;color:#fff;cursor:pointer;background:linear-gradient(var(--cta1),var(--cta2));text-shadow:0 2px 0 rgba(0,0,0,.25);box-shadow:inset 0 2px 0 rgba(255,255,255,.35),0 8px 18px rgba(26,168,68,.4);transition:transform .1s,filter .1s}
+.btn-red:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn-red:active{transform:translateY(2px);border-bottom-width:3px}
+.t-foot{font-size:11px;color:rgba(255,255,255,.65);text-align:center;font-weight:600}
+/* 遊戲中 HUD */
+#hud{position:fixed;inset:0;pointer-events:none;z-index:5;color:#fff}
+#hud button{pointer-events:auto}
+.hp-card{position:absolute;left:12px;top:12px;display:flex;gap:10px;align-items:center;padding:8px 14px 8px 8px;background:var(--glass);border:2px solid var(--line);border-radius:20px;box-shadow:0 8px 20px rgba(4,36,18,.3);backdrop-filter:blur(6px);min-width:190px}
+.hp-av{width:60px;height:60px;border-radius:50%;padding:3px;background:linear-gradient(135deg,var(--yellow),var(--c2));flex:none}
+.hp-av img{width:100%;height:100%}
+.hp-info{display:grid;gap:3px;min-width:0}
+.hp-name{font-weight:700;font-size:16px;text-shadow:0 2px 0 rgba(0,0,0,.3)}
+.hp-st{font-size:12px;font-weight:600;background:rgba(255,255,255,.14);border-radius:999px;padding:1px 9px;width:fit-content}
+.hp-exp{height:10px;border-radius:999px;background:rgba(0,0,0,.35);overflow:hidden;border:2px solid rgba(255,255,255,.2)}
+.hp-exp i{display:block;height:100%;width:0;background:linear-gradient(#ffd75e,#ffa61f);transition:width .4s}
+.hp-lv{font-size:11px;font-weight:700;color:var(--yellow)}
+.hp-clock{position:absolute;left:50%;top:12px;transform:translateX(-50%);padding:6px 16px;background:var(--glass);border:2px solid var(--line);border-radius:999px;font-weight:700;font-size:15px;box-shadow:0 6px 16px rgba(4,36,18,.3);white-space:nowrap}
+.hp-top{position:absolute;right:12px;top:12px;display:flex;gap:8px}
+.hp-top button,#dock button{border:2px solid var(--line);background:var(--glass);color:#fff;border-radius:999px;padding:9px 15px;font:700 14px 'Fredoka','Noto Sans TC',sans-serif;cursor:pointer;box-shadow:0 6px 14px rgba(4,36,18,.3);backdrop-filter:blur(6px);transition:transform .1s,background .1s}
+.hp-top button:hover,#dock button:hover{transform:translateY(-2px);background:rgba(18,90,52,.92)}
+#dock{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:max-content;max-width:calc(100vw - 24px);pointer-events:none}
+#dock button{pointer-events:auto}
+#dock #sit{position:static;right:auto;bottom:auto;padding:9px 15px;font-size:14px}
+#dock #bWheel{background:linear-gradient(var(--cta1),var(--cta2));border-color:#0c6a26}
+#net{position:fixed;left:50%;top:56px;transform:translateX(-50%);z-index:5;background:var(--glass);border:2px solid var(--line);border-radius:999px;padding:2px 12px;font-size:11px;font-weight:600;bottom:auto}
+#proj{top:104px;border-radius:14px;border:3px solid var(--ink);background:var(--ink)}
+#proj canvas{border-radius:8px}
+#proj span{font-family:inherit}
+/* 角色抽屜、圖鑑、說明 */
+#drawer,#dexPanel,#helpPanel{position:fixed;z-index:12;background:var(--glass);border:2px solid var(--line);border-radius:22px;box-shadow:0 24px 50px rgba(4,36,18,.5);color:#fff;backdrop-filter:blur(10px)}
+#drawer[hidden],#dexPanel[hidden],#helpPanel[hidden]{display:none}
+#drawer{left:50%;bottom:70px;transform:translateX(-50%);width:min(560px,94vw);padding:12px}
+.dr-head,.px-head{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:17px;padding:2px 6px 10px}
+#roster{position:static;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;padding:0;background:none;overflow:visible}
+#roster button{display:flex;gap:8px;align-items:center;border:2px solid var(--line);background:rgba(255,255,255,.08);color:#fff;border-radius:14px;padding:6px 8px;font:600 13px 'Fredoka','Noto Sans TC',sans-serif;cursor:pointer;text-align:left}
+#roster button:hover{background:rgba(255,255,255,.16)}
+#roster button.on{background:rgba(255,199,51,.22);border-color:var(--yellow);color:#fff}
+.dr-av{width:34px;height:34px;flex:none}
+#dexPanel,#helpPanel{left:50%;top:50%;transform:translate(-50%,-50%);width:min(640px,94vw);max-height:84vh;overflow:auto;padding:14px 16px}
+.px-x{border:0;background:rgba(255,255,255,.14);color:#fff;border-radius:999px;width:34px;height:34px;font-size:16px;cursor:pointer}
+.dex-sec{margin:10px 0 4px;font-size:13px;font-weight:700;color:var(--yellow)}
+.dex-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px}
+.dex-it{display:grid;place-items:center;aspect-ratio:1;border-radius:14px;background:rgba(255,255,255,.08);border:2px solid var(--line);cursor:pointer;position:relative}
+.dex-it img{width:44px;height:44px;object-fit:contain;image-rendering:pixelated}
+.dex-it.unk img{filter:brightness(0) opacity(.5)}
+.dex-it.unk::after{content:'?';position:absolute;inset:0;display:grid;place-items:center;font-weight:700;color:rgba(255,255,255,.55);font-size:20px}
+.help-list{display:grid;gap:8px;font-size:14px;font-weight:600;line-height:1.5}
+.help-list div{background:rgba(255,255,255,.07);border-radius:12px;padding:8px 12px}
+/* 提示框與浮動文字 */
+#quote{bottom:92px;background:#fff;color:var(--ink);border:3px solid var(--ink);border-radius:18px;box-shadow:0 6px 0 rgba(11,61,30,.35);font-family:'Fredoka','Noto Sans TC',sans-serif;font-weight:700;z-index:30}
+#quote b{color:var(--c2)}
+.ftx{position:fixed;left:0;top:0;z-index:7;pointer-events:none;font:700 22px 'Fredoka','Noto Sans TC',sans-serif;color:var(--yellow);-webkit-text-stroke:5px var(--ink);paint-order:stroke fill;animation:floatup 1.3s ease-out forwards;white-space:nowrap}
+@keyframes floatup{from{opacity:1;margin-top:0;scale:.6}15%{scale:1.15}to{opacity:0;margin-top:-70px;scale:1}}
+.lbl{font-family:'Fredoka','Noto Sans TC',sans-serif;border-radius:999px;padding:3px 10px;background:var(--glass);border:2px solid var(--line)}
+.ctag{border-radius:999px;border:2px solid var(--ink);font-family:'Fredoka','Noto Sans TC',sans-serif}
+
+.cp-stack{display:grid;gap:12px}
+.p4 header{background:repeating-linear-gradient(135deg,#7a4fd6 0 14px,#9166ec 14px 28px)}
+.cp-chat{display:grid;gap:10px}
+.cp-prev{display:flex;justify-content:flex-start}
+.cp-prev span{position:relative;max-width:100%;background:#fff;color:var(--ink);border:3px solid var(--ink);border-radius:18px;padding:8px 14px;font-weight:700;font-size:14px;line-height:1.5;word-break:break-all;box-shadow:0 4px 0 rgba(0,0,0,.3)}
+.cp-prev span:after{content:'';position:absolute;left:22px;bottom:-11px;width:14px;height:14px;background:#fff;border-right:3px solid var(--ink);border-bottom:3px solid var(--ink);transform:rotate(45deg)}
+.cp-prev.empty span{opacity:.55;background:#e6f4ea}
+.cp-chat{padding-bottom:4px}
+.cp-chat-in{display:flex;gap:8px;align-items:center;padding:6px 6px 6px 8px;border-radius:999px;border:2px solid var(--line);background:rgba(0,0,0,.28)}
+.cp-chat-in img{width:30px;height:30px;border-radius:50%;object-fit:cover;background:#1b6b3a}
+#cpage .cp-chat-in input[type=text]{border:0;background:transparent;padding:6px 4px;flex:1;min-width:0;outline:0}
+.cp-chat-in .send,.sv-bar .send{flex:none;width:36px;height:36px;border-radius:50%;border:0;border-bottom:3px solid #0c6a26;background:linear-gradient(var(--cta1),var(--cta2));color:#fff;font:700 16px sans-serif;cursor:pointer}
+.cp-music{display:flex;gap:10px;align-items:center;padding:8px 12px;border-radius:14px;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.14)}
+.cp-music div{flex:1;min-width:0}.cp-music b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cp-music small{display:block;opacity:.6;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cp-music .note{font-size:24px}
+.cp-music button{width:34px;height:34px;border-radius:50%;border:0;background:var(--yellow);color:var(--ink);font-weight:700;cursor:pointer}
+.cp-stories{display:flex;gap:10px;flex-wrap:wrap}
+.cp-story{display:grid;gap:4px;justify-items:center;font-size:11px;font-weight:600}
+.cp-story .th{width:64px;height:84px;padding:0;border:2px solid var(--line);border-radius:12px;overflow:hidden;background:#000;cursor:pointer}
+.cp-story .th img,.cp-story .th video{width:100%;height:100%;object-fit:cover;display:block}
+.cp-story .rm{font:700 11px 'Fredoka','Noto Sans TC',sans-serif;color:#fff;background:rgba(255,255,255,.1);border:1px solid var(--line);border-radius:999px;padding:2px 10px;cursor:pointer}
+/* 人物頭上的介面 */
+.ctag{background:none!important;border:0!important;border-radius:0!important;padding:0!important;max-width:none!important;overflow:visible!important;white-space:normal!important;z-index:6;pointer-events:none}
+.cui-tag{display:inline-flex;gap:4px;align-items:center;background:#fffdf5;border:2px solid var(--ink);border-radius:999px;padding:2px 8px;font:600 12px 'Fredoka','Noto Sans TC',sans-serif;color:#232b32;white-space:nowrap}
+.ctag>div,.ctag>img,.ctag>button{pointer-events:auto}
+.cui-wrap{position:relative;display:flex;flex-direction:column;align-items:center}
+.cui-bub{position:relative;max-width:190px;background:#fff;color:var(--ink);border:2.5px solid var(--ink);border-radius:14px;padding:4px 10px;font:700 12.5px/1.4 'Fredoka','Noto Sans TC',sans-serif;word-break:break-all;box-shadow:0 3px 0 rgba(0,0,0,.25);margin-bottom:10px}
+.cui-bub:after{content:'';position:absolute;left:50%;bottom:-8px;width:10px;height:10px;margin-left:-5px;background:#fff;border-right:2.5px solid var(--ink);border-bottom:2.5px solid var(--ink);transform:rotate(45deg)}
+.cui-bub.music{display:flex;align-items:center;gap:6px;background:#efe6ff;pointer-events:auto;width:150px}
+.cui-bub.music:after{background:#efe6ff}
+.cui-bub .mplay{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid var(--ink);background:#9166ec;color:#fff;font-size:10px;cursor:pointer;padding:0}
+.cui-bub .mt{flex:1;overflow:hidden;white-space:nowrap}.cui-bub .mt i{display:inline-block;font-style:normal;padding-left:100%;animation:mq 7s linear infinite}
+@keyframes mq{to{transform:translateX(-100%)}}
+.cui-mood{position:absolute;left:100%;top:-6px;width:34px;height:34px;margin-left:-4px;animation:mpop 1.6s ease-in-out infinite;pointer-events:none!important;filter:drop-shadow(0 2px 0 rgba(0,0,0,.35))}
+.cui-mood.angry{animation:mshake .5s linear infinite}
+.cui-mood.sad{animation:mdrip 1.8s ease-in infinite}
+.cui-mood.joy{animation:mbeat .9s ease-in-out infinite}
+@keyframes mpop{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-5px) scale(1.12)}}
+@keyframes mshake{0%,100%{transform:translateX(0) rotate(0)}25%{transform:translateX(-3px) rotate(-8deg)}75%{transform:translateX(3px) rotate(8deg)}}
+@keyframes mdrip{0%{transform:translateY(-4px)}70%,100%{transform:translateY(6px);opacity:.6}}
+@keyframes mbeat{0%,100%{transform:scale(1)}40%{transform:scale(1.28)}}
+.cui-story{position:absolute;right:100%;top:-4px;margin-right:-4px;width:34px;height:26px;padding:0;border:0;background:none;cursor:pointer;animation:mpop 2.2s ease-in-out infinite}
+.cui-story img{width:100%;height:100%;image-rendering:pixelated}
+.cui-story b{position:absolute;right:-2px;top:-2px;width:10px;height:10px;border-radius:50%;background:#2fdc5a;border:2px solid #fff}
+#spotifyDock{position:fixed;right:12px;bottom:12px;width:min(340px,86vw);z-index:25;border-radius:14px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.4)}#spotifyDock[hidden]{display:none}
+/* 限時動態檢視器 */
+#sv{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:rgba(0,0,0,.72);font-family:'Fredoka','Noto Sans TC',sans-serif;color:#fff}#sv[hidden]{display:none}
+.sv-box{position:relative;width:min(420px,96vw);max-height:96vh;display:grid;gap:8px;grid-template-rows:auto auto 1fr auto auto;padding:12px;box-sizing:border-box;border-radius:20px;background:rgba(7,40,22,.96);border:2px solid var(--line)}
+.sv-prog{display:flex;gap:4px}.sv-prog i{flex:1;height:4px;border-radius:4px;background:rgba(255,255,255,.25);overflow:hidden}.sv-prog b{display:block;height:100%;width:0;background:#fff}
+.sv-top{display:flex;gap:8px;align-items:center}.sv-top b{flex:1;font-size:16px}.sv-top button{font:700 12px 'Fredoka','Noto Sans TC',sans-serif;color:#fff;background:rgba(255,255,255,.12);border:1px solid var(--line);border-radius:999px;padding:4px 12px;cursor:pointer}
+.sv-media{position:relative;min-height:0;background:#000;border-radius:14px;overflow:hidden;display:grid;place-items:center;height:min(62vh,560px)}
+.sv-media img,.sv-media video{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.sv-nav{position:absolute;top:0;bottom:0;width:30%;border:0;background:none;color:rgba(255,255,255,.0);font-size:36px;cursor:pointer}.sv-nav.l{left:0}.sv-nav.r{right:0}.sv-nav:hover{color:rgba(255,255,255,.7)}
+.sv-comments{max-height:90px;overflow:auto;font-size:13px;display:grid;gap:2px}.sv-comments p{margin:0}.sv-comments strong{color:var(--yellow);margin-right:4px}
+.sv-bar{display:flex;gap:8px;align-items:center}
+.sv-bar #svLike{font:700 14px 'Fredoka',sans-serif;color:#fff;background:rgba(255,255,255,.1);border:2px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer}.sv-bar #svLike.on{background:#e8486a;border-color:#fff}
+.sv-bar input{flex:1;min-width:0;padding:8px 12px;border-radius:999px;border:2px solid var(--line);background:rgba(0,0,0,.3);color:#fff;font:600 14px 'Fredoka','Noto Sans TC',sans-serif}
+
+@media (max-width:640px){.hp-card{min-width:0}.hp-clock{top:84px;font-size:13px}#net{top:122px}#proj{top:150px}.hp-top button{padding:7px 11px}}
+
+</style></head><body>
+<div id="title">
+  <div class="t-inner">
+    <div class="t-logo"><span>EMC</span><span class="y">Office</span></div>
+    <div class="t-sub">凱曜設計部 · 3D 像素辦公室</div>
+    <div class="t-load" id="tLoad"><div class="t-ball"></div><div class="t-bar"><i id="tFill"></i><b id="tText">正在載入辦公室……</b></div></div>
+    <div class="t-card" id="tCard" hidden>
+      <div class="t-head">歡迎，同事！</div>
+      <div class="t-body">
+        <div class="t-row"><span>📡</span><p id="tNet">連線中…</p></div>
+        <div class="t-me" id="tMe"></div>
+        <button class="btn-red" id="tGo" type="button" hidden>進入辦公室！</button>
+        <a class="btn-ghost" id="tLogin" href="../index.html" hidden>前往網站首頁登入</a>
+        <button class="btn-ghost" id="tGuest" type="button" hidden>以訪客參觀（不能操作人物）</button>
+        <div class="t-foot">已登入會依登入帳號操作你的人物 · WASD／方向鍵移動 · Shift 跑步 · E 坐下</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="hud">
+  <div class="hp-card"><div class="hp-av" id="pAv"></div><div class="hp-info"><div class="hp-name" id="pName">—</div><div class="hp-st" id="pSt"></div><div class="hp-exp"><i id="pExp"></i></div><div class="hp-lv" id="pLv"></div></div></div>
+  <div class="hp-clock" id="pClock">🕒 …</div>
+  <div class="hp-top"><button id="bDex" type="button">📖 圖鑑</button><button id="bHelp" type="button">❓ 說明</button></div>
+  <div id="dock"><button id="bWheel" type="button">🎮 角色頁面</button><button id="sit" type="button">🪑 坐下 / 起身 (E)</button></div>
+</div>
+<div id="stick"><i></i></div>
+<div id="proj"><canvas width="128" height="72"></canvas><span></span></div>
+<div id="quote"><b></b><span></span></div>
+<div id="net">連線中…</div>
+<div id="sv" hidden><div class="sv-box"><div class="sv-prog" id="svProg"></div><div class="sv-top"><b id="svName"></b><button type="button" id="svMute">開聲音</button><button type="button" id="svClose">✕</button></div>
+  <div class="sv-media" id="svMedia"><img id="svImg" alt=""><video id="svVid" playsinline loop></video><button type="button" class="sv-nav l" id="svPrev">‹</button><button type="button" class="sv-nav r" id="svNext">›</button></div>
+  <div class="sv-comments" id="svComments" hidden></div>
+  <form class="sv-bar" id="svForm"><button type="button" id="svLike" title="按讚">❤ <span id="svLikeN">0</span></button><input id="svInput" type="text" maxlength="80" placeholder="留言給對方…" autocomplete="off"><button type="submit" class="send">➤</button></form></div></div>
+<div id="drawer" hidden><div class="dr-head"><span>選擇角色</span></div><div id="roster"></div></div>
+<div id="dexPanel" hidden><div class="px-head"><span>📖 辦公室圖鑑</span><button class="px-x" type="button">✕</button></div><div id="dexBody"></div></div>
+<div id="helpPanel" hidden><div class="px-head"><span>❓ 操作說明</span><button class="px-x" type="button">✕</button></div>
+  <div class="help-list"><div>🕹️ WASD／方向鍵移動，Shift 跑步，點地面走過去（手機用左下搖桿）</div><div>🪑 靠近椅子或馬桶按 E 坐下，再按一次起身</div><div>🎮 點自己的人物或按「角色頁面」：狀態、心情、想說的話、音樂、限時動態（管理者另有全員上下班與班長工具）</div><div>✨ 撿地上的道具、沖馬桶、點投影機，圖鑑會記錄你的發現，每 5 個升一級</div><div>📡 角色依「凱曜設計部」的即時出勤狀態行動（在座／加班／用餐／廁所／會議／下班…）</div></div></div>
+<script type="module">
+import * as THREE from 'three';
+import {RoundedBoxGeometry} from '../character-studio/vendor/RoundedBoxGeometry.js';
+import {LineSegments2} from '../character-studio/vendor/lines/LineSegments2.js';
+import {LineSegmentsGeometry} from '../character-studio/vendor/lines/LineSegmentsGeometry.js';
+import {LineMaterial} from '../character-studio/vendor/lines/LineMaterial.js';
+
+const PIXEL_MODE = new URLSearchParams(location.search).get('px') === '1';   // ?px=1：復古低解析像素模式
+const HD = !PIXEL_MODE, DPR = Math.min(devicePixelRatio || 1, 2);
+const RH = 300;                        // 復古模式的內部渲染高度（像素）
+const NAMES = ['Amber','Anna','Leona','Machi','Noise','余采馨','吳冠賢','廖秦葦','李明庭','鄭筱舢','黎子瑄','王藍庭'];
+const url = n => (HD ? 'sprites-hd/' : 'sprites/') + n + '.png';
+
+if (PIXEL_MODE) document.documentElement.classList.add('px');
+const renderer = new THREE.WebGLRenderer({antialias:HD});
+document.body.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xcfd9e0);
+const camera = new THREE.PerspectiveCamera(45, 1, .1, 120);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa7b3, 2));
+
+const lineMats = [];   // 粗線材質：解析度要跟著畫面更新
+function resize(){
+  const w = innerWidth, h = innerHeight;
+  if (HD) { renderer.setPixelRatio(DPR); renderer.setSize(w, h, false); }   // 高解析：用螢幕實際解析度
+  else { renderer.setPixelRatio(1); renderer.setSize(Math.round(RH * w / h), RH, false); }   // 復古：固定內部高度，CSS 放大成方塊像素
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  const sz = renderer.getDrawingBufferSize(new THREE.Vector2()); for (const m of lineMats) m.resolution.set(sz.x, sz.y);
+}
+addEventListener('resize', resize); resize();
+
+// ---------- 辦公室整層（依使用者提供的平面配置圖） ----------
+// 版面圖座標（1201×1526 px）× U = 世界座標。桌子 105 px 寬 ≈ 3.15 單位，與角色身高 2.04 的比例同遊戲內一致。
+const U = 0.03, PPU = HD ? 29.5 * DPR * innerHeight / 300 : 29.5;               // PPU：每單位約幾個螢幕像素（貼圖縮成這個大小才會清楚）
+const ASSET = '../EMC-ART-Pixel-Office/dist/assets/';
+const FILES = {elevator:'props2/elevator.png'};
+// [素材, 左上 x, 底部 y, 寬, 選項{h 指定高, fh 碰撞高, col 自訂碰撞[x,y,w,h]}]（版面圖像素）
+const PROPS = [
+  ['elevator',165,255,72,{fh:40}],
+];
+// 3D 立體物件（像素風：平塗色方塊＋深色邊線，低解析度渲染後就是像素立體）。座標為版面圖像素。
+// 會議桌：[中心 x, 中心 y, 寬, 深, 桌色, 椅子 x 們, 北側椅子腳底 y, 南側椅子腳底 y]
+const TABLES = [
+  [863,158,250,56,0x23282e,[790,863,935],106,210],
+  [184,1160,120,50,0x23282e,[150,218],1106,1214],
+  [186,1360,116,50,0x23282e,[152,218],1306,1414]
+];
+// 馬桶隔間（兩間）：dx 為男廁 0／女廁 155。馬桶朝右（水箱在左）。
+const STALLS = [0,155];
+// 玻璃隔間牆（缺口＝門）
+const WALLS = [
+  [290,48,153,12],[290,48,12,240],[431,48,12,240],[290,276,95,12],
+  [443,48,165,12],[596,48,12,240],[443,276,100,12],
+  [660,48,402,12],[1050,48,12,222],[660,258,402,12],[660,48,12,77],[660,210,12,60],
+  [82,1045,208,12],[82,1045,12,205],[278,1045,12,73],[278,1170,12,80],[82,1238,208,12],
+  [82,1250,208,12],[82,1250,12,210],[278,1250,12,75],[278,1380,12,80],[82,1448,208,12],
+  [610,1045,210,12],[872,1045,210,12],[610,1045,12,417],[1070,1045,12,417],[610,1450,472,12]
+];
+const LABELS = [['男廁',370,44],['女廁',526,44],['會議室 A',863,110],['影廳',215,1062],['會議室 C',186,1432],['茶水間',368,1226],['冰箱',510,1208],['會議室 D',845,1285],['電梯',201,262]];
+// 藍色桌組：三排（y 為桌面上緣），設計部 x 中心 463/568/673，同仁區 833/938/1043。type：1 有 iMac、7 空桌、4 Mac mini 桌。
+const ROW_TOPS = [355, 592, 828];
+const GROUPS = [[463,568,673],[833,938,1043]];
+// 入座：名字 → [組, 排, 欄, 上排/下排]（僅設計部最下面那排有人）
+const SEATS = {Leona:[0,2,0,'top'],Amber:[0,2,1,'top'],Noise:[0,2,2,'top'],Anna:[0,2,1,'bottom'],Machi:[0,2,2,'bottom'],
+  余采馨:[1,2,0,'top'],吳冠賢:[1,2,1,'top'],廖秦葦:[1,2,2,'top'],李明庭:[1,2,0,'bottom'],鄭筱舢:[1,2,1,'bottom'],黎子瑄:[1,2,2,'bottom'],王藍庭:[1,1,1,'top']};
+
+const FLOOR_X0 = -3, FLOOR_X1 = 1201 * U + 3, FLOOR_Z0 = -3, FLOOR_Z1 = 1526 * U + 3;
+// 地板：淺灰藍方格
+{
+  const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d');
+  g.fillStyle = '#e4eaef'; g.fillRect(0, 0, 32, 32); g.fillStyle = '#dde4ea'; g.fillRect(0, 0, 16, 16); g.fillRect(16, 16, 16, 16);
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.NearestFilter; t.colorSpace = THREE.SRGBColorSpace;
+  t.repeat.set((FLOOR_X1 - FLOOR_X0) / 2, (FLOOR_Z1 - FLOOR_Z0) / 2);
+  const f = new THREE.Mesh(new THREE.PlaneGeometry(FLOOR_X1 - FLOOR_X0, FLOOR_Z1 - FLOOR_Z0), new THREE.MeshLambertMaterial({map:t}));
+  f.rotation.x = -Math.PI / 2; f.position.set((FLOOR_X0 + FLOOR_X1) / 2, 0, (FLOOR_Z0 + FLOOR_Z1) / 2); scene.add(f); f.userData.noMask = true;
+}
+// 玻璃牆：半透明方塊加深色邊線
+const rects = [];     // 碰撞：[x0, z0, x1, z1]（世界座標）
+const wallMat = new THREE.MeshBasicMaterial({color:0xcfe6ee, transparent:true, opacity:.5, depthWrite:false});
+for (const [x, y, w, h] of WALLS) {
+  const geo = new THREE.BoxGeometry(w * U, 1.5, h * U), m = new THREE.Mesh(geo, wallMat);
+  m.position.set((x + w / 2) * U, .75, (y + h / 2) * U); scene.add(m);
+  const lm = new LineMaterial({color:0x14202a, linewidth:HD ? 3 * DPR : 1.6}), le = new LineSegments2(new LineSegmentsGeometry().fromEdgesGeometry(new THREE.EdgesGeometry(geo)), lm); le.position.copy(m.position); scene.add(le); lineMats.push(lm); lm.resolution.set(renderer.domElement.width, renderer.domElement.height);
+  rects.push([x * U, y * U, (x + w) * U, (y + h) * U]);
+}
+const R_PLAYER = .5;
+function blocked(x, z){
+  if (x < 1 || x > 1201 * U - 1 || z < 1 || z > 1526 * U - 1) return true;
+  return rects.some(([a, b, c, d]) => x > a - R_PLAYER && x < c + R_PLAYER && z > b - R_PLAYER * .55 && z < d + R_PLAYER * .55);
+}
+
+// 道具與桌組的 billboard：先把素材縮成螢幕上實際的像素大小（才會是清楚的像素風）
+const billboards = [];
+function trimmed(img, sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight){
+  const c = document.createElement('canvas'); c.width = sw; c.height = sh; const g = c.getContext('2d', {willReadFrequently:true}); g.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+  const d = g.getImageData(0, 0, sw, sh).data; let x0 = sw, x1 = -1, y0 = sh, y1 = -1;
+  for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) if (d[(y * sw + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return null;
+  const t = document.createElement('canvas'); t.width = x1 - x0 + 1; t.height = y1 - y0 + 1; t.getContext('2d').drawImage(c, x0, y0, t.width, t.height, 0, 0, t.width, t.height); return t;
+}
+function propTexture(src, dw, dh){
+  const w = Math.max(4, Math.round(dw * PPU)), h = Math.max(4, Math.round(dh * PPU));
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d', {willReadFrequently:true});
+  g.imageSmoothingQuality = 'high'; g.drawImage(src, 0, 0, w, h);
+  const d = g.getImageData(0, 0, w, h), p = d.data;
+  if (!HD) for (let i = 0; i < p.length; i += 4) { p[i + 3] = p[i + 3] > 110 ? 255 : 0; for (let k = 0; k < 3; k++) p[i + k] = Math.min(255, Math.round(p[i + k] / 16) * 16); }
+  g.putImageData(d, 0, 0);
+  const t = new THREE.CanvasTexture(c); t.magFilter = t.minFilter = HD ? THREE.LinearFilter : THREE.NearestFilter; t.generateMipmaps = false; t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function addBillboard(src, cx, z, dw, dh){
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(dw, dh), new THREE.MeshBasicMaterial({map:propTexture(src, dw, dh), transparent:true, alphaTest:.5, side:THREE.DoubleSide}));
+  m.geometry.translate(0, dh / 2, 0); m.position.set(cx, 0, z); scene.add(m); billboards.push(m); return m;
+}
+const SNACKS = [['snack_chips', .8], ['snack_cupnoodle', .62], ['snack_cola', .52], ['snack_cookie', .46], ['snack_choco', .42], ['snack_candy', .68]];
+// ---- 辦公室小樂趣（移植自 2D 版 fun.js）：投影機隨機畫面、會議室遺落物、地上的驚喜道具、馬桶便便 ----
+// 出現什麼、在哪裡，用「時段＋種子」算出來；沖掉／撿走／開關投影機只記在這個瀏覽器（本機），不寫回後端。
+const SLIDES=[['本週進度','▮▮▮▮▮▯▯ 72%'],['午餐投票','🍱 便當　🍜 拉麵　🥗 沙拉'],['今日金句','「改稿是設計師的日常」'],['Q4 目標','客戶滿意度 ↑ 加班 ↓'],['休息一下','☕ 15 分鐘後回來'],['週五提醒','🎉 下班前記得關電腦'],['新需求','「這個 logo 可以再大一點嗎」'],['會議紀錄','結論：下次再討論'],
+ ['客戶回饋','「可以再活潑一點，但要高級」'],['修改次數','v1 ▸ v2 ▸ v3 ▸ final ▸ final_final'],['設計師日常','Ctrl+S 是一種信仰'],['今日運勢','🔮 今天交稿大吉，改稿小凶'],['咖啡指數','☕☕☕☕☕ 已達上限'],['急件警報','🚨 「這個明天要，今天能給嗎」'],['色彩小教室','「紅色」到底是哪一種紅？'],['字體大亂鬥','標楷體 vs 黑體：永遠的戰爭'],['準時下班','🕖 目標：19:00 準時打卡（不可能）'],['員工福利','🍰 下午茶蛋糕已抵達茶水間'],['冷知識','像素風其實是最耗時的風格'],['猜謎時間','什麼東西越改越像原稿？'],['謎底','……客戶說「還是第一版好」'],['團隊目標','今年沒有人被叫去重跑一次！'],['小提醒','存檔、存檔、再存檔'],['午休倒數','🍜 距離午餐還有 ∞ 分鐘'],['投票','貓派 🐱　狗派 🐶　（辦公室禁戰）'],['週報','本週完成：開會 × 12'],['吐槽大會','「這個很簡單，你隨便弄一下」'],['歡迎新人','👋 新同事，咖啡機在那邊'],['神秘訊息','🎁 今天茶水間有人偷放零食'],['彩蛋','你發現了投影機的秘密！']];
+const FUN_PROPS=[['coffee','☕','咖啡杯','還熱的咖啡，沒人認領，今天續命成功'],['donut','🍩','甜甜圈','一個甜甜圈！熱量不算，因為不是你買的'],['cactus','🌵','小仙人掌','迷你仙人掌，比客戶的修改意見還刺'],['stapler','📎','訂書機','訂書機沒針了，這是辦公室永恆的謎'],['mouse','🖱️','滑鼠','一隻滑鼠，右鍵好像壞了'],['usb','💾','隨身碟','隨身碟裡存著「最終版_改_真的最終」'],['headphones','🎧','耳機','降噪耳機，戴上就聽不到改稿的聲音'],['noodle','🍜','泡麵杯','一杯泡好的泡麵，已經糊了'],['boba','🧋','珍珠奶茶','半糖少冰珍奶，吸管還咬得扁扁的'],['eraser','🧽','橡皮擦','一塊橡皮擦，擦不掉的是需求變更'],['calc','🧮','計算機','計算機算出來：今天預算還差一點'],['lunchbox','🍱','便當盒','忘了帶走的便當盒，裡面是別人的愛心'],['duck','🦆','小黃鴨','小黃鴨：專門聽你講 bug 的好夥伴'],['fan','🪭','手持小風扇','手持小風扇，夏天的救星'],['glasses','👓','眼鏡','眼鏡掉了，主人現在一定看什麼都模糊'],['swatch','🎨','色票扇','色票扇，可是客戶說要「更藍一點的藍」'],['stylus','🖊️','繪圖筆','繪圖筆，筆尖已經被畫到圓了'],['cube','🧩','魔術方塊','魔術方塊，轉了三天還是只有一面'],['plane','✈️','紙飛機','紙飛機，上面寫著「我想放假」'],['pizza','🍕','披薩片','一片披薩！今天誰加班請客？']];
+
+const NOTES0=[['筆記本','📓 撿到一本筆記本，上面寫著「下週一要交稿」'],['紙筆','✏️ 一張紙和一支筆，畫了一隻很醜的貓'],['便利貼','🗒️ 便利貼：「誰把我的馬克杯拿走了」'],['速寫本','📒 速寫本裡全是上班摸魚畫的小人'],['原子筆','🖊️ 一支有咬痕的原子筆，不知道是誰的']];
+
+const ITEMS=[['🪙','金幣','撿到一枚金幣，今天財運不錯'],['🍀','幸運草','四葉幸運草！今天會順順利利'],['🎁','小禮物','撿到一份小禮物，裡面是一顆糖'],['🎫','抽獎券','撿到一張抽獎券，記得下午開獎'],['🔑','小鑰匙','一把小鑰匙，不知道開哪個抽屜'],['⭐','星星','撿到一顆星星，心情 +10'],['🍬','糖果','地上有顆糖果，沒拆封的，賺到']];
+
+
+const NOTE_IDS = ['note_book', 'note_paper', 'note_sticky', 'note_sketch', 'note_pen']; FUN_PROPS.forEach(p => NOTE_IDS.push('prop_' + p[0]));
+const NOTES = NOTES0.concat(FUN_PROPS.map(p => [p[2], p[1] + ' ' + p[3]]));
+const DROP_IDS = ['drop_coin', 'drop_clover', 'drop_gift', 'drop_ticket', 'drop_key', 'drop_star', 'drop_candy']; FUN_PROPS.forEach(p => { DROP_IDS.push('prop_' + p[0]); ITEMS.push([p[1], p[2], p[3]]); });
+const SLIDE_N = SLIDES.length, SLOT_J = 360000, SLOT_P = 300000, SLOT_N = 720000, SLOT_D = 480000;
+function rng(str){ let h = 1779033703 ^ str.length; for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
+  let a = Math.imul(h ^ h >>> 16, 2246822507) ^ Math.imul(h ^ h >>> 13, 3266489909) >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const pickables = [], rnd = a => a[Math.floor(Math.random() * a.length)];
+let stat = {flush:0, found:0, notes:0}; try { Object.assign(stat, JSON.parse(localStorage.getItem('pixelFun') || '{}')); } catch (e) {}
+const saveStat = () => { try { localStorage.setItem('pixelFun', JSON.stringify(stat)); } catch (e) {} };
+const claims = {}, taken = id => !!claims[id];
+const quoteBox = document.getElementById('quote'); let quoteTimer = 0;
+function showQuote(title, text){ const b = quoteBox.querySelector('b'); b.textContent = title; b.style.display = title ? 'block' : 'none'; quoteBox.querySelector('span').textContent = text; quoteBox.style.display = 'block'; clearTimeout(quoteTimer); quoteTimer = setTimeout(() => { quoteBox.style.display = 'none'; }, 5200); }
+const sheets = {}, funRects = {}, spriteCache = {};
+async function loadFunArt(){ for (const v of ['v1', 'v2']) { sheets[v] = await loadImg(ASSET + 'office-fun-' + v + '.webp'); funRects[v] = await fetch(ASSET + 'office-fun-' + v + '.json').then(r => r.ok ? r.json() : null).catch(() => null); } }
+function spriteCanvas(id){
+  if (spriteCache[id]) return spriteCache[id];
+  const v = /^prop_/.test(id) ? 'v2' : 'v1', r = funRects[v] && funRects[v][id], im = sheets[v]; if (!im || !r) return null;
+  const c = document.createElement('canvas'); c.width = r.w; c.height = r.h; c.getContext('2d').drawImage(im, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h); return spriteCache[id] = c;
+}
+function pixelSprite(canvas, x, y, z, k){   // 原始像素圖：最近鄰放大，保留 2D 版的像素感
+  const dw = canvas.width * k, dh = canvas.height * k, tex = new THREE.CanvasTexture(canvas); tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false; tex.colorSpace = THREE.SRGBColorSpace;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(dw, dh), new THREE.MeshBasicMaterial({map:tex, transparent:true, alphaTest:.5, side:THREE.DoubleSide})); m.geometry.translate(0, dh / 2, 0); m.position.set(x, y, z); scene.add(m); billboards.push(m); return m;
+}
+function removeMesh(m){ scene.remove(m); const i = billboards.indexOf(m); if (i >= 0) billboards.splice(i, 1); }
+// 掉落物（地上）：每 8 分鐘一個時段、1–2 個，位置由種子決定
+const dropCache = new Map(), inSlideZone = (x, z) => Math.abs(x - 846 * U) < 4.3 && Math.abs(z - 1334 * U) < 3.2;   // 會議室 D 地板上的投影畫面範圍
+function dropsNow(){
+  const sl = Math.floor(Date.now() / SLOT_D), out = [];
+  for (const s of [sl - 1, sl]) {
+    let L = dropCache.get(s);
+    if (!L) { L = []; const r = rng('d:3d:' + s), n = 1 + Math.floor(r() * 2);
+      for (let i = 0; i < n; i++) for (let k = 0; k < 60; k++) { const x = 2 + r() * (1201 * U - 4), z = 2 + r() * (1526 * U - 4);
+        if (inSlideZone(x, z) || blocked(x, z) || blocked(x + 1, z) || blocked(x - 1, z) || blocked(x, z + 1) || blocked(x, z - 1)) continue; L.push({id:'d:' + s + ':' + i, x, z, k:Math.floor(r() * ITEMS.length)}); break; }
+      dropCache.set(s, L); }
+    L.forEach(q => { if (!taken(q.id)) out.push(q); });
+  }
+  return out;
+}
+// 會議室遺落物：每 12 分鐘一個時段、0–3 件，放在會議桌上
+const PROJ_POS = [[948, 158], [160, 1160], [162, 1360], [846, 1196]], NOTE_TABLES = [[863, 158, 250, 56], [184, 1160, 120, 50], [186, 1360, 116, 50], [846, 1196, 252, 60]], noteCache = new Map();
+function notesNow(){
+  const sl = Math.floor(Date.now() / SLOT_N), out = [];
+  for (const s of [sl - 1, sl]) {
+    let L = noteCache.get(s);
+    if (!L) { L = []; const r = rng('n:3d:' + s), n = Math.floor(r() * 4);
+      for (let i = 0; i < n; i++) for (let a = 0; a < 10; a++) {   // 遺落物避開桌上的投影機
+        const t = NOTE_TABLES[Math.floor(r() * NOTE_TABLES.length)], px = t[0] - t[2] / 2 + 20 + r() * (t[2] - 40), py = t[1] - t[3] / 2 + 12 + r() * (t[3] - 24), k = Math.floor(r() * NOTE_IDS.length);
+        if (PROJ_POS.some(q => Math.abs(q[0] - px) < 62 && Math.abs(q[1] - py) < 46)) continue; L.push({id:'n:' + s + ':' + i, x:px * U, z:py * U, k}); break; }
+      noteCache.set(s, L); }
+    L.forEach(q => { if (!taken(q.id)) out.push(q); });
+  }
+  return out;
+}
+// 便便：每 5 分鐘一個時段，每個馬桶 40% 機率；點一下沖掉
+function poopsNow(){
+  const sl = Math.floor(Date.now() / SLOT_P), out = [];
+  toilets.forEach((t, i) => { const id = 'p:' + sl + ':' + i, r = rng(id); if (r() < .4 && !taken(id) && !chairSeats.some(st => st.by && Math.hypot(st.x - t.x, st.z - t.z) < .5)) out.push({id, t, v:r() < .5 ? 1 : 2}); });
+  return out;
+}
+const floorMeshes = new Map();
+function emojiCanvas(e){ const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'); g.font = '26px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(e, 16, 17); return c; }
+function makePoop(t, v){
+  const g = new THREE.Group(); g.position.set(t.x, .56, t.z); g.scale.setScalar(v === 2 ? 1.18 : 1); g.userData.baseScale = v === 2 ? 1.18 : 1; scene.add(g);
+  const part = (geo, color, px, py, pz, sx, sy, sz) => { const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color})); m.position.set(px, py, pz); m.scale.set(sx, sy, sz); g.add(m); const h = new THREE.Mesh(geo, outlineMat); h.position.copy(m.position); h.scale.set(sx * 1.12, sy * 1.12, sz * 1.12); h.layers.set(HULL_LAYER); g.add(h); return m; };
+  const S = new THREE.SphereGeometry(1, 14, 10);
+  part(S, 0x7a4a22, 0, .1, 0, .26, .13, .26); part(S, 0x874f25, 0, .24, 0, .19, .11, .19); part(S, 0x935a2c, 0, .36, 0, .12, .1, .12); part(S, 0x9c6430, .02, .46, 0, .05, .06, .05);
+  for (const sz of [-1, 1]) { const e = new THREE.Mesh(new THREE.BoxGeometry(.04, .05, .04), new THREE.MeshBasicMaterial({color:0x0b0d10})); e.position.set(.17, .26, sz * .06); g.add(e); }
+  g.traverse(o => { if (o.isMesh) o.userData.pickRoot = g; });
+  return g;
+}
+function syncFun(){
+  if (!funRects.v1) return;
+  const want = new Map();
+  dropsNow().forEach(d => want.set(d.id, {kind:'drop', d})); notesNow().forEach(n => want.set(n.id, {kind:'note', n})); poopsNow().forEach(p => want.set(p.id, {kind:'poop', p}));
+  for (const [id, o] of floorMeshes) if (!want.has(id)) { if (o.kind === 'poop') scene.remove(o.mesh); else removeMesh(o.mesh); const j = pickables.indexOf(o.mesh); if (j >= 0) pickables.splice(j, 1); floorMeshes.delete(id); }
+  for (const [id, w] of want) {
+    if (floorMeshes.has(id)) continue;
+    let mesh;
+    if (w.kind === 'drop') { const cv = spriteCanvas(DROP_IDS[w.d.k]) || emojiCanvas(ITEMS[w.d.k][0]); mesh = pixelSprite(cv, w.d.x, 0, w.d.z, .021); mesh.userData.pick = {kind:'drop', d:w.d}; }
+    else if (w.kind === 'note') { const cv = spriteCanvas(NOTE_IDS[w.n.k]) || emojiCanvas('📝'); mesh = pixelSprite(cv, w.n.x, .95, w.n.z, .012); mesh.userData.pick = {kind:'note', n:w.n}; }
+    else { mesh = makePoop(w.p.t, w.p.v); mesh.userData.pick = {kind:'poop', p:w.p}; }
+    pickables.push(mesh); floorMeshes.set(id, {kind:w.kind, mesh, phase:Math.random() * 6});
+  }
+}
+function collectDrop(d){ claims[d.id] = [1, Date.now()]; stat.found++; saveStat(); const fresh = dexAdd('d', d.k); showQuote('', (fresh ? '🆕 新發現！' : '✨ ') + ITEMS[d.k][2] + '（累計撿到 ' + stat.found + ' 個）'); floatAt(d.x, 1.2, d.z, fresh ? '+1 新圖鑑！' : '+1'); syncFun(); }
+function collectNote(n){ claims[n.id] = [1, Date.now()]; stat.notes++; saveStat(); const fresh = dexAdd('n', n.k); showQuote('', (fresh ? '🆕 ' : '') + NOTES[n.k][1] + '（累計 ' + stat.notes + ' 件）'); floatAt(n.x, 1.8, n.z, fresh ? '+1 新圖鑑！' : '+1'); syncFun(); }
+function flushPoop(p){ claims[p.id] = [1, Date.now()]; stat.flush++; saveStat(); floatAt(p.t.x, 1.4, p.t.z, '+1 衛生之星'); showQuote('', rnd(['🚽 嘩～沖乾淨了！衛生之星 +1', '🚽 順手沖馬桶，同事感謝你！', '🚽 清潔小天使上線，今天運氣 +1', '🚽 沖水成功！廁所又恢復清爽']) + '（累計 ' + stat.flush + ' 次）'); syncFun(); }
+function startGameplay(){ syncFun(); setInterval(syncFun, 1000); }
+let lastCollect = 0;
+function updateGameplay(){
+  const t = performance.now() / 1000;
+  for (const [, o] of floorMeshes) { if (o.kind === 'drop') o.mesh.position.y = .05 + Math.sin(t * 2.2 + o.phase) * .06; else if (o.kind === 'poop') o.mesh.scale.setScalar(o.mesh.userData.baseScale * (1 + Math.sin(t * 5) * .03)); }
+  if (player && !player.sitting && performance.now() - lastCollect > 600) { lastCollect = performance.now(); for (const d of dropsNow()) if (Math.hypot(player.holder.position.x - d.x, player.holder.position.z - d.z) < 1.4) { collectDrop(d); break; } }   // 走過去也能撿
+  updateProjectors(); updateCover();
+}
+// 道具不蓋到人物的臉／身體：畫面上落在某個人物範圍內就先藏起來（也不能點）
+const _cv1 = new THREE.Vector3(), _cv2 = new THREE.Vector3(); let lastCover = 0;
+function updateCover(){
+  if (performance.now() - lastCover < 250) return; lastCover = performance.now();
+  const rs = [];
+  for (const c of Object.values(chars)) { if (!c.holder.visible) continue;
+    _cv1.copy(c.holder.position).project(camera); _cv2.copy(c.holder.position); _cv2.y = WORLD_H * STRETCH; _cv2.project(camera);
+    const fy = (-_cv1.y * .5 + .5) * innerHeight, hy = (-_cv2.y * .5 + .5) * innerHeight, h = Math.max(20, fy - hy); rs.push([(_cv1.x * .5 + .5) * innerWidth, hy - h * .1, fy + h * .08, h * .42]); }
+  for (const [, o] of floorMeshes) { if (o.kind === 'poop') continue;
+    _cv1.copy(o.mesh.position); _cv1.y += .25; _cv1.project(camera); const x = (_cv1.x * .5 + .5) * innerWidth, y = (-_cv1.y * .5 + .5) * innerHeight;
+    o.mesh.visible = !rs.some(r => Math.abs(x - r[0]) < r[3] && y > r[1] && y < r[2]); }
+}
+const imgs = {};
+const loadImg = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
+async function buildOffice(){
+  await Promise.all(Object.entries(FILES).map(async ([k, f]) => { imgs[k] = await loadImg(ASSET + f); }));
+  const T = {};      // 裁邊後的素材
+  for (const k of Object.keys(FILES)) if (imgs[k]) T[k] = trimmed(imgs[k]);
+  const place = (src, x, bottom, w, o = {}) => {
+    if (!src) return;
+    const dh = o.h ? o.h * U : w * U * src.height / src.width, dw = dh * src.width / src.height;
+    addBillboard(src, (x + w / 2) * U, bottom * U, dw, dh);
+  };
+  for (const [key, x, bottom, w, o] of PROPS) {
+    place(T[key], x, bottom, w, o);
+    if (o.col) rects.push([o.col[0] * U, o.col[1] * U, (o.col[0] + o.col[2]) * U, (o.col[1] + o.col[3]) * U]);
+    else rects.push([x * U, (bottom - (o.fh || 30)) * U, (x + w) * U, bottom * U]);
+  }
+  build3dObjects(T, place);
+  await loadFunArt();
+  await Promise.all(SNACKS.map(async ([k]) => { imgs[k] = await loadImg(ASSET + 'props4/' + k + '.png'); }));
+  if (pantry3d.snackSpot) SNACKS.forEach(([k, h], i) => { const src = imgs[k] && trimmed(imgs[k]); if (!src) return; const dh = h * .75, dw = dh * src.width / src.height, m = addBillboard(src, pantry3d.snackSpot.cx + (-1.55 + i * .62), pantry3d.snackSpot.cz, dw, dh); m.position.y = .95; });
+  startGameplay();
+  // 藍色桌組：每組兩排×三張（3D 方塊桌＋小螢幕），三排 × 設計部／同仁區
+  const I = v => v * U;
+  GROUPS.forEach((xs, gi) => ROW_TOPS.forEach((top, ri) => {
+    if (gi === 1 && ri === 0) {   // 第一排：同仁區第一欄（4 號／10 號桌）移除，中間讓出通道
+      deskBlock3d(885.5, top, 2, 0x1d4ba0, 'laptop', false);
+      for (const cx of [938, 1043]) { officeChair3d(I(cx), I(top - 38), 'S'); officeChair3d(I(cx), I(top + 116), 'N'); }
+      return;
+    }
+    if (gi === 1 && ri === 1) {   // 第二排：同仁區第一欄（4 號／10 號桌）左移，兩側補矮書櫃，整排連成一塊
+      deskBlock3d(751.5, top, 1, 0x1d4ba0, 'laptop', false); deskBlock3d(882.5, top, 2, 0x1d4ba0, 'laptop', false);
+      for (const cx of [804, 935, 1040]) { officeChair3d(I(cx), I(top - 38), 'S'); officeChair3d(I(cx), I(top + 116), 'N'); }
+      return;
+    }
+    deskBlock3d(xs[0] - 52.5, top, 3, 0x1d4ba0, gi === 0 && ri === 2 ? 'imac' : 'laptop', gi === 0 && ri === 2);
+    xs.forEach(cx => { officeChair3d(I(cx), I(top - 38), 'S'); officeChair3d(I(cx), I(top + 116), 'N'); });
+  }));
+  // 書櫃：靠緊兩張背對背辦公桌的整面層櫃（人物高），開口朝左；白柱填滿兩個桌組之間的縫，紅色工具櫃靠在上排的柱旁
+  [355, 592, 828].forEach(top => bookcase3d(388, top, 22, 94));
+  bookcase3d(725.5, 592, 26, 94, .8); bookcase3d(856.5, 592, 26, 94, .8);   // 矮書櫃（低於藍桌桌面）
+  pillar3d(725.5, 355, 55, 94, 33); cabinet3d(758.5, 355, 22, 94);
+  pillar3d(725.5, 828, 55, 94);
+  // 米黃桌組（左側上下兩組，各 2×2 合併）：南北兩側都有椅子
+  [355, 592].forEach(top => { deskBlock3d(85, top, 2, 0xe8c795, 'laptop', false); for (const cx of [137.5, 242.5]) { officeChair3d(I(cx), I(top - 38), 'S'); officeChair3d(I(cx), I(top + 116), 'N'); } });
+  officeChair3d(I(222), I(955), 'N');
+  // 白色 L 型桌（左下）
+  { const I = v => v * U; pbox(I(168), .12, I(45), 0xf3f3ee, I(224), .83, I(850.5)); pbox(I(52), .95, I(102), 0xf3f3ee, I(111), 0, I(879));
+    for (const [x, z] of [[300, 836], [300, 866], [150, 836], [150, 866]]) pbox(.12, .83, .12, 0x14181c, I(x), 0, I(z), false);
+    laptop3d(I(224), I(852), -1);
+    rects.push([I(85), I(828), I(137), I(930)], [I(137), I(828), I(308), I(873)]); }
+}
+function bookcase3d(x, z, w, d, h = 2.0){   // 版面圖像素；層櫃開口朝左（-x），其餘面是黑色側板
+  const I = v => v * U, cx = I(x + w / 2), cz = I(z + d / 2), black = 0x23272d;
+  pbox(I(w), h, I(d), black, cx, 0, cz);
+  // 左側開口：5 層書架（深色底、每層放彩色書本）
+  const c = document.createElement('canvas'); c.width = 94; c.height = 64; const g = c.getContext('2d');
+  g.fillStyle = '#15181c'; g.fillRect(0, 0, 94, 64);
+  const cols = ['#c0392b', '#2e6fb5', '#d8a93a', '#3c8d5a', '#8a5aa8', '#e8e2d2', '#c46a2d'];
+  for (let r = 0; r < 5; r++) { const y0 = r * 12.5 + 2; let x = 3; while (x < 88) { const bw = 3 + ((x * 7 + r * 5) % 4), bh = 8 + ((x + r * 3) % 3); g.fillStyle = cols[(x + r * 2) % cols.length]; g.fillRect(x, y0 + 10 - bh, bw, bh); x += bw + 1; }
+    g.fillStyle = '#3a3f47'; g.fillRect(2, y0 + 10, 90, 2); }
+  const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; t.colorSpace = THREE.SRGBColorSpace;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(I(d) - .12, h - .12), new THREE.MeshBasicMaterial({map:t}));
+  m.rotation.y = -Math.PI / 2; m.position.set(I(x) - .01, h / 2, cz); scene.add(m);
+  rects.push([I(x), I(z), I(x + w), I(z + d)]);
+}
+function pillar3d(x, z, w, d, ww = w, h = 3.4){   // 純白四方柱：寬、深切齊桌沿，上下無底座
+  const I = v => v * U, geo = new THREE.BoxGeometry(I(ww), h, I(d)), m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({color:0xffffff}));
+  m.position.set(I(x + ww / 2), h / 2, I(z + d / 2)); scene.add(m); hull(scene, I(ww), h, I(d), m.position.x, h / 2, m.position.z);
+  rects.push([I(x), I(z), I(x + ww), I(z + d)]);
+}
+function cabinet3d(x, z, w, d, h = 1.6){   // 紅色工具櫃：抽屜在右側（+x 面）
+  const I = v => v * U, cx = I(x + w / 2), cz = I(z + d / 2), ex = I(x + w) + .015;
+  pbox(I(w), h, I(d), 0xb02a30, cx, 0, cz);
+  for (let i = 0; i < 5; i++) { const y = .1 + i * (h - .2) / 5; pbox(.03, (h - .2) / 5 - .05, I(d) - .2, 0xc9353b, ex, y, cz); pbox(.04, .03, .6, 0x1b1f24, ex + .03, y + (h - .2) / 10 - .02, cz, false); }
+  rects.push([I(x), I(z), I(x + w), I(z + d)]);
+}
+// 整塊辦公桌：cols 欄 × 2 排（上排人坐北側、螢幕朝北；下排人坐南側、螢幕朝南），桌腳在外緣與欄界
+function deskBlock3d(x0, top, cols, color, kind, miniDesk){
+  const I = v => v * U, W = 105, D = 47;
+  for (let r = 0; r < 2; r++) for (let c = 0; c < cols; c++) {
+    const cx = x0 + W * c + W / 2, cz = top + D * r + D / 2;
+    pbox(I(W), .12, I(D), color, I(cx), .83, I(cz));
+    const dir = r === 0 ? -1 : 1;            // 螢幕朝向：-1 朝北、1 朝南
+    if (kind === 'laptop') { laptop3d(I(cx), I(cz), dir); continue; }
+    const mz = cz - dir * D * .12;           // 螢幕靠桌後緣
+    if (miniDesk && r === 1 && c === 0) { monitor3d(I(cx + 8), I(mz), dir, 0x15181c); pbox(.3, .17, .3, 0xf2f4f6, I(cx - 32), .95, I(cz)); }
+    else monitor3d(I(cx), I(mz), dir, kind === 'imac' ? 0xe3e6ea : 0x15181c);
+    keyboard3d(I(cx), I(cz + dir * D * .22), kind === 'imac' ? 0xf0f0f0 : 0x20242a);
+  }
+  const lx = k => x0 + W * k, zs = [top + 3, top + D * 2 - 3];
+  for (let k = 0; k <= cols; k++) for (const z of zs) pbox(.12, .83, .12, 0x14181c, I(lx(k)) + (k === 0 ? .1 : k === cols ? -.1 : 0), 0, I(z), false);
+  rects.push([I(x0), I(top + 16), I(x0 + W * cols), I(top + D * 2)]);
+}
+function laptop3d(x, z, dir){   // 黑色筆電：dir = 螢幕朝向（-1 朝北、1 朝南）；螢幕在遠離使用者的一側、微微後仰
+  pbox(.72, .04, .5, 0x15181c, x, .95, z);
+  pbox(.6, .012, .26, 0x2b3038, x, .99, z + dir * .06, false);
+  pbox(.1, .03, .16, 0x15181c, x + .55, .95, z + dir * .12, false);
+  const body = new THREE.MeshLambertMaterial({color:0x15181c}), face = new THREE.MeshLambertMaterial({color:0x2a3340});
+  const mats = [body, body, body, body, dir > 0 ? face : body, dir > 0 ? body : face];
+  const sy = .95 + .04 + .24, sz = z - dir * .25, tilt = -dir * .22;
+  const m = new THREE.Mesh(new THREE.BoxGeometry(.72, .48, .03), mats); m.position.set(x, sy, sz); m.rotation.x = tilt; scene.add(m);
+  const h = new THREE.Mesh(new THREE.BoxGeometry(.8, .56, .11), outlineMat); h.position.copy(m.position); h.rotation.x = tilt; h.layers.set(HULL_LAYER); scene.add(h);
+}
+function monitor3d(x, z, dir, color){   // 螢幕：背面為機身色、正面（朝 dir）為深色螢幕
+  const body = new THREE.MeshLambertMaterial({color}), face = new THREE.MeshLambertMaterial({color:color === 0x15181c ? 0x23303f : 0x2a3340});
+  const mats = [body, body, body, body, dir > 0 ? face : body, dir > 0 ? body : face];
+  const m = new THREE.Mesh(new THREE.BoxGeometry(.9, .46, .08), mats); m.position.set(x, .95 + .1 + .23, z); scene.add(m); hull(scene, .9, .46, .08, x, .95 + .1 + .23, z);
+  pbox(.16, .1, .14, color, x, .95, z, false); pbox(.38, .02, .24, color, x, .95, z, false);
+}
+function keyboard3d(x, z, color){ pbox(.7, .03, .22, color, x, .95, z, false); pbox(.1, .03, .14, color, x + .55, .95, z, false); }
+
+// 椅子（3D、方向固定）：face = 椅面朝向 'N' | 'S' | 'E' | 'W'。每張都登記成「座位」，人物靠近按 E 可坐下
+const FACE_ANGLE = {S:0, N:Math.PI, E:Math.PI / 2, W:-Math.PI / 2};
+const chairSeats = [], toilets = [];
+function chairBuilder(x, z, face){
+  const g = new THREE.Group();
+  const add = (w, h, d, c, px, py, pz, edge = true) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({color:c})); m.position.set(px, py + h / 2, pz); g.add(m); if (edge) hull(g, w, h, d, px, py + h / 2, pz, .035); };
+  g.position.set(x, 0, z); g.rotation.y = FACE_ANGLE[face]; scene.add(g);
+  chairSeats.push({x, z, face:FACE_ANGLE[face], by:null});
+  return add;
+}
+function chair3d(x, z, face){   // 會議室：簡單黑色折疊椅（沒有扶手）
+  const add = chairBuilder(x, z, face), black = 0x1c2026;
+  add(.52, .06, .5, black, 0, .44, 0);
+  add(.52, .42, .05, black, 0, .52, -.23);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(.05, .44, .05, 0x2a2f36, sx * .22, 0, sz * .21, false);
+}
+function officeChair3d(x, z, face){   // 辦公室：有扶手、五爪腳輪的黑色辦公椅
+  const add = chairBuilder(x, z, face), black = 0x1c2026, metal = 0x2c3139;
+  add(.64, .1, .6, black, 0, .5, 0);
+  add(.62, .64, .1, black, 0, .6, -.3);
+  for (const sx of [-1, 1]) { add(.08, .06, .42, black, sx * .36, .8, -.02); add(.06, .22, .06, metal, sx * .36, .6, 0, false); }
+  add(.1, .44, .1, metal, 0, .1, 0, false);
+  add(.8, .05, .1, metal, 0, .06, 0, false); add(.1, .05, .8, metal, 0, .06, 0, false);
+  for (const [px, pz] of [[.42, 0], [-.42, 0], [0, .42], [0, -.42]]) add(.12, .1, .12, black, px, 0, pz, false);
+}
+// ---- 像素風 3D 物件 ----
+const OUT_T = .04, HULL_LAYER = 1, outlineMat = new THREE.MeshBasicMaterial({color:0x0b0d10, side:THREE.BackSide});   // 外框粗細（世界單位）；外框物件放在 layer 1
+function hull(parent, w, h, d, px, py, pz, t = OUT_T){ const m = new THREE.Mesh(new THREE.BoxGeometry(w + 2 * t, h + 2 * t, d + 2 * t), outlineMat); m.position.set(px, py, pz); m.layers.set(HULL_LAYER); parent.add(m); return m; }
+function pbox(w, h, d, color, x, y, z, edge = true){
+  const geo = new THREE.BoxGeometry(w, h, d), m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color}));
+  m.position.set(x, y + h / 2, z); scene.add(m);
+  if (edge) hull(scene, w, h, d, x, y + h / 2, z);
+  return m;
+}
+function table3d(cx, cz, w, d, color, h = .95){   // 世界座標；桌面＋四支桌腳
+  pbox(w, .14, d, color, cx, h - .14, cz);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) pbox(.14, h - .14, .14, 0x14181c, cx + sx * (w / 2 - .18), 0, cz + sz * (d / 2 - .18), false);
+}
+function pmesh(geo, color, x, y, z, sx = 1, sy = 1, sz = 1, outline = true, k = 1.07){   // 圓形／圓角物件：外殼放大一點當黑色粗外框
+  const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color})); m.position.set(x, y, z); m.scale.set(sx, sy, sz); scene.add(m);
+  if (outline) { const h = new THREE.Mesh(geo, outlineMat); h.position.copy(m.position); h.scale.set(sx * k, sy * k, sz * k); h.layers.set(HULL_LAYER); scene.add(h); }
+  return m;
+}
+const G_TANK = new RoundedBoxGeometry(.4, .9, .86, 4, .13), G_BOWL = new THREE.CylinderGeometry(.44, .36, .46, 28), G_SEAT = new THREE.CylinderGeometry(.42, .42, .07, 28), G_WATER = new THREE.CylinderGeometry(.27, .27, .02, 24);
+const G_PED = new THREE.CylinderGeometry(.14, .18, .66, 16), G_BASIN = new THREE.CylinderGeometry(.5, .36, .22, 28), G_SINKW = new THREE.CylinderGeometry(.34, .34, .02, 24), G_FAUCET = new THREE.CylinderGeometry(.05, .05, .24, 10);
+function toilet3d(x, z){   // 朝右（+x）：圓角水箱在左、橢圓馬桶在右
+  pmesh(G_TANK, 0xf4f6f8, x - .52, .45, z, 1, 1, 1, true, 1.1);
+  pmesh(G_BOWL, 0xffffff, x + .1, .23, z, 1.12, 1, .92, true, 1.1);
+  pmesh(G_SEAT, 0xe3e9ee, x + .12, .495, z, 1.1, 1, .9, true, 1.1);
+  pmesh(G_WATER, 0x45a9ff, x + .14, .54, z, 1.05, 1, .85, false);
+}
+function sink3d(x, z){     // 朝右：圓柱腳、橢圓臉盆，水龍頭在左
+  pmesh(G_PED, 0xf3f6f8, x, .33, z, 1, 1, 1, true, 1.2);
+  pmesh(G_BASIN, 0xffffff, x + .02, .77, z, 1, 1, .82, true, 1.1);
+  pmesh(G_SINKW, 0x9fd3ff, x + .06, .89, z, 1, 1, .8, false);
+  pmesh(G_FAUCET, 0xb9c2cc, x - .4, 1.0, z, 1, 1, 1, true, 1.4);
+}
+const chairsAt = [];   // 等素材載入後再放椅子
+function build3dObjects(T, place){
+  const I = v => v * U;
+  for (const [cx, cy, w, d, col, xs, yn, ys] of TABLES) {
+    table3d(I(cx), I(cy), I(w), I(d), col);
+    rects.push([I(cx - w / 2), I(cy - d / 2), I(cx + w / 2), I(cy + d / 2)]);
+    for (const x of xs) { chair3d(I(x), I(yn), 'S'); chair3d(I(x), I(ys), 'N'); }
+  }
+  // 投影機：A 朝右（東）牆；影廳 B、會議室 C 朝左（西）牆；D 朝下（南）投在地板空地
+  projectorRig(I(948), I(158), 'E', {room:'A', wallX:I(1046) - .02, wallDir:-1, zc:I(160), w:4.3, h:2.2, title:'設計進度 Q4', kind:'bars'});
+  projectorRig(I(160), I(1160), 'W', {room:'B', wallX:I(98) + .02, wallDir:1, zc:I(1150), w:4.0, h:2.1, title:'影廳', kind:'text'});
+  projectorRig(I(162), I(1360), 'W', {room:'C', wallX:I(98) + .02, wallDir:1, zc:I(1355), w:4.0, h:2.1, title:'專案會議', kind:'list'});
+  for (const [x0, z0, ww, dd] of [[1046, 84, 4, 150], [94, 1072, 4, 156], [94, 1274, 4, 162]]) {   // 投影用白牆
+    pbox(I(ww), 2.3, I(dd), 0xf6f7f9, I(x0 + ww / 2), 0, I(z0 + dd / 2));
+  }
+  // 會議室 D：U 型白色會議桌
+  const uc = 0xeeeee4;
+  table3d(I(846), I(1196), I(252), I(60), uc); table3d(I(699), I(1256), I(46), I(180), uc); table3d(I(995), I(1256), I(46), I(180), uc);
+  projectorRig(I(846), I(1196), 'S', {room:'D', floor:{x:I(846), z:I(1334), w:6.2, d:3.6}, title:'歡迎來到 EMC', kind:'bars'});
+  rects.push([I(720), I(1166), I(972), I(1226)], [I(676), I(1166), I(722), I(1346)], [I(972), I(1166), I(1018), I(1346)]);
+  for (const x of [752, 817, 880, 945]) chair3d(I(x), I(1140), 'S');
+  for (const y of [1200, 1245, 1292, 1334]) { chair3d(I(650), I(y), 'E'); chair3d(I(1044), I(y), 'W'); }
+  pantry3d(305, 1230, 125, 38);
+  fridge3d(472, 1232, 36, 34); fridge3d(510, 1232, 36, 34);
+  // 廁所：隔間加大（寬 74、深 72），馬桶靠左牆；碰撞只擋馬桶本體與隔板，人走得進隔間，馬桶可坐
+  for (const dx of STALLS) {
+    for (const y of [100, 172]) {
+      toilet3d(I(327 + dx), I(y));
+      rects.push([I(303 + dx), I(y - 15), I(346 + dx), I(y + 15)]);
+      chairSeats.push({x:I(327 + dx) + .12, z:I(y), face:FACE_ANGLE.E, by:null, fwd:.42, kind:'toilet'});   // 坐在馬桶上，面朝右
+      toilets.push({x:I(327 + dx) + .1, z:I(y), poop:null});
+    }
+    sink3d(I(332 + dx), I(250));
+    rects.push([I(308 + dx), I(236), I(354 + dx), I(264)]);
+    for (const [x, y, w, h] of [[305,64,74,4],[305,136,74,4],[305,208,74,4],[305,64,4,148]]) { pbox(I(w), .7, I(h), 0xd7cfc6, I(x + dx + w / 2), 0, I(y + h / 2)); rects.push([I(x + dx), I(y), I(x + dx + w), I(y + h)]); }
+  }
+}
+// ---- 茶水間：深色冰箱（兩台）與木紋茶水檯（含零食） ----
+function woodTexture(){
+  const c = document.createElement('canvas'); c.width = 64; c.height = 24; const g = c.getContext('2d');
+  g.fillStyle = '#b98a50'; g.fillRect(0, 0, 64, 24);
+  const tones = ['#a77a44', '#c89a5d', '#9c6f3b', '#bf9154'];
+  for (let y = 0; y < 24; y += 3) { g.fillStyle = tones[(y / 3) % tones.length | 0]; g.fillRect(0, y, 64, 1); }
+  g.fillStyle = '#8a5f30'; for (let i = 0; i < 9; i++) { const x = (i * 23 + 7) % 60, y = (i * 11 + 4) % 22; g.fillRect(x, y, 5, 1); g.fillRect(x + 2, y + 1, 3, 1); }
+  const t = new THREE.CanvasTexture(c); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function cabinetFrontTexture(){
+  const c = document.createElement('canvas'); c.width = 64; c.height = 24; const g = c.getContext('2d');
+  g.fillStyle = '#8c5f33'; g.fillRect(0, 0, 64, 24);
+  g.fillStyle = '#6e4825'; for (const x of [0, 21, 42, 63]) g.fillRect(x, 0, 1, 24); g.fillRect(0, 0, 64, 1);
+  g.fillStyle = '#d9d2c4'; for (const x of [17, 25, 38, 46]) g.fillRect(x, 6, 2, 6);
+  const t = new THREE.CanvasTexture(c); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function pantry3d(x0, z0, w, d){    // 版面圖像素：木紋檯面＋木櫃＋零食
+  const I = v => v * U, W = I(w), D = I(d), cx = I(x0 + w / 2), cz = I(z0 + d / 2), wood = new THREE.MeshLambertMaterial({color:0xb98a50});
+  const topMat = new THREE.MeshLambertMaterial({map:woodTexture()}), frontMat = new THREE.MeshLambertMaterial({map:cabinetFrontTexture()}), side = new THREE.MeshLambertMaterial({color:0x8c5f33});
+  const top = new THREE.Mesh(new THREE.BoxGeometry(W + .1, .12, D + .1), [wood, wood, topMat, wood, wood, wood]); top.position.set(cx, .83 + .06, cz); scene.add(top); hull(scene, W + .1, .12, D + .1, cx, .89, cz);
+  const base = new THREE.Mesh(new THREE.BoxGeometry(W, .83, D), [side, side, side, side, frontMat, side]); base.position.set(cx, .415, cz); scene.add(base); hull(scene, W, .83, D, cx, .415, cz);
+  // 零食：紙箱、藍盒、紅罐、黃袋、杯子
+  const snacks = [[-1.5, .5, .42, .32, 0xc58b4a], [-.8, .34, .3, .3, 0x3f7fd0], [-.2, .3, .26, .26, 0xd8483c], [.4, .42, .32, .22, 0xf2c030], [1.0, .34, .26, .26, 0xe9eef2], [1.5, .46, .36, .3, 0xc58b4a]];
+  pantry3d.snackSpot = {cx, cz: cz - .05};
+  rects.push([I(x0), I(z0), I(x0 + w), I(z0 + d)]);
+}
+function fridge3d(x0, z0, w, d, h = 1.9){   // 深色冰箱：上冷凍、下冷藏，銀色把手與紅色指示燈
+  const I = v => v * U, W = I(w), D = I(d), cx = I(x0 + w / 2), cz = I(z0 + d / 2), zf = I(z0 + d) + .02;
+  pbox(W, h, D, 0x2f3b4b, cx, 0, cz);
+  pbox(W - .1, h * .34, .04, 0x3a4a5e, cx, h * .62 - .04, zf);          // 上門
+  pbox(W - .1, h * .56, .04, 0x3a4a5e, cx, .08, zf);                    // 下門
+  pbox(.06, h * .2, .06, 0xc7ced6, cx + W / 2 - .22, h * .66, zf + .05, false); pbox(.06, h * .3, .06, 0xc7ced6, cx + W / 2 - .22, h * .24, zf + .05, false);
+  pbox(.1, .1, .04, 0xe04646, cx - W / 2 + .2, h * .86, zf + .03, false);
+  rects.push([I(x0), I(z0), I(x0 + w), I(z0 + d)]);
+}
+// ---- 投影機 ----
+function projector3d(x, z, face, y = .95){   // 以局部 +z 為鏡頭朝向
+  const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = FACE_ANGLE[face]; scene.add(g);
+  const add = (geo, color, px, py, pz, rx = 0, out = true, k = 1.08) => { const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color})); m.position.set(px, py, pz); m.rotation.x = rx; g.add(m);
+    if (out) { const h = new THREE.Mesh(geo, outlineMat); h.position.copy(m.position); h.rotation.x = rx; h.scale.setScalar(k); h.layers.set(HULL_LAYER); g.add(h); } return m; };
+  const body = new RoundedBoxGeometry(.64, .2, .48, 3, .05), barrel = new THREE.CylinderGeometry(.1, .11, .14, 16), ring = new THREE.CylinderGeometry(.13, .13, .04, 16), glass = new THREE.CylinderGeometry(.075, .075, .02, 16);
+  add(body, 0xf1f3f6, 0, .14, 0);                                                      // 機身
+  add(new THREE.BoxGeometry(.5, .03, .3), 0xdde2e8, 0, .255, -.04, 0, false);          // 上蓋
+  for (let i = 0; i < 4; i++) add(new THREE.BoxGeometry(.3, .012, .025), 0x7b838d, -.02, .275, -.15 + i * .05, 0, false);   // 散熱孔
+  add(new THREE.BoxGeometry(.16, .014, .1), 0xc9d0d8, .16, .27, .08, 0, false);        // 操作面板
+  add(barrel, 0x1c2026, 0, .15, .3, Math.PI / 2);                                      // 鏡筒
+  add(ring, 0xaeb6c0, 0, .15, .245, Math.PI / 2, false);                               // 鏡圈
+  add(glass, 0x3f74c2, 0, .15, .375, Math.PI / 2, false);                              // 鏡片
+  add(new THREE.BoxGeometry(.04, .04, .02), 0x35d27a, -.26, .17, .245, 0, false);       // 電源燈
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(new THREE.BoxGeometry(.07, .05, .07), 0x2a2f36, sx * .24, .025, sz * .17, 0, false);   // 腳墊
+  add(new THREE.BoxGeometry(.1, .08, .04), 0x2a2f36, 0, .12, -.27, 0, false);          // 電源線孔
+  g.traverse(o => { if (o.isMesh) o.userData.pickRoot = g; });
+  return g;
+}
+function wrapLines(g, text, maxW){
+  const out = []; let line = '';
+  for (const ch of String(text)) { const t = line + ch; if (g.measureText(t).width > maxW && line) { out.push(line); line = ch; } else line = t; }
+  if (line) out.push(line); return out.slice(0, 3);
+}
+function slideCanvas(sl, canvas){   // 2D 版的簡報卡：藍色標題列＋一句話
+  const c = canvas || document.createElement('canvas'); c.width = 128; c.height = 72; const g = c.getContext('2d');
+  g.fillStyle = '#f8fbff'; g.fillRect(0, 0, 128, 72); g.fillStyle = '#2f6fd6'; g.fillRect(0, 0, 128, 13);
+  g.fillStyle = '#fff'; g.font = 'bold 9px sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'left'; g.fillText(sl[0], 5, 7);
+  g.fillStyle = '#223'; g.font = 'bold 8px sans-serif'; g.textAlign = 'center'; const L = wrapLines(g, sl[1], 116); L.forEach((t, i) => g.fillText(t, 64, 42 - (L.length - 1) * 6 + i * 12));
+  return c;
+}
+const beamMat = new THREE.MeshBasicMaterial({color:0xd5e6ff, transparent:true, opacity:.13, depthWrite:false, side:THREE.DoubleSide});
+function beam(apex, c) {   // 從鏡頭到畫面四角的半透明光錐
+  const v = []; for (let i = 0; i < 4; i++) v.push(apex.x, apex.y, apex.z, c[i].x, c[i].y, c[i].z, c[(i + 1) % 4].x, c[(i + 1) % 4].y, c[(i + 1) % 4].z);
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); const m = new THREE.Mesh(geo, beamMat); scene.add(m); return m;
+}
+const slideStore = {};   // 各會議室目前投影的畫面（小視窗放大顯示用）
+const projectors = [];
+function projState(p){   // 2D 版規則：每 6 分鐘一個時段，約 45% 機率開著、畫面隨機；點一下可開關並換畫面
+  const sl = Math.floor(Date.now() / SLOT_J), id = 'j:3d:' + sl + ':' + p.key, r = rng(id), base = r() < .45, basePic = Math.floor(r() * SLIDE_N), ov = claims[id];
+  return ov ? {on:ov[0] > 0, pic:Math.max(0, ov[0] - 1) % SLIDE_N, id} : {on:base, pic:basePic, id};
+}
+function toggleProjector(p){ const st = projState(p); claims[st.id] = [st.on ? 0 : 1 + Math.floor(Math.random() * SLIDE_N), Date.now()]; showQuote('', st.on ? '📽️ 投影機關閉' : '📽️ 投影機開啟'); updateProjectors(true); }
+let lastProj = 0;
+function updateProjectors(force){
+  if (!force && performance.now() - lastProj < 800) return; lastProj = performance.now();
+  for (const p of projectors) {
+    const st = projState(p), k = st.on + ':' + st.pic; if (k === p.last) continue; p.last = k;
+    p.plane.visible = st.on; p.beam.visible = st.on;
+    if (st.on) { const sl = SLIDES[st.pic % SLIDE_N]; slideCanvas(sl, p.canvas); p.tex.needsUpdate = true; slideStore[p.room] = {canvas:p.canvas, title:sl[0]}; } else delete slideStore[p.room];
+  }
+}
+function projectorRig(x, z, face, o){
+  const pg = projector3d(x, z, face), canvas = document.createElement('canvas'); slideCanvas(SLIDES[0], canvas);
+  const tex = new THREE.CanvasTexture(canvas); tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false; tex.colorSpace = THREE.SRGBColorSpace;
+  const dx = face === 'E' ? 1 : face === 'W' ? -1 : 0, dz = face === 'S' ? 1 : 0, apex = new THREE.Vector3(x + dx * .4, .95 + .15, z + dz * .4);
+  const mat = new THREE.MeshBasicMaterial({map:tex, polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2}), p = {key:o.room, room:o.room, canvas, tex, last:''};
+  if (o.floor) {   // 投在地板的空地
+    const f = o.floor, m = new THREE.Mesh(new THREE.PlaneGeometry(f.w, f.d), mat); m.rotation.x = -Math.PI / 2; m.position.set(f.x, .03, f.z); scene.add(m); p.plane = m;
+    p.beam = beam(apex, [new THREE.Vector3(f.x - f.w / 2, .03, f.z - f.d / 2), new THREE.Vector3(f.x + f.w / 2, .03, f.z - f.d / 2), new THREE.Vector3(f.x + f.w / 2, .03, f.z + f.d / 2), new THREE.Vector3(f.x - f.w / 2, .03, f.z + f.d / 2)]);
+  } else {         // 投在牆上：畫面平貼在白牆上
+    const yc = 1.3, ph = o.wallDir > 0 ? Math.PI / 2 : -Math.PI / 2, m = new THREE.Mesh(new THREE.PlaneGeometry(o.w, o.h), mat); m.rotation.y = ph; m.position.set(o.wallX, yc, o.zc); scene.add(m); p.plane = m;
+    const X = o.wallX; p.beam = beam(apex, [new THREE.Vector3(X, yc + o.h / 2, o.zc - o.w / 2), new THREE.Vector3(X, yc + o.h / 2, o.zc + o.w / 2), new THREE.Vector3(X, yc - o.h / 2, o.zc + o.w / 2), new THREE.Vector3(X, yc - o.h / 2, o.zc - o.w / 2)]);
+  }
+  p.plane.userData.pick = {kind:'proj', p}; pickables.push(p.plane); pg.userData.pick = {kind:'proj', p}; pickables.push(pg); projectors.push(p); return p;
+}
+// 地圖上的文字標籤（DOM，才清楚）
+const labelEls = LABELS.map(([t, ix, iy]) => { const e = document.createElement('div'); e.className = 'lbl'; e.textContent = t; document.body.appendChild(e); return {e, p:new THREE.Vector3(ix * U, 2.6, iy * U)}; });
+const _lp = new THREE.Vector3();
+function updateLabels(){
+  for (const {e, p} of labelEls) {
+    _lp.copy(p).project(camera);
+    const vis = _lp.z < 1 && Math.abs(_lp.x) < 1.1 && Math.abs(_lp.y) < 1.1;
+    e.style.display = vis ? 'block' : 'none';
+    if (vis) e.style.transform = 'translate(-50%,-50%) translate(' + ((_lp.x * .5 + .5) * innerWidth) + 'px,' + ((-_lp.y * .5 + .5) * innerHeight) + 'px)';
+  }
+}
+
+// ---------- 角色（平面像素 billboard） ----------
+const chars = {};   // name -> {holder, sprite, tex, ...}
+const roster = document.getElementById('roster');
+let player = null, target = null;
+const ANGLES = 12, ROWS = 1, CELL_W = 60, CELL_H = 60, WORLD_H = 2.04;   // 圖集：由三視圖合成的 12 個面向（每 30°）
+const loadTex = src => new Promise((res, rej) => new THREE.TextureLoader().load(src, t => {
+  t.magFilter = t.minFilter = HD ? THREE.LinearFilter : THREE.NearestFilter; t.generateMipmaps = false; t.colorSpace = THREE.SRGBColorSpace;
+  t.repeat.set(1 / ANGLES, 1 / ROWS); res(t);
+}, undefined, rej));
+const shadowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 16; const g = c.getContext('2d'); g.fillStyle = '#000'; g.beginPath(); g.ellipse(8, 8, 7, 5, 0, 0, 7); g.fill(); const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; return t; })();
+
+async function addChar(name, i){
+  const tex = await loadTex(url(name));
+  const sprite = new THREE.Mesh(new THREE.PlaneGeometry(WORLD_H * CELL_W / CELL_H, WORLD_H),
+    new THREE.MeshBasicMaterial({map:tex, transparent:true, alphaTest:.5, side:THREE.DoubleSide}));
+  sprite.geometry.translate(0, WORLD_H / 2 - .03, 0);
+  const blob = new THREE.Mesh(new THREE.PlaneGeometry(1.1, .8), new THREE.MeshBasicMaterial({map:shadowTex, transparent:true, opacity:.28, depthWrite:false}));
+  blob.rotation.x = -Math.PI / 2; blob.position.y = .02;
+  const holder = new THREE.Group(); holder.add(blob, sprite);
+  const seat = SEATS[name], a = i / NAMES.length * Math.PI * 2;
+  if (seat) {   // 入座：上排坐在桌後（面向鏡頭）、下排坐在桌前（背對鏡頭）
+    const top = ROW_TOPS[seat[1]], cx = GROUPS[seat[0]][seat[2]];
+    holder.position.set(cx * U, 0, (seat[3] === 'top' ? top - 34 : top + 120) * U);
+  } else holder.position.set((560 + 42 * (i % 6)) * U, 0, (1085 + 28 * Math.floor(i / 6)) * U);
+  scene.add(holder);
+  const c = {name, holder, sprite, tex, face:seat ? (seat[3] === 'top' ? 0 : Math.PI) : -a, moving:0, phase:Math.random() * 9, wander:!seat, t:Math.random() * 5, dir:new THREE.Vector3()};
+  chars[name] = c;
+  c.home = seat ? {x:holder.position.x, z:holder.position.z, face:c.face} : null; c.status = 'present';
+  sprite.userData.pick = {kind:'char', c}; pickables.push(sprite);
+  const tag = document.createElement('div'); tag.className = 'ctag'; document.body.appendChild(tag); c.tag = tag;
+  const b = document.createElement('button'); b.textContent = name;
+  b.dataset.name = name; b.onclick = () => select(name); roster.appendChild(b); c.btn = b;
+}
+// ---- 出勤狀態：讀「凱曜設計部」後端的即時狀態（只讀，不寫入）；連不上時依時間規則模擬 ----
+const API = 'https://machi-design-api.machi-chen.workers.dev/api';
+const STATUS = {present:['在座', '🙂'], overtime:['加班', '🌙'], lunch:['用餐', '🍱'], meeting:['會議', '📅'], leave:['休假', '🏖'], offwork:['下班', '🏠'], toilet:['廁所', '🚽'], abroad:['出國', '✈'], out:['公出', '💼']};
+const MOOD = {happy:'☀️', angry:'💢', sad:'💧', joy:'❤️'}, AWAY = new Set(['offwork', 'leave', 'abroad', 'out']);
+const live = {ok:false, version:0, at:0, simAt:0}, netEl = document.getElementById('net');
+const isMeetSeat = st => st.z < 270 * U && st.x > 660 * U && st.x < 1062 * U;
+function taipeiNow(){ const f = new Intl.DateTimeFormat('en-GB', {timeZone:'Asia/Taipei', hour:'numeric', weekday:'short', hour12:false}).formatToParts(new Date()); return {h:+f.find(p => p.type === 'hour').value % 24, weekend:['Sat', 'Sun'].includes(f.find(p => p.type === 'weekday').value)}; }
+function simStatus(){ const {h, weekend} = taipeiNow(); if (weekend) return 'offwork'; if (h >= 12 && h < 14) return 'lunch'; if (h >= 9 && h < 19) return 'present'; if (h >= 19 && h < 22) return 'overtime'; return 'offwork'; }
+function releaseSeat(c){ if (c.sitting) { c.sitting.by = null; c.sitting = null; } }
+function seatIn(c, pred){
+  const free = chairSeats.filter(st => !st.by && pred(st)); if (!free.length) return false;
+  const st = rnd(free); c.holder.position.set(st.x, 0, st.z); return sitDown(c);
+}
+function applyStatus(c, force){
+  const st = STATUS[c.status] ? c.status : 'present';
+  c.btn.textContent = c.name + ' ' + STATUS[st][1];
+  if (c === player && !force) return;               // 正在操控的角色不被即時資料搬動（自己改狀態時除外）
+  if (c.appliedStatus === st) return; c.appliedStatus = st;
+  releaseSeat(c); c.wander = false; c.sprite.material.color.set(st === 'overtime' ? 0xa9afd6 : 0xffffff);
+  if (AWAY.has(st)) { c.holder.visible = false; return; }   // 下班／休假／出國／公出：不在辦公室（座位上方顯示狀態牌）
+  c.holder.visible = true;
+  if ((st === 'present' || st === 'overtime') && c.home) { c.holder.position.set(c.home.x, 0, c.home.z); c.face = c.home.face; sitDown(c); }
+  else if (st === 'lunch') { c.holder.position.set((340 + Math.random() * 150) * U, 0, 1298 * U); c.face = Math.PI; }
+  else if (st === 'toilet') seatIn(c, x => x.kind === 'toilet');
+  else if (st === 'meeting') seatIn(c, isMeetSeat);
+  else if (c.home) { c.holder.position.set(c.home.x, 0, c.home.z); c.face = c.home.face; sitDown(c); }
+}
+function setNet(){ const t = new Date().toLocaleTimeString('zh-TW', {hour12:false, timeZone:'Asia/Taipei'}); netEl.textContent = live.ok ? '● 即時連線：凱曜設計部後端（' + t + '）' : '○ 離線：依時間規則模擬（' + t + '）'; netEl.style.color = live.ok ? '#8dffb0' : '#ffd98a'; }
+async function pollOnce(){
+  try {
+    const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify({action:'pixelOfficeState', since:live.version}), cache:'no-store'});
+    const d = await r.json(); if (!d || !d.ok) throw new Error('bad response');
+    live.ok = true; live.at = Date.now();
+    if (!d.unchanged) {
+      live.version = d.version || live.version;
+      if (d.hours) { const f = d.hours.force === 'work' || d.hours.force === 'off' ? d.hours.force : ''; if (f !== hoursForce) { hoursForce = f; for (const c of Object.values(chars)) c.appliedStatus = null; } }
+      for (const e of d.people || []) { const c = chars[e.name]; if (!c) continue; c.rawStatus = typeof e.status === 'string' ? e.status : 'present'; c.status = forcedStatus(c.rawStatus); c.mood = e.mood || ''; c.message = e.message || ''; c.statusSource = e.statusSource || ''; c.music = e.music && e.music.url ? {url:e.music.url, title:e.music.title || '', provider:e.music.provider || ''} : null; applyStatus(c); }
+      if (d.stories) applyStories(d.stories);
+    }
+  } catch (err) {
+    live.ok = false;
+    if (Date.now() - live.simAt > 30000) { live.simAt = Date.now(); const st = simStatus(); for (const c of Object.values(chars)) { c.status = st; applyStatus(c); } }
+  }
+  setNet();
+}
+function startLiveSync(){ const loop = async () => { await pollOnce(); setTimeout(loop, document.hidden ? 15000 : 3000); }; loop(); }
+const SIT_DROP = .2;
+function sitDown(c){
+  if (c.sitting) return false;
+  let best = null, bd = 2.2;
+  for (const st of chairSeats) { if (st.by) continue; const d = Math.hypot(st.x - c.holder.position.x, st.z - c.holder.position.z); if (d < bd) { bd = d; best = st; } }
+  if (!best) return false;
+  best.by = c; c.sitting = best; c.wander = false; c.moving = 0; c.face = best.face;
+  const fw = best.fwd ?? .32; c.holder.position.set(best.x + Math.sin(best.face) * fw, 0, best.z + Math.cos(best.face) * fw);
+  return true;
+}
+function standUp(c){
+  const st = c.sitting; if (!st) return;
+  const fx = Math.sin(st.face), fz = Math.cos(st.face);
+  for (const k of [-1, 1]) { const x = st.x + fx * k * 1.0, z = st.z + fz * k * 1.0; if (!blocked(x, z)) { c.holder.position.set(x, 0, z); break; } }
+  st.by = null; c.sitting = null;
+}
+function toggleSit(){ if (!player) return; if (player.sitting) standUp(player); else sitDown(player); }
+addEventListener('keydown', e => { if (e.code === 'KeyE') toggleSit(); });
+document.getElementById('sit').addEventListener('click', toggleSit);
+function select(name){
+  const prev = player; player = chars[name]; target = null; player.holder.visible = true;
+  if (prev && prev !== player) { prev.appliedStatus = null; applyStatus(prev); }
+  for (const c of Object.values(chars)) { c.btn.classList.toggle('on', c === player); c.wander = c !== player && !SEATS[c.name] && !c.sitting; }
+}
+
+let done = 0;
+Promise.all([buildOffice(), loadIcons(), ...NAMES.map((n, i) => addChar(n, i).then(() => { setLoad('載入角色 ' + (++done) + '/' + NAMES.length, done / NAMES.length); }))])
+  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); startLiveSync(); showTitleCard(); window.__plaza = {chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
+
+const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
+const TILT = 0, STRETCH = 1 / Math.cos(Math.atan(8.4 / 9.4)), _e = new THREE.Euler(0, 0, 0, 'YXZ');   // 垂直站立：不再後傾（避免穿進桌子、牆），高度拉長 STRETCH 倍抵消俯視縮短
+   // 後傾約 22°：夠像站著的人，又不會讓上半身穿進後方物件
+function updateBillboards(){ _e.set(-TILT, 0, 0); for (const m of billboards) { m.quaternion.setFromEuler(_e); m.scale.y = STRETCH; } }   // 道具方向固定（永遠朝南），只有人物會轉向
+function updateSprite(c, dt){
+  // 依角色朝向與鏡頭的相對角度，挑選 12 個面向中最接近的一格
+  c.holder.getWorldPosition(_cam); _cam.subVectors(camera.position, _cam);
+  const toCam = Math.atan2(_cam.x, _cam.z);
+  const rel = Math.atan2(Math.sin(c.face - toCam), Math.cos(c.face - toCam));   // 0 = 面向鏡頭
+  const col = (Math.round(rel / (Math.PI * 2) * ANGLES) + ANGLES) % ANGLES;
+  c.tex.offset.set(col / ANGLES, 0);
+  c.phase += dt * (c.moving > 3.5 ? 16 : 10) * (c.moving > 0 ? 1 : 0);   // 沒有走路影格，以彈跳加搖擺表現
+  const sw = Math.sin(c.phase);
+  c.sprite.position.y = (c.sitting ? -SIT_DROP : 0) + (c.moving > 0 ? Math.abs(sw) * (c.moving > 3.5 ? .2 : .1) : 0);
+  c.sprite.scale.y = STRETCH; _e.set(-TILT, toCam, 0); c.sprite.quaternion.setFromEuler(_e).multiply(_tilt.setFromAxisAngle(_z, c.moving > 0 ? sw * .07 : 0));   // 面向鏡頭，走路時輕微搖擺
+}
+
+// ---------- 輸入 ----------
+const keys = {};
+addEventListener('keydown', e => keys[e.code] = true);
+addEventListener('keyup', e => keys[e.code] = false);
+const joy = {x:0, y:0};
+const stick = document.getElementById('stick'), knob = stick.firstElementChild;
+function joyMove(e){
+  const r = stick.getBoundingClientRect(), t = e.touches ? e.touches[0] : e;
+  let dx = (t.clientX - r.left - r.width / 2) / 45, dy = (t.clientY - r.top - r.height / 2) / 45;
+  const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; }
+  joy.x = dx; joy.y = dy; knob.style.transform = `translate(${dx * 30}px,${dy * 30}px)`;
+}
+stick.addEventListener('pointerdown', e => { stick.setPointerCapture(e.pointerId); joyMove(e); });
+stick.addEventListener('pointermove', e => { if (e.buttons) joyMove(e); });
+stick.addEventListener('pointerup', () => { joy.x = joy.y = 0; knob.style.transform = ''; });
+
+const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+renderer.domElement.addEventListener('pointerdown', e => {
+  ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
+  const hit = ray.intersectObjects(pickables, true).find(h => (h.object.userData.pickRoot || h.object).visible !== false);
+  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { if (pk.c === player) radialOpen(); else { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); return; } }
+  radialClose();
+  const p = new THREE.Vector3();
+  if (ray.ray.intersectPlane(plane, p) && !blocked(p.x, p.z)) target = p;
+});
+
+// ---------- 主迴圈 ----------
+const clock = new THREE.Clock(), camPos = new THREE.Vector3(20, 10.9, 36), look = new THREE.Vector3();
+const up = new THREE.Vector3(0, 1, 0);
+function moveChar(c, dir, speed, dt){
+  if (dir.lengthSq() < 1e-4) { c.moving = 0; return; }
+  dir.normalize();
+  const p = c.holder.position, sx = dir.x * speed * dt, sz = dir.z * speed * dt;
+  if (!blocked(p.x + sx, p.z)) p.x += sx;
+  if (!blocked(p.x, p.z + sz)) p.z += sz;
+  const want = Math.atan2(dir.x, dir.z);
+  c.face = want; c.moving = speed;
+}
+// 像素色塊外框：主畫面不畫外框（layer 1），另用低解析遮罩 pass 畫出「外框／實體剪影」，
+// 以最近鄰放大後只把黑色格子疊回高清畫面——轉角就會是一格一格的像素色塊。復古模式（?px=1）直接畫外框。
+const BLOCK = 3;                          // 外框像素格大小（CSS 像素）
+const PIXEL_OUTLINE = HD && new URLSearchParams(location.search).get('outline') === 'px';   // 預設：平滑黑線直接畫在畫面上；?outline=px：像素色塊黑線
+if (!PIXEL_OUTLINE) camera.layers.enable(HULL_LAYER);
+const maskWhite = new THREE.MeshBasicMaterial({color:0xffffff});
+const compScene = new THREE.Scene(), compCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+const compMat = new THREE.ShaderMaterial({uniforms:{t:{value:null}}, depthTest:false, depthWrite:false,
+  vertexShader:'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+  fragmentShader:'varying vec2 vUv; uniform sampler2D t; void main(){ vec4 c = texture2D(t, vUv); if (c.a < .5 || c.r > .5) discard; gl_FragColor = vec4(.035, .04, .05, 1.0); }'});
+compScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), compMat));
+let maskRT = null;
+function maskMaterialFor(m){
+  if (m.userData.mm) return m.userData.mm;
+  const o = m.material; let mm = maskWhite;
+  if (Array.isArray(o)) mm = o.map(() => maskWhite);   // 多材質（螢幕）：每面都是白色剪影
+  else if (o.map) { mm = o.clone(); mm.color.set(0xffffff); mm.transparent = false; mm.side = o.side;
+    mm.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', 'vec4 sd = texture2D( map, vMapUv ); diffuseColor = vec4(1.0, 1.0, 1.0, sd.a * opacity);'); };
+    mm.customProgramCacheKey = () => 'maskwhite'; }
+  m.userData.mm = mm; return mm;
+}
+function renderFrame(){
+  renderer.render(scene, camera);
+  if (!PIXEL_OUTLINE) return;
+  const sz = renderer.getDrawingBufferSize(new THREE.Vector2()), px = BLOCK * DPR, w = Math.max(8, Math.floor(sz.x / px)), h = Math.max(8, Math.floor(sz.y / px));
+  if (!maskRT || maskRT.width !== w || maskRT.height !== h) { if (maskRT) maskRT.dispose(); maskRT = new THREE.WebGLRenderTarget(w, h, {minFilter:THREE.NearestFilter, magFilter:THREE.NearestFilter, depthBuffer:true}); compMat.uniforms.t.value = maskRT.texture; }
+  const swapped = [], hidden = [];
+  scene.traverse(o => {
+    if (!o.isMesh || !o.visible) return;
+    if (o.layers.isEnabled(HULL_LAYER)) return;                       // 外框本身：照畫
+    const mt = o.material;
+    if (o.userData.noMask || (mt && mt.isLineMaterial) || (mt && mt.transparent && !(mt.alphaTest > 0))) { o.visible = false; hidden.push(o); return; }   // 地板、玻璃牆、影子：不參與
+    swapped.push([o, mt]); o.material = maskMaterialFor(o);
+  });
+  const bg = scene.background; scene.background = null; camera.layers.enable(HULL_LAYER);
+  renderer.setRenderTarget(maskRT); renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(scene, camera);
+  renderer.setRenderTarget(null); renderer.setClearColor(0x000000, 1); camera.layers.disable(HULL_LAYER); scene.background = bg;
+  for (const [o, mt] of swapped) o.material = mt;
+  for (const o of hidden) o.visible = true;
+  renderer.autoClear = false; renderer.render(compScene, compCam); renderer.autoClear = true;
+}
+const ROOMS = [['A', 660, 48, 1062, 270, '會議室 A'], ['B', 82, 1045, 290, 1250, '影廳'], ['C', 82, 1250, 290, 1460, '會議室 C'], ['D', 610, 1045, 1082, 1462, '會議室 D']];
+const projBox = document.getElementById('proj'), projCv = projBox.querySelector('canvas'), projCtx = projCv.getContext('2d'), projTitle = projBox.querySelector('span');
+let projRoom = null;
+function updateProjectionView(){
+  let room = null;
+  if (player) { const px = player.holder.position.x / U, pz = player.holder.position.z / U; for (const r of ROOMS) if (px > r[1] && px < r[3] && pz > r[2] && pz < r[4]) room = r; }
+  const sl = room && slideStore[room[0]];
+  if (!sl) { if (projBox.style.display !== 'none') projBox.style.display = 'none'; return; }
+  if (projBox.style.display !== 'block') projBox.style.display = 'block';
+  const t = room[5] + '・投影中：' + sl.title; if (projTitle.textContent !== t) projTitle.textContent = t;
+  projCtx.imageSmoothingEnabled = false; projCtx.drawImage(sl.canvas, 0, 0, 128, 72);
+}
+// ---- 角色頁面（取代功能轉盤）：遊戲感的暫停／角色資料畫面，版型參考 PokéBonk 的暫停畫面 ----
+const symOf = {present:'person', overtime:'moon', lunch:'bowl', meeting:'meeting', leave:'calendar', offwork:'power', toilet:'toilet', abroad:'plane', out:'briefcase'}, moodSym = {happy:'sun', angry:'burst', sad:'drop', joy:'heart'};
+const ICON = {};
+function moonIcon(px){   // 加班：月牙＋星星（2D 版也是程式畫的）
+  const c = document.createElement('canvas'), sc = 2; c.width = c.height = px * sc; const g = c.getContext('2d'); g.scale(sc, sc);
+  const cx = px * .46, cy = px * .52, r = px * .34, f = g.createLinearGradient(cx - r, cy - r, cx + r, cy + r); f.addColorStop(0, '#ffe58a'); f.addColorStop(1, '#f2a93b');
+  g.fillStyle = f; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
+  g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.arc(cx + r * .5, cy - r * .32, r * .86, 0, Math.PI * 2); g.fill(); g.globalCompositeOperation = 'source-over';
+  g.strokeStyle = '#b8741d'; g.lineWidth = Math.max(1, px * .03); g.lineJoin = 'round'; g.beginPath(); g.arc(cx, cy, r, Math.PI * .42, Math.PI * 1.18); g.stroke();
+  const star = (x, y, rad) => { g.fillStyle = '#fff3b8'; g.strokeStyle = '#e0a030'; g.lineWidth = Math.max(.8, px * .02); g.beginPath(); for (let i = 0; i < 8; i++) { const a = -Math.PI / 2 + i * Math.PI / 4, d = i % 2 ? rad * .42 : rad; g[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * d, y + Math.sin(a) * d); } g.closePath(); g.fill(); g.stroke(); };
+  star(px * .78, px * .28, px * .13); star(px * .86, px * .62, px * .08); return c;
+}
+async function loadIcons(){
+  const [main, extra] = await Promise.all([loadImg(ASSET + 'icons-v3.webp'), loadImg(ASSET + 'icons-status-v4.webp')]);
+  const cut = (im, cols, i) => { const cell = im.naturalWidth / cols, c = document.createElement('canvas'); c.width = c.height = 96; const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(im, (i % cols) * cell, Math.floor(i / cols) * cell, cell, cell, 0, 0, 96, 96); return c.toDataURL(); };
+  if (main) ['sun', 'burst', 'drop', 'heart', 'person', 'power', 'toilet', 'plane', 'briefcase'].forEach((k, i) => { ICON[k] = cut(main, 3, i); });
+  if (extra) ['meeting', 'bowl', 'calendar'].forEach((k, i) => { ICON[k] = cut(extra, 3, i); });
+  ICON.moon = moonIcon(96).toDataURL();
+}
+const iconImg = (sym, px) => ICON[sym] ? '<img class="ico" alt="" src="' + ICON[sym] + '" width="' + px + '" height="' + px + '">' : '';
+const $ = id => document.getElementById(id);
+let handoff = null; try { const h = JSON.parse(localStorage.getItem('pixelViewerHandoff') || 'null'); if (h && h.name && Date.now() - Number(h.at) < 86400000) handoff = h; } catch (e) {}
+if (!handoff) { try {   // 沒有交接資料時，直接讀網站首頁的登入狀態（designRequestEditor*）
+  const get = k => localStorage.getItem(k) || sessionStorage.getItem(k) || '';
+  if (localStorage.getItem('designRequestEditorLoggedOut') !== '1' && get('designRequestEditorToken')) {
+    const user = get('designRequestEditorUser'), name = get('designRequestEditorDisplayName') || user;
+    handoff = {name, token:get('designRequestEditorToken'), staff:false, monitor:user === 'Machi' || name.toLowerCase() === 'machi', at:Date.now(), fromSite:true};
+  } } catch (e) {} }
+const adminToken = () => (handoff && handoff.token) || '';
+const isAdmin = () => Boolean(handoff && handoff.monitor && handoff.token);
+const radial = document.createElement('div'); radial.id = 'cpage'; radial.hidden = true; document.body.appendChild(radial);   // 舊名 radial 沿用，指向角色頁面
+let hoursCfg = null, hoursForce = '';
+async function post(payload){   // 後端同一支介面（和 2D 版一樣）；回傳失敗時把後端的錯誤原文丟出來
+  let r; try { r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify(payload), cache:'no-store'}); } catch (e) { throw new Error('連不上後端：後端只放行 localhost:8787 與 GitHub Pages，目前網址是 ' + location.origin); }
+  const d = await r.json(); if (!d.ok) throw new Error(d.error || '後端回覆失敗'); return d;
+}
+async function writeState(c, patch){   // 測試階段：不鎖角色、不跳確認
+  if (!live.ok) { showQuote('', '目前是離線模擬（來源未被後端放行），只在這個畫面生效，沒有寫入後端'); return true; }
+  try { await post({action:'pixelOfficeUpdate', name:c.name, patch}); return true; } catch (e) { showQuote('', '同步失敗：' + e.message); return false; }
+}
+async function adminCall(action, extra){ return post({action, ...(extra || {}), editorToken:adminToken(), token:adminToken()}); }
+function hopChar(c){ c.hopAt = performance.now(); }
+function moodFx(c, m){   // 設定心情時：頭上的心情圖示彈出、人物跳一下、飄出心情字
+  hopChar(c); const w = ({happy:'好開心！', angry:'氣噗噗！', sad:'好難過…', joy:'愛心滿格！'})[m]; if (w) floatAt(c.holder.position.x, 2.7, c.holder.position.z, w);
+}
+async function setOwnStatus(st){ const c = player; if (!c || !(await writeState(c, {status:st}))) return; c.rawStatus = st; c.status = forcedStatus(st); c.appliedStatus = null; applyStatus(c, true); showQuote('', c.name + '：' + STATUS[st][0]); renderCharPage(); }
+async function setOwnMood(m){ const c = player; if (!c || !(await writeState(c, {mood:m}))) return; c.mood = m; if (m) moodFx(c, m); showQuote('', m ? c.name + '的心情：' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[m] : '已清除心情'); renderCharPage(); }
+async function setOwnMessage(t){ const c = player; if (!c || !(await writeState(c, {message:t}))) return; c.message = t; showQuote('', t ? '已更新留言' : '已清除留言'); renderCharPage(); }
+async function setOwnAuto(){ const c = player; if (!c || !(await writeState(c, {status:'auto'}))) return; showQuote('', '已交還給電腦自動判斷，幾秒內會更新'); live.version = 0; }
+const forcedStatus = raw => hoursForce === 'off' ? 'offwork' : (hoursForce === 'work' && raw === 'offwork' ? 'present' : raw);   // 管理者的「全員上班／下班」
+function applyForce(){ for (const c of Object.values(chars)) { c.status = forcedStatus(c.rawStatus || c.status || 'present'); c.appliedStatus = null; applyStatus(c, c === player); } }
+const STATUS_DESC = {present:'在座工作中', overtime:'加班中（晚上 7 點後的在座）', lunch:'用餐中', meeting:'開會中', leave:'休假中', offwork:'已下班', toilet:'去廁所', abroad:'出國中', out:'公出工作中'};
+const roomOf = c => { const x = c.holder.position.x / U, z = c.holder.position.z / U; for (const r of ROOMS) if (x > r[1] && x < r[3] && z > r[2] && z < r[4]) return r[5]; if (x > 290 && x < 608 && z < 275) return '廁所'; if (x > 300 && x < 600 && z > 1190 && z < 1340) return '茶水間'; return '辦公區'; };
+const esc = t => String(t).replace(/[&<>"]/g, m => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;'}[m]));
+
+// ───────── 音樂（沿用 2D 版：貼 Spotify／Apple Music 連結，頭上出現音樂泡泡，點 ▶ 聽歌）─────────
+function musicInfo(value){
+  const text = String(value || '').trim(); if (!text) return null;
+  try { const parsed = new URL(text); if (parsed.protocol !== 'https:') return null;
+    if (parsed.hostname === 'open.spotify.com') { const m = parsed.pathname.match(/^\/(?:intl-[a-z-]+\/)?(?:embed\/)?(track|album|playlist|show|episode)\/([A-Za-z0-9]{22})(?:\/|$)/); return m ? {provider:'spotify', label:'Spotify', kind:m[1], id:m[2], url:'https://open.spotify.com/' + m[1] + '/' + m[2]} : null; }
+    if (parsed.hostname === 'music.apple.com') { const parts = parsed.pathname.split('/').filter(Boolean), storefront = String(parts[0] || 'us').toLowerCase(), pathId = [...parts].reverse().find(p => /^\d+$/.test(p)) || '', id = String(parsed.searchParams.get('i') || pathId); if (!/^[a-z]{2}$/.test(storefront) || !/^\d+$/.test(id)) return null; return {provider:'apple', label:'Apple Music', id, storefront, url:'https://music.apple.com/' + storefront + parsed.pathname.slice(1 + parts[0].length) + parsed.search}; }
+    return null; } catch (e) { return null; }
+}
+const musicMetaCache = new Map();
+async function musicMetadata(info){
+  const key = info.provider + ':' + info.id; if (musicMetaCache.has(key)) return musicMetaCache.get(key);
+  let meta = {title:info.label + ' ' + ({album:'專輯', playlist:'歌單', show:'Podcast 節目', episode:'Podcast 單集'}[info.kind] || '單曲'), previewUrl:''};
+  try {
+    if (info.provider === 'spotify') { const r = await fetch('https://open.spotify.com/oembed?url=' + encodeURIComponent(info.url)); if (r.ok) { const d = await r.json(); meta.title = String(d.title || '').trim() || meta.title; } }
+    else { const r = await fetch('https://itunes.apple.com/lookup?id=' + encodeURIComponent(info.id) + '&country=' + encodeURIComponent(info.storefront || 'us')); if (r.ok) { const d = await r.json(), t = (d.results || []).find(x => String(x.trackId || '') === info.id) || (d.results || [])[0]; if (t) meta = {title:[t.trackName, t.artistName].filter(Boolean).join(' - ') || meta.title, previewUrl:String(t.previewUrl || '')}; } }
+  } catch (e) {}
+  musicMetaCache.set(key, meta); return meta;
+}
+let musicPlaying = {name:'', paused:true, audio:null, controller:null, started:false}, spotifyApiPromise = null;
+function spotifyApi(){ return spotifyApiPromise || (spotifyApiPromise = new Promise((resolve, reject) => { window.onSpotifyIframeApiReady = api => resolve(api); const tag = document.createElement('script'); tag.src = 'https://open.spotify.com/embed/iframe-api/v1'; tag.async = true; tag.onerror = () => { spotifyApiPromise = null; reject(Error('無法載入 Spotify 播放器')); }; document.head.append(tag); })); }
+function ensureSpotifyDock(){ let d = $('spotifyDock'); if (d) return d; d = document.createElement('div'); d.id = 'spotifyDock'; d.innerHTML = '<div class="dock-host"></div>'; document.body.append(d); return d; }
+function stopMusic(){
+  if (musicPlaying.audio) musicPlaying.audio.pause();
+  const d = $('spotifyDock'); if (d) { d.hidden = true; d.querySelector('.dock-host').replaceChildren(); }
+  musicPlaying = {name:'', paused:true, audio:null, controller:null, started:false};
+}
+async function toggleMusic(c){
+  const m = c.music, info = m && musicInfo(m.url); if (!info) return;
+  if (musicPlaying.name === c.name) {
+    if (musicPlaying.audio) { if (musicPlaying.paused) { await musicPlaying.audio.play(); musicPlaying.paused = false; } else { musicPlaying.audio.pause(); musicPlaying.paused = true; } return; }
+    if (musicPlaying.controller) { if (!musicPlaying.started || musicPlaying.paused) musicPlaying.controller.play(); else musicPlaying.controller.pause(); return; }
+  }
+  stopMusic();
+  try {
+    if (info.provider === 'apple') {   // Apple Music：30 秒試聽
+      const meta = await musicMetadata(info); if (!meta.previewUrl) { window.open(info.url, '_blank', 'noopener'); return; }
+      const audio = new Audio(meta.previewUrl); audio.onended = stopMusic; await audio.play(); musicPlaying = {name:c.name, paused:false, audio, controller:null, started:true};
+    } else {                           // Spotify：官方小播放器（右下角）
+      const api = await spotifyApi(), dock = ensureSpotifyDock(), host = dock.querySelector('.dock-host'), target = document.createElement('div');
+      host.replaceChildren(target); dock.hidden = false; musicPlaying = {name:c.name, paused:false, started:false, audio:null, controller:null};
+      setTimeout(() => { if (musicPlaying.name === c.name && !musicPlaying.started) showQuote('', '瀏覽器擋住了自動播放，請再按一次綠色播放鍵'); }, 3000);
+      api.createController(target, {uri:'spotify:' + info.kind + ':' + info.id, width:'100%', height:80}, ctl => {
+        if (musicPlaying.name !== c.name) return; musicPlaying.controller = ctl;
+        ctl.addListener('ready', () => { ctl.play(); });
+        ctl.addListener('playback_update', ev => { if (musicPlaying.name !== c.name) return; musicPlaying.paused = Boolean(ev.data && ev.data.isPaused); if (!musicPlaying.paused) musicPlaying.started = true; });
+      });
+    }
+  } catch (e) { stopMusic(); showQuote('', '無法播放：' + (e && e.message ? e.message : '請點歌名到網頁收聽')); }
+}
+async function setOwnMusic(url){
+  const c = player; if (!c) return; const info = musicInfo(url);
+  if (!info) { showQuote('', '請貼 Spotify（單曲、專輯、歌單、Podcast）或 Apple Music 歌曲的網址'); return; }
+  const meta = await musicMetadata(info); if (!(await writeState(c, {music:{url:info.url, title:meta.title}}))) return;
+  c.music = {url:info.url, provider:info.provider, title:meta.title}; showQuote('', '🎧 開始分享：' + meta.title); renderCharPage();
+}
+async function clearOwnMusic(){ const c = player; if (!c || !(await writeState(c, {music:''}))) return; c.music = null; if (musicPlaying.name === c.name) stopMusic(); showQuote('', '已停止分享音樂'); renderCharPage(); }
+
+// ───────── 限時動態（沿用 2D 版：照片／GIF／影片，24 小時自動下架，可按讚留言；人物右上角的像素訊息氣泡）─────────
+const STORY_SECONDS = 6, STORY_MAX_ACTIVE = 5, STORY_GIF_MAX = 5 * 1024 * 1024, STORY_VIDEO_MAX = 10 * 1024 * 1024, STORY_VIDEO_SECONDS = 30;
+let stories = [], storySeen = new Set(); try { storySeen = new Set(JSON.parse(localStorage.getItem('pixel-story-seen') || '[]')); } catch (e) {}
+const storiesOf = name => stories.filter(s => s.name === name), storyUnread = name => storiesOf(name).some(s => !storySeen.has(s.id));
+const mediaUrl = u => { try { return new URL(u, API).href; } catch (e) { return u; } };
+function applyStories(list){ if (Array.isArray(list)) { stories = list; try { localStorage.setItem('pixel-story-seen', JSON.stringify([...storySeen].filter(id => stories.some(s => s.id === id)))); } catch (e) {} if (!$('sv').hidden) refreshStory(); if (!radial.hidden) renderCharPage(); } }
+const STORY_SPRITE = ['...############...', '..#wwwwwwwwwwww#..', '.#wwwwwwwwwwwwww#.', '#wwwwwwwwwwwwwwww#', '#wwwwwwwwwwwwwwww#', '#wwggwwwggwwwggww#', '#wwggwwwggwwwggww#', '#wwwwwwwwwwwwwwww#', '.#wwwwwwwwwwwwww#.', '..#wwwwwwwwwwww#..', '...#ww#########...', '..#w#.............', '..##..............'].map(r => r.padEnd(18, '.'));
+const storyIconURL = (() => { const c = document.createElement('canvas'), k = 2; c.width = 18 * k; c.height = 13 * k; const g = c.getContext('2d'); STORY_SPRITE.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === '.') return; g.fillStyle = ch === '#' ? '#3b4350' : ch === 'g' ? '#008214' : '#fff'; g.fillRect(x * k, y * k, k, k); })); return c.toDataURL(); })();
+const readDataURL = f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(Error('無法讀取這個檔案')); r.readAsDataURL(f); });
+const loadMedia = (el, ev) => new Promise((res, rej) => { el.addEventListener(ev, res, {once:true}); el.addEventListener('error', () => rej(Error('無法讀取這個檔案，請換一個再試')), {once:true}); });
+async function postStory(file){
+  const c = player; if (!c) return; if (storiesOf(c.name).length >= STORY_MAX_ACTIVE) { showQuote('', '最多同時 ' + STORY_MAX_ACTIVE + ' 則限時動態，請先下架一則'); return; }
+  const type = file.type, url = URL.createObjectURL(file);
+  try {
+    let media;
+    if (type === 'image/gif') { if (file.size > STORY_GIF_MAX) throw Error('GIF 太大，請選 5 MB 以下的檔案'); media = await readDataURL(file); }
+    else if (['video/mp4', 'video/webm', 'video/quicktime'].includes(type)) {
+      const v = document.createElement('video'); v.preload = 'metadata'; v.src = url; await loadMedia(v, 'loadedmetadata');
+      if (Number.isFinite(v.duration) && v.duration > STORY_VIDEO_SECONDS + .5) throw Error('影片太長，請剪到 ' + STORY_VIDEO_SECONDS + ' 秒以內');
+      if (file.size > STORY_VIDEO_MAX || type === 'video/quicktime') throw Error('影片請用 10 MB 以下的 MP4／WebM（3D 版暫不壓縮影片，太大的請到 2D 版貼）');
+      media = await readDataURL(file);
+    } else if (['image/jpeg', 'image/png', 'image/webp'].includes(type)) {
+      if (file.size > 8 * 1024 * 1024) throw Error('照片太大，請選擇 8 MB 以下的圖片');
+      const img = new Image(); img.src = url; await loadMedia(img, 'load');
+      const cv = document.createElement('canvas'), sc = Math.min(1, 1200 / Math.max(img.width, img.height)); cv.width = Math.round(img.width * sc); cv.height = Math.round(img.height * sc); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); media = cv.toDataURL('image/jpeg', .8);
+    } else throw Error('請選擇照片、GIF 或 MP4 影片');
+    if (!live.ok) { showQuote('', '目前是離線模擬，沒有貼出（來源未被後端放行）'); return; }
+    const d = await post({action:'pixelOfficeStoryAdd', name:c.name, media, token:adminToken()}); applyStories(d.stories); showQuote('', '限時動態已貼出，24 小時後自動下架');
+  } catch (e) { showQuote('', e && e.message ? e.message : '貼出失敗'); } finally { URL.revokeObjectURL(url); }
+}
+let sv = {name:'', id:'', elapsed:0, paused:false, timer:0, last:0, muted:true};
+const curStory = () => storiesOf(sv.name).find(s => s.id === sv.id) || null;
+function openStory(name){
+  const list = storiesOf(name); if (!list.length) return; keys && Object.keys(keys).forEach(k => keys[k] = false);
+  sv = {name, id:(list.find(s => !storySeen.has(s.id)) || list[0]).id, elapsed:0, paused:false, timer:0, last:performance.now(), muted:true};
+  $('sv').hidden = false; showStory(); clearInterval(sv.timer); sv.timer = setInterval(tickStory, 100);
+}
+function closeStory(){ clearInterval(sv.timer); $('sv').hidden = true; const v = $('svVid'); v.pause(); v.removeAttribute('src'); }
+function showStory(){
+  const list = storiesOf(sv.name), s = curStory(); if (!s) { closeStory(); return; }
+  sv.elapsed = 0; $('svName').textContent = sv.name; const img = $('svImg'), vid = $('svVid'), isVid = s.mediaType === 'video';
+  img.hidden = isVid; vid.hidden = !isVid; $('svMute').hidden = !isVid;
+  if (isVid) { vid.muted = sv.muted; $('svMute').textContent = sv.muted ? '開聲音' : '靜音'; vid.src = mediaUrl(s.imageUrl); vid.currentTime = 0; vid.play().catch(() => {}); img.removeAttribute('src'); }
+  else { vid.pause(); vid.removeAttribute('src'); img.src = mediaUrl(s.imageUrl); }
+  $('svProg').replaceChildren(...list.map(it => { const seg = document.createElement('i'); seg.dataset.id = it.id; seg.append(document.createElement('b')); return seg; }));
+  renderStoryProg(); refreshStory(); if (!storySeen.has(s.id)) { storySeen.add(s.id); try { localStorage.setItem('pixel-story-seen', JSON.stringify([...storySeen])); } catch (e) {} }
+  post({action:'pixelOfficeStoryView', id:s.id, token:adminToken()}).catch(() => {});
+}
+function storyDuration(){ const vid = $('svVid'); if (vid.hidden) return STORY_SECONDS; return Number.isFinite(vid.duration) && vid.duration > 0 ? Math.min(vid.duration, STORY_VIDEO_SECONDS) : STORY_VIDEO_SECONDS; }
+function renderStoryProg(){ const list = storiesOf(sv.name), idx = list.findIndex(s => s.id === sv.id), dur = storyDuration(); $('svProg').querySelectorAll('i').forEach((seg, i) => { seg.firstChild.style.width = (i < idx ? 100 : i === idx ? Math.min(100, sv.elapsed / dur * 100) : 0) + '%'; }); }
+function tickStory(){ const now = performance.now(), dt = (now - sv.last) / 1000; sv.last = now; if (sv.paused || $('sv').matches(':hover') && false) return; sv.elapsed += dt; renderStoryProg(); if (sv.elapsed >= storyDuration()) stepStory(1); }
+function stepStory(dir){ const list = storiesOf(sv.name), i = list.findIndex(s => s.id === sv.id) + dir; if (i < 0) { showStory(); return; } if (i >= list.length) { closeStory(); return; } sv.id = list[i].id; showStory(); }
+function refreshStory(){
+  const s = curStory(); if (!s) { if (!$('sv').hidden) { const l = storiesOf(sv.name); if (l.length) { sv.id = l[0].id; showStory(); } else closeStory(); } return; }
+  const me = (player && player.name) || (handoff && handoff.name) || '', liked = (s.likes || []).includes(me);
+  $('svLike').classList.toggle('on', liked); $('svLikeN').textContent = (s.likes || []).length; $('svLike').title = (s.likes || []).length ? '按讚：' + s.likes.join('、') : '按讚';
+  const box = $('svComments'); box.replaceChildren(...(s.comments || []).map(cm => { const p = document.createElement('p'), n = document.createElement('strong'); n.textContent = cm.name; p.append(n, ' ' + cm.text); return p; })); box.hidden = !(s.comments || []).length;
+}
+$('svClose').onclick = closeStory; $('svPrev').onclick = () => stepStory(-1); $('svNext').onclick = () => stepStory(1);
+$('svMute').onclick = () => { sv.muted = !sv.muted; $('svVid').muted = sv.muted; $('svMute').textContent = sv.muted ? '開聲音' : '靜音'; };
+$('sv').addEventListener('pointerdown', e => { if (e.target === $('sv')) closeStory(); });
+$('svMedia').addEventListener('pointerenter', () => { sv.paused = true; }); $('svMedia').addEventListener('pointerleave', () => { sv.paused = false; sv.last = performance.now(); });
+$('svLike').onclick = async () => { const s = curStory(); if (!s) return; try { applyStories((await post({action:'pixelOfficeStoryReact', id:s.id, token:adminToken()})).stories); } catch (e) { showQuote('', '按讚失敗：' + e.message); } };
+$('svForm').onsubmit = async e => { e.preventDefault(); const s = curStory(), inp = $('svInput'), body = inp.value.trim(); if (!s || !body) return; inp.disabled = true; try { applyStories((await post({action:'pixelOfficeStoryComment', id:s.id, text:body, token:adminToken()})).stories); inp.value = ''; } catch (err) { showQuote('', '留言失敗：' + err.message); } finally { inp.disabled = false; } };
+async function removeStory(id){ try { applyStories((await post({action:'pixelOfficeStoryRemove', id})).stories); showQuote('', '已下架'); } catch (e) { showQuote('', '下架失敗：' + e.message); } }
+
+// ───────── 頁面 ─────────
+function renderCharPage(){
+  const c = player; if (!c) return; const st = STATUS[c.status] || STATUS.present, total = stat.found + stat.notes + stat.flush, lv = 1 + Math.floor(total / 5);
+  const moodPct = {happy:90, joy:100, sad:35, angry:20}[c.mood] ?? 60, moodTxt = c.mood ? (iconImg(moodSym[c.mood], 18) + ' ' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[c.mood]) : '— 未設定';
+  const keepMsg = radial.querySelector('#cpMsg') ? radial.querySelector('#cpMsg').value : null, keepMusic = radial.querySelector('#cpMusic') ? radial.querySelector('#cpMusic').value : '';
+  const mine = storiesOf(c.name), m = c.music;
+  radial.innerHTML = `<div class="cp-wrap">
+    <div class="cp-head">
+      <div class="cp-av"><img alt="" src="${c.avatar || ''}"><b class="cp-lv">Lv.${lv}</b></div>
+      <div class="cp-main">
+        <div class="cp-tag"><span class="cp-pill">${live.ok ? '即時' : '模擬'}</span><span>凱曜設計部 · 5F · ${esc(roomOf(c))}</span></div>
+        <div class="cp-name">${esc(c.name)} <span class="cp-type">${iconImg(symOf[c.status] || 'person', 20)} ${st[0]}</span></div>
+        <div class="cp-bar"><label>心情</label><div><i style="width:${moodPct}%"></i></div><span>${moodTxt}</span></div>
+        <div class="cp-bar xp"><label>經驗</label><div><i style="width:${(total % 5) / 5 * 100}%"></i></div><span>${total % 5}/5</span></div>
+      </div>
+    </div>
+    <div class="cp-cols">
+      <section class="cp-panel p1"><header><h3>狀態</h3><em>共 9 種</em></header>
+        <div class="cp-cur"><i>${iconImg(symOf[c.status] || 'person', 52)}</i><div><b>${st[0]}</b><small>${STATUS_DESC[c.status] || ''}</small></div></div>
+        <div class="cp-grid" id="cpSt"></div>
+        <div class="cp-chips"><button type="button" id="cpAuto">🤖 交還電腦自動判斷</button></div>
+        <h4>現在的心情</h4><div class="cp-grid m" id="cpMood"></div>
+      </section>
+      <div class="cp-stack">
+        <section class="cp-panel p2"><header><h3>想說的話</h3><em>顯示在頭上・60 字</em></header>
+          <div class="cp-chat"><div class="cp-prev"><span id="cpPrev"></span></div>
+            <form class="cp-chat-in" id="cpForm"><img alt="" src="${c.avatar || ''}"><input id="cpMsg" type="text" maxlength="60" placeholder="說點什麼…" autocomplete="off"><button type="submit" class="send" title="送出">➤</button></form>
+            <div class="cp-chips"><button type="button" id="cpClr">清除對話</button></div></div>
+        </section>
+        <section class="cp-panel p4"><header><h3>音樂</h3><em>${m ? '分享中' : 'Spotify／Apple Music'}</em></header>
+          ${m ? '<div class="cp-music"><span class="note">🎧</span><div><b>' + esc(m.title || '音樂') + '</b><small>' + esc(m.url) + '</small></div><button type="button" id="cpMPlay">▶</button></div>' : ''}
+          <form class="cp-chat-in" id="cpMForm"><input id="cpMusic" type="text" placeholder="貼上 Spotify 或 Apple Music 網址" autocomplete="off"><button type="submit" class="send" title="分享">♪</button></form>
+          <div class="cp-chips">${m ? '<button type="button" id="cpMStop">停止分享</button>' : ''}</div>
+          <p class="cp-note">分享後頭上會出現音樂泡泡，點 ▶ 就能聽（Apple Music 試聽 30 秒；Spotify 開小播放器）。</p>
+        </section>
+        <section class="cp-panel p3"><header><h3>限時動態</h3><em>${mine.length}/${STORY_MAX_ACTIVE}・24 小時</em></header>
+          <div class="cp-chips"><button type="button" class="primary" id="cpPost">＋ 貼出照片／GIF／影片</button></div>
+          <input type="file" id="cpFile" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" hidden>
+          <div class="cp-stories">${mine.map(s => '<div class="cp-story"><button type="button" class="th" data-id="' + esc(s.id) + '">' + (s.mediaType === 'video' ? '<video src="' + esc(mediaUrl(s.imageUrl)) + '" muted></video>' : '<img alt="" src="' + esc(mediaUrl(s.imageUrl)) + '">') + '</button><small>❤ ' + (s.likes || []).length + '・💬 ' + (s.comments || []).length + '</small><button type="button" class="rm" data-id="' + esc(s.id) + '">下架</button></div>').join('') || '<p class="cp-note">還沒有限時動態。貼出後人物右上角會出現小訊息氣泡，同事點它就能看。</p>'}</div>
+        </section>
+      </div>
+    </div>
+    <section class="cp-admin" id="cpAdmin"></section>
+    <div class="cp-keys"><kbd>Esc</kbd> 繼續 · <kbd>WASD</kbd> 移動 · <kbd>Shift</kbd> 跑步 · <kbd>E</kbd> 坐下／起身 · 點人物頭上的泡泡看動態、聽音樂 · 點地上道具撿取 · 點馬桶沖水 · 點投影機開關</div>
+    <div class="cp-btns"><button type="button" id="cpDex">📖 圖鑑</button><button type="button" id="cpHelp">❓ 說明</button><button type="button" class="cp-go" id="cpGo">繼續</button></div>
+  </div>`;
+  const g = radial.querySelector('#cpSt'); for (const [id, [name]] of Object.entries(STATUS)) { const b = document.createElement('button'); b.type = 'button'; b.className = c.status === id ? 'on' : ''; b.innerHTML = '<i>' + iconImg(symOf[id], 44) + '</i>' + name; b.onclick = () => setOwnStatus(id); g.appendChild(b); }
+  const mm = radial.querySelector('#cpMood'); for (const id of Object.keys(MOOD)) { const b = document.createElement('button'); b.type = 'button'; b.className = c.mood === id ? 'on' : ''; b.innerHTML = '<i>' + iconImg(moodSym[id], 36) + '</i>' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[id]; b.onclick = () => setOwnMood(id); mm.appendChild(b); }
+  const x = document.createElement('button'); x.type = 'button'; x.innerHTML = '<i>✖</i>清除'; x.onclick = () => setOwnMood(''); mm.appendChild(x);
+  const ta = radial.querySelector('#cpMsg'), prev = radial.querySelector('#cpPrev'); ta.value = keepMsg != null ? keepMsg : (c.message || ''); const showPrev = () => { prev.textContent = ta.value.trim() || '（頭上沒有對話）'; prev.parentElement.classList.toggle('empty', !ta.value.trim()); }; ta.oninput = showPrev; showPrev();
+  radial.querySelector('#cpForm').onsubmit = e => { e.preventDefault(); setOwnMessage(ta.value.trim()); }; radial.querySelector('#cpClr').onclick = () => { ta.value = ''; setOwnMessage(''); };
+  radial.querySelector('#cpMusic').value = keepMusic; radial.querySelector('#cpMForm').onsubmit = e => { e.preventDefault(); setOwnMusic(radial.querySelector('#cpMusic').value); };
+  const mp = radial.querySelector('#cpMPlay'); if (mp) mp.onclick = () => toggleMusic(c); const ms = radial.querySelector('#cpMStop'); if (ms) ms.onclick = clearOwnMusic;
+  const file = radial.querySelector('#cpFile'); radial.querySelector('#cpPost').onclick = () => file.click(); file.onchange = () => { const f = file.files[0]; file.value = ''; if (f) postStory(f); };
+  radial.querySelectorAll('.cp-story .th').forEach(b => b.onclick = () => { radialClose(); openStory(c.name); }); radial.querySelectorAll('.cp-story .rm').forEach(b => b.onclick = () => removeStory(b.dataset.id));
+  radial.querySelector('#cpAuto').onclick = setOwnAuto; radial.querySelector('#cpGo').onclick = radialClose;
+  radial.querySelector('#cpDex').onclick = () => { radialClose(); $('bDex').click(); }; radial.querySelector('#cpHelp').onclick = () => { radialClose(); $('bHelp').click(); };
+  renderAdmin();
+}
+// 管理者工具：全員上班／下班、上下班設定、班長處罰（沿用 2D 版的動作；測試階段全面開放）
+function renderAdmin(){
+  const box = radial.querySelector('#cpAdmin'); if (!box) return;
+  const rows = [['dayStart', '上班開始'], ['lunchStart', '午休開始'], ['lunchEnd', '午休結束'], ['workEnd', '下班'], ['overtimeStart', '加班開始']], cfg = hoursCfg || {};
+  box.innerHTML = '<header><h3>管理者工具</h3><em>' + esc((player && player.name) || '') + '・測試階段全面開放</em></header><div class="cp-adm-grid">' +
+    '<div class="cp-card"><h4>全員上班／下班</h4><p class="cp-note">目前：<b>' + (hoursForce === 'work' ? '全員上班' : hoursForce === 'off' ? '全員下班' : '依時段自動') + '</b>。按一下切換，所有人的畫面一起改變。</p><div class="cp-chips"><button type="button" class="primary" id="adWork">' + (hoursForce === 'work' ? '切換成全員下班' : '切換成全員上班') + '</button></div></div>' +
+    '<div class="cp-card"><h4>上下班設定</h4><label class="cp-f"><input type="checkbox" id="fhOn"' + (cfg.enabled !== false ? ' checked' : '') + '> 套用上下班時段規則</label><label class="cp-f"><input type="checkbox" id="fhRooms"' + (cfg.meetingRooms !== false ? ' checked' : '') + '> 行事曆有會議時依會議室入座</label>' +
+      rows.map(r => '<label class="cp-f"><span>' + r[1] + '</span><input type="number" min="0" max="23" id="fh_' + r[0] + '" value="' + (cfg[r[0]] ?? '') + '"></label>').join('') + '<div class="cp-chips"><button type="button" class="primary" id="fhSave">儲存</button></div></div>' +
+    '<div class="cp-card"><h4>班長：處罰</h4><label class="cp-f col"><span>對象</span><select id="pnWho">' + NAMES.map(n => '<option>' + n + '</option>').join('') + '</select></label><label class="cp-f col"><span>原因（最多 30 字）</span><input type="text" id="pnWhy" maxlength="30" placeholder="例如：上班時間遲到"></label>' +
+      '<label class="cp-f col"><span>天數</span><select id="pnDays">' + [1, 2, 3, 5, 7, 14, 30].map(n => '<option value="' + n + '">' + n + ' 天</option>').join('') + '</select></label><div class="cp-chips"><button type="button" class="primary" id="pnGo">處罰</button><button type="button" id="pnOff">解除處罰</button></div></div></div>';
+  box.querySelector('#adWork').onclick = async () => { const mode = hoursForce === 'work' ? 'off' : 'work'; try { await adminCall('pixelOfficeAllWork', {mode}); hoursForce = mode; applyForce(); live.version = 0; showQuote('', mode === 'work' ? '已切換：全員上班' : '已切換：全員下班'); renderAdmin(); } catch (e) { showQuote('', '切換失敗：' + e.message); } };
+  box.querySelector('#fhSave').onclick = async () => { const body = {enabled:box.querySelector('#fhOn').checked, meetingRooms:box.querySelector('#fhRooms').checked}; rows.forEach(r => { body[r[0]] = Number(box.querySelector('#fh_' + r[0]).value); }); try { await adminCall('savePixelHours', body); hoursCfg = {...cfg, ...body}; showQuote('', '已儲存上下班時段'); } catch (e) { showQuote('', '儲存失敗：' + e.message); } };
+  const punish = async days => { const name = box.querySelector('#pnWho').value, reason = box.querySelector('#pnWhy').value.trim(); if (days && reason.length < 2) { showQuote('', '請先寫處罰原因（至少 2 個字）'); return; } try { await adminCall('pixelOfficePunish', {name, reason, days}); showQuote('', days ? '已處罰 ' + name + '：' + reason + '，' + days + ' 天' : '已解除 ' + name + ' 的處罰'); } catch (e) { showQuote('', '處罰失敗：' + e.message); } };
+  box.querySelector('#pnGo').onclick = () => punish(Number(box.querySelector('#pnDays').value) || 1); box.querySelector('#pnOff').onclick = () => punish(0);
+}
+async function loadHours(){ try { const r = await adminCall('getPixelHours'); hoursCfg = r.config || null; hoursForce = r.force || hoursForce; if (!radial.hidden) renderAdmin(); } catch (e) {} }
+function radialOpen(){ if (!player) return; radial.hidden = false; renderCharPage(); loadHours(); }
+function radialClose(){ radial.hidden = true; radial.innerHTML = ''; }
+function placeRadial(){}
+addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('sv').hidden) closeStory(); else if (!radial.hidden) radialClose(); } });
+radial.addEventListener('pointerdown', e => { if (e.target === radial) radialClose(); });
+
+// ───────── 人物頭上的介面：對話泡泡、音樂泡泡、心情圖示、限時動態氣泡；離席的人在座位上方顯示狀態牌 ─────────
+function updateTags(){
+  for (const c of Object.values(chars)) {
+    const away = c.status && AWAY.has(c.status) && c !== player && c.home, m = c.music, nStory = storiesOf(c.name).length;
+    let p = null, html = '';
+    if (away) { p = new THREE.Vector3(c.home.x, 1.7, c.home.z); html = '<div class="cui-tag">' + iconImg(symOf[c.status], 18) + esc(c.name + '（' + STATUS[c.status][0] + '）') + '</div>'; }
+    else if (c.holder.visible && (c.message || c.mood || m || nStory)) {
+      p = c.holder.position.clone(); p.y += 2.7;
+      const playing = musicPlaying.name === c.name && !musicPlaying.paused;
+      if (m) html += '<div class="cui-bub music"><button type="button" class="mplay" data-n="' + esc(c.name) + '">' + (playing ? '⏸' : '▶') + '</button><span class="mt"><i>♪ ' + esc(m.title || '音樂') + '</i></span></div>';
+      else if (c.message) html += '<div class="cui-bub">' + esc(c.message) + '</div>';
+      if (c.mood) html += '<img class="cui-mood' + (nStory ? ' l' : '') + ' ' + c.mood + '" alt="" src="' + (ICON[moodSym[c.mood]] || '') + '">';
+      if (nStory) html += '<button type="button" class="cui-story" data-n="' + esc(c.name) + '" title="查看 ' + esc(c.name) + ' 的動態"><img alt="" src="' + storyIconURL + '">' + (storyUnread(c.name) ? '<b></b>' : '') + '</button>';
+    }
+    if (!html || !p) { c.tag.style.display = 'none'; continue; }
+    p.project(camera); const vis = p.z < 1 && Math.abs(p.x) < 1.1 && Math.abs(p.y) < 1.1;
+    c.tag.style.display = vis ? 'block' : 'none'; if (c.tag.dataset.h !== html) { c.tag.innerHTML = html; c.tag.dataset.h = html; }
+    if (vis) c.tag.style.transform = 'translate(-50%,-100%) translate(' + ((p.x * .5 + .5) * innerWidth) + 'px,' + ((-p.y * .5 + .5) * innerHeight) + 'px)';
+  }
+}
+document.addEventListener('click', e => {
+  const play = e.target.closest('.mplay'), story = e.target.closest('.cui-story');
+  if (play) { const c = chars[play.dataset.n]; if (c) toggleMusic(c); }
+  if (story) openStory(story.dataset.n);
+});
+
+// ---- PokéBonk 風格介面：標題／選角、HUD、圖鑑、浮動文字 ----
+function setLoad(text, pct){ $('tText').textContent = text; if (pct != null) $('tFill').style.width = Math.round(pct * 100) + '%'; }
+function avatarURL(c){   // 取角色正面圖的頭肩部分當大頭貼
+  try { const im = c.tex.image, cw = im.height, cv = document.createElement('canvas'); cv.width = cv.height = 96; const g = cv.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(im, cw * .17, cw * .0, cw * .66, cw * .66, 0, 0, 96, 96); return cv.toDataURL(); } catch (e) { return ''; }
+}
+// 登入：沿用網站首頁登入後留下的身分（localStorage pixelViewerHandoff，24 小時內有效），依登入帳號操作人物；沒登入只能參觀
+const meName = () => handoff ? (NAMES.find(n => n.toLowerCase() === String(handoff.name).toLowerCase()) || null) : null;
+function showTitleCard(){ for (const c of Object.values(chars)) c.avatar = avatarURL(c); startGame(); }   // 不再有登入頁：載完直接進入（有網站登入身分就用該人物，否則預設 Machi）
+function updateTitleNet(){ const e = $('tNet'); if (e) e.textContent = live.ok ? '已連線到「凱曜設計部」伺服器，出勤狀態即時更新' : '目前離線：依時間規則模擬出勤狀態'; }
+function startGame(){
+  select(meName() || 'Machi');
+  $('title').classList.add('gone'); setTimeout(() => { $('title').style.display = 'none'; }, 450);
+}
+$('tGo').onclick = startGame; $('tGuest').onclick = startGame;
+// 圖鑑（本機記錄撿到過什麼）
+let dex = {d:[], n:[]}; try { const x = JSON.parse(localStorage.getItem('pixelDex') || 'null'); if (x && x.d && x.n) dex = x; } catch (e) {}
+function dexAdd(kind, k){ if (dex[kind].includes(k)) return false; dex[kind].push(k); try { localStorage.setItem('pixelDex', JSON.stringify(dex)); } catch (e) {} return true; }
+function renderDex(){
+  const body = $('dexBody'); body.innerHTML = '';
+  const sec = (title, ids, names, quotes, kind) => {
+    const h = document.createElement('div'); h.className = 'dex-sec'; h.textContent = title + '　' + dex[kind].length + '/' + ids.length; body.appendChild(h);
+    const g = document.createElement('div'); g.className = 'dex-grid';
+    ids.forEach((id, i) => { const cv = spriteCanvas(id), found = dex[kind].includes(i), d = document.createElement('div'); d.className = 'dex-it' + (found ? '' : ' unk');
+      d.innerHTML = '<img alt="" src="' + (cv ? cv.toDataURL() : '') + '">'; d.onclick = () => showQuote(found ? names[i] : '？？？', found ? quotes[i] : '還沒發現，到辦公室裡找找看'); g.appendChild(d); });
+    body.appendChild(g);
+  };
+  sec('地上的驚喜', DROP_IDS, ITEMS.map(x => x[1]), ITEMS.map(x => x[2]), 'd');
+  sec('會議室遺落物', NOTE_IDS, NOTES.map(x => x[0]), NOTES.map(x => x[1]), 'n');
+}
+$('bDex').onclick = () => { renderDex(); $('dexPanel').hidden = false; $('helpPanel').hidden = true; };
+$('bHelp').onclick = () => { $('helpPanel').hidden = false; $('dexPanel').hidden = true; };
+document.querySelectorAll('.px-x').forEach(b => b.onclick = () => { $('dexPanel').hidden = true; $('helpPanel').hidden = true; });
+$('bWheel').onclick = () => { if (!player) { showQuote('', '請先登入才能操作人物'); return; } if (radial.hidden) radialOpen(); else radialClose(); };
+// 浮動文字（撿到東西時 +1 往上飄）
+function floatAt(x, y, z, text){
+  const v = new THREE.Vector3(x, y, z).project(camera), e = document.createElement('div'); e.className = 'ftx'; e.textContent = text;
+  e.style.left = ((v.x * .5 + .5) * innerWidth) + 'px'; e.style.top = ((-v.y * .5 + .5) * innerHeight) + 'px'; e.style.transform = 'translate(-50%,-50%)'; document.body.appendChild(e); setTimeout(() => e.remove(), 1400);
+}
+// HUD 更新
+const fmtTime = new Intl.DateTimeFormat('zh-TW', {timeZone:'Asia/Taipei', hour:'2-digit', minute:'2-digit', hour12:false, weekday:'short'});
+function updateHud(){
+  const c = player;
+  if (!c) { $('pName').textContent = '訪客'; $('pSt').textContent = '👀 參觀中（登入後才能操作人物）'; $('pAv').innerHTML = ''; $('pExp').style.width = '0%'; $('pLv').textContent = ''; $('pClock').textContent = '🕒 ' + fmtTime.format(new Date()).replace(/^(\S+)\s+(\S+)$/, '$2 $1') + '（台北）'; updateTitleNet(); return; }
+  const st = STATUS[c.status] || STATUS.present, total = stat.found + stat.notes + stat.flush, lv = 1 + Math.floor(total / 5);
+  if ($('pName').textContent !== c.name) { $('pName').textContent = c.name; if (c.avatar) $('pAv').innerHTML = '<img alt="" src="' + c.avatar + '">'; }
+  $('pSt').innerHTML = iconImg(symOf[c.status] || 'person', 18) + ' ' + st[0] + (c.mood ? '　' + iconImg(moodSym[c.mood], 16) : '');
+  $('pExp').style.width = ((total % 5) / 5 * 100) + '%'; $('pLv').textContent = 'Lv.' + lv + '　圖鑑 ' + (dex.d.length + dex.n.length) + '/' + (DROP_IDS.length + NOTE_IDS.length);
+  $('pClock').textContent = '🕒 ' + fmtTime.format(new Date()).replace(/^(\S+)\s+(\S+)$/, '$2 $1') + '（台北）'; updateTitleNet();
+}
+setInterval(updateHud, 500);
+
+function tick(){
+  const dt = Math.min(clock.getDelta(), .05);
+  if (player) {
+    const dir = new THREE.Vector3(
+      (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0) + joy.x,
+      0,
+      (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0) + joy.y);
+    const run = keys.ShiftLeft || keys.ShiftRight || Math.hypot(joy.x, joy.y) > .85;
+    if (dir.lengthSq() > .01) target = null;
+    else if (target) { dir.copy(target).sub(player.holder.position); dir.y = 0; if (dir.length() < .2) target = null; }
+    if (!radial.hidden || !$('sv').hidden) dir.set(0, 0, 0);   // 角色頁面開著時人物不跟著走
+    if (player.sitting && dir.lengthSq() > 1e-4) standUp(player);
+    if (!player.sitting) moveChar(player, dir, run ? 5 : 2.4, dt);
+  }
+  for (const c of Object.values(chars)) {
+    if (c.wander && !c.sitting) {                                   // 其他角色隨機閒晃
+      c.t -= dt;
+      if (c.t < 0) { c.t = 1.5 + Math.random() * 4; const a = Math.random() * 6.283; c.dir.set(Math.random() < .4 ? 0 : Math.cos(a), 0, Math.sin(a)); }
+      moveChar(c, c.dir.clone(), 1.6, dt);
+    }
+    updateSprite(c, dt);
+    if (c.hopAt) { const k = (performance.now() - c.hopAt) / 600; if (k >= 1) { c.hopAt = 0; c.holder.position.y = 0; } else c.holder.position.y = Math.abs(Math.sin(k * Math.PI * 2)) * .6 * (1 - k); }
+  }
+  if (player) {
+    const p = player.holder.position;
+    camPos.lerp(new THREE.Vector3(p.x, 10.9, p.z + 12.2), 1 - Math.pow(.001, dt));
+    camera.position.copy(camPos); look.lerp(p, 1 - Math.pow(.001, dt)); camera.lookAt(look.x, 1, look.z);
+  } else { camPos.lerp(new THREE.Vector3(18, 15, 36), 1 - Math.pow(.001, dt)); camera.position.copy(camPos); look.lerp(new THREE.Vector3(18, 0, 22), 1 - Math.pow(.001, dt)); camera.lookAt(look); }   // 沒登入：固定的辦公室全景
+  updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay(); updateTags(); placeRadial();
+  renderFrame();
+  requestAnimationFrame(tick);
+}
+tick();
+</script></body></html>
