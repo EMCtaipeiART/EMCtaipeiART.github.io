@@ -556,7 +556,7 @@
       watchUniLoading();loadAllWorkBtn();fitUniFrame();[120,500,1200,2500].forEach(t=>setTimeout(()=>{try{fitUniFrame()}catch(err){}},t));{const f=$('uniFrame');if(f)f.addEventListener('load',()=>{try{fitUniFrame()}catch(err){}});}
     }
     /* 電腦版：整頁鎖定在一個畫面——iframe 高度＝視窗剩下的高度，標題與右上按鈕、右下＋／－一直看得到；場景用滑鼠按住拖曳平移，不靠滾輪 */
-    function fitUniFrame(){const fr=$('uniFrame');if(!fr||!matchMedia('(min-width:721px)').matches)return;window.scrollTo(0,0);fr.style.aspectRatio='auto';fr.style.minHeight='0';fr.style.height=Math.max(320,window.innerHeight-fr.getBoundingClientRect().top-8)+'px';}
+    function fitUniFrame(){const fr=$('uniFrame');if(!fr||!matchMedia('(min-width:721px)').matches)return;window.scrollTo(0,0);fr.style.aspectRatio='auto';fr.style.minHeight='0';fr.style.height=Math.max(320,window.innerHeight-fr.getBoundingClientRect().top)+'px';}
     window.addEventListener('resize',()=>{try{fitUniFrame()}catch(err){}});
     /* 進入多元宇宙的過場：蓋住還在載入的像素辦公室，場景準備好（或最久 10 秒）就淡出 */
     function watchUniLoading(){

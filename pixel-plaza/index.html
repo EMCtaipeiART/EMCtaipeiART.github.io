@@ -286,7 +286,7 @@ button{font-family:inherit}
 /* PokéBonk 式右上按鈕：高 44px 的膠囊、漸層底、白字粗體、左側小圖示 */
 .hp-top{gap:10px!important;align-items:center}
 .hp-top button{height:44px;padding:0 20px 0 12px!important;border:0!important;border-radius:999px!important;font:700 16px/1 'Fredoka','Noto Sans TC',sans-serif!important;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.28);display:flex;align-items:center;gap:8px;box-shadow:inset 0 2px 0 rgba(255,255,255,.4),inset 0 -3px 0 rgba(0,0,0,.18),0 6px 14px rgba(0,0,0,.28)!important;backdrop-filter:none!important}
-.hp-top button i{font-style:normal;width:30px;height:30px;border-radius:10px;background:rgba(255,255,255,.22);display:grid;place-items:center;font-size:18px;text-shadow:none}
+.hp-top button i{font-style:normal;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.22);display:grid;place-items:center;font-size:18px;text-shadow:none}
 .hp-top .pk-orange{background:linear-gradient(90deg,#ff5f7a,#ffb23f)!important}
 .hp-top .pk-green{background:linear-gradient(90deg,#27b85c,#7be07a)!important}
 .hp-top .pk-purple{background:linear-gradient(90deg,#7b4de3,#3f8ef5)!important}
@@ -1684,9 +1684,8 @@ function avatarURL(c){   // 取角色正面圖的頭肩部分當大頭貼
 const meName = () => handoff ? (NAMES.find(n => n.toLowerCase() === String(handoff.name).toLowerCase()) || null) : null;
 function showTitleCard(){
   for (const c of Object.values(chars)) c.avatar = avatarURL(c);
-  if (meName()) { startGame(); return; }
-  $('tLoad').style.display = 'none'; $('tCard').hidden = false; $('tGo').hidden = true; $('tGuest').hidden = true; $('tLogin').hidden = false;   // 沒登入：不能進入，只提示登入（人物與帳號綁定）
-  $('tMe').textContent = handoff ? '這個帳號（' + handoff.name + '）沒有對應的設計部人物，無法進入元宇宙。' : '請先登入網站，登入後會自動綁定你的人物。';
+  startGame();   // 已登入就綁定自己的人物；沒登入也能進來參觀，只是不能操作人物
+  if (!meName()) setTimeout(() => showQuote('', handoff ? '這個帳號沒有對應的設計部人物，只能參觀' : '目前是參觀模式：登入後會綁定你的人物，才能操作'), 700);
 }   // 不再有登入頁：載完直接進入（有網站登入身分就用該人物，否則預設 Machi）
 function updateTitleNet(){ const e = $('tNet'); if (e) e.textContent = live.ok ? '已連線到「凱曜設計部」伺服器，出勤狀態即時更新' : '目前離線：依時間規則模擬出勤狀態'; }
 let adminHome = false;   // 登入身分是 Machi／管理者：可以切換、操控任何人（就算被切成離開辦公室而看不到人物）
@@ -1695,7 +1694,7 @@ function startGame(){
   $('bClose').onclick = () => { try { parent.postMessage({type:'pixelUniverseClose'}, location.origin); } catch (e) {} };
   adminHome = Boolean(handoff && handoff.monitor); $('bPeople').hidden = !adminHome;   // 只有管理者帳號能切換、操控其他人物
   $('bPeople').onclick = () => { $('drawer').hidden = !$('drawer').hidden; }; $('roster').addEventListener('click', e => { if (e.target.closest('button')) $('drawer').hidden = true; });
-  select(meName());
+  if (meName()) select(meName());
   $('title').classList.add('gone'); setTimeout(() => { $('title').style.display = 'none'; }, 450);
 }
 $('tGo').onclick = startGame; $('tGuest').onclick = startGame;

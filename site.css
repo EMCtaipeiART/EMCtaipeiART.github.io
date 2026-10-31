@@ -730,7 +730,7 @@
     /* 凱躍多元宇宙（舊版像素辦公室） */
     .uni-page{max-width:none;margin:0 auto}.uni-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.uni-acts .btn{text-decoration:none;display:inline-flex;align-items:center}
     .stage-wrap.uni{max-width:none;padding:0}.uni-page{width:100%}.uni-page .page-top{width:min(720px,100%);margin:0 auto;padding:14px 0 8px;box-sizing:border-box;justify-content:center;text-align:center}.uni-page .page-top>div:first-child{text-align:center}.uni-page.is-edit .page-top{width:calc(100% - 48px)}.uni-page.is-edit .uni-frame{width:100%;aspect-ratio:auto;height:calc(100vh - 150px);min-height:620px}
-    @media (min-width:721px){.uni-page.is-edit .page-top{position:relative}.uni-page.is-edit .uni-acts{position:absolute;right:0;top:14px}.uni-page.is-edit .uni-wrap{margin-top:12px}}
+    @media (min-width:721px){.uni-page.is-edit .page-top{position:relative}.uni-page.is-edit .uni-acts{position:absolute;right:0;top:14px}.uni-page.is-edit .uni-wrap{margin-top:0}}
     @media (max-width:720px){.uni-page.is-edit .uni-frame{height:calc(100vh - 200px);min-height:600px}.uni-page .page-top{padding:10px 12px 6px;box-sizing:border-box}.uni-page .page-sub{font-size:12.5px}}
     html[data-theme="dark"] .tl-scale{background:#222a27}
     html[data-theme="dark"] .issue-status{filter:brightness(.82)}
