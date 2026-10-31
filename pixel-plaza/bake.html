@@ -2,7 +2,8 @@
 <script type="module">
 // 12 面向像素圖集（每 30° 一格）：0°/90°/180° 用原始手繪三視圖，270° 為側面鏡像，
 // 其餘 8 個中間角度使用 ai-views/<名稱>/view_XXX.png（由 Codex 依三視圖生成）。
-const ANGLES = 12, HV = 112, CELL = 120, OUT = 60;
+const HD = /[?&]hd=1/.test(location.search);   // 高解析版：不降成低點陣、不降色、不二值化邊緣
+const ANGLES = 12, HV = HD ? 224 : 112, CELL = HD ? 240 : 120, OUT = HD ? 240 : 60;
 const img = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('load ' + src)); i.src = src; });
 const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 
@@ -34,7 +35,9 @@ function place(src, big){
   return t;
 }
 function toCell(big){
-  const bd = big.getContext('2d', {willReadFrequently:true}).getImageData(0, 0, CELL, CELL).data, cell = new Uint8ClampedArray(OUT * OUT * 4);
+  const bd = big.getContext('2d', {willReadFrequently:true}).getImageData(0, 0, CELL, CELL).data;
+  if (HD) return new Uint8ClampedArray(bd);
+  const cell = new Uint8ClampedArray(OUT * OUT * 4);
   for (let y = 0; y < OUT; y++) for (let x = 0; x < OUT; x++) {
     let r = 0, g = 0, b = 0, a = 0;
     for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) { const o = ((y * 2 + dy) * CELL + x * 2 + dx) * 4, w = bd[o + 3]; r += bd[o] * w; g += bd[o + 1] * w; b += bd[o + 2] * w; a += w; }
@@ -53,8 +56,8 @@ window.bake = async (prefix, name) => {
     const src = a === 0 ? clean(await ref('front')) : a === 90 ? clean(await ref('side')) : a === 180 ? clean(await ref('back'))
       : a === 270 ? clean(await ref('side'), true) : clean(await ai(a));
     const cell = toCell(place(src));
-    const res = new Uint8ClampedArray(cell);   // 補 1px 深色外框讓邊緣更俐落
-    for (let y = 0; y < OUT; y++) for (let x = 0; x < OUT; x++) if (!cell[(y * OUT + x) * 4 + 3] &&
+    const res = new Uint8ClampedArray(cell);   // 補 1px 深色外框讓邊緣更俐落（高解析版不補）
+    if (!HD) for (let y = 0; y < OUT; y++) for (let x = 0; x < OUT; x++) if (!cell[(y * OUT + x) * 4 + 3] &&
       [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => x + dx >= 0 && y + dy >= 0 && x + dx < OUT && y + dy < OUT && cell[((y + dy) * OUT + x + dx) * 4 + 3])) {
       const o = (y * OUT + x) * 4; res[o] = 36; res[o + 1] = 28; res[o + 2] = 40; res[o + 3] = 255;
     }

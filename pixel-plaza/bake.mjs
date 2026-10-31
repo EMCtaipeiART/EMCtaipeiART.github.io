@@ -5,13 +5,14 @@ import fs from 'node:fs';
 const port = process.env.PORT || 4190;
 const only = process.argv.slice(2);
 const people = [['designer','Amber'],['designer','Anna'],['designer','Leona'],['designer','Machi'],['designer','Noise'],['staff','余采馨'],['staff','吳冠賢'],['staff','廖秦葦'],['staff','李明庭'],['staff','鄭筱舢'],['staff','黎子瑄']].filter(([, n]) => !only.length || only.includes(n));
-fs.mkdirSync('pixel-plaza/sprites', {recursive:true});
+const hd = !!process.env.HD, dir = hd ? 'pixel-plaza/sprites-hd' : 'pixel-plaza/sprites';
+fs.mkdirSync(dir, {recursive:true});
 const b = await puppeteer.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe', headless:true, args:['--no-sandbox']});
 try {
   const p = await b.newPage(); p.on('pageerror', e => console.log('pageerror', e.message));
-  await p.goto(`http://127.0.0.1:${port}/pixel-plaza/bake.html`); await p.waitForFunction('window.ready', {timeout:20000});
+  await p.goto(`http://127.0.0.1:${port}/pixel-plaza/bake.html${hd ? '?hd=1' : ''}`); await p.waitForFunction('window.ready', {timeout:20000});
   for (const [pre, n] of people) {
     const url = await p.evaluate((a, n) => window.bake(a, n), pre, n);
-    fs.writeFileSync(`pixel-plaza/sprites/${n}.png`, Buffer.from(url.split(',')[1], 'base64')); console.log('baked', n);
+    fs.writeFileSync(`${dir}/${n}.png`, Buffer.from(url.split(',')[1], 'base64')); console.log('baked', n);
   }
 } finally { await b.close(); }
