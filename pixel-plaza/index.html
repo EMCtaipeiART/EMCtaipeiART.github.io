@@ -283,10 +283,14 @@ button{font-family:inherit}
 .cp-story .th{width:48px!important;height:62px!important}
 @media (max-width:640px){.cp-cols{grid-template-columns:1fr!important}}
 #net{display:none!important}
+.cp-grid.mood{grid-template-columns:1fr 1fr!important;gap:8px!important}
+.cp-grid.mood button{padding:12px 6px!important;font-size:15px!important;border-radius:14px!important}
+.cp-grid.mood button i img{width:44px!important;height:44px!important}
+.cp-grid.mood button.clr{grid-column:1/-1;padding:9px!important;font-size:14px!important}
 #swheel{position:fixed;left:0;top:0;z-index:9;width:0;height:0;pointer-events:none}#swheel[hidden]{display:none}
-.sw-b{position:absolute;left:0;top:0;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;border:2.5px solid var(--ink);background:#fff;color:var(--ink);display:grid;place-items:center;align-content:center;gap:0;padding:0;pointer-events:auto;font:700 10px/1 'Fredoka','Noto Sans TC',sans-serif;box-shadow:0 4px 0 rgba(11,61,30,.4);transform:translate(0,0) scale(.2);opacity:0;transition:transform .28s cubic-bezier(.3,1.5,.5,1) var(--d),opacity .2s var(--d)}
+.sw-b{position:absolute;left:0;top:0;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;border:2.5px solid var(--ink);background:#fff;color:var(--ink);display:grid;place-items:center;align-content:center;gap:0;padding:0;pointer-events:auto;font:700 9px/1 'Fredoka','Noto Sans TC',sans-serif;box-shadow:0 3px 0 rgba(11,61,30,.4);transform:translate(0,0) scale(.2);opacity:0;transition:transform .28s cubic-bezier(.3,1.5,.5,1) var(--d),opacity .2s var(--d)}
 #swheel.open .sw-b{transform:translate(var(--x),var(--y)) scale(1);opacity:1}
-.sw-b img{width:30px;height:30px}.sw-b b{margin-top:-1px}.sw-b:hover{background:#e8fbe9;border-color:var(--c2)}.sw-b.on{background:var(--yellow)}
+.sw-b img{width:24px;height:24px}.sw-b b{margin-top:-1px}.sw-b:hover{background:#e8fbe9;border-color:var(--c2)}.sw-b.on{background:var(--yellow)}
 button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .th{cursor:pointer}
 #fridgeP{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:13;width:min(560px,94vw);padding:10px 12px;border-radius:18px;border:2px solid var(--line);background:var(--glass);color:#fff;font-family:'Fredoka','Noto Sans TC',sans-serif;backdrop-filter:blur(8px);box-shadow:0 18px 40px rgba(0,0,0,.4)}#fridgeP[hidden]{display:none}
 .fr-head{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:16px;margin-bottom:6px}.fr-x{height:28px;padding:0 14px;border-radius:999px;border:2px solid var(--line);background:rgba(0,0,0,.35);color:#fff;font:700 12px 'Fredoka','Noto Sans TC',sans-serif}
@@ -938,7 +942,7 @@ function seatIn(c, pred){
   const st = rnd(free); c.holder.position.set(st.x, 0, st.z); return sitDown(c);
 }
 function applyStatus(c, force){
-  const st = STATUS[c.status] ? c.status : 'present';
+  const st = STATUS[c.status] ? c.status : 'present'; stationFx(c, 0);   // 先把座位／桌面還原，人物才坐得下去
   c.btn.textContent = c.name + ' ' + STATUS[st][1];
   if (c === player && !force) return;               // 正在操控的角色不被即時資料搬動（自己改狀態時除外）
   const key = st === 'meeting' ? st + ':' + (c.meetingRoom || '') : st;
@@ -963,7 +967,7 @@ async function pollOnce(){
     if (!d.unchanged) {
       live.version = d.version || live.version;
       if (d.hours) { const f = d.hours.force === 'work' || d.hours.force === 'off' ? d.hours.force : ''; if (f !== hoursForce) { hoursForce = f; for (const c of Object.values(chars)) c.appliedStatus = null; } }
-      for (const e of d.people || []) { const c = chars[e.name]; if (!c) continue; c.rawStatus = typeof e.status === 'string' ? e.status : 'present'; c.status = forcedStatus(c.rawStatus); c.mood = e.mood || ''; c.message = e.message || ''; c.statusSource = e.statusSource || ''; c.meetingRoom = typeof e.meetingRoom === 'string' ? e.meetingRoom : ''; c.music = e.music && e.music.url ? {url:e.music.url, title:e.music.title || '', provider:e.music.provider || ''} : null; applyStatus(c); }
+      for (const e of d.people || []) { const c = chars[e.name]; if (!c) continue; const rs = typeof e.status === 'string' ? e.status : 'present'; if (c.autoPendingUntil > Date.now() && rs !== 'present') { c.rawStatus = c.rawStatus || 'present'; } else { c.autoPendingUntil = 0; c.rawStatus = rs; } c.status = forcedStatus(c.rawStatus); c.mood = e.mood || ''; c.message = e.message || ''; c.statusSource = e.statusSource || ''; c.meetingRoom = typeof e.meetingRoom === 'string' ? e.meetingRoom : ''; c.music = e.music && e.music.url ? {url:e.music.url, title:e.music.title || '', provider:e.music.provider || ''} : null; applyStatus(c); }
       if (d.stories) applyStories(d.stories);
     }
   } catch (err) {
@@ -1284,7 +1288,12 @@ function moodFx(c, m){   // 設定心情時：頭上的心情圖示彈出、人�
 async function setOwnStatus(st){ const c = pageChar || player; if (!c || !(await writeState(c, {status:st}))) return; c.rawStatus = st; c.status = forcedStatus(st); c.appliedStatus = null; applyStatus(c, true); showQuote('', c.name + '：' + STATUS[st][0]); radialClose(); }
 async function setOwnMood(m){ const c = pageChar || player; if (!c || !(await writeState(c, {mood:m}))) return; c.mood = m; if (m) moodFx(c, m); showQuote('', m ? c.name + '的心情：' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[m] : '已清除心情'); radialClose(); }
 async function setOwnMessage(t){ const c = pageChar || player; if (!c || !(await writeState(c, {message:t}))) return; c.message = t; showQuote('', t ? '已更新留言' : '已清除留言'); radialClose(); }
-async function setOwnAuto(){ const c = pageChar || player; if (!c || !(await writeState(c, {status:'auto'}))) return; showQuote('', '已交還給電腦自動判斷，幾秒內會更新'); live.version = 0; radialClose(); }
+async function setOwnAuto(){
+  const c = pageChar || player; if (!c) return;
+  c.rawStatus = 'present'; c.status = forcedStatus('present'); c.appliedStatus = null; applyStatus(c, true); c.autoPendingUntil = Date.now() + 25000;   // 先回座位；電腦在背景判斷，結果出來前不會把人物收掉
+  showQuote('', c.name + '：在座'); radialClose();
+  writeState(c, {status:'auto'}).then(ok => { if (ok) live.version = 0; }); setTimeout(() => { live.version = 0; }, 26000);
+}
 const forcedStatus = raw => hoursForce === 'off' ? 'offwork' : (hoursForce === 'work' && raw === 'offwork' ? 'present' : raw);   // 管理者的「全員上班／下班」
 function applyForce(){ for (const c of Object.values(chars)) { c.status = forcedStatus(c.rawStatus || c.status || 'present'); c.appliedStatus = null; applyStatus(c, c === player); } }
 const STATUS_DESC = {present:'在座工作中', overtime:'加班中（晚上 7 點後的在座）', lunch:'用餐中', meeting:'開會中', leave:'休假中', offwork:'已下班', toilet:'去廁所', abroad:'出國中', out:'公出工作中'};
@@ -1429,10 +1438,8 @@ function renderCharPage(){
       </div>
     </div>
     <div class="cp-cols">
-      <section class="cp-panel p1"><header><h3>狀態</h3></header>
-        <div class="cp-cur"><i>${iconImg(symOf[c.status] || 'person', 52)}</i><div><b>${st[0]}</b><small>${STATUS_DESC[c.status] || ''}</small></div></div>
-        <p class="cp-note">點人物會展開狀態輪盤；選「在座」就交還給電腦自動判斷。</p>
-        <h4>心情</h4><div class="cp-grid m" id="cpMood"></div>
+      <section class="cp-panel p1"><header><h3>心情</h3></header>
+        <div class="cp-grid mood" id="cpMood"></div>
       </section>
       <div class="cp-stack">
         <section class="cp-panel p2"><header><h3>想說的話</h3></header>
@@ -1453,8 +1460,8 @@ function renderCharPage(){
     </div>
     <details class="cp-fold"><summary>管理者工具</summary><section class="cp-admin" id="cpAdmin"></section></details>
   </div>`;
-  const mm = radial.querySelector('#cpMood'); for (const id of Object.keys(MOOD)) { const b = document.createElement('button'); b.type = 'button'; b.className = c.mood === id ? 'on' : ''; b.innerHTML = '<i>' + iconImg(moodSym[id], 36) + '</i>' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[id]; b.onclick = () => setOwnMood(id); mm.appendChild(b); }
-  const x = document.createElement('button'); x.type = 'button'; x.innerHTML = '<i>✖</i>清除'; x.onclick = () => setOwnMood(''); mm.appendChild(x);
+  const mm = radial.querySelector('#cpMood'); for (const id of Object.keys(MOOD)) { const b = document.createElement('button'); b.type = 'button'; b.className = c.mood === id ? 'on' : ''; b.innerHTML = '<i>' + iconImg(moodSym[id], 44) + '</i>' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[id]; b.onclick = () => setOwnMood(id); mm.appendChild(b); }
+  const x = document.createElement('button'); x.type = 'button'; x.className = 'clr'; x.innerHTML = '清除心情'; x.onclick = () => setOwnMood(''); mm.appendChild(x);
   const ta = radial.querySelector('#cpMsg'); ta.value = keepMsg != null ? keepMsg : (c.message || ''); 
   radial.querySelector('#cpForm').onsubmit = e => { e.preventDefault(); setOwnMessage(ta.value.trim()); }; radial.querySelector('#cpClr').onclick = () => { ta.value = ''; setOwnMessage(''); };
   radial.querySelector('#cpMusic').value = keepMusic; radial.querySelector('#cpMForm').onsubmit = e => { e.preventDefault(); setOwnMusic(radial.querySelector('#cpMusic').value); };
@@ -1492,16 +1499,16 @@ const wheel = document.createElement('div'); wheel.id = 'swheel'; wheel.hidden =
 let wheelChar = null;
 function wheelOpen(c){
   if (!c || c !== player) return; wheelChar = c; wheel.hidden = false; wheel.classList.remove('open');
-  const ids = Object.keys(STATUS), R = 86;
-  wheel.innerHTML = ids.map((id, i) => { const a = -Math.PI / 2 + i * Math.PI * 2 / ids.length, x = Math.cos(a) * R, y = Math.sin(a) * R;
-    return '<button type="button" class="sw-b' + (c.status === id ? ' on' : '') + '" data-id="' + id + '" style="--x:' + x.toFixed(1) + 'px;--y:' + y.toFixed(1) + 'px;--d:' + (i * 24) + 'ms">' + iconImg(symOf[id], 30) + '<b>' + (id === 'present' ? '在座' : STATUS[id][0]) + '</b></button>'; }).join('');
+  const ids = Object.keys(STATUS), R = 118;
+  wheel.innerHTML = ids.map((id, i) => { const a = (-200 + i * 220 / (ids.length - 1)) * Math.PI / 180, x = Math.cos(a) * R, y = Math.sin(a) * R;   // 只在頭頂展開成一把扇形，不擋住人物身體
+    return '<button type="button" class="sw-b' + (c.status === id ? ' on' : '') + '" data-id="' + id + '" style="--x:' + x.toFixed(1) + 'px;--y:' + y.toFixed(1) + 'px;--d:' + (i * 24) + 'ms">' + iconImg(symOf[id], 24) + '<b>' + (id === 'present' ? '在座' : STATUS[id][0]) + '</b></button>'; }).join('');
   wheel.querySelectorAll('.sw-b').forEach(b => b.onclick = () => { const id = b.dataset.id; wheelClose(); if (id === 'present') setOwnAuto(); else setOwnStatus(id); });
   requestAnimationFrame(() => requestAnimationFrame(() => wheel.classList.add('open')));
 }
 function wheelClose(){ wheel.hidden = true; wheel.classList.remove('open'); wheelChar = null; }
 function updateWheel(){
   if (wheel.hidden || !wheelChar) return;
-  const p = wheelChar.holder.position.clone(); p.y = wheelChar.holder.visible ? 1.1 : 1.3; p.project(camera);
+  const p = wheelChar.holder.position.clone(); p.y = wheelChar.holder.visible ? 2.2 : 1.6; p.project(camera);
   wheel.style.transform = 'translate(' + ((p.x * .5 + .5) * innerWidth) + 'px,' + ((-p.y * .5 + .5) * innerHeight) + 'px)';
 }
 let hoverChar = null, clickChar = null, clickUntil = 0;
