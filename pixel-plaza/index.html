@@ -90,7 +90,7 @@ for (let i = 0; i < 26; i++) {
 const chars = {};   // name -> {holder, sprite, tex, ...}
 const roster = document.getElementById('roster');
 let player = null, target = null;
-const ANGLES = 16, ROWS = 9, WALK = 8, CELL_W = 64, CELL_H = 80, WORLD_H = 2.05;   // 圖集：16 方向 × (待機 + 8 格走路)
+const ANGLES = 12, ROWS = 1, CELL_W = 64, CELL_H = 80, WORLD_H = 2.1;   // 圖集：由三視圖合成的 12 個面向（每 30°）
 const loadTex = src => new Promise((res, rej) => new THREE.TextureLoader().load(src, t => {
   t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; t.colorSpace = THREE.SRGBColorSpace;
   t.repeat.set(1 / ANGLES, 1 / ROWS); res(t);
@@ -124,15 +124,17 @@ Promise.all(NAMES.map((n, i) => addChar(n, i).then(() => { document.getElementBy
 
 const _cam = new THREE.Vector3();
 function updateSprite(c, dt){
-  // 依角色朝向與鏡頭的相對角度，挑選 16 方向中最接近的一格，並播放走路影格
+  // 依角色朝向與鏡頭的相對角度，挑選 12 個面向中最接近的一格
   c.holder.getWorldPosition(_cam); _cam.subVectors(camera.position, _cam);
   const toCam = Math.atan2(_cam.x, _cam.z);
   const rel = Math.atan2(Math.sin(c.face - toCam), Math.cos(c.face - toCam));   // 0 = 面向鏡頭
   const col = (Math.round(rel / (Math.PI * 2) * ANGLES) + ANGLES) % ANGLES;
-  c.phase += dt * (c.moving > 3.5 ? 14 : 8);
-  const row = c.moving > 0 ? 1 + Math.floor(c.phase) % WALK : 0;
-  c.tex.offset.set(col / ANGLES, 1 - (row + 1) / ROWS);
+  c.tex.offset.set(col / ANGLES, 0);
   c.sprite.rotation.y = toCam;                                      // 圓柱形 billboard
+  c.phase += dt * (c.moving > 3.5 ? 16 : 10) * (c.moving > 0 ? 1 : 0);   // 沒有走路影格，以彈跳加搖擺表現
+  const sw = Math.sin(c.phase);
+  c.sprite.position.y = c.moving > 0 ? Math.abs(sw) * (c.moving > 3.5 ? .2 : .1) : 0;
+  c.sprite.rotation.z = c.moving > 0 ? sw * .07 : 0;
 }
 
 // ---------- 輸入 ----------

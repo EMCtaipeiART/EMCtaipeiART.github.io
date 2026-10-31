@@ -1,49 +1,49 @@
 <!doctype html><meta charset="utf-8"><title>bake</title>
-<script type="importmap">{"imports":{"three":"../character-studio/vendor/three.module.js"}}</script>
 <script type="module">
-import * as THREE from 'three';
-import {GLTFLoader} from '../character-studio/vendor/GLTFLoader.js';
-const ANGLES = 16, WALK = 8, W = 64, H = 80, S = 2;
-const loader = new GLTFLoader();
-const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true});
-renderer.setSize(W * S, H * S, false); renderer.setClearColor(0, 0);
-const scene = new THREE.Scene();
-scene.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 1.8));
-const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(2, 5, 6); scene.add(key);
-const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, .1, 50);
-const out = document.createElement('canvas'); out.width = W * ANGLES; out.height = H * (1 + WALK);
-const og = out.getContext('2d', {willReadFrequently:true});
-const tmp = document.createElement('canvas'); tmp.width = W; tmp.height = H;
-const tg = tmp.getContext('2d', {willReadFrequently:true}); tg.imageSmoothingQuality = 'high';
+// 由手繪三視圖（正／側／背）合成 12 個面向視角的像素圖集（每 30° 一格）。
+// 0°=正面，90°=側面（面向右），180°=背面，270°=側面鏡像；其餘視角由相鄰兩張圖形變混合而成。
+const ANGLES = 12, W = 64, H = 80;
+const img = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 
-window.bake = async name => {
-  const gltf = await loader.loadAsync(`../character-studio/models/EMC_${name}_prototype.glb`);
-  const root = gltf.scene, holder = new THREE.Group(); holder.add(root); scene.add(holder);
-  const mixer = new THREE.AnimationMixer(root);
-  const clip = n => gltf.animations.find(c => c.name.toLowerCase() === n);
-  const idle = mixer.clipAction(clip('idle')), walk = mixer.clipAction(clip('walk'));
-  idle.play(); mixer.setTime(0);
-  const bb = new THREE.Box3().setFromObject(root), h = bb.max.y - bb.min.y;
-  const view = h * 1.12, el = 0.42;              // 視角：略微俯視
-  cam.left = -view * W / H / 2; cam.right = view * W / H / 2; cam.top = view / 2 + h * .05; cam.bottom = -view / 2 + h * .05; cam.updateProjectionMatrix();
-  const cy = bb.min.y + h / 2;
-  cam.position.set(0, cy + Math.sin(el) * 10, Math.cos(el) * 10); cam.lookAt(0, cy, 0);
-  for (let row = 0; row <= WALK; row++) {
-    if (row === 0) { walk.stop(); idle.play(); mixer.setTime(0); }
-    else { idle.stop(); walk.play(); mixer.setTime((row - 1) / WALK * walk.getClip().duration); }
-    for (let k = 0; k < ANGLES; k++) {
-      holder.rotation.y = k / ANGLES * Math.PI * 2;
-      renderer.render(scene, cam);
-      tg.clearRect(0, 0, W, H); tg.drawImage(renderer.domElement, 0, 0, W, H);
-      const d = tg.getImageData(0, 0, W, H), p = d.data;
-      for (let i = 0; i < p.length; i += 4) {
-        p[i + 3] = p[i + 3] > 120 ? 255 : 0;
-        for (let c = 0; c < 3; c++) p[i + c] = Math.min(255, Math.round(p[i + c] / 20) * 20);
-      }
-      og.putImageData(d, k * W, row * H);
+// 裁到不透明範圍、統一高度、腳底對齊後放進 W×H 畫布（腳在底部、水平置中）
+function norm(im, scale){
+  const c = mk(im.width, im.height), g = c.getContext('2d'); g.drawImage(im, 0, 0);
+  const d = g.getImageData(0, 0, c.width, c.height).data; let x0 = c.width, x1 = 0, y0 = c.height, y1 = 0;
+  for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) if (d[(y * c.width + x) * 4 + 3] > 40) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  return {c, x0, y0, w:x1 - x0 + 1, h:y1 - y0 + 1};
+}
+function view(n, hPx){   // 以共同的像素高度縮放，回傳 W×H 畫布
+  const s = hPx / n.h, w = n.w * s, o = mk(W, H), g = o.getContext('2d');
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(n.c, n.x0, n.y0, n.w, n.h, (W - w) / 2, H - 2 - hPx, w, hPx);
+  return o;
+}
+function draw(g, src, sx, alpha, shift){   // 水平縮放 sx（以中心為軸）並平移 shift
+  g.save(); g.globalAlpha = alpha; g.translate(W / 2 + shift, 0); g.scale(sx, 1); g.drawImage(src, -W / 2, 0); g.restore();
+}
+const flip = v => { const o = mk(W, H), g = o.getContext('2d'); g.translate(W, 0); g.scale(-1, 1); g.drawImage(v, 0, 0); return o; };
+
+window.bake = async (prefix, name) => {
+  const ims = await Promise.all(['front', 'side', 'back'].map(v => img(`../character-studio/references/${prefix}_${name}_${v}.png`)));
+  const ns = ims.map(norm), hPx = H - 6;
+  const F = view(ns[0], hPx), S = view(ns[1], hPx), B = view(ns[2], hPx), Sm = flip(S);
+  const out = mk(W * ANGLES, H), og = out.getContext('2d', {willReadFrequently:true});
+  const tmp = mk(W, H), tg = tmp.getContext('2d', {willReadFrequently:true});
+  // [起點圖, 終點圖, 混合權重, 朝向右(+1)/左(-1)]
+  const spec = [[F, F, 0, 0], [F, S, 1 / 3, 1], [F, S, 2 / 3, 1], [S, S, 0, 0], [S, B, 1 / 3, 1], [S, B, 2 / 3, 1],
+                [B, B, 0, 0], [B, Sm, 1 / 3, -1], [B, Sm, 2 / 3, -1], [Sm, Sm, 0, 0], [Sm, F, 1 / 3, -1], [Sm, F, 2 / 3, -1]];
+  spec.forEach(([a, b, w, dir], k) => {
+    tg.clearRect(0, 0, W, H);
+    if (w === 0) tg.drawImage(a, 0, 0);
+    else {
+      const t = Math.sin(w * Math.PI / 2), sh = dir * 3 * Math.sin(w * Math.PI);   // 轉身時身體略向轉向側位移
+      draw(tg, a, 1 - .3 * t, 1, sh); draw(tg, b, .7 + .3 * t, t, sh);
     }
-  }
-  scene.remove(holder);
+    const d = tg.getImageData(0, 0, W, H), p = d.data;
+    for (let i = 0; i < p.length; i += 4) { p[i + 3] = p[i + 3] > 110 ? 255 : 0; for (let c = 0; c < 3; c++) p[i + c] = Math.min(255, Math.round(p[i + c] / 24) * 24); }
+    og.putImageData(d, k * W, 0);
+  });
   return out.toDataURL('image/png');
 };
 window.ready = true;
