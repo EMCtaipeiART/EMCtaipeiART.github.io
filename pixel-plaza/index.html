@@ -149,57 +149,109 @@ function addBillboard(src, cx, z, dw, dh){
   m.geometry.translate(0, dh / 2, 0); m.position.set(cx, 0, z); scene.add(m); billboards.push(m); return m;
 }
 const SNACKS = [['snack_chips', .8], ['snack_cupnoodle', .62], ['snack_cola', .52], ['snack_cookie', .46], ['snack_choco', .42], ['snack_candy', .68]];
-// ---- 隨機道具、語錄、馬桶便便 ----
-const ITEM_TYPES = [
-  {key:'coffee', name:'外帶咖啡', h:.8, quotes:['咖啡因 120mg：足夠讓你再改一版。', '這杯是別人忘了拿的……我先幫它保管。', '第三杯了。你的血液正在轉型成美式咖啡。', '喝完這杯再交稿，不然下一杯就是慶功了。']},
-  {key:'sticky', name:'便利貼', h:.6, quotes:['便利貼：客戶說「再大氣一點」，沒有人知道是什麼意思。', '「Logo 再放大 10%」——第 38 次修改。', '字條：中午吃什麼？（附註：不要再說隨便。）', '寫著：不要刪 final_final2，那是我的底線。']},
-  {key:'redenvelope', name:'紅包', h:.7, quotes:['恭喜發財！紅包裡是一張「案子延期」證明。', '紅包袋內裝：一句「辛苦了」與 0 元，但心意無價。', '年終獎金還沒到，先收下這個心理安慰紅包。', '開運小提醒：今天的設計稿不會被退件（機率 12%）。']},
-  {key:'star', name:'幸運星', h:.7, quotes:['撿到幸運星！今天的色票一次過關。', '許個願：希望客戶一次講完所有需求。', '幸運星 +1：存滿 10 顆可兌換「免改稿券」（尚未發行）。', '閃閃發亮的靈感，保存期限：到下班為止。']},
-  {key:'usb', name:'隨身碟', h:.55, quotes:['標籤寫著「最終版_真的最終」，裡面其實是 2019 年的專案。', '插上去之後跳出：「檔案已損毀」。你並不意外。', '這顆隨身碟裡有 4,382 張參考圖，和 1 張貓。', '警告：未備份的檔案正在看著你。']},
-  {key:'gift', name:'禮物盒', h:.7, quotes:['禮物盒裡是……另一個盒子。再拆一層，還是盒子。', '拆開後：一張手寫卡片「謝謝你昨晚加班」。', '是同事的生日蛋糕券，請記得簽名。', '盒子很輕。裡面應該是「週五提早下班」的概念。']}
-];
-const POOP_QUOTES = ['誰在廁所完成了這件作品？（已沖水）', '便便說：我是今天最準時交付的成果。', '沖水成功！廁所又是一條好漢。', '這坨有 3 層、有造型，可以直接當 icon 嗎？（不行）', '警告：此物不可作為設計提案。已沖走。', '咕嚕嚕……再見了，你這個不請自來的靈感。'];
-const itemSrc = {}, items = [], pickables = [], rnd = a => a[Math.floor(Math.random() * a.length)];
+// ---- 辦公室小樂趣（移植自 2D 版 fun.js）：投影機隨機畫面、會議室遺落物、地上的驚喜道具、馬桶便便 ----
+// 出現什麼、在哪裡，用「時段＋種子」算出來；沖掉／撿走／開關投影機只記在這個瀏覽器（本機），不寫回後端。
+const SLIDES=[['本週進度','▮▮▮▮▮▯▯ 72%'],['午餐投票','🍱 便當　🍜 拉麵　🥗 沙拉'],['今日金句','「改稿是設計師的日常」'],['Q4 目標','客戶滿意度 ↑ 加班 ↓'],['休息一下','☕ 15 分鐘後回來'],['週五提醒','🎉 下班前記得關電腦'],['新需求','「這個 logo 可以再大一點嗎」'],['會議紀錄','結論：下次再討論'],
+ ['客戶回饋','「可以再活潑一點，但要高級」'],['修改次數','v1 ▸ v2 ▸ v3 ▸ final ▸ final_final'],['設計師日常','Ctrl+S 是一種信仰'],['今日運勢','🔮 今天交稿大吉，改稿小凶'],['咖啡指數','☕☕☕☕☕ 已達上限'],['急件警報','🚨 「這個明天要，今天能給嗎」'],['色彩小教室','「紅色」到底是哪一種紅？'],['字體大亂鬥','標楷體 vs 黑體：永遠的戰爭'],['準時下班','🕖 目標：19:00 準時打卡（不可能）'],['員工福利','🍰 下午茶蛋糕已抵達茶水間'],['冷知識','像素風其實是最耗時的風格'],['猜謎時間','什麼東西越改越像原稿？'],['謎底','……客戶說「還是第一版好」'],['團隊目標','今年沒有人被叫去重跑一次！'],['小提醒','存檔、存檔、再存檔'],['午休倒數','🍜 距離午餐還有 ∞ 分鐘'],['投票','貓派 🐱　狗派 🐶　（辦公室禁戰）'],['週報','本週完成：開會 × 12'],['吐槽大會','「這個很簡單，你隨便弄一下」'],['歡迎新人','👋 新同事，咖啡機在那邊'],['神秘訊息','🎁 今天茶水間有人偷放零食'],['彩蛋','你發現了投影機的秘密！']];
+const FUN_PROPS=[['coffee','☕','咖啡杯','還熱的咖啡，沒人認領，今天續命成功'],['donut','🍩','甜甜圈','一個甜甜圈！熱量不算，因為不是你買的'],['cactus','🌵','小仙人掌','迷你仙人掌，比客戶的修改意見還刺'],['stapler','📎','訂書機','訂書機沒針了，這是辦公室永恆的謎'],['mouse','🖱️','滑鼠','一隻滑鼠，右鍵好像壞了'],['usb','💾','隨身碟','隨身碟裡存著「最終版_改_真的最終」'],['headphones','🎧','耳機','降噪耳機，戴上就聽不到改稿的聲音'],['noodle','🍜','泡麵杯','一杯泡好的泡麵，已經糊了'],['boba','🧋','珍珠奶茶','半糖少冰珍奶，吸管還咬得扁扁的'],['eraser','🧽','橡皮擦','一塊橡皮擦，擦不掉的是需求變更'],['calc','🧮','計算機','計算機算出來：今天預算還差一點'],['lunchbox','🍱','便當盒','忘了帶走的便當盒，裡面是別人的愛心'],['duck','🦆','小黃鴨','小黃鴨：專門聽你講 bug 的好夥伴'],['fan','🪭','手持小風扇','手持小風扇，夏天的救星'],['glasses','👓','眼鏡','眼鏡掉了，主人現在一定看什麼都模糊'],['swatch','🎨','色票扇','色票扇，可是客戶說要「更藍一點的藍」'],['stylus','🖊️','繪圖筆','繪圖筆，筆尖已經被畫到圓了'],['cube','🧩','魔術方塊','魔術方塊，轉了三天還是只有一面'],['plane','✈️','紙飛機','紙飛機，上面寫著「我想放假」'],['pizza','🍕','披薩片','一片披薩！今天誰加班請客？']];
+
+const NOTES0=[['筆記本','📓 撿到一本筆記本，上面寫著「下週一要交稿」'],['紙筆','✏️ 一張紙和一支筆，畫了一隻很醜的貓'],['便利貼','🗒️ 便利貼：「誰把我的馬克杯拿走了」'],['速寫本','📒 速寫本裡全是上班摸魚畫的小人'],['原子筆','🖊️ 一支有咬痕的原子筆，不知道是誰的']];
+
+const ITEMS=[['🪙','金幣','撿到一枚金幣，今天財運不錯'],['🍀','幸運草','四葉幸運草！今天會順順利利'],['🎁','小禮物','撿到一份小禮物，裡面是一顆糖'],['🎫','抽獎券','撿到一張抽獎券，記得下午開獎'],['🔑','小鑰匙','一把小鑰匙，不知道開哪個抽屜'],['⭐','星星','撿到一顆星星，心情 +10'],['🍬','糖果','地上有顆糖果，沒拆封的，賺到']];
+
+
+const NOTE_IDS = ['note_book', 'note_paper', 'note_sticky', 'note_sketch', 'note_pen']; FUN_PROPS.forEach(p => NOTE_IDS.push('prop_' + p[0]));
+const NOTES = NOTES0.concat(FUN_PROPS.map(p => [p[2], p[1] + ' ' + p[3]]));
+const DROP_IDS = ['drop_coin', 'drop_clover', 'drop_gift', 'drop_ticket', 'drop_key', 'drop_star', 'drop_candy']; FUN_PROPS.forEach(p => { DROP_IDS.push('prop_' + p[0]); ITEMS.push([p[1], p[2], p[3]]); });
+const SLIDE_N = SLIDES.length, SLOT_J = 360000, SLOT_P = 300000, SLOT_N = 720000, SLOT_D = 480000;
+function rng(str){ let h = 1779033703 ^ str.length; for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
+  let a = Math.imul(h ^ h >>> 16, 2246822507) ^ Math.imul(h ^ h >>> 13, 3266489909) >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const pickables = [], rnd = a => a[Math.floor(Math.random() * a.length)];
+let stat = {flush:0, found:0, notes:0}; try { Object.assign(stat, JSON.parse(localStorage.getItem('pixelFun') || '{}')); } catch (e) {}
+const saveStat = () => { try { localStorage.setItem('pixelFun', JSON.stringify(stat)); } catch (e) {} };
+const claims = {}, taken = id => !!claims[id];
 const quoteBox = document.getElementById('quote'); let quoteTimer = 0;
-function showQuote(title, text){ quoteBox.querySelector('b').textContent = title; quoteBox.querySelector('span').textContent = text; quoteBox.style.display = 'block'; clearTimeout(quoteTimer); quoteTimer = setTimeout(() => { quoteBox.style.display = 'none'; }, 5200); }
-function randomFloorSpot(){ for (let i = 0; i < 60; i++) { const x = 2 + Math.random() * (1201 * U - 4), z = 2 + Math.random() * (1526 * U - 4); if (!blocked(x, z)) return [x, z]; } return null; }
-function spawnItem(){
-  if (items.length >= 6) return;
-  const t = rnd(ITEM_TYPES), src = itemSrc[t.key], spot = randomFloorSpot(); if (!src || !spot) return;
-  const dw = t.h * src.width / src.height, m = addBillboard(src, spot[0], spot[1], dw, t.h); m.userData.pick = {kind:'item', type:t, ref:m};
-  items.push({mesh:m, phase:Math.random() * 6, born:performance.now()}); pickables.push(m);
+function showQuote(title, text){ const b = quoteBox.querySelector('b'); b.textContent = title; b.style.display = title ? 'block' : 'none'; quoteBox.querySelector('span').textContent = text; quoteBox.style.display = 'block'; clearTimeout(quoteTimer); quoteTimer = setTimeout(() => { quoteBox.style.display = 'none'; }, 5200); }
+const sheets = {}, funRects = {}, spriteCache = {};
+async function loadFunArt(){ for (const v of ['v1', 'v2']) { sheets[v] = await loadImg(ASSET + 'office-fun-' + v + '.webp'); funRects[v] = await fetch(ASSET + 'office-fun-' + v + '.json').then(r => r.ok ? r.json() : null).catch(() => null); } }
+function spriteCanvas(id){
+  if (spriteCache[id]) return spriteCache[id];
+  const v = /^prop_/.test(id) ? 'v2' : 'v1', r = funRects[v] && funRects[v][id], im = sheets[v]; if (!im || !r) return null;
+  const c = document.createElement('canvas'); c.width = r.w; c.height = r.h; c.getContext('2d').drawImage(im, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h); return spriteCache[id] = c;
 }
-function collectItem(m){
-  const i = items.findIndex(it => it.mesh === m); if (i < 0) return;
-  const t = m.userData.pick.type; scene.remove(m); billboards.splice(billboards.indexOf(m), 1); pickables.splice(pickables.indexOf(m), 1); items.splice(i, 1);
-  showQuote('撿到：' + t.name, rnd(t.quotes));
+function pixelSprite(canvas, x, y, z, k){   // 原始像素圖：最近鄰放大，保留 2D 版的像素感
+  const dw = canvas.width * k, dh = canvas.height * k, tex = new THREE.CanvasTexture(canvas); tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false; tex.colorSpace = THREE.SRGBColorSpace;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(dw, dh), new THREE.MeshBasicMaterial({map:tex, transparent:true, alphaTest:.5, side:THREE.DoubleSide})); m.geometry.translate(0, dh / 2, 0); m.position.set(x, y, z); scene.add(m); billboards.push(m); return m;
 }
-function makePoop(t){
-  const g = new THREE.Group(); g.position.set(t.x, .56, t.z); scene.add(g);
+function removeMesh(m){ scene.remove(m); const i = billboards.indexOf(m); if (i >= 0) billboards.splice(i, 1); }
+// 掉落物（地上）：每 8 分鐘一個時段、1–2 個，位置由種子決定
+const dropCache = new Map();
+function dropsNow(){
+  const sl = Math.floor(Date.now() / SLOT_D), out = [];
+  for (const s of [sl - 1, sl]) {
+    let L = dropCache.get(s);
+    if (!L) { L = []; const r = rng('d:3d:' + s), n = 1 + Math.floor(r() * 2);
+      for (let i = 0; i < n; i++) for (let k = 0; k < 60; k++) { const x = 2 + r() * (1201 * U - 4), z = 2 + r() * (1526 * U - 4);
+        if (blocked(x, z) || blocked(x + 1, z) || blocked(x - 1, z) || blocked(x, z + 1) || blocked(x, z - 1)) continue; L.push({id:'d:' + s + ':' + i, x, z, k:Math.floor(r() * ITEMS.length)}); break; }
+      dropCache.set(s, L); }
+    L.forEach(q => { if (!taken(q.id)) out.push(q); });
+  }
+  return out;
+}
+// 會議室遺落物：每 12 分鐘一個時段、0–3 件，放在會議桌上
+const NOTE_TABLES = [[863, 158, 250, 56], [184, 1160, 120, 50], [186, 1360, 116, 50], [846, 1196, 252, 60]], noteCache = new Map();
+function notesNow(){
+  const sl = Math.floor(Date.now() / SLOT_N), out = [];
+  for (const s of [sl - 1, sl]) {
+    let L = noteCache.get(s);
+    if (!L) { L = []; const r = rng('n:3d:' + s), n = Math.floor(r() * 4);
+      for (let i = 0; i < n; i++) { const t = NOTE_TABLES[Math.floor(r() * NOTE_TABLES.length)]; L.push({id:'n:' + s + ':' + i, x:(t[0] - t[2] / 2 + 20 + r() * (t[2] - 40)) * U, z:(t[1] - t[3] / 2 + 12 + r() * (t[3] - 24)) * U, k:Math.floor(r() * NOTE_IDS.length)}); }
+      noteCache.set(s, L); }
+    L.forEach(q => { if (!taken(q.id)) out.push(q); });
+  }
+  return out;
+}
+// 便便：每 5 分鐘一個時段，每個馬桶 40% 機率；點一下沖掉
+function poopsNow(){
+  const sl = Math.floor(Date.now() / SLOT_P), out = [];
+  toilets.forEach((t, i) => { const id = 'p:' + sl + ':' + i, r = rng(id); if (r() < .4 && !taken(id) && !chairSeats.some(st => st.by && Math.hypot(st.x - t.x, st.z - t.z) < .5)) out.push({id, t, v:r() < .5 ? 1 : 2}); });
+  return out;
+}
+const floorMeshes = new Map();
+function emojiCanvas(e){ const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'); g.font = '26px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(e, 16, 17); return c; }
+function makePoop(t, v){
+  const g = new THREE.Group(); g.position.set(t.x, .56, t.z); g.scale.setScalar(v === 2 ? 1.18 : 1); g.userData.baseScale = v === 2 ? 1.18 : 1; scene.add(g);
   const part = (geo, color, px, py, pz, sx, sy, sz) => { const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color})); m.position.set(px, py, pz); m.scale.set(sx, sy, sz); g.add(m); const h = new THREE.Mesh(geo, outlineMat); h.position.copy(m.position); h.scale.set(sx * 1.12, sy * 1.12, sz * 1.12); h.layers.set(HULL_LAYER); g.add(h); return m; };
   const S = new THREE.SphereGeometry(1, 14, 10);
   part(S, 0x7a4a22, 0, .1, 0, .26, .13, .26); part(S, 0x874f25, 0, .24, 0, .19, .11, .19); part(S, 0x935a2c, 0, .36, 0, .12, .1, .12); part(S, 0x9c6430, .02, .46, 0, .05, .06, .05);
   for (const sz of [-1, 1]) { const e = new THREE.Mesh(new THREE.BoxGeometry(.04, .05, .04), new THREE.MeshBasicMaterial({color:0x0b0d10})); e.position.set(.17, .26, sz * .06); g.add(e); }
   g.traverse(o => { if (o.isMesh) o.userData.pickRoot = g; });
-  g.userData.pick = {kind:'poop', toilet:t, ref:g}; pickables.push(g); return g;
+  return g;
 }
-function spawnPoop(){
-  const free = toilets.filter(t => !t.poop && !chairSeats.some(st => st.by && Math.hypot(st.x - t.x, st.z - t.z) < .5)); if (!free.length) return;
-  const t = rnd(free); t.poop = makePoop(t);
+function syncFun(){
+  if (!funRects.v1) return;
+  const want = new Map();
+  dropsNow().forEach(d => want.set(d.id, {kind:'drop', d})); notesNow().forEach(n => want.set(n.id, {kind:'note', n})); poopsNow().forEach(p => want.set(p.id, {kind:'poop', p}));
+  for (const [id, o] of floorMeshes) if (!want.has(id)) { if (o.kind === 'poop') scene.remove(o.mesh); else removeMesh(o.mesh); const j = pickables.indexOf(o.mesh); if (j >= 0) pickables.splice(j, 1); floorMeshes.delete(id); }
+  for (const [id, w] of want) {
+    if (floorMeshes.has(id)) continue;
+    let mesh;
+    if (w.kind === 'drop') { const cv = spriteCanvas(DROP_IDS[w.d.k]) || emojiCanvas(ITEMS[w.d.k][0]); mesh = pixelSprite(cv, w.d.x, 0, w.d.z, .03); mesh.userData.pick = {kind:'drop', d:w.d}; }
+    else if (w.kind === 'note') { const cv = spriteCanvas(NOTE_IDS[w.n.k]) || emojiCanvas('📝'); mesh = pixelSprite(cv, w.n.x, .95, w.n.z, .018); mesh.userData.pick = {kind:'note', n:w.n}; }
+    else { mesh = makePoop(w.p.t, w.p.v); mesh.userData.pick = {kind:'poop', p:w.p}; }
+    pickables.push(mesh); floorMeshes.set(id, {kind:w.kind, mesh, phase:Math.random() * 6});
+  }
 }
-function flushPoop(g){
-  const t = g.userData.pick.toilet; scene.remove(g); pickables.splice(pickables.indexOf(g), 1); t.poop = null; showQuote('沖水！', rnd(POOP_QUOTES));
-}
-function startGameplay(){
-  for (let i = 0; i < 3; i++) spawnItem();
-  const loop = (fn, a, b) => { setTimeout(() => { fn(); loop(fn, a, b); }, a + Math.random() * (b - a)); };
-  loop(spawnItem, 14000, 32000); loop(spawnPoop, 25000, 70000);
-  setTimeout(spawnPoop, 6000);
-}
+function collectDrop(d){ claims[d.id] = [1, Date.now()]; stat.found++; saveStat(); showQuote('', '✨ ' + ITEMS[d.k][2] + '（累計撿到 ' + stat.found + ' 個）'); syncFun(); }
+function collectNote(n){ claims[n.id] = [1, Date.now()]; stat.notes++; saveStat(); showQuote('', NOTES[n.k][1] + '（累計 ' + stat.notes + ' 件）'); syncFun(); }
+function flushPoop(p){ claims[p.id] = [1, Date.now()]; stat.flush++; saveStat(); showQuote('', rnd(['🚽 嘩～沖乾淨了！衛生之星 +1', '🚽 順手沖馬桶，同事感謝你！', '🚽 清潔小天使上線，今天運氣 +1', '🚽 沖水成功！廁所又恢復清爽']) + '（累計 ' + stat.flush + ' 次）'); syncFun(); }
+function startGameplay(){ syncFun(); setInterval(syncFun, 1000); }
+let lastCollect = 0;
 function updateGameplay(){
   const t = performance.now() / 1000;
-  for (const it of items) it.mesh.position.y = .06 + Math.sin(t * 2.2 + it.phase) * .06;      // 道具輕輕上下浮動
-  for (const to of toilets) if (to.poop) to.poop.scale.setScalar(1 + Math.sin(t * 5) * .03);   // 便便微微呼吸
+  for (const [, o] of floorMeshes) { if (o.kind === 'drop') o.mesh.position.y = .05 + Math.sin(t * 2.2 + o.phase) * .06; else if (o.kind === 'poop') o.mesh.scale.setScalar(o.mesh.userData.baseScale * (1 + Math.sin(t * 5) * .03)); }
+  if (player && !player.sitting && performance.now() - lastCollect > 600) { lastCollect = performance.now(); for (const d of dropsNow()) if (Math.hypot(player.holder.position.x - d.x, player.holder.position.z - d.z) < 1.4) { collectDrop(d); break; } }   // 走過去也能撿
+  updateProjectors();
 }
 const imgs = {};
 const loadImg = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
@@ -218,7 +270,7 @@ async function buildOffice(){
     else rects.push([x * U, (bottom - (o.fh || 30)) * U, (x + w) * U, bottom * U]);
   }
   build3dObjects(T, place);
-  await Promise.all(ITEM_TYPES.map(async t => { const im = await loadImg(ASSET + 'props5/item_' + t.key + '.png'); if (im) itemSrc[t.key] = trimmed(im); }));
+  await loadFunArt();
   await Promise.all(SNACKS.map(async ([k]) => { imgs[k] = await loadImg(ASSET + 'props4/' + k + '.png'); }));
   if (pantry3d.snackSpot) SNACKS.forEach(([k, h], i) => { const src = imgs[k] && trimmed(imgs[k]); if (!src) return; const dh = h, dw = dh * src.width / src.height, m = addBillboard(src, pantry3d.snackSpot.cx + (-1.55 + i * .62), pantry3d.snackSpot.cz, dw, dh); m.position.y = .95; });
   startGameplay();
@@ -457,36 +509,55 @@ function projector3d(x, z, face, y = .95){   // 以局部 +z 為鏡頭朝向
   add(new THREE.BoxGeometry(.04, .04, .02), 0x35d27a, -.26, .17, .245, 0, false);       // 電源燈
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(new THREE.BoxGeometry(.07, .05, .07), 0x2a2f36, sx * .24, .025, sz * .17, 0, false);   // 腳墊
   add(new THREE.BoxGeometry(.1, .08, .04), 0x2a2f36, 0, .12, -.27, 0, false);          // 電源線孔
+  g.traverse(o => { if (o.isMesh) o.userData.pickRoot = g; });
+  return g;
 }
-function slideTexture(title, kind){
-  const c = document.createElement('canvas'); c.width = 128; c.height = 72; const g = c.getContext('2d');
-  g.fillStyle = '#f7f9fc'; g.fillRect(0, 0, 128, 72); g.fillStyle = '#2f64c8'; g.fillRect(0, 0, 128, 11);
-  g.fillStyle = '#fff'; g.font = 'bold 8px sans-serif'; g.textBaseline = 'middle'; g.fillText(title, 4, 6);
-  if (kind === 'bars') { const cols = ['#2f64c8', '#e0a030', '#d8483c', '#3c8d5a', '#8a5aa8']; [34, 46, 28, 52, 40].forEach((h, i) => { g.fillStyle = cols[i]; g.fillRect(12 + i * 22, 68 - h, 14, h); }); g.fillStyle = '#9aa4b2'; g.fillRect(8, 68, 112, 1); }
-  else if (kind === 'list') { g.fillStyle = '#334'; g.font = '7px sans-serif'; ['1. 案件進度', '2. 人力分配', '3. 下週排程', '4. 其他事項'].forEach((t, i) => { g.fillStyle = '#2f64c8'; g.fillRect(8, 22 + i * 12, 4, 4); g.fillStyle = '#334'; g.fillText(t, 16, 24 + i * 12); }); }
-  else { g.fillStyle = '#334'; g.font = '7px sans-serif'; g.fillText('你發現了投影機的秘密！', 8, 30); g.fillStyle = '#c7cfdc'; for (let i = 0; i < 4; i++) g.fillRect(8, 40 + i * 6, 96 - (i % 2) * 20, 2); }
-  const t = new THREE.CanvasTexture(c); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; t.colorSpace = THREE.SRGBColorSpace; return t;
+function wrapLines(g, text, maxW){
+  const out = []; let line = '';
+  for (const ch of String(text)) { const t = line + ch; if (g.measureText(t).width > maxW && line) { out.push(line); line = ch; } else line = t; }
+  if (line) out.push(line); return out.slice(0, 3);
+}
+function slideCanvas(sl, canvas){   // 2D 版的簡報卡：藍色標題列＋一句話
+  const c = canvas || document.createElement('canvas'); c.width = 128; c.height = 72; const g = c.getContext('2d');
+  g.fillStyle = '#f8fbff'; g.fillRect(0, 0, 128, 72); g.fillStyle = '#2f6fd6'; g.fillRect(0, 0, 128, 13);
+  g.fillStyle = '#fff'; g.font = 'bold 9px sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'left'; g.fillText(sl[0], 5, 7);
+  g.fillStyle = '#223'; g.font = 'bold 8px sans-serif'; g.textAlign = 'center'; const L = wrapLines(g, sl[1], 116); L.forEach((t, i) => g.fillText(t, 64, 42 - (L.length - 1) * 6 + i * 12));
+  return c;
 }
 const beamMat = new THREE.MeshBasicMaterial({color:0xd5e6ff, transparent:true, opacity:.13, depthWrite:false, side:THREE.DoubleSide});
 function beam(apex, c) {   // 從鏡頭到畫面四角的半透明光錐
   const v = []; for (let i = 0; i < 4; i++) v.push(apex.x, apex.y, apex.z, c[i].x, c[i].y, c[i].z, c[(i + 1) % 4].x, c[(i + 1) % 4].y, c[(i + 1) % 4].z);
-  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); scene.add(new THREE.Mesh(geo, beamMat));
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); const m = new THREE.Mesh(geo, beamMat); scene.add(m); return m;
 }
 const slideStore = {};   // 各會議室目前投影的畫面（小視窗放大顯示用）
-function projectorRig(x, z, face, o){
-  projector3d(x, z, face);
-  const dx = face === 'E' ? 1 : face === 'W' ? -1 : 0, dz = face === 'S' ? 1 : 0, apex = new THREE.Vector3(x + dx * .4, .95 + .15, z + dz * .4);
-  const tex = slideTexture(o.title, o.kind); slideStore[o.room] = {canvas:tex.image, title:o.title}; const mat = new THREE.MeshBasicMaterial({map:tex, polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2});
-  if (o.floor) {   // 投在地板的空地
-    const f = o.floor, m = new THREE.Mesh(new THREE.PlaneGeometry(f.w, f.d), mat); m.rotation.x = -Math.PI / 2; m.position.set(f.x, .03, f.z); scene.add(m);
-    beam(apex, [new THREE.Vector3(f.x - f.w / 2, .03, f.z - f.d / 2), new THREE.Vector3(f.x + f.w / 2, .03, f.z - f.d / 2), new THREE.Vector3(f.x + f.w / 2, .03, f.z + f.d / 2), new THREE.Vector3(f.x - f.w / 2, .03, f.z + f.d / 2)]);
-  } else {         // 投在牆上：畫面平貼在白牆上
-    const th = 0, yc = 1.3, ph = o.wallDir > 0 ? Math.PI / 2 - th : -(Math.PI / 2 - th), sn = Math.sin(th);
-    const cx = o.wallX - o.wallDir * (o.w / 2) * sn;
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(o.w, o.h), mat); m.rotation.y = ph; m.position.set(cx, yc, o.zc); scene.add(m);
-    const u = new THREE.Vector3(Math.cos(ph), 0, -Math.sin(ph)).multiplyScalar(o.w / 2), c0 = new THREE.Vector3(cx, yc, o.zc), up = new THREE.Vector3(0, o.h / 2, 0);
-    beam(apex, [c0.clone().sub(u).add(up), c0.clone().add(u).add(up), c0.clone().add(u).sub(up), c0.clone().sub(u).sub(up)]);
+const projectors = [];
+function projState(p){   // 2D 版規則：每 6 分鐘一個時段，約 45% 機率開著、畫面隨機；點一下可開關並換畫面
+  const sl = Math.floor(Date.now() / SLOT_J), id = 'j:3d:' + sl + ':' + p.key, r = rng(id), base = r() < .45, basePic = Math.floor(r() * SLIDE_N), ov = claims[id];
+  return ov ? {on:ov[0] > 0, pic:Math.max(0, ov[0] - 1) % SLIDE_N, id} : {on:base, pic:basePic, id};
+}
+function toggleProjector(p){ const st = projState(p); claims[st.id] = [st.on ? 0 : 1 + Math.floor(Math.random() * SLIDE_N), Date.now()]; showQuote('', st.on ? '📽️ 投影機關閉' : '📽️ 投影機開啟'); updateProjectors(true); }
+let lastProj = 0;
+function updateProjectors(force){
+  if (!force && performance.now() - lastProj < 800) return; lastProj = performance.now();
+  for (const p of projectors) {
+    const st = projState(p), k = st.on + ':' + st.pic; if (k === p.last) continue; p.last = k;
+    p.plane.visible = st.on; p.beam.visible = st.on;
+    if (st.on) { const sl = SLIDES[st.pic % SLIDE_N]; slideCanvas(sl, p.canvas); p.tex.needsUpdate = true; slideStore[p.room] = {canvas:p.canvas, title:sl[0]}; } else delete slideStore[p.room];
   }
+}
+function projectorRig(x, z, face, o){
+  const pg = projector3d(x, z, face), canvas = document.createElement('canvas'); slideCanvas(SLIDES[0], canvas);
+  const tex = new THREE.CanvasTexture(canvas); tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false; tex.colorSpace = THREE.SRGBColorSpace;
+  const dx = face === 'E' ? 1 : face === 'W' ? -1 : 0, dz = face === 'S' ? 1 : 0, apex = new THREE.Vector3(x + dx * .4, .95 + .15, z + dz * .4);
+  const mat = new THREE.MeshBasicMaterial({map:tex, polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2}), p = {key:o.room, room:o.room, canvas, tex, last:''};
+  if (o.floor) {   // 投在地板的空地
+    const f = o.floor, m = new THREE.Mesh(new THREE.PlaneGeometry(f.w, f.d), mat); m.rotation.x = -Math.PI / 2; m.position.set(f.x, .03, f.z); scene.add(m); p.plane = m;
+    p.beam = beam(apex, [new THREE.Vector3(f.x - f.w / 2, .03, f.z - f.d / 2), new THREE.Vector3(f.x + f.w / 2, .03, f.z - f.d / 2), new THREE.Vector3(f.x + f.w / 2, .03, f.z + f.d / 2), new THREE.Vector3(f.x - f.w / 2, .03, f.z + f.d / 2)]);
+  } else {         // 投在牆上：畫面平貼在白牆上
+    const yc = 1.3, ph = o.wallDir > 0 ? Math.PI / 2 : -Math.PI / 2, m = new THREE.Mesh(new THREE.PlaneGeometry(o.w, o.h), mat); m.rotation.y = ph; m.position.set(o.wallX, yc, o.zc); scene.add(m); p.plane = m;
+    const X = o.wallX; p.beam = beam(apex, [new THREE.Vector3(X, yc + o.h / 2, o.zc - o.w / 2), new THREE.Vector3(X, yc + o.h / 2, o.zc + o.w / 2), new THREE.Vector3(X, yc - o.h / 2, o.zc + o.w / 2), new THREE.Vector3(X, yc - o.h / 2, o.zc - o.w / 2)]);
+  }
+  p.plane.userData.pick = {kind:'proj', p}; pickables.push(p.plane); pg.userData.pick = {kind:'proj', p}; pickables.push(pg); projectors.push(p); return p;
 }
 // 地圖上的文字標籤（DOM，才清楚）
 const labelEls = LABELS.map(([t, ix, iy]) => { const e = document.createElement('div'); e.className = 'lbl'; e.textContent = t; document.body.appendChild(e); return {e, p:new THREE.Vector3(ix * U, 2.6, iy * U)}; });
@@ -615,7 +686,7 @@ function select(name){
 
 let done = 0;
 Promise.all([buildOffice(), ...NAMES.map((n, i) => addChar(n, i).then(() => { document.getElementById('load').textContent = `載入角色 ${++done}/${NAMES.length}`; }))])
-  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); select('Machi'); startLiveSync(); document.getElementById('load').remove(); window.__plaza = {chars, camera, seats:chairSeats, blocked, items, toilets, spawnItem, spawnPoop, pickables, applyStatus}; });
+  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); select('Machi'); startLiveSync(); document.getElementById('load').remove(); window.__plaza = {chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
 
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
 const TILT = 0, STRETCH = 1 / Math.cos(Math.atan(8.4 / 9.4)), _e = new THREE.Euler(0, 0, 0, 'YXZ');   // 垂直站立：不再後傾（避免穿進桌子、牆），高度拉長 STRETCH 倍抵消俯視縮短
@@ -654,7 +725,7 @@ const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 
 renderer.domElement.addEventListener('pointerdown', e => {
   ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
   const hit = ray.intersectObjects(pickables, true)[0];
-  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'item') collectItem(pk.ref); else if (pk.kind === 'char') { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : '', live.ok ? '（即時資料）' : '（模擬資料）'].filter(Boolean).join('　')); } else flushPoop(pk.ref); return; } }
+  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : '', live.ok ? '（即時資料）' : '（模擬資料）'].filter(Boolean).join('　')); } else if (pk.kind === 'poop') flushPoop(pk.p); return; } }
   const p = new THREE.Vector3();
   if (ray.ray.intersectPlane(plane, p) && !blocked(p.x, p.z)) target = p;
 });
@@ -718,9 +789,11 @@ let projRoom = null;
 function updateProjectionView(){
   let room = null;
   if (player) { const px = player.holder.position.x / U, pz = player.holder.position.z / U; for (const r of ROOMS) if (px > r[1] && px < r[3] && pz > r[2] && pz < r[4]) room = r; }
-  const id = room ? room[0] : null;
-  if (id !== projRoom) { projRoom = id; projBox.style.display = id && slideStore[id] ? 'block' : 'none'; if (id && slideStore[id]) projTitle.textContent = room[5] + '・投影中：' + slideStore[id].title; }
-  if (projRoom && slideStore[projRoom]) { projCtx.imageSmoothingEnabled = false; projCtx.drawImage(slideStore[projRoom].canvas, 0, 0, 128, 72); }
+  const sl = room && slideStore[room[0]];
+  if (!sl) { if (projBox.style.display !== 'none') projBox.style.display = 'none'; return; }
+  if (projBox.style.display !== 'block') projBox.style.display = 'block';
+  const t = room[5] + '・投影中：' + sl.title; if (projTitle.textContent !== t) projTitle.textContent = t;
+  projCtx.imageSmoothingEnabled = false; projCtx.drawImage(sl.canvas, 0, 0, 128, 72);
 }
 function tick(){
   const dt = Math.min(clock.getDelta(), .05);
