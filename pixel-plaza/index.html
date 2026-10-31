@@ -2,6 +2,7 @@
 <html lang="zh-Hant"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>EMC · 像素辦公室</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
 <script type="importmap">{"imports":{"three":"../character-studio/vendor/three.module.js"}}</script>
 <style>
 html,body{margin:0;height:100%;overflow:hidden;background:#cfd9e0;font-family:system-ui,"Noto Sans TC",sans-serif;touch-action:none}
@@ -55,15 +56,127 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #stick{position:fixed;left:18px;bottom:78px;width:110px;height:110px;border-radius:50%;background:#fff3;border:2px solid #fff6;display:none}
 #stick i{position:absolute;left:35px;top:35px;width:40px;height:40px;border-radius:50%;background:#fffc}
 @media (pointer:coarse){#stick{display:block}}
+/* ===== PokéBonk 風格介面：糖果色漸層斜紋、粗描邊字、深色玻璃卡片、紅色大按鈕、圓角膠囊 ===== */
+:root{--c1:#ff8a5c;--c2:#ff4f7b;--c3:#8b5cff;--ink:#241f4d;--glass:rgba(27,22,64,.82);--line:rgba(255,255,255,.16);--yellow:#ffc733;--red1:#ff6b6b;--red2:#e8404f}
+body{font-family:'Fredoka','Noto Sans TC',system-ui,sans-serif}
+button{font-family:inherit}
+#hud,#dock,#drawer,#dexPanel,#helpPanel,#title,#quote,#net{font-family:'Fredoka','Noto Sans TC',system-ui,sans-serif}
+/* 標題／載入／選角 */
+#title{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:linear-gradient(135deg,var(--c1) 0%,var(--c2) 46%,var(--c3) 100%);overflow:auto;transition:opacity .4s}
+#title::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.08) 0 16px,transparent 16px 32px);pointer-events:none}
+#title.gone{opacity:0;pointer-events:none}
+.t-inner{position:relative;display:grid;justify-items:center;gap:14px;padding:24px 16px;width:min(560px,100%);box-sizing:border-box}
+.t-logo{font-size:clamp(54px,12vw,96px);font-weight:700;letter-spacing:1px;line-height:1;transform:rotate(-3deg);display:flex;gap:14px;filter:drop-shadow(0 6px 0 rgba(36,31,77,.55))}
+.t-logo span{-webkit-text-stroke:9px var(--ink);paint-order:stroke fill;color:#fff}
+.t-logo .y{color:var(--yellow)}
+.t-sub{color:#fff;font-weight:700;font-size:15px;text-shadow:0 2px 0 rgba(36,31,77,.5)}
+.t-load{display:flex;align-items:center;gap:12px;width:min(360px,90%);margin-top:8px}
+.t-ball{flex:none;width:44px;height:44px;border-radius:50%;background:linear-gradient(#ff5a5a 0 46%,#2b2b4a 46% 54%,#fff 54%);border:4px solid #2b2b4a;position:relative;animation:spin 1.2s linear infinite;box-shadow:0 3px 0 rgba(36,31,77,.4)}
+.t-ball::after{content:'';position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#fff;border:4px solid #2b2b4a;box-sizing:border-box}
+@keyframes spin{to{transform:rotate(360deg)}}
+.t-bar{position:relative;flex:1;height:26px;border-radius:999px;background:#fff;border:3px solid var(--ink);overflow:hidden;box-shadow:0 4px 0 rgba(36,31,77,.35)}
+.t-bar i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(#ffd75e,#ffb62e);transition:width .25s}
+.t-bar b{position:absolute;inset:0;display:grid;place-items:center;font-size:12px;color:var(--ink)}
+.t-card{width:100%;border-radius:22px;background:var(--glass);border:2px solid var(--line);box-shadow:0 24px 50px rgba(20,10,60,.45);overflow:hidden;color:#fff;transform:rotate(-1.2deg);backdrop-filter:blur(8px)}
+.t-card[hidden]{display:none}
+.t-head{padding:12px 18px;font-size:19px;font-weight:700;background:repeating-linear-gradient(135deg,#ff7a3d 0 14px,#ff9a4d 14px 28px);text-shadow:0 2px 0 rgba(36,31,77,.45)}
+.t-body{padding:16px;display:grid;gap:12px}
+.t-row{display:flex;gap:10px;align-items:center;background:rgba(255,255,255,.07);border-radius:14px;padding:10px 12px;font-size:13px;font-weight:600}
+.t-row p{margin:0}
+.t-pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:8px;max-height:min(330px,44vh);overflow:auto;padding:2px}
+.t-pick button{display:grid;justify-items:center;gap:4px;border:2px solid var(--line);background:rgba(255,255,255,.08);color:#fff;border-radius:14px;padding:8px 4px;font-weight:600;font-size:12px;cursor:pointer;transition:transform .12s,background .12s}
+.t-pick button:hover{transform:translateY(-2px);background:rgba(255,255,255,.16)}
+.t-pick button.on{border-color:var(--yellow);background:rgba(255,199,51,.2);box-shadow:0 0 0 2px var(--yellow) inset}
+.t-pick img,.hp-av img,.dr-av{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#4a3f8f}
+.btn-red{border:0;border-bottom:5px solid #b32a3a;border-radius:16px;padding:14px;font:700 19px/1 'Fredoka','Noto Sans TC',sans-serif;color:#fff;cursor:pointer;background:linear-gradient(var(--red1),var(--red2));text-shadow:0 2px 0 rgba(0,0,0,.25);box-shadow:inset 0 2px 0 rgba(255,255,255,.35),0 8px 18px rgba(232,64,79,.4);transition:transform .1s,filter .1s}
+.btn-red:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn-red:active{transform:translateY(2px);border-bottom-width:3px}
+.t-foot{font-size:11px;color:rgba(255,255,255,.65);text-align:center;font-weight:600}
+/* 遊戲中 HUD */
+#hud{position:fixed;inset:0;pointer-events:none;z-index:5;color:#fff}
+#hud button{pointer-events:auto}
+.hp-card{position:absolute;left:12px;top:12px;display:flex;gap:10px;align-items:center;padding:8px 14px 8px 8px;background:var(--glass);border:2px solid var(--line);border-radius:20px;box-shadow:0 8px 20px rgba(20,10,60,.3);backdrop-filter:blur(6px);min-width:190px}
+.hp-av{width:60px;height:60px;border-radius:50%;padding:3px;background:linear-gradient(135deg,var(--yellow),var(--c2));flex:none}
+.hp-av img{width:100%;height:100%}
+.hp-info{display:grid;gap:3px;min-width:0}
+.hp-name{font-weight:700;font-size:16px;text-shadow:0 2px 0 rgba(0,0,0,.3)}
+.hp-st{font-size:12px;font-weight:600;background:rgba(255,255,255,.14);border-radius:999px;padding:1px 9px;width:fit-content}
+.hp-exp{height:10px;border-radius:999px;background:rgba(0,0,0,.35);overflow:hidden;border:2px solid rgba(255,255,255,.2)}
+.hp-exp i{display:block;height:100%;width:0;background:linear-gradient(#ffd75e,#ffa61f);transition:width .4s}
+.hp-lv{font-size:11px;font-weight:700;color:var(--yellow)}
+.hp-clock{position:absolute;left:50%;top:12px;transform:translateX(-50%);padding:6px 16px;background:var(--glass);border:2px solid var(--line);border-radius:999px;font-weight:700;font-size:15px;box-shadow:0 6px 16px rgba(20,10,60,.3);white-space:nowrap}
+.hp-top{position:absolute;right:12px;top:12px;display:flex;gap:8px}
+.hp-top button,#dock button{border:2px solid var(--line);background:var(--glass);color:#fff;border-radius:999px;padding:9px 15px;font:700 14px 'Fredoka','Noto Sans TC',sans-serif;cursor:pointer;box-shadow:0 6px 14px rgba(20,10,60,.3);backdrop-filter:blur(6px);transition:transform .1s,background .1s}
+.hp-top button:hover,#dock button:hover{transform:translateY(-2px);background:rgba(60,48,130,.9)}
+#dock{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:max-content;max-width:calc(100vw - 24px);pointer-events:none}
+#dock button{pointer-events:auto}
+#dock #sit{position:static;right:auto;bottom:auto;padding:9px 15px;font-size:14px}
+#dock #bWheel{background:linear-gradient(var(--red1),var(--red2));border-color:#b32a3a}
+#net{position:fixed;left:50%;top:56px;transform:translateX(-50%);z-index:5;background:var(--glass);border:2px solid var(--line);border-radius:999px;padding:2px 12px;font-size:11px;font-weight:600;bottom:auto}
+#proj{top:104px;border-radius:14px;border:3px solid var(--ink);background:var(--ink)}
+#proj canvas{border-radius:8px}
+#proj span{font-family:inherit}
+/* 角色抽屜、圖鑑、說明 */
+#drawer,#dexPanel,#helpPanel{position:fixed;z-index:12;background:var(--glass);border:2px solid var(--line);border-radius:22px;box-shadow:0 24px 50px rgba(20,10,60,.5);color:#fff;backdrop-filter:blur(10px)}
+#drawer[hidden],#dexPanel[hidden],#helpPanel[hidden]{display:none}
+#drawer{left:50%;bottom:70px;transform:translateX(-50%);width:min(560px,94vw);padding:12px}
+.dr-head,.px-head{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:17px;padding:2px 6px 10px}
+#roster{position:static;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;padding:0;background:none;overflow:visible}
+#roster button{display:flex;gap:8px;align-items:center;border:2px solid var(--line);background:rgba(255,255,255,.08);color:#fff;border-radius:14px;padding:6px 8px;font:600 13px 'Fredoka','Noto Sans TC',sans-serif;cursor:pointer;text-align:left}
+#roster button:hover{background:rgba(255,255,255,.16)}
+#roster button.on{background:rgba(255,199,51,.22);border-color:var(--yellow);color:#fff}
+.dr-av{width:34px;height:34px;flex:none}
+#dexPanel,#helpPanel{left:50%;top:50%;transform:translate(-50%,-50%);width:min(640px,94vw);max-height:84vh;overflow:auto;padding:14px 16px}
+.px-x{border:0;background:rgba(255,255,255,.14);color:#fff;border-radius:999px;width:34px;height:34px;font-size:16px;cursor:pointer}
+.dex-sec{margin:10px 0 4px;font-size:13px;font-weight:700;color:var(--yellow)}
+.dex-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px}
+.dex-it{display:grid;place-items:center;aspect-ratio:1;border-radius:14px;background:rgba(255,255,255,.08);border:2px solid var(--line);cursor:pointer;position:relative}
+.dex-it img{width:44px;height:44px;object-fit:contain;image-rendering:pixelated}
+.dex-it.unk img{filter:brightness(0) opacity(.5)}
+.dex-it.unk::after{content:'?';position:absolute;inset:0;display:grid;place-items:center;font-weight:700;color:rgba(255,255,255,.55);font-size:20px}
+.help-list{display:grid;gap:8px;font-size:14px;font-weight:600;line-height:1.5}
+.help-list div{background:rgba(255,255,255,.07);border-radius:12px;padding:8px 12px}
+/* 提示框與浮動文字 */
+#quote{bottom:92px;background:#fff;color:var(--ink);border:3px solid var(--ink);border-radius:18px;box-shadow:0 6px 0 rgba(36,31,77,.35);font-family:'Fredoka','Noto Sans TC',sans-serif;font-weight:700;z-index:8}
+#quote b{color:var(--c2)}
+.ftx{position:fixed;left:0;top:0;z-index:7;pointer-events:none;font:700 22px 'Fredoka','Noto Sans TC',sans-serif;color:var(--yellow);-webkit-text-stroke:5px var(--ink);paint-order:stroke fill;animation:floatup 1.3s ease-out forwards;white-space:nowrap}
+@keyframes floatup{from{opacity:1;margin-top:0;scale:.6}15%{scale:1.15}to{opacity:0;margin-top:-70px;scale:1}}
+.lbl{font-family:'Fredoka','Noto Sans TC',sans-serif;border-radius:999px;padding:3px 10px;background:var(--glass);border:2px solid var(--line)}
+.ctag{border-radius:999px;border:2px solid var(--ink);font-family:'Fredoka','Noto Sans TC',sans-serif}
+@media (max-width:640px){.hp-card{min-width:0}.hp-clock{top:84px;font-size:13px}#net{top:122px}#proj{top:150px}.hp-top button{padding:7px 11px}}
+
 </style></head><body>
-<div id="load">載入像素辦公室…</div>
-<div id="hud"><b>EMC 像素辦公室</b><br>WASD / 方向鍵移動 · Shift 跑步 · 點地面走過去 · 下方切換角色 · 網址加 ?px=1 為復古像素模式</div>
+<div id="title">
+  <div class="t-inner">
+    <div class="t-logo"><span>EMC</span><span class="y">Office</span></div>
+    <div class="t-sub">凱曜設計部 · 3D 像素辦公室</div>
+    <div class="t-load" id="tLoad"><div class="t-ball"></div><div class="t-bar"><i id="tFill"></i><b id="tText">正在載入辦公室……</b></div></div>
+    <div class="t-card" id="tCard" hidden>
+      <div class="t-head">歡迎，同事！</div>
+      <div class="t-body">
+        <div class="t-row"><span>📡</span><p id="tNet">連線中…</p></div>
+        <div class="t-row"><span>👤</span><p>選一位角色進入辦公室，之後隨時可以按「換人」。</p></div>
+        <div class="t-pick" id="tPick"></div>
+        <button class="btn-red" id="tGo" type="button">進入辦公室！</button>
+        <div class="t-foot">WASD／方向鍵移動 · Shift 跑步 · 點地面走過去 · E 坐下 · 網址加 ?px=1 為復古像素模式</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="hud">
+  <div class="hp-card"><div class="hp-av" id="pAv"></div><div class="hp-info"><div class="hp-name" id="pName">—</div><div class="hp-st" id="pSt"></div><div class="hp-exp"><i id="pExp"></i></div><div class="hp-lv" id="pLv"></div></div></div>
+  <div class="hp-clock" id="pClock">🕒 …</div>
+  <div class="hp-top"><button id="bDex" type="button">📖 圖鑑</button><button id="bHelp" type="button">❓ 說明</button></div>
+  <div id="dock"><button id="bWheel" type="button">🎛️ 功能轉盤</button><button id="sit" type="button">🪑 坐下 / 起身 (E)</button><button id="bPeople" type="button">👥 換人</button></div>
+</div>
 <div id="stick"><i></i></div>
 <div id="proj"><canvas width="128" height="72"></canvas><span></span></div>
 <div id="quote"><b></b><span></span></div>
 <div id="net">連線中…</div>
-<button id="sit">坐下 / 起身 (E)</button>
-<div id="roster"></div>
+<div id="drawer" hidden><div class="dr-head"><span>選擇角色</span></div><div id="roster"></div></div>
+<div id="dexPanel" hidden><div class="px-head"><span>📖 辦公室圖鑑</span><button class="px-x" type="button">✕</button></div><div id="dexBody"></div></div>
+<div id="helpPanel" hidden><div class="px-head"><span>❓ 操作說明</span><button class="px-x" type="button">✕</button></div>
+  <div class="help-list"><div>🕹️ WASD／方向鍵移動，Shift 跑步，點地面走過去（手機用左下搖桿）</div><div>🪑 靠近椅子或馬桶按 E 坐下，再按一次起身</div><div>🎛️ 點人物或按「功能轉盤」：在座、目前狀態、想說的話…</div><div>✨ 撿地上的道具、沖馬桶、點投影機，圖鑑會記錄你的發現，每 5 個升一級</div><div>📡 角色依「凱曜設計部」的即時出勤狀態行動（在座／加班／用餐／廁所／會議／下班…）</div></div></div>
 <script type="module">
 import * as THREE from 'three';
 import {RoundedBoxGeometry} from '../character-studio/vendor/RoundedBoxGeometry.js';
@@ -272,9 +385,9 @@ function syncFun(){
     pickables.push(mesh); floorMeshes.set(id, {kind:w.kind, mesh, phase:Math.random() * 6});
   }
 }
-function collectDrop(d){ claims[d.id] = [1, Date.now()]; stat.found++; saveStat(); showQuote('', '✨ ' + ITEMS[d.k][2] + '（累計撿到 ' + stat.found + ' 個）'); syncFun(); }
-function collectNote(n){ claims[n.id] = [1, Date.now()]; stat.notes++; saveStat(); showQuote('', NOTES[n.k][1] + '（累計 ' + stat.notes + ' 件）'); syncFun(); }
-function flushPoop(p){ claims[p.id] = [1, Date.now()]; stat.flush++; saveStat(); showQuote('', rnd(['🚽 嘩～沖乾淨了！衛生之星 +1', '🚽 順手沖馬桶，同事感謝你！', '🚽 清潔小天使上線，今天運氣 +1', '🚽 沖水成功！廁所又恢復清爽']) + '（累計 ' + stat.flush + ' 次）'); syncFun(); }
+function collectDrop(d){ claims[d.id] = [1, Date.now()]; stat.found++; saveStat(); const fresh = dexAdd('d', d.k); showQuote('', (fresh ? '🆕 新發現！' : '✨ ') + ITEMS[d.k][2] + '（累計撿到 ' + stat.found + ' 個）'); floatAt(d.x, 1.2, d.z, fresh ? '+1 新圖鑑！' : '+1'); syncFun(); }
+function collectNote(n){ claims[n.id] = [1, Date.now()]; stat.notes++; saveStat(); const fresh = dexAdd('n', n.k); showQuote('', (fresh ? '🆕 ' : '') + NOTES[n.k][1] + '（累計 ' + stat.notes + ' 件）'); floatAt(n.x, 1.8, n.z, fresh ? '+1 新圖鑑！' : '+1'); syncFun(); }
+function flushPoop(p){ claims[p.id] = [1, Date.now()]; stat.flush++; saveStat(); floatAt(p.t.x, 1.4, p.t.z, '+1 衛生之星'); showQuote('', rnd(['🚽 嘩～沖乾淨了！衛生之星 +1', '🚽 順手沖馬桶，同事感謝你！', '🚽 清潔小天使上線，今天運氣 +1', '🚽 沖水成功！廁所又恢復清爽']) + '（累計 ' + stat.flush + ' 次）'); syncFun(); }
 function startGameplay(){ syncFun(); setInterval(syncFun, 1000); }
 let lastCollect = 0;
 function updateGameplay(){
@@ -632,7 +745,7 @@ async function addChar(name, i){
   sprite.userData.pick = {kind:'char', c}; pickables.push(sprite);
   const tag = document.createElement('div'); tag.className = 'ctag'; document.body.appendChild(tag); c.tag = tag;
   const b = document.createElement('button'); b.textContent = name;
-  b.onclick = () => select(name); roster.appendChild(b); c.btn = b;
+  b.dataset.name = name; b.onclick = () => select(name); roster.appendChild(b); c.btn = b;
 }
 // ---- 出勤狀態：讀「凱曜設計部」後端的即時狀態（只讀，不寫入）；連不上時依時間規則模擬 ----
 const API = 'https://machi-design-api.machi-chen.workers.dev/api';
@@ -715,8 +828,8 @@ function select(name){
 }
 
 let done = 0;
-Promise.all([buildOffice(), ...NAMES.map((n, i) => addChar(n, i).then(() => { document.getElementById('load').textContent = `載入角色 ${++done}/${NAMES.length}`; }))])
-  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); select(handoff && chars[handoff.name] ? handoff.name : 'Machi'); startLiveSync(); document.getElementById('load').remove(); window.__plaza = {chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
+Promise.all([buildOffice(), ...NAMES.map((n, i) => addChar(n, i).then(() => { setLoad('載入角色 ' + (++done) + '/' + NAMES.length, done / NAMES.length); }))])
+  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); select(handoff && chars[handoff.name] ? handoff.name : 'Machi'); startLiveSync(); showTitleCard(); window.__plaza = {chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
 
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
 const TILT = 0, STRETCH = 1 / Math.cos(Math.atan(8.4 / 9.4)), _e = new THREE.Euler(0, 0, 0, 'YXZ');   // 垂直站立：不再後傾（避免穿進桌子、牆），高度拉長 STRETCH 倍抵消俯視縮短
@@ -896,6 +1009,64 @@ function placeRadial(){
   }
 }
 addEventListener('keydown', e => { if (e.key === 'Escape') radialClose(); });
+// ---- PokéBonk 風格介面：標題／選角、HUD、圖鑑、浮動文字 ----
+const $ = id => document.getElementById(id);
+function setLoad(text, pct){ $('tText').textContent = text; if (pct != null) $('tFill').style.width = Math.round(pct * 100) + '%'; }
+function avatarURL(c){   // 取角色正面圖的頭肩部分當大頭貼
+  try { const im = c.tex.image, cw = im.height, cv = document.createElement('canvas'); cv.width = cv.height = 96; const g = cv.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(im, cw * .17, cw * .0, cw * .66, cw * .66, 0, 0, 96, 96); return cv.toDataURL(); } catch (e) { return ''; }
+}
+let pickName = (handoff && handoff.name) || (() => { try { return localStorage.getItem('pixelLastChar'); } catch (e) { return null; } })() || 'Machi';
+function buildTitleCard(){
+  const pick = $('tPick'); pick.innerHTML = '';
+  for (const n of NAMES) { const c = chars[n]; if (!c) continue; c.avatar = avatarURL(c);
+    const b = document.createElement('button'); b.type = 'button'; b.dataset.n = n; b.className = n === pickName ? 'on' : ''; b.innerHTML = '<img alt="" src="' + c.avatar + '"><span>' + n + '</span>'; b.onclick = () => { pickName = n; pick.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); }; pick.appendChild(b); }
+  const dr = $('roster'); dr.querySelectorAll('button').forEach(b => { const n = b.dataset.name; if (n && chars[n]) { const im = document.createElement('img'); im.className = 'dr-av'; im.alt = ''; im.src = chars[n].avatar; b.prepend(im); } });
+}
+function showTitleCard(){ $('tLoad').style.display = 'none'; $('tCard').hidden = false; buildTitleCard(); updateTitleNet(); }
+function updateTitleNet(){ const e = $('tNet'); if (e) e.textContent = live.ok ? '已連線到「凱曜設計部」伺服器，出勤狀態即時更新' : '目前離線：依時間規則模擬出勤狀態'; }
+function startGame(){
+  try { localStorage.setItem('pixelLastChar', pickName); } catch (e) {}
+  select(pickName); $('title').classList.add('gone'); setTimeout(() => { $('title').style.display = 'none'; }, 450);
+}
+$('tGo').onclick = startGame;
+// 圖鑑（本機記錄撿到過什麼）
+let dex = {d:[], n:[]}; try { const x = JSON.parse(localStorage.getItem('pixelDex') || 'null'); if (x && x.d && x.n) dex = x; } catch (e) {}
+function dexAdd(kind, k){ if (dex[kind].includes(k)) return false; dex[kind].push(k); try { localStorage.setItem('pixelDex', JSON.stringify(dex)); } catch (e) {} return true; }
+function renderDex(){
+  const body = $('dexBody'); body.innerHTML = '';
+  const sec = (title, ids, names, quotes, kind) => {
+    const h = document.createElement('div'); h.className = 'dex-sec'; h.textContent = title + '　' + dex[kind].length + '/' + ids.length; body.appendChild(h);
+    const g = document.createElement('div'); g.className = 'dex-grid';
+    ids.forEach((id, i) => { const cv = spriteCanvas(id), found = dex[kind].includes(i), d = document.createElement('div'); d.className = 'dex-it' + (found ? '' : ' unk');
+      d.innerHTML = '<img alt="" src="' + (cv ? cv.toDataURL() : '') + '">'; d.onclick = () => showQuote(found ? names[i] : '？？？', found ? quotes[i] : '還沒發現，到辦公室裡找找看'); g.appendChild(d); });
+    body.appendChild(g);
+  };
+  sec('地上的驚喜', DROP_IDS, ITEMS.map(x => x[1]), ITEMS.map(x => x[2]), 'd');
+  sec('會議室遺落物', NOTE_IDS, NOTES.map(x => x[0]), NOTES.map(x => x[1]), 'n');
+}
+$('bDex').onclick = () => { renderDex(); $('dexPanel').hidden = false; $('helpPanel').hidden = true; };
+$('bHelp').onclick = () => { $('helpPanel').hidden = false; $('dexPanel').hidden = true; };
+document.querySelectorAll('.px-x').forEach(b => b.onclick = () => { $('dexPanel').hidden = true; $('helpPanel').hidden = true; });
+$('bPeople').onclick = () => { $('drawer').hidden = !$('drawer').hidden; };
+$('roster').addEventListener('click', e => { if (e.target.closest('button')) $('drawer').hidden = true; });
+$('bWheel').onclick = () => { if (radial.hidden) radialOpen(); else radialClose(); };
+// 浮動文字（撿到東西時 +1 往上飄）
+function floatAt(x, y, z, text){
+  const v = new THREE.Vector3(x, y, z).project(camera), e = document.createElement('div'); e.className = 'ftx'; e.textContent = text;
+  e.style.left = ((v.x * .5 + .5) * innerWidth) + 'px'; e.style.top = ((-v.y * .5 + .5) * innerHeight) + 'px'; e.style.transform = 'translate(-50%,-50%)'; document.body.appendChild(e); setTimeout(() => e.remove(), 1400);
+}
+// HUD 更新
+const fmtTime = new Intl.DateTimeFormat('zh-TW', {timeZone:'Asia/Taipei', hour:'2-digit', minute:'2-digit', hour12:false, weekday:'short'});
+function updateHud(){
+  const c = player; if (!c) return;
+  const st = STATUS[c.status] || STATUS.present, total = stat.found + stat.notes + stat.flush, lv = 1 + Math.floor(total / 5);
+  if ($('pName').textContent !== c.name) { $('pName').textContent = c.name; if (c.avatar) $('pAv').innerHTML = '<img alt="" src="' + c.avatar + '">'; }
+  $('pSt').textContent = st[1] + ' ' + st[0] + (c.mood ? '　' + (MOOD[c.mood] || '') : '');
+  $('pExp').style.width = ((total % 5) / 5 * 100) + '%'; $('pLv').textContent = 'Lv.' + lv + '　圖鑑 ' + (dex.d.length + dex.n.length) + '/' + (DROP_IDS.length + NOTE_IDS.length);
+  $('pClock').textContent = '🕒 ' + fmtTime.format(new Date()).replace(/^(\S+)\s+(\S+)$/, '$2 $1') + '（台北）'; updateTitleNet();
+}
+setInterval(updateHud, 500);
+
 function tick(){
   const dt = Math.min(clock.getDelta(), .05);
   if (player) {
