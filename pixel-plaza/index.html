@@ -48,23 +48,29 @@ addEventListener('resize', resize); resize();
 // 版面圖座標（1201×1526 px）× U = 世界座標。桌子 105 px 寬 ≈ 3.15 單位，與角色身高 2.04 的比例同遊戲內一致。
 const U = 0.03, PPU = 29.5;               // PPU：每單位約幾個螢幕像素（貼圖縮成這個大小才會清楚）
 const ASSET = '../EMC-ART-Pixel-Office/dist/assets/';
-const FILES = {elevator:'props2/elevator.png',stall:'props2/toilet_stall.png',sink:'props2/pedestal_sink.png',tableA:'props2/meeting_table_black_6.png',table4:'props2/meeting_table_black_4.png',tableU:'props2/meeting_table_white_U.png',pantry:'props2/pantry_counter.png',fridge:'props2/fridge_double.png',plant:'props2/plant_pot.png',deskBeige:'props2/desk_beige_front.png',deskL:'props2/desk_white_L.png',shelf:'props2/bookshelf_black_small.png',pillarCab:'props2/pillar_cabinet.png',chair:'props/chair_black.png',pillar:'props/pillar_white.png',sheet:'furniture-v4.webp'};
+const FILES = {elevator:'props2/elevator.png',stall:'props2/toilet_stall.png',sink:'props2/pedestal_sink.png',tableA:'props2/meeting_table_black_6.png',table4:'props2/meeting_table_black_4.png',tableU:'props2/meeting_table_white_U.png',pantry:'props2/pantry_counter.png',fridge:'props2/fridge_double.png',plant:'props2/plant_pot.png',deskBeige:'props2/desk_beige_front.png',deskL:'props2/desk_white_L.png',shelf:'props2/bookshelf_black_small.png',pillarCab:'props2/pillar_cabinet.png',chair:'props/chair_black.png',pillar:'props/pillar_white.png',sheet:'furniture-v4.webp',planA:'props3/plan_meeting_6.png',plan4:'props3/plan_meeting_4.png',planU:'props3/plan_meeting_U.png',toilet:'props3/plan_toilet_right.png',sinkP:'props3/plan_sink_right.png',beigePod:'props3/beige_pod_front.png'};
 // [素材, 左上 x, 底部 y, 寬, 選項{h 指定高, fh 碰撞高, col 自訂碰撞[x,y,w,h]}]（版面圖像素）
 const PROPS = [
   ['elevator',165,255,72,{fh:40}],
-  ['stall',305,190,83,{col:[305,64,83,128],h:125}],['sink',305,242,36,{fh:30,h:48}],
-  ['stall',460,190,83,{col:[460,64,83,128],h:125}],['sink',460,242,36,{fh:30,h:48}],
-  ['tableA',735,210,256,{col:[735,118,256,84]}],
-  ['table4',118,1205,132,{col:[118,1112,132,78]}],['table4',122,1405,128,{col:[122,1320,128,78]}],
-  ['tableU',658,1350,380,{col:[676,1166,340,60]}],
   ['pantry',333,1268,125,{fh:34}],['fridge',477,1285,73,{fh:50}],['plant',570,1320,22,{fh:14}],
-  ...[0,237].flatMap(dy=>[[85,355],[190,355],[85,400],[190,400]].map(([x,y])=>['deskBeige',x,y+48+dy,105,{fh:42}])),
-  ...[0,237].flatMap(dy=>[['chair',113,497+dy,50,{fh:20}],['chair',218,497+dy,50,{fh:20}]]),
-  ['deskL',85,930,223,{fh:56}],['chair',198,952,48,{fh:20}],
+  // 米黃桌組：四張合併成一整塊（上下兩組），椅子在下緣
+  ['beigePod',85,450,210,{fh:78}],['beigePod',85,687,210,{fh:78}],
+  ...[0,237].flatMap(dy=>[['chair',118,512+dy,38,{fh:16}],['chair',222,512+dy,38,{fh:16}]]),
+  ['deskL',85,930,223,{fh:56}],['chair',198,952,38,{fh:16}],
   ['shelf',388,445,22,{fh:90,h:90}],['shelf',388,682,22,{fh:90,h:90}],['shelf',388,920,22,{fh:90,h:90}],
   ['shelf',872,445,20,{fh:70,h:70}],['shelf',725,682,26,{fh:56,h:57}],['shelf',850,682,30,{fh:56,h:57}],
   ['pillarCab',730,445,70,{fh:90}],['pillar',730,920,42,{fh:90,h:92}]
 ];
+// 平放在地板上的俯視素材：[素材, 中心 x, 中心 y, 寬, 高(省略＝依素材比例), 碰撞[x,y,w,h]（省略＝不擋）]（版面圖像素）
+const FLATS = [
+  ['planA',863,158,262,null,[742,125,244,64]],
+  ['plan4',184,1160,132,null,[124,1128,120,64]],['plan4',186,1360,130,null,[128,1328,116,64]],
+  ['planU',846,1250,380,200,[676,1166,340,40]],
+  // 廁所：每間兩個馬桶朝右（水箱在左）、洗手台朝右
+  ...[0,155].flatMap(dx=>[['toilet',340+dx,96,64,null,[310+dx,78,60,38]],['toilet',340+dx,158,64,null,[310+dx,140,60,38]],['sinkP',334+dx,222,52,null,[308+dx,204,52,36]]])
+];
+// 馬桶隔板（低矮實心）：[x, y, w, h]
+const PARTS = [...[0,155].flatMap(dx=>[[305+dx,64,83,5],[305+dx,126,83,5],[305+dx,189,83,5],[305+dx,64,5,130]])];
 // 玻璃隔間牆（缺口＝門）
 const WALLS = [
   [290,48,153,12],[290,48,12,222],[431,48,12,222],[290,258,95,12],
@@ -136,7 +142,7 @@ async function buildOffice(){
   const T = {};      // 裁邊後的素材
   for (const k of Object.keys(FILES)) if (k !== 'sheet' && imgs[k]) T[k] = trimmed(imgs[k]);
   const sheet = {};  // 藍桌：從家具圖集裁出
-  for (const [t, [x, y, w, h]] of Object.entries(SHEET_RECT)) if (imgs.sheet) sheet[t] = trimmed(imgs.sheet, x, y, w, h);
+  for (const [t, [x, y, w, h]] of Object.entries(SHEET_RECT)) if (imgs.sheet) { const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(imgs.sheet, x, y, w, h, 0, 0, w, h); sheet[t] = c; }
   const place = (src, x, bottom, w, o = {}) => {
     if (!src) return;
     const dh = o.h ? o.h * U : w * U * src.height / src.width, dw = dh * src.width / src.height;
@@ -147,14 +153,28 @@ async function buildOffice(){
     if (o.col) rects.push([o.col[0] * U, o.col[1] * U, (o.col[0] + o.col[2]) * U, (o.col[1] + o.col[3]) * U]);
     else rects.push([x * U, (bottom - (o.fh || 30)) * U, (x + w) * U, bottom * U]);
   }
+  for (const [key, cx, cy, w, h, col] of FLATS) {
+    const src = T[key]; if (!src) continue;
+    const dw = w * U, dh = (h ? h : w * src.height / src.width) * U;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(dw, dh), new THREE.MeshBasicMaterial({map:propTexture(src, dw, dh), transparent:true, alphaTest:.5}));
+    m.rotation.x = -Math.PI / 2; m.position.set(cx * U, .03, cy * U); scene.add(m);
+    if (col) rects.push([col[0] * U, col[1] * U, (col[0] + col[2]) * U, (col[1] + col[3]) * U]);
+  }
+  const partMat = new THREE.MeshLambertMaterial({color:0xcfc7bf});
+  for (const [x, y, w, h] of PARTS) {
+    const geo = new THREE.BoxGeometry(w * U, .5, h * U), m = new THREE.Mesh(geo, partMat);
+    m.position.set((x + w / 2) * U, .25, (y + h / 2) * U); scene.add(m);
+    const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({color:0x6a615a})); e.position.copy(m.position); scene.add(e);
+    rects.push([x * U, y * U, (x + w) * U, (y + h) * U]);
+  }
   // 藍色桌組：每組兩排×三張，設計部最下面那排有人入座
   GROUPS.forEach((xs, gi) => ROW_TOPS.forEach((top, ri) => {
     xs.forEach((cx, ci) => {
       [['top', top + 60], ['bottom', top + 108]].forEach(([side, bottomY]) => {
         const occupied = gi === 0 && ri === 2 && Object.values(SEATS).some(s => s[3] === side && s[2] === ci);
         const miniDesk = gi === 0 && ri === 2 && side === 'bottom' && ci === 0;
-        place(sheet[occupied ? 1 : miniDesk ? 4 : 7], cx - 52, bottomY, 105);
-        place(T.chair, cx - 25, side === 'top' ? top + 22 : top + 150, 50);
+        place(sheet[occupied ? 1 : miniDesk ? 4 : 7], cx - 52.5, bottomY, 105.6);
+        place(T.chair, cx - 19, side === 'top' ? top + 14 : top + 140, 38);
       });
     });
     const x0 = xs[0] - 52;
