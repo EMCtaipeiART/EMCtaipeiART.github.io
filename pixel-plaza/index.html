@@ -397,6 +397,25 @@ const WALLS = [
   [610,1045,210,12],[872,1045,210,12],[610,1045,12,417],[1070,1045,12,417],[610,1450,472,12]
 ];
 const LABELS = [['男廁',370,44],['女廁',526,44],['會議室 A',863,110],['影廳',215,1062],['會議室 C',186,1432],['茶水間',368,1226],['冰箱',510,1208],['會議室 D',845,1285],['電梯',201,262]];
+// ===== 四樓：版面取自 2D 版 floor4.js（座標 ×0.5，套用五樓同一套家具尺寸），整層放在五樓右邊 FX4 px 處 =====
+const FX4 = 1400, F4_Z1 = 1560;
+const F4 = {EX:122.5, EY:149, toilets:[['男廁', 451.5], ['女廁', 612.5]], TY:30, TW:173, TH:219,
+  H:{x:598, y:369, w:598, h:344}, O1:{x:598, y:763, w:284, h:510.5}, O2:{x:912, y:763, w:284, h:510.5}, F:{x:598, y:1323.5, w:234, h:219}, G:{x:912, y:1323.5, w:234, h:219}};
+function glassWalls(x, y, w, h, doors){   // 玻璃屋：四面牆，door ＝ {side:'t'|'b'|'l'|'r', c:門中心座標}（寬 60）
+  const RT = 12, d = 30, gap = k => doors.find(o => o.side === k);
+  const seg = (a, b, g) => { if (!g) return [[a, b]]; const o = [], g0 = g.c - d, g1 = g.c + d; if (a < g0) o.push([a, Math.min(b, g0)]); if (b > g1) o.push([Math.max(a, g1), b]); return o; };
+  for (const [a, b] of seg(x, x + w, gap('t'))) WALLS.push([a + FX4, y, b - a, RT]);
+  for (const [a, b] of seg(x, x + w, gap('b'))) WALLS.push([a + FX4, y + h - RT, b - a, RT]);
+  for (const [a, b] of seg(y + RT, y + h - RT, gap('l'))) WALLS.push([x + FX4, a, RT, b - a]);
+  for (const [a, b] of seg(y + RT, y + h - RT, gap('r'))) WALLS.push([x + w - RT + FX4, a, RT, b - a]);
+}
+for (const [, rx] of F4.toilets) glassWalls(rx, F4.TY, F4.TW, F4.TH, [{side:'b', c:rx + 131}]);
+{ const H = F4.H; glassWalls(H.x, H.y, H.w, H.h, [{side:'t', c:H.x + 107}, {side:'b', c:H.x + H.w / 2}]); }
+for (const [k, side] of [['O1', 'l'], ['O2', 'r']]) { const o = F4[k]; glassWalls(o.x, o.y, o.w, o.h, [{side:'t', c:o.x + o.w / 2}, {side, c:o.y + o.h / 2}]); }
+glassWalls(F4.F.x, F4.F.y, F4.F.w, F4.F.h, [{side:'r', c:F4.F.y + F4.F.h / 2}]); glassWalls(F4.G.x, F4.G.y, F4.G.w, F4.G.h, [{side:'l', c:F4.G.y + F4.G.h / 2}]);
+LABELS.push(['男廁', F4.toilets[0][1] + 86 + FX4, 44], ['女廁', F4.toilets[1][1] + 86 + FX4, 44], ['4F 電梯', F4.EX + 37 + FX4, F4.EY + 20], ['會議室 H', F4.H.x + 300 + FX4, F4.H.y + 40], ['辦公室', F4.O1.x + 142 + FX4, F4.O1.y + 24], ['辦公室', F4.O2.x + 142 + FX4, F4.O2.y + 24],
+  ['會議室 F', F4.F.x + 117 + FX4, F4.F.y + 40], ['會議室 G', F4.G.x + 117 + FX4, F4.G.y + 40], ['茶水間', 930 + FX4, 40], ['冰箱', 1030 + FX4, 20]);
+
 // 藍色桌組：三排（y 為桌面上緣），設計部 x 中心 463/568/673，同仁區 833/938/1043。type：1 有 iMac、7 空桌、4 Mac mini 桌。
 const ROW_TOPS = [355, 592, 828];
 const GROUPS = [[463,568,673],[833,938,1043]];
@@ -405,8 +424,8 @@ const SEATS = {Leona:[0,2,0,'top'],Amber:[0,2,1,'top'],Noise:[0,2,2,'top'],Anna:
   余采馨:[1,2,0,'top'],吳冠賢:[1,2,1,'top'],廖秦葦:[1,2,2,'top'],李明庭:[1,2,0,'bottom'],鄭筱舢:[1,2,1,'bottom'],黎子瑄:[1,2,2,'bottom'],王藍庭:[1,1,1,'top']};
 
 const FLOOR_X0 = -3, FLOOR_X1 = 1201 * U + 3, FLOOR_Z0 = -3, FLOOR_Z1 = 1526 * U + 3;
-// 地板：淺灰藍方格
-{
+// 地板：淺灰藍方格（五樓、四樓各一塊）
+for (const [FLOOR_X0, FLOOR_X1, FLOOR_Z0, FLOOR_Z1] of [[-3, 1201 * U + 3, -3, 1526 * U + 3], [FX4 * U - 3, (FX4 + 1201) * U + 3, -3, F4_Z1 * U + 3]]) {
   const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d');
   g.fillStyle = '#e4eaef'; g.fillRect(0, 0, 32, 32); g.fillStyle = '#dde4ea'; g.fillRect(0, 0, 16, 16); g.fillRect(16, 16, 16, 16);
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.NearestFilter; t.colorSpace = THREE.SRGBColorSpace;
@@ -425,7 +444,8 @@ for (const [x, y, w, h] of WALLS) {
 }
 const R_PLAYER = .5;
 function blocked(x, z){
-  if (x < 1 || x > 1201 * U - 1 || z < 1 || z > 1526 * U - 1) return true;
+  const in5 = x > 1 && x < 1201 * U - 1 && z > 1 && z < 1526 * U - 1, in4 = x > FX4 * U + 1 && x < (FX4 + 1201) * U - 1 && z > 1 && z < F4_Z1 * U - 1;
+  if (!in5 && !in4) return true;
   return rects.some(([a, b, c, d]) => x > a - R_PLAYER && x < c + R_PLAYER && z > b - R_PLAYER * .55 && z < d + R_PLAYER * .55);
 }
 
@@ -572,6 +592,65 @@ function updateCover(){
 }
 const imgs = {};
 const loadImg = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
+
+// ---- 四樓家具（版面來自 2D floor4.js，×0.5；家具尺寸與五樓相同）----
+function elevPick(x, z, w, h, d){ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false})); m.position.set(x, h / 2, z); m.userData.pick = {kind:'elev'}; scene.add(m); pickables.push(m); }
+const F4_WHITE = 0xeeeee4, F4_BEIGE = 0xe8c795;
+function buildFloor4(){
+  const I = v => v * U, X = v => (v + FX4) * U;
+  elevPick(I(201), I(235), 2.4, 3.2, 1.6);   // 五樓電梯的點選範圍
+  // 電梯（左上）
+  { const e = F4.EX, y = F4.EY; pbox(I(75), 3.3, I(65), 0xb9c1c9, X(e + 37.5), 0, I(y + 67.5));
+    const zf = I(y + 100) + .02; for (const dx of [-1, 1]) pbox(I(32), 2.7, .04, 0x8f99a3, X(e + 37.5) + dx * I(17), 0, zf, false);
+    const c = document.createElement('canvas'); c.width = 96; c.height = 48; const g = c.getContext('2d'); g.fillStyle = '#1b2027'; g.fillRect(0, 0, 96, 48); g.fillStyle = '#e7bd60'; g.font = 'bold 30px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('4F', 48, 26);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.1, .55), new THREE.MeshBasicMaterial({map:t})); sg.position.set(X(e + 37.5), 3.0, zf + .01); scene.add(sg);
+    rects.push([X(e), I(y + 35), X(e + 75), I(y + 100)]); elevPick(X(e + 37.5), I(y + 67.5), I(75), 3.3, I(65)); }
+  // 男廁、女廁（隔間比照五樓：原點 (290,48) 的相對位置）
+  for (const [, rx] of F4.toilets) {
+    const ty = F4.TY;
+    for (const y of [52, 124]) {
+      toilet3d(X(rx + 37), I(ty + y));
+      rects.push([X(rx + 13), I(ty + y - 15), X(rx + 56), I(ty + y + 15)]);
+      chairSeats.push({x:X(rx + 37) + .12, z:I(ty + y), face:FACE_ANGLE.E, by:null, fwd:.42, kind:'toilet'});
+    }
+    sink3d(X(rx + 42), I(ty + 202)); rects.push([X(rx + 18), I(ty + 188), X(rx + 64), I(ty + 216)]);
+    for (const [x, y, w, h] of [[15, 16, 74, 4], [15, 88, 74, 4], [15, 160, 74, 4], [15, 16, 4, 148]]) { pbox(I(w), .7, I(h), 0xd7cfc6, X(rx + x + w / 2), 0, I(ty + y + h / 2)); rects.push([X(rx + x), I(ty + y), X(rx + x + w), I(ty + y + h)]); }
+  }
+  // 木長桌（10 人，上下各 5 張椅）與茶水間
+  { const tx = 853.5, tw = 267.5, cz = 171 + 32; table3d(X(tx + tw / 2), I(cz), I(tw), I(50), 0xb98a50); rects.push([X(tx), I(cz - 25), X(tx + tw), I(cz + 25)]);
+    for (let k = 0; k < 5; k++) { const cx = tx + tw * (2 * k + 1) / 10; chair3d(X(cx), I(cz - 52), 'S'); chair3d(X(cx), I(cz + 52), 'N'); } }
+  const keep = pantry3d.snackSpot; pantry3d(862 + FX4, 49, 140, 38); const pantrySnack = pantry3d.snackSpot; pantry3d.snackSpot = keep;
+  fridge3d(1012 + FX4, 54, 36, 34); fridge3d(1048 + FX4, 54, 36, 34);
+  if (pantrySnack && F4.snacks !== false) F4.snackSpot = pantrySnack;
+  // 左側五個米黃桌子群（每群上下各一排、每排四張）
+  for (let g = 0; g < 5; g++) {
+    const top = 382.5 + 232.5 * g + 40, x0 = 39;
+    deskBlock3d(x0 + FX4, top, 4, F4_BEIGE, 'laptop', false);
+    for (let k = 0; k < 4; k++) { const cx = x0 + 52.5 + 105 * k; officeChair3d(X(cx), I(top - 38), 'S'); officeChair3d(X(cx), I(top + 116), 'N'); }
+  }
+  // 大會議室 H：六張白桌排成「C」，投影機朝右
+  { const H = F4.H, xL = H.x + 276, y0 = H.y + 87, xC = xL + 50;
+    for (const k of [0, 1]) {
+      const tx = xC + k * 97.5; table3d(X(tx + 48.75), I(y0 + 32), I(97.5), I(50), F4_WHITE); table3d(X(tx + 48.75), I(y0 + 135 + 32), I(97.5), I(50), F4_WHITE);
+      rects.push([X(tx), I(y0 + 7), X(tx + 97.5), I(y0 + 57)], [X(tx), I(y0 + 142), X(tx + 97.5), I(y0 + 192)]);
+      for (const f of [.25, .75]) { chair3d(X(tx + 97.5 * f), I(y0 + 32 - 52), 'S'); chair3d(X(tx + 97.5 * f), I(y0 + 135 + 32 + 52), 'N'); }
+    }
+    for (const k of [0, 1]) { table3d(X(xL + 25), I(y0 + 100 * k + 50), I(46), I(92), F4_WHITE); rects.push([X(xL + 2), I(y0 + 100 * k + 4), X(xL + 48), I(y0 + 100 * k + 96)]); for (const dy of [25, 75]) chair3d(X(xL - 20), I(y0 + 100 * k + dy), 'E'); }
+    const wx = H.x + H.w - 16, pz = y0 + 100;
+    pbox(I(4), 2.3, I(150), 0xf6f7f9, X(wx + 2), 0, I(pz));
+    projectorRig(X(xC + 163), I(pz), 'E', {room:'H', wallX:X(wx) - .02, wallDir:-1, zc:I(pz), w:4.3, h:2.2, title:'設計進度', kind:'bars'}); }
+  // 兩間玻璃辦公室：各兩群 2×2 米黃桌
+  for (const k of ['O1', 'O2']) { const o = F4[k], x0 = o.x + 32;
+    for (let g = 0; g < 2; g++) { const top = o.y + 100 + g * 232.5; deskBlock3d(x0 + FX4, top, 2, F4_BEIGE, 'laptop', false);
+      for (let c = 0; c < 2; c++) { const cx = x0 + 52.5 + 105 * c; officeChair3d(X(cx), I(top - 38), 'S'); officeChair3d(X(cx), I(top + 116), 'N'); } } }
+  // 會議室 F、G：黑色會議桌（一桌兩椅×2），F 投影機朝左、G 朝右
+  for (const [k, face] of [['F', 'W'], ['G', 'E']]) { const r = F4[k], tx = r.x + 47, cz = r.y + r.h / 2, tw = 140, id = k;
+    table3d(X(tx + tw / 2), I(cz), I(tw), I(50), 0x23282e); rects.push([X(tx), I(cz - 25), X(tx + tw), I(cz + 25)]);
+    for (const j of [0, 1]) { const cx = tx + tw * (2 * j + 1) / 4; chair3d(X(cx), I(cz - 52), 'S'); chair3d(X(cx), I(cz + 52), 'N'); }
+    if (face === 'W') { const wx = r.x + 12; pbox(I(4), 2.3, I(r.h - 24), 0xf6f7f9, X(wx + 2), 0, I(cz)); projectorRig(X(tx + 28), I(cz), 'W', {room:id, wallX:X(wx + 4) + .02, wallDir:1, zc:I(cz), w:4.0, h:2.1, title:'專案會議', kind:'list'}); }
+    else { const wx = r.x + r.w - 16; pbox(I(4), 2.3, I(r.h - 24), 0xf6f7f9, X(wx + 2), 0, I(cz)); projectorRig(X(tx + tw - 28), I(cz), 'E', {room:id, wallX:X(wx) - .02, wallDir:-1, zc:I(cz), w:4.0, h:2.1, title:'專案會議', kind:'text'}); } }
+  if (F4.snackSpot) SNACKS.forEach(([k, h], i) => { const src = imgs[k] && trimmed(imgs[k]); if (!src) return; const dh = h * .75, dw = dh * src.width / src.height, m = addBillboard(src, F4.snackSpot.cx + (-1.62 + i * .46), F4.snackSpot.cz, dw, dh); m.position.y = .95; });
+}
 async function buildOffice(){
   await Promise.all(Object.entries(FILES).map(async ([k, f]) => { imgs[k] = await loadImg(ASSET + f); }));
   const T = {};      // 裁邊後的素材
@@ -615,6 +694,7 @@ async function buildOffice(){
   // 米黃桌組（左側上下兩組，各 2×2 合併）：南北兩側都有椅子
   [355, 592].forEach(top => { deskBlock3d(85, top, 2, 0xe8c795, 'laptop', false); for (const cx of [137.5, 242.5]) { officeChair3d(I(cx), I(top - 38), 'S'); officeChair3d(I(cx), I(top + 116), 'N'); } });
   officeChair3d(I(222), I(955), 'N');
+  buildFloor4();
   // 白色 L 型桌（左下）
   { const I = v => v * U; pbox(I(168), .12, I(45), 0xf3f3ee, I(224), .83, I(850.5)); pbox(I(52), .95, I(102), 0xf3f3ee, I(111), 0, I(879));
     for (const [x, z] of [[300, 836], [300, 866], [150, 836], [150, 866]]) pbox(.12, .83, .12, 0x14181c, I(x), 0, I(z), false);
@@ -991,16 +1071,16 @@ const FRIDGE_SHELVES = [[['boba', 'bento', 'onigiri'], ['sandwich', 'yogurt', 'p
 const FRIDGE_API = API.replace(/\/api$/, '') + '/minigames/fridge', fridges = [];
 let fridgeState = null, fridgeOpenAt = 0, fridgeWant = false, fridgeBusy = false, foodSheet = null;
 const fridgePanel = document.createElement('div'); fridgePanel.id = 'fridgeP'; fridgePanel.hidden = true; document.body.appendChild(fridgePanel);
-const fridgeFront = () => { const a = fridges[0], b = fridges[1]; return a && b ? {x:(a.cx + b.cx) / 2, z:Math.max(a.zf, b.zf) + 2.0} : null; };
+const fridgeFront = () => { const i = player && floorOf(player) === 4 ? 2 : 0, a = fridges[i], b = fridges[i + 1]; return a && b ? {x:(a.cx + b.cx) / 2, z:Math.max(a.zf, b.zf) + 2.0} : null; };
 function fridgeInteract(){
   if (!player || !fridges.length) return;
   if (AWAY.has(player.status)) return;
-  const f = fridgeFront(), d = Math.hypot(f.x - player.holder.position.x, f.z - player.holder.position.z);
+  const f = fridgeFront(); if (!f) return; const d = Math.hypot(f.x - player.holder.position.x, f.z - player.holder.position.z);
   if (d < 2.2) { fridgeOpen(); return; }
   fridgeWant = true; target = new THREE.Vector3(f.x, 0, f.z);
 }
 async function fridgeCall(body){
-  const r = await fetch(FRIDGE_API + (body ? '' : '?floor=5'), {method:body ? 'POST' : 'GET', headers:body ? {'Content-Type':'application/json'} : undefined, body:body ? JSON.stringify({...body, floor:5, nick:player ? player.name : '匿名'}) : undefined, cache:'no-store'});
+  const r = await fetch(FRIDGE_API + (body ? '' : '?floor=' + (player ? floorOf(player) : 5)), {method:body ? 'POST' : 'GET', headers:body ? {'Content-Type':'application/json'} : undefined, body:body ? JSON.stringify({...body, floor:player ? floorOf(player) : 5, nick:player ? player.name : '匿名'}) : undefined, cache:'no-store'});
   return {status:r.status, ...(await r.json().catch(() => ({ok:false})))};
 }
 async function fridgeOpen(){
@@ -1032,8 +1112,8 @@ async function fridgeTake(slot){
 function updateFridge(){
   const p = fridgeOpenAt ? Math.min(1, (performance.now() - fridgeOpenAt) / 450) : 0;
   for (const fr of fridges) { const cur = fr.open + ((fridgeOpenAt ? 1 : 0) - fr.open) * .18; fr.open = Math.abs(cur - (fridgeOpenAt ? 1 : 0)) < .005 ? (fridgeOpenAt ? 1 : 0) : cur; fr.pivots.forEach(pv => { pv.rotation.y = -fr.open * 1.75; }); fr.inner.visible = fr.open > .05; }
-  if (fridgeWant && player) { const f = fridgeFront(); if (Math.hypot(f.x - player.holder.position.x, f.z - player.holder.position.z) < 1.8) { fridgeWant = false; target = null; fridgeOpen(); } }
-  if (fridgeOpenAt && player) { const f = fridgeFront(); if (Math.hypot(f.x - player.holder.position.x, f.z - player.holder.position.z) > 5 || AWAY.has(player.status)) { fridgeClose(); showQuote('', '你走遠了，冰箱門自動關上'); } }
+  if (fridgeWant && player) { const f = fridgeFront(); if (f && Math.hypot(f.x - player.holder.position.x, f.z - player.holder.position.z) < 1.8) { fridgeWant = false; target = null; fridgeOpen(); } }
+  if (fridgeOpenAt && player) { const f = fridgeFront(); if (!f || Math.hypot(f.x - player.holder.position.x, f.z - player.holder.position.z) > 5 || AWAY.has(player.status)) { fridgeClose(); showQuote('', '你走遠了，冰箱門自動關上'); } }
 }
 function fridgeInner(w, h, shelves){   // 開門後看到的內部：深色內牆＋三層架＋零食
   const c = document.createElement('canvas'); c.width = 168; c.height = 260; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
@@ -1044,6 +1124,21 @@ function fridgeInner(w, h, shelves){   // 開門後看到的內部：深色內�
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({map:t})); m.userData.tex = t; return m;
 }
 
+// ---- 樓層：五樓、四樓（電梯互通）----
+const floorOf = c => c.holder.position.x > (FX4 - 100) * U ? 4 : 5;
+const elevSpot = f => f === 4 ? {x:(FX4 + F4.EX + 37.5) * U, z:(F4.EY + 125) * U} : {x:201 * U, z:292 * U};
+let wantElev = false;
+function elevInteract(){
+  if (!player || AWAY.has(player.status)) return;
+  const here = floorOf(player), sp = elevSpot(here);
+  if (Math.hypot(sp.x - player.holder.position.x, sp.z - player.holder.position.z) < 2.0) { elevGo(here === 5 ? 4 : 5); return; }
+  wantElev = true; target = new THREE.Vector3(sp.x, 0, sp.z);
+}
+function elevGo(to){
+  wantElev = false; target = null; if (!player) return; releaseSeat(player); wheelClose(); fridgeClose();
+  const sp = elevSpot(to); player.holder.position.set(sp.x, 0, sp.z + .6); player.face = 0;
+  camPos.set(sp.x, 10.9, sp.z + 12.8); look.set(sp.x, 0, sp.z); showQuote('', '🛗 到了 ' + to + ' 樓');
+}
 // ---- 座位現場：不在座位的狀態（用餐／會議／休假／下班／廁所／出國／公出）椅子與桌上電腦收起、桌面變灰、桌上放狀態圖示；加班有紫色聚光燈與三團鬼火 ----
 const AWAY_DESK = new Set(['lunch', 'meeting', 'leave', 'offwork', 'toilet', 'abroad', 'out']), iconTex = {};
 function flameTex(){ const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), r = g.createRadialGradient(32, 40, 2, 32, 38, 28); r.addColorStop(0, 'rgba(255,240,255,1)'); r.addColorStop(.35, 'rgba(190,120,255,.95)'); r.addColorStop(1, 'rgba(110,40,220,0)'); g.fillStyle = r; g.beginPath(); g.moveTo(32, 2); g.bezierCurveTo(48, 22, 56, 34, 50, 46); g.bezierCurveTo(46, 58, 18, 58, 14, 46); g.bezierCurveTo(8, 34, 22, 24, 32, 2); g.fill(); g.fillStyle = '#2a0a55'; g.fillRect(24, 36, 4, 6); g.fillRect(37, 36, 4, 6); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
@@ -1113,7 +1208,7 @@ function select(name){
 
 let done = 0;
 Promise.all([buildOffice(), loadIcons(), ...NAMES.map((n, i) => addChar(n, i).then(() => { setLoad('載入角色 ' + (++done) + '/' + NAMES.length, done / NAMES.length); }))])
-  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); startLiveSync(); showTitleCard(); window.__plaza = {fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
+  .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); startLiveSync(); showTitleCard(); window.__plaza = {elevGo, floorOf, elevInteract, fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
 
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
 const TILT = 0, STRETCH = 1 / Math.cos(Math.atan(8.4 / 9.4)), _e = new THREE.Euler(0, 0, 0, 'YXZ');   // 垂直站立：不再後傾（避免穿進桌子、牆），高度拉長 STRETCH 倍抵消俯視縮短
@@ -1152,8 +1247,8 @@ const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 
 renderer.domElement.addEventListener('pointerdown', e => {
   ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
   const hits = ray.intersectObjects(pickables, true).filter((h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.desk && !pk.c.holder.visible); })), hit = hits.find(h => ((h.object.userData.pickRoot || h.object).userData.pick || {}).kind === 'char') || hits[0];
-  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { clickChar = pk.c; clickUntil = performance.now() + 3000; if (pk.c !== player && player && adminHome) select(pk.c.name); if (pk.c === player) wheelOpen(pk.c); else wheelClose(); if (false) { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); else if (pk.kind === 'fridge') fridgeInteract(); else if (pk.kind === 'seat') { const st = pk.seat || chairSeats.filter(q => q.kind === 'toilet').sort((a, b) => Math.hypot(a.x - pk.at.x, a.z - pk.at.z) - Math.hypot(b.x - pk.at.x, b.z - pk.at.z))[0]; if (st && player && !st.by && !st.hidden) { wantSeat = st; target = new THREE.Vector3(st.x, 0, st.z); } } return; } }
-  radialClose(); wantSeat = null; fridgeWant = false; wheelClose();
+  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { clickChar = pk.c; clickUntil = performance.now() + 3000; if (pk.c !== player && player && adminHome) select(pk.c.name); if (pk.c === player) wheelOpen(pk.c); else wheelClose(); if (false) { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); else if (pk.kind === 'fridge') fridgeInteract(); else if (pk.kind === 'elev') elevInteract(); else if (pk.kind === 'seat') { const st = pk.seat || chairSeats.filter(q => q.kind === 'toilet').sort((a, b) => Math.hypot(a.x - pk.at.x, a.z - pk.at.z) - Math.hypot(b.x - pk.at.x, b.z - pk.at.z))[0]; if (st && player && !st.by && !st.hidden) { wantSeat = st; target = new THREE.Vector3(st.x, 0, st.z); } } return; } }
+  radialClose(); wantSeat = null; fridgeWant = false; wantElev = false; wheelClose();
   const p = new THREE.Vector3();
   if (ray.ray.intersectPlane(plane, p) && !blocked(p.x, p.z)) target = p;
 });
@@ -1222,7 +1317,8 @@ function renderFrame(){
   for (const o of hidden) o.visible = true;
   renderer.autoClear = false; renderer.render(compScene, compCam); renderer.autoClear = true;
 }
-const ROOMS = [['A', 660, 48, 1062, 270, '會議室 A'], ['B', 82, 1045, 290, 1250, '影廳'], ['C', 82, 1250, 290, 1460, '會議室 C'], ['D', 610, 1045, 1082, 1462, '會議室 D']];
+const ROOMS = [['A', 660, 48, 1062, 270, '會議室 A'], ['B', 82, 1045, 290, 1250, '影廳'], ['C', 82, 1250, 290, 1460, '會議室 C'], ['D', 610, 1045, 1082, 1462, '會議室 D'],
+  ...[['H', F4.H, '會議室 H'], ['F', F4.F, '會議室 F'], ['G', F4.G, '會議室 G']].map(([k, r, n]) => [k, r.x + 12 + FX4, r.y + 12, r.x + r.w - 12 + FX4, r.y + r.h - 12, n])];
 const projBox = document.getElementById('proj'), projCv = projBox.querySelector('canvas'), projCtx = projCv.getContext('2d'), projTitle = projBox.querySelector('span');
 let projRoom = null;
 function updateProjectionView(){
@@ -1433,7 +1529,7 @@ function renderCharPage(){
     <div class="cp-head">
       <div class="cp-av"><img alt="" src="${c.avatar || ''}"><b class="cp-lv">Lv.${lv}</b></div>
       <div class="cp-main">
-        <div class="cp-tag"><span class="cp-pill">${live.ok ? '即時' : '模擬'}</span><span>凱曜設計部 · 5F · ${esc(roomOf(c))}</span>${c !== player ? '<span class="cp-pill">管理者代操作</span>' : ''}</div>
+        <div class="cp-tag"><span class="cp-pill">${live.ok ? '即時' : '模擬'}</span><span>凱曜設計部 · ${floorOf(c)}F · ${esc(roomOf(c))}</span>${c !== player ? '<span class="cp-pill">管理者代操作</span>' : ''}</div>
         <div class="cp-name">${esc(c.name)} <span class="cp-type">${iconImg(symOf[c.status] || 'person', 20)} ${st[0]}</span></div>
       </div>
     </div>
@@ -1600,7 +1696,7 @@ function updateHud(){
   if ($('pName').textContent !== c.name) { $('pName').textContent = c.name; if (c.avatar) $('pAv').innerHTML = '<img alt="" src="' + c.avatar + '">'; }
   $('pSt').innerHTML = iconImg(symOf[c.status] || 'person', 18) + ' ' + st[0] + (c.mood ? '　' + iconImg(moodSym[c.mood], 16) : '');
   $('pExp').style.width = ((total % 5) / 5 * 100) + '%'; $('pLv').textContent = 'Lv.' + lv + '　圖鑑 ' + (dex.d.length + dex.n.length) + '/' + (DROP_IDS.length + NOTE_IDS.length);
-  $('pClock').textContent = '🕒 ' + fmtTime.format(new Date()).replace(/^(\S+)\s+(\S+)$/, '$2 $1') + '（台北）'; updateTitleNet();
+  $('pClock').textContent = '🕒 ' + fmtTime.format(new Date()).replace(/^(\S+)\s+(\S+)$/, '$2 $1') + '（台北）' + (player ? '・' + floorOf(player) + 'F' : ''); updateTitleNet();
 }
 setInterval(updateHud, 500);
 
@@ -1612,11 +1708,12 @@ function tick(){
       0,
       (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0) + joy.y);
     const run = keys.ShiftLeft || keys.ShiftRight || Math.hypot(joy.x, joy.y) > .85;
-    if (dir.lengthSq() > .01) { target = null; wantSeat = null; fridgeWant = false; wheelClose(); }
+    if (dir.lengthSq() > .01) { target = null; wantSeat = null; fridgeWant = false; wantElev = false; wheelClose(); }
     else if (target) { dir.copy(target).sub(player.holder.position); dir.y = 0; if (dir.length() < .2) target = null; }
     if (!radial.hidden || !$('sv').hidden || AWAY.has(player.status)) { dir.set(0, 0, 0); target = null; }   // 角色頁面開著時人物不跟著走
     if (player.sitting && dir.lengthSq() > 1e-4) standUp(player);
     if (!player.sitting) moveChar(player, dir, run ? 5 : 2.4, dt);
+    if (wantElev) { const sp = elevSpot(floorOf(player)); if (Math.hypot(sp.x - player.holder.position.x, sp.z - player.holder.position.z) < 1.6) elevGo(floorOf(player) === 5 ? 4 : 5); }
     if (wantSeat) { const st = wantSeat; if (st.by || st.hidden || player.sitting) wantSeat = null; else if (Math.hypot(st.x - player.holder.position.x, st.z - player.holder.position.z) < 1.0) { wantSeat = null; target = null; sitAt(player, st); } }
   }
   for (const c of Object.values(chars)) {
