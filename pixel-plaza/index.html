@@ -1266,6 +1266,7 @@ stick.addEventListener('pointerup', () => { joy.x = joy.y = 0; knob.style.transf
 
 const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 renderer.domElement.addEventListener('pointerdown', e => {
+  if (!wheel.hidden) { wheelClose(); return; }   // 輪盤開著時，點外面只收合輪盤，人物先不動；下一下才移動
   ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
   const hits = ray.intersectObjects(pickables, true).filter((h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.desk && !pk.c.holder.visible); })), hit = hits.find(h => ((h.object.userData.pickRoot || h.object).userData.pick || {}).kind === 'char') || hits[0];
   if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { clickChar = pk.c; clickUntil = performance.now() + 3000; if (pk.c !== player && player && adminHome) select(pk.c.name); if (pk.c === player) wheelOpen(pk.c); else wheelClose(); if (false) { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); else if (pk.kind === 'fridge') fridgeInteract(); else if (pk.kind === 'elev') elevInteract(); else if (pk.kind === 'seat') { const st = pk.seat || chairSeats.filter(q => q.kind === 'toilet').sort((a, b) => Math.hypot(a.x - pk.at.x, a.z - pk.at.z) - Math.hypot(b.x - pk.at.x, b.z - pk.at.z))[0]; if (st && player && !st.by && !st.hidden) { wantSeat = st; target = new THREE.Vector3(st.x, 0, st.z); } } return; } }
@@ -1616,8 +1617,8 @@ const wheel = document.createElement('div'); wheel.id = 'swheel'; wheel.hidden =
 let wheelChar = null;
 function wheelOpen(c){
   if (!c || c !== player) return; wheelChar = c; wheel.hidden = false; wheel.classList.remove('open');
-  const ids = Object.keys(STATUS), R = 118;
-  wheel.innerHTML = ids.map((id, i) => { const a = (-200 + i * 220 / (ids.length - 1)) * Math.PI / 180, x = Math.cos(a) * R, y = Math.sin(a) * R;   // 只在頭頂展開成一把扇形，不擋住人物身體
+  const ids = Object.keys(STATUS), R = 104;
+  wheel.innerHTML = ids.map((id, i) => { const a = (-90 + i * 360 / ids.length) * Math.PI / 180, x = Math.cos(a) * R, y = Math.sin(a) * R;   // 圍繞人物一圈、順時針，「在座」在正上方
     return '<button type="button" class="sw-b' + (c.status === id ? ' on' : '') + '" data-id="' + id + '" style="--x:' + x.toFixed(1) + 'px;--y:' + y.toFixed(1) + 'px;--d:' + (i * 24) + 'ms">' + iconImg(symOf[id], 24) + '<b>' + (id === 'present' ? '在座' : STATUS[id][0]) + '</b></button>'; }).join('');
   wheel.querySelectorAll('.sw-b').forEach(b => b.onclick = () => { const id = b.dataset.id; wheelClose(); if (id === 'present') setOwnAuto(); else setOwnStatus(id); });
   requestAnimationFrame(() => requestAnimationFrame(() => wheel.classList.add('open')));
@@ -1625,7 +1626,7 @@ function wheelOpen(c){
 function wheelClose(){ wheel.hidden = true; wheel.classList.remove('open'); wheelChar = null; }
 function updateWheel(){
   if (wheel.hidden || !wheelChar) return;
-  const p = wheelChar.holder.position.clone(); p.y = wheelChar.holder.visible ? 2.2 : 1.6; p.project(camera);
+  const p = wheelChar.holder.position.clone(); p.y = wheelChar.holder.visible ? 1.05 : 1.3; p.project(camera);
   wheel.style.transform = 'translate(' + ((p.x * .5 + .5) * innerWidth) + 'px,' + ((-p.y * .5 + .5) * innerHeight) + 'px)';
 }
 let hoverChar = null, clickChar = null, clickUntil = 0;
