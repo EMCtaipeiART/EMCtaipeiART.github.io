@@ -33,7 +33,7 @@
 | 讀全部狀態 | `pixelOfficeState {since}` → `people[]`（status、mood、message、music、meetingRoom、statusSource、floor4At/f4x/f4y/f4dir…）、`hours{force}`、`stories`、`funClaims` |
 | 改自己 | `pixelOfficeUpdate {name, patch}`：`status`（含 `'auto'`＝交還電腦）、`mood`、`message`、`music`、`floor/fx/fy/fdir`（位置，見下） |
 | 共用「已處理」紀錄 | `pixelOfficeFun {id, v, token}`；id 格式 `^[a-z]:[A-Za-z0-9:._-]{1,70}$`：`d:`掉落物、`n:`遺落物、`p:`便便、`j:`投影機（v=0 關、1–99 開且畫面編號） |
-| **個人進度（雲端存檔）** | `pixelOfficeProgress {name, op:'get'|'save', progress:{dex:{d:[],n:[]}, stat:{flush,found,notes}}}`；存在 DO 的 `pixel_office_settings` key `progress:<名字>`，**圖鑑取聯集、次數取較大值**，不寫 GitHub。**這個動作是新加的，Worker 要部署才有效**（沒部署時前端會提示「雲端存檔尚未啟用」並暫存本機） |
+| **個人進度（雲端存檔）** | `pixelOfficeProgress {name, op:'get'|'save', progress:{dex:{d:[],n:[]}, stat:{flush,found,notes}}}`；存在 DO 的 `pixel_office_settings` key `progress:<名字>`，**圖鑑取聯集、次數取較大值**，不寫 GitHub；另外存 `last:{x,z,at}`（最後停留位置，px，取較新的），前端只採用 24 小時內的（`LAST_TTL`）。**這個動作是新加的，Worker 要部署才有效**（沒部署時前端會提示「雲端存檔尚未啟用」並暫存本機） |
 | 管理者 | `pixelOfficeAllWork {mode}`、`getPixelHours`／`savePixelHours`、`pixelOfficePunish`（帶 `editorToken`／`token`） |
 | 冰箱 | `GET /minigames/fridge?floor=5|4&since=` 、`POST /minigames/fridge {action:'open'|'take'|'box', slot, nick, floor}`（和 2D 版同一份庫存） |
 | 限時動態 | `pixelOfficeStoryAdd／Comment／React／View／Remove` |

@@ -4268,8 +4268,12 @@ describe('Pixel Office shared state', () => {
     expect(empty.ok).toBe(true);
     await api({ action: 'pixelOfficeProgress', name: 'Machi', op: 'save', progress: { dex: { d: [1, 3], n: [2] }, stat: { found: 5, notes: 1, flush: 2 } } });
     const merged = await api({ action: 'pixelOfficeProgress', name: 'Machi', op: 'save', progress: { dex: { d: [3, 4], n: [] }, stat: { found: 2, notes: 7, flush: 0 } } });
-    expect(merged.progress).toEqual({ dex: { d: [1, 3, 4], n: [2] }, stat: { found: 5, notes: 7, flush: 2 } });
+    expect(merged.progress).toEqual({ dex: { d: [1, 3, 4], n: [2] }, stat: { found: 5, notes: 7, flush: 2 }, last: null });
     expect(((await api({ action: 'pixelOfficeProgress', name: 'Machi', op: 'get' })).progress as { dex: { d: number[] } }).dex.d).toEqual([1, 3, 4]);
+    const now = Date.now();
+    await api({ action: 'pixelOfficeProgress', name: 'Machi', op: 'save', progress: { last: { x: 800, z: 600, at: now - 1000 } } });
+    await api({ action: 'pixelOfficeProgress', name: 'Machi', op: 'save', progress: { last: { x: 100, z: 100, at: now - 9000 } } });   // 較舊的不會蓋掉
+    expect(((await api({ action: 'pixelOfficeProgress', name: 'Machi', op: 'get' })).progress as { last: { x: number } }).last.x).toBe(800);
     expect((await api({ action: 'pixelOfficeProgress', name: '路人甲', op: 'save', progress: {} })).ok).toBe(false);
   });
 

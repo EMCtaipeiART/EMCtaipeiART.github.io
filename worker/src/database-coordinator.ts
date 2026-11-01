@@ -2750,14 +2750,17 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const ids = (list: unknown): number[] => Array.isArray(list) ? [...new Set(list.map(Number).filter(n => Number.isInteger(n) && n >= 0 && n < 400))].sort((x, y) => x - y) : [];
     const count = (value: unknown): number => Math.max(0, Math.min(1_000_000, Math.floor(Number(value) || 0)));
     const dexOld = asRow(saved.dex), statOld = asRow(saved.stat);
+    const cleanLast = (value: unknown): { x: number; z: number; at: number } | null => { const v = asRow(value), x = Number(v.x), z = Number(v.z), at = Number(v.at), now = Date.now(); return Number.isFinite(x) && Number.isFinite(z) && Number.isFinite(at) && x >= 0 && x <= 6000 && z >= -300 && z <= 2000 && at <= now + 60_000 && now - at < 7 * 86_400_000 ? { x: Math.round(x), z: Math.round(z), at: Math.round(at) } : null; };
+    let last = cleanLast(saved.last);
     let dexD = ids(dexOld.d), dexN = ids(dexOld.n), stat = { flush: count(statOld.flush), found: count(statOld.found), notes: count(statOld.notes) };
     if (text(payload.op) === 'save') {
       const incoming = asRow(payload.progress), dexIn = asRow(incoming.dex), statIn = asRow(incoming.stat);
       dexD = ids([...dexD, ...ids(dexIn.d)]); dexN = ids([...dexN, ...ids(dexIn.n)]);
       stat = { flush: Math.max(stat.flush, count(statIn.flush)), found: Math.max(stat.found, count(statIn.found)), notes: Math.max(stat.notes, count(statIn.notes)) };
-      sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', key, JSON.stringify({ dex: { d: dexD, n: dexN }, stat }), Date.now());
+      const lastIn = cleanLast(incoming.last); if (lastIn && (!last || lastIn.at > last.at)) last = lastIn;   // 最後停留的位置：取較新的（一天內有效由前端判斷）
+      sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', key, JSON.stringify({ dex: { d: dexD, n: dexN }, stat, last }), Date.now());
     }
-    return { ok: true, action: 'pixelOfficeProgress', progress: { dex: { d: dexD, n: dexN }, stat } } as ApiResult;
+    return { ok: true, action: 'pixelOfficeProgress', progress: { dex: { d: dexD, n: dexN }, stat, last } } as ApiResult;
   }
 
   private async pixelOfficeFun(payload: ApiPayload): Promise<ApiResult> {
