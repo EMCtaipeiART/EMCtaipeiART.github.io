@@ -338,8 +338,12 @@ html.embed #hud,html.embed #dock,html.embed #proj,html.embed .lbl{display:none!i
 .ef-grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(var(--cols),1fr);grid-template-rows:repeat(var(--rows),1fr)}
 .ef-c{display:block;background:#2fbf57;transform:scale(0);transition:transform .08s steps(2)}
 #elevFx.on .ef-c{transform:scale(1.08)}
-.ef-txt{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:4px;opacity:0;transition:opacity .15s .22s}#elevFx.on .ef-txt{opacity:1}
-.ef-txt b{font-size:54px}.ef-txt span{font-size:34px;font-weight:700;color:var(--yellow);text-shadow:0 3px 0 rgba(11,61,30,.6)}
+.ef-page{position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(135deg,var(--c1) 0%,var(--c2) 46%,var(--c3) 100%);opacity:0;transition:opacity .2s}
+.ef-page::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.08) 0 16px,transparent 16px 32px);pointer-events:none}
+#elevFx.on .ef-page{opacity:1;transition:opacity .12s .3s}
+.ef-page .t-bar i{animation:efFill .75s ease-out .25s forwards}
+@keyframes efFill{to{width:100%}}
+.ef-grid{z-index:2}.ef-page{z-index:3}
 .cp-grid.mood{grid-template-columns:1fr 1fr!important;gap:8px!important}
 .cp-grid.mood button{padding:12px 6px!important;font-size:15px!important;border-radius:14px!important}
 .cp-grid.mood button i img{width:44px!important;height:44px!important}
@@ -1355,12 +1359,13 @@ function elevCover(label, mid, done){   // 綠色像素方塊由下往上快速�
   elevFx.style.setProperty('--cols', cols); elevFx.style.setProperty('--rows', rows);
   const cells = []; let html = '<div class="ef-grid">';
   for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) { html += '<i class="ef-c"></i>'; }
-  elevFx.innerHTML = html + '</div><div class="ef-txt"><b>🛗</b><span>' + label + '</span></div>';
+  elevFx.innerHTML = '<div class="ef-page"><div class="t-inner"><div class="t-logo"><span>EMC</span><span class="y">Office</span></div><div class="t-sub">前往 ' + label + '</div><div class="t-load"><div class="t-ball"></div><div class="t-bar"><i></i><b>電梯移動中</b></div></div></div></div>' + html + '</div>';   // 和進站載入頁同一套版面與字體（EMC Office 大標、粗描邊、旋轉椅子、進度條），上面蓋一層像素方塊過場
+  elevFx.querySelector('.t-ball').style.setProperty('background-image', 'url(' + chairIcon() + ')', 'important');
   const els = [...elevFx.querySelectorAll('.ef-c')]; els.forEach((el, n) => { const r = Math.floor(n / cols); cells.push({el, r}); el.style.transitionDelay = ((rows - 1 - r) * 8 + Math.random() * 45) + 'ms'; });
   elevFx.classList.add('on');
-  setTimeout(() => { mid(); }, 460);
-  setTimeout(() => { cells.forEach(({el, r}) => { el.style.transitionDelay = (r * 8 + Math.random() * 45) + 'ms'; }); elevFx.classList.add('out'); elevFx.classList.remove('on'); }, 620);
-  setTimeout(() => { elevFx.classList.remove('out'); elevFx.innerHTML = ''; done(); }, 1100);
+  setTimeout(() => { mid(); }, 560);
+  setTimeout(() => { cells.forEach(({el, r}) => { el.style.transitionDelay = (r * 8 + Math.random() * 45) + 'ms'; }); elevFx.classList.add('out'); elevFx.classList.remove('on'); }, 900);
+  setTimeout(() => { elevFx.classList.remove('out'); elevFx.innerHTML = ''; done(); }, 1450);
 }
 function elevGo(to){
   if (elevBusy || !player) return; wantElev = false; elevArmed = false; target = null; elevBusy = true; wheelClose(); fridgeClose();
