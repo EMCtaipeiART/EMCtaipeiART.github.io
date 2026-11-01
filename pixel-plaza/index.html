@@ -1903,7 +1903,7 @@ function renderCharPage(){
       <div class="cp-av"><img alt="" src="${c.avatar || ''}"><b class="cp-lv">Lv.${lv}</b></div>
       <div class="cp-main">
         <div class="cp-tag"><span class="cp-pill">${live.ok ? '即時' : '模擬'}</span><span>凱曜設計部 · ${floorOf(c)}F · ${esc(roomOf(c))}</span>${c !== player ? '<span class="cp-pill">管理者代操作</span>' : ''}</div>
-        <div class="cp-name">${esc(c.name)} <span class="cp-type">${iconImg(symOf[c.status] || 'person', 20)} ${st[0]}</span></div>
+        <div class="cp-name">${esc(c.name)} <span class="cp-type">${iconImg(symOf[c.status] || 'person', 20)} ${statusLabel(c)}</span></div>
       </div>
     </div>
     <div class="cp-cols">
@@ -1981,12 +1981,14 @@ function updateWheel(){
 }
 let hoverChar = null, clickChar = null, clickUntil = 0;
 const plate = document.createElement('div'); plate.className = 'cui-tag'; plate.style.cssText = 'position:fixed;left:0;top:0;z-index:7;display:none;pointer-events:none'; document.body.appendChild(plate);
+// 名牌／狀態列顯示的文字：狀態是「在座」但人其實沒坐著（離開座位在辦公室裡走動）時顯示「離座」
+const statusLabel = c => (c.status === 'present' && c.holder.visible && !c.sitting) ? '離座' : (STATUS[c.status] || STATUS.present)[0];
 function updatePlate(){
   const c = hoverChar || (performance.now() < clickUntil ? clickChar : null);
   if (!c || !(c.holder.visible || AWAY.has(c.status))) { plate.style.display = 'none'; return; }
   const p = c.holder.position.clone(); p.y = .05; p.project(camera);
   if (p.z >= 1) { plate.style.display = 'none'; return; }
-  const st = STATUS[c.status] || STATUS.present, html = esc(c.name + '（' + st[0] + '）');
+  const st = STATUS[c.status] || STATUS.present, html = esc(c.name + '（' + statusLabel(c) + '）');
   if (plate.dataset.h !== html) { plate.innerHTML = html; plate.dataset.h = html; }
   plate.style.display = 'inline-flex'; plate.style.transform = 'translate(-50%,6px) translate(' + ((p.x * .5 + .5) * innerWidth) + 'px,' + ((-p.y * .5 + .5) * innerHeight) + 'px)';
 }
@@ -2118,7 +2120,7 @@ function updateHud(){
   if (!c) { $('pName').textContent = '訪客'; $('pSt').textContent = '👀 參觀中（登入後才能操作人物）'; $('pAv').innerHTML = ''; $('pExp').style.width = '0%'; $('pLv').textContent = ''; $('pClock').textContent = '🕒 ' + fmtTime.format(new Date()).replace(/^(\S+)\s+(\S+)$/, '$2 $1') + '（台北）'; updateTitleNet(); return; }
   const st = STATUS[c.status] || STATUS.present, total = stat.found + stat.notes + stat.flush, lv = 1 + Math.floor(total / 5);
   if ($('pName').textContent !== c.name) { $('pName').textContent = c.name; if (c.avatar) $('pAv').innerHTML = '<img alt="" src="' + c.avatar + '">'; }
-  $('pSt').innerHTML = iconImg(symOf[c.status] || 'person', 18) + ' ' + st[0] + (c.mood ? '　' + iconImg(moodSym[c.mood], 16) : '');
+  $('pSt').innerHTML = iconImg(symOf[c.status] || 'person', 18) + ' ' + statusLabel(c) + (c.mood ? '　' + iconImg(moodSym[c.mood], 16) : '');
   $('pExp').style.width = ((total % 5) / 5 * 100) + '%'; $('pLv').textContent = 'Lv.' + lv + '　圖鑑 ' + (dex.d.length + dex.n.length) + '/' + (DROP_IDS.length + NOTE_IDS.length);
   $('pClock').textContent = '🕒 ' + fmtTime.format(new Date()).replace(/^(\S+)\s+(\S+)$/, '$2 $1') + '（台北）' + (player ? '・' + floorOf(player) + 'F' : ''); updateTitleNet();
 }
