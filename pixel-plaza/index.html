@@ -298,10 +298,11 @@ button{font-family:inherit}
 .hp-top button:hover{transform:translateY(-2px);filter:brightness(1.08)}
 /* 收合式按鈕：平常只有圓形＋小圖示，滑鼠移上去才展開中文字；說明放右下角 */
 .hp-br{position:absolute;right:12px;bottom:12px;display:flex;pointer-events:auto}
-.hp-top button,.hp-br button{position:relative;height:44px;min-width:44px;padding:0 7px!important;border:0!important;border-radius:999px!important;font:700 16px/1 'Fredoka','Noto Sans TC',sans-serif!important;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;gap:0;overflow:hidden;pointer-events:auto;cursor:pointer;box-shadow:inset 0 2px 0 rgba(255,255,255,.4),inset 0 -3px 0 rgba(0,0,0,.18),0 6px 14px rgba(0,0,0,.28)!important;transition:padding .28s ease,filter .15s,transform .15s}
-.hp-br button i{font-style:normal;flex:none;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.22);display:grid;place-items:center;font-size:18px;text-shadow:none}
+.hp-top button,.hp-br button{position:relative;height:44px;min-width:44px;padding:0 4px!important;border:0!important;border-radius:999px!important;font:700 16px/1 'Fredoka','Noto Sans TC',sans-serif!important;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;gap:0;overflow:hidden;pointer-events:auto;cursor:pointer;box-shadow:inset 0 2px 0 rgba(255,255,255,.4),inset 0 -3px 0 rgba(0,0,0,.18),0 6px 14px rgba(0,0,0,.28)!important;transition:padding .28s ease,filter .15s,transform .15s}
+.hp-top button i,.hp-br button i{font-style:normal;flex:none;width:36px;height:36px;border-radius:0;background:none!important;display:grid;place-items:center;text-shadow:none}
+.hp-top button i img,.hp-br button i img{width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 2px 0 rgba(0,0,0,.35));pointer-events:none}
 .hp-top button span,.hp-br button span{max-width:0;opacity:0;margin-left:0;white-space:nowrap;overflow:hidden;transition:max-width .3s ease,opacity .2s ease,margin .3s ease}
-.hp-top button:hover,.hp-br button:hover,.hp-top button:focus-visible,.hp-br button:focus-visible{padding:0 18px 0 7px!important;transform:translateY(-2px);filter:brightness(1.08)}
+.hp-top button:hover,.hp-br button:hover,.hp-top button:focus-visible,.hp-br button:focus-visible{padding:0 18px 0 4px!important;transform:translateY(-2px);filter:brightness(1.08)}
 .hp-top button:hover span,.hp-br button:hover span,.hp-top button:focus-visible span,.hp-br button:focus-visible span{max-width:90px;opacity:1;margin-left:8px}
 .hp-br .pk-purple{background:linear-gradient(90deg,#5a49b4,#4569b8)!important}
 .hp-top .pk-teal{width:auto!important;background:linear-gradient(90deg,#3c7f94,#5fa6b8)!important}
@@ -312,6 +313,7 @@ button{font-family:inherit}
   .hp-top{gap:6px!important;right:8px!important;top:8px!important}
   .hp-top button,.hp-br button{height:38px!important;min-width:38px!important}
   .hp-br{right:8px!important;bottom:10px!important}
+  .hp-top button i,.hp-br button i,.hp-top button i img,.hp-br button i img{width:30px!important;height:30px!important}
   #cpage .cp-head{padding-right:12px!important}
 }
 html.embed #hud,html.embed #dock,html.embed #proj,html.embed .lbl{display:none!important}   /* ?embed=1：嵌在網站設計師面板裡的精簡畫面 */
@@ -1757,7 +1759,7 @@ function renderCharPage(){
   const moodPct = {happy:90, joy:100, sad:35, angry:20}[c.mood] ?? 60, moodTxt = c.mood ? (iconImg(moodSym[c.mood], 18) + ' ' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[c.mood]) : '— 未設定';
   const keepMsg = radial.querySelector('#cpMsg') ? radial.querySelector('#cpMsg').value : null, keepMusic = radial.querySelector('#cpMusic') ? radial.querySelector('#cpMusic').value : '';
   const mine = storiesOf(c.name), m = c.music;
-  radial.innerHTML = `<div class="cp-wrap"><button type="button" class="cp-x" id="cpX" title="關閉"><img alt="" width="18" height="18" style="image-rendering:pixelated" src="${pxIconURL('close')}">關閉</button>
+  radial.innerHTML = `<div class="cp-wrap"><button type="button" class="cp-x" id="cpX" title="關閉"><img alt="" width="22" height="22" src="${pxIconURL('close')}">關閉</button>
     <div class="cp-head">
       <div class="cp-av"><img alt="" src="${c.avatar || ''}"><b class="cp-lv">Lv.${lv}</b></div>
       <div class="cp-main">
@@ -1890,21 +1892,9 @@ function showTitleCard(){
   if (!meName()) setTimeout(() => showQuote('', handoff ? '這個帳號沒有對應的設計部人物，只能參觀' : '目前是參觀模式：登入後會綁定你的人物，才能操作'), 700);
 }   // 不再有登入頁：載完直接進入（有網站登入身分就用該人物，否則預設 Machi）
 function updateTitleNet(){ const e = $('tNet'); if (e) e.textContent = live.ok ? '已連線到「凱曜設計部」伺服器，出勤狀態即時更新' : '目前離線：依時間規則模擬出勤狀態'; }
-// ---- 右上角按鈕的像素圖示（12×12，黑色外框）；樣式規範見 UI-SPEC.md「按鈕」----
-const PX_PAL = {k:'#111418', s:'#ffd7a8', b:'#2f8cff', g:'#27b85c', y:'#ffc733', r:'#e8486a', w:'#ffffff'};
-const PX_ICONS = {
-  role:['...kkkkkk...', '..kkkkkkkk..', '.kkssssssskk', '.kssssssssk.', '.kskssssksk.', '.kssssssssk.', '.kssssssssk.', '..ksssssssk.', '...kkssskk..', '..kbbbbbbbk.', '.kbbbbbbbbbk', '.kkkkkkkkkkk'],
-  dex:['............', '..kkkkkkkk..', '.kwwwkkwwwk.', '.kwbwkkwbwk.', '.kwwwkkwwwk.', '.kwbwkkwbwk.', '.kwwwkkwwwk.', '.kwbwkkwbwk.', '.kwwwkkwwwk.', '.krrrrrrrrk.', '..kkkkkkkk..', '............'],
-  help:['............', '..kkkkkkkk..', '.kyyyyyyyyk.', '.kyykkkkyyk.', '.kykkyykkyk.', '.kyyyyykkyk.', '.kyyyykkyyk.', '.kyyykkyyyk.', '.kyyyyyyyyk.', '.kyyykkyyyk.', '.kyyyyyyyyk.', '..kkkkkkkk..'],
-  people:['............', '..kkk..kkk..', '.ksssk.ksssk', '.ksksk.ksksk', '.ksssk.ksssk', '..kkk..kkk..', '.kbbbk.kgggk', '.kbbbk.kgggk', '.kkkkk.kkkkk', '............', '............', '............'],
-  close:['............', 'kk........kk', 'krk......krk', '.krk....krk.', '..krk..krk..', '...krkkrk...', '....krrk....', '...krkkrk...', '..krk..krk..', '.krk....krk.', 'krk......krk', 'kk........kk']
-};
-function pxIconURL(name, k = 2){
-  const rows = PX_ICONS[name], c = document.createElement('canvas'); c.width = c.height = 12 * k; const g = c.getContext('2d');
-  rows.forEach((r, y) => [...r].forEach((ch, x) => { if (PX_PAL[ch]) { g.fillStyle = PX_PAL[ch]; g.fillRect(x * k, y * k, k, k); } }));
-  return c.toDataURL();
-}
-document.querySelectorAll('[data-px]').forEach(el => { el.innerHTML = '<img alt="" width="24" height="24" style="image-rendering:pixelated" src="' + pxIconURL(el.dataset.px) + '">'; });
+// ---- 右上角按鈕的遊戲圖示（Codex 生成的精緻像素圖，pixel-plaza/icons/icon_<名稱>.png，128×128 透明底）；樣式規範見 UI-SPEC.md「按鈕」----
+const pxIconURL = name => 'icons/icon_' + name + '.png';
+document.querySelectorAll('[data-px]').forEach(el => { el.innerHTML = '<img alt="" draggable="false" src="' + pxIconURL(el.dataset.px) + '">'; });
 let adminHome = false, entryRelease = false;   // 登入身分是 Machi／管理者：可以切換、操控任何人（就算被切成離開辦公室而看不到人物）
 function startGame(){
   $('bClose').hidden = /[?&]embed=1/.test(location.search);   // 右上角「關閉」：嵌在網站裡就請網站關閉；手機另開分頁就關掉分頁，關不掉就回網站首頁

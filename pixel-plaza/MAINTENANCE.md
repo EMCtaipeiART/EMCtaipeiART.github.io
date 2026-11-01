@@ -9,6 +9,7 @@
 | --- | --- |
 | `pixel-plaza/index.html` | 整個 3D 版（HTML＋CSS＋一支 `<script type="module">`，three.js 從 `../character-studio/vendor/` 載入）。**所有功能都在這一個檔案**，改完要保持 `node --check` 通過 |
 | `pixel-plaza/assets/` | 2D 版移過來的圖：`icons-v3.webp`、`icons-status-v4.webp`、`office-fun-v1/v2.webp/json`、`props2/elevator.png` |
+| `pixel-plaza/icons/` | 右上角按鈕的遊戲圖示（`icon_role/dex/help/people/close.png`，Codex 生成） |
 | `pixel-plaza/snacks/` | 茶水檯八款零食（Codex 生成的像素圖，256×256 透明底） |
 | `pixel-plaza/fridge/office-foods-v1.webp` | 冰箱食物圖集（28px 一格，順序見 `FOOD_IDX`） |
 | `pixel-plaza/sprites-hd/`、`sprites/` | 人物 12 面向圖集（`<名字>.png`，240／60px 一格） |
@@ -51,7 +52,7 @@
 5. 角色：`addChar`、`applyStatus`、`sitDown/standUp`、`remoteFromState/remoteStep`（別人的位置）、`pushPosition`（自己的位置）、`stationFx`（座位現場）。
 6. 互動：`pointerdown → onPick`、`wheelOpen`（狀態輪盤）、`updatePlate`（名牌）、`findPath`（A\*）、`elevInteract/elevGo/elevCover`、`fridge*`。
 7. 角色頁面：`renderCharPage`、`renderAdmin`、`setOwn*`、音樂（`musicInfo`…）、限時動態（`openStory`…）、`progLoad/progSave`（雲端進度）。
-8. HUD：`PX_ICONS`（像素按鈕圖示）、`startGame()`（綁帳號）、`updateHud`。
+8. HUD：按鈕圖示 `pxIconURL()`、`startGame()`（綁帳號）、`updateHud`。
 9. 主迴圈 `tick()`：移動、遠端人物、攝影機、`updateTags/Fridge/Elev`、`pushPosition`。
 
 ## 5. 改東西的做法（避免錯亂）
@@ -59,7 +60,7 @@
 - **一次只改一類東西**，改完先 `node --check`（把 `<script type="module">` 內容存成 .mjs 檢查），再用 puppeteer 截圖看。
 - **新增家具**：`pbox`/`table3d`/`chair3d`/`officeChair3d` 建模＋ **登記 `rects` 碰撞** ＋ 黑色外框；樓層加在 `buildOffice()`（五樓）或 `buildFloor4()`（四樓）。通道 ≥ 1.2 單位，不然會卡住（A\* 也走不過）。
 - **新增隨機物件**：一定用 `rng(id)`＋時段；**不可依賴載入順序**（碰撞必須在場景蓋完才算）；寫入共用紀錄用 `fnClaim`。
-- **新增按鈕**：在 `PX_ICONS` 加像素圖示，HTML 寫 `<i data-px="名稱"></i>`，class 選 `pk-*` 顏色；手機要看過。
+- **新增按鈕**：用 Codex 生成同風格圖示放進 `pixel-plaza/icons/icon_<名稱>.png`（提示詞見 UI-SPEC §5.3），HTML 寫 `<i data-px="名稱"></i>`，class 選 `pk-*` 顏色；手機要看過。
 - **新增要跨裝置保存的資料**：不要只放 `localStorage`；放後端（見 `pixelOfficeProgress` 的做法：取聯集／取較大值，才不會被舊裝置覆蓋）。
 - **改座位**：只動 `SEATS`／`SEATS4`；舊分頁會殘留舊座位位置（已改成坐在自己座位不回報；另外頁面會自動偵測新版重新載入）。
 - 不要把 `EMC-ART-Pixel-Office/` 這個舊路徑寫進新程式（已封存到 `archive/EMC-ART-Pixel-Office-2D/`）。
