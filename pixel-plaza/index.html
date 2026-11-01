@@ -2055,8 +2055,8 @@ $('tGo').onclick = startGame; $('tGuest').onclick = startGame;
 let dex = {d:[], n:[]}; try { const x = JSON.parse(localStorage.getItem('pixelDex') || 'null'); if (x && x.d && x.n) dex = x; } catch (e) {}
 function dexAdd(kind, k){ if (dex[kind].includes(k)) return false; dex[kind].push(k); try { localStorage.setItem('pixelDex' + progScope, JSON.stringify(dex)); } catch (e) {} progDirty(); return true; }
 function progDirty(){ clearTimeout(progTimer); progTimer = setTimeout(progSave, 2500); }
-function progApply(p){   // 與雲端合併：圖鑑取聯集、次數取較大值
-  if (!p) return; if (p.last && Number.isFinite(p.last.x) && Date.now() - Number(p.last.at) < LAST_TTL && (!pendingRestore || p.last.at > pendingRestore.at)) pendingRestore = p.last; for (const kind of ['d', 'n']) for (const id of ((p.dex || {})[kind] || [])) if (!dex[kind].includes(id)) dex[kind].push(id);
+function progApply(p, atLogin){   // 與雲端合併：圖鑑取聯集、次數取較大值；「上次位置」只在登入讀取時採用（之後每次存檔回傳的位置是舊的，採用會把人物拉回去）
+  if (!p) return; if (atLogin && p.last && Number.isFinite(p.last.x) && Date.now() - Number(p.last.at) < LAST_TTL && (!pendingRestore || p.last.at > pendingRestore.at)) pendingRestore = p.last; for (const kind of ['d', 'n']) for (const id of ((p.dex || {})[kind] || [])) if (!dex[kind].includes(id)) dex[kind].push(id);
   for (const k of ['flush', 'found', 'notes']) stat[k] = Math.max(stat[k] || 0, Number((p.stat || {})[k]) || 0);
   try { localStorage.setItem('pixelDex' + progScope, JSON.stringify(dex)); localStorage.setItem('pixelFun' + progScope, JSON.stringify(stat)); } catch (e) {}
 }
@@ -2087,7 +2087,7 @@ async function progLoad(){
   try { const d = JSON.parse(localStorage.getItem('pixelDex' + progScope) || 'null'); if (d && d.d && d.n) { dex = d; } } catch (e) {}
   try { Object.assign(stat, JSON.parse(localStorage.getItem('pixelFun' + progScope) || '{}')); } catch (e) {}
   try { const l = JSON.parse(localStorage.getItem('pixelLast' + progScope) || 'null'); if (l && Number.isFinite(l.x) && Date.now() - Number(l.at) < LAST_TTL) pendingRestore = l; } catch (e) {}
-  try { const r = await post({action:'pixelOfficeProgress', name, op:'get'}); progApply(r.progress); progCloud = true; progDirty(); } catch (e) { progCloud = false; }
+  try { const r = await post({action:'pixelOfficeProgress', name, op:'get'}); progApply(r.progress, true); progCloud = true; progDirty(); } catch (e) { progCloud = false; }
 }
 function renderDex(){
   const body = $('dexBody'); body.innerHTML = '';
