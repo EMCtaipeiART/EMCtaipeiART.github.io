@@ -1969,7 +1969,7 @@ function wheelOpen(c){
   if (!c || c !== player) return; wheelChar = c; wheel.hidden = false; wheel.classList.remove('open');
   const ids = Object.keys(STATUS), R = 104;
   wheel.innerHTML = ids.map((id, i) => { const a = (-90 + i * 360 / ids.length) * Math.PI / 180, x = Math.cos(a) * R, y = Math.sin(a) * R;   // 圍繞人物一圈、順時針，「在座」在正上方
-    return '<button type="button" class="sw-b' + (c.status === id ? ' on' : '') + '" data-id="' + id + '" style="--x:' + x.toFixed(1) + 'px;--y:' + y.toFixed(1) + 'px;--d:' + (i * 24) + 'ms">' + iconImg(symOf[id], 24) + '<b>' + (id === 'present' ? '在座' : STATUS[id][0]) + '</b></button>'; }).join('');
+    return '<button type="button" class="sw-b' + ((id === 'present' ? statusLabel(c) === '在座' : c.status === id) ? ' on' : '') + '" data-id="' + id + '" style="--x:' + x.toFixed(1) + 'px;--y:' + y.toFixed(1) + 'px;--d:' + (i * 24) + 'ms">' + iconImg(symOf[id], 24) + '<b>' + (id === 'present' ? '在座' : STATUS[id][0]) + '</b></button>'; }).join('');
   wheel.querySelectorAll('.sw-b').forEach(b => b.onclick = () => { const id = b.dataset.id; wheelClose(); if (id === 'present') setOwnAuto(); else setOwnStatus(id); });
   requestAnimationFrame(() => requestAnimationFrame(() => wheel.classList.add('open')));
 }
