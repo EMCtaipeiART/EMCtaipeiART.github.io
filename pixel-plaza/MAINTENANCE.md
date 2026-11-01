@@ -81,6 +81,7 @@
 | 道具、投影機各人看到不同 | 隨機在場景蓋完前就算了（`startGameplay` 要在 `buildOffice` 最後）；或種子／時段常數被改 |
 | 圖鑑、等級換電腦不見 | `pixelOfficeProgress` 還沒部署到 Worker，或帳號沒綁到人物（訪客不存） |
 | 寫入失敗 `Failed to fetch` | 網址不在 `ALLOWED_ORIGINS`（例如本機 4190）；請用 `localhost:8787` 或正式網址 |
+| 畫面太亮／太暗、陰影怪 | 看 `index.html` 的 `HemisphereLight`、`DirectionalLight`（`sun`）、`scene.environmentIntensity` 三個亮度；`?flat=1` 可關掉材質與陰影比對 |
 | 人物卡牆 | 先看碰撞矩形有沒有登記、通道寬度；`unstick` 會把卡進去的人推出來；A\* 走不通會直接走直線 |
 | 狀態一直是下班 | 週末／下班時段後端自動判斷成下班；進入辦公室會自動改在座。管理者的「全員下班」開著時，沒進來的人仍顯示下班 |
 | 手機版面重疊 | 看 `@media (max-width:640px)` 區塊（玩家卡、時鐘、按鈕） |
