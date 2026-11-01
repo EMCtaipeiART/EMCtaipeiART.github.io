@@ -1,6 +1,6 @@
 import { env, runInDurableObject, SELF } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
-import { RULES, MAP, canSee, lineOfSight, movePlayer, zoneCenter } from '../../EMC-ART-Pixel-Office/dist/minigames/games/hideseek-sim.js';
+import { RULES, MAP, canSee, lineOfSight, movePlayer, zoneCenter } from '../../archive/EMC-ART-Pixel-Office-2D/dist/minigames/games/hideseek-sim.js';
 
 const wait = (ms = 30) => new Promise(r => setTimeout(r, ms));
 async function until(cond: () => boolean, ms = 4000) {

@@ -4263,6 +4263,16 @@ describe('凱曜 department prefix', () => {
 });
 
 describe('Pixel Office shared state', () => {
+  it('3D 辦公室個人進度：圖鑑取聯集、次數取較大值，換裝置讀得回來；未知名字被拒絕', async () => {
+    const empty = await api({ action: 'pixelOfficeProgress', name: 'Machi', op: 'get' });
+    expect(empty.ok).toBe(true);
+    await api({ action: 'pixelOfficeProgress', name: 'Machi', op: 'save', progress: { dex: { d: [1, 3], n: [2] }, stat: { found: 5, notes: 1, flush: 2 } } });
+    const merged = await api({ action: 'pixelOfficeProgress', name: 'Machi', op: 'save', progress: { dex: { d: [3, 4], n: [] }, stat: { found: 2, notes: 7, flush: 0 } } });
+    expect(merged.progress).toEqual({ dex: { d: [1, 3, 4], n: [2] }, stat: { found: 5, notes: 7, flush: 2 } });
+    expect(((await api({ action: 'pixelOfficeProgress', name: 'Machi', op: 'get' })).progress as { dex: { d: number[] } }).dex.d).toEqual([1, 3, 4]);
+    expect((await api({ action: 'pixelOfficeProgress', name: '路人甲', op: 'save', progress: {} })).ok).toBe(false);
+  });
+
   it('辦公室小樂趣：先到先得、投影機可反覆切換、狀態回傳所有人共用的紀錄', async () => {
     const first = await api({ action: 'pixelOfficeFun', id: 'd:5:100:0', v: 1 });
     expect(first.won).toBe(true);

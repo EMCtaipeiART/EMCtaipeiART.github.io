@@ -1,7 +1,7 @@
 import { DurableObject } from 'cloudflare:workers';
 // 規則與單機版是同一份程式碼（單一來源）：伺服器跑的就是 Phase 5 驗證過的 hideseek-sim。
-import { RULES, createGame, stepGame, canSee, scoreFor, seekerOf } from '../../EMC-ART-Pixel-Office/dist/minigames/games/hideseek-sim.js';
-import { createRng } from '../../EMC-ART-Pixel-Office/dist/minigames/core/rng.js';
+import { RULES, createGame, stepGame, canSee, scoreFor, seekerOf } from '../../archive/EMC-ART-Pixel-Office-2D/dist/minigames/games/hideseek-sim.js';
+import { createRng } from '../../archive/EMC-ART-Pixel-Office-2D/dist/minigames/core/rng.js';
 
 /**
  * 辦公室躲貓貓的連線房間（一個邀請碼 = 一個房間）。伺服器權威：

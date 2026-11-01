@@ -2738,6 +2738,28 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     try { const m = JSON.parse(row?.value || '{}'); return m && typeof m === 'object' ? m : {}; } catch { return {}; }
   }
 
+  /** 3D 辦公室的個人進度（撿到的圖鑑、撿東西／遺落物／沖馬桶次數，等級由此算出）：換電腦、換瀏覽器也在。
+   *  op:'get' 讀取；op:'save' 與雲端合併後存回（圖鑑取聯集、次數取較大值，所以不會被舊裝置蓋掉）。存 pixel_office_settings 的 progress:<名字>，不寫 GitHub。 */
+  private pixelOfficeProgress(payload: ApiPayload): ApiResult {
+    const name = text(payload.name);
+    if (!this.pixelOfficeKnownName(name)) return { ok: false, action: 'pixelOfficeProgress', error: '找不到這位同仁' } as ApiResult;
+    const key = 'progress:' + name, sql = this.ctx.storage.sql;
+    const row = sql.exec<{ value: string }>('SELECT value FROM pixel_office_settings WHERE key = ?', key).toArray()[0];
+    let saved: Row = {};
+    try { saved = JSON.parse(row?.value || '{}') as Row; } catch { saved = {}; }
+    const ids = (list: unknown): number[] => Array.isArray(list) ? [...new Set(list.map(Number).filter(n => Number.isInteger(n) && n >= 0 && n < 400))].sort((x, y) => x - y) : [];
+    const count = (value: unknown): number => Math.max(0, Math.min(1_000_000, Math.floor(Number(value) || 0)));
+    const dexOld = asRow(saved.dex), statOld = asRow(saved.stat);
+    let dexD = ids(dexOld.d), dexN = ids(dexOld.n), stat = { flush: count(statOld.flush), found: count(statOld.found), notes: count(statOld.notes) };
+    if (text(payload.op) === 'save') {
+      const incoming = asRow(payload.progress), dexIn = asRow(incoming.dex), statIn = asRow(incoming.stat);
+      dexD = ids([...dexD, ...ids(dexIn.d)]); dexN = ids([...dexN, ...ids(dexIn.n)]);
+      stat = { flush: Math.max(stat.flush, count(statIn.flush)), found: Math.max(stat.found, count(statIn.found)), notes: Math.max(stat.notes, count(statIn.notes)) };
+      sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', key, JSON.stringify({ dex: { d: dexD, n: dexN }, stat }), Date.now());
+    }
+    return { ok: true, action: 'pixelOfficeProgress', progress: { dex: { d: dexD, n: dexN }, stat } } as ApiResult;
+  }
+
   private async pixelOfficeFun(payload: ApiPayload): Promise<ApiResult> {
     const id = String(payload.id || '');
     if (!/^[a-z]:[A-Za-z0-9:._-]{1,70}$/.test(id)) return { ok: false, action: 'pixelOfficeFun', error: 'invalid id' } as ApiResult;
@@ -5371,6 +5393,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'pixelOfficeUpdate') return this.pixelOfficeUpdate(payload);
       if (action === 'pixelOfficeStaffBack') return await this.pixelOfficeStaffBack(payload);
       if (action === 'pixelOfficeFun') return await this.pixelOfficeFun(payload);
+      if (action === 'pixelOfficeProgress') return this.pixelOfficeProgress(payload);
       if (action === 'pixelOfficeHeartbeat') return await this.pixelOfficeHeartbeat(payload);
       if (action === 'pixelOfficeCalendarStatus') return await this.pixelOfficeCalendarStatus(payload);
       if (action === 'pixelOfficePhoto') return this.pixelOfficePhoto(payload);

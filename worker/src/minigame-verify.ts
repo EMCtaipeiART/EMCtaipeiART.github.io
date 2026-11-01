@@ -1,8 +1,8 @@
 // 小遊戲成績的伺服器端驗證器。客戶端只送「作答／出手紀錄」，分數一律由這裡重算，不信任客戶端宣稱的分數。
 // 規則與前端是同一份程式碼（單一來源）：題組、物理、計分都直接引用遊戲模組。
-import { createRng, hashString } from '../../EMC-ART-Pixel-Office/dist/minigames/core/rng.js';
-import { createDeck, pointsForCorrect, WRONG_PENALTY } from '../../EMC-ART-Pixel-Office/dist/minigames/games/deadline-challenges.js';
-import { createBall, stepBall, pointsFor, binXAt, makeWindSchedule, windAt, MAX_PULL, POWER_K } from '../../EMC-ART-Pixel-Office/dist/minigames/games/hoops-sim.js';
+import { createRng, hashString } from '../../archive/EMC-ART-Pixel-Office-2D/dist/minigames/core/rng.js';
+import { createDeck, pointsForCorrect, WRONG_PENALTY } from '../../archive/EMC-ART-Pixel-Office-2D/dist/minigames/games/deadline-challenges.js';
+import { createBall, stepBall, pointsFor, binXAt, makeWindSchedule, windAt, MAX_PULL, POWER_K } from '../../archive/EMC-ART-Pixel-Office-2D/dist/minigames/games/hoops-sim.js';
 
 export type GameId = 'deadline' | 'hoops' | 'treasure';
 export interface GameSpec { duration: number; level: 'full' | 'basic' }

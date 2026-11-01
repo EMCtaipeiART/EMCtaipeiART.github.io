@@ -1,5 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
-import { dayKey } from '../../EMC-ART-Pixel-Office/dist/minigames/core/rng.js';
+import { dayKey } from '../../archive/EMC-ART-Pixel-Office-2D/dist/minigames/core/rng.js';
 import { COUNTDOWN_SECS, GAMES, verifyRun, type GameId } from './minigame-verify';
 
 /**

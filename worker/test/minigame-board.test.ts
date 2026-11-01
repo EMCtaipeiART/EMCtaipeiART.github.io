@@ -1,8 +1,8 @@
 import { env, runInDurableObject, SELF } from 'cloudflare:test';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createRng, hashString } from '../../EMC-ART-Pixel-Office/dist/minigames/core/rng.js';
-import { createDeck, pointsForCorrect } from '../../EMC-ART-Pixel-Office/dist/minigames/games/deadline-challenges.js';
-import { createBall, stepBall, pointsFor, binXAt, makeWindSchedule, windAt } from '../../EMC-ART-Pixel-Office/dist/minigames/games/hoops-sim.js';
+import { createRng, hashString } from '../../archive/EMC-ART-Pixel-Office-2D/dist/minigames/core/rng.js';
+import { createDeck, pointsForCorrect } from '../../archive/EMC-ART-Pixel-Office-2D/dist/minigames/games/deadline-challenges.js';
+import { createBall, stepBall, pointsFor, binXAt, makeWindSchedule, windAt } from '../../archive/EMC-ART-Pixel-Office-2D/dist/minigames/games/hoops-sim.js';
 
 const T = { now: Date.UTC(2026, 9, 26, 4, 0, 0) };   // 台北 2026-10-26 12:00
 const DAY = '2026-10-26';
