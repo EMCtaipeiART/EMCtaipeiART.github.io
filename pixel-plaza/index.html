@@ -578,7 +578,7 @@ const rectsWallEnd = rects.length;
     if (wallBoxes.some((o, j) => j !== i && cx >= o[0] - EPS && cx <= o[0] + o[2] + EPS && cz >= o[1] - EPS && cz <= o[1] + o[3] + EPS)) return; free.set(Math.round(cx) + ',' + Math.round(cz), [cx, cz]);
   }));
   free.forEach(([cx, cz]) => { pos.push(cx * U, 0, cz * U, cx * U, H, cz * U); });
-  const lm = new LineMaterial({color:0x14202a, linewidth:HD ? 3 * DPR : 1.6}), le = new LineSegments2(new LineSegmentsGeometry().setPositions(pos), lm);
+  const lm = new LineMaterial({color:0x14202a, linewidth:HD ? 2 * DPR : 1.2}), le = new LineSegments2(new LineSegmentsGeometry().setPositions(pos), lm);
   le.userData.noShift = true; scene.add(le); lineMats.push(lm); lm.resolution.set(renderer.domElement.width, renderer.domElement.height);
 }
 const R_PLAYER = .45;
@@ -887,6 +887,7 @@ async function buildOffice(){
   dropCache.clear(); noteCache.clear(); startGameplay();   // 場景（含四樓）全部蓋好、碰撞都齊了才開始算道具：否則每個人載入的時間點不同，算出來的位置會不一樣
 }
 function bookcase3d(x, z, w, d, h = 2.0){   // 版面圖像素；層櫃開口朝左（-x），其餘面是黑色側板
+  x += 1; w -= 2;   // 和桌子之間留 2px 縫，外框不會互相穿插
   const I = v => v * U, cx = I(x + w / 2), cz = I(z + d / 2), black = 0x23272d;
   pbox(I(w), h, I(d), black, cx, 0, cz);
   // 左側開口：5 層書架（深色底、每層放彩色書本）
@@ -901,11 +902,13 @@ function bookcase3d(x, z, w, d, h = 2.0){   // 版面圖像素；層櫃開口朝
   rects.push([I(x), I(z), I(x + w), I(z + d)]);
 }
 function pillar3d(x, z, w, d, ww = w, h = 3.4){   // 純白四方柱：寬、深切齊桌沿，上下無底座
+  x += 1; ww -= 2; w -= 2;   // 和左右辦公桌之間各留 1px 縫，外框不會穿進桌面
   const I = v => v * U, geo = new THREE.BoxGeometry(I(ww), h, I(d)), m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({color:0xffffff}));
   m.position.set(I(x + ww / 2), h / 2, I(z + d / 2)); scene.add(m); hull(scene, I(ww), h, I(d), m.position.x, h / 2, m.position.z);
   rects.push([I(x), I(z), I(x + ww), I(z + d)]);
 }
 function cabinet3d(x, z, w, d, h = 1.6){   // 紅色工具櫃：抽屜在右側（+x 面）
+  x += 1; w -= 2;
   const I = v => v * U, cx = I(x + w / 2), cz = I(z + d / 2), ex = I(x + w) + .015;
   pbox(I(w), h, I(d), 0xb02a30, cx, 0, cz);
   for (let i = 0; i < 5; i++) { const y = .1 + i * (h - .2) / 5; pbox(.03, (h - .2) / 5 - .05, I(d) - .2, 0xc9353b, ex, y, cz); pbox(.04, .03, .6, 0x1b1f24, ex + .03, y + (h - .2) / 10 - .02, cz, false); }
@@ -937,9 +940,9 @@ function laptop3d(x, z, dir){   // 黑色筆電：dir = 螢幕朝向（-1 朝北
   pbox(.1, .03, .16, 0x15181c, x + .55, .95, z + dir * .12, false);
   const body = new THREE.MeshLambertMaterial({color:0x15181c}), face = new THREE.MeshLambertMaterial({color:0x2a3340});
   const mats = [body, body, body, body, dir > 0 ? face : body, dir > 0 ? body : face];
-  const sy = .95 + .04 + .24, sz = z - dir * .25, tilt = -dir * .22;
+  const sy = .95 + .04 + .24 + .04, sz = z - dir * .25, tilt = -dir * .22;   // 螢幕再抬高一點，斜放後底邊不會插進桌面
   const m = new THREE.Mesh(new THREE.BoxGeometry(.72, .48, .03), mats); m.position.set(x, sy, sz); m.rotation.x = tilt; scene.add(m);
-  const h = new THREE.Mesh(new THREE.BoxGeometry(.8, .56, .11), outlineMat); h.position.copy(m.position); h.rotation.x = tilt; h.layers.set(HULL_LAYER); scene.add(h);
+  const h = new THREE.Mesh(new THREE.BoxGeometry(.76, .52, .07), outlineMat); h.position.copy(m.position); h.rotation.x = tilt; h.layers.set(HULL_LAYER); scene.add(h);
 }
 function monitor3d(x, z, dir, color){   // 螢幕：背面為機身色、正面（朝 dir）為深色螢幕
   const body = new THREE.MeshLambertMaterial({color}), face = new THREE.MeshLambertMaterial({color:color === 0x15181c ? 0x23303f : 0x2a3340});
@@ -954,7 +957,7 @@ const FACE_ANGLE = {S:0, N:Math.PI, E:Math.PI / 2, W:-Math.PI / 2};
 const chairSeats = [], toilets = [];
 function chairBuilder(x, z, face){
   const g = new THREE.Group();
-  const add = (w, h, d, c, px, py, pz, edge = true) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({color:c})); m.position.set(px, py + h / 2, pz); m.userData.pickRoot = g; g.add(m); if (edge) hull(g, w, h, d, px, py + h / 2, pz, .035); };
+  const add = (w, h, d, c, px, py, pz, edge = true) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({color:c})); m.position.set(px, py + h / 2, pz); m.userData.pickRoot = g; g.add(m); if (edge) hull(g, w, h, d, px, py + h / 2, pz, .021); };
   g.position.set(x, 0, z); g.rotation.y = FACE_ANGLE[face]; scene.add(g);
   { const seat = {x, z, face:FACE_ANGLE[face], by:null, group:g}; chairSeats.push(seat); g.userData.pick = {kind:'seat', seat}; pickables.push(g); }
   return add;
@@ -975,7 +978,7 @@ function officeChair3d(x, z, face){   // 辦公室：有扶手、五爪腳輪的
   for (const [px, pz] of [[.42, 0], [-.42, 0], [0, .42], [0, -.42]]) add(.12, .1, .12, black, px, 0, pz, false);
 }
 // ---- 像素風 3D 物件 ----
-const OUT_T = .04, HULL_LAYER = 1, outlineMat = new THREE.MeshBasicMaterial({color:0x0b0d10, side:THREE.BackSide});   // 外框粗細（世界單位）；外框物件放在 layer 1
+const OUT_T = .024, HULL_LAYER = 1, outlineMat = new THREE.MeshBasicMaterial({color:0x0b0d10, side:THREE.BackSide});   // 外框粗細（世界單位）；外框物件放在 layer 1
 function hull(parent, w, h, d, px, py, pz, t = OUT_T){ const m = new THREE.Mesh(new THREE.BoxGeometry(w + 2 * t, h + 2 * t, d + 2 * t), outlineMat); m.position.set(px, py, pz); m.layers.set(HULL_LAYER); parent.add(m); return m; }
 const rbCache = new Map();
 function roundedGeo(w, h, d){   // 倒圓角的方塊（桌板、櫃體邊角有一點弧度，比較有質感）；太薄的零件維持方塊
@@ -995,7 +998,7 @@ function table3d(cx, cz, w, d, color, h = .95){   // 世界座標；桌面＋四
 }
 function pmesh(geo, color, x, y, z, sx = 1, sy = 1, sz = 1, outline = true, k = 1.07){   // 圓形／圓角物件：外殼放大一點當黑色粗外框
   const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color})); m.position.set(x, y, z); m.scale.set(sx, sy, sz); scene.add(m);
-  if (outline) { const h = new THREE.Mesh(geo, outlineMat); h.position.copy(m.position); h.scale.set(sx * k, sy * k, sz * k); h.layers.set(HULL_LAYER); scene.add(h); }
+  if (outline) { const h = new THREE.Mesh(geo, outlineMat); h.position.copy(m.position); const kk = 1 + (k - 1) * .6; h.scale.set(sx * kk, sy * kk, sz * kk); h.layers.set(HULL_LAYER); scene.add(h); }
   return m;
 }
 const G_TANK = new RoundedBoxGeometry(.4, .9, .86, 4, .13), G_BOWL = new THREE.CylinderGeometry(.44, .36, .46, 28), G_SEAT = new THREE.CylinderGeometry(.42, .42, .07, 28), G_WATER = new THREE.CylinderGeometry(.27, .27, .02, 24);
@@ -1079,7 +1082,7 @@ function fridge3d(x0, z0, w, d, h = 1.9){   // 深色冰箱：上冷凍、下冷
   const I = v => v * U, W = I(w), D = I(d), cx = I(x0 + w / 2), cz = I(z0 + d / 2), zf = I(z0 + d) + .02, n0 = scene.children.length, f = fridges.length;
   pbox(W, h, D, 0x2f3b4b, cx, 0, cz);
   const inner = fridgeInner(W - .12, h - .12, FRIDGE_SHELVES[f % 2]); inner.position.set(cx, h / 2, zf - .012); inner.visible = false; scene.add(inner);
-  const pivots = [], door = (hh, y) => { const pv = new THREE.Group(); pv.position.set(cx - W / 2 + .05, y, zf); const dw = W - .1, m = new THREE.Mesh(new THREE.BoxGeometry(dw, hh, .04), new THREE.MeshLambertMaterial({color:0x3a4a5e})); m.position.set(dw / 2, hh / 2, 0); pv.add(m); hull(pv, dw, hh, .04, dw / 2, hh / 2, 0, .03);
+  const pivots = [], door = (hh, y) => { const pv = new THREE.Group(); pv.position.set(cx - W / 2 + .05, y, zf); const dw = W - .1, m = new THREE.Mesh(new THREE.BoxGeometry(dw, hh, .04), new THREE.MeshLambertMaterial({color:0x3a4a5e})); m.position.set(dw / 2, hh / 2, 0); pv.add(m); hull(pv, dw, hh, .04, dw / 2, hh / 2, 0, .018);
     const hd = new THREE.Mesh(new THREE.BoxGeometry(.06, Math.min(.6, hh * .5), .06), new THREE.MeshLambertMaterial({color:0xc7ced6})); hd.position.set(dw - .14, hh * .5, .05); pv.add(hd); scene.add(pv); pivots.push(pv); };
   door(h * .34, h * .62 - .04); door(h * .56, .08);
   pbox(.1, .1, .04, 0xe04646, cx - W / 2 + .2, h * .86, zf + .03, false);
