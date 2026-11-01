@@ -413,13 +413,26 @@ const NAMES = ['Amber','Anna','Leona','Machi','Noise','余采馨','吳冠賢','�
 const url = n => (HD ? 'sprites-hd/' : 'sprites/') + n + '.png';
 
 if (PIXEL_MODE) document.documentElement.classList.add('px');
+const FLAT = /[?&]flat=1/.test(location.search);   // ?flat=1：關掉材質與陰影（除錯、低階裝置用）
 const renderer = new THREE.WebGLRenderer({antialias:HD});
+renderer.shadowMap.enabled = !FLAT; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.prepend(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xcfd9e0);
 const camera = new THREE.PerspectiveCamera(45, 1, .1, 120);
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa7b3, 2));
+scene.add(new THREE.HemisphereLight(0xffffff, 0xa9b6c2, FLAT ? 2 : 1.12));
+// 主光（左上前方的暖白光）：投柔邊陰影，位置跟著畫面中心走，陰影貼圖只涵蓋可視範圍
+const sun = new THREE.DirectionalLight(0xfff2e0, FLAT ? 0 : 1.4);
+sun.castShadow = !FLAT; sun.shadow.mapSize.set(2048, 2048); sun.shadow.camera.left = sun.shadow.camera.bottom = -30; sun.shadow.camera.right = sun.shadow.camera.top = 30; sun.shadow.camera.near = 1; sun.shadow.camera.far = 80;
+sun.shadow.bias = -.0004; sun.shadow.normalBias = .04; sun.shadow.radius = 3.5; scene.add(sun, sun.target);
+if (!FLAT) {   // 環境反射：一個簡單的「明亮辦公室」環境（天花板燈、窗光、地板反光），讓桌面、金屬、黑色家具有高級的反光
+  const pm = new THREE.PMREMGenerator(renderer), env = new THREE.Scene(), dome = new THREE.Mesh(new THREE.SphereGeometry(40, 32, 16), new THREE.MeshBasicMaterial({vertexColors:true, side:THREE.BackSide}));
+  const pos = dome.geometry.attributes.position, col = []; for (let i = 0; i < pos.count; i++) { const t = (pos.getY(i) / 40 + 1) / 2, c = new THREE.Color().lerpColors(new THREE.Color(0xb8c2cb), new THREE.Color(0xf3f7fb), Math.pow(t, 1.4)); col.push(c.r, c.g, c.b); }
+  dome.geometry.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); env.add(dome);
+  for (const [x, y, z, w, h, ry] of [[-18, 20, -10, 16, 5, .5], [16, 22, 8, 20, 5, -.4], [0, 30, 0, 22, 22, 0], [-30, 8, 14, 3, 14, 1.2]]) { const p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({color:new THREE.Color(3, 3, 2.8), side:THREE.DoubleSide})); p.position.set(x, y, z); p.lookAt(0, 0, 0); p.rotation.z += ry * .2; env.add(p); }
+  scene.environment = pm.fromScene(env, .03).texture; scene.environmentIntensity = .22; pm.dispose();
+}
 
 const lineMats = [];   // 粗線材質：解析度要跟著畫面更新
 function resize(){
@@ -786,6 +799,32 @@ function buildFloor4(T, place){
     else { const wx = r.x + r.w - 16; pbox(I(4), 2.3, I(r.h - 24), 0xf6f7f9, X(wx + 2), 0, I(cz)); projectorRig(X(tx + tw - 28), I(cz), 'E', {room:id, wallX:X(wx) - .02, wallDir:-1, zc:I(cz), w:4.0, h:2.1, title:'專案會議', kind:'text'}); } }
   if (F4.snackSpot) SNACKS.forEach(([k, h], i) => { const raw = imgs[k] && trimmed(imgs[k]); if (!raw) return; const src = outlined(raw, 18), dh = h * .64 * src.height / raw.height, dw = dh * src.width / src.height, m = addBillboard(src, F4.snackSpot.cx + (-1.75 + i * .5), F4.snackSpot.cz, dw, dh); m.position.y = .95; });
 }
+function speckleTex(){   // 桌面：細緻的霧面紋理（細顆粒＋極淡的橫向纖維），乘在桌色上
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), im = g.createImageData(128, 128);
+  for (let i = 0; i < 128 * 128; i++) { const v = 236 + Math.random() * 19; im.data[i * 4] = im.data[i * 4 + 1] = im.data[i * 4 + 2] = v; im.data[i * 4 + 3] = 255; }
+  g.putImageData(im, 0, 0); g.strokeStyle = 'rgba(0,0,0,.035)'; for (let k = 0; k < 90; k++) { const y = Math.random() * 128; g.beginPath(); g.moveTo(Math.random() * 40, y); g.lineTo(60 + Math.random() * 68, y + Math.random() * 1.5); g.stroke(); }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(3, 2); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+function upgradeMaterials(){   // 辦公室家具：Lambert → 物理材質（桌面霧面質感、金屬桌腳與把手、黑色家具微光澤、木紋桌面），並開啟柔邊陰影
+  if (FLAT) return;
+  const METAL = new Set([0x14181c, 0x2c3139, 0xc7ced6, 0xaeb6c0, 0x8f99a3, 0xb9c1c9, 0x2a2f36, 0x2f3b4b]), speckle = speckleTex(), wood = woodTexture(), map = new Map();
+  const make = (mt, o) => {
+    if (map.has(mt)) return map.get(mt);
+    const hex = mt.color.getHex(), p = (o.geometry && o.geometry.parameters) || {}, top = (p.height || 9) <= .16 && Math.max(p.width || 0, p.depth || 0) > 1.2;
+    const o2 = {color:mt.color, map:mt.map || null, roughness:.62, metalness:.04};
+    if (top) { o2.roughness = .3; if (!mt.map) o2.map = hex === 0xb98a50 ? wood : speckle; if (o2.map === wood) o2.color = new THREE.Color(0xffffff); if (hex === 0x23282e) { o2.roughness = .2; o2.metalness = .12; } }
+    else if (METAL.has(hex)) { o2.roughness = .28; o2.metalness = .85; }
+    else if (hex === 0x1c2026 || hex === 0x23282e) { o2.roughness = .42; o2.metalness = .12; }
+    const m2 = new THREE.MeshStandardMaterial(o2); map.set(mt, m2); return m2;
+  };
+  scene.traverse(o => {
+    if (!o.isMesh || o.layers.isEnabled(HULL_LAYER)) return;
+    const mts = Array.isArray(o.material) ? o.material : [o.material], lam = mts.every(mt => mt && mt.isMeshLambertMaterial);
+    if (!lam) return;
+    o.material = Array.isArray(o.material) ? o.material.map(mt => make(mt, o)) : make(o.material, o);
+    if (o.userData.noMask) o.receiveShadow = true; else { o.castShadow = true; o.receiveShadow = true; }
+  });
+}
 function reflow5F(){   // 五樓分區位移：北邊（廁所、會議室 A、電梯）上移 67 px、南邊（會議室 B/C/D、茶水間）下移 33 px
   const dz = z => z < 310 * U ? -67 * U : z > 1000 * U ? 33 * U : 0, is5 = x => x < 1300 * U;
   for (const p of projectors) { if (!is5(p.plane.position.x)) continue; const d = dz(p.plane.position.z); if (d && p.beam) p.beam.geometry.translate(0, 0, d); }
@@ -844,7 +883,7 @@ async function buildOffice(){
     for (const [x, z] of [[300, 836], [300, 866], [150, 836], [150, 866]]) pbox(.12, .83, .12, 0x14181c, I(x), 0, I(z), false);
     laptop3d(I(224), I(852), -1);
     rects.push([I(85), I(828), I(137), I(930)], [I(137), I(828), I(308), I(873)]); }
-  reflow5F();
+  reflow5F(); upgradeMaterials();
   dropCache.clear(); noteCache.clear(); startGameplay();   // 場景（含四樓）全部蓋好、碰撞都齊了才開始算道具：否則每個人載入的時間點不同，算出來的位置會不一樣
 }
 function bookcase3d(x, z, w, d, h = 2.0){   // 版面圖像素；層櫃開口朝左（-x），其餘面是黑色側板
@@ -938,8 +977,14 @@ function officeChair3d(x, z, face){   // 辦公室：有扶手、五爪腳輪的
 // ---- 像素風 3D 物件 ----
 const OUT_T = .04, HULL_LAYER = 1, outlineMat = new THREE.MeshBasicMaterial({color:0x0b0d10, side:THREE.BackSide});   // 外框粗細（世界單位）；外框物件放在 layer 1
 function hull(parent, w, h, d, px, py, pz, t = OUT_T){ const m = new THREE.Mesh(new THREE.BoxGeometry(w + 2 * t, h + 2 * t, d + 2 * t), outlineMat); m.position.set(px, py, pz); m.layers.set(HULL_LAYER); parent.add(m); return m; }
+const rbCache = new Map();
+function roundedGeo(w, h, d){   // 倒圓角的方塊（桌板、櫃體邊角有一點弧度，比較有質感）；太薄的零件維持方塊
+  const k = [w, h, d].map(v => v.toFixed(3)).join(); let g = rbCache.get(k);
+  if (!g) { const r = Math.min(.035, Math.min(w, h, d) / 2 - .002); g = !FLAT && r > .008 ? new RoundedBoxGeometry(w, h, d, 2, r) : new THREE.BoxGeometry(w, h, d); rbCache.set(k, g); }
+  return g;
+}
 function pbox(w, h, d, color, x, y, z, edge = true){
-  const geo = new THREE.BoxGeometry(w, h, d), m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color}));
+  const geo = roundedGeo(w, h, d), m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color}));
   m.position.set(x, y + h / 2, z); scene.add(m);
   if (edge) hull(scene, w, h, d, x, y + h / 2, z);
   return m;
@@ -2114,6 +2159,7 @@ function tick(){
     camPos.lerp(new THREE.Vector3(p.x, 10.9 * camZoom, p.z + 12.2 * camZoom), 1 - Math.pow(.001, dt));
     camera.position.copy(camPos); look.lerp(p, 1 - Math.pow(.001, dt)); camera.lookAt(look.x, 1, look.z);
   } else { const k = 1 - Math.pow(.0005, dt); camPos.lerp(new THREE.Vector3(guestAt.x, 10.9, guestAt.z + 12.2), k); camera.position.copy(camPos); look.lerp(new THREE.Vector3(guestAt.x, 1, guestAt.z), k); camera.lookAt(look); }   // 沒登入：滾輪／左鍵拖曳平移畫面，點電梯換看另一層
+  { const cx = player ? player.holder.position : guestAt; sun.target.position.set(cx.x, 0, cx.z); sun.position.set(cx.x - 10, 26, cx.z + 10); }
   updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay(); updateTags(); placeRadial(); updateFridge(); updateElev(); pushPosition(); trackLast();
   renderFrame();
   requestAnimationFrame(tick);
