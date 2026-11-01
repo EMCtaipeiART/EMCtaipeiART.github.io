@@ -1225,7 +1225,7 @@ function pushPosition(){
   const x = p.x / U, z = p.z / U, f4 = floorOf(c) === 4;
   post({action:'pixelOfficeUpdate', name:c.name, patch:{floor:4, fx:Math.round(f4 ? 3000 + x - FX4 + 100 : x), fy:Math.round(f4 ? z + 100 : z), fdir:faceDir(c.face)}}).catch(e => { if (performance.now() - (pushPosition.errAt || 0) > 20000) { pushPosition.errAt = performance.now(); showQuote('', '位置同步失敗：' + (e && e.message ? e.message : e)); } });
 }
-addEventListener('pagehide', () => { try { if (player && live.ok) navigator.sendBeacon(API, JSON.stringify({action:'pixelOfficeUpdate', name:player.name, patch:{floor:5}})); } catch (e) {} });
+addEventListener('pagehide', () => { try { if (player && live.ok) { navigator.sendBeacon(API, JSON.stringify({action:'pixelOfficeUpdate', name:player.name, patch:{floor:5}})); const l = lastPos(); if (l && meName()) { try { localStorage.setItem('pixelLast' + progScope, JSON.stringify(l)); } catch (e) {} navigator.sendBeacon(API, JSON.stringify({action:'pixelOfficeProgress', name:meName(), op:'save', progress:{dex, stat, last:l}})); } } } catch (e) {} });
 function remoteFromState(c, e){
   if (c === player) return;
   const fresh = e.floor4At && Date.now() - e.floor4At < REMOTE_STALE_MS && Number.isFinite(e.f4x) && Number.isFinite(e.f4y);
@@ -2010,13 +2010,29 @@ let dex = {d:[], n:[]}; try { const x = JSON.parse(localStorage.getItem('pixelDe
 function dexAdd(kind, k){ if (dex[kind].includes(k)) return false; dex[kind].push(k); try { localStorage.setItem('pixelDex' + progScope, JSON.stringify(dex)); } catch (e) {} progDirty(); return true; }
 function progDirty(){ clearTimeout(progTimer); progTimer = setTimeout(progSave, 2500); }
 function progApply(p){   // 與雲端合併：圖鑑取聯集、次數取較大值
-  if (!p) return; for (const kind of ['d', 'n']) for (const id of ((p.dex || {})[kind] || [])) if (!dex[kind].includes(id)) dex[kind].push(id);
+  if (!p) return; if (p.last && Number.isFinite(p.last.x) && Date.now() - Number(p.last.at) < LAST_TTL && (!pendingRestore || p.last.at > pendingRestore.at)) pendingRestore = p.last; for (const kind of ['d', 'n']) for (const id of ((p.dex || {})[kind] || [])) if (!dex[kind].includes(id)) dex[kind].push(id);
   for (const k of ['flush', 'found', 'notes']) stat[k] = Math.max(stat[k] || 0, Number((p.stat || {})[k]) || 0);
   try { localStorage.setItem('pixelDex' + progScope, JSON.stringify(dex)); localStorage.setItem('pixelFun' + progScope, JSON.stringify(stat)); } catch (e) {}
 }
+// 最後停留的位置（一天內有效）：存雲端（跟個人進度一起）與本機；重新登入（換手機也一樣）回到那裡
+const LAST_TTL = 86400000; let lastSaved = {x:-999, z:-999}, lastTimer = 0, pendingRestore = null;
+function lastPos(){ const c = player; if (!c || AWAY.has(c.status)) return null; return {x:Math.round(c.holder.position.x / U), z:Math.round(c.holder.position.z / U), at:Date.now()}; }
+function trackLast(){   // 走動後停下來 3 秒存一次；也負責把人物放回上次停留的地方
+  if (pendingRestore && player && !AWAY.has(player.status) && !entryRelease) restoreLast();
+  const c = player; if (!c || !meName()) return; const p = c.holder.position, moved = Math.hypot(p.x - lastSaved.x, p.z - lastSaved.z) > .3;
+  if (!moved) { clearTimeout(lastTimer); lastTimer = 0; return; }
+  if (!lastTimer) lastTimer = setTimeout(() => { lastTimer = 0; const l = lastPos(); if (!l) return; lastSaved = {x:l.x * U, z:l.z * U}; try { localStorage.setItem('pixelLast' + progScope, JSON.stringify(l)); } catch (e) {} progDirty(); }, 3000);
+}
+function restoreLast(){
+  const c = player, l = pendingRestore; pendingRestore = null; if (!c || !l) return;
+  releaseSeat(c); c.holder.position.set(l.x * U, 0, l.z * U); unstick(c); c.moving = 0; target = null;
+  const home = c.home; if (home && Math.hypot(c.holder.position.x - home.x, c.holder.position.z - home.z) < .8) sitDown(c);
+  camPos.set(c.holder.position.x, 10.9 * camZoom, c.holder.position.z + 12.2 * camZoom); look.copy(c.holder.position);
+  lastSaved = {x:c.holder.position.x, z:c.holder.position.z}; posSent.x = -99;
+}
 async function progSave(){
   const name = meName(); if (!name || !live.ok || progCloud === false) return;
-  try { const r = await post({action:'pixelOfficeProgress', name, op:'save', progress:{dex, stat}}); progApply(r.progress); progCloud = true; }
+  try { const r = await post({action:'pixelOfficeProgress', name, op:'save', progress:{dex, stat, last:lastPos()}}); progApply(r.progress); progCloud = true; }
   catch (e) { if (progCloud === null) showQuote('', '雲端存檔尚未啟用，圖鑑與等級先暫存在這台電腦'); progCloud = false; }
 }
 async function progLoad(){
@@ -2024,6 +2040,7 @@ async function progLoad(){
   progScope = ':' + name;   // 本機暫存依帳號分開，同一台電腦換人登入不會混在一起
   try { const d = JSON.parse(localStorage.getItem('pixelDex' + progScope) || 'null'); if (d && d.d && d.n) { dex = d; } } catch (e) {}
   try { Object.assign(stat, JSON.parse(localStorage.getItem('pixelFun' + progScope) || '{}')); } catch (e) {}
+  try { const l = JSON.parse(localStorage.getItem('pixelLast' + progScope) || 'null'); if (l && Number.isFinite(l.x) && Date.now() - Number(l.at) < LAST_TTL) pendingRestore = l; } catch (e) {}
   try { const r = await post({action:'pixelOfficeProgress', name, op:'get'}); progApply(r.progress); progCloud = true; progDirty(); } catch (e) { progCloud = false; }
 }
 function renderDex(){
@@ -2097,7 +2114,7 @@ function tick(){
     camPos.lerp(new THREE.Vector3(p.x, 10.9 * camZoom, p.z + 12.2 * camZoom), 1 - Math.pow(.001, dt));
     camera.position.copy(camPos); look.lerp(p, 1 - Math.pow(.001, dt)); camera.lookAt(look.x, 1, look.z);
   } else { const k = 1 - Math.pow(.0005, dt); camPos.lerp(new THREE.Vector3(guestAt.x, 10.9, guestAt.z + 12.2), k); camera.position.copy(camPos); look.lerp(new THREE.Vector3(guestAt.x, 1, guestAt.z), k); camera.lookAt(look); }   // 沒登入：滾輪／左鍵拖曳平移畫面，點電梯換看另一層
-  updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay(); updateTags(); placeRadial(); updateFridge(); updateElev(); pushPosition();
+  updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay(); updateTags(); placeRadial(); updateFridge(); updateElev(); pushPosition(); trackLast();
   renderFrame();
   requestAnimationFrame(tick);
 }
