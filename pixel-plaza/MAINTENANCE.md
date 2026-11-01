@@ -1,0 +1,91 @@
+# 3D 辦公室｜維護手冊（改程式前先看）
+
+> 介面與視覺規範請看 [`UI-SPEC.md`](UI-SPEC.md)；這份講**結構、座標、資料、後端欄位、部署、排錯**。
+> 最後更新：2026-11-01。
+
+## 1. 檔案
+
+| 位置 | 內容 |
+| --- | --- |
+| `pixel-plaza/index.html` | 整個 3D 版（HTML＋CSS＋一支 `<script type="module">`，three.js 從 `../character-studio/vendor/` 載入）。**所有功能都在這一個檔案**，改完要保持 `node --check` 通過 |
+| `pixel-plaza/assets/` | 2D 版移過來的圖：`icons-v3.webp`、`icons-status-v4.webp`、`office-fun-v1/v2.webp/json`、`props2/elevator.png` |
+| `pixel-plaza/snacks/` | 茶水檯八款零食（Codex 生成的像素圖，256×256 透明底） |
+| `pixel-plaza/fridge/office-foods-v1.webp` | 冰箱食物圖集（28px 一格，順序見 `FOOD_IDX`） |
+| `pixel-plaza/sprites-hd/`、`sprites/` | 人物 12 面向圖集（`<名字>.png`，240／60px 一格） |
+| `pixel-plaza/ai-views/`、`bake.html`、`bake.mjs` | 人物圖集的來源與烘焙（**不上線**，線上只放 sprites） |
+| `archive/EMC-ART-Pixel-Office-2D/` | **封存的 2D 版**（不要刪：Worker 的小遊戲驗證、網站首頁隱藏的頭像橋接、相關測試還在用） |
+| `worker/src/database-coordinator.ts` | 後端 Durable Object；像素辦公室相關動作在 `pixelOffice*` |
+
+本機預覽：`node serve.mjs`（任何靜態伺服器都行，根目錄＝repo 根），開 `http://localhost:4190/pixel-plaza/index.html?as=Machi`。`?as=名字` **只在 localhost 有效**；沒帶就是訪客。
+
+## 2. 座標與單位
+
+- 版面圖 px → 世界單位：`× U`（`U = 0.03`）。人物高 `WORLD_H = 2.04`。碰撞用世界單位。
+- 五樓：x 0–1201 px、z 0–1526 px。四樓：整層加 `FX4 = 3600` px 的 x 偏移；本機座標 x∈[-100, 1430]、z∈[-100, 1700]。樓層判斷 `floorOf(c)`（`x > (FX4-100)*U` 就是四樓）。
+- 四樓版面取自 2D 版 `floor4.js`，座標 ×0.5；所有四樓幾何寫在 `const F4 = {...}`，玻璃牆由 `glassWalls()` 寫進 `WALLS`，家具在 `buildFloor4()`。
+- 座位：`SEATS`（五樓：`[桌組, 排, 欄, 'top'|'bottom']`）、`SEATS4`（四樓：`[桌子群 0–4, 座位 1–8]`，1–4 上排、5–8 下排）。**改座位只改這兩張表**，四樓的人在 `SEATS` 裡要放一筆 `['f4',0,0,'top'|'bottom']` 佔位。
+
+## 3. 資料與後端（Worker：`https://machi-design-api.machi-chen.workers.dev/api`，POST `text/plain` JSON）
+
+| 用途 | 動作 / 欄位 |
+| --- | --- |
+| 讀全部狀態 | `pixelOfficeState {since}` → `people[]`（status、mood、message、music、meetingRoom、statusSource、floor4At/f4x/f4y/f4dir…）、`hours{force}`、`stories`、`funClaims` |
+| 改自己 | `pixelOfficeUpdate {name, patch}`：`status`（含 `'auto'`＝交還電腦）、`mood`、`message`、`music`、`floor/fx/fy/fdir`（位置，見下） |
+| 共用「已處理」紀錄 | `pixelOfficeFun {id, v, token}`；id 格式 `^[a-z]:[A-Za-z0-9:._-]{1,70}$`：`d:`掉落物、`n:`遺落物、`p:`便便、`j:`投影機（v=0 關、1–99 開且畫面編號） |
+| **個人進度（雲端存檔）** | `pixelOfficeProgress {name, op:'get'|'save', progress:{dex:{d:[],n:[]}, stat:{flush,found,notes}}}`；存在 DO 的 `pixel_office_settings` key `progress:<名字>`，**圖鑑取聯集、次數取較大值**，不寫 GitHub。**這個動作是新加的，Worker 要部署才有效**（沒部署時前端會提示「雲端存檔尚未啟用」並暫存本機） |
+| 管理者 | `pixelOfficeAllWork {mode}`、`getPixelHours`／`savePixelHours`、`pixelOfficePunish`（帶 `editorToken`／`token`） |
+| 冰箱 | `GET /minigames/fridge?floor=5|4&since=` 、`POST /minigames/fridge {action:'open'|'take'|'box', slot, nick, floor}`（和 2D 版同一份庫存） |
+| 限時動態 | `pixelOfficeStoryAdd／Comment／React／View／Remove` |
+| 即時推送 | WebSocket `wss://…/ws`：後端每次寫入送 `{type:'pixel'}`，前端收到就重讀（`pollNow()`）；每 25 秒送 `ping` |
+
+- **位置同步協定**（沿用 2D 版的四樓欄位，不用改後端）：自己走動時 `pixelOfficeUpdate {floor:4, fx, fy, fdir}`。`fx < 3000`＝五樓（`fx=x px`、`fy=z px`）；`fx ≥ 3000`＝四樓（`fx = 3000 + 本機x + 100`、`fy = z + 100`）。後端記成 `floor4At`（最後回報時間）、`f4x`、`f4y`、`f4dir`。其他人看到 `floor4At` 在 3 分鐘內就依這個位置擺人，過期就回到依狀態擺放。**人坐在自己座位上不回報**（回報一次 `{floor:5}` 清除），避免舊位置殘留。
+- 後端只放行 `https://emc-art.com`、`https://emctaipeiart.github.io`、`localhost:8787`（`ALLOWED_ORIGINS`）。別的網址（例如 4190）寫入會失敗，**測試寫入請用模擬後端，不要打真實後端**。
+- 全員上班／下班（`hours.force`）：`'off'`＝全部顯示下班（**已進辦公室的人除外**），`'work'`＝下班的顯示在座，`''`＝依時段。
+
+## 4. 程式結構（`index.html` 內，大致由上到下）
+
+1. CSS（`:root` 色票、`.hp-*` HUD、`.cp-*` 角色頁面、`.cui-*` 頭上資訊、`#swheel` 輪盤、`#elevFx`、`#fridgeP`、`.sv-*` 動態檢視器、手機 `@media (max-width:640px)`）。
+2. 常數與版面表：`PROPS`、`TABLES`、`WALLS`、`LABELS`、`F4`、`ROOMS`、`SEATS`、`SEATS4`、`STATUS`、`MOOD`、`AWAY`。
+3. 場景：地板、`blocked()`／`rects`（碰撞）、`buildOffice()`（家具、椅子、廁所、冰箱、茶水間、`buildFloor4()`，**最後才 `startGameplay()`**）。
+4. 趣味系統：`dropsNow/notesNow/poopsNow`、`syncFun`、`collect*`、投影機（`projectorRig`、`projState`、`toggleProjector`）、`fnClaim/applyFunClaims`。
+5. 角色：`addChar`、`applyStatus`、`sitDown/standUp`、`remoteFromState/remoteStep`（別人的位置）、`pushPosition`（自己的位置）、`stationFx`（座位現場）。
+6. 互動：`pointerdown → onPick`、`wheelOpen`（狀態輪盤）、`updatePlate`（名牌）、`findPath`（A\*）、`elevInteract/elevGo/elevCover`、`fridge*`。
+7. 角色頁面：`renderCharPage`、`renderAdmin`、`setOwn*`、音樂（`musicInfo`…）、限時動態（`openStory`…）、`progLoad/progSave`（雲端進度）。
+8. HUD：`PX_ICONS`（像素按鈕圖示）、`startGame()`（綁帳號）、`updateHud`。
+9. 主迴圈 `tick()`：移動、遠端人物、攝影機、`updateTags/Fridge/Elev`、`pushPosition`。
+
+## 5. 改東西的做法（避免錯亂）
+
+- **一次只改一類東西**，改完先 `node --check`（把 `<script type="module">` 內容存成 .mjs 檢查），再用 puppeteer 截圖看。
+- **新增家具**：`pbox`/`table3d`/`chair3d`/`officeChair3d` 建模＋ **登記 `rects` 碰撞** ＋ 黑色外框；樓層加在 `buildOffice()`（五樓）或 `buildFloor4()`（四樓）。通道 ≥ 1.2 單位，不然會卡住（A\* 也走不過）。
+- **新增隨機物件**：一定用 `rng(id)`＋時段；**不可依賴載入順序**（碰撞必須在場景蓋完才算）；寫入共用紀錄用 `fnClaim`。
+- **新增按鈕**：在 `PX_ICONS` 加像素圖示，HTML 寫 `<i data-px="名稱"></i>`，class 選 `pk-*` 顏色；手機要看過。
+- **新增要跨裝置保存的資料**：不要只放 `localStorage`；放後端（見 `pixelOfficeProgress` 的做法：取聯集／取較大值，才不會被舊裝置覆蓋）。
+- **改座位**：只動 `SEATS`／`SEATS4`；舊分頁會殘留舊座位位置（已改成坐在自己座位不回報；另外頁面會自動偵測新版重新載入）。
+- 不要把 `EMC-ART-Pixel-Office/` 這個舊路徑寫進新程式（已封存到 `archive/EMC-ART-Pixel-Office-2D/`）。
+
+## 6. 部署
+
+1. 在工作分支（目前 `codex/character-studio-backup`）改好、commit、push。
+2. **上線只放需要的檔案到 `main`**（不要整個分支合併，分支和 main 差很多）：`pixel-plaza/`（不含 `ai-views/`、`*.mjs`）、`character-studio/vendor/`。做法：從 `origin/main` 開一個暫存 worktree，把檔案複製過去，commit，`git push origin HEAD:main`（pre-push 會跑瀏覽器煙霧測試，worktree 需要 `node_modules` 的 junction）。
+3. GitHub Pages 由 `.github/workflows/update-database-archive.yml` 發布，**路徑過濾包含 `pixel-plaza/**`、`character-studio/vendor/**`、`archive/**`**；新增別的資料夾要一起加進去。
+4. 發布後約 1–3 分鐘生效（Pages 快取最長 10 分鐘），開著的舊頁面約 1 分鐘內自動重新載入。
+5. **Worker（後端）要另外部署**（`worker/`，`wrangler deploy`，需要 Cloudflare 權限）：新增的 `pixelOfficeProgress`（雲端存檔）必須部署才有效。Worker 的小遊戲檔案已改指向 `archive/EMC-ART-Pixel-Office-2D/`。
+
+## 7. 常見問題
+
+| 現象 | 原因／處理 |
+| --- | --- |
+| 有人一直被拉回舊座位／舊位置 | 有人開著舊版分頁在回報位置 → 請他重新整理（新版會自動重載） |
+| 道具、投影機各人看到不同 | 隨機在場景蓋完前就算了（`startGameplay` 要在 `buildOffice` 最後）；或種子／時段常數被改 |
+| 圖鑑、等級換電腦不見 | `pixelOfficeProgress` 還沒部署到 Worker，或帳號沒綁到人物（訪客不存） |
+| 寫入失敗 `Failed to fetch` | 網址不在 `ALLOWED_ORIGINS`（例如本機 4190）；請用 `localhost:8787` 或正式網址 |
+| 人物卡牆 | 先看碰撞矩形有沒有登記、通道寬度；`unstick` 會把卡進去的人推出來；A\* 走不通會直接走直線 |
+| 狀態一直是下班 | 週末／下班時段後端自動判斷成下班；進入辦公室會自動改在座。管理者的「全員下班」開著時，沒進來的人仍顯示下班 |
+| 手機版面重疊 | 看 `@media (max-width:640px)` 區塊（玩家卡、時鐘、按鈕） |
+
+## 8. 還沒做／已知限制
+
+- 四樓固定座位只有 2D 版指定的四位；其他同事不會坐在四樓桌子群。
+- 位置同步靠後端欄位，延遲約 0.3–0.5 秒；要更即時需要新增 WebSocket 轉發（要改 Worker）。
+- 雲端存檔、位置同步在真實後端的行為，開發時只用模擬後端測過。
