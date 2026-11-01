@@ -503,31 +503,68 @@ for (const [FLOOR_X0, FLOOR_X1, FLOOR_Z0, FLOOR_Z1] of [[-3, 1201 * U + 3, -100 
 // 玻璃牆：半透明方塊加深色邊線
 const rects = [];     // 碰撞：[x0, z0, x1, z1]（世界座標）
 const wallMat = new THREE.MeshBasicMaterial({color:0xcfe6ee, transparent:true, opacity:.5, depthWrite:false});
-const WALL_T = 6;   // 玻璃厚度（原本 12 px，減半）
-const wallBoxes = WALLS.map(([x, y, w, h]) => { if (w === 12) return [x + (12 - WALL_T) / 2, y, WALL_T, h]; if (h === 12) return [x, y + (12 - WALL_T) / 2, w, WALL_T]; return [x, y, w, h]; });
+const WALL_T = 6, HALF = WALL_T / 2;   // 玻璃厚度（原本 12 px，減半）
+// 把每面牆化成「中心線」，再處理接縫：背靠背的平行牆併成一面、轉角／丁字接口對齊到牆面（不重疊、沒縫隙、沒有凸出的小尾巴）、同一直線上相連的牆併成一面
+const wallBoxes = (() => {
+  const W = WALLS.map(([x, y, w, h]) => h === 12 ? {hz:true, c:y + 6, a0:x, a1:x + w} : w === 12 ? {hz:false, c:x + 6, a0:y, a1:y + h} : {raw:[x, y, w, h]});
+  const L = W.filter(o => !o.raw), T = 7;
+  for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++) {   // 1. 背靠背的平行牆：共用中心線
+    const p = L[i], q = L[j]; if (p.hz !== q.hz || Math.abs(p.c - q.c) > 12.5 || Math.abs(p.c - q.c) < .5) continue;
+    if (Math.min(p.a1, q.a1) - Math.max(p.a0, q.a0) > 6) { const m = (p.c + q.c) / 2; p.c = q.c = m; }
+  }
+  const snap = L.map(o => ({...o}));
+  // 2. 垂直牆之間的接口（橫牆在轉角處蓋住轉角；垂直牆貼在橫牆的牆面上）
+  for (let i = 0; i < L.length; i++) {
+    const o = L[i], t = snap[i];
+    for (const p of L) {
+      if (p === o || p.hz === o.hz) continue;
+      if (p.a0 - T > o.c || p.a1 + T < o.c) continue;                 // p 的長度要涵蓋 o 的中心線
+      const pEnds = Math.abs(p.a0 - o.c) <= T || Math.abs(p.a1 - o.c) <= T;   // p 的端點也落在 o 上（轉角）
+      if (o.a0 >= p.c - T && o.a0 <= p.c + T) t.a0 = pEnds ? p.c - HALF : p.c + HALF;
+      if (o.a1 >= p.c - T && o.a1 <= p.c + T) t.a1 = pEnds ? p.c + HALF : p.c - HALF;
+    }
+  }
+  // 垂直牆（p）端點碰到橫牆（o 的角色對調）：橫牆蓋住轉角，所以垂直牆貼在橫牆的牆面
+  for (let i = 0; i < L.length; i++) {
+    const o = L[i], t = snap[i]; if (o.hz) continue;
+    for (const p of L) {
+      if (!p.hz) continue; if (p.a0 - T > o.c || p.a1 + T < o.c) continue;
+      if (o.a0 >= p.c - T && o.a0 <= p.c + T) t.a0 = p.c + HALF;
+      if (o.a1 >= p.c - T && o.a1 <= p.c + T) t.a1 = p.c - HALF;
+    }
+  }
+  const merged = [];   // 3. 同一直線上相連／重疊的牆併成一面
+  snap.forEach(o => { const k = merged.find(m => m.hz === o.hz && Math.abs(m.c - o.c) < .5 && o.a0 <= m.a1 + .5 && o.a1 >= m.a0 - .5); if (k) { k.a0 = Math.min(k.a0, o.a0); k.a1 = Math.max(k.a1, o.a1); } else merged.push({...o}); });
+  const out = merged.map(o => o.hz ? [o.a0, o.c - HALF, o.a1 - o.a0, WALL_T] : [o.c - HALF, o.a0, WALL_T, o.a1 - o.a0]);
+  W.filter(o => o.raw).forEach(o => out.push(o.raw));
+  return out;
+})();
 for (const [x, y, w, h] of wallBoxes) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w * U, 1.5, h * U), wallMat);
   m.position.set((x + w / 2) * U, .75, (y + h / 2) * U); m.userData.noShift = true; scene.add(m);
   rects.push([x * U, y * U, (x + w) * U, (y + h) * U]);
 }
 const rectsWallEnd = rects.length;
-{ // 外框只畫「所有牆合起來」的輪廓：兩面牆接觸、重疊的地方不畫線
-  const EPS = 1, segs = [];
-  wallBoxes.forEach((b, i) => {
-    const [x, y, w, h] = b, edges = [[x, y, x + w, y], [x, y + h, x + w, y + h], [x, y, x, y + h], [x + w, y, x + w, y + h]];
+{ // 外框只畫「所有牆合起來」的輪廓：牆與牆接觸、重疊的地方不畫線；垂直的角線只畫在自由端與外轉角，接口處（凹角）不畫，看起來是一體成形
+  const EPS = 1, segs = [], cut = (parts, lo, hi) => parts.flatMap(([p, q]) => (q <= lo || p >= hi) ? [[p, q]] : [[p, Math.min(q, lo)], [Math.max(p, hi), q]].filter(([u, v]) => v - u > .5));
+  wallBoxes.forEach((bx, i) => {
+    const [x, y, w, h] = bx, edges = [[x, y, x + w, y], [x, y + h, x + w, y + h], [x, y, x, y + h], [x + w, y, x + w, y + h]];
     for (const e of edges) {
       const horiz = e[1] === e[3]; let parts = [[horiz ? e[0] : e[1], horiz ? e[2] : e[3]]];
       wallBoxes.forEach((o, j) => {
         if (j === i) return; const [ox, oy, ow, oh] = o;
-        if (horiz) { if (e[1] < oy - EPS || e[1] > oy + oh + EPS) return; const a = ox - EPS, c = ox + ow + EPS; parts = parts.flatMap(([p, q]) => (q <= a || p >= c) ? [[p, q]] : [[p, Math.min(q, a)], [Math.max(p, c), q]].filter(([u, v]) => v - u > 0.5)); }
-        else { if (e[0] < ox - EPS || e[0] > ox + ow + EPS) return; const a = oy - EPS, c = oy + oh + EPS; parts = parts.flatMap(([p, q]) => (q <= a || p >= c) ? [[p, q]] : [[p, Math.min(q, a)], [Math.max(p, c), q]].filter(([u, v]) => v - u > 0.5)); }
+        if (horiz) { if (e[1] < oy - EPS || e[1] > oy + oh + EPS) return; parts = cut(parts, ox - EPS, ox + ow + EPS); }
+        else { if (e[0] < ox - EPS || e[0] > ox + ow + EPS) return; parts = cut(parts, oy - EPS, oy + oh + EPS); }
       });
       parts.forEach(([p, q]) => segs.push(horiz ? [p, e[1], q, e[1]] : [e[0], p, e[0], q]));
     }
   });
-  const pos = [], vert = new Map(), H = 1.5;
-  segs.forEach(([x1, z1, x2, z2]) => { pos.push(x1 * U, H, z1 * U, x2 * U, H, z2 * U, x1 * U, 0, z1 * U, x2 * U, 0, z2 * U); vert.set(Math.round(x1) + ',' + Math.round(z1), [x1, z1]); vert.set(Math.round(x2) + ',' + Math.round(z2), [x2, z2]); });
-  vert.forEach(([x, z]) => { pos.push(x * U, 0, z * U, x * U, H, z * U); });
+  const pos = [], H = 1.5, free = new Map();
+  segs.forEach(([x1, z1, x2, z2]) => { pos.push(x1 * U, H, z1 * U, x2 * U, H, z2 * U, x1 * U, 0, z1 * U, x2 * U, 0, z2 * U); });
+  wallBoxes.forEach((bx, i) => [[bx[0], bx[1]], [bx[0] + bx[2], bx[1]], [bx[0], bx[1] + bx[3]], [bx[0] + bx[2], bx[1] + bx[3]]].forEach(([cx, cz]) => {
+    if (wallBoxes.some((o, j) => j !== i && cx >= o[0] - EPS && cx <= o[0] + o[2] + EPS && cz >= o[1] - EPS && cz <= o[1] + o[3] + EPS)) return; free.set(Math.round(cx) + ',' + Math.round(cz), [cx, cz]);
+  }));
+  free.forEach(([cx, cz]) => { pos.push(cx * U, 0, cz * U, cx * U, H, cz * U); });
   const lm = new LineMaterial({color:0x14202a, linewidth:HD ? 3 * DPR : 1.6}), le = new LineSegments2(new LineSegmentsGeometry().setPositions(pos), lm);
   le.userData.noShift = true; scene.add(le); lineMats.push(lm); lm.resolution.set(renderer.domElement.width, renderer.domElement.height);
 }
