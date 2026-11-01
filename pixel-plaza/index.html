@@ -2100,6 +2100,7 @@ function renderDex(){
       d.innerHTML = '<img alt="" src="' + (cv ? cv.toDataURL() : '') + '">'; d.onclick = () => showQuote(found ? names[i] : '？？？', found ? quotes[i] : '還沒發現，到辦公室裡找找看'); g.appendChild(d); });
     body.appendChild(g);
   };
+  const cl = document.createElement('div'); cl.className = 'dex-sec'; cl.style.cssText = 'font-size:12px;opacity:.85'; cl.textContent = !meName() ? '訪客不會存圖鑑，登入後才會記錄' : progCloud === true ? '☁ 已和帳號同步，換裝置登入也在' : progCloud === false ? '⚠ 雲端存檔尚未啟用，目前只存在這台裝置' : '☁ 同步中…'; body.appendChild(cl);
   sec('地上的驚喜', DROP_IDS, ITEMS.map(x => x[1]), ITEMS.map(x => x[2]), 'd');
   sec('會議室遺落物', NOTE_IDS, NOTES.map(x => x[0]), NOTES.map(x => x[1]), 'n');
 }
