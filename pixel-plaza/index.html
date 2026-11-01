@@ -1263,8 +1263,7 @@ const posSent = {x:-99, z:-99, t:0};
 const faceDir = f => { const dx = Math.sin(f), dz = Math.cos(f); return Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 'right' : 'left') : (dz > 0 ? 'down' : 'up'); };
 function pushPosition(){
   const c = player; if (!c || !live.ok || AWAY.has(c.status)) return;
-  if (c.home && c.sitting && Math.hypot(c.holder.position.x - c.home.x, c.holder.position.z - c.home.z) < .6) {   // 坐在自己的座位上：不用回報位置（別人依狀態就會把他放在這），並清掉先前的回報
-    if (!posSent.home) { posSent.home = true; posSent.x = -99; post({action:'pixelOfficeUpdate', name:c.name, patch:{floor:5}}).catch(() => {}); } return; }
+  // 坐在自己座位上也每 45 秒回報一次：這是「人在線上」的訊號，別人（含訪客）才不會在「全員下班」時把在線的人顯示成下班
   posSent.home = false;
   const now = performance.now(), p = c.holder.position, moved = Math.hypot(p.x - posSent.x, p.z - posSent.z) > .12;
   if (!((moved && now - posSent.t > POS_PUSH_MS) || now - posSent.t > POS_BEAT_MS)) return;
