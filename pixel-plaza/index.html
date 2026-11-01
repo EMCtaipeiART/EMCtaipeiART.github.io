@@ -313,9 +313,25 @@ button{font-family:inherit}
   .hp-top{gap:6px!important;right:8px!important;top:8px!important}
   .hp-top button,.hp-br button{height:38px!important;min-width:38px!important}
   .hp-br{right:8px!important;bottom:10px!important}
-  .hp-top button i,.hp-br button i,.hp-top button i img,.hp-br button i img{width:30px!important;height:30px!important}
+  .hp-top button.pk-orange,.hp-top button.pk-green,.hp-top button.pk-teal,.hp-top button.pk-red,.hp-br button.pk-purple{height:36px;min-width:36px}
+  .hp-top button i,.hp-br button i,.hp-top button i svg,.hp-br button i svg{width:20px!important;height:20px!important}
   #cpage .cp-head{padding-right:12px!important}
 }
+/* 高級平面質感：中性的深色玻璃圓鈕＋細線條單色圖示；每顆按鈕用自己的強調色（--ac）畫圖示與展開時的底線，底色不再用大面積漸層 */
+.hp-top button.pk-orange{--ac:#ffb454}.hp-top button.pk-green{--ac:#62e39a}.hp-br button.pk-purple{--ac:#9db4ff}.hp-top button.pk-teal{--ac:#6fd6e8}.hp-top button.pk-red{--ac:#ff7b7b}
+.hp-top button.pk-orange,.hp-top button.pk-green,.hp-top button.pk-teal,.hp-top button.pk-red,.hp-br button.pk-purple{
+  height:40px;min-width:40px;padding:0 9px!important;border:1px solid rgba(255,255,255,.14)!important;border-radius:999px!important;
+  background:rgba(10,26,20,.72)!important;color:#eef6f1;font:600 14px/1 'Fredoka','Noto Sans TC',sans-serif!important;letter-spacing:.02em;text-shadow:none;
+  box-shadow:0 8px 20px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.08)!important;backdrop-filter:blur(10px)!important;transition:padding .28s ease,background .2s,border-color .2s,transform .15s}
+.hp-top button.pk-orange:hover,.hp-top button.pk-green:hover,.hp-top button.pk-teal:hover,.hp-top button.pk-red:hover,.hp-br button.pk-purple:hover,
+.hp-top button.pk-orange:focus-visible,.hp-top button.pk-green:focus-visible,.hp-top button.pk-teal:focus-visible,.hp-top button.pk-red:focus-visible,.hp-br button.pk-purple:focus-visible{
+  background:rgba(16,40,31,.9)!important;border-color:var(--ac)!important;padding:0 16px 0 9px!important;filter:none!important}
+.hp-top button i,.hp-br button i{width:22px!important;height:22px!important;border-radius:0!important;background:none!important;color:var(--ac);display:grid;place-items:center}
+.hp-top button i svg,.hp-br button i svg{display:block;width:22px;height:22px}
+.hp-top button span,.hp-br button span{color:#eef6f1}
+.hp-top button:hover span,.hp-br button:hover span{margin-left:8px}
+.cp-x{background:rgba(255,255,255,.1)!important;border:1px solid rgba(255,255,255,.22)!important;color:#fff!important;font-weight:600!important}
+.cp-x svg{color:#ff7b7b}
 html.embed #hud,html.embed #dock,html.embed #proj,html.embed .lbl{display:none!important}   /* ?embed=1：嵌在網站設計師面板裡的精簡畫面 */
 #elevFx{position:fixed;inset:0;z-index:50;pointer-events:none;font-family:'Fredoka','Noto Sans TC',sans-serif;color:#fff}
 #elevFx.on,#elevFx.out{pointer-events:auto}
@@ -1759,7 +1775,7 @@ function renderCharPage(){
   const moodPct = {happy:90, joy:100, sad:35, angry:20}[c.mood] ?? 60, moodTxt = c.mood ? (iconImg(moodSym[c.mood], 18) + ' ' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[c.mood]) : '— 未設定';
   const keepMsg = radial.querySelector('#cpMsg') ? radial.querySelector('#cpMsg').value : null, keepMusic = radial.querySelector('#cpMusic') ? radial.querySelector('#cpMusic').value : '';
   const mine = storiesOf(c.name), m = c.music;
-  radial.innerHTML = `<div class="cp-wrap"><button type="button" class="cp-x" id="cpX" title="關閉"><img alt="" width="22" height="22" src="${pxIconURL('close')}">關閉</button>
+  radial.innerHTML = `<div class="cp-wrap"><button type="button" class="cp-x" id="cpX" title="關閉">${svgIcon('close', 16)}關閉</button>
     <div class="cp-head">
       <div class="cp-av"><img alt="" src="${c.avatar || ''}"><b class="cp-lv">Lv.${lv}</b></div>
       <div class="cp-main">
@@ -1893,8 +1909,15 @@ function showTitleCard(){
 }   // 不再有登入頁：載完直接進入（有網站登入身分就用該人物，否則預設 Machi）
 function updateTitleNet(){ const e = $('tNet'); if (e) e.textContent = live.ok ? '已連線到「凱曜設計部」伺服器，出勤狀態即時更新' : '目前離線：依時間規則模擬出勤狀態'; }
 // ---- 右上角按鈕的遊戲圖示（Codex 生成的精緻像素圖，pixel-plaza/icons/icon_<名稱>.png，128×128 透明底）；樣式規範見 UI-SPEC.md「按鈕」----
-const pxIconURL = name => 'icons/icon_' + name + '.png';
-document.querySelectorAll('[data-px]').forEach(el => { el.innerHTML = '<img alt="" draggable="false" src="' + pxIconURL(el.dataset.px) + '">'; });
+const SVG_ICONS = {   // 24×24 單線條圖示：粗 1.8、圓端點，顏色吃 currentColor（由按鈕的 --ac 決定）
+  role:'<circle cx="12" cy="8" r="3.6"/><path d="M5 20c.6-3.8 3.4-6 7-6s6.4 2.2 7 6"/>',
+  dex:'<path d="M5 5.5A1.5 1.5 0 0 1 6.5 4H19v14H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19"/><path d="M9 8.5h6"/>',
+  help:'<circle cx="12" cy="12" r="9"/><path d="M9.6 9.6a2.5 2.5 0 1 1 3.6 2.2c-.8.5-1.2 1-1.2 1.9"/><circle cx="12" cy="17" r=".7" fill="currentColor"/>',
+  people:'<circle cx="9" cy="8.5" r="3"/><path d="M3.5 19c.5-3.2 2.7-5 5.5-5s5 1.8 5.5 5"/><circle cx="17" cy="9.5" r="2.4"/><path d="M15.8 14.2c2.6-.3 4.4 1.3 4.9 4.3"/>',
+  close:'<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>'
+};
+const svgIcon = (name, px = 22) => '<svg viewBox="0 0 24 24" width="' + px + '" height="' + px + '" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + SVG_ICONS[name] + '</svg>';
+document.querySelectorAll('[data-px]').forEach(el => { el.innerHTML = svgIcon(el.dataset.px); });
 let adminHome = false, entryRelease = false;   // 登入身分是 Machi／管理者：可以切換、操控任何人（就算被切成離開辦公室而看不到人物）
 function startGame(){
   $('bClose').hidden = /[?&]embed=1/.test(location.search);   // 右上角「關閉」：嵌在網站裡就請網站關閉；手機另開分頁就關掉分頁，關不掉就回網站首頁
