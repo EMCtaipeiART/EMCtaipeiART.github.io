@@ -23,6 +23,7 @@
 - 版面圖 px → 世界單位：`× U`（`U = 0.03`）。人物高 `WORLD_H = 2.04`。碰撞用世界單位。
 - 五樓：x 0–1201 px、z 0–1526 px。四樓：整層加 `FX4 = 3600` px 的 x 偏移；本機座標 x∈[-100, 1430]、z∈[-100, 1700]。樓層判斷 `floorOf(c)`（`x > (FX4-100)*U` 就是四樓）。
 - 四樓版面取自 2D 版 `floor4.js`，座標 ×0.5；所有四樓幾何寫在 `const F4 = {...}`，玻璃牆由 `glassWalls()` 寫進 `WALLS`，家具在 `buildFloor4()`。
+- **五樓分區位移**：為了拓寬走道，`index.html` 把五樓北邊（z < 310 px：廁所、會議室 A、電梯）上移 67px、南邊（z > 1000 px：會議室 B/C/D、茶水間）下移 33px。**不要直接改這些區域建模用的原始座標去「搬位置」**——原始座標照舊（`buildOffice` 裡的數字），`reflow5F()` 在建好後統一位移；資料表（`WALLS`、`LABELS`、`ROOMS`、`PROJ_POS`、`NOTE_TABLES`）用 `zN()` 在定義時位移；程式裡直接寫死的位置（`elevSpot`、`inSlideZone`、`isMeetSeat`、`roomOf`、邊界）已手動更新。五樓可走範圍現在是 z∈[-100, 1560] px。
 - 座位：`SEATS`（五樓：`[桌組, 排, 欄, 'top'|'bottom']`）、`SEATS4`（四樓：`[桌子群 0–4, 座位 1–8]`，1–4 上排、5–8 下排）。**改座位只改這兩張表**，四樓的人在 `SEATS` 裡要放一筆 `['f4',0,0,'top'|'bottom']` 佔位。
 
 ## 3. 資料與後端（Worker：`https://machi-design-api.machi-chen.workers.dev/api`，POST `text/plain` JSON）
