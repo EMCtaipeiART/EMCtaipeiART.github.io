@@ -3402,6 +3402,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'personaAvatarSnapshot', name, version: now, seat, changed: !before || before.look_key !== lookKey };
   }
 
+  /** 角色工坊「發佈給誰」的名單：Pixel Office 12 位人物＋帳號設定（設定表）裡所有有名字的人員（不分部門）。只有管理者能讀。 */
+  private characterRoster(database: DatabaseSnapshot, session: SessionRecord | null): ApiResult {
+    const current = this.requireSession(session);
+    if (!hasCapability(database, current, 'database.manage')) throw new Error('只有管理者可以讀取人員名單');
+    const names = [...PIXEL_OFFICE_NAMES, ...(database.tables['設定']?.rows || []).map(row => text(row['名字']))].filter(Boolean);
+    return { ok: true, action: 'characterRoster', names: [...new Set(names)] };
+  }
+
   private async coinMe(database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
     const current = this.requireSession(session);
     const name = this.coinHolderName(database, current);
@@ -5421,6 +5429,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const baseUrl = text(payload.supplementBaseUrl) || context.baseUrl;
 
       if (action === 'coinMe') return await this.coinMe(database, session);
+      if (action === 'characterRoster') return this.characterRoster(database, session);
       if (action === 'personaAvatarSnapshot') return this.personaAvatarSnapshot(payload, database, session);
       if (action === 'pixelOfficePunish') return await this.pixelOfficePunish(payload, database, session);
       if (action === 'coinTransfer') return await this.coinTransfer(payload, database, session);
