@@ -1216,11 +1216,11 @@ async function addChar(name, i){
 const API = 'https://machi-design-api.machi-chen.workers.dev/api';
 const STATUS = {present:['在座', '🙂'], overtime:['加班', '🌙'], lunch:['用餐', '🍱'], meeting:['會議', '📅'], leave:['休假', '🏖'], offwork:['下班', '🏠'], toilet:['廁所', '🚽'], abroad:['出國', '✈'], out:['公出', '💼']};
 const MOOD = {happy:'☀️', angry:'💢', sad:'💧', joy:'❤️'}, AWAY = new Set(['lunch', 'offwork', 'leave', 'abroad', 'out']);
-let srvHours = null;
+let srvHours = null, srvWorkday = true;   // srvWorkday：後端判斷今天要不要上班（含國定假日）
 const live = {ok:false, version:0, at:0, simAt:0}, netEl = document.getElementById('net');
 const isMeetSeat = st => st.z < 203 * U && st.x > 660 * U && st.x < 1062 * U;
 function taipeiNow(){ const f = new Intl.DateTimeFormat('en-GB', {timeZone:'Asia/Taipei', hour:'numeric', weekday:'short', hour12:false}).formatToParts(new Date()); return {h:+f.find(p => p.type === 'hour').value % 24, weekend:['Sat', 'Sun'].includes(f.find(p => p.type === 'weekday').value)}; }
-function simStatus(staff){ const {h, weekend} = taipeiNow(), a = srvHours || {}, d0 = a.dayStart ?? 9, w1 = a.workEnd ?? 19; if (weekend) return 'offwork'; if (h >= (a.lunchStart ?? 12) && h < (a.lunchEnd ?? 14) && h >= d0 && h < w1) return 'lunch'; if (h >= d0 && h < w1) return 'present'; if (!staff && h >= (a.overtimeStart ?? 19) && h < 22) return 'overtime'; return 'offwork'; }   // 企劃／專案同仁沒有電腦心跳：下班後一律下班，不算加班
+function simStatus(staff){ const {h, weekend} = taipeiNow(), a = srvHours || {}, d0 = a.dayStart ?? 8, w1 = a.workEnd ?? 19; if (weekend || !srvWorkday) return 'offwork'; if (h >= (a.lunchStart ?? 12) && h < (a.lunchEnd ?? 14) && h >= d0 && h < w1) return 'lunch'; if (h >= d0 && h < w1) return 'present'; if (!staff && h >= (a.overtimeStart ?? 19) && h < 22) return 'overtime'; return 'offwork'; }   // 企劃／專案同仁沒有電腦心跳：下班後一律下班，不算加班
 function releaseSeat(c){ if (c.sitting) { c.sitting.by = null; c.sitting = null; } }
 function seatIn(c, pred){
   const free = chairSeats.filter(st => !st.by && !st.hidden && pred(st)); if (!free.length) return false;
@@ -1284,7 +1284,7 @@ function applyStatus(c, force){
   else if (c.home) { c.holder.position.set(c.home.x, 0, c.home.z); c.face = c.home.face; sitDown(c); }
 }
 function setNet(){ const t = new Date().toLocaleTimeString('zh-TW', {hour12:false, timeZone:'Asia/Taipei'}); netEl.textContent = live.ok ? '● 即時連線：凱曜設計部後端（' + t + '）' : '○ 離線：依時間規則模擬（' + t + '）'; netEl.style.color = live.ok ? '#8dffb0' : '#ffd98a'; }
-function syncExtraStatus(){   // 額外人物沒有後端狀態：依時間規則（平日 9–19 上班、午休、週末下班），全員上班／下班按鈕也算
+function syncExtraStatus(){   // 額外人物沒有後端狀態：依時間規則（平日 8–19 上班、午休、週末與國定假日下班），全員上班／下班按鈕也算
   const st = hoursForce === 'work' ? 'present' : hoursForce === 'off' ? 'offwork' : simStatus(true);
   for (const n of extraNames) { const c = chars[n]; if (c && (c.status !== st || c.appliedStatus == null)) { c.status = st; applyStatus(c); } }
 }
@@ -1292,7 +1292,7 @@ async function pollOnce(){
   try {
     const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify({action:'pixelOfficeState', since:live.version}), cache:'no-store'});
     const d = await r.json(); if (!d || !d.ok) throw new Error('bad response');
-    live.ok = true; live.at = Date.now();
+    live.ok = true; live.at = Date.now(); if (typeof d.workday === 'boolean' && d.workday !== srvWorkday) { srvWorkday = d.workday; for (const c of Object.values(chars)) c.appliedStatus = null; }
     if (Array.isArray(d.hidden)) applyHidden(d.hidden);
     if (!d.unchanged) {
       live.version = d.version || live.version;
