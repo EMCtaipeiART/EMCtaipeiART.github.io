@@ -1399,6 +1399,13 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
       eligiblePreviews.push(item);
       continue;
     }
+    // refresh＝設計師手動按「沿用路徑／選資料夾」回覆：明確要把這個資料夾現在的檔案備份進這一輪，
+    // 不套用「封存後才出現的新檔／新版等下一輪」（那是給排程爬蟲防止誤歸類用的）。
+    if (refresh && entry) {
+      entry.pendingAfterRound = null;
+      eligiblePreviews.push(item);
+      continue;
+    }
     let pendingAfterRound = trackedRound(entry?.pendingAfterRound);
     // 「等下一輪」只有在被等的那一輪真的交付過時才成立。沒交付過代表這是殘留標記（重複使用的案件
     // 編號、或檔案離開同步紀錄後留下的封存），清掉讓這個檔案照一般流程上傳，不然會永遠卡在下一輪。
