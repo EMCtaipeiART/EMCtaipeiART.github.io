@@ -13,7 +13,7 @@
 ## 專案
 - EMC 台北設計需求系統：靜態站（GitHub Pages，repo `EMCtaipeiART/EMCtaipeiART.github.io`，網址 https://emc-art.com）＋ Cloudflare Worker／Durable Object（`worker/`，API `https://machi-design-api.machi-chen.workers.dev/api`）。
 - 前台：`index.html`（殼）＋ `site.js`（一個大 IIFE，`show(view)` 切頁）＋ `site.css`。改完前端要跑 `node tools/stamp.cjs`（更新 index.html 裡 site.js 的版本雜湊，只認 16 進位），並把 `index.html` 一起 commit。
-- 元宇宙（像素辦公室）：`EMC-ART-Pixel-Office/dist/app.js`（canvas 遊戲）。改完要手動把 `dist/index.html` 的 `app.js?v=N` 加一，不然 Pages 快取（max-age 600）會讓人看到舊版。
+- 元宇宙（**現行為 3D 版**）：`pixel-plaza/index.html`（單檔、three.js）。**改之前必讀 `pixel-plaza/MAINTENANCE.md` 與 `pixel-plaza/UI-SPEC.md`**（見檔尾「3D 版」一節）。舊 2D 版已封存到 `archive/EMC-ART-Pixel-Office-2D/`，不要再改它、也不要把舊路徑 `EMC-ART-Pixel-Office/` 寫進新程式。
 - 出氣擂台：`vent-arena/`（Codex 的遊戲，我們加了 `scenes.js`、`dark.css`、`overrides.css`）。
 - Worker 後端改了要 `cd worker && wrangler deploy`（部署不在 Git 裡；沒有 Cloudflare 登入就請使用者在本機部署）。
 
@@ -31,7 +31,7 @@
 - 不要印出 `CLOUDFLARE_*` 之類環境變數的值（曾經 token 被貼到錯的變數而洩漏，已請使用者換掉）。
 - 像素辦公室的位置：後端存的 x 不含左側新桌子群的寬度（前端 `LX`，非首頁小框為 320），`pushChange` 會減掉 `LX`、`applyRemote` 會加回來。人物在會議室的位置只是畫面排的，**不能寫回後端**（曾造成散會後人留在會議室）。
 
-## 元宇宙規則（使用者決定的，別擅自改）
+## 元宇宙規則（使用者決定的，別擅自改；以下多為 2D 版時期訂的，業務規則（上下班、全員上班、權限、會議室）3D 版沿用，視覺與座標細節以 3D 規範為準）
 - **上下班時間**：平日 09:00–19:00 為上班（企劃部／專案部同仁、他們的桌子群、沒人坐的空桌、左側新桌子群都一樣）；19:00 之後、09:00 之前、週末與國定假日為下班，設計師有電腦心跳就套加班濾鏡。時段可在「上下班設定」改（後端 `pixelHours`，預設 dayStart 9／lunch 12–14／workEnd 19／overtimeStart 19，加班固定到隔天 06:00）。前端從 `pixelOfficeState.hours` 讀。
 - **全員上班／全員下班**：頁面上是一顆切換鈕；全員上班＝所有人「在座」（不是加班）、畫面當成平日中午，到台北當天 24:00 時間規則暫停，仍可個別手動切換；休假、出國不動。後端 `pixelAllWorkUntil`，hours 帶 `allWorkUntil`。
 - **權限**：只有管理者與 Machi（`monitor`）能操控別人的人物；其他人只能操控自己。走路按鍵／拖動只有在「沒選任何人」時才自動選自己。
@@ -51,3 +51,13 @@
 - 網站的「元宇宙」入口、設計師面板內嵌小視窗（`?embed=1`）、出氣擂台返回連結都已指向 `pixel-plaza/`（three.js 3D 版，UI 規範在 `pixel-plaza/UI-SPEC.md`）。
 - 2D 版整包封存在 `archive/EMC-ART-Pixel-Office-2D/`（原路徑 `EMC-ART-Pixel-Office/` 已不存在），git tag `pixel-office-2d-final` 也保存了封存前的最後狀態。封存版仍有檔案供首頁隱藏的頭像橋接 iframe（`?avatars=1`）與相關測試使用，不要刪。
 - 3D 版自己的素材放在 `pixel-plaza/assets/`、`pixel-plaza/snacks/`、`pixel-plaza/fridge/`，不依賴封存資料夾。
+
+## 3D 版修改守則（讀完 `pixel-plaza/MAINTENANCE.md`、`UI-SPEC.md` 再動手）
+- 所有功能在 `pixel-plaza/index.html` 一個檔案；改完把 `<script type="module">` 內容存成 .mjs 跑 `node --check`，再用 puppeteer 截圖看。一次只改一類東西。
+- 座標：1 px＝0.03 世界單位（`U`）；五樓北邊（z<310）上移 67px、南邊（z>1000）下移 33px，由 `reflow5F()`／`zN()` 統一處理——**新增物件照原始座標寫，不要自己再位移**。四樓 x 偏移 `FX4=3600`。
+- 新增家具：`pbox/table3d/chair3d` 建模＋登記 `rects` 碰撞＋黑色外框，通道 ≥ 1.2 單位；相鄰物件留 1–2px 縫。改座位只動 `SEATS`／`SEATS4`。
+- 隨機物件用 `rng(id)`＋時段，等 `buildOffice()` 蓋完才 `startGameplay()`，不然各人看到不同。
+- UI：綠色主色、HUD 按鈕用 `pk-*` 厚邊漸層＋細線 SVG 圖示、面板關閉鈕一律 `.px-x`；不要用 emoji 當功能圖示、不要混第三種像素圖示風格。
+- 後端：位置沿用 `pixelOfficeUpdate` 的 floor/fx/fy/fdir 協定；個人進度走 `pixelOfficeProgress`（Worker 要另外 `wrangler deploy`）。後端只放行 emc-art.com／github.io／localhost:8787，**測試寫入用模擬後端，別打真實後端**。本機預覽要加 `?as=名字`（僅 localhost 有效）。
+- 部署：只把 `pixel-plaza/`（不含 `ai-views/`、`*.mjs`）與 `character-studio/vendor/` 放到 `main`；Pages 工作流程的路徑過濾要涵蓋新資料夾。改完同步更新 `UI-SPEC.md`／`MAINTENANCE.md`，並在 `MAINTENANCE_LOG.md` 檔尾記一段。
+- 本機 `EMC-ART-Pixel-Office/` 資料夾只是 2D 時期遺留的未追蹤殘檔（`dist/assets`、`cdn`、`source-history.bundle`），已不屬於 Git，別當成現行版本。

@@ -1248,3 +1248,10 @@
 - 2026-10-30: 短網址 batch group card: every link inside a batch now shows its own 累計 and 不重複 click counts (group total on the right is the sum).
 - 2026-10-30: 短網址 batch group card: per-link rows are now a column table (短網址 / 名稱·網址 / 累計點擊 / 不重複點擊) with headers, stacked on phones; group total stays on the right.
 - 2026-10-30: 短網址 copy/links now use the raw Chinese code (no percent-encoding) per user preference.
+
+## 2026-11-02 本機對齊 3D 版元宇宙，補上 3D 修改守則
+
+- 做了什麼：`git pull --ff-only` 把本機 main 從落後 135 個 commit 追到 `origin/main`（含 `pixel-plaza/` 3D 版、2D 版封存到 `archive/EMC-ART-Pixel-Office-2D/`、`pixel-plaza/MAINTENANCE.md`、`UI-SPEC.md`）。
+- 為什麼：假日在家已把元宇宙改成 3D；`CLAUDE.md` 舊內容仍指向 2D 路徑，容易改錯檔。
+- `CLAUDE.md`：元宇宙段落改指向 `pixel-plaza/`，新增「3D 版修改守則」（座標位移、碰撞、隨機物件、UI 規範、後端與部署重點）。
+- 注意：本機未追蹤的 `EMC-ART-Pixel-Office/` 是 2D 遺留殘檔，未動、不在 Git。
