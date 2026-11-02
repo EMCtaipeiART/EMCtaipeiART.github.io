@@ -1255,3 +1255,10 @@
 - 為什麼：假日在家已把元宇宙改成 3D；`CLAUDE.md` 舊內容仍指向 2D 路徑，容易改錯檔。
 - `CLAUDE.md`：元宇宙段落改指向 `pixel-plaza/`，新增「3D 版修改守則」（座標位移、碰撞、隨機物件、UI 規範、後端與部署重點）。
 - 注意：本機未追蹤的 `EMC-ART-Pixel-Office/` 是 2D 遺留殘檔，未動、不在 Git。
+
+## 2026-11-02 服裝生成器：帽子、眼鏡下架（角色工坊改版第一步）
+
+- 原因：3D 版人物有 12 個視角，帽子與眼鏡只畫在正面／側面／背面三視圖上，其他角度對不上。
+- 做法（獨立 repo `emc-ai-stage-classifier`）：`site-source/app/outfit/page.tsx` 移除「帽子」「眼鏡」分頁；`app/api/outfit/route.ts` 對 cap／glasses 回 410。服裝、頭像不變。
+- 部署：repo 已推送，Worker 尚未重新部署（`cd site-source && npm run deploy:cloudflare`，需 Cloudflare 登入）。
+- 下一步（尚未動工）：新「角色工坊」流程——上傳照片＋提示詞 → AI 三視圖（含頭）→ 自動對位確認 → AI 補 9 個角度 → 檢查 → 烘焙 12 視角圖集上線；3D 辦公室需改成能載入動態圖集。
