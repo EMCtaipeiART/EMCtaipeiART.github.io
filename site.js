@@ -576,6 +576,7 @@
     window.pixelSnapLog=()=>{try{return JSON.parse(localStorage.getItem('pixelSnapLog')||'[]')}catch(err){return []}};
     let snapAllBusy=false;
     function snapshotEveryone(tries){
+      return;   /* 2026-11-02 停用：3D 元宇宙不再回報造型快照，頭像快照改由角色工坊「確認上線／設為預設」時一次存好；留著會一直跳出「遊戲畫面還沒準備好」 */
       const fr=$('uniFrame'),isMgr=loggedIn()&&(isAdminUser()||isMachiUser()||(typeof ownDesignerName==='function'&&ownDesignerName()==='Machi'));
       if(!fr||snapAllBusy||(!tries&&Date.now()-(state.snapAllAt||0)<30000)||!state.uniEdit||!isMgr){if(isMgr||tries)snapLog('略過核對',{frame:Boolean(fr),busy:snapAllBusy,edit:Boolean(state.uniEdit),manager:isMgr,throttled:!tries&&Date.now()-(state.snapAllAt||0)<30000});return}
       snapLog('開始核對',{tries:tries||0});
