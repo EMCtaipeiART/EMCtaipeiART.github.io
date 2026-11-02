@@ -1619,3 +1619,7 @@ body.uni-on .hero{display:none}
 /* 元宇宙載入畫面改用 3D 辦公室自己的「EMC Office」綠底遊戲感載入頁，網站不再另外蓋一層 */
 .uni-loading{display:none!important}
 .uni-wrap{background:linear-gradient(135deg,#43d86c 0%,#1aa844 46%,#0b6a2b 100%)}
+.g-links{display:inline-flex;gap:6px;align-items:center;margin-right:2px}
+.g-link{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--muted);transition:color .15s,border-color .15s}
+.g-link:hover{color:var(--green,#16a34a);border-color:currentColor}
+.g-link svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}

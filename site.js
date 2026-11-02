@@ -1436,6 +1436,11 @@
       const type=String(row['設計種類']||row['設計類型']||'').trim(),stage=String(row['階段']||'').trim();
       return [...new Set(state.weights.filter(r=>String(r['設計種類']||'').trim()===type&&String(r['階段']||'').trim()===stage&&String(r['狀態']||'').trim()!=='下架').map(r=>String(r['項目細節']||'').trim()).filter(Boolean))];
     }
+    /* 右上角的 Google 信箱／行事曆小圖示：新開分頁；有登入就帶 authuser 直接開對應帳號 */
+    function googleLinksHtml(){
+      const acct=String(selfAccount()||'').trim(),au=/@/.test(acct)?'?authuser='+encodeURIComponent(acct):'';
+      return '<span class="g-links"><a class="g-link" href="https://mail.google.com/mail/'+au+'" target="_blank" rel="noopener" title="開啟 Gmail" aria-label="開啟 Gmail"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m4 7 8 6 8-6"/></svg></a><a class="g-link" href="https://calendar.google.com/calendar/'+(au?'u/0/r'+au:'')+'" target="_blank" rel="noopener" title="開啟 Google 行事曆" aria-label="開啟 Google 行事曆"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></a></span>';
+    }
     function renderProjects(){
       const stage=$('stage');
       if(!state.loaded){stage.innerHTML=`<div class="latest-grid">${'<div class="skeleton"></div>'.repeat(6)}</div>`;return}
@@ -1454,6 +1459,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       }).join('');
       const hadFocus=document.activeElement?.id==='boardSearch';
       stage.innerHTML=`<div class="section-head"><div><h2>專案列表</h2></div><div class="section-tools">
+          ${googleLinksHtml()}
           <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><input id="boardSearch" type="search" placeholder="搜尋編號、客戶、專案、負責人" value="${esc(state.query)}" aria-label="搜尋案件"></label>
           ${layoutGroupHtml()}
           <div class="filter-wrap"><button type="button" class="tool-btn${n?' on':''}" data-filter-toggle aria-expanded="${state.filterOpen}"><svg viewBox="0 0 24 24"><path d="M4 5h16l-6.2 7.4V19l-3.6-1.8v-4.8z"/></svg>篩選${n?`（${n}）`:''}</button>${state.filterOpen?filterPopHtml():''}</div>
@@ -4181,7 +4187,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const allDayEs=tlEvs.filter(e=>e.allDay||e.kind==='leave'),noTime=[];
       const timeline=`<div class="dc-timeline"><h4>${esc(sel.replace(/-/g,'/'))} 時段行程${isToday?'（現在 '+dcPad(nowH)+':'+dcPad(nowTp.getUTCMinutes())+'）':''}</h4>${allDayEs.length||noTime.length?`<div class="dc-slot"><span class="dc-slot-t">整天</span><div class="dc-slot-b">${allDayEs.map(e=>`<span class="dc-ev${e.kind==='leave'?' leave':''}" style="--c:${e.color||dcColor(e.who)}">${e.kind==='leave'?'休 ':''}${esc(e.who)} ${esc(e.title)}</span>`).join('')}</div></div>`:''}${slotRows}</div>`;
       const warn=dcCal.mode==='due'?[]:[dcCal.error?`讀取失敗：${esc(dcCal.error)}`:'',data?.unreadable?.length?`${esc(data.unreadable.join('、'))} 的 Google 行事曆讀不到（可能沒有分享或授權失效）`:'',data&&data.femas===false?'人資系統假單暫時讀不到，只顯示 Google 行事曆上的休假':''].filter(Boolean);
-      $('stage').innerHTML=`<div class="page wide-cal"><div class="page-top"><div><h2 class="page-title">行事曆</h2><p class="page-sub">設計部五位設計師串聯的 Google 行事曆與人資系統假單。</p></div></div>
+      $('stage').innerHTML=`<div class="page wide-cal"><div class="page-top"><div><h2 class="page-title">行事曆</h2><p class="page-sub">設計部五位設計師串聯的 Google 行事曆與人資系統假單。</p></div><div style="margin-left:auto">${googleLinksHtml()}</div></div>
         ${dutyBarHtml()}
         <div class="dc-top"><div class="dc-nav"><button type="button" class="btn" data-dc="prev" aria-label="上個月">‹</button><button type="button" class="btn" data-dc="today">今天</button><button type="button" class="btn" data-dc="next" aria-label="下個月">›</button></div><h3>${dcCal.y} 年 ${dcCal.m+1} 月</h3>${dcCal.loading?'<span class="page-sub" style="margin:0">讀取中…</span>':'<button type="button" class="btn" data-dc="refresh">重新整理</button>'}</div>
         <div class="dc-legend"><span class="dc-mode" role="radiogroup" aria-label="顯示內容"><button type="button" class="dc-chip${dcCal.mode==='cal'?'':' off'}" style="--c:var(--brand)" data-dc-mode="cal"><i></i>行程與請假</button><button type="button" class="dc-chip${dcCal.mode==='due'?'':' off'}" style="--c:#d64550" data-dc-mode="due" title="未執行與執行中的案件，從開始日標到交件日"><i></i>案件交期</button></span>${(()=>{const me=ownDesignerName();const all=dcCal.hidden.size===0;return me&&DC_COLORS[me]?`<button type="button" class="dc-chip" style="--c:var(--muted)" data-dc-who-all="${all?'me':'all'}">${all?'只看我':'顯示全部'}</button>`:`<button type="button" class="dc-chip" style="--c:var(--muted)" data-dc-who-all="all">顯示全部</button>`})()}${names.map(n=>`<button type="button" class="dc-chip${dcCal.hidden.has(n)?' off':''}" style="--c:${dcColor(n)}" data-dc-who="${esc(n)}"><i></i>${esc(n)}</button>`).join('')}</div>
