@@ -116,8 +116,8 @@ button{font-family:inherit}
 .t-logo .y{color:var(--yellow)}
 .t-sub{color:#fff;font-weight:700;font-size:15px;text-shadow:0 2px 0 rgba(11,61,30,.5)}
 .t-load{display:flex;align-items:center;gap:12px;width:min(360px,90%);margin-top:8px}
-.t-ball{flex:none;width:44px;height:44px;border-radius:50%;background:linear-gradient(#43d86c 0 46%,#0b3d1e 46% 54%,#fff 54%);border:4px solid #0b3d1e;position:relative;animation:spin 1.2s linear infinite;box-shadow:0 3px 0 rgba(11,61,30,.4)}
-.t-ball::after{content:'';position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#fff;border:4px solid #0b3d1e;box-sizing:border-box}
+.t-ball{flex:none;width:44px;height:44px;border-radius:50%;background:none;border:0;position:relative;animation:spin 1.2s linear infinite;box-shadow:0 3px 0 rgba(11,61,30,.4)}
+.t-ball::after{content:none;position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#fff;border:4px solid #0b3d1e;box-sizing:border-box}
 @keyframes spin{to{transform:rotate(360deg)}}
 .t-bar{position:relative;flex:1;height:26px;border-radius:999px;background:#fff;border:3px solid var(--ink);overflow:hidden;box-shadow:0 4px 0 rgba(11,61,30,.35)}
 .t-bar i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(#ffd75e,#ffb62e);transition:width .25s}
