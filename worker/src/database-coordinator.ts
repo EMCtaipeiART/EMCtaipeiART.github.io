@@ -40,6 +40,8 @@ const PIXEL_OFFICE_STAFF_SEAT_POS: Array<[number, number]> = Array.from({ length
 // 出勤狀態。'overtime'（加班）與其他離席狀態不同：人還在座位上工作，只是過了下班時間。
 const PIXEL_OFFICE_STATUSES = ['present', 'overtime', 'lunch', 'offwork', 'toilet', 'meeting', 'leave', 'abroad', 'out'];
 // 電腦開著時由時間決定、不需要手動點的狀態。其餘（會議／出國／公出）電腦判斷不出來，一律尊重手動指定。
+/** 手動改狀態後，電腦的自動判斷暫停多久：之後沒再改就恢復自動（使用者 2026-11-02 要求；假日手動在座、閒置兩小時後回到下班）。 */
+const PIXEL_OFFICE_MANUAL_HOLD_MS = 2 * 3_600_000;
 const PIXEL_OFFICE_AUTO_STATUSES = ['present', 'overtime', 'lunch', 'toilet', 'offwork'];
 // 設計師電腦上的 NAS 爬蟲每分鐘會回報一次「電腦開著」（pixelOfficeHeartbeat）。超過這麼久沒收到，
 // 就當作電腦關機（或睡眠），把「在座／加班／用餐／廁所」改成下班。5 分鐘 = 容許漏報 4 次，避免網路小卡頓就誤判。
@@ -2127,8 +2129,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const rows = this.ctx.storage.sql.exec<{ name: string; state: string; last_seen: number }>(
       'SELECT name, state, last_seen FROM pixel_office_people'
     ).toArray();
-    // 假日（週六日與國定假日）沒有心跳超過門檻就直接下班：連手動點的在座也一樣（使用者 2026-10-11 要求），
-    // 從來沒有心跳的人也算。平日的規則不變。
+    // 假日（週六日與國定假日）沒有心跳超過門檻就直接下班，從來沒有心跳的人也算；
+    // 但手動改過的狀態先保留兩小時（2026-11-02 改：取代 10-11 的「連手動也一律下班」）。
     const holiday = !pixelOfficeIsWorkday(nowMs);
     for (const row of rows) {
       const lastSeen = Number(row.last_seen) || 0;
@@ -2140,7 +2142,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       // 'offwork' 也要放行再判一次：中午電腦睡著的人會先在 12:00 前被判成下班，不讓它再被改的話
       // 整個午休都會卡在下班——這正是使用者回報的那個情況。
       if (!['present', 'overtime', 'lunch', 'toilet', 'offwork'].includes(status)) continue;
-      if (!holiday && state.statusSource === 'manual' && Number(state.statusAt) > lastSeen + PIXEL_OFFICE_OFFLINE_MS) continue;
+      if (state.statusSource === 'manual' && nowMs - (Number(state.statusAt) || 0) < PIXEL_OFFICE_MANUAL_HOLD_MS) continue;   // 手動改過的狀態保留兩小時，之後才回到電腦判斷（假日也一樣）
       const next = pixelOfficeOfflineStatus(nowMs, lastSeen);
       if (status === next) continue;
       state.status = next;
@@ -2676,7 +2678,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     // 來回）就交還給自動。沒有記錄過時段的舊資料一律視為過期，這樣升級之後不會有人卡在舊狀態。
     // 只適用於電腦判斷得出來的狀態；出國／公出電腦看不出來，手動指定了就維持到關機為止。
     const manualExpired = source === 'manual' && PIXEL_OFFICE_AUTO_STATUSES.includes(current)
-      && text(state.statusBaseline) !== pixelOfficeWorkStatus(nowMs);
+      && nowMs - (Number(state.statusAt) || 0) >= PIXEL_OFFICE_MANUAL_HOLD_MS;   // 手動指定維持到兩小時沒再改狀態（不管時段、假日）
     // 開會／休假期間電腦有心跳，不要被「剛開機」改成在座——下一分鐘行事曆同步又會改回去，畫面會來回跳。
     const inCalendarEvent = ['meeting', 'leave'].includes(current) && source === 'calendar';
     // 人就在電腦前敲鍵盤，卻還掛著公出／會議／用餐：收回成在座（使用者 2026-09-23 要求）。

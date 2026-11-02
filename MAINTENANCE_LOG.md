@@ -1421,3 +1421,7 @@
 
 ## 2026-11-02 上下班：08:00 全體上班、19:00 全體下班，國定假日也算下班
 - 後端早已是 dayStart 8／workEnd 19；元宇宙畫面端的備援值 9 改成 8。企劃／專案（額外人物）原本只判斷週六日，現在 Worker 的 `pixelOfficeState` 會帶 `workday`（含國定假日，不換版本也會帶），畫面據此整批下班。CLAUDE.md 規則同步更新。Worker 已部署。
+
+## 2026-11-02 手動改狀態保留兩小時再回電腦判斷
+- 取代 10-11「假日連手動在座也一律下班」與「手動維持到換時段」：手動改過的在座／加班／用餐／廁所／下班，兩小時沒再改狀態（`statusAt`）才恢復電腦判斷——心跳端（`manualExpired`）與離線掃描（`pixelOfficeApplyOffline`）都用同一個 `PIXEL_OFFICE_MANUAL_HOLD_MS`。假日手動在座、閒置兩小時後回到下班。Worker 測試 219 全過，已部署。
+- `pixelOfficeState` 現在帶 `workday`（已確認線上回 true；國定假日時畫面端的企劃／專案會整批下班）。
