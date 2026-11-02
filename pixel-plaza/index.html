@@ -1637,6 +1637,19 @@ renderer.domElement.addEventListener('pointerdown', e => { if (player) { onPick(
 renderer.domElement.addEventListener('pointermove', e => { if (player || !guestDrag || !(e.buttons & 1)) return; const dx = e.clientX - guestDrag.x, dy = e.clientY - guestDrag.y; if (!guestDrag.moved && Math.hypot(dx, dy) < 5) return; guestDrag.moved = true; guestAt.x -= (e.movementX || 0) * .045; guestAt.z -= (e.movementY || 0) * .07; guestClamp(); renderer.domElement.style.cursor = 'grabbing'; });
 renderer.domElement.addEventListener('pointerup', e => { if (player || !guestDrag) return; const was = guestDrag; guestDrag = null; renderer.domElement.style.cursor = ''; if (!was.moved) onPick(e); });
 let camZoom = 1;
+// 手機雙指縮放：兩指張開＝拉近、捏合＝拉遠（和滾輪同一個 camZoom）；第二根手指落下時取消第一指已設的走路目標
+const touches = new Map(); let pinch = null;
+const pinchDist = () => { const [a, b] = [...touches.values()]; return Math.hypot(a.x - b.x, a.y - b.y) || 1; };
+renderer.domElement.addEventListener('pointerdown', e => {
+  if (e.pointerType !== 'touch') return; touches.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if (touches.size >= 2) { pinch = {d0:pinchDist(), z0:camZoom}; target = null; wantSeat = null; fridgeWant = false; wantElev = false; guestDrag = null; e.stopImmediatePropagation(); }
+}, true);
+renderer.domElement.addEventListener('pointermove', e => {
+  if (!touches.has(e.pointerId)) return; touches.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if (pinch && touches.size >= 2) { camZoom = Math.max(.5, Math.min(1.9, pinch.z0 * pinch.d0 / pinchDist())); e.stopImmediatePropagation(); }
+}, true);
+const touchEnd = e => { touches.delete(e.pointerId); if (touches.size < 2) pinch = null; };
+renderer.domElement.addEventListener('pointerup', touchEnd, true); renderer.domElement.addEventListener('pointercancel', touchEnd, true);
 renderer.domElement.addEventListener('wheel', e => { if (player) { e.preventDefault(); camZoom = Math.max(.5, Math.min(1.9, camZoom * (1 + e.deltaY * .0012))); return; } e.preventDefault(); guestAt.z += e.deltaY * .03; guestAt.x += e.deltaX * .03; guestClamp(); }, {passive:false});
 function onPick(e){
   if (!wheel.hidden) { wheelClose(); return; }   // 輪盤開著時，點外面只收合輪盤，人物先不動；下一下才移動

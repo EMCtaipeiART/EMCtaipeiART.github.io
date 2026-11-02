@@ -1425,3 +1425,6 @@
 ## 2026-11-02 手動改狀態保留兩小時再回電腦判斷
 - 取代 10-11「假日連手動在座也一律下班」與「手動維持到換時段」：手動改過的在座／加班／用餐／廁所／下班，兩小時沒再改狀態（`statusAt`）才恢復電腦判斷——心跳端（`manualExpired`）與離線掃描（`pixelOfficeApplyOffline`）都用同一個 `PIXEL_OFFICE_MANUAL_HOLD_MS`。假日手動在座、閒置兩小時後回到下班。Worker 測試 219 全過，已部署。
 - `pixelOfficeState` 現在帶 `workday`（已確認線上回 true；國定假日時畫面端的企劃／專案會整批下班）。
+
+## 2026-11-02 元宇宙：手機雙指縮放
+- 畫布加上雙指縮放（Pointer Events，pointerType=touch）：兩指張開拉近、捏合拉遠，與滾輪共用 `camZoom`（0.5～1.9）。第二指落下時取消第一指已設的走路／座位目標，避免縮放時人物亂走。
