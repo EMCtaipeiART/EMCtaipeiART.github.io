@@ -103,5 +103,5 @@
 
 - `…/api/public/characters` 回傳 `{characters:{名字:版本}, seats:{名字:座位編號}}`。名字不在 `NAMES` 的就是「額外人物」：`index.html` 的 `bootChars` 會替他們呼叫 `addChar`，並用 `cloudSeatFor` 把座位寫進 `SEATS`／`SEATS4`；沒有座位的在辦公室自由走動（`applyStatus` 會幫沒有 `home` 的人開 `wander`）。
 - 額外人物沒有後端狀態：上下班用 `syncExtraStatus`（時間規則＋全員上班／下班）；不能登入操控。
-- 座位編號：五樓 `5:桌子群(0|1):排(0-2):欄(0-2):top|bottom`、四樓 `4:桌子群(0-4):座位(1-8)`；會議室、茶水間不算。**固定 12 人的座位寫在服裝生成器 repo 的 `lib/character.ts` `FIXED_SEATS`，要和這裡的 `SEATS`／`SEATS4` 一致**，改座位表時兩邊一起改（座位圖 `app/outfit/seat-picker.tsx` 也依 `ROW_TOPS`／`GROUPS`）。
+- 座位編號 `S:x:z:t|b`＝椅子的版面 px（四樓含 3600 偏移）；`t` 坐桌後面向鏡頭、`b` 坐桌前背對鏡頭。可選座位只有辦公桌的椅子（五樓 43 個含左側新桌子群，四樓 56 個含右側兩間辦公室），會議室、茶水間、長桌、廁所不算。**清單在服裝生成器 repo 的 `lib/seat-layout.ts`（量自執行時的 `__plaza.seats`），改了辦公室家具或座位要重新量並兩邊一起改；固定 12 人的座位也在那裡（`FIXED_SEATS`）。** 3D 辦公室收到 `S:` 座位就把人放到那個座標、`sitDown` 坐最近的椅子。
 - 本機測試：`?charApi=http://localhost:<port>/characters` 只在 localhost 有效，可指到假的雲端清單。

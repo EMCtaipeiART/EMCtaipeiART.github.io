@@ -1198,6 +1198,8 @@ async function addChar(name, i){
   if (s4) {   // 四樓座位（人物腳底位置＝椅子位置）
     const edge = 382.5 + 232.5 * s4[0] + 40, k = (s4[1] - 1) % 4, cx = 39 + 52.5 + 105 * k + FX4;
     holder.position.set(cx * U, 0, (s4[1] > 4 ? edge + 120 : edge - 34) * U);
+  } else if (seat && (seat[0] === 'p' || seat[0] === 'p4')) {   // 座位圖指定的位置：直接是椅子的座標
+    holder.position.set(seat[1] * U, 0, seat[2] * U);
   } else if (seat) {   // 入座：上排坐在桌後（面向鏡頭）、下排坐在桌前（背對鏡頭）
     const top = ROW_TOPS[seat[1]], cx = GROUPS[seat[0]][seat[2]];
     holder.position.set(cx * U, 0, (seat[3] === 'top' ? top - 34 : top + 120) * U);
@@ -1544,10 +1546,9 @@ function select(name){
 
 let done = 0;
 // 角色工坊發佈的「額外人物」（不在固定 12 人裡）：有指定座位就坐那裡，沒指定就在辦公室自由走動；沒有後端狀態，上下班依時間規則
-function cloudSeatFor(n){
-  const k = cloudSeats[n]; let m;
-  if ((m = /^5:([01]):([0-2]):([0-2]):(top|bottom)$/.exec(k || ''))) SEATS[n] = [+m[1], +m[2], +m[3], m[4]];
-  else if ((m = /^4:([0-4]):([1-8])$/.exec(k || ''))) { SEATS4[n] = [+m[1], +m[2]]; SEATS[n] = ['f4', 0, 0, +m[2] > 4 ? 'bottom' : 'top']; }
+function cloudSeatFor(n){   // 座位編號 S:x:z:t|b（椅子的版面 px；t＝坐桌後面向鏡頭、b＝坐桌前背對鏡頭），由服裝生成器的座位圖指定
+  const m = /^S:(\d+):(\d+):(t|b)$/.exec(cloudSeats[n] || '');
+  if (m) { SEATS[n] = ['p', +m[1], +m[2], m[3] === 't' ? 'top' : 'bottom']; if (+m[1] >= 3000) SEATS[n][0] = 'p4'; }
 }
 const extraNames = [];
 const bootChars = cloudReady.then(() => {
