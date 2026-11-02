@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 10229,
+  "revision": 10230,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-02T08:46:55.336Z",
+  "updatedAt": "2026-11-02T09:10:24.914Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1078,7 +1078,7 @@
         {"案件編號":"26100173","修改次數":"1","建立日期":"2026/11/02 13:10:05","修改日期":"2026/11/02 13:10:05","修改內容":"設計圖搬移（合併信件分類）","修改人":"Machi","確認修正日":"2026/11/02 13:10:05","圖片連結":"[{\"fileName\":\"261030_Epson_淡水福容快閃活動_B版_1080x1920.png\",\"url\":\"https://lh3.googleusercontent.com/d/1qvveaVJRZ0880zRUOMIuoohdOCRWr0tL=w1600\"}]","圖片來源":"manual-move","圖片更新時間":"2026/11/02 13:10:05"},
         {"案件編號":"26110004","修改次數":"0","建立日期":"2026/11/02 14:45:41","修改日期":"2026/11/02 14:45:41","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/02 14:45:41","圖片連結":"[{\"fileName\":\"261014_金士頓_IPC_v04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1f7K3IySxUZK_FRieaVp69FMXbg-Jb2F0=w1600\"},{\"fileName\":\"261014_金士頓_IPC_ENG.png\",\"url\":\"https://lh3.googleusercontent.com/d/1EDgX0HzkZlIGxziwRmtGG_CV_z6mxJu3=w1600\"},{\"fileName\":\"261014_金士頓_IPC_JP.png\",\"url\":\"https://lh3.googleusercontent.com/d/1qM7iDAYodhzGxVxTRujeD4C_vTmzhU3w=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/02 14:46:10"},
         {"案件編號":"26100171","修改次數":"0","建立日期":"2026/11/02 15:57:01","修改日期":"2026/11/02 15:57:01","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/02 15:57:01","圖片連結":"[{\"fileName\":\"261102_官網_雙11-CPAS.ver3_AeroClip.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1NqJjjc-x5ixsE0GcwPZvmwMXK3uApL2B=w1600\"},{\"fileName\":\"261102_官網_雙11-CPAS.ver3_Liberty-5-Pro-Max.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1nOVHyel5d2XXBfGKEyC-upIl3YBJPByW=w1600\"},{\"fileName\":\"261102_官網_雙11-CPAS.ver3_Liberty-5-Pro.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1zOWpPSj4V_dmLlsMh-2PPEnlXMpgU6CB=w1600\"},{\"fileName\":\"261102_官網_雙11-CPAS.ver3_Liberty-Buds.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1ICBZQVSTeg6yDU3cE15nf9EJRJPAWOYL=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/02 15:57:01"},
-        {"案件編號":"26100064","修改次數":"3","建立日期":"2026/11/02 16:04:05","修改日期":"2026-11-02","修改內容":"感謝！僅一個小地方調整，\n幫我把文字大小寫改為「Epson」（基本上除了 Logo 之外都是用這個拼法）：","修改內容連結":"","修改人":"李明庭","確認修正日":"2026/11/02 16:46:55","待修改圖片":""},
+        {"案件編號":"26100064","修改次數":"3","建立日期":"2026/11/02 16:04:05","修改日期":"2026-11-02","修改內容":"感謝！僅一個小地方調整，\n幫我把文字大小寫改為「Epson」（基本上除了 Logo 之外都是用這個拼法）：","修改內容連結":"","修改人":"李明庭","確認修正日":"2026/11/02 16:46:55","待修改圖片":"","圖片連結":"[{\"fileName\":\"261030_Epson_社群貼文_康軒合作.png\",\"url\":\"https://lh3.googleusercontent.com/d/1N-g8DR1MFOKzz7zw8-TrTw0JLpl67lhh=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/02 17:10:24"},
         {"案件編號":"26100204","修改次數":"0","建立日期":"2026/11/02 16:46:09","修改日期":"2026/11/02 16:46:09","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/02 16:46:09","圖片連結":"[{\"fileName\":\"261102_富美家_11月社群貼文ˍ11月木工＋設計師抽獎活動_1080x1350.png\",\"url\":\"https://lh3.googleusercontent.com/d/1S1iMMSQoI8H-TzBHc-f8trhb1wW5ZHwJ=w1600\"},{\"fileName\":\"261102_富美家_11月社群貼文ˍ11月木工＋設計師抽獎活動_1200x1200.png\",\"url\":\"https://lh3.googleusercontent.com/d/1tHqIlwFwhduf0Jxu5P2KmdeIHrxistvC=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/02 16:46:09"}
       ]
     },
