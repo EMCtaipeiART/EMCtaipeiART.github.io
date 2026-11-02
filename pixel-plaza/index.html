@@ -226,13 +226,12 @@ button{font-family:inherit}
 .cui-tag{display:inline-flex;gap:4px;align-items:center;background:#fffdf5;border:2px solid var(--ink);border-radius:999px;padding:2px 8px;font:600 12px 'Fredoka','Noto Sans TC',sans-serif;color:#232b32;white-space:nowrap}
 .ctag>div,.ctag>img,.ctag>button{pointer-events:auto}
 .cui-wrap{position:relative;display:flex;flex-direction:column;align-items:center}
-.cui-bub{position:relative;max-width:190px;background:#fff;color:var(--ink);border:2.5px solid var(--ink);border-radius:14px;padding:4px 10px;font:700 12.5px/1.4 'Fredoka','Noto Sans TC',sans-serif;word-break:break-all;box-shadow:0 3px 0 rgba(0,0,0,.25);margin-bottom:0}
+.cui-bub{position:relative;box-sizing:content-box;width:7em;max-width:none;background:#fff;color:var(--ink);border:2.5px solid var(--ink);border-radius:14px;padding:4px 10px;font:700 12.5px/1.4 'Fredoka','Noto Sans TC',sans-serif;word-break:break-all;box-shadow:0 3px 0 rgba(0,0,0,.25);margin-bottom:0}
 .cui-stack{display:flex;flex-direction:column;align-items:center;gap:5px}.cui-ico{display:flex;gap:8px;align-items:center}
 .cui-bub:not(.tail):after{display:none}
 .cui-bub:after{content:'';position:absolute;left:50%;bottom:-8px;width:10px;height:10px;margin-left:-5px;background:#fff;border-right:2.5px solid var(--ink);border-bottom:2.5px solid var(--ink);transform:rotate(45deg)}
-.cui-bub.music{display:flex;align-items:center;gap:6px;background:#efe6ff;pointer-events:auto;width:150px}
-.cui-bub.music:after{background:#efe6ff}
-.cui-bub .mplay{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid var(--ink);background:#9166ec;color:#fff;font-size:10px;cursor:pointer;padding:0}
+.cui-mus{display:flex;align-items:center;gap:4px;pointer-events:auto}.cui-msg+.cui-mus{margin-top:3px;padding-top:3px;border-top:2px dashed #cbbcf0}
+.cui-bub .mplay{flex:none;width:18px;height:18px;border-radius:50%;border:2px solid var(--ink);background:#9166ec;color:#fff;font-size:8px;cursor:pointer;padding:0;line-height:1}
 .cui-bub .mt{flex:1;overflow:hidden;white-space:nowrap}.cui-bub .mt i{display:inline-block;font-style:normal;padding-left:100%;animation:mq 7s linear infinite}
 @keyframes mq{to{transform:translateX(-100%)}}
 .cui-mood{position:static;width:30px;height:30px;animation:mpop 1.6s ease-in-out infinite;pointer-events:none!important;filter:drop-shadow(0 2px 0 rgba(0,0,0,.35))}
@@ -2067,12 +2066,11 @@ function updateTags(){
     else if (c.holder.visible && (c.message || c.mood || m || nStory)) {
       p = c.holder.position.clone(); p.y += 2.7;
       const playing = musicPlaying.name === c.name && !musicPlaying.paused;
-      const bub = [], showMusic = m && (!c.message || playing || Math.floor(performance.now() / 3500) % 2 === 1);   // 對話與音樂共用一個泡泡，同時存在時每 3.5 秒輪流顯示
-      if (c.message && !showMusic) bub.push('<div class="cui-bub">' + esc(c.message) + '</div>');
-      if (showMusic) bub.push('<div class="cui-bub music"><button type="button" class="mplay" data-n="' + esc(c.name) + '">' + (playing ? '⏸' : '▶') + '</button><span class="mt"><i>♪ ' + esc(m.title || '音樂') + '</i></span></div>');
+      // 對話與音樂共用同一個泡泡（寬度固定七個字），音樂列縮小放在對話下方；心情／動態圖示在泡泡上方
+      const msg = c.message ? '<div class="cui-msg">' + esc(c.message) + '</div>' : '', mus = m ? '<div class="cui-mus"><button type="button" class="mplay" data-n="' + esc(c.name) + '">' + (playing ? '⏸' : '▶') + '</button><span class="mt"><i>♪ ' + esc(m.title || '音樂') + '</i></span></div>' : '';
+      const bub = msg || mus ? '<div class="cui-bub tail' + (m ? ' hasmus' : '') + '">' + msg + mus + '</div>' : '';
       const ico = (nStory ? '<button type="button" class="cui-story" data-n="' + esc(c.name) + '" title="查看 ' + esc(c.name) + ' 的動態"><img alt="" src="' + storyIconURL + '">' + (storyUnread(c.name) ? '<b></b>' : '') + '</button>' : '') + (c.mood ? '<img class="cui-mood ' + c.mood + '" alt="" src="' + (ICON[moodSym[c.mood]] || '') + '">' : '');
-      if (!ico && bub.length) bub[bub.length - 1] = bub[bub.length - 1].replace('class="cui-bub', 'class="cui-bub tail');
-      html = '<div class="cui-stack">' + bub.join('') + (ico ? '<div class="cui-ico">' + ico + '</div>' : '') + '</div>';
+      html = '<div class="cui-stack">' + (ico ? '<div class="cui-ico">' + ico + '</div>' : '') + bub + '</div>';
     }
     if (!html || !p) { c.tag.style.display = 'none'; continue; }
     p.project(camera); const vis = p.z < 1 && Math.abs(p.x) < 1.1 && Math.abs(p.y) < 1.1;
