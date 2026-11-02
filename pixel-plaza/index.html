@@ -1229,7 +1229,7 @@ function seatIn(c, pred){
 }
 const FEMALE_STAFF = new Set(['Anna', 'Amber', 'Leona', '余采馨', '黎子瑄', '王藍庭', '鄭筱舢']);   // 上廁所優先女廁；其他人優先男廁（優先的沒位置才去另一邊）
 function toiletIn(c){
-  const want = FEMALE_STAFF.has(c.name) ? 'f' : 'm', fl = c.home ? (c.home.x > (FX4 - 100) * U ? 4 : 5) : 0, onFl = x => !fl || (x.x > (FX4 - 100) * U ? 4 : 5) === fl;
+  const want = FEMALE_STAFF.has(c.name) ? 'f' : 'm', fl = (c.home || c.holder.position).x > (FX4 - 100) * U ? 4 : 5, onFl = x => (x.x > (FX4 - 100) * U ? 4 : 5) === fl;   // 沒有固定座位的人就看他現在在哪一層（以前沒座位會隨機飛到另一層的廁所）
   return seatIn(c, x => x.kind === 'toilet' && x.sex === want && onFl(x)) || seatIn(c, x => x.kind === 'toilet' && x.sex === want) || seatIn(c, x => x.kind === 'toilet' && onFl(x)) || seatIn(c, x => x.kind === 'toilet');
 }
 function applyHidden(list){   // 帳號設定勾了「隱藏人物」（測試人員）：不顯示在元宇宙
