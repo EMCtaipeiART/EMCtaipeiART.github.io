@@ -635,7 +635,7 @@
       return [...rows].sort((a,b)=>{const ra=String(a['排序']??'').trim(),rb=String(b['排序']??'').trim(),ha=ra!==''&&Number.isFinite(+ra),hb=rb!==''&&Number.isFinite(+rb);if(ha&&hb)return +ra-+rb||collator.compare(a['客戶別'],b['客戶別']);if(ha!==hb)return ha?-1:1;return collator.compare(a['客戶別'],b['客戶別'])});
     }
     function designerNames(){
-      const list=state.settings.filter(r=>/^(平面|影音)$/.test(String(r['組別']||'').trim())&&String(r['名字']||'').trim()&&String(r['設計師顯示']||'v').toLowerCase()!=='x').map(r=>String(r['名字']).trim());
+      const list=state.settings.filter(r=>!isHiddenPerson(r)&&/^(平面|影音)$/.test(String(r['組別']||'').trim())&&String(r['名字']||'').trim()&&String(r['設計師顯示']||'v').toLowerCase()!=='x').map(r=>String(r['名字']).trim());
       return list.length?[...new Set(list)]:[...DESIGNERS];
     }
     const designTypes=()=>{const t=[...new Set(state.weights.map(r=>String(r['設計種類']||'').trim()).filter(Boolean))];return t.length?t:['平面','影音']};
@@ -644,7 +644,7 @@
     /** 新案件輪替：同組（平面／影音）裡「新專案輪值」最小的設計師是下一位；有替代設計師時，實際接案的人排到最後（跟後端 applyRotation 同一套）。 */
     function rotationOrder(type){
       const grp=type==='影音'?'影音':'平面';
-      return state.settings.filter(r=>String(r['組別']||'').trim()===grp&&String(r['名字']||'').trim()&&String(r['設計師顯示']||'v').toLowerCase()!=='x')
+      return state.settings.filter(r=>!isHiddenPerson(r)&&String(r['組別']||'').trim()===grp&&String(r['名字']||'').trim()&&String(r['設計師顯示']||'v').toLowerCase()!=='x')
         .sort((a,b)=>(Number(a['新專案輪值'])||99)-(Number(b['新專案輪值'])||99)||String(a['名字']).localeCompare(String(b['名字']),'zh-Hant')).map(r=>String(r['名字']).trim());
     }
     function applyRotationPlan(f){
@@ -662,6 +662,8 @@
     const newClientSet=new Set();
     const isNewClient=c=>Boolean(c)&&newClientSet.has(c);
     const newStage=(type,isNew)=>isNew&&stagesFor(type).includes('提案')?'提案':defaultStage(type);
+    /** 帳號設定勾了「隱藏人物」的測試人員：不出現在填單、寄件與負責人名單 */
+    function isHiddenPerson(r){return /^(x|v|true|1)$/i.test(String(r&&r['隱藏人物']||'').trim())}
     function designerEmail(name){const row=state.settings.find(r=>norm(r['名字'])===norm(name)||norm(r['顯示名'])===norm(name)),account=String(row?.['帳號']||'').trim();return account||(name?`${String(name).replace(/\s+/g,'').toLowerCase()}@emctaipei.com`:'')}
     function recipientFor(name){const display=RECIPIENT_NAMES[name]||name,email=designerEmail(name);return display&&email?`${display} <${email}>`:email}
     const emailOf=text=>(String(text||'').match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i)||[''])[0].toLowerCase();
@@ -1176,7 +1178,7 @@
     const AS_DESIGNERS=['Machi','Anna','Amber','Leona','Noise'];
     const AS_ALIAS={kingston:'金士頓',保誠:'保誠人壽','新光(金控)':'新光人壽',新光金控:'新光人壽'};
     const asKey=n=>{const k=String(n||'').toLowerCase().replace(/[\s　]+/g,'');return AS_ALIAS[k]||k};
-    function asOwnerNames(){const m=new Map();for(const r of state.settings||[]){const acc=canonAcc(r['帳號']);if(acc.includes('@'))m.set(acc,String(r['顯示名']||r['名字']||'').trim()||acc.split('@')[0])}return m}
+    function asOwnerNames(){const m=new Map();for(const r of state.settings||[]){const acc=canonAcc(r['帳號']);if(isHiddenPerson(r))continue;if(acc.includes('@'))m.set(acc,String(r['顯示名']||r['名字']||'').trim()||acc.split('@')[0])}return m}
     const AS_NICK={david:'廖秦葦',allen:'李明庭'};
     const asNick=t=>String(t||'').replace(/[A-Za-z]+/g,w=>AS_NICK[w.toLowerCase()]||w);
     function asSysRow(client){const k=asKey(client);return (state.customers||[]).find(r=>asKey(r['客戶別'])===k)||null}
@@ -2031,7 +2033,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     }
     function mailContacts(extra){
       const seen=new Set(),list=[],add=(name,email,group)=>{const e=String(email||'').trim().toLowerCase();if(!e||seen.has(e))return;seen.add(e);list.push({name:name||e,email:e,group:group||'其他'})};
-      for(const r of state.settings){const acc=canonAcc(r['帳號']);if(!acc.includes('@'))continue;const dept=String(r['部門']||'').trim(),grp=String(r['組別']||'').trim();if(hiddenUnit.test(dept)||hiddenUnit.test(grp))continue;add(String(r['顯示名']||r['名字']||'').trim(),acc,grp||dept)}
+      for(const r of state.settings){const acc=canonAcc(r['帳號']);if(!acc.includes('@'))continue;const dept=String(r['部門']||'').trim(),grp=String(r['組別']||'').trim();if(hiddenUnit.test(dept)||hiddenUnit.test(grp)||isHiddenPerson(r))continue;add(String(r['顯示名']||r['名字']||'').trim(),acc,grp||dept)}
       for(const entry of extra){const e=emailOf(entry);if(e)add(String(entry).replace(/\s*<.*?>\s*/,'').trim(),e,'其他')}
       return list;
     }

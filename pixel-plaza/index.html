@@ -1227,7 +1227,12 @@ function seatIn(c, pred){
   const free = chairSeats.filter(st => !st.by && !st.hidden && pred(st)); if (!free.length) return false;
   const st = rnd(free); c.holder.position.set(st.x, 0, st.z); return sitDown(c);
 }
+function applyHidden(list){   // 帳號設定勾了「隱藏人物」（測試人員）：不顯示在元宇宙
+  const set = new Set(list);
+  for (const c of Object.values(chars)) { const h = set.has(c.name) && c !== player; if (!!c.hidden === h) continue; c.hidden = h; c.btn.style.display = h ? 'none' : ''; c.appliedStatus = null; if (h) { releaseSeat(c); c.holder.visible = false; c.moving = 0; } else applyStatus(c); }
+}
 function applyStatus(c, force){
+  if (c.hidden) { c.holder.visible = false; return; }
   const st = STATUS[c.status] ? c.status : 'present'; stationFx(c, 0);   // 先把座位／桌面還原，人物才坐得下去
   c.btn.textContent = c.name + ' ' + STATUS[st][1];
   if (c === player && !force) return;               // 正在操控的角色不被即時資料搬動（自己改狀態時除外）
@@ -1256,6 +1261,7 @@ async function pollOnce(){
     const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify({action:'pixelOfficeState', since:live.version}), cache:'no-store'});
     const d = await r.json(); if (!d || !d.ok) throw new Error('bad response');
     live.ok = true; live.at = Date.now();
+    if (Array.isArray(d.hidden)) applyHidden(d.hidden);
     if (!d.unchanged) {
       live.version = d.version || live.version;
       if (d.hours) { srvHours = d.hours; const f = d.hours.force === 'work' || d.hours.force === 'off' ? d.hours.force : ''; if (f !== hoursForce) { hoursForce = f; for (const c of Object.values(chars)) c.appliedStatus = null; } }

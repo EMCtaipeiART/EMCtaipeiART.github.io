@@ -733,6 +733,7 @@
           ${accountField('姓名','名字',model['原始名字']||model['名字'],{placeholder:'內部識別姓名'})}${accountField('顯示名稱','顯示名',model['顯示名'],{placeholder:'前台顯示名稱'})}
           ${accountSuggestionField('部門','部門',model['部門'],departments)}${accountSuggestionField('組別','組別',model['組別'],teams)}
           <p class="account-field-help">部門與組別可直接修改、輸入新名稱，或清空後儲存以移除；既有名稱會作為輸入建議。</p>
+          <div class="account-choice-group wide" style="grid-column:1/-1"><div class="account-choice-grid">${accountFlag('隱藏人物','隱藏人物（測試人員：不出現在元宇宙、填單與寄件名單）',/^(?:x|v|true|1)$/i.test(String(model['隱藏人物']||'')),'collapsed')}</div></div>
         </div><div class="account-avatar-settings"><div class="account-profile-preview"><img data-account-avatar-preview src="${esc(model['頭像連結']||initialsAvatar(model['顯示名']||model['名字']))}" onerror="this.onerror=null;this.src='${esc(initialsAvatar(model['顯示名']||model['名字']))}'" alt=""><div><b data-account-preview-name>${esc(model['顯示名']||model['名字']||'新帳號')}</b><small>所有帳號皆可設定個人頭像</small></div></div>${accountField('頭像連結','頭像連結',model['頭像連結'],{type:'url',wide:true,placeholder:'https://...'})}</div></section>
         <details class="account-section-fold"><summary>喜愛設定</summary><div class="account-section-fold-body"><div class="account-fields">${accountField('深淺模式','深淺模式',model['深淺模式'],{options:['淺色','深色']})}</div>
           <div class="account-choice-group"><p>預設篩選年份（可複選）</p><div class="account-choice-grid">${accountCurrentYears(model).map(year=>accountChoice('篩選年份',year,`${year} 年`,selectedYears.has(year))).join('')}</div></div>

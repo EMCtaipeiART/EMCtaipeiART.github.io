@@ -380,6 +380,8 @@ const LOGIN_WINDOW_MS = 10 * 60 * 1000;
 // Cloudflare Workers caps Web Crypto PBKDF2 at 100,000 iterations.
 const LOCAL_PASSWORD_ITERATIONS = 100_000;
 const LOCAL_PASSWORD_PREFIX = 'pbkdf2-sha256';
+/** 帳號設定勾了「隱藏人物」的人（測試人員）：不出現在元宇宙、填單與寄件名單。 */
+const hiddenPeopleNames = (database: DatabaseSnapshot): string[] => (database.tables['設定']?.rows || []).filter(row => /^(x|v|true|1|隱藏)$/i.test(text(row['隱藏人物']))).flatMap(row => [text(row['名字']), text(row['顯示名'])]).filter(Boolean);
 const ADMIN_TABLE_ORDER = ['database', '系統公告欄', '加權計分標準', '短連結', '補充資料連結', '修改統計表', '設定', '角色權限範本', '客戶別', '帳號權限', '組織選項', 'reels', 'bug_report'];
 
 type MutatorResult = { result: ApiResult; changed?: boolean; changedTables?: string[] };
@@ -3406,7 +3408,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   private characterRoster(database: DatabaseSnapshot, session: SessionRecord | null): ApiResult {
     const current = this.requireSession(session);
     if (!hasCapability(database, current, 'database.manage')) throw new Error('只有管理者可以讀取人員名單');
-    const names = [...PIXEL_OFFICE_NAMES, ...(database.tables['設定']?.rows || []).map(row => text(row['名字']))].filter(Boolean);
+    const hidden = new Set(hiddenPeopleNames(database));
+    const names = [...PIXEL_OFFICE_NAMES, ...(database.tables['設定']?.rows || []).map(row => text(row['名字']))].filter(name => name && !hidden.has(name));
     return { ok: true, action: 'characterRoster', names: [...new Set(names)] };
   }
 
@@ -5400,7 +5403,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'getPixelHours') return { ok: true, action, config: { ...cleanPixelHours(await this.ctx.storage.get<PixelHours>('pixelHours')) }, defaults: PIXEL_HOURS_DEFAULT, force: pixelForceNow(Date.now()) };
       if (action === 'getHeroConfig') return { ok: true, action, config: (await this.ctx.storage.get<HeroConfig>('heroConfig')) || null };
       if (action === 'releaseInfo') return { ok: true, action: 'releaseInfo', release: Number(await this.ctx.storage.get('appRelease')) || 0 };
-      if (action === 'pixelOfficeState') return this.pixelOfficeState(payload);
+      if (action === 'pixelOfficeState') { let hidden: string[] = []; try { hidden = hiddenPeopleNames((await this.snapshot()).database); } catch { /* 讀不到就不隱藏 */ } return { ...this.pixelOfficeState(payload), hidden }; }
       if (action === 'pixelOfficeUpdate') return this.pixelOfficeUpdate(payload);
       if (action === 'pixelOfficeStaffBack') return await this.pixelOfficeStaffBack(payload);
       if (action === 'pixelOfficeFun') return await this.pixelOfficeFun(payload);
