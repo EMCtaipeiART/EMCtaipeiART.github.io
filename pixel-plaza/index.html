@@ -410,9 +410,9 @@ const HD = !PIXEL_MODE, DPR = Math.min(devicePixelRatio || 1, 2);
 const RH = 300;                        // 復古模式的內部渲染高度（像素）
 const NAMES = ['Amber','Anna','Leona','Machi','Noise','余采馨','吳冠賢','廖秦葦','李明庭','鄭筱舢','黎子瑄','王藍庭'];
 // 人物圖集：預設讀本機靜態檔；角色工坊發佈過的人改讀雲端（圖集 12 個面向，版本號變了網址就變，不怕快取）
-const CHAR_API = 'https://emc-ai-stage-classifier.machi-chen.workers.dev/api/public/characters';
-let cloudChars = {};
-const cloudReady = (localStorage.getItem('noCloudChars') === '1' ? Promise.resolve() : fetch(CHAR_API, {signal: AbortSignal.timeout(4000)}).then(r => r.ok ? r.json() : null).then(j => { cloudChars = (j && j.characters) || {}; }).catch(() => {}));
+const CHAR_API = (location.hostname === 'localhost' && new URLSearchParams(location.search).get('charApi')) || 'https://emc-ai-stage-classifier.machi-chen.workers.dev/api/public/characters';   // ?charApi= 只在 localhost 有效（測試用）
+let cloudChars = {}, cloudSeats = {};
+const cloudReady = (localStorage.getItem('noCloudChars') === '1' ? Promise.resolve() : fetch(CHAR_API, {signal: AbortSignal.timeout(4000)}).then(r => r.ok ? r.json() : null).then(j => { cloudChars = (j && j.characters) || {}; cloudSeats = (j && j.seats) || {}; }).catch(() => {}));
 const url = n => cloudChars[n] ? CHAR_API + '/' + encodeURIComponent(n) + '/' + (HD ? 'atlas-hd' : 'atlas') + '.png?v=' + cloudChars[n] : (HD ? 'sprites-hd/' : 'sprites/') + n + '.png';
 
 
@@ -1234,6 +1234,7 @@ function applyStatus(c, force){
   releaseSeat(c); c.wander = false; c.sprite.material.color.set(st === 'overtime' ? 0xa9afd6 : 0xffffff);
   if (AWAY.has(st)) { c.holder.visible = false; if (c.home) c.holder.position.set(c.home.x, 0, c.home.z); c.moving = 0; if (c === player) target = null; return; }   // 用餐／下班／休假／出國／公出：不在辦公室，人物隱藏（桌面顯示狀態圖示）
   c.holder.visible = true;
+  if (!c.home && c !== player && (st === 'present' || st === 'overtime')) c.wander = true;   // 沒有指定座位的人（角色工坊發佈的額外人物）在辦公室自由走動
   if ((st === 'present' || st === 'overtime') && c.home) { c.holder.position.set(c.home.x, 0, c.home.z); c.face = c.home.face; sitDown(c); }
   else if (st === 'toilet') seatIn(c, x => x.kind === 'toilet');
   else if (st === 'meeting') {   // 依行事曆：後端 meetingRoom（A～D）指定會議室，就把人放進那間
@@ -1243,6 +1244,10 @@ function applyStatus(c, force){
   else if (c.home) { c.holder.position.set(c.home.x, 0, c.home.z); c.face = c.home.face; sitDown(c); }
 }
 function setNet(){ const t = new Date().toLocaleTimeString('zh-TW', {hour12:false, timeZone:'Asia/Taipei'}); netEl.textContent = live.ok ? '● 即時連線：凱曜設計部後端（' + t + '）' : '○ 離線：依時間規則模擬（' + t + '）'; netEl.style.color = live.ok ? '#8dffb0' : '#ffd98a'; }
+function syncExtraStatus(){   // 額外人物沒有後端狀態：依時間規則（平日 9–19 上班、午休、週末下班），全員上班／下班按鈕也算
+  const st = hoursForce === 'work' ? 'present' : hoursForce === 'off' ? 'offwork' : simStatus();
+  for (const n of extraNames) { const c = chars[n]; if (c && c.status !== st) { c.status = st; applyStatus(c); } }
+}
 async function pollOnce(){
   try {
     const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify({action:'pixelOfficeState', since:live.version}), cache:'no-store'});
@@ -1260,6 +1265,7 @@ async function pollOnce(){
     live.ok = false;
     if (Date.now() - live.simAt > 30000) { live.simAt = Date.now(); const st = simStatus(); for (const c of Object.values(chars)) { c.status = st; applyStatus(c); } }
   }
+  syncExtraStatus();
   setNet();
 }
 // ---- 位置同步：自己走動時回報位置，其他人（含訪客）依後端的位置顯示，大家看到的畫面一致 ----
@@ -1537,7 +1543,19 @@ function select(name){
 }
 
 let done = 0;
-Promise.all([buildOffice(), loadIcons(), ...NAMES.map((n, i) => addChar(n, i).then(() => { setLoad('載入角色', ++done / NAMES.length); }))])
+// 角色工坊發佈的「額外人物」（不在固定 12 人裡）：有指定座位就坐那裡，沒指定就在辦公室自由走動；沒有後端狀態，上下班依時間規則
+function cloudSeatFor(n){
+  const k = cloudSeats[n]; let m;
+  if ((m = /^5:([01]):([0-2]):([0-2]):(top|bottom)$/.exec(k || ''))) SEATS[n] = [+m[1], +m[2], +m[3], m[4]];
+  else if ((m = /^4:([0-4]):([1-8])$/.exec(k || ''))) { SEATS4[n] = [+m[1], +m[2]]; SEATS[n] = ['f4', 0, 0, +m[2] > 4 ? 'bottom' : 'top']; }
+}
+const extraNames = [];
+const bootChars = cloudReady.then(() => {
+  for (const n of Object.keys(cloudChars)) if (!NAMES.includes(n) && /^[^\\/?#]{1,40}$/.test(n)) { extraNames.push(n); cloudSeatFor(n); }
+  const all = [...NAMES, ...extraNames];
+  return Promise.all(all.map((n, i) => addChar(n, i).then(() => { setLoad('載入角色', ++done / all.length); })));
+});
+Promise.all([buildOffice(), loadIcons(), bootChars])
   .then(() => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); startLiveSync(); showTitleCard(); window.__plaza = {findPath, guestAt, guestGoFloor, updateElev, elevGo, floorOf, elevInteract, fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
 
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);

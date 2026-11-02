@@ -98,3 +98,10 @@
 - 圖集規格不變：12 格橫排（每 30°；0 正面、90 朝右側面、180 背面、270 為 90 的鏡像），`sprites/` 每格 60px、`sprites-hd/` 每格 240px，人物高 224（HD）、腳底離格底 6。
 - 新角色走「角色工坊」：照片＋提示詞 → AI 三視圖 → 自動對位（使用者確認）→ AI 補 8 個角度（30/60/120/150/210/240/300/330）→ 轉盤檢查 → 瀏覽器烘焙圖集 → 發佈到雲端。帽子、眼鏡已下架（直接畫進角色，不再單獨做配件）。
 - 目前只有 `NAMES` 裡的 12 人會出現在 3D 辦公室；雲端圖集可覆蓋這 12 人的外觀。新增人物還需要座位（`SEATS`）與人物清單。
+
+## 10. 額外人物與指定座位（2026-11-02）
+
+- `…/api/public/characters` 回傳 `{characters:{名字:版本}, seats:{名字:座位編號}}`。名字不在 `NAMES` 的就是「額外人物」：`index.html` 的 `bootChars` 會替他們呼叫 `addChar`，並用 `cloudSeatFor` 把座位寫進 `SEATS`／`SEATS4`；沒有座位的在辦公室自由走動（`applyStatus` 會幫沒有 `home` 的人開 `wander`）。
+- 額外人物沒有後端狀態：上下班用 `syncExtraStatus`（時間規則＋全員上班／下班）；不能登入操控。
+- 座位編號：五樓 `5:桌子群(0|1):排(0-2):欄(0-2):top|bottom`、四樓 `4:桌子群(0-4):座位(1-8)`；會議室、茶水間不算。**固定 12 人的座位寫在服裝生成器 repo 的 `lib/character.ts` `FIXED_SEATS`，要和這裡的 `SEATS`／`SEATS4` 一致**，改座位表時兩邊一起改（座位圖 `app/outfit/seat-picker.tsx` 也依 `ROW_TOPS`／`GROUPS`）。
+- 本機測試：`?charApi=http://localhost:<port>/characters` 只在 localhost 有效，可指到假的雲端清單。
