@@ -1365,3 +1365,6 @@
 - 用本機 Codex（imagegen）依工坊的合圖提示詞算好 `notes/吳冠賢-8角度合圖.png`（1536×1024），存進 KV `char/bbb5e5db-…/grid.png`，製作單 `angles_json` 設旗標 `{"-1":1}`。
 - 工坊 `fillGrid`：有旗標且不是「重新生成」時，直接讀現成的合圖、不呼叫 OpenAI；按「開始生成其餘角度」「用此品質整組重算」（force）或 API 重算成功後旗標作廢。
 - 待辦：管理者到工坊開啟該張 → 對位確認 → 檢查 8 個角度 → 選發佈給吳冠賢 → 確認上線。
+
+## 2026-11-02 元宇宙：切換人物、角色、圖鑑改實心圖示
+- `pixel-plaza/index.html` 新增 `SOLID_ICONS`（role／dex／people）：這三顆 HUD 按鈕用實心圖示（`fill=currentColor`），說明、關閉維持原本的細線圖示。

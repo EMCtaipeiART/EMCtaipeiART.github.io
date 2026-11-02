@@ -2102,7 +2102,12 @@ const SVG_ICONS = {   // 24×24 單線條圖示：粗 1.8、圓端點，顏色�
   people:'<circle cx="9" cy="8.5" r="3"/><path d="M3.5 19c.5-3.2 2.7-5 5.5-5s5 1.8 5.5 5"/><circle cx="17" cy="9.5" r="2.4"/><path d="M15.8 14.2c2.6-.3 4.4 1.3 4.9 4.3"/>',
   close:'<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>'
 };
-const svgIcon = (name, px = 22) => '<svg viewBox="0 0 24 24" width="' + px + '" height="' + px + '" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + SVG_ICONS[name] + '</svg>';
+const SOLID_ICONS = {   // 角色、圖鑑、切換人物：實心圖示（2026-11-02），顏色一樣吃 currentColor
+  role:'<circle cx="12" cy="7.5" r="4.2"/><path d="M3.8 21c.5-4.8 3.8-7.6 8.2-7.6s7.7 2.8 8.2 7.6z"/>',
+  dex:'<path fill-rule="evenodd" d="M6.5 2.5H19a1.2 1.2 0 0 1 1.2 1.2v13.6a1.2 1.2 0 0 1-1.2 1.2H6.6a1.6 1.6 0 0 0-1.6 1.6V4A1.5 1.5 0 0 1 6.5 2.5zM9 6.6v1.8h7.2V6.6z"/><path d="M6.6 19.9H20.2v1.6H6.6a1.6 1.6 0 0 1 0-3.2z"/>',
+  people:'<circle cx="9" cy="8" r="3.7"/><path d="M2.4 20.5c.4-4.2 3-6.6 6.6-6.6s6.2 2.4 6.6 6.6z"/><circle cx="17.3" cy="9.2" r="2.9"/><path d="M16.3 13.9c3.2-.5 5.2 1.6 5.5 5.6h-4.7c-.1-2.1-.4-3.9-.8-5.6z"/>'
+};
+const svgIcon = (name, px = 22) => SOLID_ICONS[name] ? '<svg viewBox="0 0 24 24" width="' + px + '" height="' + px + '" fill="currentColor" aria-hidden="true">' + SOLID_ICONS[name] + '</svg>' : '<svg viewBox="0 0 24 24" width="' + px + '" height="' + px + '" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + SVG_ICONS[name] + '</svg>';
 document.querySelectorAll('[data-px]').forEach(el => { el.innerHTML = svgIcon(el.dataset.px); });
 let adminHome = false, entryRelease = false;   // 登入身分是 Machi／管理者：可以切換、操控任何人（就算被切成離開辦公室而看不到人物）
 function startGame(){
