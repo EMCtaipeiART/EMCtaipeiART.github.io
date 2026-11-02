@@ -409,7 +409,12 @@ const PIXEL_MODE = new URLSearchParams(location.search).get('px') === '1';   // 
 const HD = !PIXEL_MODE, DPR = Math.min(devicePixelRatio || 1, 2);
 const RH = 300;                        // 復古模式的內部渲染高度（像素）
 const NAMES = ['Amber','Anna','Leona','Machi','Noise','余采馨','吳冠賢','廖秦葦','李明庭','鄭筱舢','黎子瑄','王藍庭'];
-const url = n => (HD ? 'sprites-hd/' : 'sprites/') + n + '.png';
+// 人物圖集：預設讀本機靜態檔；角色工坊發佈過的人改讀雲端（圖集 12 個面向，版本號變了網址就變，不怕快取）
+const CHAR_API = 'https://emc-ai-stage-classifier.machi-chen.workers.dev/api/public/characters';
+let cloudChars = {};
+const cloudReady = (localStorage.getItem('noCloudChars') === '1' ? Promise.resolve() : fetch(CHAR_API, {signal: AbortSignal.timeout(4000)}).then(r => r.ok ? r.json() : null).then(j => { cloudChars = (j && j.characters) || {}; }).catch(() => {}));
+const url = n => cloudChars[n] ? CHAR_API + '/' + encodeURIComponent(n) + '/' + (HD ? 'atlas-hd' : 'atlas') + '.png?v=' + cloudChars[n] : (HD ? 'sprites-hd/' : 'sprites/') + n + '.png';
+
 
 if (PIXEL_MODE) document.documentElement.classList.add('px');
 const FLAT = /[?&]flat=1/.test(location.search);   // ?flat=1：關掉材質與陰影（除錯、低階裝置用）
@@ -1173,14 +1178,16 @@ const chars = {};   // name -> {holder, sprite, tex, ...}
 const roster = document.getElementById('roster');
 let player = null, target = null, routeFor = null, routePts = [];
 const ANGLES = 12, ROWS = 1, CELL_W = 60, CELL_H = 60, WORLD_H = 2.04;   // 圖集：由三視圖合成的 12 個面向（每 30°）
-const loadTex = src => new Promise((res, rej) => new THREE.TextureLoader().load(src, t => {
+const loadTex = src => new Promise((res, rej) => { const ld = new THREE.TextureLoader(); ld.setCrossOrigin('anonymous'); ld.load(src, t => {
   t.magFilter = t.minFilter = HD ? THREE.LinearFilter : THREE.NearestFilter; t.generateMipmaps = false; t.colorSpace = THREE.SRGBColorSpace;
   t.repeat.set(1 / ANGLES, 1 / ROWS); res(t);
-}, undefined, rej));
+}, undefined, rej); });
 const shadowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), r = g.createRadialGradient(64, 64, 4, 64, 64, 62); r.addColorStop(0, 'rgba(0,0,0,1)'); r.addColorStop(.55, 'rgba(0,0,0,.65)'); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 128, 128); const t = new THREE.CanvasTexture(c); t.anisotropy = 4; t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter; return t; })();
 
 async function addChar(name, i){
-  const tex = await loadTex(url(name));
+  await cloudReady;
+  // 雲端圖集載入失敗（網路、尚未部署）就退回本機靜態檔，不能讓人物消失
+  const tex = await loadTex(url(name)).catch(() => { delete cloudChars[name]; return loadTex(url(name)); });
   const sprite = new THREE.Mesh(new THREE.PlaneGeometry(WORLD_H * CELL_W / CELL_H, WORLD_H),
     new THREE.MeshBasicMaterial({map:tex, transparent:true, alphaTest:.5, side:THREE.DoubleSide}));
   sprite.geometry.translate(0, WORLD_H / 2 - .03, 0);

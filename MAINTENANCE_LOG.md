@@ -1262,3 +1262,12 @@
 - 做法（獨立 repo `emc-ai-stage-classifier`）：`site-source/app/outfit/page.tsx` 移除「帽子」「眼鏡」分頁；`app/api/outfit/route.ts` 對 cap／glasses 回 410。服裝、頭像不變。
 - 部署：repo 已推送，Worker 尚未重新部署（`cd site-source && npm run deploy:cloudflare`，需 Cloudflare 登入）。
 - 下一步（尚未動工）：新「角色工坊」流程——上傳照片＋提示詞 → AI 三視圖（含頭）→ 自動對位確認 → AI 補 9 個角度 → 檢查 → 烘焙 12 視角圖集上線；3D 辦公室需改成能載入動態圖集。
+
+## 2026-11-02 角色工坊：照片 → 三視圖 → 對位確認 → 補角度 → 12 視角圖集上線
+
+- 原因：2D 時代的「頭像＋身體拼接」只有三視圖，3D 版缺其他角度，帽子眼鏡也只有三個視角可用。
+- 服裝生成器（獨立 repo `emc-ai-stage-classifier`，已推送並部署 Worker）：新增 `/api/character/*`（start 生成三視圖、confirm 存對位後的三視圖、angle 單一角度生成、asset 製作單圖片、publish 發佈）與公開 `/api/public/characters`（版本清單）、`/api/public/characters/<名字>/atlas(-hd).png`。介面是 `app/outfit/character-workshop.tsx`；影像處理（去背、切三視圖、量測、對位、診斷、烘焙）在 `lib/character-image.ts`。限制：三視圖每人最多 3 次、每個角度最多重算 3 次（管理者不限）。風格參考圖直接讀 `emc-art.com/pixel-plaza/sprites-hd/Leona.png`。
+- 入口：企劃部／專案部第一次進服裝頁改走角色工坊（取代舊精靈）；管理者與 Machi 另有「角色工坊」分頁可測試。帽子、眼鏡分頁下架。
+- 3D 辦公室（`pixel-plaza/index.html`）：啟動時讀雲端清單，有發佈的人用雲端圖集，失敗退回本機 `sprites*/`。
+- 驗證：影像處理用 Leona 圖集模擬三視圖＋8 角度在瀏覽器跑過（切 3 張、診斷通過、烘焙出 2880×240）；型別檢查與建置通過。**尚未用真實照片呼叫 OpenAI**（會花錢），第一次真實試做請用管理者帳號，並確認 12 個角度的方向與品質。
+- 未解：新增人物（非 `NAMES` 的 12 人）要出現在 3D 辦公室還需座位與人物清單；舊精靈程式（`persona-wizard.tsx`）保留未刪。

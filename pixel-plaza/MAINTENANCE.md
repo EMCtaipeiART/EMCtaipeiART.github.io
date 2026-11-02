@@ -13,6 +13,7 @@
 | `pixel-plaza/fridge/office-foods-v1.webp` | 冰箱食物圖集（28px 一格，順序見 `FOOD_IDX`） |
 | `pixel-plaza/sprites-hd/`、`sprites/` | 人物 12 面向圖集（`<名字>.png`，240／60px 一格） |
 | `pixel-plaza/ai-views/`、`bake.html`、`bake.mjs` | 人物圖集的來源與烘焙（**不上線**，線上只放 sprites） |
+| 雲端人物圖集 | **角色工坊**（服裝生成器網站 `emc-ai-stage-classifier`，原始碼在獨立 repo）發佈的 12 視角圖集存在它的 KV；`index.html` 啟動時讀 `…/api/public/characters`（`{characters:{名字:版本}}`），有的人改用 `…/characters/<名字>/atlas(-hd).png?v=版本`，沒有或載入失敗就退回本機 `sprites*/`。開發時 `localStorage.noCloudChars='1'` 可關掉雲端 |
 | `archive/EMC-ART-Pixel-Office-2D/` | **封存的 2D 版**（不要刪：Worker 的小遊戲驗證、網站首頁隱藏的頭像橋接、相關測試還在用） |
 | `worker/src/database-coordinator.ts` | 後端 Durable Object；像素辦公室相關動作在 `pixelOffice*` |
 
@@ -91,3 +92,9 @@
 - 四樓固定座位只有 2D 版指定的四位；其他同事不會坐在四樓桌子群。
 - 位置同步靠後端欄位，延遲約 0.3–0.5 秒；要更即時需要新增 WebSocket 轉發（要改 Worker）。
 - 雲端存檔、位置同步在真實後端的行為，開發時只用模擬後端測過。
+
+## 9. 人物圖集來源（2026-11-02 起）
+
+- 圖集規格不變：12 格橫排（每 30°；0 正面、90 朝右側面、180 背面、270 為 90 的鏡像），`sprites/` 每格 60px、`sprites-hd/` 每格 240px，人物高 224（HD）、腳底離格底 6。
+- 新角色走「角色工坊」：照片＋提示詞 → AI 三視圖 → 自動對位（使用者確認）→ AI 補 8 個角度（30/60/120/150/210/240/300/330）→ 轉盤檢查 → 瀏覽器烘焙圖集 → 發佈到雲端。帽子、眼鏡已下架（直接畫進角色，不再單獨做配件）。
+- 目前只有 `NAMES` 裡的 12 人會出現在 3D 辦公室；雲端圖集可覆蓋這 12 人的外觀。新增人物還需要座位（`SEATS`）與人物清單。
