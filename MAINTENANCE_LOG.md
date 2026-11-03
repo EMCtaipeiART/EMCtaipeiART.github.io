@@ -1461,3 +1461,7 @@
 - 進度兩條：辦公室歸屬感（全員共用，決定活動範圍與成長事件）、個人信任度。Worker 新增 `pixelOfficeCat`（`cat:<名字>`、`cat:office`），**需要 `wrangler deploy`**；未部署時前端以 localStorage 暫存。
 - 設計理由：不做最愛排行榜；週末有自動餵食器、貓不會餓病；位置不經後端，所以沒有同步延遲，也不增加後端寫入。細節見 `pixel-plaza/MAINTENANCE.md` §11、`UI-SPEC.md` §9.5。
 - 驗證：`node --check`、本機瀏覽器看過睡紙箱／睡椅子／吃飯／餵點心／逗貓棒流程與面板；後端用 tsc 檢查（只剩原本測試檔的既有型別錯誤），沒打真實後端。
+
+## 2026-11-03 元宇宙：走路圖擴到 Anna、Leona、Amber、Noise、余采馨
+- Anna：Codex 生成的 14 張（同 Machi 流程）。Leona、Amber、Noise、余采馨：改用使用者的 ChatGPT（Chrome）一次生成 7×2 走路精靈圖（附該角色 7 個站姿角度當參考），下載後去白底、依站姿的高度與位置正規化成 240×240，210°～330° 用鏡像並交換左右腳，輸出到 `pixel-plaza/sprites-walk(-hd)/名字.png`。
+- `WALK_NAMES` 加入這些人；其餘人（吳冠賢、廖秦葦、李明庭、王藍庭、鄭筱舢、黎子瑄、傅思凱）生成中。Codex 因工作區點數用盡中斷。
