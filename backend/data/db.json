@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 10429,
+  "revision": 10430,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-03T13:57:26.914Z",
+  "updatedAt": "2026-11-03T13:57:35.162Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1959,7 +1959,8 @@
       ],
       "primaryKey": "案件編號",
       "rows": [
-        {"案件編號":"26110024","申請人帳號":"amber.tian@emctaipei.com","申請人":"Amber","申請時間":"2026-11-03T11:01:38.446Z","案件摘要":"金士頓_2026/11月貼文「MSI#1」中、英、日文版修改｜Amber｜未開始"}
+        {"案件編號":"26110024","申請人帳號":"amber.tian@emctaipei.com","申請人":"Amber","申請時間":"2026-11-03T11:01:38.446Z","案件摘要":"金士頓_2026/11月貼文「MSI#1」中、英、日文版修改｜Amber｜未開始"},
+        {"案件編號":"26110027","申請人帳號":"livia.chu@emctaipei.com","申請人":"朱祖翎","申請時間":"2026-11-03T13:57:35.162Z","案件摘要":"soundcore_11月ˍPChome_雙11大促_CPAS_AeroClip 2｜Machi｜未開始"}
       ]
     },
     "短連結": {
