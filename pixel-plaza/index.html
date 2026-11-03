@@ -364,6 +364,7 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 .cat-bars{display:grid;grid-template-columns:1fr 1fr;gap:10px}.cat-bars div{font-size:12px}.cat-bars b{display:block}.cat-bars span{opacity:.85}.cat-bars i{display:block;height:9px;margin-top:4px;border-radius:999px;background:rgba(255,255,255,.15);overflow:hidden}.cat-bars u{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--cta1),var(--yellow))}
 .cat-mood{margin:8px 2px 4px;font-size:13px;font-weight:700}
 .cat-act{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.cat-act button{position:relative;height:40px;border-radius:12px;border:0;border-bottom:4px solid #0f7a33;background:linear-gradient(180deg,var(--cta1),var(--cta2));color:#fff;font:700 13px 'Fredoka','Noto Sans TC',sans-serif;cursor:pointer;text-shadow:0 1px 0 rgba(0,0,0,.25)}.cat-act button:active{transform:translateY(2px);border-bottom-width:2px}.cat-act button.no{filter:grayscale(.7);opacity:.7}.cat-act u{text-decoration:none;position:absolute;right:-3px;top:-6px;background:var(--yellow);color:var(--ink);border-radius:999px;padding:0 6px;font-size:10px}
+.fr-head{position:relative}#catP .fr-head{min-height:34px;padding-right:42px}#catP .fr-x{position:absolute;right:0;top:0;width:34px;height:34px;padding:0;display:grid;place-items:center;line-height:1;font-size:15px;border:2px solid var(--line)}
 .cat-name{margin-top:10px;padding:8px 10px;border-radius:14px;background:rgba(255,255,255,.1);font-size:12px}.cat-name h4{margin:0 0 6px;font-size:13px}.cat-name ol{margin:0;padding:0;list-style:none;max-height:120px;overflow:auto}.cat-name li{display:flex;align-items:center;gap:6px;padding:3px 0}.cat-name li b{flex:1;font-size:13px}.cat-name li i{font-style:normal;opacity:.7}.cat-name li button{height:26px;padding:0 10px;border-radius:9px;border:0;border-bottom:3px solid #0f7a33;background:linear-gradient(180deg,var(--cta1),var(--cta2));color:#fff;font:700 12px 'Fredoka','Noto Sans TC',sans-serif;cursor:pointer}.cat-name li button.on{background:linear-gradient(180deg,#ffd45a,#f0a516);border-bottom-color:#b27408;color:#4a2f00}.cat-name li button.rm{background:rgba(255,255,255,.18);border-bottom-color:rgba(0,0,0,.25);padding:0 7px}.cat-name form{display:flex;gap:6px;margin-top:6px}.cat-name input{flex:1;min-width:0;height:30px;padding:0 10px;border-radius:10px;border:2px solid var(--line);background:rgba(0,0,0,.25);color:#fff;font:600 13px 'Fredoka','Noto Sans TC',sans-serif}.cat-name form button{height:30px;padding:0 12px;border-radius:10px;border:0;border-bottom:3px solid #0f7a33;background:linear-gradient(180deg,var(--cta1),var(--cta2));color:#fff;font:700 12px 'Fredoka','Noto Sans TC',sans-serif;cursor:pointer}.cat-name p{margin:6px 0 0;opacity:.8}.cat-name p button{height:26px;padding:0 10px;border-radius:9px;border:0;border-bottom:3px solid rgba(0,0,0,.3);background:rgba(255,255,255,.18);color:#fff;font:700 12px 'Fredoka','Noto Sans TC',sans-serif;cursor:pointer}
 @media (max-width:640px){.cat-act{grid-template-columns:repeat(3,1fr)}}
 @media (max-width:640px){.hp-card{min-width:0}.hp-clock{top:84px;font-size:13px}#net{top:122px}#proj{top:150px}.hp-top button{padding:7px 11px}}
@@ -2358,12 +2359,12 @@ function catNameBind(){
   const c = catPanel.querySelector('#catNameClose'); if (c) c.onclick = () => { if (confirm('現在就結算，票數最高的名字立刻成為貓的名字？')) act('nameClose'); };
 }
 // 貓的貼圖：assets/cat/cat-atlas.webp（10 個姿勢 × 正／側／背三視角，側面朝右，朝左用鏡像）；貼圖面向鏡頭，依貓和鏡頭的相對角度挑視角
-const CAT_POSES = ['stand', 'walkA', 'walkB', 'sit', 'loaf', 'sleep', 'eat', 'run', 'groom', 'belly'], CAT_CW = 377, CAT_CH = 239, CAT_K = .0042;
+const CAT_POSES = ['stand', 'walkA', 'walkB', 'sit', 'loaf', 'sleep', 'eat', 'run', 'groom', 'belly'], CAT_CW = 397, CAT_CH = 259, CAT_K = .0042, CAT_FOOT = 14;   // 格子大小與腳底離格底的像素數見 assets/cat/cat-atlas.json
 function catBuild(){
   const g = new THREE.Group(), P = {g, ready:false};
   const tex = new THREE.TextureLoader().load('assets/cat/cat-atlas.webp', () => { P.ready = true; });
   tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = tex.minFilter = THREE.LinearFilter; tex.generateMipmaps = false; tex.repeat.set(1 / 3, 1 / CAT_POSES.length);
-  const geo = new THREE.PlaneGeometry(CAT_CW * CAT_K, CAT_CH * CAT_K); geo.translate(0, CAT_CH * CAT_K / 2 - 4 * CAT_K, 0);   // 腳底在格底上方 4 px
+  const geo = new THREE.PlaneGeometry(CAT_CW * CAT_K, CAT_CH * CAT_K); geo.translate(0, CAT_CH * CAT_K / 2 - CAT_FOOT * CAT_K, 0);   // 腳底在格底上方 CAT_FOOT px（含黑外框）
   const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({map:tex, transparent:true, alphaTest:.4, side:THREE.DoubleSide}));
   m.userData.pickRoot = g; m.visible = false; g.add(m); P.sprite = m; P.tex = tex; return P;
 }
@@ -2518,6 +2519,7 @@ function updateCat(dt){
   catPose(a, now);
   // 你靠近時：看你、不熟的人可能走開；陪伴計時；登入後熟人會走來蹭
   const pp = catPlayerPos(), near = pp ? Math.hypot(pp.x - catG.position.x, pp.z - catG.position.z) : 99;
+  if (!catPanel.hidden && pp && near > 7) catClose();   // 走遠了就自動收起來
   if (!catLocal && pp && near < 3.2 && a.speed === 0 && a.pose !== 'loaf' && catAnnoyed < now) { const lv = trustLv(); let df = Math.atan2(pp.x - catG.position.x, pp.z - catG.position.z) - catG.rotation.y; df = Math.atan2(Math.sin(df), Math.cos(df)); catG.rotation.y += df * Math.min(1, dt * 3); if (lv === 0 && near < 1.4 && Math.random() < dt * .25) { catLocal = null; const away = catSpots.walk.length ? catSpots.walk.reduce((b, q) => Math.hypot(q.x - pp.x, q.z - pp.z) > Math.hypot(b.x - pp.x, b.z - pp.z) && Math.hypot(q.x - catG.position.x, q.z - catG.position.z) < 9 ? q : b, catSpots.walk[0]) : null; if (away) { catGo([away], 3.2, catReturn); } } }
   if (catCompany) { const moved = Math.hypot(pp.x - catCompany.x, pp.z - catCompany.z); if (moved > 1.2 || near > 4.5 || (catLocal && catLocal.mode !== 'return')) { catCompany = null; showQuote('', '陪伴中斷了'); catRender(); } else { catCompany.t += dt; if (catCompany.t >= 20) { catCompany = null; catCare('company'); } } }
   if (!catGreeted && player && !AWAY.has(player.status) && now - catT0 > 5000 && !catLocal && trustLv() >= 2 && (catState.total.feed | 0) + (catState.total.treat | 0) >= 3 && a.pose !== 'loaf' && floorOf(player) === 5 && near > 6) { catGreeted = true; catGo([{x:pp.x, z:pp.z + .9}], CAT.walk * 2.2, () => { catLocalStart('rub', 3.6, {}); catHeld = '♥'; setTimeout(() => { catHeld = ''; }, 3600); }); }
@@ -2530,6 +2532,8 @@ function updateCat(dt){
 }
 // ---- 互動 ----
 const catPanel = document.createElement('div'); catPanel.id = 'catP'; catPanel.hidden = true; document.body.appendChild(catPanel);
+addEventListener('pointerdown', e => { if (!catPanel.hidden && !catPanel.contains(e.target)) catClose(); }, true);   // 點面板外面就收起來
+addEventListener('keydown', e => { if (e.key === 'Escape' && !catPanel.hidden) catClose(); });
 function catClose(){ catPanel.hidden = true; }
 function catMoodText(){
   const a = catAt(Date.now()), p = a.pose;

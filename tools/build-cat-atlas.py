@@ -9,6 +9,8 @@ D = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'pixel-plaza'
 POSES = [('stand', 'stand-sheet.webp'), ('walkA', 'walkA-sheet.png'), ('walkB', 'walkB-sheet.png'), ('sit', 'sit-sheet.png'),
          ('loaf', 'loaf-sheet.png'), ('sleep', 'sleep-sheet.png'), ('eat', 'eat-sheet.png'), ('run', 'run-sheet.png'),
          ('groom', 'groom-sheet.png'), ('belly', 'belly-sheet.png')]
+OUT = 10  # 外圍黑色粗輪廓（圖集像素；畫面上約 2～3 px）
+OL = (26, 20, 16, 255)
 SC = 0.34   # 原圖 → 圖集縮放（站立貓約 200 px 高）
 
 def cutout(im, name):
@@ -39,6 +41,14 @@ def split3(keep):
         p = x
     groups.append((s, p)); return groups
 
+def outline(crop):
+    w, h = crop.size; pad = Image.new('RGBA', (w + 2 * OUT, h + 2 * OUT), (0, 0, 0, 0)); pad.paste(crop, (OUT, OUT))
+    a = np.asarray(pad)[..., 3] > 96
+    yy, xx = np.ogrid[-OUT:OUT + 1, -OUT:OUT + 1]; st = (xx * xx + yy * yy) <= OUT * OUT + 1
+    d = ndi.binary_dilation(a, structure=st)
+    ol = np.zeros(a.shape + (4,), np.uint8); ol[d] = OL
+    base = Image.fromarray(ol); base.alpha_composite(pad); return base
+
 views = {}
 for pose, f in POSES:
     im = Image.open(D + '../../ai-views/cat-sheets/' + pose + '-sheet.webp'); k = SC * 2172 / im.size[0]
@@ -53,18 +63,18 @@ for pose, f in POSES:
         sub = keep[:, x0:x1 + 1]; ys = np.where(sub.any(axis=1))[0]; y0, y1 = ys[0], ys[-1]
         crop = Image.fromarray(arr[y0:y1 + 1, x0:x1 + 1])
         w, h = crop.size; crop = crop.resize((max(1, round(w * k)), max(1, round(h * k))), Image.LANCZOS)
-        row.append(crop)
+        row.append(outline(crop))
     views[pose] = row
 
 CW = max(c.size[0] for r in views.values() for c in r) + 8
 CH = max(c.size[1] for r in views.values() for c in r) + 8
 print('cell', CW, CH)
 atlas = Image.new('RGBA', (CW * 3, CH * len(POSES)), (0, 0, 0, 0))
-meta = {'cw': CW, 'ch': CH, 'poses': [p for p, _ in POSES], 'views': ['front', 'side', 'back'], 'sc': SC, 'h': {}}
+meta = {'cw': CW, 'ch': CH, 'poses': [p for p, _ in POSES], 'views': ['front', 'side', 'back'], 'sc': SC, 'foot': 4 + OUT, 'h': {}}
 for ri, (pose, _) in enumerate(POSES):
     for ci, c in enumerate(views[pose]):
         w, h = c.size
-        atlas.paste(c, (ci * CW + (CW - w) // 2, ri * CH + CH - 4 - h), c)   # 底部置中，腳底離格底 4 px
+        atlas.paste(c, (ci * CW + (CW - w) // 2, ri * CH + CH - 4 - h), c)   # 底部置中；外框底緣離格底 4 px，所以腳底離格底 4+OUT px
         meta['h'][f'{pose}:{ci}'] = h
 atlas.save(D + 'cat-atlas.webp', lossless=True, quality=100, method=6)
 json.dump(meta, open(D + 'cat-atlas.json', 'w'), ensure_ascii=False)
