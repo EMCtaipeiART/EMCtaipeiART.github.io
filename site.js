@@ -1438,9 +1438,9 @@
       return [...new Set(state.weights.filter(r=>String(r['設計種類']||'').trim()===type&&String(r['階段']||'').trim()===stage&&String(r['狀態']||'').trim()!=='下架').map(r=>String(r['項目細節']||'').trim()).filter(Boolean))];
     }
     /* 右上角的 Google 信箱／行事曆小圖示：新開分頁；有登入就帶 authuser 直接開對應帳號 */
-    function googleLinksHtml(){
+    function googleLinksHtml(withAi){
       const acct=String(selfAccount()||'').trim(),au=/@/.test(acct)?'?authuser='+encodeURIComponent(acct):'';
-      return '<span class="g-links"><a class="g-link" href="https://mail.google.com/mail/'+au+'" target="_blank" rel="noopener" title="開啟 Gmail" aria-label="開啟 Gmail"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m4 7 8 6 8-6"/></svg></a><a class="g-link" href="https://calendar.google.com/calendar/'+(au?'u/0/r'+au:'')+'" target="_blank" rel="noopener" title="開啟 Google 行事曆" aria-label="開啟 Google 行事曆"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></a></span>';
+      return '<span class="g-links"><a class="g-link" href="https://mail.google.com/mail/'+au+'" target="_blank" rel="noopener" title="開啟 Gmail" aria-label="開啟 Gmail"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m4 7 8 6 8-6"/></svg></a><a class="g-link" href="https://calendar.google.com/calendar/'+(au?'u/0/r'+au:'')+'" target="_blank" rel="noopener" title="開啟 Google 行事曆" aria-label="開啟 Google 行事曆"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></a>'+(withAi?'<a class="g-link" href="https://chatgpt.com" target="_blank" rel="noopener" title="前往 ChatGPT" aria-label="前往 ChatGPT"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-5 4v-4H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/><path d="M8 10h8M8 13h5"/></svg></a><a class="g-link" href="https://www.magnific.com/app" target="_blank" rel="noopener" title="前往 Magnific" aria-label="前往 Magnific"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/><path d="M19 3v4M17 5h4"/></svg></a>':'')+'</span>';
     }
     function renderProjects(){
       const stage=$('stage');
@@ -1460,7 +1460,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       }).join('');
       const hadFocus=document.activeElement?.id==='boardSearch';
       stage.innerHTML=`<div class="section-head"><div><h2>專案列表</h2></div><div class="section-tools">
-          ${googleLinksHtml()}
+          ${googleLinksHtml(true)}
           <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><input id="boardSearch" type="search" placeholder="搜尋編號、客戶、專案、負責人" value="${esc(state.query)}" aria-label="搜尋案件"></label>
           ${layoutGroupHtml()}
           <div class="filter-wrap"><button type="button" class="tool-btn${n?' on':''}" data-filter-toggle aria-expanded="${state.filterOpen}"><svg viewBox="0 0 24 24"><path d="M4 5h16l-6.2 7.4V19l-3.6-1.8v-4.8z"/></svg>篩選${n?`（${n}）`:''}</button>${state.filterOpen?filterPopHtml():''}</div>

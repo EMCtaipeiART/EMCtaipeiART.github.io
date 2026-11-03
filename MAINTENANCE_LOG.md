@@ -4,6 +4,9 @@
 
 ## 2026-10-30
 
+### 專案列表加 ChatGPT、Magnific 快捷圖示
+- 專案列表右上角在 Gmail／行事曆旁多兩個小圖示，新開分頁前往 https://chatgpt.com 與 https://www.magnific.com/app（行事曆頁不加）。
+
 ### 專案列表／行事曆右上角加 Gmail、Google 行事曆小圖示
 - 兩頁右上角各放一組小圖示，點了新開分頁；已登入的 Google 帳號會帶 authuser 直接開對應帳號。
 
