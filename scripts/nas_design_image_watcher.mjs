@@ -201,6 +201,7 @@ async function runScan(args, configInput, configDir, stateFile) {
       // 不受影響）。
       // 只在真正要讀寫同步狀態的這段期間持有狀態鎖，處理完這個資料夾就立刻放開，讓網頁上的
       // 「立即備份」有機會插隊。搶不到就跳過這個資料夾，下一輪排程會再處理。
+      await lib.yieldToWaiting(stateLockFile); // 設計師正在按「立即備份」時先讓路
       if (!(await lib.acquireLockWithWait(stateLockFile, { timeoutMs: STATE_LOCK_WAIT_MS, pollIntervalMs: 1000 }))) {
         console.log(`  ${label}[略過] 同步狀態正被「立即備份」使用，這個資料夾這次先跳過，下一輪排程會再處理`);
         warnings.push(`案件 ${project.caseId} 資料夾「${folder.path}」因同步狀態被佔用而跳過`);

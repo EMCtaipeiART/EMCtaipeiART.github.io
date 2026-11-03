@@ -30,3 +30,26 @@ test('回覆時重抓：備份後又改過的同名圖（本機紀錄 pendingAft
   const lib = await readFile(new URL('../../scripts/nas_design_image_lib.mjs', import.meta.url), 'utf8');
   assert.match(lib, /trackedRound\(entry\.pendingAfterRound\) !== null \|\| isNewerThanRecorded\(item\)/);
 });
+
+test('立即備份等鎖時，排程爬蟲會在資料夾之間讓路（旗標檔）', async () => {
+  const { mkdtemp, writeFile, utimes } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const path = await import('node:path');
+  const { markLockWaiting, clearLockWaiting, yieldToWaiting } = await import('../../scripts/nas_design_image_lib.mjs');
+  const dir = await mkdtemp(path.join(tmpdir(), 'lockwait-'));
+  const lock = path.join(dir, 'state.lock');
+  let t = Date.now();
+  await yieldToWaiting(lock, { maxMs: 2000 });
+  assert.ok(Date.now() - t < 500, '沒人在等就不停頓');
+  await markLockWaiting(lock);
+  setTimeout(() => clearLockWaiting(lock), 700);
+  t = Date.now();
+  await yieldToWaiting(lock, { maxMs: 5000 });
+  assert.ok(Date.now() - t >= 600 && Date.now() - t < 2500, '旗標在就等到清掉為止');
+  await writeFile(`${lock}.wait`, 'x');
+  const old = new Date(Date.now() - 120000);
+  await utimes(`${lock}.wait`, old, old);
+  t = Date.now();
+  await yieldToWaiting(lock, { maxMs: 5000 });
+  assert.ok(Date.now() - t < 800, '超過 60 秒的殘留旗標直接清掉');
+});

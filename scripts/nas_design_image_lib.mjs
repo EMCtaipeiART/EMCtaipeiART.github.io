@@ -158,6 +158,28 @@ export async function releaseLock(lockFile) {
  * 排程才會補上。逾時仍然搶不到鎖時回傳 false，呼叫端要能優雅降級（沿用
  * 既有「備份失敗不擋路徑登記」的設計，不是拋例外中斷整個流程）。
  */
+/**
+ * 立即備份（選擇器）要等狀態鎖時先立一面「有人在等」的旗標，排程爬蟲在每個資料夾之間看到旗標就讓出（最多 30 秒）。
+ * 沒有這個讓路，爬蟲一個資料夾接一個資料夾連續持鎖，選擇器每 1.5 秒才輪詢一次、常常搶不到，
+ * 設計師要等快一分鐘才看得到預覽圖。旗標超過 60 秒沒更新視為殘留，自動清掉。
+ */
+export async function markLockWaiting(lockFile) {
+  try { await fs.writeFile(`${lockFile}.wait`, String(Date.now())); } catch { /* 旗標只是讓路用，寫不進去不影響備份 */ }
+}
+export async function clearLockWaiting(lockFile) {
+  try { await fs.rm(`${lockFile}.wait`, { force: true }); } catch { /* 同上 */ }
+}
+export async function yieldToWaiting(lockFile, { maxMs = 30000 } = {}) {
+  const flag = `${lockFile}.wait`;
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < maxMs) {
+    let stat;
+    try { stat = await fs.stat(flag); } catch { return; }
+    if (Date.now() - stat.mtimeMs > 60000) { await fs.rm(flag, { force: true }).catch(() => {}); return; }
+    await new Promise(resolve => setTimeout(resolve, 300));
+  }
+}
+
 export async function acquireLockWithWait(lockFile, { timeoutMs = 45000, pollIntervalMs = 1500 } = {}) {
   const deadline = Date.now() + timeoutMs;
   for (;;) {
