@@ -2876,6 +2876,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       state.statusAt = Date.now();
       }
     }
+    // 午餐時段只有電腦沒心跳（離線或閒置）才算用餐：人在遊戲裡走動就是回來了，解除用餐；之後心跳又停了，
+    // 離線判斷（pixelOfficeApplyOffline）／心跳閒置判斷會再切回用餐，直到午休結束。
+    if (!('status' in patch) && text(state.status) === 'lunch' && ('x' in patch || 'y' in patch || 'fx' in patch || 'fy' in patch) && pixelOfficeWorkStatus(Date.now()) === 'present') {
+      state.status = 'present'; state.statusSource = 'auto'; delete state.activeSince; state.statusAt = Date.now();
+    }
     if ('x' in patch || 'y' in patch) {
       const x = Number(patch.x), y = Number(patch.y);
       if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error('位置不正確');
