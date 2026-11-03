@@ -1881,7 +1881,7 @@ if (!handoff) { try {   // 沒有交接資料時，直接讀網站首頁的登�
   const get = k => localStorage.getItem(k) || sessionStorage.getItem(k) || '';
   if (localStorage.getItem('designRequestEditorLoggedOut') !== '1' && get('designRequestEditorToken')) {
     const user = get('designRequestEditorUser'), name = get('designRequestEditorDisplayName') || user;
-    handoff = {name, token:get('designRequestEditorToken'), staff:false, monitor:user === 'Machi' || name.toLowerCase() === 'machi', at:Date.now(), fromSite:true};
+    handoff = {name, user, token:get('designRequestEditorToken'), staff:false, monitor:user === 'Machi' || name.toLowerCase() === 'machi', at:Date.now(), fromSite:true};
   } } catch (e) {} }
 if (!handoff) { const as = new URLSearchParams(location.search).get('as'); if (as && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) handoff = {name:as, staff:false, monitor:as === 'Machi', at:Date.now(), dev:true}; }   // 只有本機開發才能用 ?as=名字 假裝登入
 const adminToken = () => (handoff && handoff.token) || '';
@@ -2181,7 +2181,13 @@ function avatarURL(c){   // 取角色正面圖的頭肩部分當大頭貼
   try { const im = c.tex.image, cw = im.height, cv = document.createElement('canvas'); cv.width = cv.height = 96; const g = cv.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(im, cw * .17, cw * .0, cw * .66, cw * .66, 0, 0, 96, 96); return cv.toDataURL(); } catch (e) { return ''; }
 }
 // 登入：沿用網站首頁登入後留下的身分（localStorage pixelViewerHandoff，24 小時內有效），依登入帳號操作人物；沒登入只能參觀
-const meName = () => handoff ? (NAMES.find(n => n.toLowerCase() === String(handoff.name).toLowerCase()) || null) : null;
+// 登入身分對到哪個人物：顯示名稱、帳號、信箱前綴都試（以前只比顯示名稱，名稱不是人物名時進站就變訪客，要自己點人物才能走）；角色工坊發佈的額外人物也算
+const meName = () => {
+  if (!handoff) return null;
+  const all = [...NAMES, ...Object.keys(chars).filter(n => !NAMES.includes(n))], low = v => String(v || '').trim().toLowerCase();
+  for (const v of [handoff.name, handoff.user, String(handoff.email || '').split('@')[0]]) { const k = low(v); if (k) { const hit = all.find(n => n.toLowerCase() === k); if (hit) return hit; } }
+  return null;
+};
 function showTitleCard(){
   stopLoadTips();
   for (const c of Object.values(chars)) c.avatar = avatarURL(c);
