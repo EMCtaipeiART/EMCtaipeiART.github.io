@@ -423,7 +423,7 @@ let cloudChars = {}, cloudSeats = {};
 // 開場就同時送出出勤狀態請求（不等場景和角色圖載完）；pollOnce 第一次直接用這份，之後照常輪詢
 let earlyState = fetch('https://machi-design-api.machi-chen.workers.dev/api', {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify({action:'pixelOfficeState', since:0}), cache:'no-store'}).then(r => r.json()).catch(() => null);
 const cloudReady = (localStorage.getItem('noCloudChars') === '1' ? Promise.resolve() : fetch(CHAR_API, {signal: AbortSignal.timeout(4000)}).then(r => r.ok ? r.json() : null).then(j => { cloudChars = (j && j.characters) || {}; cloudSeats = (j && j.seats) || {}; }).catch(() => {}));
-const url = n => cloudChars[n] ? CHAR_API + '/' + encodeURIComponent(n) + '/' + (HD ? 'atlas-hd' : 'atlas') + '.png?v=' + cloudChars[n] : (HD ? 'sprites-hd/' : 'sprites/') + n + '.png';
+const url = n => cloudChars[n] ? CHAR_API + '/' + encodeURIComponent(n) + '/' + (HD ? 'atlas-hd' : 'atlas') + '.png?v=' + cloudChars[n] : (HD ? 'sprites-hd/' + n + '.webp' : 'sprites/' + n + '.png');
 
 
 if (PIXEL_MODE) document.documentElement.classList.add('px');
@@ -1188,7 +1188,7 @@ const chars = {};   // name -> {holder, sprite, tex, ...}
 const roster = document.getElementById('roster');
 let player = null, target = null, routeFor = null, routePts = [];
 const walkLoads = [];
-for (const n of ['Machi','Anna','Leona','Amber','Noise','余采馨','吳冠賢','李明庭','王藍庭','鄭筱舢','黎子瑄','傅思凱']) fetch((!PIXEL_MODE ? 'sprites-walk-hd/' : 'sprites-walk/') + n + '.png', {priority:'low'}).catch(() => {});   // 暖機：先放進瀏覽器快取，addChar 再載時不用重抓   // 走路圖集（HD 約 14MB）：在載入畫面就一起下載完，進站後走路動畫才不會又要等
+for (const n of ['Machi','Anna','Leona','Amber','Noise','余采馨','吳冠賢','李明庭','王藍庭','鄭筱舢','黎子瑄','傅思凱']) fetch((!PIXEL_MODE ? 'sprites-walk-hd/' + n + '.webp' : 'sprites-walk/' + n + '.png'), {priority:'low'}).catch(() => {});   // 暖機：先放進瀏覽器快取，addChar 再載時不用重抓   // 走路圖集（HD 約 14MB）：在載入畫面就一起下載完，進站後走路動畫才不會又要等
 const WALK_NAMES = ['Machi','Anna','Leona','Amber','Noise','余采馨','吳冠賢','李明庭','王藍庭','鄭筱舢','黎子瑄','傅思凱'];   // 有走路影格圖集的人物（sprites-walk*/名字.png）
 const ANGLES = 12, ROWS = 1, CELL_W = 60, CELL_H = 60, WORLD_H = 2.04;   // 圖集：由三視圖合成的 12 個面向（每 30°）
 const loadTex = src => new Promise((res, rej) => { const ld = new THREE.TextureLoader(); ld.setCrossOrigin('anonymous'); ld.load(src, t => {
@@ -1220,7 +1220,7 @@ async function addChar(name, i){
   scene.add(holder);
   const c = {name, holder, sprite, tex, face:seat ? (seat[3] === 'top' ? 0 : Math.PI) : -a, moving:0, phase:Math.random() * 9, wander:!seat, t:Math.random() * 5, dir:new THREE.Vector3()};
   chars[name] = c;
-  if (WALK_NAMES.includes(name)) walkLoads.push(loadTex((HD ? 'sprites-walk-hd/' : 'sprites-walk/') + name + '.png').then(t => { t.repeat.y = .5; c.walkTex = t; }).catch(() => {}));   // 走路影格（2 排：左腳出、右腳出），沒有就退回彈跳搖擺
+  if (WALK_NAMES.includes(name)) walkLoads.push(loadTex(HD ? 'sprites-walk-hd/' + name + '.webp' : 'sprites-walk/' + name + '.png').then(t => { t.repeat.y = .5; c.walkTex = t; }).catch(() => {}));   // 走路影格（2 排：左腳出、右腳出），沒有就退回彈跳搖擺
   c.home = seat ? {x:holder.position.x, z:holder.position.z, face:c.face} : null; c.status = 'present';
   sprite.userData.pick = {kind:'char', c}; pickables.push(sprite);
   const tag = document.createElement('div'); tag.className = 'ctag'; document.body.appendChild(tag); c.tag = tag;
@@ -1659,7 +1659,7 @@ const bootChars = cloudReady.then(() => {
 });
 Promise.all([buildOffice(), loadIcons(), bootChars])
   .then(async () => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); setLoad('讀取出勤狀態', .9); await Promise.race([pollNow(), new Promise(r => setTimeout(r, 6000))]);
-    { let n = 0; const tot = walkLoads.length; walkLoads.forEach(pr => pr.then(() => setLoad('載入走路動畫', .9 + .1 * ++n / tot))); setLoad('載入走路動畫', .9); await Promise.race([Promise.all(walkLoads), new Promise(r => setTimeout(r, 30000))]); }   // 最多等 30 秒，網路太慢就先進站，沒載完的人物走路時先用彈跳搖擺
+    { let n = 0; const tot = walkLoads.length; walkLoads.forEach(pr => pr.then(() => setLoad('載入走路動畫', .9 + .1 * ++n / tot))); setLoad('載入走路動畫', .9); await Promise.race([Promise.all(walkLoads), new Promise(r => setTimeout(r, 10000))]); }   // 最多等 10 秒，網路太慢就先進站，沒載完的人物走路時先用彈跳搖擺
  startLiveSync(); catInit(); showTitleCard(); window.__plaza = {remoteFromState, catAt, wanderStep, findPath, guestAt, guestGoFloor, updateElev, elevGo, floorOf, elevInteract, fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
 
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
