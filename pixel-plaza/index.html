@@ -1335,6 +1335,7 @@ async function pollOnce(){
 // ---- 位置同步：自己走動時回報位置，其他人（含訪客）依後端的位置顯示，大家看到的畫面一致 ----
 // 沿用後端現有欄位（patch: floor/fx/fy/fdir → 存成 floor4At、f4x、f4y、f4dir）：fx < 3000 是五樓（fx=x px、fy=z px）；fx ≥ 3000 是四樓（fx=3000+局部 x+100、fy=z+100）。
 // floor4At 是最後回報時間，超過 3 分鐘沒更新就當作人不在線上，改回依狀態擺放。
+const REMOTE_DELAY_MS = 380;
 const POS_PUSH_MS = 220, POS_BEAT_MS = 45000, REMOTE_STALE_MS = 180000;
 const posSent = {x:-99, z:-99, t:0};
 const faceDir = f => { const dx = Math.sin(f), dz = Math.cos(f); return Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 'right' : 'left') : (dz > 0 ? 'down' : 'up'); };
@@ -1343,7 +1344,8 @@ function pushPosition(){
   // 坐在自己座位上也每 45 秒回報一次：這是「人在線上」的訊號，別人（含訪客）才不會在「全員下班」時把在線的人顯示成下班
   posSent.home = false;
   const now = performance.now(), p = c.holder.position, moved = Math.hypot(p.x - posSent.x, p.z - posSent.z) > .12;
-  if (!((moved && now - posSent.t > POS_PUSH_MS) || now - posSent.t > POS_BEAT_MS)) return;
+  const settle = !moved && Math.hypot(p.x - posSent.x, p.z - posSent.z) > .02 && now - posSent.t > POS_PUSH_MS;   // 停下來後把最後位置補送出去，對方才不會差一小段再瞬間補上
+  if (!((moved && now - posSent.t > POS_PUSH_MS) || settle || now - posSent.t > POS_BEAT_MS)) return;
   posSent.x = p.x; posSent.z = p.z; posSent.t = now;
   const x = p.x / U, z = p.z / U, f4 = floorOf(c) === 4;
   post({action:'pixelOfficeUpdate', name:c.name, patch:{floor:4, fx:Math.round(f4 ? 3000 + x - FX4 + 100 : x), fy:Math.round(f4 ? z + 100 : z), fdir:faceDir(c.face)}}).catch(e => { if (performance.now() - (pushPosition.errAt || 0) > 20000) { pushPosition.errAt = performance.now(); showQuote('', '位置同步失敗：' + (e && e.message ? e.message : e)); } });
@@ -1354,8 +1356,14 @@ function remoteFromState(c, e){
   const fresh = e.floor4At && Date.now() - e.floor4At < REMOTE_STALE_MS && Number.isFinite(e.f4x) && Number.isFinite(e.f4y);
   if (fresh) {
     const f4 = e.f4x >= 3000, tx = (f4 ? e.f4x - 3100 + FX4 : e.f4x) * U, tz = (f4 ? e.f4y - 100 : e.f4y) * U;
-    const first = !c.remote; c.remote = {x:tx, z:tz, at:e.floor4At, dir:e.f4dir || ''}; c.wander = false;
-    if (first) { releaseSeat(c); c.holder.position.set(tx, 0, tz); }
+    const prev = c.remote, first = !prev, same = prev && prev.at === e.floor4At, buf = prev ? prev.buf : [];
+    if (!same) {   // 收到新位置：存成時間序列樣本，畫面以固定延遲內插播放（不再「追最新座標」，走路才不會一頓一頓）
+      const last = buf[buf.length - 1];
+      if (last && e.floor4At - last.t > 700) buf.push({t:e.floor4At - 250, x:last.x, z:last.z});   // 停了一陣子才又動：先停在原地，不要從舊位置慢慢滑過去
+      buf.push({t:e.floor4At, x:tx, z:tz}); if (buf.length > 16) buf.shift();
+    }
+    c.remote = {x:tx, z:tz, at:e.floor4At, dir:e.f4dir || '', buf, off:prev ? (same ? prev.off : Math.min(performance.now() - e.floor4At, prev.off + 20)) : performance.now() - e.floor4At};   // off：本機時鐘與樣本時間的差，取最小值（網路延遲抖動不影響播放） c.wander = false;
+    if (first) { releaseSeat(c); c.holder.position.set(tx, 0, tz); c.mvS = 0; }
   } else if (c.remote) { c.remote = null; c.appliedStatus = null; }
 }
 const sitSpot = st => { const fw = st.fwd ?? (st.face === 0 ? .06 : .32); return {x:st.x + Math.sin(st.face) * fw, z:st.z + Math.cos(st.face) * fw}; };
@@ -1365,6 +1373,24 @@ function remoteStep(c, dt){
   let dx = r.x - p.x, dz = r.z - p.z, d = Math.hypot(dx, dz);
   if (c.sitting) { const sp = sitSpot(c.sitting); if (Math.hypot(sp.x - r.x, sp.z - r.z) > .35) standUp(c); else { c.moving = 0; return; } dx = r.x - p.x; dz = r.z - p.z; d = Math.hypot(dx, dz); }
   if (d > 14) { p.x = r.x; p.z = r.z; d = 0; }
+  const b = r.buf;
+  if (b && b.length > 1 && !c.sitting) {   // 內插播放：比最新樣本晚 REMOTE_DELAY_MS，在前後兩個樣本之間線性內插
+    const rt = performance.now() - r.off - REMOTE_DELAY_MS;
+    let i = b.length - 1; while (i > 0 && b[i - 1].t > rt) i--;
+    let ix, iz;
+    if (rt <= b[0].t) { ix = b[0].x; iz = b[0].z; }
+    else if (rt >= b[b.length - 1].t) { ix = r.x; iz = r.z; }
+    else { const a = b[i - 1], n = b[i], k = (rt - a.t) / Math.max(1, n.t - a.t); ix = a.x + (n.x - a.x) * k; iz = a.z + (n.z - a.z) * k; }
+    const ddx = ix - p.x, ddz = iz - p.z, jump = Math.hypot(ddx, ddz);
+    if (jump > 14) { p.x = ix; p.z = iz; c.mvS = 0; }
+    else {
+      const sp = dt > 0 ? jump / dt : 0; c.mvS = (c.mvS || 0) * .8 + sp * .2;
+      if (jump > .004) { if (jump > .02) c.face = Math.atan2(ddx, ddz); p.x = ix; p.z = iz; }
+      c.moving = c.mvS > 3.4 ? 4.8 : c.mvS > .5 ? 2.4 : 0;
+    }
+    if (!(rt >= b[b.length - 1].t && Math.hypot(r.x - p.x, r.z - p.z) < .06)) return;   // 還沒播到最後一個樣本：下一幀繼續；到了才走下面「停下來」的處理（入座、朝向）
+    c.mvS = 0; d = 0;
+  }
   if (d > .06) { const step = Math.min(d, Math.max(4.8, d * 3.2) * dt); p.x += dx / d * step; p.z += dz / d * step; c.face = Math.atan2(dx, dz); c.moving = d > 1.6 ? 4.8 : 2.4; }
   else {
     c.moving = 0;
@@ -1626,7 +1652,7 @@ const bootChars = cloudReady.then(() => {
   return Promise.all(all.map((n, i) => addChar(n, i).then(() => { setLoad('載入角色', ++done / all.length); })));
 });
 Promise.all([buildOffice(), loadIcons(), bootChars])
-  .then(async () => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); await Promise.race([pollNow(), new Promise(r => setTimeout(r, 4000))]); startLiveSync(); catInit(); showTitleCard(); window.__plaza = {catAt, wanderStep, findPath, guestAt, guestGoFloor, updateElev, elevGo, floorOf, elevInteract, fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
+  .then(async () => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); await Promise.race([pollNow(), new Promise(r => setTimeout(r, 4000))]); startLiveSync(); catInit(); showTitleCard(); window.__plaza = {remoteFromState, catAt, wanderStep, findPath, guestAt, guestGoFloor, updateElev, elevGo, floorOf, elevInteract, fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
 
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
 const TILT = 0, STRETCH = 1 / Math.cos(Math.atan(8.4 / 9.4)), _e = new THREE.Euler(0, 0, 0, 'YXZ');   // 垂直站立：不再後傾（避免穿進桌子、牆），高度拉長 STRETCH 倍抵消俯視縮短
