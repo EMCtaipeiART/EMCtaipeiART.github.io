@@ -716,7 +716,7 @@ function makePoop(t, v){
   return g;
 }
 function syncFun(){
-  if (!funRects.v1) return;
+  if (!funRects.v1 || !funRects.v2 || !sheets.v1 || !sheets.v2) return;   // 兩張圖集都載好才放道具：v2 還沒好時 prop_ 會退回 emoji（🦆 綠頭鴨），跟圖鑑的小黃鴨不一樣
   const want = new Map();
   dropsNow().forEach(d => want.set(d.id, {kind:'drop', d})); notesNow().forEach(n => want.set(n.id, {kind:'note', n})); poopsNow().forEach(p => want.set(p.id, {kind:'poop', p}));
   for (const [id, o] of floorMeshes) if (!want.has(id)) { if (o.kind === 'poop') scene.remove(o.mesh); else removeMesh(o.mesh); const j = pickables.indexOf(o.mesh); if (j >= 0) pickables.splice(j, 1); floorMeshes.delete(id); }
