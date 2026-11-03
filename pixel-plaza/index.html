@@ -356,7 +356,7 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 .fr-head{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:16px;margin-bottom:6px}.fr-x{height:28px;padding:0 14px;border-radius:999px;border:2px solid var(--line);background:rgba(0,0,0,.35);color:#fff;font:700 12px 'Fredoka','Noto Sans TC',sans-serif}
 .fr-cols{display:grid;grid-template-columns:1fr 1fr;gap:8px}.fr-door{padding:6px;border-radius:12px;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.12)}.fr-door h4{margin:0 0 6px;font-size:12px;color:var(--yellow)}
 .fr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.fr-it{position:relative;display:grid;justify-items:center;gap:1px;padding:4px 2px;border-radius:10px;border:2px solid var(--line);background:rgba(255,255,255,.08);color:#fff;font:700 11px 'Fredoka','Noto Sans TC',sans-serif}
-.fr-it i{width:45px;height:45px;background:url('fridge/office-foods-v1.webp') 0 0/auto 45px no-repeat;image-rendering:pixelated}.fr-it u{position:absolute;right:3px;top:2px;text-decoration:none;background:var(--yellow);color:var(--ink);border-radius:999px;padding:0 6px;font-size:10px}
+.fr-it i{display:block;width:42px;height:42px;background:url('fridge/office-foods-v1.webp') 0 0/auto 42px no-repeat;image-rendering:pixelated}.fr-it{grid-template-rows:42px 18px;align-content:center;justify-content:stretch;height:76px;padding:4px 2px 2px;gap:3px}.fr-it b{display:block;width:100%;line-height:18px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fr-it u{position:absolute;right:3px;top:2px;text-decoration:none;background:var(--yellow);color:var(--ink);border-radius:999px;padding:0 6px;font-size:10px}
 .fr-it:hover{background:rgba(255,255,255,.18)}.fr-it.no{opacity:.4}.fr-note{margin:6px 2px 0;font-size:11px;opacity:.75}
 .fr-cat{margin-top:8px;padding:6px;border-radius:12px;background:rgba(255,199,51,.1);border:2px solid rgba(255,199,51,.35)}.fr-cat h4{margin:0 0 6px;font-size:12px;color:var(--yellow)}.fr-cat>div{display:flex;gap:6px}
 .fr-cb{position:relative;flex:1;height:34px;border-radius:999px;border:2px solid var(--line);background:rgba(255,255,255,.08);color:#fff;font:700 13px 'Fredoka','Noto Sans TC',sans-serif;cursor:pointer}.fr-cb:hover{background:rgba(255,255,255,.18)}.fr-cb u{text-decoration:none;margin-left:6px;background:var(--yellow);color:var(--ink);border-radius:999px;padding:0 7px;font-size:11px}
@@ -1430,13 +1430,13 @@ async function pollNow(){ if (pollBusy) { pollAgain = true; return; } pollBusy =
 function startLiveSync(){ const loop = async () => { const v0 = live.version; await pollNow(); if (live.version !== v0) hotUntil = performance.now() + 8000; setTimeout(loop, document.hidden ? 15000 : pushOpen ? 5000 : (performance.now() < hotUntil || (player && player.moving) ? 350 : 1500)); }; loop(); }
 // ---- 冰箱：點冰箱走過去開門（門真的轉開、露出架上零食），點零食拿一個；庫存與排行在後端 /minigames/fridge（和 2D 版同一份）----
 const FOODS = {
-  chips:['洋芋片', '🥔 喀滋喀滋！洋芋片超涮嘴', 'happy'], cookie:['餅乾', '🍪 酥脆餅乾，配咖啡剛好', 'happy'], candy:['糖果', '🍬 含顆糖，心情甜甜的', 'joy'],
-  pudding:['布丁', '🍮 Q彈布丁，幸福感滿格', 'joy'], yogurt:['優格', '🥄 清爽優格，腸胃說謝謝', 'happy'], drink:['汽水', '🥤 噗嗤～汽水氣泡好爽', 'happy'],
-  rare:['限量金布丁', '✨ 抽到限量金布丁！今天運氣爆棚', 'joy'], expired:['過期優格', '🤢 吃到過期優格……', 'sad'],
-  boba:['珍珠奶茶', '🧋 珍奶來一口，加班也有力氣', 'joy'], bento:['便當', '🍱 開動！便當是午餐的靈魂', 'happy'], onigiri:['御飯糰', '🍙 御飯糰，簡單的幸福', 'happy'],
-  sandwich:['三明治', '🥪 三明治，趕稿的好夥伴', 'happy'], energy:['提神飲料', '⚡ 灌下提神飲料，血條回滿！', 'happy'], egg:['茶葉蛋', '🥚 香噴噴茶葉蛋，整層樓都聞得到', 'happy'],
-  noodle:['泡麵', '🍜 泡麵三分鐘，等待的時間最漫長', 'happy'], coffee:['咖啡', '☕ 咖啡續命，今天也要戰鬥', 'happy'], cake:['蛋糕', '🍰 草莓蛋糕，有人過生日嗎？', 'joy'],
-  donut:['甜甜圈', '🍩 甜甜圈，熱量不算熱量', 'joy'], choco:['巧克力', '🍫 巧克力讓大腦重新開機', 'joy']};
+  chips:['可樂果', '🥜 可樂果，邊吃邊掉屑，鍵盤又要清了', 'happy'], cookie:['孔雀餅乾', '🍪 孔雀餅乾，小時候的味道', 'happy'], candy:['大白兔', '🍬 大白兔奶糖，包裝紙的糯米紙也要吃', 'joy'],
+  pudding:['布丁', '🍮 Q彈布丁，焦糖那層最幸福', 'joy'], yogurt:['優酪乳', '🥛 優酪乳，喝完腸胃說謝謝', 'happy'], drink:['黑松沙士', '🥤 黑松沙士！喝起來像喝藥草，但是有人愛', 'happy'],
+  rare:['限量金布丁', '✨ 抽到限量金布丁！今天運氣爆棚', 'joy'], expired:['過期手搖飲', '🤢 喝到過期三週的手搖飲……杯底的珍珠好像在動', 'sad'],
+  boba:['珍珠奶茶', '🧋 半糖少冰珍奶，加班也有力氣', 'joy'], bento:['排骨便當', '🍱 排骨便當開動！便當是午餐的靈魂', 'happy'], onigiri:['御飯糰', '🍙 御飯糰，撕包裝的那一步永遠失敗', 'happy'],
+  sandwich:['三明治', '🥪 超商三明治，趕稿的好夥伴', 'happy'], energy:['蠻牛', '⚡ 灌下一瓶蠻牛，血條回滿！', 'happy'], egg:['茶葉蛋', '🥚 香噴噴茶葉蛋，整層樓都聞得到', 'happy'],
+  noodle:['肉燥麵', '🍜 泡麵三分鐘，等待的時間最漫長', 'happy'], coffee:['冰美式', '☕ 冰美式續命，今天也要戰鬥', 'happy'], cake:['草莓蛋糕', '🍰 草莓蛋糕，有人過生日嗎？', 'joy'],
+  donut:['甜甜圈', '🍩 甜甜圈，熱量不算熱量', 'joy'], choco:['77巧克力', '🍫 77 巧克力夾心，讓大腦重新開機', 'joy']};
 const FOOD_IDX = {chips:0, cookie:1, candy:2, pudding:3, yogurt:4, drink:5, rare:6, expired:7, boba:8, bento:9, onigiri:10, sandwich:11, energy:12, egg:13, noodle:14, coffee:15, cake:16, donut:17, choco:18};
 const FRIDGE_SHELVES = [[['boba', 'bento', 'onigiri'], ['sandwich', 'yogurt', 'pudding'], ['drink', 'energy', 'egg']], [['chips', 'cookie', 'candy'], ['noodle', 'coffee', 'cake'], ['donut', 'choco', 'rare']]];
 const FRIDGE_API = API.replace(/\/api$/, '') + '/minigames/fridge', fridges = [];
@@ -1455,13 +1455,27 @@ async function fridgeCall(body){
   return {status:r.status, ...(await r.json().catch(() => ({ok:false})))};
 }
 async function fridgeOpen(){
-  if (fridgeOpenAt) return; fridgeOpenAt = performance.now(); fridgePanel.hidden = false; renderFridge();
+  if (fridgeOpenAt) return; fridgeOpenAt = performance.now(); fridgePanel.hidden = false; renderFridge(); panelAnchor = player ? {x:player.holder.position.x, z:player.holder.position.z} : null;
   try { const r = await fridgeCall({action:'open'}); if (r && r.stock) { fridgeState = r; renderFridge(); } } catch (e) { showQuote('', '冰箱連不上後端：' + (live.ok ? e.message : '目前網址未被後端放行')); }
 }
+let panelAnchor = null;   // 面板開啟時人物的位置：走開就自動收合
+// 冰箱／圖鑑／說明：點視窗外面、或人物走動，直接收合（不用一定點叉叉）
+addEventListener('pointerdown', e => {
+  const t = e.target; if (!t || !t.closest) return;
+  if (!fridgePanel.hidden && !fridgePanel.contains(t)) fridgeClose();
+  if (!$('dexPanel').hidden && !$('dexPanel').contains(t) && !t.closest('#bDex')) $('dexPanel').hidden = true;
+  if (!$('helpPanel').hidden && !$('helpPanel').contains(t) && !t.closest('#bHelp')) $('helpPanel').hidden = true;
+}, true);
+setInterval(() => {
+  const open = !fridgePanel.hidden || !$('dexPanel').hidden || !$('helpPanel').hidden;
+  if (!open || !player) { if (!open) panelAnchor = null; return; }
+  const p = player.holder.position; if (!panelAnchor) panelAnchor = {x:p.x, z:p.z};
+  if (Math.hypot(p.x - panelAnchor.x, p.z - panelAnchor.z) > .5) { fridgeClose(); $('dexPanel').hidden = true; $('helpPanel').hidden = true; panelAnchor = null; }
+}, 200);
 function fridgeClose(){ fridgeOpenAt = 0; fridgePanel.hidden = true; fridgeWant = false; }
 function renderFridge(){
   const st = (fridgeState && fridgeState.stock) || {};
-  const cell = id => { const q = st[id] || 0, i = FOOD_IDX[id]; return '<button type="button" class="fr-it' + (q ? '' : ' no') + '" data-id="' + id + '"><i style="background-position:-' + (i * 28 * 1.6) + 'px 0"></i><b>' + FOODS[id][0] + '</b><u>' + q + '</u></button>'; };
+  const cell = id => { const q = st[id] || 0, i = FOOD_IDX[id]; return '<button type="button" class="fr-it' + (q ? '' : ' no') + '" data-id="' + id + '"><i style="background-position:-' + (i * 42) + 'px 0"></i><b>' + FOODS[id][0] + '</b><u>' + q + '</u></button>'; };
   fridgePanel.innerHTML = '<div class="fr-head"><span>🧊 冰箱</span><button type="button" class="px-x fr-x" id="frX" title="關閉">✕</button></div><div class="fr-cols">' +
     FRIDGE_SHELVES.map((rows, f) => '<div class="fr-door"><h4>' + (f ? '右冰箱' : '左冰箱') + '</h4><div class="fr-grid">' + rows.flat().filter(id => id !== 'rare' || (st.rare || 0)).map(cell).join('') + '</div></div>').join('') + '</div>' +
     catZoneHtml() + '<p class="fr-note">點一樣東西拿一個；下班後偷吃會被抓到喔。' + (fridgeState ? '' : '（讀取庫存中…）') + '</p>';
@@ -2286,8 +2300,8 @@ function renderDex(){
   sec('地上的驚喜', DROP_IDS, ITEMS.map(x => x[1]), ITEMS.map(x => x[2]), 'd');
   sec('會議室遺落物', NOTE_IDS, NOTES.map(x => x[0]), NOTES.map(x => x[1]), 'n');
 }
-$('bDex').onclick = () => { renderDex(); $('dexPanel').hidden = false; $('helpPanel').hidden = true; };
-$('bHelp').onclick = () => { $('helpPanel').hidden = false; $('dexPanel').hidden = true; };
+$('bDex').onclick = () => { renderDex(); $('dexPanel').hidden = false; $('helpPanel').hidden = true; panelAnchor = null; };
+$('bHelp').onclick = () => { $('helpPanel').hidden = false; $('dexPanel').hidden = true; panelAnchor = null; };
 document.querySelectorAll('.px-x').forEach(b => b.onclick = () => { $('dexPanel').hidden = true; $('helpPanel').hidden = true; $('drawer').hidden = true; });
 $('bWheel').onclick = () => { if (!player) { showQuote('', '請先登入才能操作人物'); return; } if (radial.hidden) radialOpen(); else radialClose(); };
 // 浮動文字（撿到東西時 +1 往上飄）
