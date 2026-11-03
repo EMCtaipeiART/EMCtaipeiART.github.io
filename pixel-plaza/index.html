@@ -2293,7 +2293,7 @@ const CAT_GAIN = {feed:{trust:1, belong:3, cap:2}, treat:{trust:4, belong:1, cap
 const catDay = () => new Date(Date.now() + 288e5).toISOString().slice(0, 10);
 const catLvOf = (v, at) => { let l = 0; at.forEach((t, i) => { if (v >= t) l = i; }); return l; };
 let catState = {trust:0, day:'', daily:{}, total:{}}, catOffice = {belong:0, bowlAt:0, waterAt:0}, catInv = {food:0, treat:0, toy:false};
-let catG = null, catParts = null, catBowl = null, catSpots = null, catLocal = null, catAnnoyed = 0, catGreeted = false, catCompany = null, catHeld = '', catTagEl = null, catCloudOk = null, catT0 = 0;
+let catG = null, catParts = null, catBowl = null, catSpots = null, catLocal = null, catAnnoyed = 0, catGreeted = false, catCompany = null, catHeld = '', catTagEl = null, catCloudOk = null, catT0 = 0, catForce = null;
 const catPlans = new Map(), catPaths = new Map();
 const belongLv = () => catLvOf(catOffice.belong, CAT_LV_AT), trustLv = () => catLvOf(catState.trust, TRUST_AT);
 const catKey = n => 'pixelCat:' + (n || meName() || '');
@@ -2316,20 +2316,15 @@ function catCheckLevel(){   // 歸屬感升級：第一次達到才說一次
   const lv = belongLv(), key = 'pixelCatLv:' + (meName() || ''); let seen = 0; try { seen = +localStorage.getItem(key) || 0; } catch (e) {}
   if (lv > seen) { try { localStorage.setItem(key, String(lv)); } catch (e) {} if (seen > 0 || lv > 0) showQuote(CAT.name + '・' + CAT_LV[lv], ['', '橘子開始會睡在沒人坐的椅子上了', '橘子會跳上沒人的桌子趴著了', '橘子決定留下來了，整間辦公室都是牠的地盤（偶爾還會暴衝）'][lv]); }
 }
-// 貓的模型：橘色方塊貓＋黑外框；朝 +z
+// 貓的貼圖：assets/cat/cat-atlas.webp（10 個姿勢 × 正／側／背三視角，側面朝右，朝左用鏡像）；貼圖面向鏡頭，依貓和鏡頭的相對角度挑視角
+const CAT_POSES = ['stand', 'walkA', 'walkB', 'sit', 'loaf', 'sleep', 'eat', 'run', 'groom', 'belly'], CAT_CW = 377, CAT_CH = 239, CAT_K = .0042;
 function catBuild(){
-  const g = new THREE.Group(), inner = new THREE.Group(), body = new THREE.Group(), head = new THREE.Group(), P = {};
-  const M = c => new THREE.MeshLambertMaterial({color:c}), O = 0xe8963c, D = 0xc9741f, L = 0xf9e3bd, PK = 0xf2a0a0;
-  const add = (par, w, h, d, c, x, y, z, edge) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), M(c)); m.position.set(x, y, z); m.userData.pickRoot = g; par.add(m); if (edge) { const h2 = hull(par, w, h, d, x, y, z, .02); } return m; };
-  inner.position.y = .3; g.add(inner); body.position.set(0, .22, 0); inner.add(body); head.position.set(0, .3, .36); body.add(head);
-  add(body, .34, .3, .62, O, 0, 0, 0, true); add(body, .2, .06, .5, L, 0, -.13, .02, false);
-  add(body, .36, .05, .1, D, 0, .12, .08, false); add(body, .36, .05, .1, D, 0, .12, -.1, false);   // 背上的條紋
-  add(head, .34, .3, .3, O, 0, 0, 0, true); add(head, .14, .1, .06, L, 0, -.07, .16, false); add(head, .05, .04, .03, PK, 0, -.03, .185, false);
-  add(head, .09, .12, .07, O, -.11, .2, -.02, true); add(head, .09, .12, .07, O, .11, .2, -.02, true); add(head, .04, .06, .03, PK, -.11, .19, .02, false); add(head, .04, .06, .03, PK, .11, .19, .02, false);
-  P.eyes = [add(head, .06, .07, .03, 0x15191c, -.09, .04, .165, false), add(head, .06, .07, .03, 0x15191c, .09, .04, .165, false)];
-  P.legs = []; for (const [sx, sz] of [[-1, 1], [1, 1], [-1, -1], [1, -1]]) { const lg = new THREE.Group(); lg.position.set(sx * .11, .0, sz * .2); body.add(lg); add(lg, .1, .22, .1, O, 0, -.11, 0, false); add(lg, .1, .04, .12, L, 0, -.21, .01, false); P.legs.push(lg); }
-  P.tail = []; let par = body, py = .02, pz = -.31; for (let i = 0; i < 3; i++) { const t = new THREE.Group(); t.position.set(0, py, pz); par.add(t); add(t, .08, .08, .2, i === 1 ? D : O, 0, 0, -.1, i === 0); par = t; py = 0; pz = -.2; P.tail.push(t); }
-  P.g = g; P.inner = inner; P.body = body; P.head = head; return P;
+  const g = new THREE.Group(), P = {g, ready:false};
+  const tex = new THREE.TextureLoader().load('assets/cat/cat-atlas.webp', () => { P.ready = true; });
+  tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = tex.minFilter = THREE.LinearFilter; tex.generateMipmaps = false; tex.repeat.set(1 / 3, 1 / CAT_POSES.length);
+  const geo = new THREE.PlaneGeometry(CAT_CW * CAT_K, CAT_CH * CAT_K); geo.translate(0, CAT_CH * CAT_K / 2 - 4 * CAT_K, 0);   // 腳底在格底上方 4 px
+  const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({map:tex, transparent:true, alphaTest:.4, side:THREE.DoubleSide}));
+  m.userData.pickRoot = g; m.visible = false; g.add(m); P.sprite = m; P.tex = tex; return P;
 }
 function catBowlBuild(x, z){   // 共用貓碗（飼料碗＋水碗）
   const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
@@ -2362,11 +2357,11 @@ function catInit(){
     desks:desks.map(k => { let seat = null, bd = 3; for (const s of chairSeats) { if (s.kind) continue; const d = Math.hypot(s.x - k.x, s.z - k.z); if (d < bd) { bd = d; seat = s; } } return {x:k.x, z:k.z + (seat && seat.z > k.z ? .3 : -.3), y:.95, face:seat && seat.z > k.z ? 0 : Math.PI, pose:'loaf'}; }),
     walk, bowl:{x:bw[0], z:bw[1]}
   };
-  const P = catParts = catBuild(); catG = P.g; catG.scale.setScalar(1.4); catG.userData.pick = {kind:'cat'}; scene.add(catG); pickables.push(catG);
+  const P = catParts = catBuild(); catG = P.g; catG.userData.pick = {kind:'cat'}; scene.add(catG); pickables.push(catG);
   catTagEl = document.createElement('div'); catTagEl.className = 'cui-tag cat-tag'; catTagEl.style.cssText = 'position:fixed;left:0;top:0;z-index:2;pointer-events:none;display:none'; document.body.appendChild(catTagEl);
   catT0 = performance.now();
   if (meN) { catCloud('get'); setInterval(() => catCloud('get'), 90000); }
-  window.__cat = {click:catClick, act:catAct, bowlClick:catBowlClick, care:catCare, get spots(){ return catSpots; }, at:catAt, plan:catPlan, state:() => ({catState, catOffice, catInv}), local:() => catLocal, pos:() => catG.position.clone(), set(o){ Object.assign(catOffice, o); catPlans.clear(); }, give(k, n){ catInv[k] = n; }};
+  window.__cat = {click:catClick, act:catAct, bowlClick:catBowlClick, care:catCare, get spots(){ return catSpots; }, at:catAt, plan:catPlan, state:() => ({catState, catOffice, catInv}), local:() => catLocal, pos:() => catG.position.clone(), set(o){ Object.assign(catOffice, o); catPlans.clear(); }, force(o){ catForce = o; }, give(k, n){ catInv[k] = n; }};
 }
 // 這個時段貓在哪、做什麼（所有人算出來一樣）
 function catTP(ms){ const d = new Date(ms + 288e5); return {h:d.getUTCHours() + d.getUTCMinutes() / 60, dow:d.getUTCDay()}; }
@@ -2416,24 +2411,19 @@ function catAt(now){
 const catWeekendFeeder = () => { const tp = catTP(Date.now()); return tp.dow === 0 || tp.dow === 6; };
 const catBowlFull = () => catWeekendFeeder() || Date.now() - catOffice.bowlAt < 8 * 3600e3, catWaterFull = () => catWeekendFeeder() || Date.now() - catOffice.waterAt < 8 * 3600e3;
 // 姿勢：直接調整各部位
-function catPose(a, now, dtS){
-  const P = catParts, tm = now / 1000, walking = a.pose === 'walk' || a.pose === 'run', sw = a.pose === 'run' ? 11 : 6.5;
-  let by = .22, bx = 0, bz = 0, hx = 0, hy = 0, iz = 0, iy = .3, legs = 1, eye = 1, hindLegs = 1, bscale = 1;
-  const ph = tm * sw;
-  P.legs.forEach((lg, i) => { lg.rotation.x = walking ? Math.sin(ph + (i === 0 || i === 3 ? 0 : Math.PI)) * (a.pose === 'run' ? .9 : .55) : 0; });
-  let tailAmp = .25, tailBase = -.25;
-  if (a.pose === 'run') { bx = .12; by = .2 + Math.abs(Math.sin(ph)) * .08; tailBase = .2; tailAmp = .1; }
-  else if (a.pose === 'walk') { by = .22 + Math.abs(Math.sin(ph)) * .02; }
-  else if (a.pose === 'sit' || a.pose === 'groom') { bx = -.6; by = .12; hindLegs = 0; hx = .45; if (a.pose === 'groom') { hx = .85 + Math.sin(tm * 6) * .12; hy = Math.sin(tm * 3) * .25; } tailBase = -.1; tailAmp = .12; }
-  else if (a.pose === 'loaf') { by = -.02; legs = 0; hx = .35; hy = 0; eye = 0; tailBase = -.9; tailAmp = .05; bscale = 1.05; }
-  else if (a.pose === 'eat') { hx = .95; by = .2; tailAmp = .2; }
-  else if (a.pose === 'belly') { iz = Math.PI; iy = .55; P.legs.forEach((lg, i) => { lg.rotation.x = Math.sin(tm * 9 + i) * .8; }); tailAmp = .5; }
-  else if (a.pose === 'look') { hy = Math.sin(tm * 1.3) * .5; }
-  else if (a.pose === 'rub') { bz = Math.sin(tm * 5) * .12; tailBase = .3; tailAmp = .15; hx = .2; }
-  P.body.position.y = by; P.body.rotation.x = bx; P.body.rotation.z = bz; P.head.rotation.x = hx; P.head.rotation.y = hy; P.inner.rotation.z = iz; P.inner.position.y = iy;
-  P.legs.forEach((lg, i) => { lg.visible = legs && (hindLegs || i < 2); });
-  P.eyes.forEach(e => { e.scale.y = eye ? 1 : .15; });
-  P.tail.forEach((t, i) => { t.rotation.x = tailBase * (i === 0 ? 1 : .6) + Math.sin(tm * 2.2 + i * .7) * tailAmp * (i ? .6 : .3); t.rotation.y = Math.sin(tm * 1.6 + i) * tailAmp * (a.pose === 'walk' || a.pose === 'run' ? .3 : .8); });
+function catPose(a, now){
+  const P = catParts; if (!P.ready) return; const tm = now / 1000, sp = P.sprite;
+  let name = 'stand', bob = 0, sy = 1;
+  if (a.pose === 'walk' || a.pose === 'rub') { name = Math.floor(tm * 4.5) % 2 ? 'walkB' : 'walkA'; bob = Math.abs(Math.sin(tm * 4.5 * Math.PI)) * .03; }
+  else if (a.pose === 'run') { name = 'run'; bob = Math.abs(Math.sin(tm * 14)) * .14; }
+  else if (a.pose === 'loaf') { name = a.y < .3 ? 'sleep' : 'loaf'; sy = 1 + Math.sin(tm * 1.6) * .012; }   // 紙箱裡蜷著睡，椅子與桌上趴成香包
+  else if (a.pose === 'eat') { name = 'eat'; sy = 1 + Math.sin(tm * 7) * .015; }
+  else if (a.pose === 'sit' || a.pose === 'groom' || a.pose === 'belly') name = a.pose;
+  else sy = 1 + Math.sin(tm * 1.8) * .01;
+  _cam.set(camera.position.x - catG.position.x, 0, camera.position.z - catG.position.z); const toCam = Math.atan2(_cam.x, _cam.z);
+  const rel = Math.atan2(Math.sin(catG.rotation.y - toCam), Math.cos(catG.rotation.y - toCam)), sn = Math.sin(rel), view = Math.abs(sn) > .62 ? 1 : Math.cos(rel) > 0 ? 0 : 2;   // 0 正面、1 側面（sn>0 是朝畫面右邊）、2 背面
+  const row = CAT_POSES.indexOf(name); P.tex.offset.set(view / 3, 1 - (row + 1) / CAT_POSES.length);
+  sp.rotation.y = toCam - catG.rotation.y; sp.scale.set(view === 1 && sn < 0 ? -1 : 1, STRETCH * sy, 1); sp.position.y = bob; sp.visible = true;
 }
 // 本機互動動作（只有做互動的人看得到：貓走向你、蹭腳、吃點心、玩逗貓棒…做完走回大家看到的位置）
 const catPlayerPos = () => player ? player.holder.position : null;
@@ -2479,7 +2469,8 @@ function updateCat(dt){
   if (!catLocal) { const k = Math.min(1, dt * 12); if (!catLast) { catG.position.set(a.x, 0, a.z); } else { catG.position.x += (a.x - catG.position.x) * k; catG.position.z += (a.z - catG.position.z) * k; } let df = a.face - catG.rotation.y; df = Math.atan2(Math.sin(df), Math.cos(df)); catG.rotation.y += df * Math.min(1, dt * 9); }
   else { let df = a.face - catG.rotation.y; df = Math.atan2(Math.sin(df), Math.cos(df)); catG.rotation.y += df * Math.min(1, dt * 12); }
   catG.position.y += ((a.y || 0) - catG.position.y) * Math.min(1, dt * 14); catLast = now;
-  catPose(a, now, dt);
+  if (catForce) { if (catForce.face != null) catG.rotation.y = catForce.face; a = Object.assign({}, a, catForce); }   // 除錯：window.__cat.force({pose, face, y}) 固定姿勢與朝向，force(null) 取消
+  catPose(a, now);
   // 你靠近時：看你、不熟的人可能走開；陪伴計時；登入後熟人會走來蹭
   const pp = catPlayerPos(), near = pp ? Math.hypot(pp.x - catG.position.x, pp.z - catG.position.z) : 99;
   if (!catLocal && pp && near < 3.2 && a.speed === 0 && a.pose !== 'loaf' && catAnnoyed < now) { const lv = trustLv(); let df = Math.atan2(pp.x - catG.position.x, pp.z - catG.position.z) - catG.rotation.y; df = Math.atan2(Math.sin(df), Math.cos(df)); catG.rotation.y += df * Math.min(1, dt * 3); if (lv === 0 && near < 1.4 && Math.random() < dt * .25) { catLocal = null; const away = catSpots.walk.length ? catSpots.walk.reduce((b, q) => Math.hypot(q.x - pp.x, q.z - pp.z) > Math.hypot(b.x - pp.x, b.z - pp.z) && Math.hypot(q.x - catG.position.x, q.z - catG.position.z) < 9 ? q : b, catSpots.walk[0]) : null; if (away) { catGo([away], 3.2, catReturn); } } }

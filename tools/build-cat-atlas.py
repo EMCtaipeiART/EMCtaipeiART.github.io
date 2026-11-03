@@ -1,0 +1,71 @@
+# 貓咪貼圖集：把 pixel-plaza/ai-views/cat-sheets/<姿勢>-sheet.webp（ChatGPT 生成的三視圖，只存在本機、不進 Git）
+# 去背（藍底／米底）、切成 正／側／背 三格、依腳底對齊，輸出 pixel-plaza/assets/cat/cat-atlas.webp + .json
+import numpy as np, json, sys
+from PIL import Image
+from scipy import ndimage as ndi
+
+import os
+D = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'pixel-plaza', 'assets', 'cat') + '/'
+POSES = [('stand', 'stand-sheet.webp'), ('walkA', 'walkA-sheet.png'), ('walkB', 'walkB-sheet.png'), ('sit', 'sit-sheet.png'),
+         ('loaf', 'loaf-sheet.png'), ('sleep', 'sleep-sheet.png'), ('eat', 'eat-sheet.png'), ('run', 'run-sheet.png'),
+         ('groom', 'groom-sheet.png'), ('belly', 'belly-sheet.png')]
+SC = 0.34   # 原圖 → 圖集縮放（站立貓約 200 px 高）
+
+def cutout(im, name):
+    a = np.asarray(im.convert('RGB')).astype(int)
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    if name == 'stand':   # 米色底：從四邊洪水填滿
+        bg0 = (abs(r - 253) < 14) & (abs(g - 248) < 14) & (abs(b - 238) < 20)
+        lab, n = ndi.label(bg0)
+        edge = set(lab[0, :]) | set(lab[-1, :]) | set(lab[:, 0]) | set(lab[:, -1]); edge.discard(0)
+        bg = np.isin(lab, list(edge))
+    else:                 # 藍底（有漸層）：藍色明顯大於紅、綠
+        bg = (b > r + 70) & (b > g + 25)
+    fg = ~bg
+    fg = ndi.binary_opening(fg, iterations=1)
+    lab, n = ndi.label(fg)
+    sizes = ndi.sum(fg, lab, range(1, n + 1))
+    keep = np.isin(lab, [i + 1 for i, s in enumerate(sizes) if s > 400])   # 去掉雜點
+    keep = ndi.binary_fill_holes(keep) | keep
+    keep = ndi.binary_erosion(keep, iterations=1)   # 吃掉一圈藍邊
+    out = np.dstack([a.astype(np.uint8), (keep * 255).astype(np.uint8)])
+    return Image.fromarray(out), keep
+
+def split3(keep):
+    cols = keep.any(axis=0); xs = np.where(cols)[0]
+    groups = []; s = xs[0]; p = xs[0]
+    for x in xs[1:]:
+        if x - p > 24: groups.append((s, p)); s = x
+        p = x
+    groups.append((s, p)); return groups
+
+views = {}
+for pose, f in POSES:
+    im = Image.open(D + '../../ai-views/cat-sheets/' + pose + '-sheet.webp'); k = SC * 2172 / im.size[0]
+    rgba, keep = cutout(im, pose)
+    gs = split3(keep)
+    if pose == 'run' and len(gs) == 2: gs = [(gs[0][0], 546), (547, gs[0][1]), gs[1]]
+    print(pose, im.size, 'groups', gs)
+    if len(gs) != 3: print('  !! 不是 3 組'); sys.exit(1)
+    arr = np.asarray(rgba)
+    row = []
+    for (x0, x1) in gs:
+        sub = keep[:, x0:x1 + 1]; ys = np.where(sub.any(axis=1))[0]; y0, y1 = ys[0], ys[-1]
+        crop = Image.fromarray(arr[y0:y1 + 1, x0:x1 + 1])
+        w, h = crop.size; crop = crop.resize((max(1, round(w * k)), max(1, round(h * k))), Image.LANCZOS)
+        row.append(crop)
+    views[pose] = row
+
+CW = max(c.size[0] for r in views.values() for c in r) + 8
+CH = max(c.size[1] for r in views.values() for c in r) + 8
+print('cell', CW, CH)
+atlas = Image.new('RGBA', (CW * 3, CH * len(POSES)), (0, 0, 0, 0))
+meta = {'cw': CW, 'ch': CH, 'poses': [p for p, _ in POSES], 'views': ['front', 'side', 'back'], 'sc': SC, 'h': {}}
+for ri, (pose, _) in enumerate(POSES):
+    for ci, c in enumerate(views[pose]):
+        w, h = c.size
+        atlas.paste(c, (ci * CW + (CW - w) // 2, ri * CH + CH - 4 - h), c)   # 底部置中，腳底離格底 4 px
+        meta['h'][f'{pose}:{ci}'] = h
+atlas.save(D + 'cat-atlas.webp', lossless=True, quality=100, method=6)
+json.dump(meta, open(D + 'cat-atlas.json', 'w'), ensure_ascii=False)
+print('stand heights', [meta['h'][f'stand:{i}'] for i in range(3)])
