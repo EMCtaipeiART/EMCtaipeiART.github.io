@@ -2767,6 +2767,31 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'pixelOfficeProgress', progress: { dex: { d: dexD, n: dexN }, stat, last } } as ApiResult;
   }
 
+  /** 3D 辦公室的流浪貓：辦公室歸屬感（全員共用，cat:office）與每人的信任度（cat:<名字>）。
+   *  op:'get' 讀取；op:'care' 記一次有效互動（kind: feed／treat／play／company／pet），每人每天每種互動只有前幾次會增加進度（上限在 CAT_CARE）。
+   *  effect:'food'／'water' 會更新共用貓碗的補充時間。不寫 GitHub；信任度與歸屬感只增不減。 */
+  private pixelOfficeCat(payload: ApiPayload): ApiResult {
+    const name = text(payload.name);
+    if (!this.pixelOfficeKnownName(name)) return { ok: false, action: 'pixelOfficeCat', error: '找不到這位同仁' } as ApiResult;
+    const sql = this.ctx.storage.sql, now = Date.now(), day = new Date(now + 8 * 3_600_000).toISOString().slice(0, 10);
+    const read = (key: string): Row => { const row = sql.exec<{ value: string }>('SELECT value FROM pixel_office_settings WHERE key = ?', key).toArray()[0]; try { return asRow(JSON.parse(row?.value || '{}')); } catch { return {}; } };
+    const write = (key: string, value: unknown) => sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', key, JSON.stringify(value), now);
+    const CAT_CARE: Record<string, { trust: number; belong: number; cap: number }> = { feed: { trust: 1, belong: 3, cap: 2 }, treat: { trust: 4, belong: 1, cap: 3 }, play: { trust: 3, belong: 1, cap: 3 }, company: { trust: 2, belong: 0, cap: 2 }, pet: { trust: 1, belong: 0, cap: 3 } };
+    const meRaw = read('cat:' + name), officeRaw = read('cat:office');
+    let trust = Math.max(0, Math.min(100, Math.floor(Number(meRaw.trust) || 0)));
+    let daily: Record<string, number> = meRaw.day === day ? Object.fromEntries(Object.entries(asRow(meRaw.daily)).map(([k, v]) => [k, Math.max(0, Math.floor(Number(v) || 0))])) : {};
+    let belong = Math.max(0, Math.min(1_000_000, Math.floor(Number(officeRaw.belong) || 0)));
+    let bowlAt = Math.floor(Number(officeRaw.bowlAt) || 0), waterAt = Math.floor(Number(officeRaw.waterAt) || 0), gained = false;
+    if (text(payload.op) === 'care') {
+      const kind = text(payload.kind), rule = CAT_CARE[kind], effect = text(payload.effect);
+      if (!rule) return { ok: false, action: 'pixelOfficeCat', error: 'invalid kind' } as ApiResult;
+      if ((daily[kind] || 0) < rule.cap) { daily[kind] = (daily[kind] || 0) + 1; trust = Math.min(100, trust + rule.trust); belong += rule.belong; gained = true; }
+      if (effect === 'food') bowlAt = now; else if (effect === 'water') waterAt = now;
+      write('cat:' + name, { trust, day, daily }); write('cat:office', { belong, bowlAt, waterAt });
+    }
+    return { ok: true, action: 'pixelOfficeCat', gained, cat: { trust, day, daily }, office: { belong, bowlAt, waterAt } } as ApiResult;
+  }
+
   private async pixelOfficeFun(payload: ApiPayload): Promise<ApiResult> {
     const id = String(payload.id || '');
     if (!/^[a-z]:[A-Za-z0-9:._-]{1,70}$/.test(id)) return { ok: false, action: 'pixelOfficeFun', error: 'invalid id' } as ApiResult;
@@ -5410,6 +5435,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'pixelOfficeStaffBack') return await this.pixelOfficeStaffBack(payload);
       if (action === 'pixelOfficeFun') return await this.pixelOfficeFun(payload);
       if (action === 'pixelOfficeProgress') return this.pixelOfficeProgress(payload);
+      if (action === 'pixelOfficeCat') return this.pixelOfficeCat(payload);
       if (action === 'pixelOfficeHeartbeat') return await this.pixelOfficeHeartbeat(payload);
       if (action === 'pixelOfficeCalendarStatus') return await this.pixelOfficeCalendarStatus(payload);
       if (action === 'pixelOfficePhoto') return this.pixelOfficePhoto(payload);
