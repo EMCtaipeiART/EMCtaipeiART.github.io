@@ -1906,6 +1906,17 @@ function moodFx(c, m){   // 設定心情時：頭上的心情圖示彈出、人�
   hopChar(c); const w = ({happy:'好開心！', angry:'氣噗噗！', sad:'好難過…', joy:'愛心滿格！'})[m]; if (w) floatAt(c.holder.position.x, 2.7, c.holder.position.z, w);
 }
 async function setOwnStatus(st){ const c = pageChar || player; if (!c || !(await writeState(c, {status:st}))) return; c.rawStatus = st; c.status = forcedStatus(st, c); c.appliedStatus = null; applyStatus(c, true); showQuote('', c.name + '：' + STATUS[st][0]); radialClose(); }
+// 手動點「廁所」後自己離開馬桶（走動／起身）就解除廁所狀態，交還給電腦判斷；人物留在原地，不拉回座位
+let onToiletSeat = null;
+function releaseToilet(c){
+  c.rawStatus = 'present'; c.status = forcedStatus('present', c); c.appliedStatus = c.status; c.btn.textContent = c.name + ' ' + STATUS[c.status][1]; c.autoPendingUntil = Date.now() + 25000;
+  writeState(c, {status:'auto'}).then(ok => { if (ok) live.version = 0; }); setTimeout(() => { live.version = 0; }, 26000);
+}
+setInterval(() => {
+  const c = player; if (!c) { onToiletSeat = null; return; }
+  const on = Boolean(c.sitting && c.sitting.kind === 'toilet');
+  if (on) onToiletSeat = c; else if (onToiletSeat) { const prev = onToiletSeat; onToiletSeat = null; if (prev === c && c.status === 'toilet') releaseToilet(c); }
+}, 250);
 async function setOwnMood(m){ const c = pageChar || player; if (!c || !(await writeState(c, {mood:m}))) return; c.mood = m; if (m) moodFx(c, m); showQuote('', m ? c.name + '的心情：' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[m] : '已清除心情'); radialClose(); }
 async function setOwnMessage(t){ const c = pageChar || player; if (!c || !(await writeState(c, {message:t}))) return; c.message = t; showQuote('', t ? '已更新留言' : '已清除留言'); radialClose(); }
 async function setOwnAuto(){
