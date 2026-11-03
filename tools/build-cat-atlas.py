@@ -9,7 +9,7 @@ D = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'pixel-plaza'
 POSES = [('stand', 'stand-sheet.webp'), ('walkA', 'walkA-sheet.png'), ('walkB', 'walkB-sheet.png'), ('sit', 'sit-sheet.png'),
          ('loaf', 'loaf-sheet.png'), ('sleep', 'sleep-sheet.png'), ('eat', 'eat-sheet.png'), ('run', 'run-sheet.png'),
          ('groom', 'groom-sheet.png'), ('belly', 'belly-sheet.png')]
-OUT = 10  # 外圍黑色粗輪廓（圖集像素；畫面上約 2～3 px）
+OUT = 7   # 外圍黑色粗輪廓（圖集像素；畫面上約 2～3 px）
 OL = (26, 20, 16, 255)
 SC = 0.34   # 原圖 → 圖集縮放（站立貓約 200 px 高）
 
