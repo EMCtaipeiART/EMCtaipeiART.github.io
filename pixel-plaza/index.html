@@ -1183,7 +1183,7 @@ function updateLabels(){
 const chars = {};   // name -> {holder, sprite, tex, ...}
 const roster = document.getElementById('roster');
 let player = null, target = null, routeFor = null, routePts = [];
-const WALK_NAMES = ['Machi','Anna','Leona','Amber','Noise','余采馨'];   // 有走路影格圖集的人物（sprites-walk*/名字.png）
+const WALK_NAMES = ['Machi','Anna','Leona','Amber','Noise','余采馨','吳冠賢','李明庭','王藍庭','鄭筱舢','黎子瑄','傅思凱'];   // 有走路影格圖集的人物（sprites-walk*/名字.png）
 const ANGLES = 12, ROWS = 1, CELL_W = 60, CELL_H = 60, WORLD_H = 2.04;   // 圖集：由三視圖合成的 12 個面向（每 30°）
 const loadTex = src => new Promise((res, rej) => { const ld = new THREE.TextureLoader(); ld.setCrossOrigin('anonymous'); ld.load(src, t => {
   t.magFilter = t.minFilter = HD ? THREE.LinearFilter : THREE.NearestFilter; t.generateMipmaps = false; t.colorSpace = THREE.SRGBColorSpace;
