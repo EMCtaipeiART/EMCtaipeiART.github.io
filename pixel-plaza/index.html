@@ -396,7 +396,7 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 <div id="drawer" hidden><div class="dr-head"><span>選擇角色</span><button class="px-x" type="button" title="關閉">✕</button></div><div id="roster"></div></div>
 <div id="dexPanel" hidden><div class="px-head"><span>📖 辦公室圖鑑</span><button class="px-x" type="button">✕</button></div><div id="dexBody"></div></div>
 <div id="helpPanel" hidden><div class="px-head"><span>❓ 操作說明</span><button class="px-x" type="button">✕</button></div>
-  <div class="help-list"><div>🕹️ WASD／方向鍵移動，Shift 跑步，點地面走過去（手機用左下搖桿）</div><div>🪑 點椅子或馬桶，人物會走過去坐下；要起身直接走動</div><div>🎮 點自己的人物或按「角色頁面」：狀態、心情、想說的話、音樂、限時動態（管理者另有全員上下班與班長工具）</div><div>✨ 撿地上的道具、沖馬桶、點投影機，圖鑑會記錄你的發現，每 5 個升一級</div><div>📡 角色依「凱曜設計部」的即時出勤狀態行動（在座／加班／用餐／廁所／會議／下班…）</div></div></div>
+  <div class="help-list"><div>🕹️ WASD／方向鍵移動，Shift 跑步，點椅子／馬桶等物件會走過去（手機可點地面走過去，或用左下搖桿）</div><div>🪑 點椅子或馬桶，人物會走過去坐下；要起身直接走動</div><div>🎮 點自己的人物或按「角色頁面」：狀態、心情、想說的話、音樂、限時動態（管理者另有全員上下班與班長工具）</div><div>✨ 撿地上的道具、沖馬桶、點投影機，圖鑑會記錄你的發現，每 5 個升一級</div><div>📡 角色依「凱曜設計部」的即時出勤狀態行動（在座／加班／用餐／廁所／會議／下班…）</div></div></div>
 <script type="module">
 import * as THREE from 'three';
 import {RoundedBoxGeometry} from '../character-studio/vendor/RoundedBoxGeometry.js';
@@ -1672,6 +1672,7 @@ function onPick(e){
   if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { clickChar = pk.c; clickUntil = performance.now() + 3000; if (pk.c !== player && player && adminHome) select(pk.c.name); if (pk.c === player) wheelOpen(pk.c); else wheelClose(); if (false) { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); else if (pk.kind === 'fridge') fridgeInteract(); else if (pk.kind === 'elev') elevInteract(); else if (pk.kind === 'seat') { const st = pk.seat || chairSeats.filter(q => q.kind === 'toilet').sort((a, b) => Math.hypot(a.x - pk.at.x, a.z - pk.at.z) - Math.hypot(b.x - pk.at.x, b.z - pk.at.z))[0]; if (st && player && !st.by && !st.hidden) { wantSeat = st; target = new THREE.Vector3(st.x, 0, st.z); } } return; } }
   radialClose(); wantSeat = null; fridgeWant = false; wantElev = false; wheelClose();
   const p = new THREE.Vector3();
+  if (e.pointerType === 'mouse') return;   // 桌面版：點地面不再自動走過去（用 WASD／方向鍵），只有點可點物件（椅子、馬桶、電梯…）才會走；手機（觸控）維持點地面走過去
   if (ray.ray.intersectPlane(plane, p) && !blocked(p.x, p.z)) target = p;
 }
 
