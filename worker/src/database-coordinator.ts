@@ -19,6 +19,7 @@ import { DUTY_ATTENDEES, DUTY_ERIC_EMAIL, DUTY_ROOM_EMAIL, dutyEventBody, dutyMe
 import { importBoxKey, isSealed, openText, sealText } from './secure-box';
 import { assignCsvUrl, seedAssignments, type Assignment } from './assignments';
 import { NOTEBOOK_SEED_TABS, notebookCsvUrl, parseCsv, seedFromGrids, trimGrid, type NotebookField, type NotebookItem } from './notebook';
+import { applyNamingOp, namingView, normalizeNaming, type CatNaming } from './cat-naming';
 import { femasOnLeave, parseFemasIcal, parseFemasNameMap, type FemasLeave } from './femas-leave';
 import type {
   ApiPayload, ApiResult, DatabaseSnapshot, RequestContext, Row, SessionRecord, StoredSnapshot
@@ -2772,6 +2773,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
    *  effect:'food'／'water' 會更新共用貓碗的補充時間。不寫 GitHub；信任度與歸屬感只增不減。 */
   private pixelOfficeCat(payload: ApiPayload): ApiResult {
     const name = text(payload.name);
+    if (text(payload.op).startsWith('name')) return this.pixelOfficeCatNaming(payload, name);
     if (!this.pixelOfficeKnownName(name)) return { ok: false, action: 'pixelOfficeCat', error: '找不到這位同仁' } as ApiResult;
     const sql = this.ctx.storage.sql, now = Date.now(), day = new Date(now + 8 * 3_600_000).toISOString().slice(0, 10);
     const read = (key: string): Row => { const row = sql.exec<{ value: string }>('SELECT value FROM pixel_office_settings WHERE key = ?', key).toArray()[0]; try { return asRow(JSON.parse(row?.value || '{}')); } catch { return {}; } };
@@ -2790,6 +2792,22 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       write('cat:' + name, { trust, day, daily }); write('cat:office', { belong, bowlAt, waterAt });
     }
     return { ok: true, action: 'pixelOfficeCat', gained, cat: { trust, day, daily }, office: { belong, bowlAt, waterAt } } as ApiResult;
+  }
+
+  /** 貓的取名投票（cat:name）：op = nameGet／namePropose（text）／nameVote（id）／nameClose／nameRemove（id）。
+   *  nameGet 任何人（含訪客）都能讀；其餘要是已知同仁。管理者＝名字是 Machi（和 pixelOfficeUpdate 一樣不驗證身分，只擋畫面上的操作）。
+   *  有變動才寫入（寫入會更新時間戳、驚動所有人的輪詢）。 */
+  private pixelOfficeCatNaming(payload: ApiPayload, name: string): ApiResult {
+    const op = text(payload.op), known = name !== '' && this.pixelOfficeKnownName(name), who = known ? name : '';
+    if (name && !known && op !== 'nameGet') return { ok: false, action: 'pixelOfficeCat', error: '找不到這位同仁' } as ApiResult;
+    const sql = this.ctx.storage.sql, now = Date.now(), admin = known && name.toLowerCase() === 'machi';
+    const row = sql.exec<{ value: string }>('SELECT value FROM pixel_office_settings WHERE key = ?', 'cat:name').toArray()[0];
+    let raw: unknown = null; try { raw = row ? JSON.parse(row.value) : null; } catch { raw = null; }
+    const before: CatNaming = normalizeNaming(raw, now), res = applyNamingOp(before, op, who, text(payload.arg), now, admin);
+    const json = JSON.stringify(res.naming);
+    if (!row || json !== JSON.stringify(before) || json !== row.value) sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', 'cat:name', json, now);
+    if (res.error) return { ok: false, action: 'pixelOfficeCat', error: res.error, naming: namingView(res.naming, who, admin) } as ApiResult;
+    return { ok: true, action: 'pixelOfficeCat', naming: namingView(res.naming, who, admin) } as ApiResult;
   }
 
   private async pixelOfficeFun(payload: ApiPayload): Promise<ApiResult> {

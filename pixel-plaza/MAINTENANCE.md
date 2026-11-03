@@ -125,3 +125,8 @@
 - 圖集由 `python3 tools/build-cat-atlas.py` 產生，來源是 `pixel-plaza/ai-views/cat-sheets/*-sheet.webp`（ChatGPT 網頁版生成的三視圖，藍底 #0066FF；stand 是米底。**只存在本機、不進 Git**，不見了就請 ChatGPT 依三視圖設定稿重畫）。要換圖：換來源 → 跑腳本 → 圖集與 json 一起 commit。
 - 除錯：`window.__cat.force({pose, face, y})` 固定姿勢與朝向（face 0＝面向鏡頭、π/2＝朝畫面右），`force(null)` 取消。沒登入時改 `window.__plaza.guestAt` 的 x、z 就能把鏡頭移到貓旁邊。
 - 外觀是三花貓（粉色項圈＋鈴鐺），名字目前仍叫「橘子」；要改名改 `CAT.name` 與文案（Worker 的儲存 key 是 `cat:<人名>`／`cat:office`，不含貓名）。
+
+### 取名投票（2026-11-03）
+- 貓還沒有名字時暫稱「無名小貓」（`CAT.name`）；任何同仁可在貓的面板「幫牠取名字」提名（每人最多 2 個、1～8 字）、投票（每人 1 票，再點一次收回、點別的改投）。投票期從第一次有人打開起 7 天，到期票數最高的名字定案成為貓的名字（同票取較早提名的；到期時完全沒票就再延 3 天）。管理者（名字是 Machi）可移除不當提名、提前結算。
+- 後端：`pixelOfficeCat` 的 op `nameGet`（含訪客可讀）／`namePropose`（arg＝名字）／`nameVote`（arg＝提名 id）／`nameClose`／`nameRemove`（arg＝id）。純邏輯在 `worker/src/cat-naming.ts`（測試 `worker/test/cat-naming.test.ts`），整份狀態存 `pixel_office_settings` 的 `cat:name`，有變動才寫。**要 `cd worker && npx wrangler deploy` 才會生效**；沒部署時面板顯示「取名投票還沒開放」。管理者判斷和 `pixelOfficeUpdate` 一樣不驗證身分（只擋畫面上的操作）。
+- 前端：`catNameLoad`（啟動與每 90 秒讀一次）、`catNameApply`（定案後 `CAT.name` 換成得標名字，並跳一次「投票結果出爐」）、`catNameHtml／catNameBind`（面板區塊）。在輸入框打字時 `keydown` 不再驅動走路。除錯：`__cat.naming()`、`__cat.nameLoad()`；本機沒有後端時可在頁面裡覆寫 `fetch` 模擬 Worker。
