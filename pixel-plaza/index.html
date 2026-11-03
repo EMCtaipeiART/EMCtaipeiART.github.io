@@ -1524,11 +1524,18 @@ function elevGo(to){
   if (elevBusy || !player) return; wantElev = false; elevArmed = false; target = null; elevBusy = true; wheelClose(); fridgeClose();
   elevCover(to + 'F', () => { releaseSeat(player); const sp = elevSpot(to); player.holder.position.set(sp.x, 0, sp.z + .6); player.face = 0; camPos.set(sp.x, 10.9, sp.z + 12.8); look.set(sp.x, 0, sp.z); }, () => { elevBusy = false; showQuote('', '🛗 到了 ' + to + ' 樓'); });
 }
-// ---- 自動更新：網站有新版本時（ETag 變了），分頁自己重新載入，避免有人開著舊版一直回報舊的座位／位置 ----
+// ---- 自動更新：網站有新版本時（ETag 變了），等使用者閒置 60 秒後分頁自己重新載入，避免有人開著舊版一直回報舊的座位／位置 ----
 (function autoUpdate(){
   const url = location.pathname, tag = async () => { try { const r = await fetch(url, {method:'HEAD', cache:'no-store'}); return r.headers.get('etag') || r.headers.get('last-modified') || ''; } catch (e) { return ''; } };
-  let base = null; tag().then(t => { base = t; });
-  setInterval(async () => { if (document.hidden && Math.random() < .5) return; const t = await tag(); if (base && t && t !== base) { showQuote('', '🔄 有新版本，馬上更新'); setTimeout(() => location.reload(), 2500); base = t; } else if (!base) base = t; }, 60000);
+  let base = null, pending = false, lastAct = Date.now(); tag().then(t => { base = t; });
+  for (const ev of ['pointerdown', 'keydown', 'wheel', 'touchstart']) addEventListener(ev, () => { lastAct = Date.now(); }, {passive:true, capture:true});
+  const reload = () => { showQuote('', '🔄 有新版本，馬上更新'); setTimeout(() => location.reload(), 2500); };
+  // 偵測到新版後不立刻刷新（會打斷操作），等使用者閒置 60 秒再重新載入
+  setInterval(async () => {
+    if (pending) { if (Date.now() - lastAct >= 60000) { pending = false; reload(); } return; }
+    if (document.hidden && Math.random() < .5) return; const t = await tag();
+    if (base && t && t !== base) { base = t; if (Date.now() - lastAct >= 60000) reload(); else pending = true; } else if (!base) base = t;
+  }, 20000);
 })();
 // ---- 座位現場：不在座位的狀態（用餐／會議／休假／下班／廁所／出國／公出）椅子與桌上電腦收起、桌面變灰、桌上放狀態圖示；加班有紫色聚光燈與三團鬼火 ----
 const AWAY_DESK = new Set(['lunch', 'meeting', 'leave', 'offwork', 'toilet', 'abroad', 'out']), iconTex = {};
