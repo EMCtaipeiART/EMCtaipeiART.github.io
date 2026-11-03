@@ -1287,6 +1287,7 @@ function applyStatus(c, force){
   if (c === player && !force) return;               // 正在操控的角色不被即時資料搬動（自己改狀態時除外）
   const key = st === 'meeting' ? st + ':' + (c.meetingRoom || '') : st;
   if (c.appliedStatus === key) return; c.appliedStatus = key;
+  if (c.remote && remoteParked(c) && (st === 'meeting' || st === 'toilet')) c.remote = null;   // 人已離線停在原地，但行事曆有會議／去廁所就照狀態安排
   if (c.remote && c !== player) { c.holder.visible = !AWAY.has(st); c.sprite.material.color.set(st === 'overtime' ? 0xa9afd6 : 0xffffff); return; }   // 本人在線上：位置由本人回報，不依狀態擺放
   releaseSeat(c); c.wander = false; c.sprite.material.color.set(st === 'overtime' ? 0xa9afd6 : 0xffffff);
   if (AWAY.has(st) && (c.home || c === player)) { c.holder.visible = false; if (c.home) c.holder.position.set(c.home.x, 0, c.home.z); c.moving = 0; if (c === player) target = null; return; }   // 用餐／下班／休假／出國／公出：不在辦公室，人物隱藏（桌面顯示狀態圖示）
@@ -1344,7 +1345,8 @@ async function pollOnce(){
 // 沿用後端現有欄位（patch: floor/fx/fy/fdir → 存成 floor4At、f4x、f4y、f4dir）：fx < 3000 是五樓（fx=x px、fy=z px）；fx ≥ 3000 是四樓（fx=3000+局部 x+100、fy=z+100）。
 // floor4At 是最後回報時間，超過 3 分鐘沒更新就當作人不在線上，改回依狀態擺放。
 const REMOTE_DELAY_MS = 380;
-const POS_PUSH_MS = 220, POS_BEAT_MS = 45000, REMOTE_STALE_MS = 180000;
+const POS_PUSH_MS = 220, POS_BEAT_MS = 45000, REMOTE_STALE_MS = 180000, REMOTE_PARK_MS = 86400000;   // STALE：超過這麼久沒回報就當作人已離線（但人物停在原地）；PARK：離線後位置保留多久（一天），之後才回座位
+const remoteParked = c => Boolean(c.remote) && Date.now() - c.remote.at >= REMOTE_STALE_MS;
 const posSent = {x:-99, z:-99, t:0};
 const faceDir = f => { const dx = Math.sin(f), dz = Math.cos(f); return Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 'right' : 'left') : (dz > 0 ? 'down' : 'up'); };
 function pushPosition(){
@@ -1358,10 +1360,11 @@ function pushPosition(){
   const x = p.x / U, z = p.z / U, f4 = floorOf(c) === 4;
   post({action:'pixelOfficeUpdate', name:c.name, patch:{floor:4, fx:Math.round(f4 ? 3000 + x - FX4 + 100 : x), fy:Math.round(f4 ? z + 100 : z), fdir:faceDir(c.face)}}).catch(e => { if (performance.now() - (pushPosition.errAt || 0) > 20000) { pushPosition.errAt = performance.now(); showQuote('', '位置同步失敗：' + (e && e.message ? e.message : e)); } });
 }
-addEventListener('pagehide', () => { try { if (player && live.ok) { navigator.sendBeacon(API, JSON.stringify({action:'pixelOfficeUpdate', name:player.name, patch:{floor:5}})); const l = lastPos(); if (l && meName()) { try { localStorage.setItem('pixelLast' + progScope, JSON.stringify(l)); } catch (e) {} navigator.sendBeacon(API, JSON.stringify({action:'pixelOfficeProgress', name:meName(), op:'save', progress:{dex, stat, last:l}})); } } } catch (e) {} });
+addEventListener('pagehide', () => { try { if (player && live.ok) { const l = lastPos();   // 離開時不清掉位置：人物就停在原地，下次進站接著走
+    if (l && meName()) { try { localStorage.setItem('pixelLast' + progScope, JSON.stringify(l)); } catch (e) {} navigator.sendBeacon(API, JSON.stringify({action:'pixelOfficeProgress', name:meName(), op:'save', progress:{dex, stat, last:l}})); } } } catch (e) {} });
 function remoteFromState(c, e){
   if (c === player) return;
-  const fresh = e.floor4At && Date.now() - e.floor4At < REMOTE_STALE_MS && Number.isFinite(e.f4x) && Number.isFinite(e.f4y);
+  const fresh = e.floor4At && Date.now() - e.floor4At < REMOTE_PARK_MS && Number.isFinite(e.f4x) && Number.isFinite(e.f4y);
   if (fresh) {
     const f4 = e.f4x >= 3000, tx = (f4 ? e.f4x - 3100 + FX4 : e.f4x) * U, tz = (f4 ? e.f4y - 100 : e.f4y) * U;
     const prev = c.remote, first = !prev, same = prev && prev.at === e.floor4At, buf = prev ? prev.buf : [];
@@ -1377,7 +1380,7 @@ function remoteFromState(c, e){
 const sitSpot = st => { const fw = st.fwd ?? (st.face === 0 ? .06 : .32); return {x:st.x + Math.sin(st.face) * fw, z:st.z + Math.cos(st.face) * fw}; };
 function remoteStep(c, dt){
   const r = c.remote, p = c.holder.position;
-  if (Date.now() - r.at > REMOTE_STALE_MS) { c.remote = null; c.appliedStatus = null; applyStatus(c); return; }
+  if (Date.now() - r.at > REMOTE_PARK_MS) { c.remote = null; c.appliedStatus = null; applyStatus(c); return; }
   let dx = r.x - p.x, dz = r.z - p.z, d = Math.hypot(dx, dz);
   if (c.sitting) { const sp = sitSpot(c.sitting); if (Math.hypot(sp.x - r.x, sp.z - r.z) > .35) standUp(c); else { c.moving = 0; return; } dx = r.x - p.x; dz = r.z - p.z; d = Math.hypot(dx, dz); }
   if (d > 14) { p.x = r.x; p.z = r.z; d = 0; }
@@ -1911,7 +1914,7 @@ async function setOwnAuto(){
   showQuote('', c.name + '：在座'); radialClose();
   writeState(c, {status:'auto'}).then(ok => { if (ok) live.version = 0; }); setTimeout(() => { live.version = 0; }, 26000);
 }
-const forcedStatus = (raw, c) => hoursForce === 'off' && !(c && (c.entered || c.remote)) ? 'offwork' : (hoursForce === 'work' && raw === 'offwork' ? 'present' : raw);   // 全員下班時，人已經進來辦公室（本人、或別人看到的在線者）不算下班   // 管理者的「全員上班／下班」
+const forcedStatus = (raw, c) => hoursForce === 'off' && !(c && (c.entered || (c.remote && !remoteParked(c)))) ? 'offwork' : (hoursForce === 'work' && raw === 'offwork' ? 'present' : raw);   // 全員下班時，人已經進來辦公室（本人、或別人看到的在線者）不算下班   // 管理者的「全員上班／下班」
 function applyForce(){ for (const c of Object.values(chars)) { c.status = forcedStatus(c.rawStatus || c.status || 'present', c); c.appliedStatus = null; applyStatus(c, c === player); } }
 const STATUS_DESC = {present:'在座工作中', overtime:'加班中（晚上 7 點後的在座）', lunch:'用餐中', meeting:'開會中', leave:'休假中', offwork:'已下班', toilet:'去廁所', abroad:'出國中', out:'公出工作中'};
 const roomOf = c => { const x = c.holder.position.x / U, z = c.holder.position.z / U; for (const r of ROOMS) if (x > r[1] && x < r[3] && z > r[2] && z < r[4]) return r[5]; if (x > 290 && x < 608 && z < 208) return '廁所'; if (x > 300 && x < 600 && z > 1223 && z < 1373) return '茶水間'; return '辦公區'; };
