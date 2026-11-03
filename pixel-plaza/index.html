@@ -1183,6 +1183,8 @@ function updateLabels(){
 const chars = {};   // name -> {holder, sprite, tex, ...}
 const roster = document.getElementById('roster');
 let player = null, target = null, routeFor = null, routePts = [];
+const walkQueue = []; let walkStarted = false;   // 走路圖集（約 14MB）等狀態讀完、畫面能玩了才下載，不要和開場必要的圖搶頻寬
+function startWalkLoad(){ walkStarted = true; walkQueue.splice(0).forEach(f => f()); }
 const WALK_NAMES = ['Machi','Anna','Leona','Amber','Noise','余采馨','吳冠賢','李明庭','王藍庭','鄭筱舢','黎子瑄','傅思凱'];   // 有走路影格圖集的人物（sprites-walk*/名字.png）
 const ANGLES = 12, ROWS = 1, CELL_W = 60, CELL_H = 60, WORLD_H = 2.04;   // 圖集：由三視圖合成的 12 個面向（每 30°）
 const loadTex = src => new Promise((res, rej) => { const ld = new THREE.TextureLoader(); ld.setCrossOrigin('anonymous'); ld.load(src, t => {
@@ -1214,7 +1216,7 @@ async function addChar(name, i){
   scene.add(holder);
   const c = {name, holder, sprite, tex, face:seat ? (seat[3] === 'top' ? 0 : Math.PI) : -a, moving:0, phase:Math.random() * 9, wander:!seat, t:Math.random() * 5, dir:new THREE.Vector3()};
   chars[name] = c;
-  if (WALK_NAMES.includes(name)) loadTex((HD ? 'sprites-walk-hd/' : 'sprites-walk/') + name + '.png').then(t => { t.repeat.y = .5; c.walkTex = t; }).catch(() => {});   // 走路影格（2 排：左腳出、右腳出），沒有就退回彈跳搖擺
+  if (WALK_NAMES.includes(name)) (walkStarted ? (f => f()) : (f => walkQueue.push(f)))(() => loadTex((HD ? 'sprites-walk-hd/' : 'sprites-walk/') + name + '.png').then(t => { t.repeat.y = .5; c.walkTex = t; }).catch(() => {}));   // 走路影格（2 排：左腳出、右腳出），沒有就退回彈跳搖擺
   c.home = seat ? {x:holder.position.x, z:holder.position.z, face:c.face} : null; c.status = 'present';
   sprite.userData.pick = {kind:'char', c}; pickables.push(sprite);
   const tag = document.createElement('div'); tag.className = 'ctag'; document.body.appendChild(tag); c.tag = tag;
@@ -1652,7 +1654,7 @@ const bootChars = cloudReady.then(() => {
   return Promise.all(all.map((n, i) => addChar(n, i).then(() => { setLoad('載入角色', ++done / all.length); })));
 });
 Promise.all([buildOffice(), loadIcons(), bootChars])
-  .then(async () => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); await Promise.race([pollNow(), new Promise(r => setTimeout(r, 4000))]); startLiveSync(); catInit(); showTitleCard(); window.__plaza = {remoteFromState, catAt, wanderStep, findPath, guestAt, guestGoFloor, updateElev, elevGo, floorOf, elevInteract, fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
+  .then(async () => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); await Promise.race([pollNow(), new Promise(r => setTimeout(r, 4000))]); startLiveSync(); startWalkLoad(); catInit(); showTitleCard(); window.__plaza = {remoteFromState, catAt, wanderStep, findPath, guestAt, guestGoFloor, updateElev, elevGo, floorOf, elevInteract, fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
 
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
 const TILT = 0, STRETCH = 1 / Math.cos(Math.atan(8.4 / 9.4)), _e = new THREE.Euler(0, 0, 0, 'YXZ');   // 垂直站立：不再後傾（避免穿進桌子、牆），高度拉長 STRETCH 倍抵消俯視縮短
