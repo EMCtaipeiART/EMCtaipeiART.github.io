@@ -1284,9 +1284,23 @@ function applyStatus(c, force){
   else if (c.home) { c.holder.position.set(c.home.x, 0, c.home.z); c.face = c.home.face; sitDown(c); }
 }
 function setNet(){ const t = new Date().toLocaleTimeString('zh-TW', {hour12:false, timeZone:'Asia/Taipei'}); netEl.textContent = live.ok ? '● 即時連線：凱曜設計部後端（' + t + '）' : '○ 離線：依時間規則模擬（' + t + '）'; netEl.style.color = live.ok ? '#8dffb0' : '#ffd98a'; }
+let emptyOff = null;
+function syncEmptyDesks(){   // 沒人坐的辦公桌：和大家一樣照上下班時間——下班時段（19:00 後、08:00 前、週末與國定假日）椅子收起、桌面變灰、放下班圖示
+  const off = hoursForce === 'work' ? false : hoursForce === 'off' ? true : simStatus(true) === 'offwork';
+  if (emptyOff === off || !deskCells.length) return; emptyOff = off;
+  const owned = new Set(); for (const c of Object.values(chars)) { const st = c.home && stationOf(c); if (st && st.cell) owned.add(st.cell); }
+  for (const k of deskCells) {
+    if (owned.has(k)) continue;
+    let seat = null, bd = 3; for (const st of chairSeats) { if (st.kind || st.by) continue; const d = Math.hypot(st.x - k.x, st.z - k.z); if (d < bd) { bd = d; seat = st; } }
+    if (seat) { seat.hidden = off; seat.group.visible = !off; }
+    k.items.forEach(m => { m.visible = !off; }); k.top.material.color.setHex(off ? 0x8d949b : k.color);
+    if (off) iconSprite(k, 'power'); else if (k.icon) k.icon.visible = false;
+  }
+}
 function syncExtraStatus(){   // 額外人物沒有後端狀態：依時間規則（平日 8–19 上班、午休、週末與國定假日下班），全員上班／下班按鈕也算
   const st = hoursForce === 'work' ? 'present' : hoursForce === 'off' ? 'offwork' : simStatus(true);
   for (const n of extraNames) { const c = chars[n]; if (c && (c.status !== st || c.appliedStatus == null)) { c.status = st; applyStatus(c); } }
+  syncEmptyDesks();
 }
 async function pollOnce(){
   try {
