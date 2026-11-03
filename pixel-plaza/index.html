@@ -1630,8 +1630,8 @@ function updateSprite(c, dt){
   let map = c.tex;
   if (wk) { const st = Math.floor(c.phase / (Math.PI / 2)) % 4; if (st % 2) { map = c.walkTex; map.offset.set(col / ANGLES, st === 1 ? .5 : 0); } }   // 4 格循環：站姿、左腳出、站姿、右腳出
   if (c.sprite.material.map !== map) { c.sprite.material.map = map; c.sprite.material.needsUpdate = true; }
-  c.sprite.position.y = (c.sitting ? -SIT_DROP : 0) + (c.moving > 0 ? Math.abs(sw) * (wk ? .03 : c.moving > 3.5 ? .2 : .1) : 0);
-  c.sprite.scale.y = STRETCH; _e.set(-TILT, toCam, 0); c.sprite.quaternion.setFromEuler(_e).multiply(_tilt.setFromAxisAngle(_z, c.moving > 0 && !wk ? sw * .07 : 0));   // 面向鏡頭，走路時輕微搖擺
+  c.sprite.position.y = (c.sitting ? -SIT_DROP : 0) + (c.moving > 0 ? Math.abs(sw) * (c.moving > 3.5 ? .2 : .1) : 0);
+  c.sprite.scale.y = STRETCH; _e.set(-TILT, toCam, 0); c.sprite.quaternion.setFromEuler(_e).multiply(_tilt.setFromAxisAngle(_z, c.moving > 0 ? sw * .07 : 0));   // 面向鏡頭，走路時輕微搖擺
 }
 
 // ---------- 輸入 ----------
