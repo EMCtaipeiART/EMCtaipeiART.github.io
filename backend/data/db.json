@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 10402,
+  "revision": 10403,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-03T11:01:12.473Z",
+  "updatedAt": "2026-11-03T11:01:38.446Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1952,7 +1952,9 @@
         "案件摘要"
       ],
       "primaryKey": "案件編號",
-      "rows": []
+      "rows": [
+        {"案件編號":"26110024","申請人帳號":"amber.tian@emctaipei.com","申請人":"Amber","申請時間":"2026-11-03T11:01:38.446Z","案件摘要":"金士頓_2026/11月貼文「MSI#1」中、英、日文版修改｜Amber｜未開始"}
+      ]
     },
     "短連結": {
       "headers": [
