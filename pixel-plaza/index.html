@@ -2379,7 +2379,10 @@ function catInit(){
   const f = fridges[0] && fridges[1] ? {x:(fridges[0].cx + fridges[1].cx) / 2, z:Math.max(fridges[0].zf, fridges[1].zf)} : {x:15, z:39};
   const pick = (cands, r) => cands.find(c => free(c[0], c[1], r)) || cands[0];
   const bw = pick([[f.x - 4.0, f.z + 1.2], [f.x - 3.0, f.z + 1.5], [f.x - 5.0, f.z + 1.2], [f.x - 2.0, f.z + 1.6]], .5);
-  const bx = pick([[f.x - 6.7, f.z + 1.6], [f.x - 7.5, f.z + 1.6], [f.x - 8.5, f.z + 1.6], [f.x - 6.5, f.z + 2.2], [f.x - 7.5, f.z + 2.6]], .7);
+  // 紙箱（1.0×0.8）：在茶水檯前找一塊真的放得下的空地——和所有碰撞矩形（含薄薄的玻璃牆）都不重疊、也不壓到貓碗；從偏好位置往外找最近的
+  const fitsBox = (x, z) => !blocked(x, z) && !rects.some(([a, b, c, d]) => x + .65 > a && x - .65 < c && z + .55 > b && z - .55 < d) && !(Math.abs(x - bw[0]) < 1.5 && Math.abs(z - bw[1]) < 1.1);
+  const boxCands = []; for (let gx = f.x - 10; gx <= f.x + 1; gx += .5) for (let gz = f.z + 1.4; gz <= f.z + 5; gz += .5) boxCands.push([gx, gz, Math.hypot(gx - (f.x - 5.6), gz - (f.z + 2.4))]);
+  const bx = boxCands.sort((p, q) => p[2] - q[2]).find(c => fitsBox(c[0], c[1])) || [f.x - 6.7, f.z + 1.6];
   catBowl = catBowlBuild(bw[0], bw[1]); const box = catBoxBuild(bx[0], bx[1]); rects.push([bx[0] - .5, bx[1] - .4, bx[0] + .5, bx[1] + .4]);
   const owned = new Set(); for (const c of Object.values(chars)) { const st = c.home && stationOf(c); if (st && st.cell) owned.add(st.cell); }
   const x5 = (FX4 - 100) * U, sortXZ = (a, b) => a.x - b.x || a.z - b.z;
