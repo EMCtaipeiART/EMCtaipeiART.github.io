@@ -1281,9 +1281,9 @@ function applyStatus(c, force){
   if (c.appliedStatus === key) return; c.appliedStatus = key;
   if (c.remote && c !== player) { c.holder.visible = !AWAY.has(st); c.sprite.material.color.set(st === 'overtime' ? 0xa9afd6 : 0xffffff); return; }   // 本人在線上：位置由本人回報，不依狀態擺放
   releaseSeat(c); c.wander = false; c.sprite.material.color.set(st === 'overtime' ? 0xa9afd6 : 0xffffff);
-  if (AWAY.has(st)) { c.holder.visible = false; if (c.home) c.holder.position.set(c.home.x, 0, c.home.z); c.moving = 0; if (c === player) target = null; return; }   // 用餐／下班／休假／出國／公出：不在辦公室，人物隱藏（桌面顯示狀態圖示）
+  if (AWAY.has(st) && (c.home || c === player)) { c.holder.visible = false; if (c.home) c.holder.position.set(c.home.x, 0, c.home.z); c.moving = 0; if (c === player) target = null; return; }   // 用餐／下班／休假／出國／公出：不在辦公室，人物隱藏（桌面顯示狀態圖示）
   c.holder.visible = true;
-  if (!c.home && c !== player && (st === 'present' || st === 'overtime')) { c.wander = true; c.inElev = false; c.route = null; }   // 沒有指定座位的人（角色工坊發佈的額外人物）在辦公桌區自由走動、偶爾搭電梯換樓層
+  if (!c.home && c !== player && (st === 'present' || st === 'overtime' || AWAY.has(st))) { c.wander = true; c.inElev = false; c.route = null; }   // 沒有指定座位的人（角色工坊發佈的額外人物）在辦公桌區自由走動、偶爾搭電梯換樓層
   if ((st === 'present' || st === 'overtime') && c.home) { c.holder.position.set(c.home.x, 0, c.home.z); c.face = c.home.face; sitDown(c); }
   else if (st === 'toilet') toiletIn(c);
   else if (st === 'meeting') {   // 依行事曆：後端 meetingRoom（A～D）指定會議室，就把人放進那間
