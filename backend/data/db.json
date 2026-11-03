@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 10269,
+  "revision": 10270,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-03T01:57:26.739Z",
+  "updatedAt": "2026-11-03T01:57:52.948Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1086,7 +1086,7 @@
         {"案件編號":"26100200","修改次數":"0","建立日期":"2026/11/02 20:02:08","修改日期":"2026/11/02 20:02:08","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/02 20:02:08","圖片連結":"[{\"fileName\":\"261102_添可_十一月_CPAS_StationS9_雙11倒數.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1VBIAat2XWb78G5iVv8omjJq4xJasMklO=w1600\"},{\"fileName\":\"261102_添可_十一月_CPAS_S7_雙11倒數.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1Wn5n8XGZT-oWk1LwjABFY35SNfZGb1Vq=w1600\"},{\"fileName\":\"261102_添可_十一月_CPAS_S7_雙11功能.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1-zs5drIR0QiSEAyOZUft9FpWE-icyVQw=w1600\"},{\"fileName\":\"261102_添可_十一月_CPAS_S9_雙11倒數.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1PMBZYj5OG43nZHKNXvatqp7aRilU8ZzR=w1600\"},{\"fileName\":\"261102_添可_十一月_CPAS_S9_雙11功能.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1N99mUyxzmCFaalaCzaGeidTnVScNMnUf=w1600\"},{\"fileName\":\"261102_添可_十一月_CPAS_Sation5_雙11倒數.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1kQzFbiCOQrWpHmtgNtF_6wkQvRTWpdPR=w1600\"},{\"fileName\":\"261102_添可_十一月_CPAS_StationS9_雙11功能.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1b5lPgSLLP5t8yas-TkuUlwlSNb62fdAo=w1600\"},{\"fileName\":\"261102_添可_十一月_CPAS_i6_雙11倒數.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1rwMfEDKRVf07R8J-pEI79O20nQlzxpiD=w1600\"},{\"fileName\":\"261102_添可_十一月_CPAS_i6_雙11功能.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1TFp9wkUERMs3Olw4kuCSysTS0gYdpP73=w1600\"},{\"fileName\":\"261102_添可_十一月_CPAS_i7fold_雙11倒數.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1JVdtRfMhhseCafDKu3IvVWtYtJl5RwiT=w1600\"},{\"fileName\":\"261102_添可_十一月_CPAS_i7fold_雙11功能.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1Ws7ION_VNlvkDM0Ah9EHHYufQpcA6s9A=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/02 20:12:39"},
         {"案件編號":"26100201","修改次數":"0","建立日期":"2026/11/02 20:06:49","修改日期":"2026/11/02 20:06:49","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/02 20:06:49","圖片連結":"[{\"fileName\":\"261102_添可_十一月_CPAS_Station5_雙11功能.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ir6hmdjqXHTyjGK3-N4VpOA98xhrnqQK=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/02 20:11:36"},
         {"案件編號":"26110007","修改次數":"0","建立日期":"2026/11/03 09:53:04","修改日期":"2026/11/03 09:53:04","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/03 09:53:04","圖片連結":"[{\"fileName\":\"261103_添可_雙11特惠.png\",\"url\":\"https://lh3.googleusercontent.com/d/17A8yIaSmK1KJi7MMk6se1KU3y25VOHKc=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/03 09:53:04"},
-        {"案件編號":"26110008","修改次數":"0","建立日期":"2026/11/03 09:57:26","修改日期":"2026/11/03 09:57:26","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/03 09:57:26","圖片連結":"[{\"fileName\":\"261103_添可_雙11好評熱賣.png\",\"url\":\"https://lh3.googleusercontent.com/d/1UgN7kx0BJzj3sPW1GjJPKuXeY6BtnrR2=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/03 09:57:26"}
+        {"案件編號":"26110008","修改次數":"0","建立日期":"2026/11/03 09:57:26","修改日期":"2026/11/03 09:57:26","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/03 09:57:26","圖片連結":"[{\"fileName\":\"261103_添可_雙11好評熱賣.png\",\"url\":\"https://lh3.googleusercontent.com/d/1UgN7kx0BJzj3sPW1GjJPKuXeY6BtnrR2=w1600\"},{\"fileName\":\"261103_添可_世界名畫.png\",\"url\":\"https://lh3.googleusercontent.com/d/15uoX9U8p1VMmQoorAO38SZLuH_LcVSap=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/03 09:57:52"}
       ]
     },
     "補充資料連結": {
