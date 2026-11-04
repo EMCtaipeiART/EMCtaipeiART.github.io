@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 10503,
+  "revision": 10504,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-04T04:52:27.299Z",
+  "updatedAt": "2026-11-04T04:53:52.847Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1964,7 +1964,9 @@
         "案件摘要"
       ],
       "primaryKey": "案件編號",
-      "rows": []
+      "rows": [
+        {"案件編號":"26110029","申請人帳號":"allen.li@emctaipei.com","申請人":"李明庭","申請時間":"2026-11-04T04:53:52.847Z","案件摘要":"DJI_社群貼文_Romo P2上市_Resize｜Machi｜未開始"}
+      ]
     },
     "短連結": {
       "headers": [
