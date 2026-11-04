@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 10461,
+  "revision": 10462,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-04T02:31:18.760Z",
+  "updatedAt": "2026-11-04T02:31:35.543Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1119,7 +1119,7 @@
         {"案件編號":"26100203","修改次數":"0","建立日期":"2026/11/03 19:38:42","修改日期":"2026/11/03 19:38:42","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/03 19:38:42","圖片連結":"[{\"fileName\":\"261103_shopee_新品上市CPAS_AeroClip 2_影片包框.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1Gh93vg18UNH5YuLTNprHtLvsWy33q167=w1600\"},{\"fileName\":\"261103_shopee_新品上市CPAS_AeroClip-2_情境A款.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/14w7uRAxwhOb2ZVQJkSTETablCIK0vlVh=w1600\"},{\"fileName\":\"261103_shopee_新品上市CPAS_AeroClip-2_情境B款.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1L4at32kp9s5ckO9KRwHA4DgkwpOcXSOR=w1600\"},{\"fileName\":\"261103_shopee_新品上市CPAS_AeroClip-2_電商.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1x9o2I5eOSgYnX6pMbMSANSq9gLC40D_5=w1600\"},{\"fileName\":\"soundcore_D1105_SEA_1080x1920_TW_22s_9_16_1.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1nmMeTRVzltSTrjuchTIpKqHPa53cwyGg=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/03 19:38:42"},
         {"案件編號":"26110020","修改次數":"1","建立日期":"2026/11/04 08:30:22","修改日期":"2026-11-04","修改內容":"客戶來信調整，主要改標題區、移除候選人位置的人，詳細如附件P3，再請協助，感恩。","修改內容連結":"","修改人":"Machi","確認修正日":"2026/11/04 08:30:52","待修改圖片":"","圖片連結":"[{\"fileName\":\"261103_保誠人壽_圖文選單_個人化服務.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1SA40i7kdwHtBdw5YWzvhlmH2c-c9qiRI=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/04 08:30:40"},
         {"案件編號":"26100192","修改次數":"2","建立日期":"2026/11/04 09:30:07","修改日期":"2026-11-04","修改內容":"產品顏色請協助調整，換掉勃根地紅\n再麻煩了，謝謝","修改內容連結":"","修改人":"廖秦葦","確認修正日":"","待修改圖片":""},
-        {"案件編號":"26100202","修改次數":"1","建立日期":"2026/11/04 10:31:18","修改日期":"2026-11-04","修改內容":"Hi Machi,\n客戶來信調整，主要改標題區、移除候選人位置的人，詳細如附件P3，再請協助，感恩。","修改內容連結":"","修改人":"Machi","確認修正日":"","待修改圖片":""}
+        {"案件編號":"26100202","修改次數":"1","建立日期":"2026/11/04 10:31:18","修改日期":"2026-11-04","修改內容":"Hi Machi,\n客戶來信調整，主要改標題區、移除候選人位置的人，詳細如附件P3，再請協助，感恩。","修改內容連結":"","修改人":"Machi","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"261103_保誠人壽_選舉公報.png\",\"url\":\"https://lh3.googleusercontent.com/d/1EzdNyVjl5wEHN7quEjBaVyFaKKsgPTrO=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/04 10:31:35"}
       ]
     },
     "補充資料連結": {
