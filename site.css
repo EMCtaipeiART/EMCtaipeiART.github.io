@@ -1500,12 +1500,12 @@ body.arena-on .stage{padding:0!important;max-width:none!important}
 body.arena-on .arena-frame{border-radius:0;box-shadow:none;background:transparent}
 
 /* 設計師回覆信：NAS 路徑與合併信件分類 */
-.dr-nas,.dr-cls{border:1px solid var(--line,#e3e8e5);border-radius:14px;background:var(--surface,#fff);padding:14px 16px;margin:0 0 12px}
+.dr-nas,.dr-cls{border:1px solid var(--line,#e3e8e5);border-radius:14px;background:var(--panel,#fff);color:var(--ink,#17211d);padding:14px 16px;margin:0 0 12px}
 .dr-nas-head,.dr-cls-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .dr-cls-head>div{display:flex;flex-direction:column;gap:2px;min-width:0}
 .dr-cls-head span{font-size:12.5px;color:var(--muted,#66756c)}
 .dr-nas-list{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
-.dr-nas-list li{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-size:13px;padding:7px 10px;border-radius:10px;background:var(--soft,#f4f7f5)}
+.dr-nas-list li{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-size:13px;padding:7px 10px;border-radius:10px;background:var(--brand-soft,#f4f7f5)}
 .dr-nas-path{word-break:break-all}.dr-nas-kw{color:var(--muted,#66756c);font-size:12px}
 .dr-nas-none{margin:6px 0 0;color:var(--muted,#66756c);font-size:13px}
 .dr-cls-list{display:flex;flex-direction:column;margin-top:10px;border-top:1px solid var(--line,#e3e8e5)}
@@ -1516,7 +1516,7 @@ body.arena-on .arena-frame{border-radius:0;box-shadow:none;background:transparen
 @media(max-width:640px){.dr-cls-row{grid-template-columns:1fr;gap:6px}.dr-nas-head,.dr-cls-head{flex-wrap:wrap}}
 
 .dr-cls-row{grid-template-columns:56px minmax(0,1fr) minmax(0,1fr)}
-.dr-cls-thumb{width:56px;height:56px;border-radius:10px;object-fit:cover;background:var(--soft,#f4f7f5);border:1px solid var(--line,#e3e8e5)}
+.dr-cls-thumb{width:56px;height:56px;border-radius:10px;object-fit:cover;background:var(--brand-soft,#f4f7f5);border:1px solid var(--line,#e3e8e5)}
 .dr-cls-thumb.is-none{display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted,#66756c)}
 @media(max-width:640px){.dr-cls-row{grid-template-columns:56px minmax(0,1fr)}.dr-cls-row select{grid-column:1/-1}}
 
@@ -1623,3 +1623,9 @@ body.uni-on .hero{display:none}
 .g-link{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--muted);transition:color .15s,border-color .15s}
 .g-link:hover{color:var(--green,#16a34a);border-color:currentColor}
 .g-link svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* 設計師回覆信區塊：深色模式 */
+html[data-theme="dark"] .dr-nas,html[data-theme="dark"] .dr-cls{background:#1d2321;color:#e9efec;border-color:#2c3431}
+html[data-theme="dark"] .dr-nas b,html[data-theme="dark"] .dr-cls b,html[data-theme="dark"] .dr-cls-name,html[data-theme="dark"] .dr-nas-path{color:#e9efec}
+html[data-theme="dark"] .dr-nas-list li{background:#26302c}
+html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
