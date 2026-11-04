@@ -701,6 +701,12 @@ const PICKER_PAGE = `<!doctype html>
       result = data;
     }catch(error){
       previewPollingStopped = true;
+      if(mode === 'reuse' && window.opener){
+        // 沿用路徑是背景作業：失敗不彈視窗，回報給主頁面用提示顯示後直接關閉
+        window.opener.postMessage({ type: 'machi-nas-folder-selected', caseId, nonce, folders: foldersToSubmit.map(item => ({ path: item.path, keyword: item.keyword, ok: false })), error: error.message }, origin || '*');
+        window.close();
+        return;
+      }
       restoreWindowForPrompt();
       showErrorPrompt(error.message);
       return;
