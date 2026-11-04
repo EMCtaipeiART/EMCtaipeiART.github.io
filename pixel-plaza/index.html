@@ -42,7 +42,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 .cp-tiles div{display:grid;place-items:center;text-align:center;padding:8px 10px;border-radius:14px;background:rgba(4,30,16,.82);border:2px solid rgba(255,255,255,.14)}
 .cp-tiles b{font-size:24px;line-height:1.1}
 .cp-tiles small{font-size:11px;opacity:.75;font-weight:600}
-.cp-cols{display:grid;grid-template-columns:1fr 1.15fr;gap:12px;align-items:start}
+.cp-cols{display:grid;grid-template-columns:1fr 1.15fr;gap:12px;align-items:start}.cp-cols.solo{grid-template-columns:1fr!important}
 .cp-panel,.cp-admin{border-radius:16px;border:2px solid var(--line);background:rgba(4,32,18,.84);overflow:hidden}
 .cp-panel header,.cp-admin header{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;font-weight:700}
 .cp-panel header h3,.cp-admin header h3{margin:0;font-size:18px;text-shadow:0 2px 0 rgba(4,36,18,.4)}
@@ -350,6 +350,15 @@ html.embed #hud,html.embed #dock,html.embed #proj,html.embed .lbl{display:none!i
 .cp-grid.mood button.clr{grid-column:1/-1;padding:9px!important;font-size:14px!important}
 #swheel{position:fixed;left:0;top:0;z-index:9;width:0;height:0;pointer-events:none}#swheel[hidden]{display:none}
 .sw-b{position:absolute;left:0;top:0;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;border:2.5px solid var(--ink);background:#fff;color:var(--ink);display:grid;place-items:center;align-content:center;gap:0;padding:0;pointer-events:auto;font:700 9px/1 'Fredoka','Noto Sans TC',sans-serif;box-shadow:0 3px 0 rgba(11,61,30,.4);transform:translate(0,0) scale(.2);opacity:0;transition:transform .28s cubic-bezier(.3,1.5,.5,1) var(--d),opacity .2s var(--d)}
+#swheel .qc{position:absolute;left:40px;top:-60px;width:238px;box-sizing:border-box;padding:8px 10px 10px;border:3px solid var(--ink);border-radius:14px;background:#fffdf5;color:var(--ink);box-shadow:0 4px 0 rgba(0,0,0,.28);pointer-events:auto;font:700 12px/1.2 'Fredoka','Noto Sans TC',sans-serif;opacity:0;transform:scale(.92);transform-origin:left center;transition:opacity .12s,transform .12s}
+#swheel.open .qc{opacity:1;transform:none}#swheel .qc.flip{left:auto;right:40px;transform-origin:right center}
+.qc-h{margin:6px 0 4px;font-size:11px;color:#59606a}.qc-h:first-child{margin-top:0}
+.qc-row{display:flex;flex-wrap:wrap;gap:5px}.qc-extra{margin-top:5px}.qc-extra[hidden]{display:none}
+.qc-s{display:flex;align-items:center;gap:3px;padding:4px 8px;border:2px solid var(--ink);border-radius:999px;background:#fff;color:var(--ink);font:700 12px 'Fredoka','Noto Sans TC',sans-serif}
+.qc-s img{width:18px;height:18px}.qc-s:hover,.qc-m:hover{background:#e8fbe9}.qc-s.on,.qc-m.on{background:var(--yellow)}
+.qc-m{width:38px;height:38px;display:grid;place-items:center;padding:0;border:2px solid var(--ink);border-radius:12px;background:#fff;color:var(--ink);font:700 14px sans-serif}.qc-m img{width:28px;height:28px}
+.qc-say{display:flex;gap:6px;margin-top:8px}.qc-say input{flex:1;min-width:0;border:2px solid var(--ink);border-radius:999px;padding:5px 10px;font:600 12px 'Fredoka','Noto Sans TC',sans-serif;background:#fff;color:var(--ink)}
+.qc-say .send{flex:none;width:30px;height:30px;border-radius:50%;border:0;border-bottom:3px solid #0c6a26;background:linear-gradient(var(--cta1),var(--cta2));color:#fff;font:700 12px sans-serif}
 #swheel.open .sw-b{transform:translate(var(--x),var(--y)) scale(1);opacity:1}
 .sw-b img{width:24px;height:24px}.sw-b b{margin-top:-1px}.sw-b:hover{background:#e8fbe9;border-color:var(--c2)}.sw-b.on{background:var(--yellow)}
 button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .th{cursor:pointer}
@@ -2140,7 +2149,10 @@ async function removeStory(id){ try { applyStories((await post({action:'pixelOff
 
 // ───────── 頁面 ─────────
 const keepFocus = root => { const a = document.activeElement; if (!a || !a.id || !root.contains(a)) return () => {}; const id = a.id, s0 = a.selectionStart, s1 = a.selectionEnd; return () => { const n = root.querySelector('#' + id); if (!n || document.activeElement === n) return; n.focus({preventScroll:true}); try { if (s0 != null) n.setSelectionRange(s0, s1); } catch (e) {} }; };   // 面板重畫（每次後端有新資料）會把輸入框換掉，游標跑掉就打不了字：重畫後把焦點與游標位置還給同一個輸入框
-function renderCharPage(){
+function renderCharPage(force){
+  { const c0 = pageChar || player; if (!c0) return;
+    const sig = JSON.stringify([c0.name, c0.status, c0.mood, c0.message, c0.music, c0.avatar, stat.found + stat.notes + stat.flush, floorOf(c0), roomOf(c0), live.ok, c0 !== player, adminHome, storiesOf(c0.name).map(x => x.id + (x.likes || '') + (x.comments ? x.comments.length : 0))]);
+    if (!force && radial.dataset.sig === sig && radial.querySelector('.cp-wrap')) return; radial.dataset.sig = sig; }   // 內容沒變就不重畫：輸入框、捲動位置都不會被洗掉
   const restoreFocus = keepFocus(radial);
   const c = pageChar || player; if (!c) return; const st = STATUS[c.status] || STATUS.present, total = stat.found + stat.notes + stat.flush, lv = 1 + Math.floor(total / 5);
   const moodPct = {happy:90, joy:100, sad:35, angry:20}[c.mood] ?? 60, moodTxt = c.mood ? (iconImg(moodSym[c.mood], 18) + ' ' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[c.mood]) : '— 未設定';
@@ -2154,15 +2166,13 @@ function renderCharPage(){
         <div class="cp-name">${esc(c.name)} <span class="cp-type">${iconImg(symOf[c.status] || 'person', 20)} ${statusLabel(c)}</span></div>
       </div>
     </div>
-    <div class="cp-cols">
-      <section class="cp-panel p1"><header><h3>心情</h3></header>
-        <div class="cp-grid mood" id="cpMood"></div>
-      </section>
+    <div class="cp-cols${c === player ? ' solo' : ''}">
+      ${c === player ? '' : '<section class="cp-panel p1"><header><h3>心情</h3></header><div class="cp-grid mood" id="cpMood"></div></section>'}
       <div class="cp-stack">
-        <section class="cp-panel p2"><header><h3>想說的話</h3></header>
+        ${c === player ? '<p class="cp-note" style="margin:0 0 4px">狀態、心情、想說的話：直接點自己的人物就能改。</p>' : `<section class="cp-panel p2"><header><h3>想說的話</h3></header>
           <div class="cp-chat"><form class="cp-chat-in" id="cpForm"><img alt="" src="${c.avatar || ''}"><input id="cpMsg" type="text" maxlength="60" placeholder="說點什麼…" autocomplete="off"><button type="submit" class="send" title="送出">➤</button></form>
             <div class="cp-chips"><button type="button" id="cpClr">清除對話</button></div></div>
-        </section>
+        </section>`}
         <section class="cp-panel p4"><header><h3>音樂</h3></header>
           ${m ? '<div class="cp-music"><span class="note">🎧</span><div><b>' + esc(m.title || '音樂') + '</b><small>' + esc(m.url) + '</small></div><button type="button" id="cpMPlay">▶</button></div>' : ''}
           <form class="cp-chat-in" id="cpMForm"><input id="cpMusic" type="text" placeholder="貼上 Spotify 或 Apple Music 網址" autocomplete="off"><button type="submit" class="send" title="分享">♪</button></form>
@@ -2177,10 +2187,9 @@ function renderCharPage(){
     </div>
     ${adminHome ? '<details class="cp-fold"><summary>管理者工具</summary><section class="cp-admin" id="cpAdmin"></section></details>' : ''}
   </div>`;
-  const mm = radial.querySelector('#cpMood'); for (const id of Object.keys(MOOD)) { const b = document.createElement('button'); b.type = 'button'; b.className = c.mood === id ? 'on' : ''; b.innerHTML = '<i>' + iconImg(moodSym[id], 44) + '</i>' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[id]; b.onclick = () => setOwnMood(id); mm.appendChild(b); }
-  const x = document.createElement('button'); x.type = 'button'; x.className = 'clr'; x.innerHTML = '清除心情'; x.onclick = () => setOwnMood(''); mm.appendChild(x);
-  const ta = radial.querySelector('#cpMsg'); ta.value = keepMsg != null ? keepMsg : (c.message || ''); 
-  radial.querySelector('#cpForm').onsubmit = e => { e.preventDefault(); setOwnMessage(ta.value.trim()); }; radial.querySelector('#cpClr').onclick = () => { ta.value = ''; setOwnMessage(''); };
+  const mm = radial.querySelector('#cpMood'); if (mm) for (const id of Object.keys(MOOD)) { const b = document.createElement('button'); b.type = 'button'; b.className = c.mood === id ? 'on' : ''; b.innerHTML = '<i>' + iconImg(moodSym[id], 44) + '</i>' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[id]; b.onclick = () => setOwnMood(id); mm.appendChild(b); }
+  if (mm) { const x = document.createElement('button'); x.type = 'button'; x.className = 'clr'; x.innerHTML = '清除心情'; x.onclick = () => setOwnMood(''); mm.appendChild(x); }
+  const ta = radial.querySelector('#cpMsg'); if (ta) { ta.value = keepMsg != null ? keepMsg : (c.message || ''); radial.querySelector('#cpForm').onsubmit = e => { e.preventDefault(); setOwnMessage(ta.value.trim()); }; radial.querySelector('#cpClr').onclick = () => { ta.value = ''; setOwnMessage(''); }; }
   radial.querySelector('#cpMusic').value = keepMusic; radial.querySelector('#cpMForm').onsubmit = e => { e.preventDefault(); setOwnMusic(radial.querySelector('#cpMusic').value); };
   const mp = radial.querySelector('#cpMPlay'); if (mp) mp.onclick = () => toggleMusic(c); const ms = radial.querySelector('#cpMStop'); if (ms) ms.onclick = clearOwnMusic;
   const file = radial.querySelector('#cpFile'); radial.querySelector('#cpPost').onclick = () => file.click(); file.onchange = () => { const f = file.files[0]; file.value = ''; if (f) postStory(f); };
@@ -2203,7 +2212,7 @@ function renderAdmin(){   // 班長工具：全員上班／下班、上下班設
   restoreFocus(); box.querySelector('#pnGo').onclick = () => punish(Number(box.querySelector('#pnDays').value) || 1); box.querySelector('#pnOff').onclick = () => punish(0);
 }
 async function loadHours(){ try { const r = await adminCall('getPixelHours'); hoursCfg = r.config || null; hoursForce = r.force || hoursForce; if (!radial.hidden) renderAdmin(); } catch (e) {} }
-function radialOpen(who){ if (!player) return; pageChar = who && who !== player ? who : null; radial.hidden = false; renderCharPage(); if (adminHome) loadHours(); }
+function radialOpen(who){ if (!player) return; pageChar = who && who !== player ? who : null; radial.hidden = false; renderCharPage(true); if (adminHome) loadHours(); }
 function radialClose(){ pageChar = null; radial.hidden = true; radial.innerHTML = ''; }
 function placeRadial(){}
 addEventListener('keydown', e => { if (e.key === 'Escape') { if (!wheel.hidden) wheelClose(); else if (!fridgePanel.hidden) fridgeClose(); else if (!$('sv').hidden) closeStory(); else if (!radial.hidden) radialClose(); } });
@@ -2213,12 +2222,21 @@ radial.addEventListener('pointerdown', e => { if (e.target === radial) radialClo
 // ---- 狀態輪盤：點人物展開一圈九個狀態，人物移動或點別處就收合；選「在座」＝交還電腦自動判斷 ----
 const wheel = document.createElement('div'); wheel.id = 'swheel'; wheel.hidden = true; document.body.appendChild(wheel);
 let wheelChar = null;
-function wheelOpen(c){
+const QC_MAIN = ['present', 'lunch', 'toilet', 'meeting'], MOOD_TXT = {happy:'喜', angry:'怒', sad:'哀', joy:'樂'};
+function wheelOpen(c){   // 點自己的人物：在人物旁邊展開小卡（常用狀態、心情、一句話），選完就收；走動、點外面、Esc 也收
   if (!c || c !== player) return; wheelChar = c; wheel.hidden = false; wheel.classList.remove('open');
-  const ids = Object.keys(STATUS), R = 104;
-  wheel.innerHTML = ids.map((id, i) => { const a = (-90 + i * 360 / ids.length) * Math.PI / 180, x = Math.cos(a) * R, y = Math.sin(a) * R;   // 圍繞人物一圈、順時針，「在座」在正上方
-    return '<button type="button" class="sw-b' + ((id === 'present' ? statusLabel(c) === '在座' : c.status === id) ? ' on' : '') + '" data-id="' + id + '" style="--x:' + x.toFixed(1) + 'px;--y:' + y.toFixed(1) + 'px;--d:' + (i * 24) + 'ms">' + iconImg(symOf[id], 24) + '<b>' + (id === 'present' ? '在座' : STATUS[id][0]) + '</b></button>'; }).join('');
-  wheel.querySelectorAll('.sw-b').forEach(b => b.onclick = () => { const id = b.dataset.id; wheelClose(); if (id === 'present') setOwnAuto(); else setOwnStatus(id); });
+  const lab = id => id === 'present' ? '在座' : STATUS[id][0], cur = id => id === 'present' ? statusLabel(c) === '在座' : c.status === id;
+  const chip = id => '<button type="button" class="qc-s' + (cur(id) ? ' on' : '') + '" data-id="' + id + '">' + iconImg(symOf[id], 18) + '<span>' + lab(id) + '</span></button>';
+  const more = Object.keys(STATUS).filter(id => !QC_MAIN.includes(id));
+  wheel.innerHTML = '<div class="qc"><div class="qc-h">狀態</div><div class="qc-row">' + QC_MAIN.map(chip).join('') + '<button type="button" class="qc-s qc-more" id="qcMore">更多</button></div>'
+    + '<div class="qc-row qc-extra" id="qcExtra" hidden>' + more.map(chip).join('') + '</div>'
+    + '<div class="qc-h">心情</div><div class="qc-row">' + Object.keys(MOOD).map(id => '<button type="button" class="qc-m' + (c.mood === id ? ' on' : '') + '" data-m="' + id + '" title="' + MOOD_TXT[id] + '">' + iconImg(moodSym[id], 28) + '</button>').join('') + '<button type="button" class="qc-m qc-x" data-m="" title="清除心情">✕</button></div>'
+    + '<form class="qc-say" id="qcForm"><input id="qcMsg" type="text" maxlength="60" placeholder="說點什麼…" autocomplete="off"><button type="submit" class="send" title="送出">➤</button></form></div>';
+  const inp = wheel.querySelector('#qcMsg'); inp.value = c.message || '';
+  wheel.querySelectorAll('.qc-s[data-id]').forEach(b => b.onclick = () => { const id = b.dataset.id; wheelClose(); if (id === 'present') setOwnAuto(); else setOwnStatus(id); });
+  wheel.querySelectorAll('.qc-m').forEach(b => b.onclick = () => { wheelClose(); setOwnMood(b.dataset.m); });
+  wheel.querySelector('#qcMore').onclick = () => { const x = wheel.querySelector('#qcExtra'); x.hidden = !x.hidden; wheel.querySelector('#qcMore').classList.toggle('on', !x.hidden); };
+  wheel.querySelector('#qcForm').onsubmit = e => { e.preventDefault(); const t = inp.value.trim(); wheelClose(); setOwnMessage(t); };
   requestAnimationFrame(() => requestAnimationFrame(() => wheel.classList.add('open')));
 }
 function wheelClose(){ wheel.hidden = true; wheel.classList.remove('open'); wheelChar = null; }
@@ -2226,6 +2244,7 @@ function updateWheel(){
   if (wheel.hidden || !wheelChar) return;
   const p = wheelChar.holder.position.clone(); p.y = wheelChar.holder.visible ? 1.05 : 1.3; p.project(camera);
   wheel.style.transform = 'translate(' + ((p.x * .5 + .5) * innerWidth) + 'px,' + ((-p.y * .5 + .5) * innerHeight) + 'px)';
+  const q = wheel.firstElementChild; if (q) { const w = q.offsetWidth, h = q.offsetHeight, px = (p.x * .5 + .5) * innerWidth, py = (-p.y * .5 + .5) * innerHeight; q.classList.toggle('flip', px + 40 + w > innerWidth - 8); q.style.top = Math.max(8 - py, Math.min(innerHeight - 8 - py - h, -h * .5)) + 'px'; }   // 靠右邊就放左側；上下不超出畫面
 }
 let hoverChar = null, clickChar = null, clickUntil = 0;
 const plate = document.createElement('div'); plate.className = 'cui-tag'; plate.style.cssText = 'position:fixed;left:0;top:0;z-index:7;display:none;pointer-events:none'; document.body.appendChild(plate);
