@@ -1737,7 +1737,7 @@ function updateSprite(c, dt){
   if (wk) { const st = Math.floor(c.phase / (Math.PI / 2)) % 4; if (st % 2) { map = c.walkTex; map.offset.set(col / ANGLES, st === 1 ? .5 : 0); } }   // 4 格循環：站姿、左腳出、站姿、右腳出
   if (c.sprite.material.map !== map) { c.sprite.material.map = map; c.sprite.material.needsUpdate = true; }
   c.sprite.position.y = (c.sitting ? -SIT_DROP : 0) + (c.moving > 0 ? Math.abs(sw) * (c.moving > 3.5 ? .2 : .1) : 0);
-  c.sprite.scale.y = STRETCH; _e.set(-TILT, toCam, 0); c.sprite.quaternion.setFromEuler(_e).multiply(_tilt.setFromAxisAngle(_z, c.moving > 0 ? sw * .07 : 0));   // 面向鏡頭，走路時輕微搖擺
+  { const ks = CHAR_SCALE[c.name] || 1; c.sprite.scale.x = ks; c.sprite.scale.y = STRETCH * ks; } _e.set(-TILT, toCam, 0); c.sprite.quaternion.setFromEuler(_e).multiply(_tilt.setFromAxisAngle(_z, c.moving > 0 ? sw * .07 : 0));   // 面向鏡頭，走路時輕微搖擺
 }
 
 // ---------- 輸入 ----------
@@ -2260,8 +2260,17 @@ function startLoadTips(){
 const stopLoadTips = () => { clearInterval(tipTimer); const el = $('tTip'); if (el) el.style.display = 'none'; };
 startLoadTips();
 function setLoad(text, pct){ $('tText').textContent = text; if (pct != null) $('tFill').style.width = Math.round(pct * 100) + '%'; }
+const CHAR_SCALE = {Leona:1.1};   // 圖集裡頭身比較小的人物放大一點，站在一起才不會特別小
 function avatarURL(c){   // 取角色正面圖的頭肩部分當大頭貼
-  try { const im = c.tex.image, cw = im.height, cv = document.createElement('canvas'); cv.width = cv.height = 96; const g = cv.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(im, cw * .17, cw * .0, cw * .66, cw * .66, 0, 0, 96, 96); return cv.toDataURL(); } catch (e) { return ''; }
+  try {
+    const im = c.tex.image, cw = im.height, cv = document.createElement('canvas'); cv.width = cv.height = 96; const g = cv.getContext('2d'); g.imageSmoothingQuality = 'high';
+    let sx = cw * .17, sy = 0, sw = cw * .66;   // 預設裁切（頭寬約 143/240 的人物剛好）；再依這個人的頭寬、頭頂位置校正，頭小的人（Leona）就不會頭像縮在裡面
+    try { const t = document.createElement('canvas'); t.width = t.height = cw; const tg = t.getContext('2d', {willReadFrequently:true}); tg.drawImage(im, 0, 0, cw, cw, 0, 0, cw, cw); const d = tg.getImageData(0, 0, cw, cw).data; let top = -1;
+      for (let y = 0; y < cw && top < 0; y++) for (let x = 0; x < cw; x++) if (d[(y * cw + x) * 4 + 3] > 20) { top = y; break; }
+      if (top >= 0) { let x0 = cw, x1 = 0; const y1 = top + Math.round(cw * .93 * .3); for (let y = top; y < y1; y++) for (let x = 0; x < cw; x++) if (d[(y * cw + x) * 4 + 3] > 20) { if (x < x0) x0 = x; if (x > x1) x1 = x; }
+        const hw = x1 - x0; if (hw > cw * .25) { const k = cw / 240; sw = Math.min(cw, hw * 1.105); sx = Math.max(0, Math.min(cw - sw, (x0 + x1) / 2 - sw / 2)); sy = Math.max(0, top - 10 * k * sw / (158 * k)); } }
+    } catch (e) {}
+    g.drawImage(im, sx, sy, sw, sw, 0, 0, 96, 96); return cv.toDataURL(); } catch (e) { return ''; }
 }
 // 登入：沿用網站首頁登入後留下的身分（localStorage pixelViewerHandoff，24 小時內有效），依登入帳號操作人物；沒登入只能參觀
 // 登入身分對到哪個人物：顯示名稱、帳號、信箱前綴都試（以前只比顯示名稱，名稱不是人物名時進站就變訪客，要自己點人物才能走）；角色工坊發佈的額外人物也算
