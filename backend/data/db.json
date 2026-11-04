@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 10485,
+  "revision": 10486,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-04T03:44:30.217Z",
+  "updatedAt": "2026-11-04T03:44:33.867Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1119,7 +1119,7 @@
         {"案件編號":"26110020","修改次數":"1","建立日期":"2026/11/04 08:30:22","修改日期":"2026-11-04","修改內容":"客戶來信調整，主要改標題區、移除候選人位置的人，詳細如附件P3，再請協助，感恩。","修改內容連結":"","修改人":"Machi","確認修正日":"2026/11/04 08:30:52","待修改圖片":"","圖片連結":"[{\"fileName\":\"261103_保誠人壽_圖文選單_個人化服務.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1SA40i7kdwHtBdw5YWzvhlmH2c-c9qiRI=w1600\"},{\"fileName\":\"261103_保誠人壽_圖文選單_未綁定.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1F_Gg7r6f3aX2xnLHY3JLkMbl4TJceG8m=w1600\"},{\"fileName\":\"261103_保誠人壽_圖文選單_已綁定.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1IXAE9jKap3TCQx0ICT8D75CV0X4AQY-d=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/04 11:41:10"},
         {"案件編號":"26100192","修改次數":"2","建立日期":"2026/11/04 09:30:07","修改日期":"2026-11-04","修改內容":"產品顏色請協助調整，換掉勃根地紅\n再麻煩了，謝謝","修改內容連結":"","修改人":"廖秦葦","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"261103_Momo_CPAS_AeroClip 2_情境.png\",\"url\":\"https://lh3.googleusercontent.com/d/1i_EDZnDyJo_R0bdRn9tDciksoIz24rJe=w1600\"},{\"fileName\":\"261103_Momo_CPAS_AeroClip 2_電商_Ａ.png\",\"url\":\"https://lh3.googleusercontent.com/d/19f5JgB-Jd677JJzJt6DcyLPHTezwlE6_=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/04 11:27:22"},
         {"案件編號":"26100202","修改次數":"1","建立日期":"2026/11/04 10:31:18","修改日期":"2026-11-04","修改內容":"Hi Machi,\n客戶來信調整，主要改標題區、移除候選人位置的人，詳細如附件P3，再請協助，感恩。","修改內容連結":"","修改人":"Machi","確認修正日":"2026/11/04 10:31:44","待修改圖片":"","圖片連結":"[{\"fileName\":\"261103_保誠人壽_選舉公報.png\",\"url\":\"https://lh3.googleusercontent.com/d/1EzdNyVjl5wEHN7quEjBaVyFaKKsgPTrO=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/04 10:31:35"},
-        {"案件編號":"26110020","修改次數":"2","建立日期":"2026/11/04 11:41:38","修改日期":"2026-11-04","修改內容":"02","修改內容連結":"","修改人":"Machi","確認修正日":"2026/11/04 11:43:01","待修改圖片":"","圖片連結":"[{\"fileName\":\"261103_保誠人壽_圖文選單_已綁定.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1i_6SsCAGfO0_bMfWPBpK_r1YxWABkTxO=w1600\"},{\"fileName\":\"261103_保誠人壽_圖文選單_未綁定.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/197_WcAMPRQwe1le2LTSTyI3zsj5o4A7B=w1600\"}]","圖片來源":"mail-inline-upload","圖片更新時間":"2026/11/04 11:42:55"}
+        {"案件編號":"26110020","修改次數":"2","建立日期":"2026/11/04 11:41:38","修改日期":"2026-11-04","修改內容":"02","修改內容連結":"","修改人":"Machi","確認修正日":"2026/11/04 11:43:01","待修改圖片":"","圖片連結":"[{\"fileName\":\"261103_保誠人壽_圖文選單_已綁定.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1i_6SsCAGfO0_bMfWPBpK_r1YxWABkTxO=w1600\"},{\"fileName\":\"261103_保誠人壽_圖文選單_未綁定.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/197_WcAMPRQwe1le2LTSTyI3zsj5o4A7B=w1600\"},{\"fileName\":\"261103_保誠人壽_圖文選單_綁定0.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1izOAzObLEoHzVUCXomlYwWArHwxCzQW4=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/04 11:44:33"}
       ]
     },
     "補充資料連結": {
