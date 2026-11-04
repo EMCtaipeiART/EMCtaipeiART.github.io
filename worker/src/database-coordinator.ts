@@ -1033,10 +1033,13 @@ function isCaseDesignerSession(row: Row, session: { user?: string; account?: str
  */
 const GMAIL_UNDELIVERED_LABELS = new Set(['DRAFT', 'TRASH', 'SPAM']);
 function deliveredThreadMessages(messages: unknown[]): Row[] {
-  return (Array.isArray(messages) ? messages : []).map(asRow).filter(message => {
-    const labels = Array.isArray(message.labelIds) ? message.labelIds.map(text) : [];
-    return !labels.some(label => GMAIL_UNDELIVERED_LABELS.has(label));
-  });
+  const all = (Array.isArray(messages) ? messages : []).map(asRow);
+  const labelsOf = (message: Row) => Array.isArray(message.labelIds) ? message.labelIds.map(text) : [];
+  const delivered = all.filter(message => !labelsOf(message).some(label => GMAIL_UNDELIVERED_LABELS.has(label)));
+  if (delivered.length) return delivered;
+  // 整串都被寄件帳號丟進垃圾桶／垃圾郵件時，寧可退回「除草稿外」的內容，也不要讓設計師讀不到信件串、無法回信
+  // （2026-11-04：26100203 Anna 回信讀到「沒有信件」）。
+  return all.filter(message => !labelsOf(message).includes('DRAFT'));
 }
 /** 回覆對象：最後一封帶有 Message-Id 的信。 */
 function replyAnchorMessage(messages: unknown[]): Row | null {
