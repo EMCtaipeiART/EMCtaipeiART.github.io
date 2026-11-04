@@ -1395,7 +1395,12 @@ function pushPosition(){
   if (!((moved && now - posSent.t > POS_PUSH_MS) || settle || now - posSent.t > POS_BEAT_MS)) return;
   posSent.x = p.x; posSent.z = p.z; posSent.t = now;
   const x = p.x / U, z = p.z / U, f4 = floorOf(c) === 4;
-  post({action:'pixelOfficeUpdate', name:c.name, patch:{floor:4, fx:Math.round(f4 ? 3000 + x - FX4 + 100 : x), fy:Math.round(f4 ? z + 100 : z), fdir:faceDir(c.face)}}).catch(e => { if (performance.now() - (pushPosition.errAt || 0) > 20000) { pushPosition.errAt = performance.now(); showQuote('', '位置同步失敗：' + (e && e.message ? e.message : e)); } });
+  const body = {action:'pixelOfficeUpdate', name:c.name, patch:{floor:4, fx:Math.round(f4 ? 3000 + x - FX4 + 100 : x), fy:Math.round(f4 ? z + 100 : z), fdir:faceDir(c.face)}};
+  (async () => {   // 偶發的網路抖動不跳訊息：自動重送最多 2 次，位置也會在下一輪補送；連續失敗 3 次才提醒
+    for (let k = 0; k < 3; k++) { try { await post(body); pushPosition.fails = 0; return; } catch (e) { pushPosition.err = e; if (k < 2) await new Promise(r => setTimeout(r, 400 * (k + 1))); } }
+    posSent.t = 0; posSent.x = -99; pushPosition.fails = (pushPosition.fails || 0) + 1;
+    if (pushPosition.fails >= 3 && performance.now() - (pushPosition.errAt || 0) > 20000) { pushPosition.errAt = performance.now(); const e = pushPosition.err; showQuote('', '位置同步失敗：' + (e && e.message ? e.message : e)); }
+  })();
 }
 addEventListener('pagehide', () => { try { if (player && live.ok) { const l = lastPos();   // 離開時不清掉位置：人物就停在原地，下次進站接著走
     if (l && meName()) { try { localStorage.setItem('pixelLast' + progScope, JSON.stringify(l)); } catch (e) {} navigator.sendBeacon(API, JSON.stringify({action:'pixelOfficeProgress', name:meName(), op:'save', progress:{dex, stat, last:l}})); } } } catch (e) {} });
