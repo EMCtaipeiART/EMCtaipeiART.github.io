@@ -4313,6 +4313,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const data = await response.json().catch(() => ({})) as Row;
     if (!response.ok) return { ok: false, action: 'getCaseMailThread', error: text((data.error as Row)?.message) || `Gmail 讀取失敗：${response.status}` };
     const rawMessages = deliveredThreadMessages(Array.isArray(data.messages) ? data.messages : []);
+    console.log(`getCaseMailThread ${caseId} viewer=${current.account} user=${current.user} owner=${owner} raw=${Array.isArray(data.messages) ? data.messages.length : -1} delivered=${rawMessages.length} designerMatch=${isCaseDesignerSession(row, current)}`);
     if (!rawMessages.length) {
       const all = Array.isArray(data.messages) ? data.messages.map(asRow) : [];
       const labels = all.map(m => (Array.isArray(m.labelIds) ? m.labelIds.map(text).join('/') : '無標籤') || '無標籤').join('、');
