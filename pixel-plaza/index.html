@@ -368,8 +368,6 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 .fr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.fr-it{position:relative;display:grid;justify-items:center;gap:1px;padding:4px 2px;border-radius:10px;border:2px solid var(--line);background:rgba(255,255,255,.08);color:#fff;font:700 11px 'Fredoka','Noto Sans TC',sans-serif}
 .fr-it i{display:block;width:42px;height:42px;background:url('fridge/office-foods-v1.webp') 0 0/auto 42px no-repeat;image-rendering:pixelated}.fr-it{grid-template-rows:42px 18px;align-content:center;justify-content:stretch;height:76px;padding:4px 2px 2px;gap:3px}.fr-it b{display:block;width:100%;line-height:18px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fr-it u{position:absolute;right:3px;top:2px;text-decoration:none;background:var(--yellow);color:var(--ink);border-radius:999px;padding:0 6px;font-size:10px}
 .fr-it:hover{background:rgba(255,255,255,.18)}.fr-it.no{opacity:.4}.fr-note{margin:6px 2px 0;font-size:11px;opacity:.75}
-.fr-cat{margin-top:8px;padding:6px;border-radius:12px;background:rgba(255,199,51,.1);border:2px solid rgba(255,199,51,.35)}.fr-cat h4{margin:0 0 6px;font-size:12px;color:var(--yellow)}.fr-cat>div{display:flex;gap:6px}
-.fr-cb{position:relative;flex:1;height:34px;border-radius:999px;border:2px solid var(--line);background:rgba(255,255,255,.08);color:#fff;font:700 13px 'Fredoka','Noto Sans TC',sans-serif;cursor:pointer}.fr-cb:hover{background:rgba(255,255,255,.18)}.fr-cb u{text-decoration:none;margin-left:6px;background:var(--yellow);color:var(--ink);border-radius:999px;padding:0 7px;font-size:11px}
 #catP{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:13;width:min(480px,94vw);padding:10px 12px;border-radius:18px;border:2px solid var(--line);background:var(--glass);color:#fff;font-family:'Fredoka','Noto Sans TC',sans-serif;backdrop-filter:blur(8px);box-shadow:0 18px 40px rgba(0,0,0,.4)}#catP[hidden]{display:none}
 .cat-bars{display:grid;grid-template-columns:1fr 1fr;gap:10px}.cat-bars div{font-size:12px}.cat-bars b{display:block}.cat-bars span{opacity:.85}.cat-bars i{display:block;height:9px;margin-top:4px;border-radius:999px;background:rgba(255,255,255,.15);overflow:hidden}.cat-bars u{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--cta1),var(--yellow))}
 .cat-mood{margin:8px 2px 4px;font-size:13px;font-weight:700}
@@ -1557,8 +1555,8 @@ function renderFridge(){
   const cell = id => { const q = st[id] || 0, i = FOOD_IDX[id]; return '<button type="button" class="fr-it' + (q ? '' : ' no') + '" data-id="' + id + '"><i style="background-position:-' + (i * 42) + 'px 0"></i><b>' + FOODS[id][0] + '</b><u>' + q + '</u></button>'; };
   fridgePanel.innerHTML = '<div class="fr-head"><span>🧊 冰箱</span><button type="button" class="px-x fr-x" id="frX" title="關閉">✕</button></div><div class="fr-cols">' +
     FRIDGE_SHELVES.map((rows, f) => '<div class="fr-door"><h4>' + (f ? '右冰箱' : '左冰箱') + '</h4><div class="fr-grid">' + rows.flat().filter(id => id !== 'rare' || (st.rare || 0)).map(cell).join('') + '</div></div>').join('') + '</div>' +
-    catZoneHtml() + '<p class="fr-note">點一樣東西拿一個；下班後偷吃會被抓到喔。' + (fridgeState ? '' : '（讀取庫存中…）') + '</p>';
-  fridgePanel.querySelector('#frX').onclick = fridgeClose; catZoneBind();
+    '<p class="fr-note">點一樣東西拿一個；下班後偷吃會被抓到喔。' + (fridgeState ? '' : '（讀取庫存中…）') + '</p>';
+  fridgePanel.querySelector('#frX').onclick = fridgeClose;
   fridgePanel.querySelectorAll('.fr-it').forEach(b => b.onclick = () => fridgeTake(b.dataset.id));
 }
 async function fridgeTake(slot){
@@ -2690,11 +2688,11 @@ function catRender(){
     '<div class="cat-bars"><div><b>辦公室歸屬感</b><span>' + CAT_LV[bl] + '　' + catOffice.belong + '</span><i><u style="width:' + Math.max(4, bPct) + '%"></u></i></div><div><b>你的信任度</b><span>' + TRUST_LV[tl] + '</span><i><u style="width:' + Math.max(4, tPct) + '%"></u></i></div></div>' +
     '<p class="cat-mood">牠現在：' + catMoodText() + '</p><div class="cat-act">' +
     '<button type="button" data-a="call">叫牠過來</button><button type="button" data-a="pet">摸摸</button>' +
-    '<button type="button" data-a="treat"' + (catInv.treat ? '' : ' class="no"') + '>餵點心<u>' + (catInv.treat | 0) + '</u></button>' +
-    '<button type="button" data-a="play"' + (catInv.toy ? '' : ' class="no"') + '>逗貓棒' + (catInv.toy ? '' : '<u>0</u>') + '</button>' +
+    '<button type="button" data-a="treat"' + (left('treat') ? '' : ' class="no"') + '>餵點心<u>' + left('treat') + '</u></button>' +
+    '<button type="button" data-a="play"' + (left('play') ? '' : ' class="no"') + '>逗貓棒<u>' + left('play') + '</u></button>' +
     '<button type="button" data-a="company">' + (catCompany ? '陪伴中 ' + Math.floor(catCompany.t) + '/20' : '安靜陪伴') + '</button></div>' +
     catNameHtml() +
-    '<p class="fr-note">今天還能增加：點心 ' + left('treat') + '　逗貓 ' + left('play') + '　摸摸 ' + left('pet') + '　陪伴 ' + left('company') + '　餵食 ' + left('feed') + '。貓用品在茶水間冰箱的「貓咪專用區」，飼料倒進碗裡。' + (catCloudOk === false ? '（雲端存檔尚未啟用，先暫存在這台電腦）' : '') + '</p>';
+    '<p class="fr-note">今天還能增加：點心 ' + left('treat') + '　逗貓 ' + left('play') + '　摸摸 ' + left('pet') + '　陪伴 ' + left('company') + '　餵食 ' + left('feed') + '。貓碗在茶水間旁，點碗就會加飼料和換水。' + (catCloudOk === false ? '（雲端存檔尚未啟用，先暫存在這台電腦）' : '') + '</p>';
   catPanel.querySelector('#catX').onclick = catClose; catNameBind(); catPanel.querySelectorAll('.cat-act button').forEach(b => b.onclick = () => catAct(b.dataset.a));
 }
 function catClick(){ if (!catG) return; catRender(); catPanel.hidden = false; }
@@ -2725,18 +2723,16 @@ function catAct(a){
     catLocalStart('look', 2.5, {}); catHeld = '♥'; setTimeout(() => { catHeld = ''; }, 2500); const g = catCare('pet'); showQuote(CAT.name, g ? '呼嚕呼嚕（信任度 +' + CAT_GAIN.pet.trust + '）' : '牠瞇著眼享受，但今天摸夠了'); return;
   }
   if (a === 'treat') {
-    if (!catInv.treat) { showQuote('', '先去冰箱的「貓咪專用區」拿貓零食'); return; }
     if (sleeping) { showQuote(CAT.name, '牠在睡覺，等牠醒來再餵'); return; }
     if ((catState.daily.treat | 0) >= CAT_GAIN.treat.cap) { catLocalStart('look', 2.5, {}); showQuote(CAT.name, '吃飽了，牠拒絕了點心'); return; }
     catGo([{x:pp.x + .6, z:pp.z + .8}], CAT.walk * 2, () => catLocalStart('sniff', 3, {after:() => {
       const eat = trustLv() >= 1 || Math.random() < .55;
-      if (eat) { catInv.treat--; catLocalStart('eat', 3.2, {}); catHeld = '好吃'; setTimeout(() => { catHeld = ''; }, 3200); catCare('treat'); showQuote(CAT.name, '牠聞了聞，吃掉了（信任度 +' + CAT_GAIN.treat.trust + '）'); }
+      if (eat) { catLocalStart('eat', 3.2, {}); catHeld = '好吃'; setTimeout(() => { catHeld = ''; }, 3200); catCare('treat'); showQuote(CAT.name, '牠聞了聞，吃掉了（信任度 +' + CAT_GAIN.treat.trust + '）'); }
       else { catAnnoyed = now + 15000; catGo([catSpots.walk[Math.floor(Math.random() * catSpots.walk.length)] || {x:pp.x + 3, z:pp.z}], 3, catReturn); showQuote(CAT.name, '牠聞了聞，決定不吃，轉身走了（點心還在）'); }
     }}));
     catClose(); return;
   }
   if (a === 'play') {
-    if (!catInv.toy) { showQuote('', '先去冰箱的「貓咪專用區」拿逗貓棒'); return; }
     if (sleeping) { showQuote(CAT.name, '牠在睡覺，等牠醒來再玩'); return; }
     if (trustLv() === 0) { catLocalStart('look', 2.5, {}); showQuote(CAT.name, '牠只瞄了逗貓棒一眼，還不敢玩（先餵點心培養感情）'); return; }
     const pts = [0, 1, 2].map(() => { const ang = Math.random() * 6.28, r = 1.4 + Math.random() * 1.4; let q = {x:pp.x + Math.cos(ang) * r, z:pp.z + Math.sin(ang) * r}; if (blocked(q.x, q.z)) q = {x:pp.x, z:pp.z + 1.4}; return q; });
@@ -2747,17 +2743,9 @@ function catAct(a){
 function catBowlClick(){
   if (!player || AWAY.has(player.status)) return; const b = catBowl; if (!b) return; const pp = player.holder.position;
   if (Math.hypot(pp.x - b.x, pp.z - b.z) > 3.2) { target = new THREE.Vector3(b.x, 0, b.z + 1.3); showQuote('', '走到碗邊再點一次'); return; }
-  if (catInv.food > 0) { catInv.food--; catCare('feed', 'food'); showQuote(CAT.name, '飼料倒進碗裡了'); }
+  if (!catBowlFull()) { catCare('feed', 'food'); showQuote(CAT.name, '加了一份飼料'); }
   else if (!catWaterFull()) { catCare('feed', 'water'); showQuote(CAT.name, '換了新鮮的水'); }
-  else if (!catBowlFull()) showQuote('', '飼料碗空了：先去冰箱的「貓咪專用區」拿貓飼料');
   else showQuote('', '碗裡還滿滿的');
-}
-function catZoneHtml(){ return '<div class="fr-cat"><h4>貓咪專用區</h4><div><button type="button" class="fr-cb" data-cat="food">貓飼料<u>' + (catInv.food | 0) + '</u></button><button type="button" class="fr-cb" data-cat="treat">貓零食<u>' + (catInv.treat | 0) + '</u></button><button type="button" class="fr-cb" data-cat="toy">逗貓棒<u>' + (catInv.toy ? '有' : '0') + '</u></button></div></div>'; }
-function catZoneBind(){
-  fridgePanel.querySelectorAll('.fr-cb').forEach(b => b.onclick = () => {
-    const k = b.dataset.cat; if (k === 'food') { if (catInv.food >= 2) { showQuote('', '貓飼料帶兩份就夠了'); return; } catInv.food++; } else if (k === 'treat') { if (catInv.treat >= 3) { showQuote('', '貓零食最多帶三包'); return; } catInv.treat++; } else catInv.toy = true;
-    catSave(); renderFridge(); showQuote('', '拿了' + (k === 'food' ? '一份貓飼料，倒進茶水間旁的貓碗' : k === 'treat' ? '一包貓零食，親手餵給' + CAT.name + '' : '逗貓棒，可以和' + CAT.name + '玩'));
-  });
 }
 function tick(){
   const dt = Math.min(clock.getDelta(), .05);
