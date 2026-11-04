@@ -191,6 +191,7 @@ button{font-family:inherit}
 .dex-it img{width:44px;height:44px;object-fit:contain;image-rendering:pixelated}
 .dex-it.unk img{filter:brightness(0) opacity(.5)}
 .dex-it.unk::after{content:'?';position:absolute;inset:0;display:grid;place-items:center;font-weight:700;color:rgba(255,255,255,.55);font-size:20px}
+#lockDot{position:fixed;left:50%;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:#fff;border:2px solid #0b3d1e;box-shadow:0 0 0 2px rgba(255,255,255,.55);z-index:6;pointer-events:none}
 .help-list{display:grid;gap:8px;font-size:14px;font-weight:600;line-height:1.5}
 .help-list div{background:rgba(255,255,255,.07);border-radius:12px;padding:8px 12px}
 /* 提示框與浮動文字 */
@@ -407,7 +408,7 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 <div id="drawer" hidden><div class="dr-head"><span>選擇角色</span><button class="px-x" type="button" title="關閉">✕</button></div><div id="roster"></div></div>
 <div id="dexPanel" hidden><div class="px-head"><span>📖 辦公室圖鑑</span><button class="px-x" type="button">✕</button></div><div id="dexBody"></div></div>
 <div id="helpPanel" hidden><div class="px-head"><span>❓ 操作說明</span><button class="px-x" type="button">✕</button></div>
-  <div class="help-list"><div>🎥 滑鼠移到畫面左／右邊緣，視角就會跟著轉（越靠邊轉越快）；也可以在空地按住滑鼠左鍵或右鍵拖曳、或按 Q／E 旋轉，R 回正<label style="display:block;margin-top:6px;font-weight:700"><input type="checkbox" id="mouseTurnCk" checked> 滑鼠靠邊自動轉視角</label>；手機用兩指橫向滑動，滾輪／雙指捏合縮放</div>
+  <div class="help-list"><div>🎥 在空地點一下就鎖定滑鼠：滑鼠左右移動，視角就直接跟著轉（和 PokéBonk 一樣）；按 Esc 解除鎖定。鎖定時畫面中央的小圓點就是游標，對準椅子、冰箱、人物再點一下就會互動。也可以按 Q／E 旋轉、R 回正
   <div>🕹️ WASD／方向鍵移動，Shift 跑步，點椅子／馬桶等物件會走過去（手機可點地面走過去，或用左下搖桿）</div><div>🪑 點椅子或馬桶，人物會走過去坐下；要起身直接走動</div><div>🎮 點自己的人物或按「角色頁面」：狀態、心情、想說的話、音樂、限時動態（管理者另有全員上下班與班長工具）</div><div>✨ 撿地上的道具、沖馬桶、點投影機，圖鑑會記錄你的發現，每 5 個升一級</div><div>📡 角色依「凱曜設計部」的即時出勤狀態行動（在座／加班／用餐／廁所／會議／下班…）</div></div></div>
 <script type="module">
 import * as THREE from 'three';
@@ -1479,6 +1480,7 @@ addEventListener('pointerdown', e => {
   if (!$('helpPanel').hidden && !$('helpPanel').contains(t) && !t.closest('#bHelp')) $('helpPanel').hidden = true;
 }, true);
 setInterval(() => {
+  if (document.pointerLockElement && (!wheel.hidden || ['fridgeP', 'catP', 'dexPanel', 'helpPanel', 'cpage', 'drawer', 'sv'].some(id => { const el = document.getElementById(id); return el && !el.hidden; }))) document.exitPointerLock();   // 打開面板就解除鎖定，游標才點得到
   const open = !fridgePanel.hidden || !$('dexPanel').hidden || !$('helpPanel').hidden;
   if (!open || !player) { if (!open) panelAnchor = null; return; }
   const p = player.holder.position; if (!panelAnchor) panelAnchor = {x:p.x, z:p.z};
@@ -1733,12 +1735,16 @@ stick.addEventListener('pointerup', () => { joy.x = joy.y = 0; knob.style.transf
 const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 let guestDrag = null;
 let rotDrag = null;
+const lockEl = document.createElement('div'); lockEl.id = 'lockDot'; lockEl.hidden = true; document.body.appendChild(lockEl);   // 鎖定時畫面中央的小圓點（就是游標）
+const isLocked = () => document.pointerLockElement === renderer.domElement;
+document.addEventListener('pointerlockchange', () => { lockEl.hidden = !isLocked(); if (!isLocked()) rotDrag = null; });
+document.addEventListener('mousemove', e => { if (isLocked()) camYaw -= (e.movementX || 0) * .0035; });   // 鎖定中：滑鼠左右移動直接轉視角（往右移＝視角往右轉）
 function pickHitAt(e){   // 滑鼠點下去的地方有沒有可點的東西（有就照舊處理，沒有才當成拖曳旋轉視角——Mac 觸控板不好按右鍵拖曳）
   ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
   return ray.intersectObjects(pickables, true).some(h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.desk && !pk.c.holder.visible); });
 }
 renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
-renderer.domElement.addEventListener('pointerdown', e => { if (player && e.button === 2) { rotDrag = {x:e.clientX}; try { renderer.domElement.setPointerCapture(e.pointerId); } catch (err) {} renderer.domElement.style.cursor = 'grabbing'; return; } if (player) { if (e.pointerType === 'mouse' && e.button === 0 && !pickHitAt(e)) { rotDrag = {x:e.clientX}; try { renderer.domElement.setPointerCapture(e.pointerId); } catch (err) {} } onPick(e); return; } guestDrag = {x:e.clientX, y:e.clientY, moved:false}; try { renderer.domElement.setPointerCapture(e.pointerId); } catch (err) {} });
+renderer.domElement.addEventListener('pointerdown', e => { if (player && e.button === 2) { rotDrag = {x:e.clientX}; try { renderer.domElement.setPointerCapture(e.pointerId); } catch (err) {} renderer.domElement.style.cursor = 'grabbing'; return; } if (player) { if (isLocked() && e.button === 0) { onPick({clientX:innerWidth / 2, clientY:innerHeight / 2, pointerType:'mouse', button:0}); return; } if (e.pointerType === 'mouse' && e.button === 0 && !pickHitAt(e)) { try { renderer.domElement.requestPointerLock(); } catch (err) {} } onPick(e); return; } guestDrag = {x:e.clientX, y:e.clientY, moved:false}; try { renderer.domElement.setPointerCapture(e.pointerId); } catch (err) {} });
 renderer.domElement.addEventListener('pointermove', e => { if (rotDrag) { camYaw -= (e.movementX || 0) * .006; return; } if (player || !guestDrag || !(e.buttons & 1)) return; const dx = e.clientX - guestDrag.x, dy = e.clientY - guestDrag.y; if (!guestDrag.moved && Math.hypot(dx, dy) < 5) return; guestDrag.moved = true; guestAt.x -= (e.movementX || 0) * .045; guestAt.z -= (e.movementY || 0) * .07; guestClamp(); renderer.domElement.style.cursor = 'grabbing'; });
 renderer.domElement.addEventListener('pointerup', e => { if (rotDrag) { rotDrag = null; renderer.domElement.style.cursor = ''; return; } if (player || !guestDrag) return; const was = guestDrag; guestDrag = null; renderer.domElement.style.cursor = ''; if (!was.moved) onPick(e); });
 let camZoom = 1, camYaw = 0;   // camYaw：鏡頭繞人物旋轉的角度（右鍵拖曳／Q、E／手機兩指橫向滑動），0＝原本從南邊往北看
@@ -1778,9 +1784,7 @@ renderer.domElement.addEventListener('pointermove', e => {
     hoverChar = pk && pk.kind === 'char' ? pk.c : null; renderer.domElement.style.cursor = pk ? 'pointer' : '';
   });
 });
-renderer.domElement.addEventListener('pointerleave', () => { hoverChar = null; mouseX = null; });
-let mouseX = null, mouseTurn = true; try { mouseTurn = localStorage.getItem('plazaMouseTurn') !== '0'; } catch (e) {}   // 滑鼠靠近畫面左右邊緣，視角就跟著往那邊轉（不用拖曳）
-renderer.domElement.addEventListener('pointermove', e => { mouseX = e.pointerType === 'mouse' ? e.clientX : null; });
+renderer.domElement.addEventListener('pointerleave', () => { hoverChar = null; });
 
 // ---------- 主迴圈 ----------
 const clock = new THREE.Clock(), camPos = new THREE.Vector3(20, 10.9, 36), look = new THREE.Vector3();
@@ -2330,7 +2334,6 @@ function renderDex(){
   sec('會議室遺落物', NOTE_IDS, NOTES.map(x => x[0]), NOTES.map(x => x[1]), 'n');
 }
 $('bDex').onclick = () => { renderDex(); $('dexPanel').hidden = false; $('helpPanel').hidden = true; panelAnchor = null; };
-$('mouseTurnCk').checked = mouseTurn; $('mouseTurnCk').onchange = e => { mouseTurn = e.target.checked; try { localStorage.setItem('plazaMouseTurn', mouseTurn ? '1' : '0'); } catch (err) {} };
 $('bHelp').onclick = () => { $('helpPanel').hidden = false; $('dexPanel').hidden = true; panelAnchor = null; };
 document.querySelectorAll('.px-x').forEach(b => b.onclick = () => { $('dexPanel').hidden = true; $('helpPanel').hidden = true; $('drawer').hidden = true; });
 $('bWheel').onclick = () => { if (!player) { showQuote('', '請先登入才能操作人物'); return; } if (radial.hidden) radialOpen(); else radialClose(); };
@@ -2682,9 +2685,6 @@ function tick(){
       0,
       (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0) + joy.y);
     if (keys.KeyQ) camYaw += 1.6 * dt; if (keys.KeyE) camYaw -= 1.6 * dt;
-    if (mouseTurn && mouseX != null && !rotDrag && radial.hidden && $('sv').hidden && fridgePanel.hidden && $('dexPanel').hidden && $('helpPanel').hidden) {   // 滑鼠在畫面左／右 22% 的邊緣區：越靠邊轉越快
-      const f = mouseX / innerWidth, Z = .22; if (f < Z) camYaw += 1.8 * (Z - f) / Z * dt; else if (f > 1 - Z) camYaw -= 1.8 * (f - (1 - Z)) / Z * dt;
-    }
     if (dir.lengthSq() > .0001 && camYaw) { const cs = Math.cos(camYaw), sn = Math.sin(camYaw), dx = dir.x, dz = dir.z; dir.x = dx * cs + dz * sn; dir.z = -dx * sn + dz * cs; }   // 按鍵／搖桿的方向相對鏡頭
     const run = keys.ShiftLeft || keys.ShiftRight || Math.hypot(joy.x, joy.y) > .85;
     if (dir.lengthSq() > .01) { target = null; wantSeat = null; fridgeWant = false; wantElev = false; wheelClose(); }
