@@ -407,7 +407,8 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 <div id="drawer" hidden><div class="dr-head"><span>選擇角色</span><button class="px-x" type="button" title="關閉">✕</button></div><div id="roster"></div></div>
 <div id="dexPanel" hidden><div class="px-head"><span>📖 辦公室圖鑑</span><button class="px-x" type="button">✕</button></div><div id="dexBody"></div></div>
 <div id="helpPanel" hidden><div class="px-head"><span>❓ 操作說明</span><button class="px-x" type="button">✕</button></div>
-  <div class="help-list"><div>🕹️ WASD／方向鍵移動，Shift 跑步，點椅子／馬桶等物件會走過去（手機可點地面走過去，或用左下搖桿）</div><div>🪑 點椅子或馬桶，人物會走過去坐下；要起身直接走動</div><div>🎮 點自己的人物或按「角色頁面」：狀態、心情、想說的話、音樂、限時動態（管理者另有全員上下班與班長工具）</div><div>✨ 撿地上的道具、沖馬桶、點投影機，圖鑑會記錄你的發現，每 5 個升一級</div><div>📡 角色依「凱曜設計部」的即時出勤狀態行動（在座／加班／用餐／廁所／會議／下班…）</div></div></div>
+  <div class="help-list"><div>🎥 按住滑鼠右鍵拖曳（或 Q／E）旋轉視角，R 回正；手機用兩指橫向滑動，滾輪／雙指捏合縮放</div>
+  <div>🕹️ WASD／方向鍵移動，Shift 跑步，點椅子／馬桶等物件會走過去（手機可點地面走過去，或用左下搖桿）</div><div>🪑 點椅子或馬桶，人物會走過去坐下；要起身直接走動</div><div>🎮 點自己的人物或按「角色頁面」：狀態、心情、想說的話、音樂、限時動態（管理者另有全員上下班與班長工具）</div><div>✨ 撿地上的道具、沖馬桶、點投影機，圖鑑會記錄你的發現，每 5 個升一級</div><div>📡 角色依「凱曜設計部」的即時出勤狀態行動（在座／加班／用餐／廁所／會議／下班…）</div></div></div>
 <script type="module">
 import * as THREE from 'three';
 import {RoundedBoxGeometry} from '../character-studio/vendor/RoundedBoxGeometry.js';
@@ -1588,7 +1589,7 @@ function elevCover(label, mid, done){   // 綠色像素方塊由下往上快速�
 }
 function elevGo(to){
   if (elevBusy || !player) return; wantElev = false; elevArmed = false; target = null; elevBusy = true; wheelClose(); fridgeClose();
-  elevCover(to + 'F', () => { releaseSeat(player); const sp = elevSpot(to); player.holder.position.set(sp.x, 0, sp.z + .6); player.face = 0; camPos.set(sp.x, 10.9, sp.z + 12.8); look.set(sp.x, 0, sp.z); }, () => { elevBusy = false; showQuote('', '🛗 到了 ' + to + ' 樓'); });
+  elevCover(to + 'F', () => { releaseSeat(player); const sp = elevSpot(to); player.holder.position.set(sp.x, 0, sp.z + .6); player.face = 0; { const o = camOff(10.9, 12.8); camPos.set(sp.x + o.x, o.y, sp.z + o.z); } look.set(sp.x, 0, sp.z); }, () => { elevBusy = false; showQuote('', '🛗 到了 ' + to + ' 樓'); });
 }
 // ---- 自動更新：網站有新版本時（ETag 變了），等使用者閒置 60 秒後分頁自己重新載入，避免有人開著舊版一直回報舊的座位／位置 ----
 (function autoUpdate(){
@@ -1667,7 +1668,7 @@ let wantSeat = null;   // 點椅子／馬桶：走過去自動坐下；要起身
 function sitAt(c, st){ c.holder.position.set(st.x, 0, st.z); sitDown(c); }
 function select(name){
   const prev = player; player = chars[name]; player.remote = null; posSent.t = 0; target = null; player.holder.visible = !AWAY.has(player.status);
-  { const p = player.holder.position; camPos.set(p.x, 10.9, p.z + 12.2); look.copy(p); }   // 換人時鏡頭直接跳過去（人物可能在另一層）
+  { const p = player.holder.position, o = camOff(); camPos.set(p.x + o.x, o.y, p.z + o.z); look.copy(p); }   // 換人時鏡頭直接跳過去（人物可能在另一層）
   if (prev && prev !== player) { prev.appliedStatus = null; applyStatus(prev); }
   for (const c of Object.values(chars)) { c.btn.classList.toggle('on', c === player); c.wander = c !== player && !SEATS[c.name] && !c.sitting; }
 }
@@ -1692,7 +1693,7 @@ Promise.all([buildOffice(), loadIcons(), bootChars])
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
 const TILT = 0, STRETCH = 1 / Math.cos(Math.atan(8.4 / 9.4)), _e = new THREE.Euler(0, 0, 0, 'YXZ');   // 垂直站立：不再後傾（避免穿進桌子、牆），高度拉長 STRETCH 倍抵消俯視縮短
    // 後傾約 22°：夠像站著的人，又不會讓上半身穿進後方物件
-function updateBillboards(){ _e.set(-TILT, 0, 0); for (const m of billboards) { m.quaternion.setFromEuler(_e); m.scale.y = STRETCH; } }   // 道具方向固定（永遠朝南），只有人物會轉向
+function updateBillboards(){ _e.set(-TILT, camYaw, 0); for (const m of billboards) { m.quaternion.setFromEuler(_e); m.scale.y = STRETCH; } }   // 道具方向固定（永遠朝南），只有人物會轉向
 function updateSprite(c, dt){
   // 依角色朝向與鏡頭的相對角度，挑選 12 個面向中最接近的一格
   c.holder.getWorldPosition(_cam); _cam.subVectors(camera.position, _cam);
@@ -1711,6 +1712,7 @@ function updateSprite(c, dt){
 
 // ---------- 輸入 ----------
 const keys = {};
+addEventListener('keydown', e => { if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return; if (e.code === 'KeyR' && !e.ctrlKey && !e.metaKey) camYaw = 0; });
 addEventListener('keydown', e => { if (e.target && e.target.tagName === 'INPUT') return; keys[e.code] = true; });   // 在輸入框打字（貓取名）不要讓角色跟著走
 addEventListener('keyup', e => keys[e.code] = false);
 const joy = {x:0, y:0};
@@ -1727,20 +1729,24 @@ stick.addEventListener('pointerup', () => { joy.x = joy.y = 0; knob.style.transf
 
 const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 let guestDrag = null;
-renderer.domElement.addEventListener('pointerdown', e => { if (player) { onPick(e); return; } guestDrag = {x:e.clientX, y:e.clientY, moved:false}; try { renderer.domElement.setPointerCapture(e.pointerId); } catch (err) {} });
-renderer.domElement.addEventListener('pointermove', e => { if (player || !guestDrag || !(e.buttons & 1)) return; const dx = e.clientX - guestDrag.x, dy = e.clientY - guestDrag.y; if (!guestDrag.moved && Math.hypot(dx, dy) < 5) return; guestDrag.moved = true; guestAt.x -= (e.movementX || 0) * .045; guestAt.z -= (e.movementY || 0) * .07; guestClamp(); renderer.domElement.style.cursor = 'grabbing'; });
-renderer.domElement.addEventListener('pointerup', e => { if (player || !guestDrag) return; const was = guestDrag; guestDrag = null; renderer.domElement.style.cursor = ''; if (!was.moved) onPick(e); });
-let camZoom = 1;
+let rotDrag = null;
+renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
+renderer.domElement.addEventListener('pointerdown', e => { if (player && e.button === 2) { rotDrag = {x:e.clientX}; try { renderer.domElement.setPointerCapture(e.pointerId); } catch (err) {} renderer.domElement.style.cursor = 'grabbing'; return; } if (player) { onPick(e); return; } guestDrag = {x:e.clientX, y:e.clientY, moved:false}; try { renderer.domElement.setPointerCapture(e.pointerId); } catch (err) {} });
+renderer.domElement.addEventListener('pointermove', e => { if (rotDrag) { camYaw -= (e.movementX || 0) * .006; return; } if (player || !guestDrag || !(e.buttons & 1)) return; const dx = e.clientX - guestDrag.x, dy = e.clientY - guestDrag.y; if (!guestDrag.moved && Math.hypot(dx, dy) < 5) return; guestDrag.moved = true; guestAt.x -= (e.movementX || 0) * .045; guestAt.z -= (e.movementY || 0) * .07; guestClamp(); renderer.domElement.style.cursor = 'grabbing'; });
+renderer.domElement.addEventListener('pointerup', e => { if (rotDrag) { rotDrag = null; renderer.domElement.style.cursor = ''; return; } if (player || !guestDrag) return; const was = guestDrag; guestDrag = null; renderer.domElement.style.cursor = ''; if (!was.moved) onPick(e); });
+let camZoom = 1, camYaw = 0;   // camYaw：鏡頭繞人物旋轉的角度（右鍵拖曳／Q、E／手機兩指橫向滑動），0＝原本從南邊往北看
+const camOff = (h = 10.9, d = 12.2) => ({x:Math.sin(camYaw) * d, y:h, z:Math.cos(camYaw) * d});
 // 手機雙指縮放：兩指張開＝拉近、捏合＝拉遠（和滾輪同一個 camZoom）；第二根手指落下時取消第一指已設的走路目標
 const touches = new Map(); let pinch = null;
+const pinchCx = () => { const v = [...touches.values()]; return v.reduce((a, t) => a + t.x, 0) / (v.length || 1); };
 const pinchDist = () => { const [a, b] = [...touches.values()]; return Math.hypot(a.x - b.x, a.y - b.y) || 1; };
 renderer.domElement.addEventListener('pointerdown', e => {
   if (e.pointerType !== 'touch') return; touches.set(e.pointerId, {x:e.clientX, y:e.clientY});
-  if (touches.size >= 2) { pinch = {d0:pinchDist(), z0:camZoom}; target = null; wantSeat = null; fridgeWant = false; wantElev = false; guestDrag = null; e.stopImmediatePropagation(); }
+  if (touches.size >= 2) { pinch = {d0:pinchDist(), z0:camZoom, cx:pinchCx()}; target = null; wantSeat = null; fridgeWant = false; wantElev = false; guestDrag = null; e.stopImmediatePropagation(); }
 }, true);
 renderer.domElement.addEventListener('pointermove', e => {
   if (!touches.has(e.pointerId)) return; touches.set(e.pointerId, {x:e.clientX, y:e.clientY});
-  if (pinch && touches.size >= 2) { camZoom = Math.max(.5, Math.min(1.9, pinch.z0 * pinch.d0 / pinchDist())); e.stopImmediatePropagation(); }
+  if (pinch && touches.size >= 2) { camZoom = Math.max(.5, Math.min(1.9, pinch.z0 * pinch.d0 / pinchDist())); { const cx = pinchCx(); camYaw -= (cx - pinch.cx) * .008; pinch.cx = cx; } e.stopImmediatePropagation(); }
 }, true);
 const touchEnd = e => { touches.delete(e.pointerId); if (touches.size < 2) pinch = null; };
 renderer.domElement.addEventListener('pointerup', touchEnd, true); renderer.domElement.addEventListener('pointercancel', touchEnd, true);
@@ -2285,7 +2291,7 @@ function restoreLast(){
   const c = player, l = pendingRestore; pendingRestore = null; if (!c || !l) return;
   releaseSeat(c); c.holder.position.set(l.x * U, 0, l.z * U); unstick(c); c.moving = 0; target = null;
   const home = c.home; if (home && Math.hypot(c.holder.position.x - home.x, c.holder.position.z - home.z) < .8) sitDown(c);
-  camPos.set(c.holder.position.x, 10.9 * camZoom, c.holder.position.z + 12.2 * camZoom); look.copy(c.holder.position);
+  { const o = camOff(10.9 * camZoom, 12.2 * camZoom); camPos.set(c.holder.position.x + o.x, o.y, c.holder.position.z + o.z); } look.copy(c.holder.position);
   lastSaved = {x:c.holder.position.x, z:c.holder.position.z}; posSent.x = -99;
 }
 async function progSave(){
@@ -2665,6 +2671,8 @@ function tick(){
       (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0) + joy.x,
       0,
       (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0) + joy.y);
+    if (keys.KeyQ) camYaw += 1.6 * dt; if (keys.KeyE) camYaw -= 1.6 * dt;
+    if (dir.lengthSq() > .0001 && camYaw) { const cs = Math.cos(camYaw), sn = Math.sin(camYaw), dx = dir.x, dz = dir.z; dir.x = dx * cs + dz * sn; dir.z = -dx * sn + dz * cs; }   // 按鍵／搖桿的方向相對鏡頭
     const run = keys.ShiftLeft || keys.ShiftRight || Math.hypot(joy.x, joy.y) > .85;
     if (dir.lengthSq() > .01) { target = null; wantSeat = null; fridgeWant = false; wantElev = false; wheelClose(); }
     else if (target) {
@@ -2689,7 +2697,7 @@ function tick(){
   }
   if (player) {
     const p = player.holder.position;
-    camPos.lerp(new THREE.Vector3(p.x, 10.9 * camZoom, p.z + 12.2 * camZoom), 1 - Math.pow(.001, dt));
+    { const o = camOff(10.9 * camZoom, 12.2 * camZoom); camPos.lerp(new THREE.Vector3(p.x + o.x, o.y, p.z + o.z), 1 - Math.pow(.001, dt)); }
     camera.position.copy(camPos); look.lerp(p, 1 - Math.pow(.001, dt)); camera.lookAt(look.x, 1, look.z);
   } else { const k = 1 - Math.pow(.0005, dt); camPos.lerp(new THREE.Vector3(guestAt.x, 10.9, guestAt.z + 12.2), k); camera.position.copy(camPos); look.lerp(new THREE.Vector3(guestAt.x, 1, guestAt.z), k); camera.lookAt(look); }   // 沒登入：滾輪／左鍵拖曳平移畫面，點電梯換看另一層
   { const cx = player ? player.holder.position : guestAt; sun.target.position.set(cx.x, 0, cx.z); sun.position.set(cx.x - 10, 26, cx.z + 10); }
