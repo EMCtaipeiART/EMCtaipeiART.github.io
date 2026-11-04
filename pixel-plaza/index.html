@@ -81,7 +81,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 .cp-row{display:flex;justify-content:space-between;gap:10px;padding:7px 12px;border-radius:10px;background:rgba(255,255,255,.06);font-size:13px;font-weight:600}
 .cp-row b{color:var(--yellow)}
 .cp-admin>:not(header){margin:12px 14px}
-.cp-adm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.cp-adm-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.cp-adm-now{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.cp-hrs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.cp-hrs .cp-f{display:grid;gap:3px;justify-items:stretch;font-size:11px}.cp-hrs .cp-f input{width:100%;box-sizing:border-box;padding:5px 4px;text-align:center}.cp-adm-chk{display:flex;gap:14px;flex-wrap:wrap}@media (max-width:640px){.cp-hrs{grid-template-columns:repeat(3,1fr)}}
 .cp-card{display:grid;gap:8px;align-content:start;padding:12px;border-radius:14px;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.12)}
 .cp-f{display:flex;gap:10px;align-items:center;justify-content:space-between;font-size:13px;font-weight:600}
 .cp-f.col{display:grid;gap:4px;justify-content:stretch}
@@ -2197,13 +2197,13 @@ function renderCharPage(force){
   radial.querySelector('#cpX').onclick = radialClose; renderAdmin(); restoreFocus(); radial.querySelectorAll('.cp-story .rm').forEach(b => b.onclick = () => removeStory(b.dataset.id));
 }
 // 管理者工具：全員上班／下班、上下班設定、班長處罰（沿用 2D 版的動作；測試階段全面開放）
-function renderAdmin(){   // 班長工具：全員上班／下班、上下班設定、處罰（只有管理者帳號看得到）
+function renderAdmin(){   // 班長工具：上下班（切換＋時段設定合併）、處罰（只有管理者帳號看得到）
   const box = radial.querySelector('#cpAdmin'); if (!box) return; const restoreFocus = keepFocus(box);
   const rows = [['dayStart', '上班開始'], ['lunchStart', '午休開始'], ['lunchEnd', '午休結束'], ['workEnd', '下班'], ['overtimeStart', '加班開始']], cfg = hoursCfg || {};
   box.innerHTML = '<div class="cp-adm-grid">' +
-    '<div class="cp-card"><h4>全員上班／下班</h4><p class="cp-note">目前：<b>' + (hoursForce === 'work' ? '全員上班' : hoursForce === 'off' ? '全員下班' : '依時段自動') + '</b>。按一下切換，所有人的畫面一起改變。</p><div class="cp-chips"><button type="button" class="primary" id="adWork">' + (hoursForce === 'work' ? '切換成全員下班' : '切換成全員上班') + '</button></div></div>' +
-    '<div class="cp-card"><h4>上下班設定</h4><label class="cp-f"><input type="checkbox" id="fhOn"' + (cfg.enabled !== false ? ' checked' : '') + '> 套用上下班時段規則</label><label class="cp-f"><input type="checkbox" id="fhRooms"' + (cfg.meetingRooms !== false ? ' checked' : '') + '> 行事曆有會議時依會議室入座</label>' +
-      rows.map(r => '<label class="cp-f"><span>' + r[1] + '</span><input type="number" min="0" max="23" id="fh_' + r[0] + '" value="' + (cfg[r[0]] ?? '') + '"></label>').join('') + '<div class="cp-chips"><button type="button" class="primary" id="fhSave">儲存</button></div></div>' +
+    '<div class="cp-card"><h4>上下班</h4><div class="cp-adm-now"><span>目前：<b>' + (hoursForce === 'work' ? '全員上班' : hoursForce === 'off' ? '全員下班' : '依時段自動') + '</b></span><button type="button" class="primary" id="adWork">' + (hoursForce === 'work' ? '切換成全員下班' : '切換成全員上班') + '</button></div>' +
+      '<div class="cp-adm-chk"><label class="cp-f"><input type="checkbox" id="fhOn"' + (cfg.enabled !== false ? ' checked' : '') + '> 套用上下班時段規則</label><label class="cp-f"><input type="checkbox" id="fhRooms"' + (cfg.meetingRooms !== false ? ' checked' : '') + '> 行事曆有會議時依會議室入座</label></div>' +
+      '<div class="cp-hrs">' + rows.map(r => '<label class="cp-f"><span>' + r[1] + '</span><input type="number" min="0" max="23" id="fh_' + r[0] + '" value="' + (cfg[r[0]] ?? '') + '"></label>').join('') + '</div><div class="cp-chips"><button type="button" class="primary" id="fhSave">儲存時段</button></div></div>' +
     '<div class="cp-card"><h4>班長：處罰</h4><label class="cp-f col"><span>對象</span><select id="pnWho">' + NAMES.map(n => '<option>' + n + '</option>').join('') + '</select></label><label class="cp-f col"><span>原因（最多 30 字）</span><input type="text" id="pnWhy" maxlength="30" placeholder="例如：上班時間遲到"></label>' +
       '<label class="cp-f col"><span>天數</span><select id="pnDays">' + [1, 2, 3, 5, 7, 14, 30].map(n => '<option value="' + n + '">' + n + ' 天</option>').join('') + '</select></label><div class="cp-chips"><button type="button" class="primary" id="pnGo">處罰</button><button type="button" id="pnOff">解除處罰</button></div></div></div>';
   box.querySelector('#adWork').onclick = async () => { const mode = hoursForce === 'work' ? 'off' : 'work'; try { await adminCall('pixelOfficeAllWork', {mode}); hoursForce = mode; applyForce(); live.version = 0; showQuote('', mode === 'work' ? '已切換：全員上班' : '已切換：全員下班'); radialClose(); } catch (e) { showQuote('', '切換失敗：' + e.message); } };
