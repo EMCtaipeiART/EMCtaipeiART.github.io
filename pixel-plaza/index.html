@@ -1450,7 +1450,8 @@ function remoteStep(c, dt){
 // 即時推送：後端每次有人寫入（狀態、位置、留言…）就透過 WebSocket 通知所有連線，收到通知立刻重讀，不必等輪詢。
 // 輪詢只當備援：推送連得上時 5 秒一次，連不上時有變化就 350ms 連續輪詢、安靜時 1.5 秒。
 let hotUntil = 0, pushOpen = false, pollBusy = false, pollAgain = false;
-async function pollNow(){ if (pollBusy) { pollAgain = true; return; } pollBusy = true; try { do { pollAgain = false; await pollOnce(); } while (pollAgain); } finally { pollBusy = false; } }
+let pollRun = null;
+function pollNow(){ if (pollBusy) { pollAgain = true; return pollRun; } pollBusy = true; pollRun = (async () => { try { do { pollAgain = false; await pollOnce(); } while (pollAgain); } finally { pollBusy = false; } })(); return pollRun; }   // 正在讀取時回傳同一個 Promise，呼叫的人才等得到讀完
 (function pushConnect(){
   if (!('WebSocket' in window)) return;
   let ws = null, ping = 0, retry = 0; const url = API.replace(/^http/i, 'ws').replace(/\/api\/?$/, '') + '/ws';
@@ -1723,7 +1724,7 @@ const bootChars = cloudReady.then(() => {
   return Promise.all(all.map((n, i) => addChar(n, i).then(() => { setLoad('載入角色', ++done / all.length); })));
 });
 Promise.all([buildOffice(), loadIcons(), bootChars])
-  .then(async () => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); setLoad('讀取出勤狀態', .9); await Promise.race([pollNow(), new Promise(r => setTimeout(r, 12000))]);
+  .then(async () => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); setLoad('讀取出勤狀態', .9); live.version = 0; await Promise.race([pollNow(), new Promise(r => setTimeout(r, 12000))]);   // 人物都建好後才（重新）完整讀一次：先前 WebSocket 等提早的讀取當時人物還沒建完，那次的狀態與位置沒人接，之後讀到「沒變」就一直不補，進站後才慢慢補上
     { let n = 0; const tot = walkLoads.length; walkLoads.forEach(pr => pr.then(() => setLoad('載入走路動畫', .9 + .1 * ++n / tot))); setLoad('載入走路動畫', .9); await Promise.race([Promise.all(walkLoads), new Promise(r => setTimeout(r, 10000))]); }   // 最多等 10 秒，網路太慢就先進站，沒載完的人物走路時先用彈跳搖擺
  settleChars(); startLiveSync(); catInit(); showTitleCard(); window.__plaza = {remoteFromState, catAt, wanderStep, findPath, guestAt, guestGoFloor, updateElev, elevGo, floorOf, elevInteract, fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
 
