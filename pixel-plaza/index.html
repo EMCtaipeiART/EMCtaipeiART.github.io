@@ -455,7 +455,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xcfd9e0);
 const camera = new THREE.PerspectiveCamera(45, 1, .1, 120);
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0xa9b6c2, FLAT ? 2 : 1.12));
+const hemiLight = new THREE.HemisphereLight(0xffffff, 0xa9b6c2, FLAT ? 2 : 1.12); scene.add(hemiLight);
 // 主光（左上前方的暖白光）：投柔邊陰影，位置跟著畫面中心走，陰影貼圖只涵蓋可視範圍
 const sun = new THREE.DirectionalLight(0xfff2e0, FLAT ? 0 : 1.4);
 sun.castShadow = !FLAT; sun.shadow.mapSize.set(2048, 2048); sun.shadow.camera.left = sun.shadow.camera.bottom = -30; sun.shadow.camera.right = sun.shadow.camera.top = 30; sun.shadow.camera.near = 1; sun.shadow.camera.far = 80;
@@ -538,15 +538,30 @@ const SEATS = {Leona:[0,2,0,'top'],Amber:[0,2,1,'top'],Noise:[0,2,2,'top'],Anna:
   余采馨:['f4',0,0,'bottom'],吳冠賢:[1,2,0,'bottom'],廖秦葦:[1,2,0,'top'],李明庭:[1,2,1,'top'],鄭筱舢:['f4',0,0,'bottom'],黎子瑄:['f4',0,0,'bottom'],王藍庭:['f4',0,0,'bottom']};
 
 const FLOOR_X0 = -3, FLOOR_X1 = 1201 * U + 3, FLOOR_Z0 = -100 * U, FLOOR_Z1 = 1560 * U + 3;
-// 地板：淺灰藍方格（五樓、四樓各一塊）
+// 地板：淺灰藍方格（五樓、四樓各一塊）；深色模式換成深灰藍方格（見 applyTheme）
+const floorTiles = [];
 for (const [FLOOR_X0, FLOOR_X1, FLOOR_Z0, FLOOR_Z1] of [[-3, 1201 * U + 3, -100 * U, 1560 * U + 3], [(FX4 + F4_X0) * U, (FX4 + F4_X1) * U, F4_Z0 * U, F4_Z1 * U]]) {
   const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d');
   g.fillStyle = '#e4eaef'; g.fillRect(0, 0, 32, 32); g.fillStyle = '#dde4ea'; g.fillRect(0, 0, 16, 16); g.fillRect(16, 16, 16, 16);
-  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.NearestFilter; t.colorSpace = THREE.SRGBColorSpace;
+  const t = new THREE.CanvasTexture(c); floorTiles.push({c, t}); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.NearestFilter; t.colorSpace = THREE.SRGBColorSpace;
   t.repeat.set((FLOOR_X1 - FLOOR_X0) / 2, (FLOOR_Z1 - FLOOR_Z0) / 2);
   const f = new THREE.Mesh(new THREE.PlaneGeometry(FLOOR_X1 - FLOOR_X0, FLOOR_Z1 - FLOOR_Z0), new THREE.MeshLambertMaterial({map:t}));
   f.rotation.x = -Math.PI / 2; f.position.set((FLOOR_X0 + FLOOR_X1) / 2, 0, (FLOOR_Z0 + FLOOR_Z1) / 2); scene.add(f); f.userData.noMask = true;
 }
+// 深色模式（跟著網站的深淺模式：localStorage designRequestThemeV1，網站切換時用 postMessage 通知）：地板、背景、燈光一起變暗
+function applyTheme(t){
+  const dark = t === 'dark', col = dark ? ['#2b323a', '#252b32'] : ['#e4eaef', '#dde4ea'];
+  for (const {c, t: tex} of floorTiles) { const g = c.getContext('2d'); g.fillStyle = col[0]; g.fillRect(0, 0, 32, 32); g.fillStyle = col[1]; g.fillRect(0, 0, 16, 16); g.fillRect(16, 16, 16, 16); tex.needsUpdate = true; }
+  scene.background.set(dark ? 0x141a20 : 0xcfd9e0);
+  hemiLight.color.set(dark ? 0xaab6c8 : 0xffffff); hemiLight.groundColor.set(dark ? 0x3a4350 : 0xa9b6c2); hemiLight.intensity = (FLAT ? 2 : 1.12) * (dark ? .62 : 1);
+  sun.intensity = (FLAT ? 0 : 1.4) * (dark ? .55 : 1); sun.color.set(dark ? 0xc8d4ff : 0xfff2e0);
+  document.documentElement.dataset.plazaTheme = dark ? 'dark' : 'light';
+}
+let themeNow = 'light'; try { themeNow = localStorage.getItem('designRequestThemeV1') === 'dark' ? 'dark' : 'light'; } catch (e) {}
+applyTheme(themeNow);
+addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'pixelOfficeTheme') applyTheme(e.data.theme === 'dark' ? 'dark' : 'light'); });
+addEventListener('storage', e => { if (e.key === 'designRequestThemeV1') applyTheme(e.newValue === 'dark' ? 'dark' : 'light'); });
+
 // 玻璃牆：半透明方塊加深色邊線
 const rects = [];     // 碰撞：[x0, z0, x1, z1]（世界座標）
 const wallMat = new THREE.MeshBasicMaterial({color:0xcfe6ee, transparent:true, opacity:.5, depthWrite:false});
