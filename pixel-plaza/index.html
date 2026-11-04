@@ -754,7 +754,7 @@ function updateGameplay(){
   if (player && !player.sitting && performance.now() - lastCollect > 600) { lastCollect = performance.now(); for (const d of dropsNow()) if (Math.hypot(player.holder.position.x - d.x, player.holder.position.z - d.z) < 1.4) { collectDrop(d); break; } }   // 走過去也能撿
   updateProjectors(); updateCover();
 }
-// 道具不蓋到人物的臉／身體：畫面上落在某個人物範圍內就先藏起來（也不能點）
+// 道具不蓋到人物的臉／身體：畫面上落在某個人物範圍內，就改畫在人物後面（以前是整個藏起來，走動時會一下消失一下出現）
 const _cv1 = new THREE.Vector3(), _cv2 = new THREE.Vector3(); let lastCover = 0;
 function updateCover(){
   if (performance.now() - lastCover < 250) return; lastCover = performance.now();
@@ -764,7 +764,9 @@ function updateCover(){
     const fy = (-_cv1.y * .5 + .5) * innerHeight, hy = (-_cv2.y * .5 + .5) * innerHeight, h = Math.max(20, fy - hy); rs.push([(_cv1.x * .5 + .5) * innerWidth, hy - h * .1, fy + h * .08, h * .42]); }
   for (const [, o] of floorMeshes) { if (o.kind === 'poop') continue;
     _cv1.copy(o.mesh.position); _cv1.y += .25; _cv1.project(camera); const x = (_cv1.x * .5 + .5) * innerWidth, y = (-_cv1.y * .5 + .5) * innerHeight;
-    o.mesh.visible = !rs.some(r => Math.abs(x - r[0]) < r[3] && y > r[1] && y < r[2]); }
+    const cov = rs.some(r => Math.abs(x - r[0]) < r[3] && y > r[1] && y < r[2]);
+    if (o.cov === cov) continue; o.cov = cov; o.mesh.visible = true;   // 不再把道具藏起來（走動時會一下消失一下出現）：被人物擋到時改成畫在人物後面（不寫入深度、先畫），人物永遠蓋在上面
+    o.mesh.traverse(m => { const mt = m.material; if (!mt) return; for (const q of Array.isArray(mt) ? mt : [mt]) { q.depthTest = !cov; q.depthWrite = !cov; q.needsUpdate = true; } m.renderOrder = cov ? -5 : 0; }); }
 }
 const imgs = {};
 const loadImg = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
