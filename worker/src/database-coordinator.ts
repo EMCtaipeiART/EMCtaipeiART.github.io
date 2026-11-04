@@ -4313,6 +4313,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const data = await response.json().catch(() => ({})) as Row;
     if (!response.ok) return { ok: false, action: 'getCaseMailThread', error: text((data.error as Row)?.message) || `Gmail 讀取失敗：${response.status}` };
     const rawMessages = deliveredThreadMessages(Array.isArray(data.messages) ? data.messages : []);
+    if (!rawMessages.length) {
+      const all = Array.isArray(data.messages) ? data.messages.map(asRow) : [];
+      const labels = all.map(m => (Array.isArray(m.labelIds) ? m.labelIds.map(text).join('/') : '無標籤') || '無標籤').join('、');
+      return { ok: false, action: 'getCaseMailThread', error: `Gmail 信件串裡沒有可顯示的信件（寄件帳號 ${owner}，共 ${all.length} 封${labels ? `，標籤：${labels}` : ''}）`, reason: 'GMAIL_THREAD_EMPTY' };
+    }
     if (!canAccessCaseMailThread(current.account, owner, rawMessages, isCaseDesignerSession(row, current))) {
       return { ok: false, action: 'getCaseMailThread', error: '此信件串的收件人/副本裡沒有這個帳號，無法查看內容', reason: 'GMAIL_THREAD_NOT_PARTICIPANT' };
     }
