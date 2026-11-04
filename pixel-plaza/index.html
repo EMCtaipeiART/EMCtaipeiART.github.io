@@ -1315,9 +1315,17 @@ function syncEmptyDesks(){   // 沒人坐的辦公桌：和大家一樣照上下
     if (off) iconSprite(k, 'power'); else if (k.icon) k.icon.visible = false;
   }
 }
+const STAFF_NAMES = ['廖秦葦', '李明庭', '鄭筱舢', '吳冠賢', '余采馨', '黎子瑄', '王藍庭'];   // 後端 pixelOfficeStaff 的同仁座位（企劃部／專案部）
 function syncExtraStatus(){   // 額外人物沒有後端狀態：依時間規則（平日 8–19 上班、午休、週末與國定假日下班），全員上班／下班按鈕也算
   const st = hoursForce === 'work' ? 'present' : hoursForce === 'off' ? 'offwork' : simStatus(true);
   for (const n of extraNames) { const c = chars[n]; if (c && (c.status !== st || c.appliedStatus == null)) { c.status = st; applyStatus(c); } }
+  // 企劃部／專案部同仁沒有電腦心跳，後端狀態一直是「在座」：照時間規則（午休用餐、下班後／假日下班）；手動指定、行事曆（會議／休假／公出）、本人在線上時不動
+  for (const n of STAFF_NAMES) {
+    const c = chars[n]; if (!c || c === player || c.entered || c.statusSource === 'manual' || (c.remote && !remoteParked(c))) continue;
+    if (!['present', 'overtime', 'offwork', 'lunch'].includes(c.rawStatus || 'present')) continue;
+    const st = hoursForce === 'work' ? 'present' : hoursForce === 'off' ? 'offwork' : simStatus(true);
+    if (c.status !== st || c.appliedStatus == null) { c.status = st; applyStatus(c); }
+  }
   syncEmptyDesks();
 }
 async function pollOnce(){
