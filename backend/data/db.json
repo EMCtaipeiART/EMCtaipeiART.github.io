@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 10501,
+  "revision": 10502,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-04T04:25:51.534Z",
+  "updatedAt": "2026-11-04T04:26:32.727Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -2014,8 +2014,7 @@
         {"短碼":"麻豆外流影片","原始網址":"https://na.cx/i/YMkbWAr.jpg","名稱":"testestetst","專案":"","可見範圍":"僅自己","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"local:d97dc604-04f6-401f-8f65-478ea8b7ce4b","建立者":"Celine組測試人員","建立時間":"2026/10/30 19:38:02","更新時間":"2026/10/30 19:38:02"},
         {"短碼":"賴瑞reelsFN","原始網址":"https://drive.google.com/file/d/1uziSUrIMizyLXASymAQfQzH2ldIX18Pb/view?usp=sharing","名稱":"賴瑞reels","專案":"Soundcore","可見範圍":"同組","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"hsuan.li@emctaipei.com","建立者":"黎子瑄","建立時間":"2026/10/31 15:15:26","更新時間":"2026/10/31 15:15:26"},
         {"短碼":"賴瑞YTFN","原始網址":"https://drive.google.com/file/d/1KbOUeCBw21bvE_gkeNr_soRXp_o-3Wm9/view?usp=sharing","名稱":"賴瑞YT","專案":"Soundcore","可見範圍":"同組","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"hsuan.li@emctaipei.com","建立者":"黎子瑄","建立時間":"2026/10/31 15:16:27","更新時間":"2026/10/31 15:16:27"},
-        {"短碼":"UaxVsL","原始網址":"https://drive.google.com/drive/folders/1UoUrsQ27ZPXWCJTv1UUzx0AI9qB89bPm","名稱":"","專案":"","可見範圍":"同組","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/11/04 12:25:36","更新時間":"2026/11/04 12:25:36"},
-        {"短碼":"6yqXBh","原始網址":"https://emc-art.com/UaxVsL","名稱":"","專案":"","可見範圍":"全部","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/11/04 12:25:51","更新時間":"2026/11/04 12:25:51"}
+        {"短碼":"UaxVsL","原始網址":"https://drive.google.com/drive/folders/1UoUrsQ27ZPXWCJTv1UUzx0AI9qB89bPm","名稱":"","專案":"","可見範圍":"同組","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/11/04 12:25:36","更新時間":"2026/11/04 12:25:36"}
       ]
     }
   },
