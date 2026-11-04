@@ -2511,7 +2511,7 @@ function catBuild(){
 }
 function catBowlBuild(x, z){   // 共用貓碗（飼料碗＋水碗）
   const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
-  const mk = (px, c) => { const b = new THREE.Mesh(new THREE.BoxGeometry(.5, .14, .36), new THREE.MeshLambertMaterial({color:0x3a8fd0})); b.position.set(px, .07, 0); b.userData.pickRoot = g; g.add(b); hull(g, .5, .14, .36, px, .07, 0, .02); const f = new THREE.Mesh(new THREE.BoxGeometry(.4, .03, .26), new THREE.MeshLambertMaterial({color:c})); f.position.set(px, .15, 0); f.userData.pickRoot = g; g.add(f); return f; };
+  const mk = (px, c) => { const b = new THREE.Mesh(new THREE.CylinderGeometry(.21, .17, .14, 24), new THREE.MeshLambertMaterial({color:0x3a8fd0})); b.position.set(px, .07, 0); b.userData.pickRoot = g; g.add(b); { const h = new THREE.Mesh(new THREE.CylinderGeometry(.21 + .02, .17 + .02, .14 + .04, 24), outlineMat); h.position.set(px, .07, 0); h.layers.set(HULL_LAYER); g.add(h); } const f = new THREE.Mesh(new THREE.CylinderGeometry(.17, .17, .03, 24), new THREE.MeshLambertMaterial({color:c})); f.position.set(px, .15, 0); f.userData.pickRoot = g; g.add(f); return f; };
   const food = mk(-.3, 0x9b6a3c), water = mk(.3, 0x7fd0f2); g.userData.pick = {kind:'catbowl'}; pickables.push(g); return {g, food, water, x, z};
 }
 function catBoxBuild(x, z){   // 紙箱
@@ -2641,17 +2641,27 @@ function catStep(dt, now){   // 回傳這一格的位置與姿勢（本機覆蓋
     const k = el / 6; if (k >= 1) { catLocal = null; catLocalStart('belly', 2.2, {}); return {pose:'belly', y:0, face}; }
     const ti = Math.min(2, Math.floor(k * 3)), tp = L.pts[ti], dx = tp.x - pos.x, dz = tp.z - pos.z, d = Math.hypot(dx, dz);
     if (d > .25) { const s = Math.min(d, 4.2 * dt); pos.x += dx / d * s; pos.z += dz / d * s; face = Math.atan2(dx, dz); pose = 'run'; } else { pose = 'stand'; y = Math.abs(Math.sin(el * 8)) * .35; face = Math.atan2(dx, dz); }
-    if (L.toy) { L.toy.position.set(tp.x, .5 + Math.abs(Math.sin(el * 5)) * .35, tp.z); } return {pose, y, face};
+    if (L.toy && pp) { const ang = el * 2.1, tip = {x:pp.x + Math.cos(ang) * 1.7, z:pp.z + Math.sin(ang) * 1.5}, ty = .45 + Math.abs(Math.sin(el * 5)) * .3;
+      let t2 = tip; for (let i = 0; i < 6 && blocked(t2.x, t2.z); i++) { const aa = ang + (i + 1) * 1.05; t2 = {x:pp.x + Math.cos(aa) * 1.5, z:pp.z + Math.sin(aa) * 1.3}; } if (blocked(t2.x, t2.z)) t2 = {x:pp.x + Math.sin(player.face) * .9, z:pp.z + Math.cos(player.face) * .9};
+      L.pts[0] = L.pts[1] = L.pts[2] = t2; L.toy.position.set(t2.x, ty, t2.z); catWandUpdate(pp, t2, ty);
+      if (player && !player.sitting) player.face = Math.atan2(catG.position.x - pp.x, catG.position.z - pp.z); }
+    return {pose, y, face};
   }
   catLocal = null; return {pose:'stand', y:0, face};
 }
 function catToyShow(on, p){ if (!catToyShow.m) { const m = new THREE.Mesh(new THREE.BoxGeometry(.18, .18, .18), new THREE.MeshLambertMaterial({color:0xff5a6e})); m.userData.noMask = true; scene.add(m); catToyShow.m = m; } catToyShow.m.visible = on; if (on && p) catToyShow.m.position.set(p.x, .5, p.z); return catToyShow.m; }
+function catToyHide(){ if (catToyShow.m) catToyShow.m.visible = false; if (catToyShow.s) catToyShow.s.visible = false; }
+function catWandUpdate(pp, tip, y){   // 玩家手上的逗貓棒：棒子從手伸到球
+  if (!catToyShow.s) { const g = new THREE.CylinderGeometry(.025, .025, 1, 6); g.rotateX(Math.PI / 2); g.translate(0, 0, .5); const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({color:0x8a5a2b})); m.userData.noMask = true; scene.add(m); catToyShow.s = m; }
+  const m = catToyShow.s, hx = pp.x + (tip.x - pp.x) * .25, hz = pp.z + (tip.z - pp.z) * .25, hy = 1.1; m.visible = true; m.position.set(hx, hy, hz);
+  const L = Math.hypot(tip.x - hx, y - hy, tip.z - hz) || 1; m.scale.set(1, 1, L); m.lookAt(tip.x, y, tip.z);
+}
 let catLast = 0;
 function updateCat(dt){
   if (!catG) return; const now = performance.now(), vx = player ? player.holder.position.x : guestAt.x, on5 = vx < (FX4 - 100) * U; catG.visible = on5;
   if (!on5 || performance.now() - catT0 < 600) { catTagEl.style.display = 'none'; return; }
   let a;
-  if (catLocal) { const s = catStep(dt, now); a = {x:catG.position.x, z:catG.position.z, y:s.y, face:s.face, pose:s.pose, kind:'local'}; if (catLocal && catLocal.mode === 'play') {} else if (catToyShow.m) catToyShow.m.visible = false; }
+  if (catLocal) { const s = catStep(dt, now); a = {x:catG.position.x, z:catG.position.z, y:s.y, face:s.face, pose:s.pose, kind:'local'}; if (catLocal && catLocal.mode === 'play') {} else catToyHide(); }
   else { a = catAt(syncNow()); }
   if (!catLocal) { const k = Math.min(1, dt * 12); if (!catLast) { catG.position.set(a.x, 0, a.z); } else { catG.position.x += (a.x - catG.position.x) * k; catG.position.z += (a.z - catG.position.z) * k; } let df = a.face - catG.rotation.y; df = Math.atan2(Math.sin(df), Math.cos(df)); catG.rotation.y += df * Math.min(1, dt * 9); }
   else { let df = a.face - catG.rotation.y; df = Math.atan2(Math.sin(df), Math.cos(df)); catG.rotation.y += df * Math.min(1, dt * 12); }
@@ -2737,7 +2747,7 @@ function catAct(a){
     if (trustLv() === 0) { catLocalStart('look', 2.5, {}); showQuote(CAT.name, '牠只瞄了逗貓棒一眼，還不敢玩（先餵點心培養感情）'); return; }
     const pts = [0, 1, 2].map(() => { const ang = Math.random() * 6.28, r = 1.4 + Math.random() * 1.4; let q = {x:pp.x + Math.cos(ang) * r, z:pp.z + Math.sin(ang) * r}; if (blocked(q.x, q.z)) q = {x:pp.x, z:pp.z + 1.4}; return q; });
     const toy = catToyShow(true, pts[0]); catLocalStart('play', 6, {pts, toy}); catLocal.t0 = performance.now(); catCare('play'); showQuote(CAT.name, '追著逗貓棒撲來撲去！'); catClose();
-    setTimeout(() => { if (catToyShow.m) catToyShow.m.visible = false; }, 6200); return;
+    setTimeout(catToyHide, 6200); return;
   }
 }
 function catBowlClick(){
