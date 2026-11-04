@@ -1386,7 +1386,7 @@ async function pollOnce(){
     const pre = earlyState; earlyState = null; let d = pre && live.version === 0 ? await pre : null;   // 開場預先送出的那份（只在還沒讀過狀態時用）
     if (!d || !d.ok) { const tq = Date.now(); const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify({action:'pixelOfficeState', since:live.version}), cache:'no-store'}); d = await r.json(); if (d && d.serverNow) { const off = d.serverNow + (Date.now() - tq) / 2 - Date.now(); clockOff = clockSet ? clockOff + (off - clockOff) * .3 : off; clockSet = true; } } if (!d || !d.ok) throw new Error('bad response');
     live.ok = true; live.at = Date.now(); if (typeof d.workday === 'boolean' && d.workday !== srvWorkday) { srvWorkday = d.workday; for (const c of Object.values(chars)) c.appliedStatus = null; }
-    if (d.catOffice) { catOffice.belong = Math.max(0, d.catOffice.belong | 0); catOffice.bowlAt = d.catOffice.bowlAt | 0; catOffice.waterAt = d.catOffice.waterAt | 0; }   // 貓的歸屬感與貓碗是全員共用的：以伺服器為準（訪客也一樣）
+    if (d.catOffice) { catOffice.belong = Math.max(0, d.catOffice.belong | 0); catOffice.bowlAt = Math.max(catOffice.bowlAt, d.catOffice.bowlAt | 0); catOffice.waterAt = Math.max(catOffice.waterAt, d.catOffice.waterAt | 0); }   // 貓的歸屬感與貓碗是全員共用的：以伺服器為準（訪客也一樣）
     if (Array.isArray(d.hidden)) applyHidden(d.hidden);
     if (!d.unchanged) {
       live.version = d.version || live.version;
