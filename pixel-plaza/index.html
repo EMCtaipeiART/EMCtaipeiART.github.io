@@ -1401,7 +1401,7 @@ addEventListener('pagehide', () => { try { if (player && live.ok) { const l = la
     if (l && meName()) { try { localStorage.setItem('pixelLast' + progScope, JSON.stringify(l)); } catch (e) {} navigator.sendBeacon(API, JSON.stringify({action:'pixelOfficeProgress', name:meName(), op:'save', progress:{dex, stat, last:l}})); } } } catch (e) {} });
 function remoteFromState(c, e){
   if (c === player) return;
-  const stale = e.floor4At && Date.now() - e.floor4At >= REMOTE_STALE_MS, away = ['toilet', 'meeting'].includes(c.status) || ['toilet', 'meeting'].includes(e.status);   // 人已離線（久沒回報）但狀態是廁所／會議：不要再用舊位置把人放回座位，交給狀態安排
+  const stale = e.floor4At && Date.now() - e.floor4At >= REMOTE_STALE_MS, away = ['toilet', 'meeting'].includes(c.status) || ['toilet', 'meeting'].includes(e.status) || (c.home && ['present', 'overtime'].includes(typeof e.status === 'string' ? e.status : 'present'));   // 人已離線（久沒回報）：狀態是廁所／會議，或是在座／加班而有自己的座位，就不用他最後停的位置（舊位置會讓人停在四樓或走道上），照狀態安排（回自己座位）；人在線上時照他回報的位置
   const fresh = e.floor4At && Date.now() - e.floor4At < REMOTE_PARK_MS && Number.isFinite(e.f4x) && Number.isFinite(e.f4y) && !(stale && away);
   if (fresh) {
     const f4 = e.f4x >= 3000, tx = (f4 ? e.f4x - 3100 + FX4 : e.f4x) * U, tz = (f4 ? e.f4y - 100 : e.f4y) * U;
