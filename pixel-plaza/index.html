@@ -407,7 +407,7 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 <div id="drawer" hidden><div class="dr-head"><span>選擇角色</span><button class="px-x" type="button" title="關閉">✕</button></div><div id="roster"></div></div>
 <div id="dexPanel" hidden><div class="px-head"><span>📖 辦公室圖鑑</span><button class="px-x" type="button">✕</button></div><div id="dexBody"></div></div>
 <div id="helpPanel" hidden><div class="px-head"><span>❓ 操作說明</span><button class="px-x" type="button">✕</button></div>
-  <div class="help-list"><div>🎥 按住滑鼠右鍵拖曳（或 Q／E）旋轉視角，R 回正；手機用兩指橫向滑動，滾輪／雙指捏合縮放</div>
+  <div class="help-list"><div>🎥 在空地按住滑鼠左鍵或右鍵拖曳（或 Q／E）旋轉視角，R 回正；手機用兩指橫向滑動，滾輪／雙指捏合縮放</div>
   <div>🕹️ WASD／方向鍵移動，Shift 跑步，點椅子／馬桶等物件會走過去（手機可點地面走過去，或用左下搖桿）</div><div>🪑 點椅子或馬桶，人物會走過去坐下；要起身直接走動</div><div>🎮 點自己的人物或按「角色頁面」：狀態、心情、想說的話、音樂、限時動態（管理者另有全員上下班與班長工具）</div><div>✨ 撿地上的道具、沖馬桶、點投影機，圖鑑會記錄你的發現，每 5 個升一級</div><div>📡 角色依「凱曜設計部」的即時出勤狀態行動（在座／加班／用餐／廁所／會議／下班…）</div></div></div>
 <script type="module">
 import * as THREE from 'three';
@@ -423,6 +423,8 @@ const NAMES = ['Amber','Anna','Leona','Machi','Noise','余采馨','吳冠賢','�
 // 人物圖集：預設讀本機靜態檔；角色工坊發佈過的人改讀雲端（圖集 12 個面向，版本號變了網址就變，不怕快取）
 const CHAR_API = (location.hostname === 'localhost' && new URLSearchParams(location.search).get('charApi')) || 'https://emc-ai-stage-classifier.machi-chen.workers.dev/api/public/characters';   // ?charApi= 只在 localhost 有效（測試用）
 let cloudChars = {}, cloudSeats = {};
+let clockOff = 0, clockSet = false;   // 本機時鐘與伺服器的差：貓的行程、道具時段都用伺服器時間，每個人畫面才會同步（電腦時鐘差幾十秒就會看到不一樣的貓）
+const syncNow = () => Date.now() + clockOff;
 // 開場就同時送出出勤狀態請求（不等場景和角色圖載完）；pollOnce 第一次直接用這份，之後照常輪詢
 let earlyState = fetch('https://machi-design-api.machi-chen.workers.dev/api', {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify({action:'pixelOfficeState', since:0}), cache:'no-store'}).then(r => r.json()).catch(() => null);
 const cloudReady = (localStorage.getItem('noCloudChars') === '1' ? Promise.resolve() : fetch(CHAR_API, {signal: AbortSignal.timeout(4000)}).then(r => r.ok ? r.json() : null).then(j => { cloudChars = (j && j.characters) || {}; cloudSeats = (j && j.seats) || {}; }).catch(() => {}));
@@ -676,7 +678,7 @@ function removeMesh(m){ scene.remove(m); const i = billboards.indexOf(m); if (i 
 // 掉落物（地上）：每 8 分鐘一個時段、1–2 個，位置由種子決定
 const dropCache = new Map(), inSlideZone = (x, z) => Math.abs(x - 846 * U) < 4.3 && Math.abs(z - 1367 * U) < 3.2;   // 會議室 D 地板上的投影畫面範圍
 function dropsNow(){
-  const sl = Math.floor(Date.now() / SLOT_D), out = [];
+  const sl = Math.floor(syncNow() / SLOT_D), out = [];
   for (const s of [sl - 1, sl]) {
     let L = dropCache.get(s);
     if (!L) { L = []; const r = rng('d:3d:' + s), n = 2 + Math.floor(r() * 3);   // 兩層樓合計 2～4 件；時段與種子相同，所有人看到的一樣
@@ -693,7 +695,7 @@ const F4_PROJ = [[H_PROJ_X(), F4.H.y + 187], [F4.F.x + 47 + 28 + FX4, F4.F.y + F
 function H_PROJ_X(){ return F4.H.x + 276 + 50 + 163 + FX4; }
 const PROJ_POS = [...[[948, 158], [160, 1160], [162, 1360], [846, 1196]].map(p => [p[0], zN(p[1])]), ...F4_PROJ], NOTE_TABLES = [...[[863, 158, 250, 56], [184, 1160, 120, 50], [186, 1360, 116, 50], [846, 1196, 252, 60]].map(t => [t[0], zN(t[1]), t[2], t[3]]), ...F4_NOTE], noteCache = new Map();
 function notesNow(){
-  const sl = Math.floor(Date.now() / SLOT_N), out = [];
+  const sl = Math.floor(syncNow() / SLOT_N), out = [];
   for (const s of [sl - 1, sl]) {
     let L = noteCache.get(s);
     if (!L) { L = []; const r = rng('n:3d:' + s), n = Math.floor(r() * 6);
@@ -707,7 +709,7 @@ function notesNow(){
 }
 // 便便：每 5 分鐘一個時段，每個馬桶 40% 機率；點一下沖掉
 function poopsNow(){
-  const sl = Math.floor(Date.now() / SLOT_P), out = [];
+  const sl = Math.floor(syncNow() / SLOT_P), out = [];
   toilets.forEach((t, i) => { const id = 'p:' + sl + ':' + i, r = rng(id); if (r() < .4 && !taken(id) && !chairSeats.some(st => st.by && Math.hypot(st.x - t.x, st.z - t.z) < .5)) out.push({id, t, v:r() < .5 ? 1 : 2}); });
   return out;
 }
@@ -1332,8 +1334,9 @@ function syncExtraStatus(){   // 額外人物沒有後端狀態：依時間規�
 async function pollOnce(){
   try {
     const pre = earlyState; earlyState = null; let d = pre && live.version === 0 ? await pre : null;   // 開場預先送出的那份（只在還沒讀過狀態時用）
-    if (!d || !d.ok) { const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify({action:'pixelOfficeState', since:live.version}), cache:'no-store'}); d = await r.json(); } if (!d || !d.ok) throw new Error('bad response');
+    if (!d || !d.ok) { const tq = Date.now(); const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify({action:'pixelOfficeState', since:live.version}), cache:'no-store'}); d = await r.json(); if (d && d.serverNow) { const off = d.serverNow + (Date.now() - tq) / 2 - Date.now(); clockOff = clockSet ? clockOff + (off - clockOff) * .3 : off; clockSet = true; } } if (!d || !d.ok) throw new Error('bad response');
     live.ok = true; live.at = Date.now(); if (typeof d.workday === 'boolean' && d.workday !== srvWorkday) { srvWorkday = d.workday; for (const c of Object.values(chars)) c.appliedStatus = null; }
+    if (d.catOffice) { catOffice.belong = Math.max(0, d.catOffice.belong | 0); catOffice.bowlAt = d.catOffice.bowlAt | 0; catOffice.waterAt = d.catOffice.waterAt | 0; }   // 貓的歸屬感與貓碗是全員共用的：以伺服器為準（訪客也一樣）
     if (Array.isArray(d.hidden)) applyHidden(d.hidden);
     if (!d.unchanged) {
       live.version = d.version || live.version;
@@ -1730,8 +1733,12 @@ stick.addEventListener('pointerup', () => { joy.x = joy.y = 0; knob.style.transf
 const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 let guestDrag = null;
 let rotDrag = null;
+function pickHitAt(e){   // 滑鼠點下去的地方有沒有可點的東西（有就照舊處理，沒有才當成拖曳旋轉視角——Mac 觸控板不好按右鍵拖曳）
+  ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
+  return ray.intersectObjects(pickables, true).some(h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.desk && !pk.c.holder.visible); });
+}
 renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
-renderer.domElement.addEventListener('pointerdown', e => { if (player && e.button === 2) { rotDrag = {x:e.clientX}; try { renderer.domElement.setPointerCapture(e.pointerId); } catch (err) {} renderer.domElement.style.cursor = 'grabbing'; return; } if (player) { onPick(e); return; } guestDrag = {x:e.clientX, y:e.clientY, moved:false}; try { renderer.domElement.setPointerCapture(e.pointerId); } catch (err) {} });
+renderer.domElement.addEventListener('pointerdown', e => { if (player && e.button === 2) { rotDrag = {x:e.clientX}; try { renderer.domElement.setPointerCapture(e.pointerId); } catch (err) {} renderer.domElement.style.cursor = 'grabbing'; return; } if (player) { if (e.pointerType === 'mouse' && e.button === 0 && !pickHitAt(e)) { rotDrag = {x:e.clientX}; try { renderer.domElement.setPointerCapture(e.pointerId); } catch (err) {} } onPick(e); return; } guestDrag = {x:e.clientX, y:e.clientY, moved:false}; try { renderer.domElement.setPointerCapture(e.pointerId); } catch (err) {} });
 renderer.domElement.addEventListener('pointermove', e => { if (rotDrag) { camYaw -= (e.movementX || 0) * .006; return; } if (player || !guestDrag || !(e.buttons & 1)) return; const dx = e.clientX - guestDrag.x, dy = e.clientY - guestDrag.y; if (!guestDrag.moved && Math.hypot(dx, dy) < 5) return; guestDrag.moved = true; guestAt.x -= (e.movementX || 0) * .045; guestAt.z -= (e.movementY || 0) * .07; guestClamp(); renderer.domElement.style.cursor = 'grabbing'; });
 renderer.domElement.addEventListener('pointerup', e => { if (rotDrag) { rotDrag = null; renderer.domElement.style.cursor = ''; return; } if (player || !guestDrag) return; const was = guestDrag; guestDrag = null; renderer.domElement.style.cursor = ''; if (!was.moved) onPick(e); });
 let camZoom = 1, camYaw = 0;   // camYaw：鏡頭繞人物旋轉的角度（右鍵拖曳／Q、E／手機兩指橫向滑動），0＝原本從南邊往北看
@@ -2455,7 +2462,7 @@ function catInit(){
   catT0 = performance.now();
   if (meN) { catCloud('get'); setInterval(() => catCloud('get'), 90000); }
   catNameLoad(); setInterval(catNameLoad, 90000);
-  window.__cat = {naming:() => catNaming, nameLoad:catNameLoad, click:catClick, act:catAct, bowlClick:catBowlClick, care:catCare, get spots(){ return catSpots; }, at:catAt, plan:catPlan, state:() => ({catState, catOffice, catInv}), local:() => catLocal, pos:() => catG.position.clone(), set(o){ Object.assign(catOffice, o); catPlans.clear(); }, force(o){ catForce = o; }, give(k, n){ catInv[k] = n; }};
+  window.__cat = {now:syncNow, naming:() => catNaming, nameLoad:catNameLoad, click:catClick, act:catAct, bowlClick:catBowlClick, care:catCare, get spots(){ return catSpots; }, at:catAt, plan:catPlan, state:() => ({catState, catOffice, catInv}), local:() => catLocal, pos:() => catG.position.clone(), set(o){ Object.assign(catOffice, o); catPlans.clear(); }, force(o){ catForce = o; }, give(k, n){ catInv[k] = n; }};
 }
 // 這個時段貓在哪、做什麼（所有人算出來一樣）
 function catTP(ms){ const d = new Date(ms + 288e5); return {h:d.getUTCHours() + d.getUTCMinutes() / 60, dow:d.getUTCDay()}; }
@@ -2502,8 +2509,8 @@ function catAt(now){
   return {x:sPos.x, z:sPos.z, y:sPos.y, face:sPos.face, pose, kind:plan.kind, speed:0};
 }
 // 碗：主食 8 小時內有人補過就是滿的，水 8 小時；週末／休息日有自動餵食器（碗一直是滿的）
-const catWeekendFeeder = () => { const tp = catTP(Date.now()); return tp.dow === 0 || tp.dow === 6; };
-const catBowlFull = () => catWeekendFeeder() || Date.now() - catOffice.bowlAt < 8 * 3600e3, catWaterFull = () => catWeekendFeeder() || Date.now() - catOffice.waterAt < 8 * 3600e3;
+const catWeekendFeeder = () => { const tp = catTP(syncNow()); return tp.dow === 0 || tp.dow === 6; };
+const catBowlFull = () => catWeekendFeeder() || syncNow() - catOffice.bowlAt < 8 * 3600e3, catWaterFull = () => catWeekendFeeder() || syncNow() - catOffice.waterAt < 8 * 3600e3;
 // 姿勢：直接調整各部位
 function catPose(a, now){
   const P = catParts; if (!P.ready) return; const tm = now / 1000, sp = P.sprite;
@@ -2523,14 +2530,14 @@ function catPose(a, now){
 const catPlayerPos = () => player ? player.holder.position : null;
 function catGo(pts, speed, then){ const here = catG.position; const route = catRoute({x:here.x, z:here.z}, pts); catLocal = {mode:'go', path:route.pts.slice(1), speed, then, t:performance.now()}; }
 function catLocalStart(mode, dur, extra){ catLocal = Object.assign({mode, until:performance.now() + dur * 1000, t0:performance.now(), a:0}, extra || {}); }
-function catReturn(){ const b = catAt(Date.now()); const here = catG.position; const route = catRoute({x:here.x, z:here.z}, [{x:b.x, z:b.z}]); catLocal = {mode:'return', path:route.pts.slice(1), speed:2.4, tries:0}; }
+function catReturn(){ const b = catAt(syncNow()); const here = catG.position; const route = catRoute({x:here.x, z:here.z}, [{x:b.x, z:b.z}]); catLocal = {mode:'return', path:route.pts.slice(1), speed:2.4, tries:0}; }
 function catStep(dt, now){   // 回傳這一格的位置與姿勢（本機覆蓋時）
   const L = catLocal, pos = catG.position; let pose = 'stand', y = 0, face = catG.rotation.y;
   const walkTo = () => { const wp = L.path[0]; if (!wp) return true; const dx = wp.x - pos.x, dz = wp.z - pos.z, d = Math.hypot(dx, dz); if (d < .15) { L.path.shift(); return !L.path.length; } const s = Math.min(d, L.speed * dt); pos.x += dx / d * s; pos.z += dz / d * s; face = Math.atan2(dx, dz); pose = L.speed > 5 ? 'run' : 'walk'; return false; };
   if (L.mode === 'go' || L.mode === 'return') {
     if (walkTo()) {
       if (L.mode === 'go') { const th = L.then; catLocal = null; if (th) th(); return {pose:'stand', y:0, face}; }
-      const b = catAt(Date.now()); if (Math.hypot(b.x - pos.x, b.z - pos.z) > .8 && (L.tries = (L.tries | 0) + 1) < 4) { const r = catRoute({x:pos.x, z:pos.z}, [{x:b.x, z:b.z}]); L.path = r.pts.slice(1); } else { catLocal = null; }
+      const b = catAt(syncNow()); if (Math.hypot(b.x - pos.x, b.z - pos.z) > .8 && (L.tries = (L.tries | 0) + 1) < 4) { const r = catRoute({x:pos.x, z:pos.z}, [{x:b.x, z:b.z}]); L.path = r.pts.slice(1); } else { catLocal = null; }
     }
     return {pose, y: 0, face};
   }
@@ -2559,7 +2566,7 @@ function updateCat(dt){
   if (!on5 || performance.now() - catT0 < 600) { catTagEl.style.display = 'none'; return; }
   let a;
   if (catLocal) { const s = catStep(dt, now); a = {x:catG.position.x, z:catG.position.z, y:s.y, face:s.face, pose:s.pose, kind:'local'}; if (catLocal && catLocal.mode === 'play') {} else if (catToyShow.m) catToyShow.m.visible = false; }
-  else { a = catAt(Date.now()); }
+  else { a = catAt(syncNow()); }
   if (!catLocal) { const k = Math.min(1, dt * 12); if (!catLast) { catG.position.set(a.x, 0, a.z); } else { catG.position.x += (a.x - catG.position.x) * k; catG.position.z += (a.z - catG.position.z) * k; } let df = a.face - catG.rotation.y; df = Math.atan2(Math.sin(df), Math.cos(df)); catG.rotation.y += df * Math.min(1, dt * 9); }
   else { let df = a.face - catG.rotation.y; df = Math.atan2(Math.sin(df), Math.cos(df)); catG.rotation.y += df * Math.min(1, dt * 12); }
   catG.position.y += ((a.y || 0) - catG.position.y) * Math.min(1, dt * 14); catLast = now;
@@ -2584,7 +2591,7 @@ addEventListener('pointerdown', e => { if (!catPanel.hidden && !catPanel.contain
 addEventListener('keydown', e => { if (e.key === 'Escape' && !catPanel.hidden) catClose(); });
 function catClose(){ catPanel.hidden = true; }
 function catMoodText(){
-  const a = catAt(Date.now()), p = a.pose;
+  const a = catAt(syncNow()), p = a.pose;
   if (catLocal && catLocal.mode === 'play') return '正在玩'; if (catAnnoyed > performance.now()) return '有點不爽，暫時不理你';
   return p === 'loaf' ? '睡覺中' : p === 'eat' ? '吃飯中' : p === 'groom' ? '理毛中' : p === 'run' ? '突然暴衝中' : p === 'walk' ? '散步中' : p === 'sit' ? '坐著發呆' : '看著你';
 }
@@ -2612,7 +2619,7 @@ function catCare(kind, effect){   // 一次有效互動：每天前幾次增加�
 }
 function catNeed(dist){ const pp = catPlayerPos(); if (!pp || !catG) return false; if (Math.hypot(pp.x - catG.position.x, pp.z - catG.position.z) > dist) { showQuote('', '走近一點再試試'); return false; } return true; }
 function catAct(a){
-  if (!player || AWAY.has(player.status)) return; const now = performance.now(), sleeping = catAt(Date.now()).pose === 'loaf' && !catLocal;
+  if (!player || AWAY.has(player.status)) return; const now = performance.now(), sleeping = catAt(syncNow()).pose === 'loaf' && !catLocal;
   if (a === 'company') { if (catCompany) { catCompany = null; catRender(); return; } if (!catNeed(4.5)) return; catCompany = {t:0, x:player.holder.position.x, z:player.holder.position.z}; showQuote('', '安靜陪伴 20 秒（不要走動）'); catRender(); return; }
   if (catAnnoyed > now && a !== 'call') { showQuote(CAT.name, '牠現在不想理你，過一陣子再來'); return; }
   const pp = player.holder.position;

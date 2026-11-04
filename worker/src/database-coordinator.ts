@@ -2721,7 +2721,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   private pixelOfficeState(payload: ApiPayload): ApiResult {
     this.pixelOfficeApplyOffline(Date.now());
     const version = this.pixelOfficeVersion();
-    if (Number(payload.since) === version && version > 0) return { ok: true, action: 'pixelOfficeState', version, unchanged: true, workday: pixelOfficeIsWorkday(Date.now()) };   // 國定假日要在不換版本時也傳到畫面
+    // 全員共用的貓（歸屬感、貓碗）與伺服器時間：每個人（含訪客）每次輪詢都帶回，貓的行程才會在每個人畫面上一致（不依賴各人本機存檔與電腦時鐘）
+    let catOffice: Row = {};
+    try { const row = this.ctx.storage.sql.exec<{ value: string }>("SELECT value FROM pixel_office_settings WHERE key = 'cat:office'").toArray()[0]; catOffice = asRow(JSON.parse(row?.value || '{}')); } catch { catOffice = {}; }
+    const office = { belong: Math.max(0, Math.floor(Number(catOffice.belong) || 0)), bowlAt: Math.floor(Number(catOffice.bowlAt) || 0), waterAt: Math.floor(Number(catOffice.waterAt) || 0) };
+    if (Number(payload.since) === version && version > 0) return { ok: true, action: 'pixelOfficeState', version, unchanged: true, workday: pixelOfficeIsWorkday(Date.now()), serverNow: Date.now(), catOffice: office };   // 國定假日要在不換版本時也傳到畫面
     const rows = this.ctx.storage.sql.exec<{ name: string; state: string; photo_version: number; updated_at: number }>(
       'SELECT name, state, photo_version, updated_at FROM pixel_office_people'
     ).toArray();
@@ -2733,7 +2737,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     // 稱號跟著狀態一起回：前端不必為了它多打一次 API，改了也會隨輪詢傳到每個人的畫面。
     const avatars: Record<string, number> = {};
     for (const row of this.ctx.storage.sql.exec<{ name: string; updated_at: number }>('SELECT name, updated_at FROM pixel_office_avatar_current').toArray()) avatars[row.name] = Number(row.updated_at) || 0;
-    return { ok: true, action: 'pixelOfficeState', version, people, staff: this.pixelOfficeStaff().map(item => ({ seat: item.seat, name: item.name })), staffMeetings: this.pixelOfficeStaffMeetings(), funClaims: this.pixelOfficeFunClaims(), levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories(), avatars, hours: { dayStart: pixelHours.dayStart, workEnd: pixelHours.workEnd, overtimeStart: pixelHours.overtimeStart, force: pixelForceNow(Date.now()) }, workday: pixelOfficeIsWorkday(Date.now()) };
+    return { ok: true, action: 'pixelOfficeState', version, serverNow: Date.now(), catOffice: office, people, staff: this.pixelOfficeStaff().map(item => ({ seat: item.seat, name: item.name })), staffMeetings: this.pixelOfficeStaffMeetings(), funClaims: this.pixelOfficeFunClaims(), levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories(), avatars, hours: { dayStart: pixelHours.dayStart, workEnd: pixelHours.workEnd, overtimeStart: pixelHours.overtimeStart, force: pixelForceNow(Date.now()) }, workday: pixelOfficeIsWorkday(Date.now()) };
   }
 
   /** 辦公室小樂趣（便便、驚喜道具、遺落物、投影機）的「已被處理」紀錄：所有人共用。
