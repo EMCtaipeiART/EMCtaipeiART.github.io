@@ -426,7 +426,13 @@ let clockOff = 0, clockSet = false;   // 本機時鐘與伺服器的差：貓的
 const syncNow = () => Date.now() + clockOff;
 // 開場就同時送出出勤狀態請求（不等場景和角色圖載完）；pollOnce 第一次直接用這份，之後照常輪詢
 let earlyState = fetch('https://machi-design-api.machi-chen.workers.dev/api', {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify({action:'pixelOfficeState', since:0}), cache:'no-store'}).then(r => r.json()).catch(() => null);
-const cloudReady = (localStorage.getItem('noCloudChars') === '1' ? Promise.resolve() : fetch(CHAR_API, {signal: AbortSignal.timeout(4000)}).then(r => r.ok ? r.json() : null).then(j => { cloudChars = (j && j.characters) || {}; cloudSeats = (j && j.seats) || {}; }).catch(() => {}));
+const cloudReady = (localStorage.getItem('noCloudChars') === '1' ? Promise.resolve() : (async () => {   // 角色工坊發佈的額外人物清單：失敗就重試一次，仍失敗就用上次存的，不然傅思凱這類人物會有人看得到、有人看不到
+  let j = null;
+  for (let k = 0; k < 2 && !j; k++) { try { const r = await fetch(CHAR_API, {signal: AbortSignal.timeout(k ? 8000 : 5000)}); if (r.ok) j = await r.json(); } catch (e) {} }
+  if (j && j.characters) { try { localStorage.setItem('plazaCloudChars', JSON.stringify(j)); } catch (e) {} }
+  else { try { j = JSON.parse(localStorage.getItem('plazaCloudChars') || 'null'); } catch (e) {} }
+  cloudChars = (j && j.characters) || {}; cloudSeats = (j && j.seats) || {};
+})());
 const url = n => cloudChars[n] ? CHAR_API + '/' + encodeURIComponent(n) + '/' + (HD ? 'atlas-hd' : 'atlas') + '.png?v=' + cloudChars[n] : (HD ? 'sprites-hd/' + n + '.webp' : 'sprites/' + n + '.png');
 
 
@@ -1256,14 +1262,34 @@ function applyHidden(list){   // 帳號設定勾了「隱藏人物」（測試�
 }
 // ---- 自由走動的人（沒選座位）：只在辦公桌區（紅框範圍）走動，偶爾搭電梯到另一層；同一時間只在一層出現 ----
 const WALK_AREA = {5:[6, 300, 1195, 1040, []], 4:[-80, 380, 1400, 1540, [[830, 400, 1130, 720], [640, 1330, 1080, 1530]]]};   // [x0, z0, x1, z1, 不取點的會議室]（px；四樓是本地 x）
-function wanderPick(fl){
+function wanderPick(fl, rf = Math.random){
   const [x0, z0, x1, z1, ex] = WALK_AREA[fl], ox = fl === 4 ? FX4 : 0;
   for (let k = 0; k < 40; k++) {
-    const x = x0 + Math.random() * (x1 - x0), z = z0 + Math.random() * (z1 - z0);
+    const x = x0 + rf() * (x1 - x0), z = z0 + rf() * (z1 - z0);
     if (ex.some(r => x > r[0] && x < r[2] && z > r[1] && z < r[3])) continue;
     if (!blocked((x + ox) * U, z * U)) return {x:(x + ox) * U, z:z * U};
   }
   return null;
+}
+// 自由走動的人（沒座位）：依伺服器時間決定位置，每個瀏覽器看到同一個人在同一個地方（和貓咪同樣做法）
+const WSLOT = 30000, WBLK = 5, wPlans = {};
+function wanderPlan(name, b, j){
+  const key = name + ':' + b + ':' + j; if (wPlans[key]) return wPlans[key];
+  const fl = rng('wf:' + name + ':' + b)() < .5 ? 4 : 5, es = elevSpot(fl), elev = {x:es.x, z:es.z + .6};
+  const dest = jj => jj < 0 ? elev : jj >= WBLK - 1 ? elev : (wanderPick(fl, rng('w:' + name + ':' + b + ':' + jj)) || elev);
+  const from = dest(j - 1), to = dest(j), route = findPath(from, to, fl), pts = [from, ...route]; let len = 0; const segs = [];
+  for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].z - pts[i - 1].z); segs.push(d); len += d; }
+  const pl = wPlans[key] = {fl, pts, segs, len}; return pl;
+}
+function wanderSynced(c){
+  if (c.inElev) return;
+  const t = syncNow(), k = Math.floor(t / WSLOT), b = Math.floor(k / WBLK), j = k % WBLK, d = (t % WSLOT) / 1000 * 1.6, p = c.holder.position;
+  const pl = wanderPlan(c.name, b, j); c.fl = pl.fl;
+  let rest = Math.min(d, pl.len), i = 0; while (i < pl.segs.length - 1 && rest > pl.segs[i]) { rest -= pl.segs[i]; i++; }
+  const a = pl.pts[i], e = pl.pts[i + 1] || a, sl = pl.segs[i] || 1, f = Math.min(1, rest / sl);
+  p.set(a.x + (e.x - a.x) * f, 0, a.z + (e.z - a.z) * f);
+  const walking = d < pl.len - .05 && pl.len > 0; c.moving = walking ? 2.4 : 0;
+  if (walking && Math.hypot(e.x - a.x, e.z - a.z) > .01) c.face = Math.atan2(e.x - a.x, e.z - a.z);
 }
 function wanderStep(c, dt){
   if (c.inElev) return;
@@ -2698,7 +2724,7 @@ function tick(){
   }
   for (const c of Object.values(chars)) {
     if (c.remote && c !== player) remoteStep(c, dt);
-    else if (c.wander && !c.sitting) wanderStep(c, dt);
+    else if (c.wander && !c.sitting) wanderSynced(c);
     if (c.sitting) { const sp = sitSpot(c.sitting); if (Math.hypot(sp.x - c.holder.position.x, sp.z - c.holder.position.z) > .6 || (c.moving > 0 && c === player)) releaseSeat(c); }   // 走動中就不是坐著：離開座位的人一律解除入座
     updateSprite(c, dt); stationFx(c, dt);
     if (c.hopAt) { const k = (performance.now() - c.hopAt) / 600; if (k >= 1) { c.hopAt = 0; c.holder.position.y = 0; } else c.holder.position.y = Math.abs(Math.sin(k * Math.PI * 2)) * .6 * (1 - k); }
