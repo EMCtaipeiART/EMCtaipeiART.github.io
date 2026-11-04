@@ -3223,7 +3223,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const folders=Array.isArray(data.folders)?data.folders:(data.path?[{path:data.path,keyword:data.keyword||''}]:[]);
         if(!folders.length){toast('未選擇任何資料夾',true);return}
         const ok=folders.filter(f=>f.ok!==false),failed=folders.length-ok.length;
-        if(!ok.length){toast(data.error?`NAS 備份失敗：${data.error}`:`全部 ${folders.length} 個資料夾都設定失敗，請重新選擇`,true);return}
+        if(!ok.length){const why=data.error||(folders.find(f=>f.error)||{}).error;toast(why?`NAS 備份失敗：${why}`:`全部 ${folders.length} 個資料夾都設定失敗，請重新選擇`,true);return}
         if(data.trackOnly){
           if(!ok.some(f=>String(f.path||'').trim())){toast('請先點進要追蹤的資料夾',true);return}
           saveCaseNas(id,ok);
