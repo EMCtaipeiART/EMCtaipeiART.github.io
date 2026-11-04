@@ -1465,6 +1465,13 @@ async function pollNow(){ if (pollBusy) { pollAgain = true; return; } pollBusy =
   connect(); document.addEventListener('visibilitychange', () => { if (!document.hidden && (!ws || ws.readyState > 1)) connect(); });
   window.__pushWS = {get open(){ return pushOpen; }, trigger:() => pollNow()};
 })();
+function settleChars(){   // loading 頁收尾：把大家的狀態與位置一次定位（遠端人物直接站到回報位置、該坐的坐下），進站後不再有人走動、回朔
+  for (const c of Object.values(chars)) {
+    if (c === player || c.hidden || !c.remote) continue;
+    const r = c.remote, p = c.holder.position; r.buf = [{t:r.at, x:r.x, z:r.z}]; r.off = performance.now() - r.at; p.x = r.x; p.z = r.z; c.mvS = 0; c.moving = 0;
+    for (let k = 0; k < 3; k++) remoteStep(c, .05);
+  }
+}
 function startLiveSync(){ const loop = async () => { const v0 = live.version; await pollNow(); if (live.version !== v0) hotUntil = performance.now() + 8000; setTimeout(loop, document.hidden ? 15000 : pushOpen ? 5000 : (performance.now() < hotUntil || (player && player.moving) ? 350 : 1500)); }; loop(); }
 // ---- 冰箱：點冰箱走過去開門（門真的轉開、露出架上零食），點零食拿一個；庫存與排行在後端 /minigames/fridge（和 2D 版同一份）----
 const FOODS = {
@@ -1716,9 +1723,9 @@ const bootChars = cloudReady.then(() => {
   return Promise.all(all.map((n, i) => addChar(n, i).then(() => { setLoad('載入角色', ++done / all.length); })));
 });
 Promise.all([buildOffice(), loadIcons(), bootChars])
-  .then(async () => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); setLoad('讀取出勤狀態', .9); await Promise.race([pollNow(), new Promise(r => setTimeout(r, 6000))]);
+  .then(async () => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); setLoad('讀取出勤狀態', .9); await Promise.race([pollNow(), new Promise(r => setTimeout(r, 12000))]);
     { let n = 0; const tot = walkLoads.length; walkLoads.forEach(pr => pr.then(() => setLoad('載入走路動畫', .9 + .1 * ++n / tot))); setLoad('載入走路動畫', .9); await Promise.race([Promise.all(walkLoads), new Promise(r => setTimeout(r, 10000))]); }   // 最多等 10 秒，網路太慢就先進站，沒載完的人物走路時先用彈跳搖擺
- startLiveSync(); catInit(); showTitleCard(); window.__plaza = {remoteFromState, catAt, wanderStep, findPath, guestAt, guestGoFloor, updateElev, elevGo, floorOf, elevInteract, fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
+ settleChars(); startLiveSync(); catInit(); showTitleCard(); window.__plaza = {remoteFromState, catAt, wanderStep, findPath, guestAt, guestGoFloor, updateElev, elevGo, floorOf, elevInteract, fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
 
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
 const TILT = 0, STRETCH = 1 / Math.cos(Math.atan(8.4 / 9.4)), _e = new THREE.Euler(0, 0, 0, 'YXZ');   // 垂直站立：不再後傾（避免穿進桌子、牆），高度拉長 STRETCH 倍抵消俯視縮短
@@ -2250,7 +2257,7 @@ document.addEventListener('click', e => {
 });
 
 // ---- PokéBonk 風格介面：標題／選角、HUD、圖鑑、浮動文字 ----
-const LOAD_TIPS = ['☕ 小提醒：咖啡機旁邊的零食，先搶先贏', '🐱 辦公室有一隻貓，牠心情好才會給你摸', '🍱 午餐時間，電腦休眠的同事會顯示「用餐」', '🕹️ WASD／方向鍵移動，Shift 跑步', '🪑 點椅子或馬桶，人物會自己走過去坐下', '📖 地上的小東西撿起來，會記進辦公室圖鑑', '🛗 想去另一層？走到電梯前點一下就好', '🎨 設計師的口頭禪：「這個藍色再藍一點」', '📅 行事曆有會議，人物會自動走進會議室', '🌙 晚上七點後還在座位上的人，會頂著月亮加班', '🧋 今天的珍奶，半糖少冰', '🖱️ 手機可以點地面走過去，或用左下搖桿', '📎 訂書機又沒針了，這是辦公室永恆的謎', '🎧 戴上降噪耳機，就聽不到改稿的聲音', '🦆 小黃鴨專門聽你講 bug', '💬 點人物可以看他的狀態、心情和留言', '🏠 全員下班時，進來的人會自動變成「在座」', '🍕 誰今天加班請客？', '✈️ 出國、休假的同事，桌面會顯示小圖示', '🧩 魔術方塊轉了三天，還是只有一面'];
+const LOAD_TIPS = ['小提醒：咖啡機旁邊的零食，先搶先贏', '辦公室有一隻貓，牠心情好才會給你摸', '午餐時間，電腦休眠的同事會顯示「用餐」', 'WASD／方向鍵移動，Shift 跑步', '點椅子或馬桶，人物會自己走過去坐下', '地上的小東西撿起來，會記進辦公室圖鑑', '想去另一層？走到電梯前點一下就好', '設計師的口頭禪：「這個藍色再藍一點」', '行事曆有會議，人物會自動走進會議室', '晚上七點後還在座位上的人，會頂著月亮加班', '今天的珍奶，半糖少冰', '手機可以點地面走過去，或用左下搖桿', '訂書機又沒針了，這是辦公室永恆的謎', '戴上降噪耳機，就聽不到改稿的聲音', '小黃鴨專門聽你講 bug', '點人物可以看他的狀態、心情和留言', '全員下班時，進來的人會自動變成「在座」', '誰今天加班請客？', '出國、休假的同事，桌面會顯示小圖示', '魔術方塊轉了三天，還是只有一面'];
 let tipTimer = 0;
 function startLoadTips(){
   const el = $('tTip'); if (!el) return; let i = Math.floor(Math.random() * LOAD_TIPS.length);
