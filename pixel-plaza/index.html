@@ -2260,7 +2260,7 @@ function startLoadTips(){
 const stopLoadTips = () => { clearInterval(tipTimer); const el = $('tTip'); if (el) el.style.display = 'none'; };
 startLoadTips();
 function setLoad(text, pct){ $('tText').textContent = text; if (pct != null) $('tFill').style.width = Math.round(pct * 100) + '%'; }
-const CHAR_SCALE = {Leona:1.1};   // 圖集裡頭身比較小的人物放大一點，站在一起才不會特別小
+const CHAR_SCALE = {Leona:1.1, 廖秦葦:1.18};   // 圖集裡頭身比較小的人物放大一點，站在一起才不會特別小
 function avatarURL(c){   // 取角色正面圖的頭肩部分當大頭貼
   try {
     const im = c.tex.image, cw = im.height, cv = document.createElement('canvas'); cv.width = cv.height = 96; const g = cv.getContext('2d'); g.imageSmoothingQuality = 'high';
