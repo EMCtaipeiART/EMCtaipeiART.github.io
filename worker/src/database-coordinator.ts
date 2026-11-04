@@ -1009,9 +1009,19 @@ function accountIsGmailThreadParticipant(account: unknown, messages: unknown[]):
 
 /** 信件串就在這個帳號自己的信箱裡（綁定／寄出信件串的帳號本人）一律算相關人：用「串信」綁定的信件串，
  * 本人可能是密件副本或透過群組信箱收到，標頭 To／Cc 裡不會出現自己，以前會被當成「不是相關人」擋下回信。 */
-function canAccessCaseMailThread(account: unknown, owner: unknown, messages: unknown[]): boolean {
+function canAccessCaseMailThread(account: unknown, owner: unknown, messages: unknown[], isCaseDesigner = false): boolean {
   const email = canonicalAccount(account);
-  return Boolean(email) && email === canonicalAccount(owner) || accountIsGmailThreadParticipant(account, messages);
+  return isCaseDesigner || Boolean(email) && email === canonicalAccount(owner) || accountIsGmailThreadParticipant(account, messages);
+}
+
+/** 案件的設計負責人本來就要能讀／回這條信件串，即使信件串的收件人/副本沒有列到他（2026-11-04：26100203 的
+ * 設計負責人 Anna 不在原信收件人/副本裡，結果讀不到信件串、無法回信）。 */
+function isCaseDesignerSession(row: Row, session: { user?: string; account?: string } | null): boolean {
+  const designer = text(row['設計負責人']).toLowerCase();
+  if (!designer || !session) return false;
+  const user = text(session.user).toLowerCase();
+  const local = canonicalAccount(session.account).split('@')[0].toLowerCase();
+  return user === designer || user.startsWith(designer) || local === designer || local.split(/[._-]/)[0] === designer;
 }
 
 /**
@@ -4300,7 +4310,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const data = await response.json().catch(() => ({})) as Row;
     if (!response.ok) return { ok: false, action: 'getCaseMailThread', error: text((data.error as Row)?.message) || `Gmail 讀取失敗：${response.status}` };
     const rawMessages = deliveredThreadMessages(Array.isArray(data.messages) ? data.messages : []);
-    if (!canAccessCaseMailThread(current.account, owner, rawMessages)) {
+    if (!canAccessCaseMailThread(current.account, owner, rawMessages, isCaseDesignerSession(row, current))) {
       return { ok: false, action: 'getCaseMailThread', error: '此信件串的收件人/副本裡沒有這個帳號，無法查看內容', reason: 'GMAIL_THREAD_NOT_PARTICIPANT' };
     }
     let remainingImageBudget = GMAIL_THREAD_IMAGE_LIMIT_TOTAL;
@@ -4381,7 +4391,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const threadData = await threadResponse.json().catch(() => ({})) as Row;
     const threadMessages = deliveredThreadMessages(Array.isArray(threadData.messages) ? threadData.messages : []);
     if (!threadResponse.ok || !threadMessages.length) return { ok: false, action: 'replyCaseMail', error: '找不到原始信件串，無法回覆' };
-    if (!canAccessCaseMailThread(current.account, owner, threadMessages)) {
+    if (!canAccessCaseMailThread(current.account, owner, threadMessages, isCaseDesignerSession(row, current))) {
       return { ok: false, action: 'replyCaseMail', error: '此信件串的收件人/副本裡沒有這個帳號，無法回覆', reason: 'GMAIL_THREAD_NOT_PARTICIPANT' };
     }
     const lastMessage = replyAnchorMessage(threadMessages) || asRow(threadMessages[threadMessages.length - 1]);
@@ -4533,7 +4543,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (!threadId) return { ok: false, action: 'scheduleCaseReply', error: '此案件尚未透過 Gmail 寄出過信件' };
     const accessToken = await this.getValidGmailAccessToken(owner);
     const threadMessages = await fetchGmailThreadMessages(accessToken, threadId);
-    if (!canAccessCaseMailThread(current.account, owner, threadMessages)) {
+    if (!canAccessCaseMailThread(current.account, owner, threadMessages, isCaseDesignerSession(row, current))) {
       return { ok: false, action: 'scheduleCaseReply', error: '此信件串的收件人/副本裡沒有這個帳號，無法回覆', reason: 'GMAIL_THREAD_NOT_PARTICIPANT' };
     }
     const suggestion = this.computeReplySuggestion(threadMessages, current.account);
