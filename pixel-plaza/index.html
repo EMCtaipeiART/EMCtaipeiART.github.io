@@ -227,8 +227,9 @@ button{font-family:inherit}
 .cui-tag{display:inline-flex;gap:4px;align-items:center;background:#fffdf5;border:2px solid var(--ink);border-radius:999px;padding:2px 8px;font:600 12px 'Fredoka','Noto Sans TC',sans-serif;color:#232b32;white-space:nowrap}
 .ctag>div,.ctag>img,.ctag>button{pointer-events:auto}
 .cui-wrap{position:relative;display:flex;flex-direction:column;align-items:center}
-.cui-bub{position:relative;box-sizing:content-box;width:7em;max-width:none;background:#fff;color:var(--ink);border:2.5px solid var(--ink);border-radius:14px;padding:4px 10px;font:700 12.5px/1.4 'Fredoka','Noto Sans TC',sans-serif;word-break:break-all;box-shadow:0 3px 0 rgba(0,0,0,.25);margin-bottom:0}
+.cui-bub{position:relative;box-sizing:content-box;width:max-content;min-width:1.5em;max-width:11em;text-align:center;background:#fff;color:var(--ink);border:2.5px solid var(--ink);border-radius:14px;padding:4px 10px;font:700 12.5px/1.4 'Fredoka','Noto Sans TC',sans-serif;word-break:break-all;box-shadow:0 3px 0 rgba(0,0,0,.25);margin-bottom:0}
 .cui-stack{display:flex;flex-direction:column;align-items:center;gap:5px}.cui-ico{display:flex;gap:8px;align-items:center}
+.cui-bub.hasmus{width:9em}   /* 有音樂的泡泡固定寬度（歌名跑馬燈）；純文字依字數自動調整寬度 */
 .cui-bub:not(.tail):after{display:none}
 .cui-bub:after{content:'';position:absolute;left:50%;bottom:-8px;width:10px;height:10px;margin-left:-5px;background:#fff;border-right:2.5px solid var(--ink);border-bottom:2.5px solid var(--ink);transform:rotate(45deg)}
 .cui-mus{display:flex;align-items:center;gap:4px;pointer-events:auto}.cui-msg+.cui-mus{margin-top:3px;padding-top:3px;border-top:2px dashed #cbbcf0}
