@@ -110,6 +110,8 @@
 
 ## 11. 辦公室流浪貓「橘子」（2026-11-03）
 
+> 完整的寵物規範（角色繪製、機制、功能、同步、後端、做第二隻寵物與狗的差異）見 `PET-SPEC.md`。下面是逐次維護筆記。
+
 - **只住五樓**，一隻、全員共養。程式在 `index.html` 的「辦公室流浪貓」區塊（`catInit/catPlan/catAt/updateCat/catAct/catCare`，緊接在 `tick()` 之前）；`tick()` 呼叫 `updateCat(dt)`，`startGameplay` 後的 `.then` 裡呼叫 `catInit()`。除錯用 `window.__cat`（`at(ms)`、`plan(slot)`、`state()`、`set({belong})`、`give('treat',2)`、`act('treat')`、`click()`）。
 - **位置不靠後端同步**：每 75 秒一個時段（`CAT.slot`），`rng('cat:'+時段)`＋台北時段／星期決定去哪（早上門口、午餐茶水間、其餘睡紙箱／空椅子／沒人的桌子／散步，夜間與週末睡紙箱），所有人算出來一樣（和掉落物同一套做法）。路線用 `findPath`（A\*）串起來並快取；約 12%（家貓等級 24%）的時段會「暴衝」：跑兩個點再跑回來、坐下理毛。**改 `catPlan` 的權重或 `CAT.slot` 會讓新舊版本的貓位置不同**，改了請讓使用者重新整理。
 - **空椅子／空桌**＝`catInit` 當下沒有人物 `home` 的辦公桌椅（`desks` 取 `deskCells` 中沒人用的）；額外人物（雲端座位）在 `catInit` 之前已載入。茶水檯前新增共用貓碗（`catBowlBuild`）與紙箱（`catBoxBuild`，有碰撞），位置在 `catInit` 用 `blocked()` 從候選點挑第一個空的。
