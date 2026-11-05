@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 10634,
+  "revision": 10635,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-05T02:29:40.872Z",
+  "updatedAt": "2026-11-05T02:41:10.150Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1144,7 +1144,7 @@
         {"案件編號":"26110001","修改次數":"0","建立日期":"2026/11/04 19:37:24","修改日期":"2026/11/04 19:37:24","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/04 19:37:24","圖片連結":"[{\"fileName\":\"261104_官網_新品上市CPAS_AeroClip-2_情境.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1B44pB6gYv7bD--1jif27M3_HTSHqrrim=w1600\"},{\"fileName\":\"261104_官網_新品上市CPAS_AeroClip-2_電商.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1mpNGEe4Wjv2OaMhJECXHXL82uL9Ry0Kx=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/04 19:37:24"},
         {"案件編號":"26110002","修改次數":"0","建立日期":"2026/11/04 19:37:54","修改日期":"2026/11/04 19:37:54","修改內容":"初稿完成（設計圖搬移）","修改人":"Anna","確認修正日":"2026/11/04 19:37:54","圖片連結":"[{\"fileName\":\"soundcore_D1105_SEA_1080x1920_TW_22s_9_16_1.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1NHdcwsTBfIZ_kfEoeNMLyo0lBKAoUJTd=w1600\"},{\"fileName\":\"261104_官網_新品上市CPAS_AeroClip 2_影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1eAeSYVTKgItQ0O6JsjKWc5lc9499fcEu=w1600\"}]","圖片來源":"manual-move","圖片更新時間":"2026/11/04 19:37:54"},
         {"案件編號":"26110005","修改次數":"0","建立日期":"2026/11/04 19:49:31","修改日期":"2026/11/04 19:49:31","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/04 19:49:31","圖片連結":"[{\"fileName\":\"261104_DJI_雙11選購指南_情境篇_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ZDcl8iMb33UalIeOA7CFi5LTVC_rxYiO=w1600\"},{\"fileName\":\"261104_DJI_雙11選購指南_情境篇_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1PuEEWxp5gIxbb7-pr5n1Wtm-6mviTs6d=w1600\"},{\"fileName\":\"261104_DJI_雙11選購指南_情境篇_03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1zbSActGNHHpC8yGobL6oK0NQ9LBpKf85=w1600\"},{\"fileName\":\"261104_DJI_雙11選購指南_情境篇_04.png\",\"url\":\"https://lh3.googleusercontent.com/d/13ywvl24JXjDKdnTprniGVqOzN3C32DYd=w1600\"},{\"fileName\":\"261104_DJI_雙11選購指南_情境篇_05.png\",\"url\":\"https://lh3.googleusercontent.com/d/1D1b0Apvkp1GWZxCwrTgA8SvrRaLIaEUq=w1600\"},{\"fileName\":\"261104_DJI_雙11選購指南_情境篇_06.png\",\"url\":\"https://lh3.googleusercontent.com/d/1StAyQvce0KSUOJu5uW8Jt7jb4Bv_xej2=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/04 19:49:31"},
-        {"案件編號":"26090204","修改次數":"3","建立日期":"2026/11/05 09:51:57","修改日期":"2026-11-05","修改內容":"正式開賣請改成開放預訂，最後一修，再麻煩於今日中午前提供，感謝！","修改內容連結":"","修改人":"廖秦葦","確認修正日":"","待修改圖片":""}
+        {"案件編號":"26090204","修改次數":"3","建立日期":"2026/11/05 09:51:57","修改日期":"2026-11-05","修改內容":"正式開賣請改成開放預訂，最後一修，再麻煩於今日中午前提供，感謝！","修改內容連結":"","修改人":"廖秦葦","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"261022_王品＿雙星熱年菜_11月_Post1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1TVEdLCYEc-MKsNAnvqHX9BUcrsKs0SmD=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/05 10:41:10"}
       ]
     },
     "補充資料連結": {
