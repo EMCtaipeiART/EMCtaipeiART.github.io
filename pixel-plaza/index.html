@@ -981,7 +981,7 @@ function deskBlock3d(x0, top, cols, color, kind, miniDesk){
   }
   const lx = k => x0 + W * k, zs = [top + 3, top + D * 2 - 3];
   for (let k = 0; k <= cols; k++) for (const z of zs) pbox(.12, .83, .12, 0x14181c, I(lx(k)) + (k === 0 ? .1 : k === cols ? -.1 : 0), 0, I(z), false);
-  rects.push([I(x0), I(top + 16), I(x0 + W * cols), I(top + D * 2)]);
+  rects.push([I(x0), I(top - 6), I(x0 + W * cols), I(top + D * 2)]);   // 北緣原本內縮 16px，人走到桌子北側會身體吃進桌面
 }
 function laptop3d(x, z, dir){   // 黑色筆電：dir = 螢幕朝向（-1 朝北、1 朝南）；螢幕在遠離使用者的一側、微微後仰
   pbox(.72, .04, .5, 0x15181c, x, .95, z);
