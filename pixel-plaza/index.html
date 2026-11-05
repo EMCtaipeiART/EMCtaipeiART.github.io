@@ -2717,10 +2717,10 @@ function catWandUpdate(pp, tip, y){   // 玩家手上的逗貓棒：棒子從手
   const m = catToyShow.s, hx = pp.x + (tip.x - pp.x) * .25, hz = pp.z + (tip.z - pp.z) * .25, hy = 1.1; m.visible = true; m.position.set(hx, hy, hz);
   const L = Math.hypot(tip.x - hx, y - hy, tip.z - hz) || 1; m.scale.set(1, 1, L); m.lookAt(tip.x, y, tip.z);
 }
-let catLast = 0;
+let catLast = 0, catOffSync = 0;
 function updateCat(dt){
   if (!catG) return; const now = performance.now(), vx = player ? player.holder.position.x : guestAt.x, on5 = (vx < (FX4 - 100) * U) === (DEF.floor === 5); catG.visible = on5;
-  if (!on5 || performance.now() - catT0 < 600) { catTagEl.style.display = 'none'; return; }
+  if (!on5 || performance.now() - catT0 < 600) { catTagEl.style.display = 'none'; if (!on5 && now - catOffSync > 400) { catOffSync = now; catGreeted = false; const b = catAt(syncNow()); catG.position.set(b.x, 0, b.z); catG.rotation.y = b.face; catLocal = null; catLast = 0; } return; }   // 玩家不在這層時貓照時間表悄悄移動，人回來時不會從舊位置滑過去
   let a;
   if (catLocal) { const s = catStep(dt, now); a = {x:catG.position.x, z:catG.position.z, y:s.y, face:s.face, pose:s.pose, kind:'local'}; if (catLocal && catLocal.mode === 'play') {} else catToyHide(); }
   else { a = catAt(syncNow()); }
@@ -2735,7 +2735,7 @@ function updateCat(dt){
   if (!catLocal && pp && near < 3.2 && a.speed === 0 && a.pose !== 'loaf' && catAnnoyed < now) { const lv = trustLv(); let df = Math.atan2(pp.x - catG.position.x, pp.z - catG.position.z) - catG.rotation.y; df = Math.atan2(Math.sin(df), Math.cos(df)); catG.rotation.y += df * Math.min(1, dt * 3); if (lv === 0 && near < 1.4 && Math.random() < dt * .25) { catLocal = null; const away = catSpots.walk.length ? catSpots.walk.reduce((b, q) => Math.hypot(q.x - pp.x, q.z - pp.z) > Math.hypot(b.x - pp.x, b.z - pp.z) && Math.hypot(q.x - catG.position.x, q.z - catG.position.z) < 9 ? q : b, catSpots.walk[0]) : null; if (away) { catGo([away], 3.2, catReturn); } } }
   catFxTick(dt, now);
   if (catCompany) { const moved = Math.hypot(pp.x - catCompany.x, pp.z - catCompany.z); if (moved > 1.2 || near > 4.5 || (catLocal && !['return', 'go', 'stay'].includes(catLocal.mode))) { catCompany = null; if (catLocal && catLocal.mode === 'stay') catReturn(); showQuote('', '陪伴中斷了'); catRender(); } else { catCompany.t += dt; if (catCompany.t >= 20) { catCompany = null; catHearts(3); catReturn(); catCare('company'); } } }
-  if (!catGreeted && player && !AWAY.has(player.status) && now - catT0 > 5000 && !catLocal && trustLv() >= 2 && (catState.total.feed | 0) + (catState.total.treat | 0) >= 3 && a.pose !== 'loaf' && floorOf(player) === DEF.floor && near > 6) { catGreeted = true; catGo([{x:pp.x, z:pp.z + .9}], CAT.walk * 2.2, () => { catLocalStart('rub', 3.6, {}); catHeld = '♥'; setTimeout(() => { catHeld = ''; }, 3600); }); }
+  if (!catGreeted && player && !AWAY.has(player.status) && now - catT0 > 5000 && !catLocal && trustLv() >= 2 && (catState.total.feed | 0) + (catState.total.treat | 0) >= 3 && a.pose !== 'loaf' && floorOf(player) === DEF.floor && near > 6) { catGreeted = true; catGo([{x:pp.x, z:pp.z + .9}], CAT.run * .8, () => { catLocalStart('rub', 3.6, {}); catHeld = '♥'; setTimeout(() => { catHeld = ''; }, 3600); }); }
   // 名牌：靠近時顯示心情
   const p = catG.position.clone(); p.y += 1.1 + catG.position.y; p.project(camera);
   const mood = catHeld || (a.pose === 'loaf' ? 'zzZ' : a.pose === 'eat' ? '吃飯中' : a.pose === 'run' ? '！' : a.pose === 'groom' ? '理毛' : ''), vis = p.z < 1 && Math.abs(p.x) < 1.1 && Math.abs(p.y) < 1.1 && (near < 9 || catHeld), html = CAT.name + (mood ? '　' + mood : '');
@@ -2782,7 +2782,7 @@ function catAct(a){
   const pp = player.holder.position;
   if (a === 'call') {
     if (sleeping) { showQuote(CAT.name, '牠睡得很熟，只動了動耳朵'); return; }
-    if (trustLv() >= 2) { catGo([{x:pp.x, z:pp.z + 1.0}], CAT.walk * 2.4, () => { catLocalStart('look', 3, {}); catHeld = '♥'; setTimeout(() => { catHeld = ''; }, 3000); }); showQuote(CAT.name, '牠聽到了，小跑步過來'); }
+    if (trustLv() >= 2) { catGo([{x:pp.x, z:pp.z + 1.0}], CAT.run * .8, () => { catLocalStart('look', 3, {}); catHeld = '♥'; setTimeout(() => { catHeld = ''; }, 3000); }); showQuote(CAT.name, '牠聽到了，小跑步過來'); }
     else if (trustLv() === 1 && Math.random() < .4) { catGo([{x:pp.x, z:pp.z + 1.8}], CAT.walk * 1.5, () => { catLocalStart('look', 2.5, {}); }); showQuote(CAT.name, '牠猶豫了一下，慢慢靠過來'); }
     else { catLocalStart('look', 2.5, {}); showQuote(CAT.name, '牠回頭看了你一眼，然後轉回去'); }
     catClose(); return;
