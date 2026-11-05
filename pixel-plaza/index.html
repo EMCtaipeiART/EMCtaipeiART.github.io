@@ -2628,6 +2628,9 @@ function catStep(dt, now){   // 回傳這一格的位置與姿勢（本機覆蓋
     return {pose, y: 0, face};
   }
   const pp = catPlayerPos(), el = (now - L.t0) / 1000;
+  if (L.mode === 'stay') {   // 安靜陪伴：貓坐在玩家旁邊，過一會兒趴下
+    if (pp) face = Math.atan2(pp.x - pos.x, pp.z - pos.z); if (now > L.until) catReturn(); return {pose:el > 9 ? 'loaf' : 'sit', y:0, face};
+  }
   if (L.mode === 'rub') {   // 繞著腳邊八字形蹭
     L.a += dt * 2.4; if (pp) { pos.x = pp.x + Math.sin(L.a) * .7; pos.z = pp.z + Math.sin(L.a * 2) * .4 + .5; face = Math.atan2(Math.cos(L.a) * .7, Math.cos(L.a * 2) * .8); }
     if (now > L.until) catReturn(); return {pose:'rub', y:0, face};
@@ -2650,6 +2653,19 @@ function catStep(dt, now){   // 回傳這一格的位置與姿勢（本機覆蓋
   catLocal = null; return {pose:'stand', y:0, face};
 }
 function catToyShow(on, p){ if (!catToyShow.m) { const m = new THREE.Mesh(new THREE.BoxGeometry(.18, .18, .18), new THREE.MeshLambertMaterial({color:0xff5a6e})); m.userData.noMask = true; scene.add(m); catToyShow.m = m; } catToyShow.m.visible = on; if (on && p) catToyShow.m.position.set(p.x, .5, p.z); return catToyShow.m; }
+let catFx = [], catFace = 0, catHeartTex = null, catTreat = null;
+function catHeart(x, y, z){   // 飄起來的小愛心
+  if (!catHeartTex) { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); g.font = '700 54px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 6; g.strokeStyle = '#1a1410'; g.strokeText('♥', 32, 36); g.fillStyle = '#ff5a7a'; g.fillText('♥', 32, 36); catHeartTex = new THREE.CanvasTexture(c); }
+  const m = new THREE.Sprite(new THREE.SpriteMaterial({map:catHeartTex, transparent:true, depthTest:false})); m.scale.set(.42, .42, 1); m.position.set(x + (Math.random() - .5) * .4, y, z + (Math.random() - .5) * .3); m.renderOrder = 50; m.userData.noMask = true; scene.add(m); catFx.push({m, t0:performance.now(), x0:m.position.x});
+}
+function catHearts(n){ if (!catG) return; for (let i = 0; i < n; i++) setTimeout(() => catHeart(catG.position.x, 1.5, catG.position.z), i * 320); }
+function catFaceCat(ms){ catFace = performance.now() + ms; }
+function catTreatShow(on, x, y, z){ if (!catTreat) { catTreat = new THREE.Mesh(new THREE.SphereGeometry(.09, 10, 8), new THREE.MeshLambertMaterial({color:0xffc23a})); catTreat.userData.noMask = true; scene.add(catTreat); } catTreat.visible = on; if (on) catTreat.position.set(x, y, z); }
+function catFxTick(dt, now){
+  for (let i = catFx.length - 1; i >= 0; i--) { const f = catFx[i], k = (now - f.t0) / 1100; if (k >= 1) { scene.remove(f.m); f.m.material.dispose(); catFx.splice(i, 1); continue; } f.m.position.y += dt * .9; f.m.position.x = f.x0 + Math.sin(k * 6) * .12; f.m.material.opacity = k > .6 ? 1 - (k - .6) / .4 : 1; }
+  if (catFace > now && player && !player.sitting && catG) { const pp = player.holder.position; player.face = Math.atan2(catG.position.x - pp.x, catG.position.z - pp.z); }
+  if (catCompany && catLocal && catLocal.mode === 'stay') { catCompany.h = (catCompany.h || 0) + dt; if (catCompany.h > 3.2) { catCompany.h = 0; catHearts(1); } catFace = now + 300; }
+}
 function catToyHide(){ if (catToyShow.m) catToyShow.m.visible = false; if (catToyShow.s) catToyShow.s.visible = false; }
 function catWandUpdate(pp, tip, y){   // 玩家手上的逗貓棒：棒子從手伸到球
   if (!catToyShow.s) { const g = new THREE.CylinderGeometry(.025, .025, 1, 6); g.rotateX(Math.PI / 2); g.translate(0, 0, .5); const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({color:0x8a5a2b})); m.userData.noMask = true; scene.add(m); catToyShow.s = m; }
@@ -2672,7 +2688,8 @@ function updateCat(dt){
   const pp = catPlayerPos(), near = pp ? Math.hypot(pp.x - catG.position.x, pp.z - catG.position.z) : 99;
   if (!catPanel.hidden && pp && near > 7) catClose();   // 走遠了就自動收起來
   if (!catLocal && pp && near < 3.2 && a.speed === 0 && a.pose !== 'loaf' && catAnnoyed < now) { const lv = trustLv(); let df = Math.atan2(pp.x - catG.position.x, pp.z - catG.position.z) - catG.rotation.y; df = Math.atan2(Math.sin(df), Math.cos(df)); catG.rotation.y += df * Math.min(1, dt * 3); if (lv === 0 && near < 1.4 && Math.random() < dt * .25) { catLocal = null; const away = catSpots.walk.length ? catSpots.walk.reduce((b, q) => Math.hypot(q.x - pp.x, q.z - pp.z) > Math.hypot(b.x - pp.x, b.z - pp.z) && Math.hypot(q.x - catG.position.x, q.z - catG.position.z) < 9 ? q : b, catSpots.walk[0]) : null; if (away) { catGo([away], 3.2, catReturn); } } }
-  if (catCompany) { const moved = Math.hypot(pp.x - catCompany.x, pp.z - catCompany.z); if (moved > 1.2 || near > 4.5 || (catLocal && catLocal.mode !== 'return')) { catCompany = null; showQuote('', '陪伴中斷了'); catRender(); } else { catCompany.t += dt; if (catCompany.t >= 20) { catCompany = null; catCare('company'); } } }
+  catFxTick(dt, now);
+  if (catCompany) { const moved = Math.hypot(pp.x - catCompany.x, pp.z - catCompany.z); if (moved > 1.2 || near > 4.5 || (catLocal && !['return', 'go', 'stay'].includes(catLocal.mode))) { catCompany = null; if (catLocal && catLocal.mode === 'stay') catReturn(); showQuote('', '陪伴中斷了'); catRender(); } else { catCompany.t += dt; if (catCompany.t >= 20) { catCompany = null; catHearts(3); catReturn(); catCare('company'); } } }
   if (!catGreeted && player && !AWAY.has(player.status) && now - catT0 > 5000 && !catLocal && trustLv() >= 2 && (catState.total.feed | 0) + (catState.total.treat | 0) >= 3 && a.pose !== 'loaf' && floorOf(player) === 5 && near > 6) { catGreeted = true; catGo([{x:pp.x, z:pp.z + .9}], CAT.walk * 2.2, () => { catLocalStart('rub', 3.6, {}); catHeld = '♥'; setTimeout(() => { catHeld = ''; }, 3600); }); }
   // 名牌：靠近時顯示心情
   const p = catG.position.clone(); p.y += 1.1 + catG.position.y; p.project(camera);
@@ -2716,7 +2733,7 @@ function catCare(kind, effect){   // 一次有效互動：每天前幾次增加�
 function catNeed(dist){ const pp = catPlayerPos(); if (!pp || !catG) return false; if (Math.hypot(pp.x - catG.position.x, pp.z - catG.position.z) > dist) { showQuote('', '走近一點再試試'); return false; } return true; }
 function catAct(a){
   if (!player || AWAY.has(player.status)) return; const now = performance.now(), sleeping = catAt(syncNow()).pose === 'loaf' && !catLocal;
-  if (a === 'company') { if (catCompany) { catCompany = null; catRender(); return; } if (!catNeed(4.5)) return; catCompany = {t:0, x:player.holder.position.x, z:player.holder.position.z}; showQuote('', '安靜陪伴 20 秒（不要走動）'); catRender(); return; }
+  if (a === 'company') { if (catCompany) { catCompany = null; catRender(); return; } if (!catNeed(4.5)) return; catCompany = {t:0, x:player.holder.position.x, z:player.holder.position.z}; const q = player.holder.position; catGo([{x:q.x + .9, z:q.z + .5}], CAT.walk * 2, () => catLocalStart('stay', 21, {})); showQuote('', '安靜陪伴 20 秒（不要走動）：牠會過來坐在你旁邊'); catRender(); return; }
   if (catAnnoyed > now && a !== 'call') { showQuote(CAT.name, '牠現在不想理你，過一陣子再來'); return; }
   const pp = player.holder.position;
   if (a === 'call') {
@@ -2730,16 +2747,19 @@ function catAct(a){
   if (a === 'pet') {
     if (sleeping) { catAnnoyed = now + 60000; const away = catSpots.walk.length ? catSpots.walk[Math.floor(Math.random() * catSpots.walk.length)] : null; catHeld = '…'; setTimeout(() => { catHeld = ''; }, 3000); if (away) catGo([away], 3, () => catLocalStart('look', 1, {after:catReturn})); showQuote(CAT.name, '睡覺時一直摸，牠換地方睡了，暫時不理你'); catClose(); return; }
     if (trustLv() === 0 && Math.random() < .5) { catAnnoyed = now + 20000; catGo([catSpots.walk[Math.floor(Math.random() * catSpots.walk.length)] || {x:pp.x + 3, z:pp.z}], 3.2, catReturn); showQuote(CAT.name, '還不熟，牠閃開走掉了'); catClose(); return; }
-    catLocalStart('look', 2.5, {}); catHeld = '♥'; setTimeout(() => { catHeld = ''; }, 2500); const g = catCare('pet'); showQuote(CAT.name, g ? '呼嚕呼嚕（信任度 +' + CAT_GAIN.pet.trust + '）' : '牠瞇著眼享受，但今天摸夠了'); return;
+    catClose(); catFaceCat(3600);
+    catGo([{x:pp.x + .35, z:pp.z + .85}], CAT.walk * 2.2, () => { catLocalStart('rub', 3, {a:0}); catHeld = '♥'; catHearts(4); setTimeout(() => { catHeld = ''; }, 3000); const g = catCare('pet'); showQuote(CAT.name, g ? '呼嚕呼嚕（信任度 +' + CAT_GAIN.pet.trust + '）' : '牠瞇著眼享受，但今天摸夠了'); });
+    return;
   }
   if (a === 'treat') {
     if (sleeping) { showQuote(CAT.name, '牠在睡覺，等牠醒來再餵'); return; }
     if ((catState.daily.treat | 0) >= CAT_GAIN.treat.cap) { catLocalStart('look', 2.5, {}); showQuote(CAT.name, '吃飽了，牠拒絕了點心'); return; }
-    catGo([{x:pp.x + .6, z:pp.z + .8}], CAT.walk * 2, () => catLocalStart('sniff', 3, {after:() => {
-      const eat = trustLv() >= 1 || Math.random() < .55;
-      if (eat) { catLocalStart('eat', 3.2, {}); catHeld = '好吃'; setTimeout(() => { catHeld = ''; }, 3200); catCare('treat'); showQuote(CAT.name, '牠聞了聞，吃掉了（信任度 +' + CAT_GAIN.treat.trust + '）'); }
+    catFaceCat(7500); const hand = () => { const c = catG.position, dx = c.x - pp.x, dz = c.z - pp.z, d = Math.hypot(dx, dz) || 1; return {x:pp.x + dx / d * .45, z:pp.z + dz / d * .45}; };
+    catGo([{x:pp.x + .6, z:pp.z + .8}], CAT.walk * 2, () => { const h = hand(); catTreatShow(true, h.x, .95, h.z); catLocalStart('sniff', 2.2, {after:() => {
+      const eat = trustLv() >= 1 || Math.random() < .55; catTreatShow(false);
+      if (eat) { catLocalStart('eat', 3.2, {}); catHeld = '好吃'; catHearts(2); setTimeout(() => { catHeld = ''; }, 3200); catCare('treat'); showQuote(CAT.name, '牠聞了聞，吃掉了（信任度 +' + CAT_GAIN.treat.trust + '）'); }
       else { catAnnoyed = now + 15000; catGo([catSpots.walk[Math.floor(Math.random() * catSpots.walk.length)] || {x:pp.x + 3, z:pp.z}], 3, catReturn); showQuote(CAT.name, '牠聞了聞，決定不吃，轉身走了（點心還在）'); }
-    }}));
+    }}); });
     catClose(); return;
   }
   if (a === 'play') {
