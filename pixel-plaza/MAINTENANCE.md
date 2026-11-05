@@ -121,8 +121,8 @@
 
 ### 貼圖版（2026-11-03）
 - 貓不再是方塊模型：`catBuild()` 建一片垂直平面，貼 `assets/cat/cat-atlas.webp`（`cat-atlas.json` 記格子大小）。圖集 3 欄（正面／右側／背面）× 10 列（`CAT_POSES`：stand、walkA、walkB、sit、loaf、sleep、eat、run、groom、belly），每格 391x253（尺寸與 `foot` 見 `cat-atlas.json`，index.html 的 `CAT_CW／CAT_CH／CAT_FOOT` 要同步）、每張圖外圍有腳本加上的 7 px 黑色粗輪廓（`OUT`，改粗細就改 `tools/build-cat-atlas.py` 的 `OUT` 後重跑並同步常數）、腳底離格底 11 px。
-- `catPose(a, now)` 負責挑格子：貓的朝向和鏡頭的相對角度 → 正／側／背（|sin|>.62 為側面，sin<0 時 `scale.x=-1` 鏡像）；pose 對應：walk／rub 以 4.5 Hz 交替 walkA／walkB，run 單張加彈跳，`loaf`（共享狀態「睡覺」）在紙箱（y<.3）用 sleep、椅子／桌上用 loaf，其餘同名。呼吸、吃東西用 `scale.y` 小幅抖動。
-- 圖集由 `python3 tools/build-cat-atlas.py` 產生，來源是 `pixel-plaza/ai-views/cat-sheets/*-sheet.webp`（ChatGPT 網頁版生成的三視圖，藍底 #0066FF；stand 是米底。**只存在本機、不進 Git**，不見了就請 ChatGPT 依三視圖設定稿重畫）。要換圖：換來源 → 跑腳本 → 圖集與 json 一起 commit。
+- `catPose(a, now)` 負責挑格子：貓的朝向和鏡頭的相對角度 → 5 個視角（0 正面、1 前斜 45°、2 側面、3 後斜 45°、4 背面；以 atan2(|sin|,cos) 四捨五入到 45° 一格，sin<0 時 `scale.x=-1` 鏡像）；pose 對應：walk／rub 以 4.5 Hz 交替 walkA／walkB，run 單張加彈跳，`loaf`（共享狀態「睡覺」）在紙箱（y<.3）用 sleep、椅子／桌上用 loaf，其餘同名。呼吸、吃東西用 `scale.y` 小幅抖動。
+- 圖集由 `python3 tools/build-cat-atlas.py` 產生，來源是 `pixel-plaza/ai-views/cat-sheets/*-sheet.webp`（正／側／背）與 `*-q.png`（右前斜、右後斜 45°，同樣由 ChatGPT 依三視圖補畫，高度對齊相鄰視角平均；圖集 5 欄：正、前斜、側、後斜、背）（ChatGPT 網頁版生成的三視圖，藍底 #0066FF；stand 是米底。**只存在本機、不進 Git**，不見了就請 ChatGPT 依三視圖設定稿重畫）。要換圖：換來源 → 跑腳本 → 圖集與 json 一起 commit。
 - 除錯：`window.__cat.force({pose, face, y})` 固定姿勢與朝向（face 0＝面向鏡頭、π/2＝朝畫面右），`force(null)` 取消。沒登入時改 `window.__plaza.guestAt` 的 x、z 就能把鏡頭移到貓旁邊。
 - 外觀是三花貓（粉色項圈＋鈴鐺），名字目前仍叫「橘子」；要改名改 `CAT.name` 與文案（Worker 的儲存 key 是 `cat:<人名>`／`cat:office`，不含貓名）。
 
