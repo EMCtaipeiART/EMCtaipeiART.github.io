@@ -2765,8 +2765,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const version = this.pixelOfficeVersion();
     // 全員共用的貓（歸屬感、貓碗）與伺服器時間：每個人（含訪客）每次輪詢都帶回，貓的行程才會在每個人畫面上一致（不依賴各人本機存檔與電腦時鐘）
     const catOfficeOf = (key: string) => { let o: Row = {}; try { const row = this.ctx.storage.sql.exec<{ value: string }>('SELECT value FROM pixel_office_settings WHERE key = ?', key).toArray()[0]; o = asRow(JSON.parse(row?.value || '{}')); } catch { o = {}; } return { belong: Math.max(0, Math.floor(Number(o.belong) || 0)), bowlAt: Math.floor(Number(o.bowlAt) || 0), waterAt: Math.floor(Number(o.waterAt) || 0), act: this.pixelOfficeCatAct(o.act) }; };
-    const office = catOfficeOf('cat:office'), office2 = catOfficeOf('cat2:office');
-    if (Number(payload.since) === version && version > 0) return { ok: true, action: 'pixelOfficeState', version, unchanged: true, workday: pixelOfficeIsWorkday(Date.now()), serverNow: Date.now(), catOffice: office, cat2Office: office2 };   // 國定假日要在不換版本時也傳到畫面
+    const office = catOfficeOf('cat:office'), office2 = catOfficeOf('cat2:office'), dog1Office = catOfficeOf('dog1:office'), dog2Office = catOfficeOf('dog2:office');
+    if (Number(payload.since) === version && version > 0) return { ok: true, action: 'pixelOfficeState', version, unchanged: true, workday: pixelOfficeIsWorkday(Date.now()), serverNow: Date.now(), catOffice: office, cat2Office: office2, dog1Office, dog2Office };   // 國定假日要在不換版本時也傳到畫面
     const rows = this.ctx.storage.sql.exec<{ name: string; state: string; photo_version: number; updated_at: number }>(
       'SELECT name, state, photo_version, updated_at FROM pixel_office_people'
     ).toArray();
@@ -2778,7 +2778,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     // 稱號跟著狀態一起回：前端不必為了它多打一次 API，改了也會隨輪詢傳到每個人的畫面。
     const avatars: Record<string, number> = {};
     for (const row of this.ctx.storage.sql.exec<{ name: string; updated_at: number }>('SELECT name, updated_at FROM pixel_office_avatar_current').toArray()) avatars[row.name] = Number(row.updated_at) || 0;
-    return { ok: true, action: 'pixelOfficeState', version, serverNow: Date.now(), catOffice: office, cat2Office: office2, people, staff: this.pixelOfficeStaff().map(item => ({ seat: item.seat, name: item.name })), staffMeetings: this.pixelOfficeStaffMeetings(), funClaims: this.pixelOfficeFunClaims(), levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories(), avatars, hours: { dayStart: pixelHours.dayStart, workEnd: pixelHours.workEnd, overtimeStart: pixelHours.overtimeStart, force: pixelForceNow(Date.now()) }, workday: pixelOfficeIsWorkday(Date.now()) };
+    return { ok: true, action: 'pixelOfficeState', version, serverNow: Date.now(), catOffice: office, cat2Office: office2, dog1Office, dog2Office, people, staff: this.pixelOfficeStaff().map(item => ({ seat: item.seat, name: item.name })), staffMeetings: this.pixelOfficeStaffMeetings(), funClaims: this.pixelOfficeFunClaims(), levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories(), avatars, hours: { dayStart: pixelHours.dayStart, workEnd: pixelHours.workEnd, overtimeStart: pixelHours.overtimeStart, force: pixelForceNow(Date.now()) }, workday: pixelOfficeIsWorkday(Date.now()) };
   }
 
   /** 辦公室小樂趣（便便、驚喜道具、遺落物、投影機）的「已被處理」紀錄：所有人共用。
@@ -2823,7 +2823,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   }
 
   private pixelOfficeCat(payload: ApiPayload): ApiResult {
-    const name = text(payload.name), pk = text(payload.pet) === 'cat2' ? 'cat2' : 'cat';   // 第二隻貓（四樓）用 cat2: 開頭的鍵，和第一隻完全分開
+    const name = text(payload.name), pk = ['cat2', 'dog1', 'dog2'].includes(text(payload.pet)) ? text(payload.pet) : 'cat';   // 每隻寵物用自己的鍵前綴（cat:／cat2:／dog1:／dog2:），資料完全分開
     if (text(payload.op).startsWith('name')) return this.pixelOfficeCatNaming(payload, name, pk);
     if (!this.pixelOfficeKnownName(name)) return { ok: false, action: 'pixelOfficeCat', error: '找不到這位同仁' } as ApiResult;
     const sql = this.ctx.storage.sql, now = Date.now(), day = new Date(now + 8 * 3_600_000).toISOString().slice(0, 10);
