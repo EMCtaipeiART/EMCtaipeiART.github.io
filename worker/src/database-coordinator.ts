@@ -2742,6 +2742,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       next = desired;
       if (manualExpired) source = 'auto';
     }
+    // 行事曆會議進行中，人先回到電腦前（會議被收回、deskReleasedEnd 記著結束時間），之後電腦閒置離開座位：
+    // 還在會議時間內，應該是「會議」而不是「廁所」（2026-11-05 Noise 回報）。
+    if (next === 'toilet' && Number(state.deskReleasedEnd) > nowMs) {
+      next = 'meeting'; source = 'calendar'; state.meetingEnd = Number(state.deskReleasedEnd); delete state.deskReleasedEnd;
+    }
     const changed = next !== current || source !== text(state.statusSource) || !existing;
     if (changed) {
       state.status = next;
