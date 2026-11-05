@@ -1629,3 +1629,4 @@ html[data-theme="dark"] .dr-nas,html[data-theme="dark"] .dr-cls{background:#1d23
 html[data-theme="dark"] .dr-nas b,html[data-theme="dark"] .dr-cls b,html[data-theme="dark"] .dr-cls-name,html[data-theme="dark"] .dr-nas-path{color:#e9efec}
 html[data-theme="dark"] .dr-nas-list li{background:#26302c}
 html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
+@media(max-width:720px){.dc-slot-b .dc-ev{font-size:12px;height:auto;padding:2px 8px;border-left:3px solid var(--c);border-radius:6px;margin-top:0;white-space:normal;line-height:1.45}.dc-slot-b{gap:4px}.dc-slot-b .dc-ev i{display:block;margin-left:0}}
