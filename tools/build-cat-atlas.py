@@ -14,7 +14,7 @@ POSES = [('stand', 'stand-sheet.webp'), ('walkA', 'walkA-sheet.png'), ('walkB', 
 if DOG:
     _pf = 'd' + PET[3:] + '-'
     POSES = [(n, _pf + n + '-sheet.png') for n in ['stand', 'walkA', 'walkB', 'run', 'sit', 'down', 'sleep', 'eat', 'wag']]
-OUT = 7   # 外圍黑色粗輪廓（圖集像素；畫面上約 2～3 px）
+OUT = 2 if DOG else 7   # 外圍黑色粗輪廓（圖集像素；畫面上約 2～3 px）
 OL = (26, 20, 16, 255)
 SC = 0.34   # 原圖 → 圖集縮放（站立貓約 200 px 高）
 

@@ -2524,8 +2524,8 @@ const DOG_POSES = ['stand', 'walkA', 'walkB', 'run', 'sit', 'down', 'sleep', 'ea
 const CAT_DEFS = [
   {id:'cat', pet:'', floor:5, ox:0, fr:[0, 1], name:'無名小貓', title:'辦公室的貓', seed:'cat:', keyPrefix:'pixelCat:', lvKey:'pixelCatLv:', namedKey:'pixelCatNamed', atlas:'assets/cat/cat-atlas.webp', cw:391, ch:253, officeKey:'catOffice', dbg:'__cat'},
   {id:'cat2', pet:'cat2', floor:4, ox:FX4, fr:[2, 3], name:'四樓小貓', title:'四樓的貓', seed:'cat2:', keyPrefix:'pixelCat2v2:', lvKey:'pixelCat2v2Lv:', namedKey:'pixelCat2v2Named', atlas:'assets/cat2/cat-atlas.webp', cw:285, ch:248, officeKey:'cat2Office', dbg:'__cat2'},
-  {id:'dog1', pet:'dog1', species:'dog', noun:'狗', toy:'丟球', floor:4, ox:FX4, fr:[2, 3], name:'無名臘腸', title:'四樓的狗', seed:'dog1:', keyPrefix:'pixelDog1v1:', lvKey:'pixelDog1v1Lv:', namedKey:'pixelDog1v1Named', atlas:'assets/dog1/cat-atlas.webp', cw:317, ch:223, poses:DOG_POSES, k:.0058, walk:2.1, run:8.2, energy:1, sleepy:4, zoom:.12, officeKey:'dog1Office', dbg:'__dog1'},
-  {id:'dog2', pet:'dog2', species:'dog', noun:'狗', toy:'丟球', floor:5, ox:0, fr:[0, 1], name:'無名薩摩', title:'五樓的狗', seed:'dog2:', keyPrefix:'pixelDog2v1:', lvKey:'pixelDog2v1Lv:', namedKey:'pixelDog2v1Named', atlas:'assets/dog2/cat-atlas.webp', cw:263, ch:227, poses:DOG_POSES, k:.0058, walk:2.3, run:8.6, energy:3, sleepy:1, zoom:.3, officeKey:'dog2Office', dbg:'__dog2'}];
+  {id:'dog1', pet:'dog1', species:'dog', noun:'狗', toy:'丟球', floor:4, ox:FX4, fr:[2, 3], name:'無名臘腸', title:'四樓的狗', seed:'dog1:', keyPrefix:'pixelDog1v1:', lvKey:'pixelDog1v1Lv:', namedKey:'pixelDog1v1Named', atlas:'assets/dog1/cat-atlas.webp', cw:307, ch:213, foot:6, poses:DOG_POSES, k:.0061, walk:2.1, run:8.2, energy:1, sleepy:4, zoom:.12, officeKey:'dog1Office', dbg:'__dog1'},
+  {id:'dog2', pet:'dog2', species:'dog', noun:'狗', toy:'丟球', floor:5, ox:0, fr:[0, 1], name:'無名薩摩', title:'五樓的狗', seed:'dog2:', keyPrefix:'pixelDog2v1:', lvKey:'pixelDog2v1Lv:', namedKey:'pixelDog2v1Named', atlas:'assets/dog2/cat-atlas.webp', cw:253, ch:217, foot:6, poses:DOG_POSES, k:.0061, walk:2.3, run:8.6, energy:3, sleepy:1, zoom:.3, officeKey:'dog2Office', dbg:'__dog2'}];
 function makeCat(DEF){
 // ---- 辦公室流浪貓（只住五樓；名字由大家提名投票決定，投票前暫稱「無名小貓」）：位置由時間決定（每 75 秒一個時段、rng 種子相同），所有人看到同一隻；互動進度走 pixelOfficeCat ----
 const CAT = {name:DEF.name, walk:DEF.walk || 1.7, run:DEF.run || 7.5, slot:75000}, DOG = DEF.species === 'dog', NOUN = DEF.noun || '貓';
@@ -2592,7 +2592,7 @@ function catNameBind(){
   const c = catPanel.querySelector('#catNameClose'); if (c) c.onclick = () => { if (confirm('現在就結算，票數最高的名字立刻成為貓的名字？')) act('nameClose'); };
 }
 // 貓的貼圖：assets/cat/cat-atlas.webp（10 個姿勢 × 正／側／背三視角，側面朝右，朝左用鏡像）；貼圖面向鏡頭，依貓和鏡頭的相對角度挑視角
-const CAT_POSES = ['stand', 'walkA', 'walkB', 'sit', 'loaf', 'sleep', 'eat', 'run', 'groom', 'belly'], CAT_CW = 391, CAT_CH = 253, CAT_K = DEF.k || .0042, CAT_FOOT = 11, POSES = DEF.poses || CAT_POSES;   // 格子大小與腳底離格底的像素數見 assets/cat/cat-atlas.json
+const CAT_POSES = ['stand', 'walkA', 'walkB', 'sit', 'loaf', 'sleep', 'eat', 'run', 'groom', 'belly'], CAT_CW = 391, CAT_CH = 253, CAT_K = DEF.k || .0042, CAT_FOOT = DEF.foot || 11, POSES = DEF.poses || CAT_POSES;   // 格子大小與腳底離格底的像素數見 assets/cat/cat-atlas.json
 function catBuild(){
   const g = new THREE.Group(), P = {g, ready:false};
   const tex = new THREE.TextureLoader().load(DEF.atlas, () => { P.ready = true; });
