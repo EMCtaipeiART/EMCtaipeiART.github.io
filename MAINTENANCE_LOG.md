@@ -1765,3 +1765,8 @@
 - 用 ChatGPT 生成臘腸 9 個姿勢（stand、walkA、walkB、run、sit、down、sleep、eat、wag）的三視圖＋45° 斜角，藍底 #0066FF，存本機 pixel-plaza/ai-views/dog1-sheets/（d1-<姿勢>-sheet.png、d1-<姿勢>-q.png，不進 Git）。
 - eat 已重畫成沒有食碗、wag 沒有動態線；舊版留為 old-*.png。
 - 注意：自動下載若太早會抓到上一張，已用 md5 比對並修正。薩摩耶還沒做。
+
+## 2026-11-05 薩摩耶姿勢圖完成
+- 薩摩耶 9 個姿勢（stand、walkA、walkB、run、sit、down、sleep、eat、wag）三視圖＋45° 斜角，藍底 #0066FF，存本機 pixel-plaza/ai-views/dog2-sheets/（d2-<姿勢>-sheet.png、d2-<姿勢>-q.png，不進 Git）。已用 md5 檢查無重複、無食碗／動態線。
+- 臘腸（dog1-sheets）與薩摩耶（dog2-sheets）的原始檔名對調過一次已修正：dog-sheets/dog1-dachshund-sheet.png 是臘腸、dog2-samoyed-sheet.png 是薩摩耶。
+- 下一步：改 tools/build-cat-atlas.py 支援狗（姿勢清單、來源資料夾 dog1/dog2、檔名 d1-/d2-），合成圖集。
