@@ -2482,6 +2482,67 @@ const catPanel = document.createElement('div'); catPanel.id = 'catP'; catPanel.h
 addEventListener('pointerdown', e => { if (!catPanel.hidden && !catPanel.contains(e.target)) catPanel.hidden = true; }, true);   // 點面板外面就收起來
 addEventListener('keydown', e => { if (e.key === 'Escape' && !catPanel.hidden) catPanel.hidden = true; });
 const petSites = [];   // 已經被某隻寵物的碗／窩／門口占走的位置，後面的寵物會避開（最多 2.6 單位）
+// 每隻寵物各自的對話與氣泡（個性不同；缺的鍵用 cat 的）。{N}＝寵物名字，n＝信任度增加量
+const PET_SAY = {
+  cat:{
+    lv:['', '{N}開始會睡在沒人坐的椅子上了', '{N}會跳上沒人的桌子趴著了', '{N}決定留下來了，整間辦公室都是牠的地盤（偶爾還會暴衝）'],
+    annoyed:'牠現在不想理你，過一陣子再來',
+    callSleep:['牠睡得很熟，只動了動耳朵', '耳朵抖了一下，牠翻個身繼續睡'],
+    callYes:['牠聽到了，小跑步過來', '「喵。」牠勉為其難地走過來了'],
+    callMaybe:'牠猶豫了一下，慢慢靠過來',
+    callNo:['牠回頭看了你一眼，然後轉回去', '牠假裝沒聽到'],
+    petSleep:'睡覺時一直摸，牠換地方睡了，暫時不理你', petFlee:'還不熟，牠閃開走掉了',
+    petOk:n => '呼嚕呼嚕（信任度 +' + n + '）', petMax:'牠瞇著眼享受，但今天摸夠了',
+    treatSleep:'牠在睡覺，等牠醒來再餵', treatFull:'吃飽了，牠拒絕了點心', treatEat:n => '牠聞了聞，吃掉了（信任度 +' + n + '）', treatNo:'牠聞了聞，決定不吃，轉身走了（點心還在）',
+    playSleep:'牠在睡覺，等牠醒來再玩', playShy:'牠只瞄了逗貓棒一眼，還不敢玩（先餵點心培養感情）', playGo:'追著逗貓棒撲來撲去！',
+    bowlFood:'加了一份飼料', bowlWater:'換了新鮮的水', bowlFull:'碗裡還滿滿的',
+    held:{eat:'好吃', sleepTouch:'…'}, tag:{sleep:'zzZ', eat:'吃飯中', run:'！', groom:'理毛', enc:'！'},
+    mood:{sleep:'睡覺中', eat:'吃飯中', groom:'理毛中', run:'突然暴衝中', walk:'散步中', sit:'坐著發呆', other:'看著你', play:'正在玩', annoyed:'有點不爽，暫時不理你'}
+  },
+  cat2:{
+    lv:['', '{N}會在辦公室四處聞聞看看了（鈴鐺叮鈴叮鈴）', '{N}開始窩在沒人的椅子上打盹了', '{N}正式成為四樓的一份子，大家一走近就聽得到牠的鈴鐺聲'],
+    annoyed:'牠有點累了，想自己靜一靜',
+    callSleep:['牠睡著了，鈴鐺輕輕叮了一聲', '牠睜開一隻眼看看你，又閉上了'],
+    callYes:['叮鈴叮鈴～牠朝你小跑步過來', '「喵～」牠搖著尾巴走過來了'],
+    callMaybe:'牠歪著頭想了想，叮鈴叮鈴慢慢走過來',
+    callNo:['牠看了你一眼，繼續舔爪子', '鈴鐺響了一下，但牠沒有過來'],
+    petSleep:'牠睡得好好的被打擾，換個地方繼續睡了', petFlee:'牠還有點怕生，叮鈴叮鈴躲開了',
+    petOk:n => '咕嚕咕嚕～（信任度 +' + n + '）', petMax:'牠舒服地瞇起眼睛，但今天已經摸夠了',
+    treatSleep:'牠睡著了，等牠醒來再餵吧', treatFull:'牠今天吃得很飽，把頭轉開了', treatEat:n => '牠嗅了嗅，開心地吃掉了（信任度 +' + n + '）', treatNo:'牠嗅了嗅，沒有興趣，叮鈴叮鈴走開了（點心還在）',
+    playSleep:'牠睡著了，等牠醒來再玩', playShy:'牠盯著逗貓棒看，卻不敢靠近（先餵點心培養感情）', playGo:'追著逗貓棒撲來撲去，鈴鐺叮叮噹噹響！',
+    bowlFood:'加了一份飼料，牠的鈴鐺叮鈴響了一下', bowlWater:'換了新鮮的水', bowlFull:'碗裡還滿滿的',
+    held:{eat:'好吃♪', sleepTouch:'嗯…'}, tag:{sleep:'zzZ', eat:'咀嚼中', run:'喵！', groom:'洗臉', enc:'喵！'},
+    mood:{sleep:'打呼嚕中', eat:'吃飯中', groom:'洗臉中', run:'突然暴衝，鈴鐺亂響', walk:'叮鈴叮鈴散步中', sit:'乖乖坐著', other:'看著你', play:'正在玩', annoyed:'想靜一靜'}
+  },
+  dog1:{
+    lv:['', '{N}開始在辦公室慢慢晃悠巡邏了', '{N}會在門口等你上下班了，肚子餓就來找你', '{N}決定留下來了，整間辦公室都是牠的家（還有牠的零食庫）'],
+    annoyed:'牠今天有點懶，先讓牠歇一下',
+    callSleep:['「呼……」牠睡得流口水，只抖了抖耳朵', '牠打了個大哈欠，眼睛還沒睜開'],
+    callYes:['「汪！」牠甩著大耳朵邁開短腿衝過來', '「汪汪！」長長的身子扭著跑過來了'],
+    callMaybe:'「汪？」牠歪著頭，慢慢走過來', callNo:'牠看了你一眼，又趴回去',
+    petSleep:'牠被摸醒了，嘆了口氣換個地方繼續睡', petFlee:'牠害羞地退了一步',
+    petOk:n => '「嗚～」牠翻出肚皮讓你摸（信任度 +' + n + '）', petMax:'牠舒服得直哼哼，但今天已經摸夠了',
+    treatSleep:'牠鼻子動了動，但還沒睡醒', treatFull:'「汪……」牠今天吃太飽，連零食都吃不下了', treatEat:n => '「汪！」一口吞下點心，尾巴搖不停（信任度 +' + n + '）', treatNo:'牠聞了聞，竟然不吃（點心還在）',
+    playSleep:'牠打呼打得正香，等牠醒來再玩', playShy:'牠看了球一眼，還有點害羞', playGo:'「汪汪！」拖著長長的身子追球跑！',
+    bowlFood:'加了一份飯，牠搖著尾巴等不及了', bowlWater:'換了新鮮的水，牠咕嚕咕嚕喝了好幾口', bowlFull:'碗裡還滿滿的，牠一臉可惜',
+    held:{eat:'好香！', sleepTouch:'嗯？'}, tag:{sleep:'呼嚕…', eat:'開飯！', run:'汪！', groom:'搖尾巴', enc:'汪！'},
+    mood:{sleep:'打呼中', eat:'開飯中', groom:'搖尾巴', run:'衝刺中', walk:'慢慢晃悠', sit:'坐著等你', other:'看著你', play:'正在玩', annoyed:'想歇一下'}
+  },
+  dog2:{
+    lv:['', '{N}開始在辦公室跑來跑去巡邏了', '{N}會在門口迎接每一個人，看到你就微笑', '{N}決定留下來了，整間辦公室都是牠的遊樂場'],
+    annoyed:'牠玩累了，先趴一下',
+    callSleep:['牠睡成一團白色毛球，只抖了抖耳朵', '牠在夢裡「汪」了一聲'],
+    callYes:['「汪汪汪！」牠笑得合不攏嘴衝過來', '「汪！」捲尾巴甩得像螺旋槳，牠跑過來了'],
+    callMaybe:'「汪？」牠笑著慢慢走過來', callNo:'牠玩得正開心，晚點再來找你',
+    petSleep:'牠被摸醒了，迷迷糊糊地蹭了蹭你，又睡著了', petFlee:'牠害羞地笑了笑',
+    petOk:n => '「嘿嘿～」牠笑瞇瞇地蹭你（信任度 +' + n + '）', petMax:'牠開心得直打滾，但今天已經摸夠了',
+    treatSleep:'牠睡得正香，等牠醒來再餵', treatFull:'「汪～」牠舔舔嘴，今天已經吃得飽飽的了', treatEat:n => '「汪汪！」牠笑著一口吃掉，尾巴轉成螺旋槳（信任度 +' + n + '）', treatNo:'牠聞了聞，竟然不吃（點心還在）',
+    playSleep:'牠睡得正香，等牠醒來再玩', playShy:'牠盯著球，開心卻不好意思', playGo:'「汪汪汪！」牠追著球飛奔，毛都飄起來了！',
+    bowlFood:'加了一份飯，牠高興得原地轉圈', bowlWater:'換了新鮮的水，牠喝得滿臉都是水', bowlFull:'碗裡還滿滿的，牠對你笑了一下',
+    held:{eat:'好好吃！', sleepTouch:'嘿嘿'}, tag:{sleep:'zzZ', eat:'好好吃！', run:'汪汪汪！', groom:'嘿嘿', enc:'汪！'},
+    mood:{sleep:'睡成毛球', eat:'吃飯中', groom:'開心搖尾巴', run:'狂奔中', walk:'開心散步', sit:'笑著等你', other:'看著你', play:'正在玩', annoyed:'想趴一下'}
+  }
+};
 const petReg = {}, PET_PAIRS = {5:['cat', 'dog2'], 4:['cat2', 'dog1']}, petEnc = new Map();   // 同一層的一貓一狗：狗偶爾跑去找貓玩，貓有時閃開有時理牠。全部由時間算出來（和大家看到的位置一樣），不用同步
 function petPairEnc(floor, now){
   const pair = PET_PAIRS[floor], SLOT = 75000; if (!pair) return null;
@@ -2528,7 +2589,8 @@ const CAT_DEFS = [
   {id:'dog2', pet:'dog2', species:'dog', noun:'狗', toy:'丟球', floor:5, ox:0, fr:[0, 1], name:'無名薩摩', title:'五樓的狗', seed:'dog2:', keyPrefix:'pixelDog2v1:', lvKey:'pixelDog2v1Lv:', namedKey:'pixelDog2v1Named', atlas:'assets/dog2/cat-atlas.webp', cw:253, ch:217, foot:6, poses:DOG_POSES, k:.0061, walk:2.3, run:8.6, energy:3, sleepy:1, zoom:.3, officeKey:'dog2Office', dbg:'__dog2'}];
 function makeCat(DEF){
 // ---- 辦公室流浪貓（只住五樓；名字由大家提名投票決定，投票前暫稱「無名小貓」）：位置由時間決定（每 75 秒一個時段、rng 種子相同），所有人看到同一隻；互動進度走 pixelOfficeCat ----
-const CAT = {name:DEF.name, walk:DEF.walk || 1.7, run:DEF.run || 7.5, slot:75000}, DOG = DEF.species === 'dog', NOUN = DEF.noun || '貓';
+const CAT = {name:DEF.name, walk:DEF.walk || 1.7, run:DEF.run || 7.5, slot:75000}, DOG = DEF.species === 'dog', NOUN = DEF.noun || '貓', SAY = PET_SAY[DEF.id] || PET_SAY.cat;
+const sy = (k, a) => { let v = SAY[k] !== undefined ? SAY[k] : PET_SAY.cat[k]; if (Array.isArray(v)) v = v[Math.floor(Math.random() * v.length)]; return typeof v === 'function' ? v(a) : v; };
 const CAT_LV = DEF.species === 'dog' ? ['路過', '常客', '室友', '家犬'] : ['路過', '常客', '室友', '家貓'], CAT_LV_AT = [0, 30, 80, 160], TRUST_LV = ['陌生', '好奇', '熟悉', '親近'], TRUST_AT = [0, 10, 25, 50];
 const CAT_GAIN = {feed:{trust:1, belong:3, cap:2}, treat:{trust:4, belong:1, cap:3}, play:{trust:3, belong:1, cap:3}, company:{trust:2, belong:0, cap:2}, pet:{trust:1, belong:0, cap:3}};   // 每天前幾次有效互動拿滿，之後不再增加（和 Worker 的 pixelOfficeCat 同一張表）
 const catDay = () => new Date(Date.now() + 288e5).toISOString().slice(0, 10);
@@ -2555,7 +2617,7 @@ async function catCloud(op, kind, effect){
 }
 function catCheckLevel(){   // 歸屬感升級：第一次達到才說一次
   const lv = belongLv(), key = DEF.lvKey + (meName() || ''); let seen = 0; try { seen = +localStorage.getItem(key) || 0; } catch (e) {}
-  if (lv > seen) { try { localStorage.setItem(key, String(lv)); } catch (e) {} if (seen > 0 || lv > 0) showQuote(CAT.name + '・' + CAT_LV[lv], (DOG ? ['', CAT.name + '開始在辦公室到處巡邏了', CAT.name + '會在門口等大家上下班了', CAT.name + '決定留下來了，整間辦公室都是牠的家（超愛跑來跑去）'] : ['', CAT.name + '開始會睡在沒人坐的椅子上了', CAT.name + '會跳上沒人的桌子趴著了', CAT.name + '決定留下來了，整間辦公室都是牠的地盤（偶爾還會暴衝）'])[lv]); }
+  if (lv > seen) { try { localStorage.setItem(key, String(lv)); } catch (e) {} if (seen > 0 || lv > 0) showQuote(CAT.name + '・' + CAT_LV[lv], SAY.lv[lv].replace('{N}', CAT.name)); }
 }
 // ---- 取名投票：資料在 Worker（pixelOfficeCat 的 nameGet／namePropose／nameVote／nameClose／nameRemove）；投票期 7 天，得票最高的名字就是貓的名字 ----
 let catNaming = null, catNameBusy = false, catNameHinted = false;
@@ -2619,11 +2681,12 @@ function catInit(){
   const fa = fridges[DEF.fr[0]], fb = fridges[DEF.fr[1]], f = fa && fb ? {x:(fa.cx + fb.cx) / 2, z:Math.max(fa.zf, fb.zf)} : {x:15 + DEF.ox * U, z:39};
   const pick = (cands, r) => cands.find(c => free(c[0], c[1], r)) || cands[0];
   let bw = pick([[f.x - 4.0, f.z + 1.2], [f.x - 3.0, f.z + 1.5], [f.x - 5.0, f.z + 1.2], [f.x - 2.0, f.z + 1.6]], .5);
-  if (DOG && DEF.floor === 5) { const gc = []; for (let gx = f.x - 13; gx <= f.x + 2; gx += .5) for (let gz = f.z + 1.4; gz <= f.z + 6; gz += .5) if (free(gx, gz, 1.1)) gc.push([gx, gz, Math.hypot(gx - (f.x - 9), gz - (f.z + 2.4))]); if (gc.length) { gc.sort((p, q) => p[2] - q[2]); bw = [gc[0][0], gc[0][1]]; } }
+  if (DOG && DEF.floor === 5) { const gc = []; for (let gx = f.x + 2.5; gx <= f.x + 10; gx += .5) for (let gz = f.z + 1.4; gz <= f.z + 7; gz += .5) if (free(gx, gz, 1.1)) gc.push([gx, gz, Math.hypot(gx - (f.x + 4), gz - (f.z + 2.4))]);   // 五樓狗：窩與碗放冰箱右側空地（不放會議室）
+    if (gc.length) { gc.sort((p, q) => p[2] - q[2]); bw = [gc[0][0], gc[0][1]]; } }
   if (DEF.floor === 4) { const gc = []; for (let gx = f.x + 3; gx <= f.x + 11; gx += .5) for (let gz = f.z + 1.5; gz <= f.z + 17; gz += .5) if (free(gx, gz, .6)) gc.push([gx, gz, (f.x + 11 - gx) * 4 + (gz - (f.z + 1.5))]); if (gc.length) { gc.sort((p, q) => p[2] - q[2]); bw = [gc[0][0], gc[0][1]]; } }   // 四樓：貓窩與貓碗放在冰箱右側的空地（不放廁所旁；貓狗的碗與窩靠東側牆排成一列，不擋走道）
   // 紙箱（1.0×0.8）：在茶水檯前找一塊真的放得下的空地——和所有碰撞矩形（含薄薄的玻璃牆）都不重疊、也不壓到貓碗；從偏好位置往外找最近的
   const fitsBox = (x, z) => !blocked(x, z) && !rects.some(([a, b, c, d]) => x + .65 > a && x - .65 < c && z + .55 > b && z - .55 < d) && !(Math.abs(x - bw[0]) < 1.5 && Math.abs(z - bw[1]) < 1.1) && petSites.every(q => Math.hypot(q[0] - x, q[1] - z) > 2.6);
-  const boxCands = []; for (let gx = f.x - 10 + (DEF.floor === 4 ? 12 : 0); gx <= f.x + 1 + (DEF.floor === 4 ? 9 : 0); gx += .5) for (let gz = f.z + 1.4; gz <= f.z + (DEF.floor === 4 ? 12 : 5); gz += .5) boxCands.push([gx, gz, (DEF.floor === 4 || DOG ? Math.hypot(gx - bw[0], gz - (bw[1] + 3)) : Math.hypot(gx - (f.x - 5.6), gz - (f.z + 2.4)))]);
+  const boxCands = []; for (let gx = f.x - 10 + (DEF.floor === 4 ? 12 : DOG ? 13 : 0); gx <= f.x + 1 + (DEF.floor === 4 ? 9 : DOG ? 10 : 0); gx += .5) for (let gz = f.z + 1.4; gz <= f.z + (DEF.floor === 4 ? 12 : 5); gz += .5) boxCands.push([gx, gz, (DEF.floor === 4 || DOG ? Math.hypot(gx - bw[0], gz - (bw[1] + 3)) : Math.hypot(gx - (f.x - 5.6), gz - (f.z + 2.4)))]);
   const bx = boxCands.sort((p, q) => p[2] - q[2]).find(c => fitsBox(c[0], c[1])) || [f.x - 6.7, f.z + 1.6];
   petSites.push([bw[0], bw[1]], [bx[0], bx[1]]); catBowl = catBowlBuild(bw[0], bw[1]); const box = catBoxBuild(bx[0], bx[1]); rects.push([bx[0] - .5, bx[1] - .4, bx[0] + .5, bx[1] + .4]);
   const owned = new Set(); for (const c of Object.values(chars)) { const st = c.home && stationOf(c); if (st && st.cell) owned.add(st.cell); }
@@ -2812,7 +2875,7 @@ function updateCat(dt){
   if (!catGreeted && player && !AWAY.has(player.status) && now - catT0 > 5000 && !catLocal && (DOG || trustLv() >= 2 && (catState.total.feed | 0) + (catState.total.treat | 0) >= 3) && a.pose !== 'loaf' && floorOf(player) === DEF.floor && near > 6) { catGreeted = true; catActOut('greet'); catGo([{x:pp.x, z:pp.z + .9}], CAT.run * .8, () => { catLocalStart('rub', 3.6, {}); catHeld = '♥'; setTimeout(() => { catHeld = ''; }, 3600); }); }
   // 名牌：靠近時顯示心情
   const p = catG.position.clone(); p.y += 1.1 + catG.position.y; p.project(camera);
-  const mood = catHeld || (DOG && a.kind === 'enc' ? '汪！' : a.pose === 'loaf' ? 'zzZ' : a.pose === 'eat' ? '吃飯中' : a.pose === 'run' ? '！' : a.pose === 'groom' ? '理毛' : ''), vis = p.z < 1 && Math.abs(p.x) < 1.1 && Math.abs(p.y) < 1.1 && (near < 9 || catHeld), html = CAT.name + (mood ? '　' + mood : '');
+  const mood = catHeld || (DOG && a.kind === 'enc' ? SAY.tag.enc : a.pose === 'loaf' ? SAY.tag.sleep : a.pose === 'eat' ? SAY.tag.eat : a.pose === 'run' ? SAY.tag.run : a.pose === 'groom' ? SAY.tag.groom : ''), vis = p.z < 1 && Math.abs(p.x) < 1.1 && Math.abs(p.y) < 1.1 && (near < 9 || catHeld), html = CAT.name + (mood ? '　' + mood : '');
   catTagEl.style.display = vis ? 'inline-flex' : 'none'; if (catTagEl.textContent !== html) catTagEl.textContent = html; if (vis) catTagEl.style.transform = 'translate(-50%,-100%) translate(' + ((p.x * .5 + .5) * innerWidth) + 'px,' + ((-p.y * .5 + .5) * innerHeight) + 'px)';
   // 碗：飼料與水的顏色
   if (catBowl) { catBowl.food.visible = catBowlFull(); catBowl.water.visible = catWaterFull(); }
@@ -2822,8 +2885,8 @@ const catOwns = () => !catPanel.hidden && catPanel.dataset.cat === DEF.id;
 function catClose(){ catPanel.hidden = true; }
 function catMoodText(){
   const a = catAt(syncNow()), p = a.pose;
-  if (catLocal && catLocal.mode === 'play') return '正在玩'; if (catAnnoyed > performance.now()) return '有點不爽，暫時不理你';
-  return p === 'loaf' ? '睡覺中' : p === 'eat' ? '吃飯中' : p === 'groom' ? '理毛中' : p === 'run' ? '突然暴衝中' : p === 'walk' ? '散步中' : p === 'sit' ? '坐著發呆' : '看著你';
+  const M = SAY.mood; if (catLocal && catLocal.mode === 'play') return M.play; if (catAnnoyed > performance.now()) return M.annoyed;
+  return p === 'loaf' ? M.sleep : p === 'eat' ? M.eat : p === 'groom' ? M.groom : p === 'run' ? M.run : p === 'walk' ? M.walk : p === 'sit' ? M.sit : M.other;
 }
 function catRender(){
   if (catPanel.dataset.cat !== DEF.id) return;
@@ -2852,39 +2915,39 @@ function catNeed(dist){ const pp = catPlayerPos(); if (!pp || !catG) return fals
 function catAct(a){
   if (!player || AWAY.has(player.status)) return; catPartner = null; const now = performance.now(), sleeping = catAt(syncNow()).pose === 'loaf' && !catLocal;
   if (a === 'company') { if (catCompany) { catCompany = null; catRender(); return; } if (!catNeed(4.5)) return; catCompany = {t:0, x:player.holder.position.x, z:player.holder.position.z}; const q = player.holder.position; catGo([{x:q.x + .9, z:q.z + .5}], CAT.walk * 2, () => catLocalStart('stay', 21, {})); catActOut('company'); showQuote('', '安靜陪伴 20 秒（不要走動）：牠會過來坐在你旁邊'); catRender(); return; }
-  if (catAnnoyed > now && a !== 'call') { showQuote(CAT.name, '牠現在不想理你，過一陣子再來'); return; }
+  if (catAnnoyed > now && a !== 'call') { showQuote(CAT.name, sy('annoyed')); return; }
   const pp = player.holder.position;
   if (a === 'call') {
-    if (sleeping) { showQuote(CAT.name, '牠睡得很熟，只動了動耳朵'); return; }
-    if (DOG || trustLv() >= 2) { catActOut('call'); catGo([{x:pp.x, z:pp.z + 1.0}], CAT.run * .8, () => { catLocalStart('look', 3, {}); catHeld = '♥'; setTimeout(() => { catHeld = ''; }, 3000); }); showQuote(CAT.name, DOG ? '牠聽到了，開心地衝過來！' : '牠聽到了，小跑步過來'); }
-    else if (trustLv() === 1 && Math.random() < .4) { catGo([{x:pp.x, z:pp.z + 1.8}], CAT.walk * 1.5, () => { catLocalStart('look', 2.5, {}); }); showQuote(CAT.name, '牠猶豫了一下，慢慢靠過來'); }
-    else { catLocalStart('look', 2.5, {}); showQuote(CAT.name, '牠回頭看了你一眼，然後轉回去'); }
+    if (sleeping) { showQuote(CAT.name, sy('callSleep')); return; }
+    if (DOG || trustLv() >= 2) { catActOut('call'); catGo([{x:pp.x, z:pp.z + 1.0}], CAT.run * .8, () => { catLocalStart('look', 3, {}); catHeld = '♥'; setTimeout(() => { catHeld = ''; }, 3000); }); showQuote(CAT.name, sy('callYes')); }
+    else if (trustLv() === 1 && Math.random() < .4) { catGo([{x:pp.x, z:pp.z + 1.8}], CAT.walk * 1.5, () => { catLocalStart('look', 2.5, {}); }); showQuote(CAT.name, sy('callMaybe')); }
+    else { catLocalStart('look', 2.5, {}); showQuote(CAT.name, sy('callNo')); }
     catClose(); return;
   }
   if (!catNeed(4.5)) return;
   if (a === 'pet') {
-    if (sleeping) { catAnnoyed = now + 60000; const away = catSpots.walk.length ? catSpots.walk[Math.floor(Math.random() * catSpots.walk.length)] : null; catHeld = '…'; setTimeout(() => { catHeld = ''; }, 3000); if (away) catGo([away], 3, () => catLocalStart('look', 1, {after:catReturn})); showQuote(CAT.name, '睡覺時一直摸，牠換地方睡了，暫時不理你'); catClose(); return; }
-    if (!DOG && trustLv() === 0 && Math.random() < .5) { catAnnoyed = now + 20000; catGo([catSpots.walk[Math.floor(Math.random() * catSpots.walk.length)] || {x:pp.x + 3, z:pp.z}], 3.2, catReturn); showQuote(CAT.name, '還不熟，牠閃開走掉了'); catClose(); return; }
+    if (sleeping) { catAnnoyed = now + 60000; const away = catSpots.walk.length ? catSpots.walk[Math.floor(Math.random() * catSpots.walk.length)] : null; catHeld = SAY.held.sleepTouch; setTimeout(() => { catHeld = ''; }, 3000); if (away) catGo([away], 3, () => catLocalStart('look', 1, {after:catReturn})); showQuote(CAT.name, sy('petSleep')); catClose(); return; }
+    if (!DOG && trustLv() === 0 && Math.random() < .5) { catAnnoyed = now + 20000; catGo([catSpots.walk[Math.floor(Math.random() * catSpots.walk.length)] || {x:pp.x + 3, z:pp.z}], 3.2, catReturn); showQuote(CAT.name, sy('petFlee')); catClose(); return; }
     catClose(); catFaceCat(3600); catActOut('pet');
-    catGo([{x:pp.x + .35, z:pp.z + .85}], CAT.walk * 2.2, () => { catLocalStart('rub', 3, {a:0}); catHeld = '♥'; catHearts(4); setTimeout(() => { catHeld = ''; }, 3000); const g = catCare('pet'); showQuote(CAT.name, g ? '呼嚕呼嚕（信任度 +' + CAT_GAIN.pet.trust + '）' : '牠瞇著眼享受，但今天摸夠了'); });
+    catGo([{x:pp.x + .35, z:pp.z + .85}], CAT.walk * 2.2, () => { catLocalStart('rub', 3, {a:0}); catHeld = '♥'; catHearts(4); setTimeout(() => { catHeld = ''; }, 3000); const g = catCare('pet'); showQuote(CAT.name, g ? sy('petOk', CAT_GAIN.pet.trust) : sy('petMax')); });
     return;
   }
   if (a === 'treat') {
-    if (sleeping) { showQuote(CAT.name, '牠在睡覺，等牠醒來再餵'); return; }
-    if ((catState.daily.treat | 0) >= CAT_GAIN.treat.cap) { catLocalStart('look', 2.5, {}); showQuote(CAT.name, '吃飽了，牠拒絕了點心'); return; }
+    if (sleeping) { showQuote(CAT.name, sy('treatSleep')); return; }
+    if ((catState.daily.treat | 0) >= CAT_GAIN.treat.cap) { catLocalStart('look', 2.5, {}); showQuote(CAT.name, sy('treatFull')); return; }
     catFaceCat(7500); catActOut('treat'); const hand = () => { const c = catG.position, dx = c.x - pp.x, dz = c.z - pp.z, d = Math.hypot(dx, dz) || 1; return {x:pp.x + dx / d * .45, z:pp.z + dz / d * .45}; };
     catGo([{x:pp.x + .6, z:pp.z + .8}], CAT.walk * 2, () => { const h = hand(); catTreatShow(true, h.x, .95, h.z); catLocalStart('sniff', 2.2, {after:() => {
       const eat = DOG || trustLv() >= 1 || Math.random() < .55; catTreatShow(false);
-      if (eat) { catLocalStart('eat', 3.2, {}); catHeld = '好吃'; catHearts(2); setTimeout(() => { catHeld = ''; }, 3200); catCare('treat'); showQuote(CAT.name, '牠聞了聞，吃掉了（信任度 +' + CAT_GAIN.treat.trust + '）'); }
-      else { catAnnoyed = now + 15000; catGo([catSpots.walk[Math.floor(Math.random() * catSpots.walk.length)] || {x:pp.x + 3, z:pp.z}], 3, catReturn); showQuote(CAT.name, '牠聞了聞，決定不吃，轉身走了（點心還在）'); }
+      if (eat) { catLocalStart('eat', 3.2, {}); catHeld = SAY.held.eat; catHearts(2); setTimeout(() => { catHeld = ''; }, 3200); catCare('treat'); showQuote(CAT.name, sy('treatEat', CAT_GAIN.treat.trust)); }
+      else { catAnnoyed = now + 15000; catGo([catSpots.walk[Math.floor(Math.random() * catSpots.walk.length)] || {x:pp.x + 3, z:pp.z}], 3, catReturn); showQuote(CAT.name, sy('treatNo')); }
     }}); });
     catClose(); return;
   }
   if (a === 'play') {
-    if (sleeping) { showQuote(CAT.name, '牠在睡覺，等牠醒來再玩'); return; }
-    if (!DOG && trustLv() === 0) { catLocalStart('look', 2.5, {}); showQuote(CAT.name, '牠只瞄了逗貓棒一眼，還不敢玩（先餵點心培養感情）'); return; }
+    if (sleeping) { showQuote(CAT.name, sy('playSleep')); return; }
+    if (!DOG && trustLv() === 0) { catLocalStart('look', 2.5, {}); showQuote(CAT.name, sy('playShy')); return; }
     const pts = [0, 1, 2].map(() => { const ang = Math.random() * 6.28, r = 1.4 + Math.random() * 1.4; let q = {x:pp.x + Math.cos(ang) * r, z:pp.z + Math.sin(ang) * r}; if (blocked(q.x, q.z)) q = {x:pp.x, z:pp.z + 1.4}; return q; });
-    const toy = catToyShow(true, pts[0]); catLocalStart('play', 6, {pts, toy}); catLocal.t0 = performance.now(); catCare('play'); catActOut('play'); showQuote(CAT.name, DOG ? '追著球跑來跑去！' : '追著逗貓棒撲來撲去！'); catClose();
+    const toy = catToyShow(true, pts[0]); catLocalStart('play', 6, {pts, toy}); catLocal.t0 = performance.now(); catCare('play'); catActOut('play'); showQuote(CAT.name, sy('playGo')); catClose();
     setTimeout(catToyHide, 6200); return;
   }
 }
@@ -2892,9 +2955,9 @@ function catApplyState(d){ const o = d[DEF.officeKey]; if (!o) return; catOffice
 function catBowlClick(){
   if (!player || AWAY.has(player.status)) return; const b = catBowl; if (!b) return; const pp = player.holder.position;
   if (Math.hypot(pp.x - b.x, pp.z - b.z) > 3.2) { target = new THREE.Vector3(b.x, 0, b.z + 1.3); showQuote('', '走到碗邊再點一次'); return; }
-  if (!catBowlFull()) { catCare('feed', 'food'); showQuote(CAT.name, '加了一份飼料'); }
-  else if (!catWaterFull()) { catCare('feed', 'water'); showQuote(CAT.name, '換了新鮮的水'); }
-  else showQuote('', '碗裡還滿滿的');
+  if (!catBowlFull()) { catCare('feed', 'food'); showQuote(CAT.name, sy('bowlFood')); }
+  else if (!catWaterFull()) { catCare('feed', 'water'); showQuote(CAT.name, sy('bowlWater')); }
+  else showQuote(CAT.name, sy('bowlFull'));
 }
 return {id:DEF.id, at:catAt, init:catInit, update:updateCat, click:catClick, bowlClick:catBowlClick, applyState:catApplyState};
 }
