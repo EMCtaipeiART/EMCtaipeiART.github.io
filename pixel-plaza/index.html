@@ -2464,7 +2464,7 @@ addEventListener('pointerdown', e => { if (!catPanel.hidden && !catPanel.contain
 addEventListener('keydown', e => { if (e.key === 'Escape' && !catPanel.hidden) catPanel.hidden = true; });
 const CAT_DEFS = [
   {id:'cat', pet:'', floor:5, ox:0, fr:[0, 1], name:'無名小貓', title:'辦公室的貓', seed:'cat:', keyPrefix:'pixelCat:', lvKey:'pixelCatLv:', namedKey:'pixelCatNamed', atlas:'assets/cat/cat-atlas.webp', cw:391, ch:253, officeKey:'catOffice', dbg:'__cat'},
-  {id:'cat2', pet:'cat2', floor:4, ox:FX4, fr:[2, 3], name:'四樓小貓', title:'四樓的貓', seed:'cat2:', keyPrefix:'pixelCat2:', lvKey:'pixelCat2Lv:', namedKey:'pixelCat2Named', atlas:'assets/cat2/cat-atlas.webp', cw:285, ch:248, officeKey:'cat2Office', dbg:'__cat2'}];
+  {id:'cat2', pet:'cat2', floor:4, ox:FX4, fr:[2, 3], name:'四樓小貓', title:'四樓的貓', seed:'cat2:', keyPrefix:'pixelCat2v2:', lvKey:'pixelCat2v2Lv:', namedKey:'pixelCat2v2Named', atlas:'assets/cat2/cat-atlas.webp', cw:285, ch:248, officeKey:'cat2Office', dbg:'__cat2'}];
 function makeCat(DEF){
 // ---- 辦公室流浪貓（只住五樓；名字由大家提名投票決定，投票前暫稱「無名小貓」）：位置由時間決定（每 75 秒一個時段、rng 種子相同），所有人看到同一隻；互動進度走 pixelOfficeCat ----
 const CAT = {name:DEF.name, walk:1.7, run:7.5, slot:75000};
