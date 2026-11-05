@@ -2765,7 +2765,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     // 全員共用的貓（歸屬感、貓碗）與伺服器時間：每個人（含訪客）每次輪詢都帶回，貓的行程才會在每個人畫面上一致（不依賴各人本機存檔與電腦時鐘）
     let catOffice: Row = {};
     try { const row = this.ctx.storage.sql.exec<{ value: string }>("SELECT value FROM pixel_office_settings WHERE key = 'cat:office'").toArray()[0]; catOffice = asRow(JSON.parse(row?.value || '{}')); } catch { catOffice = {}; }
-    const office = { belong: Math.max(0, Math.floor(Number(catOffice.belong) || 0)), bowlAt: Math.floor(Number(catOffice.bowlAt) || 0), waterAt: Math.floor(Number(catOffice.waterAt) || 0) };
+    const office = { belong: Math.max(0, Math.floor(Number(catOffice.belong) || 0)), bowlAt: Math.floor(Number(catOffice.bowlAt) || 0), waterAt: Math.floor(Number(catOffice.waterAt) || 0), act: this.pixelOfficeCatAct(catOffice.act) };
     if (Number(payload.since) === version && version > 0) return { ok: true, action: 'pixelOfficeState', version, unchanged: true, workday: pixelOfficeIsWorkday(Date.now()), serverNow: Date.now(), catOffice: office };   // 國定假日要在不換版本時也傳到畫面
     const rows = this.ctx.storage.sql.exec<{ name: string; state: string; photo_version: number; updated_at: number }>(
       'SELECT name, state, photo_version, updated_at FROM pixel_office_people'
@@ -2816,6 +2816,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   /** 3D 辦公室的流浪貓：辦公室歸屬感（全員共用，cat:office）與每人的信任度（cat:<名字>）。
    *  op:'get' 讀取；op:'care' 記一次有效互動（kind: feed／treat／play／company／pet），每人每天每種互動只有前幾次會增加進度（上限在 CAT_CARE）。
    *  effect:'food'／'water' 會更新共用貓碗的補充時間。不寫 GitHub；信任度與歸屬感只增不減。 */
+  /** 最近一次有人和貓互動（讓其他人的畫面也播同樣動作）。只留 5 分鐘內的。 */
+  private pixelOfficeCatAct(raw: unknown): { name: string; kind: string; at: number } | null {
+    const a = asRow(raw), at = Math.floor(Number(a.at) || 0), kind = text(a.kind), name = text(a.name);
+    return name && ['pet', 'treat', 'play', 'company'].includes(kind) && Date.now() - at < 300_000 ? { name, kind, at } : null;
+  }
+
   private pixelOfficeCat(payload: ApiPayload): ApiResult {
     const name = text(payload.name);
     if (text(payload.op).startsWith('name')) return this.pixelOfficeCatNaming(payload, name);
@@ -2829,12 +2835,18 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     let daily: Record<string, number> = meRaw.day === day ? Object.fromEntries(Object.entries(asRow(meRaw.daily)).map(([k, v]) => [k, Math.max(0, Math.floor(Number(v) || 0))])) : {};
     let belong = Math.max(0, Math.min(1_000_000, Math.floor(Number(officeRaw.belong) || 0)));
     let bowlAt = Math.floor(Number(officeRaw.bowlAt) || 0), waterAt = Math.floor(Number(officeRaw.waterAt) || 0), gained = false;
+    if (text(payload.op) === 'act') {
+      const kind = text(payload.kind);
+      if (!['pet', 'treat', 'play', 'company'].includes(kind)) return { ok: false, action: 'pixelOfficeCat', error: 'invalid kind' } as ApiResult;
+      write('cat:office', { belong, bowlAt, waterAt, act: { name, kind, at: now } });
+      return { ok: true, action: 'pixelOfficeCat' } as ApiResult;
+    }
     if (text(payload.op) === 'care') {
       const kind = text(payload.kind), rule = CAT_CARE[kind], effect = text(payload.effect);
       if (!rule) return { ok: false, action: 'pixelOfficeCat', error: 'invalid kind' } as ApiResult;
       if ((daily[kind] || 0) < rule.cap) { daily[kind] = (daily[kind] || 0) + 1; trust = Math.min(100, trust + rule.trust); belong += rule.belong; gained = true; }
       if (effect === 'food') bowlAt = now; else if (effect === 'water') waterAt = now;
-      write('cat:' + name, { trust, day, daily }); write('cat:office', { belong, bowlAt, waterAt });
+      write('cat:' + name, { trust, day, daily }); write('cat:office', { belong, bowlAt, waterAt, act: officeRaw.act });
     }
     return { ok: true, action: 'pixelOfficeCat', gained, cat: { trust, day, daily }, office: { belong, bowlAt, waterAt } } as ApiResult;
   }
