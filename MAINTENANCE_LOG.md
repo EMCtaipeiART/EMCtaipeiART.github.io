@@ -1760,3 +1760,8 @@
 - 臘腸、薩摩耶兩張設定稿用 ChatGPT 重畫成同一風格（Q 版深棕粗外框），存本機 pixel-plaza/ai-views/dog-sheets/（不進 Git）。
 - PET-SPEC.md 新增 §13：美術、作息、互動、擺放、實作順序與待決事項（尚未實作）。
 - 同日貓咪修正：四樓貓儲存 key 改 pixelCat2v2*、迎接／叫過來改跑步、離層位置同步、call/greet 事件廣播，Worker 版本 0417ec0c。
+
+## 2026-11-05 臘腸姿勢圖完成
+- 用 ChatGPT 生成臘腸 9 個姿勢（stand、walkA、walkB、run、sit、down、sleep、eat、wag）的三視圖＋45° 斜角，藍底 #0066FF，存本機 pixel-plaza/ai-views/dog1-sheets/（d1-<姿勢>-sheet.png、d1-<姿勢>-q.png，不進 Git）。
+- eat 已重畫成沒有食碗、wag 沒有動態線；舊版留為 old-*.png。
+- 注意：自動下載若太早會抓到上一張，已用 md5 比對並修正。薩摩耶還沒做。
