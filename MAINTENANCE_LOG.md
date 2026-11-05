@@ -1770,3 +1770,8 @@
 - 薩摩耶 9 個姿勢（stand、walkA、walkB、run、sit、down、sleep、eat、wag）三視圖＋45° 斜角，藍底 #0066FF，存本機 pixel-plaza/ai-views/dog2-sheets/（d2-<姿勢>-sheet.png、d2-<姿勢>-q.png，不進 Git）。已用 md5 檢查無重複、無食碗／動態線。
 - 臘腸（dog1-sheets）與薩摩耶（dog2-sheets）的原始檔名對調過一次已修正：dog-sheets/dog1-dachshund-sheet.png 是臘腸、dog2-samoyed-sheet.png 是薩摩耶。
 - 下一步：改 tools/build-cat-atlas.py 支援狗（姿勢清單、來源資料夾 dog1/dog2、檔名 d1-/d2-），合成圖集。
+
+## 2026-11-05 狗圖集合成
+- tools/build-cat-atlas.py 支援 dog1／dog2：來源 ai-views/<dog1|dog2>-sheets/d<N>-<姿勢>-sheet|q.png（全藍底），輸出 pixel-plaza/assets/<dog1|dog2>/cat-atlas.webp＋json。
+- 狗圖集 5 欄（正、前斜、側、後斜、背）× 9 列（stand、walkA、walkB、run、sit、down、sleep、eat、wag）。格子：dog1（臘腸）317×223、dog2（薩摩耶）263×227；站立高度 187／213 圖集像素。
+- 狗版額外去掉身體洞裡殘留的藍底。尚未接進 index.html。

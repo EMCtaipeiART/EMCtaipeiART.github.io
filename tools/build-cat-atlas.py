@@ -7,9 +7,13 @@ from scipy import ndimage as ndi
 import os
 PET = sys.argv[1] if len(sys.argv) > 1 else 'cat'   # 'cat'（五樓）或 'cat2'（四樓）：來源 ai-views/<PET>-sheets/，輸出 assets/<PET>/
 D = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'pixel-plaza', 'assets', PET) + '/'
+DOG = PET.startswith('dog')   # dog1（臘腸，四樓）／dog2（薩摩耶，五樓）：來源 ai-views/<PET>-sheets/d<N>-<姿勢>-sheet.png，全部藍底
 POSES = [('stand', 'stand-sheet.webp'), ('walkA', 'walkA-sheet.png'), ('walkB', 'walkB-sheet.png'), ('sit', 'sit-sheet.png'),
          ('loaf', 'loaf-sheet.png'), ('sleep', 'sleep-sheet.png'), ('eat', 'eat-sheet.png'), ('run', 'run-sheet.png'),
          ('groom', 'groom-sheet.png'), ('belly', 'belly-sheet.png')]
+if DOG:
+    _pf = 'd' + PET[3:] + '-'
+    POSES = [(n, _pf + n + '-sheet.png') for n in ['stand', 'walkA', 'walkB', 'run', 'sit', 'down', 'sleep', 'eat', 'wag']]
 OUT = 7   # 外圍黑色粗輪廓（圖集像素；畫面上約 2～3 px）
 OL = (26, 20, 16, 255)
 SC = 0.34   # 原圖 → 圖集縮放（站立貓約 200 px 高）
@@ -17,7 +21,7 @@ SC = 0.34   # 原圖 → 圖集縮放（站立貓約 200 px 高）
 def cutout(im, name):
     a = np.asarray(im.convert('RGB')).astype(int)
     r, g, b = a[..., 0], a[..., 1], a[..., 2]
-    if name == 'stand':   # 米色底：從四邊洪水填滿
+    if name == 'stand' and not DOG:   # 米色底：從四邊洪水填滿
         bg0 = (abs(r - 253) < 14) & (abs(g - 248) < 14) & (abs(b - 238) < 20)
         lab, n = ndi.label(bg0)
         edge = set(lab[0, :]) | set(lab[-1, :]) | set(lab[:, 0]) | set(lab[:, -1]); edge.discard(0)
@@ -30,6 +34,7 @@ def cutout(im, name):
     sizes = ndi.sum(fg, lab, range(1, n + 1))
     keep = np.isin(lab, [i + 1 for i, s in enumerate(sizes) if s > 400])   # 去掉雜點
     keep = ndi.binary_fill_holes(keep) | keep
+    if DOG: keep &= ~((b > r + 60) & (b > g + 20))   # 狗：身體洞裡殘留的藍底（腿縫、尾巴縫）也去掉
     keep = ndi.binary_erosion(keep, iterations=1)   # 吃掉一圈藍邊
     out = np.dstack([a.astype(np.uint8), (keep * 255).astype(np.uint8)])
     return Image.fromarray(out), keep
@@ -52,10 +57,10 @@ def outline(crop):
 
 views = {}
 for pose, f in POSES:
-    _b = D + '../../ai-views/' + PET + '-sheets/' + pose + '-sheet'; im = Image.open(_b + ('.webp' if os.path.exists(_b + '.webp') else '.png')); k = SC * 2172 / im.size[0]
+    _b = D + '../../ai-views/' + PET + '-sheets/' + (_pf if DOG else '') + pose + '-sheet'; im = Image.open(_b + ('.webp' if os.path.exists(_b + '.webp') else '.png')); k = SC * 2172 / im.size[0]
     rgba, keep = cutout(im, pose)
     gs = split3(keep)
-    if pose == 'run' and len(gs) == 2: gs = [(gs[0][0], 546), (547, gs[0][1]), gs[1]]
+    if pose == 'run' and len(gs) == 2 and not DOG: gs = [(gs[0][0], 546), (547, gs[0][1]), gs[1]]
     print(pose, im.size, 'groups', gs)
     if len(gs) != 3: print('  !! 不是 3 組'); sys.exit(1)
     arr = np.asarray(rgba)
@@ -66,7 +71,7 @@ for pose, f in POSES:
         w, h = crop.size; crop = crop.resize((max(1, round(w * k)), max(1, round(h * k))), Image.LANCZOS)
         row.append(outline(crop))
     # 斜 45° 兩格（ChatGPT 生成的 <姿勢>-q.png，正面斜、背面斜）：高度用相鄰兩個視角的平均來對齊，大小才一致
-    qim = Image.open(D + '../../ai-views/' + PET + '-sheets/' + pose + '-q.png'); qrgba, qkeep = cutout(qim, pose + '-q'); qg = split3(qkeep)
+    qim = Image.open(D + '../../ai-views/' + PET + '-sheets/' + (_pf if DOG else '') + pose + '-q.png'); qrgba, qkeep = cutout(qim, pose + '-q'); qg = split3(qkeep)
     if len(qg) != 2: print('  !! 斜角不是 2 組', pose, qg); sys.exit(1)
     qarr = np.asarray(qrgba); qrow = []
     hs = [c.size[1] - 2 * OUT for c in row]   # 原三格的貓高（去掉外框）
