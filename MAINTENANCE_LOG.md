@@ -1775,3 +1775,10 @@
 - tools/build-cat-atlas.py 支援 dog1／dog2：來源 ai-views/<dog1|dog2>-sheets/d<N>-<姿勢>-sheet|q.png（全藍底），輸出 pixel-plaza/assets/<dog1|dog2>/cat-atlas.webp＋json。
 - 狗圖集 5 欄（正、前斜、側、後斜、背）× 9 列（stand、walkA、walkB、run、sit、down、sleep、eat、wag）。格子：dog1（臘腸）317×223、dog2（薩摩耶）263×227；站立高度 187／213 圖集像素。
 - 狗版額外去掉身體洞裡殘留的藍底。尚未接進 index.html。
+
+## 2026-11-05 兩隻寵物狗上線（臘腸四樓、薩摩耶五樓）
+- pixel-plaza/index.html：CAT_DEFS 新增 dog1（臘腸、四樓）、dog2（薩摩耶、五樓）；DEF 加 species/noun/toy/poses/k/walk/run/energy/sleepy/zoom；狗用 9 姿勢圖集（assets/dog1、dog2），loaf→down/sleep、groom/belly→wag。
+- 狗的作息：早上門口迎接、午餐碗邊、傍晚門口等下班、下班後睡窩；白天臘腸愛睡、薩摩耶愛跑（突然衝刺機率 .3）；不上椅子與桌子。互動不拒絕（叫牠一定衝來、點心一定吃、丟球一定玩、回樓層一定迎接）。
+- 多寵物避位：petSites 讓碗、窩、門口彼此至少 2.6 單位。
+- Worker：pet 參數接受 cat2／dog1／dog2，各自 cat2:／dog1:／dog2: 鍵前綴；pixelOfficeState 回傳 dog1Office／dog2Office；版本 378446ef。
+- 儲存 key：pixelDog1v1／pixelDog2v1。未做：狗貓互動、跑跳迎接細節。
