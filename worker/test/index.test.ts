@@ -4696,6 +4696,15 @@ describe('Pixel Office shared state', () => {
       at('2026-09-22T07:12:00Z');
       expect(await statusOf('Noise')).toBe('present');
 
+      // 電腦開著時手動解除下班（晚上 22:00），之後電腦離線超過 5 分鐘就直接回到下班，不必等兩小時。
+      at('2026-09-22T14:00:00Z');
+      await heartbeat('Noise');
+      await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { status: 'present' } });
+      at('2026-09-22T14:02:00Z');
+      expect(await statusOf('Noise')).toBe('present');
+      at('2026-09-22T14:08:00Z');
+      expect(await statusOf('Noise')).toBe('offwork');
+
       // 'auto' 不是狀態而是出口：把手動標記清掉、交還給電腦判斷。沒有它的話手動點過就只能等
       // 跨時段或關機重開（2026-09-22 誤把 Leona 設成手動的下班，就是靠這個救回來的）。
       at('2026-09-22T03:00:00Z');

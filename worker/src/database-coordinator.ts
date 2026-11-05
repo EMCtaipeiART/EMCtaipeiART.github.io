@@ -2156,8 +2156,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       // 'offwork' 也要放行再判一次：中午電腦睡著的人會先在 12:00 前被判成下班，不讓它再被改的話
       // 整個午休都會卡在下班——這正是使用者回報的那個情況。
       if (!['present', 'overtime', 'lunch', 'toilet', 'offwork'].includes(status)) continue;
-      if (state.statusSource === 'manual' && nowMs - (Number(state.statusAt) || 0) < PIXEL_OFFICE_MANUAL_HOLD_MS) continue;   // 手動改過的狀態保留兩小時，之後才回到電腦判斷（假日也一樣）
       const next = pixelOfficeOfflineStatus(nowMs, lastSeen);
+      // 手動改過的狀態保留兩小時；但「電腦開著時手動改的」（statusAt 不晚於最後心跳），之後電腦離線超過門檻（5 分鐘）
+      // 又該是下班，就直接回到下班（2026-11-05）。離線之後才手動指定的仍尊重兩小時。
+      const manualWhileOnline = (Number(state.statusAt) || 0) <= lastSeen;
+      if (state.statusSource === 'manual' && !(next === 'offwork' && manualWhileOnline) && nowMs - (Number(state.statusAt) || 0) < PIXEL_OFFICE_MANUAL_HOLD_MS) continue;
       if (status === next) continue;
       state.status = next;
       state.statusSource = 'auto';
