@@ -1782,3 +1782,6 @@
 - 多寵物避位：petSites 讓碗、窩、門口彼此至少 2.6 單位。
 - Worker：pet 參數接受 cat2／dog1／dog2，各自 cat2:／dog1:／dog2: 鍵前綴；pixelOfficeState 回傳 dog1Office／dog2Office；版本 378446ef。
 - 儲存 key：pixelDog1v1／pixelDog2v1。未做：狗貓互動、跑跳迎接細節。
+
+## 2026-11-05 狗貓互動
+- index.html：petPairEnc／petApply，同層貓狗偶爾互動（狗跑去找貓、貓閃開或站著看），由時間決定、全員一致。細節見 PET-SPEC.md §13.9。

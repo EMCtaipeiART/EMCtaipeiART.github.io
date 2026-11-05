@@ -2482,6 +2482,44 @@ const catPanel = document.createElement('div'); catPanel.id = 'catP'; catPanel.h
 addEventListener('pointerdown', e => { if (!catPanel.hidden && !catPanel.contains(e.target)) catPanel.hidden = true; }, true);   // 點面板外面就收起來
 addEventListener('keydown', e => { if (e.key === 'Escape' && !catPanel.hidden) catPanel.hidden = true; });
 const petSites = [];   // 已經被某隻寵物的碗／窩／門口占走的位置，後面的寵物會避開（最多 2.6 單位）
+const petReg = {}, PET_PAIRS = {5:['cat', 'dog2'], 4:['cat2', 'dog1']}, petEnc = new Map();   // 同一層的一貓一狗：狗偶爾跑去找貓玩，貓有時閃開有時理牠。全部由時間算出來（和大家看到的位置一樣），不用同步
+function petPairEnc(floor, now){
+  const pair = PET_PAIRS[floor], SLOT = 75000; if (!pair) return null;
+  const cat = petReg[pair[0]], dog = petReg[pair[1]]; if (!cat || !dog || !cat.ready || !dog.ready) return null;
+  const s = Math.floor(now / SLOT), key = floor + ':' + s + ':' + cat.lv(); if (petEnc.has(key)) return petEnc.get(key);
+  let enc = null; const r = rng('enc:' + floor + ':' + s), tp = cat.tp(s * SLOT + SLOT / 2);
+  if (tp.h >= 9 && tp.h < 18.5 && tp.dow >= 1 && tp.dow <= 5 && r() < .16) {
+    const t0 = s * SLOT + 50000 + Math.floor(r() * 3000), d0 = dog.base(t0), c0 = cat.base(t0), flee = r() < .6;
+    if (d0.speed === 0 && c0.speed === 0 && !d0.y && !c0.y && Math.hypot(d0.x - c0.x, d0.z - c0.z) < 30 && Math.hypot(d0.x - c0.x, d0.z - c0.z) > 5) {
+      const ang = Math.atan2(d0.x - c0.x, d0.z - c0.z), tgt = {x:c0.x + Math.sin(ang) * 1.4, z:c0.z + Math.cos(ang) * 1.4};
+      const goR = dog.route(d0, [tgt]), backR = dog.route(tgt, [{x:d0.x, z:d0.z}]), tr = goR.len / dog.run, tb = backR.len / dog.run;
+      let fl = null, fR = null, bR = null, tf = 0;
+      if (flee) { const cands = cat.spots.walk.filter(q => { const d = Math.hypot(q.x - c0.x, q.z - c0.z); return d > 5 && d < 11; }).sort((a, b) => Math.hypot(b.x - tgt.x, b.z - tgt.z) - Math.hypot(a.x - tgt.x, a.z - tgt.z)); if (cands.length) { fl = cands[0]; fR = cat.route(c0, [fl]); bR = cat.route(fl, [{x:c0.x, z:c0.z}]); tf = fR.len / cat.run; } }
+      const dogEnd = tr + 3 + tb, catEnd = fl ? tr + 3.6 + bR.len / cat.run * 1.2 : tr + 3.6, T = Math.max(dogEnd, catEnd) + .4;
+      const dEnd = dog.base(t0 + T * 1000), cEnd = cat.base(t0 + T * 1000);
+      if (T < 20 && t0 + T * 1000 < (s + 1) * SLOT - 600 && dEnd.speed === 0 && cEnd.speed === 0 && Math.hypot(dEnd.x - d0.x, dEnd.z - d0.z) < .05 && Math.hypot(cEnd.x - c0.x, cEnd.z - c0.z) < .05) enc = {t0, d0, c0, tgt, goR, backR, tr, tb, fl, fR, bR, tf, T, dogId:pair[1], catId:pair[0]};
+    }
+  }
+  petEnc.set(key, enc); if (petEnc.size > 80) petEnc.delete(petEnc.keys().next().value); return enc;
+}
+function petApply(id, floor, b, now){   // 套用狗貓互動：回傳這個寵物此刻的位置與姿勢（沒有互動就是原本的）
+  const e = petPairEnc(floor, now); if (!e) return b; const t = (now - e.t0) / 1000; if (t < 0 || t > e.T) return b;
+  const dog = petReg[e.dogId], cat = petReg[e.catId];
+  if (id === e.dogId) {
+    if (t < e.tr) { const q = dog.along(e.goR.pts, t * dog.run); return {x:q.x, z:q.z, y:0, face:q.face, pose:'run', kind:'enc', speed:dog.run}; }
+    if (t < e.tr + 3) return {x:e.tgt.x, z:e.tgt.z, y:0, face:Math.atan2(e.c0.x - e.tgt.x, e.c0.z - e.tgt.z), pose:'groom', kind:'enc', speed:0};
+    if (t < e.tr + 3 + e.tb) { const q = dog.along(e.backR.pts, (t - e.tr - 3) * dog.run); return {x:q.x, z:q.z, y:0, face:q.face, pose:'run', kind:'enc', speed:dog.run}; }
+    return b;
+  }
+  const faceDog = Math.atan2(e.tgt.x - e.c0.x, e.tgt.z - e.c0.z);
+  if (t < e.tr) return {x:e.c0.x, z:e.c0.z, y:0, face:t > e.tr - 1.5 ? faceDog : b.face, pose:b.pose === 'loaf' ? 'sit' : b.pose, kind:'enc', speed:0};
+  if (!e.fl) { if (t < e.tr + 3.6) return {x:e.c0.x, z:e.c0.z, y:0, face:faceDog, pose:'stand', kind:'enc', speed:0}; return b; }
+  const t1 = t - e.tr;
+  if (t1 < e.tf) { const q = cat.along(e.fR.pts, t1 * cat.run); return {x:q.x, z:q.z, y:0, face:q.face, pose:'run', kind:'enc', speed:cat.run}; }
+  if (t1 < 3.6) return {x:e.fl.x, z:e.fl.z, y:0, face:Math.atan2(e.tgt.x - e.fl.x, e.tgt.z - e.fl.z), pose:'sit', kind:'enc', speed:0};
+  const q = cat.along(e.bR.pts, (t1 - 3.6) * cat.run / 1.2); return {x:q.x, z:q.z, y:0, face:q.face, pose:'walk', kind:'enc', speed:cat.run / 1.2};
+}
+window.__petEnc = petPairEnc;   // 除錯：看某層某時刻有沒有狗貓互動
 const DOG_POSES = ['stand', 'walkA', 'walkB', 'run', 'sit', 'down', 'sleep', 'eat', 'wag'];
 const CAT_DEFS = [
   {id:'cat', pet:'', floor:5, ox:0, fr:[0, 1], name:'無名小貓', title:'辦公室的貓', seed:'cat:', keyPrefix:'pixelCat:', lvKey:'pixelCatLv:', namedKey:'pixelCatNamed', atlas:'assets/cat/cat-atlas.webp', cw:391, ch:253, officeKey:'catOffice', dbg:'__cat'},
@@ -2604,6 +2642,7 @@ function catInit(){
   catT0 = performance.now();
   if (meN) { catCloud('get'); setInterval(() => catCloud('get'), 90000); }
   catNameLoad(); setInterval(catNameLoad, 90000);
+  petReg[DEF.id] = {ready:true, base:catBase, route:catRoute, along:alongPath, run:CAT.run, tp:catTP, lv:belongLv, spots:catSpots};
   window[DEF.dbg] = {actIn:catActIn, now:syncNow, naming:() => catNaming, nameLoad:catNameLoad, click:catClick, act:catAct, bowlClick:catBowlClick, care:catCare, get spots(){ return catSpots; }, at:catAt, plan:catPlan, state:() => ({catState, catOffice, catInv}), local:() => catLocal, pos:() => catG.position.clone(), set(o){ Object.assign(catOffice, o); catPlans.clear(); }, force(o){ catForce = o; }, give(k, n){ catInv[k] = n; }};
 }
 // 這個時段貓在哪、做什麼（所有人算出來一樣）
@@ -2642,7 +2681,7 @@ function catPathFor(s, plan, prev){
   r = catRoute(prev.spot, [...plan.via, plan.spot]); catPaths.set(key, r); if (catPaths.size > 120) catPaths.delete(catPaths.keys().next().value); return r;
 }
 const alongPath = (pts, d) => { let acc = 0; for (let i = 1; i < pts.length; i++) { const a = pts[i - 1], b = pts[i], l = Math.hypot(b.x - a.x, b.z - a.z); if (d <= acc + l || i === pts.length - 1) { const k = l > 1e-6 ? Math.min(1, Math.max(0, (d - acc) / l)) : 1; return {x:a.x + (b.x - a.x) * k, z:a.z + (b.z - a.z) * k, face:Math.atan2(b.x - a.x, b.z - a.z)}; } acc += l; } return {x:pts[0].x, z:pts[0].z, face:0}; };
-function catAt(now){
+function catBase(now){
   const s = Math.floor(now / CAT.slot), plan = catPlan(s), prevPlan = catPlan(s - 1), t = (now - s * CAT.slot) / 1000 - plan.delay;
   if (t < 0) return {x:prevPlan.spot.x, z:prevPlan.spot.z, y:prevPlan.spot.y, face:prevPlan.spot.face, pose:prevPlan.spot.pose, kind:prevPlan.kind, speed:0};
   const route = catPathFor(s, plan, prevPlan), sp = Math.max(CAT.walk, route.len / 40), dur = route.len / sp;
@@ -2657,6 +2696,7 @@ function catAt(now){
   if (plan.kind === 'tea' && pose === 'eat' && !catBowlFull()) pose = 'sit';
   return {x:sPos.x, z:sPos.z, y:sPos.y, face:sPos.face, pose, kind:plan.kind, speed:0};
 }
+const catAt = now => petApply(DEF.id, DEF.floor, catBase(now), now);
 // 碗：主食 8 小時內有人補過就是滿的，水 8 小時；週末／休息日有自動餵食器（碗一直是滿的）
 const catWeekendFeeder = () => { const tp = catTP(syncNow()); return tp.dow === 0 || tp.dow === 6; };
 const catBowlFull = () => catWeekendFeeder() || syncNow() - catOffice.bowlAt < 8 * 3600e3, catWaterFull = () => catWeekendFeeder() || syncNow() - catOffice.waterAt < 8 * 3600e3;
@@ -2772,7 +2812,7 @@ function updateCat(dt){
   if (!catGreeted && player && !AWAY.has(player.status) && now - catT0 > 5000 && !catLocal && (DOG || trustLv() >= 2 && (catState.total.feed | 0) + (catState.total.treat | 0) >= 3) && a.pose !== 'loaf' && floorOf(player) === DEF.floor && near > 6) { catGreeted = true; catActOut('greet'); catGo([{x:pp.x, z:pp.z + .9}], CAT.run * .8, () => { catLocalStart('rub', 3.6, {}); catHeld = '♥'; setTimeout(() => { catHeld = ''; }, 3600); }); }
   // 名牌：靠近時顯示心情
   const p = catG.position.clone(); p.y += 1.1 + catG.position.y; p.project(camera);
-  const mood = catHeld || (a.pose === 'loaf' ? 'zzZ' : a.pose === 'eat' ? '吃飯中' : a.pose === 'run' ? '！' : a.pose === 'groom' ? '理毛' : ''), vis = p.z < 1 && Math.abs(p.x) < 1.1 && Math.abs(p.y) < 1.1 && (near < 9 || catHeld), html = CAT.name + (mood ? '　' + mood : '');
+  const mood = catHeld || (DOG && a.kind === 'enc' ? '汪！' : a.pose === 'loaf' ? 'zzZ' : a.pose === 'eat' ? '吃飯中' : a.pose === 'run' ? '！' : a.pose === 'groom' ? '理毛' : ''), vis = p.z < 1 && Math.abs(p.x) < 1.1 && Math.abs(p.y) < 1.1 && (near < 9 || catHeld), html = CAT.name + (mood ? '　' + mood : '');
   catTagEl.style.display = vis ? 'inline-flex' : 'none'; if (catTagEl.textContent !== html) catTagEl.textContent = html; if (vis) catTagEl.style.transform = 'translate(-50%,-100%) translate(' + ((p.x * .5 + .5) * innerWidth) + 'px,' + ((-p.y * .5 + .5) * innerHeight) + 'px)';
   // 碗：飼料與水的顏色
   if (catBowl) { catBowl.food.visible = catBowlFull(); catBowl.water.visible = catWaterFull(); }
