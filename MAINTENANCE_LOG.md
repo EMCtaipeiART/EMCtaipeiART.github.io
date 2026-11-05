@@ -1735,3 +1735,8 @@
 
 ## 2026-11-05 寵物規範文件
 - 新增 `pixel-plaza/PET-SPEC.md`：以辦公室貓為範本，記錄角色繪製流程（提示詞、圖集腳本）、機制（時間表、進度、碗）、互動功能、多人同步、取名投票、後端協定、除錯、已踩過的坑；並規劃第二款寵物（狗）與貓的差異、建議重構與檢查清單。
+
+## 2026-11-05　四樓加一隻寵物貓（米色虎斑）
+- 貓模組改成 makeCat(DEF) 工廠，同時跑兩隻：五樓無名小貓、四樓「四樓小貓」（可各自取名投票）。四樓貓窩／貓碗放在冰箱右側空地。
+- Worker：pixelOfficeCat 新增 pet 參數（cat2: 鍵）、pixelOfficeState 回傳 cat2Office。要到 worker 資料夾執行 wrangler deploy，四樓貓才有雲端存檔與同步。
+- 新圖集 assets/cat2/（ChatGPT 依設定稿生成 9 姿勢三視圖加 10 組 45 度斜角）；tools/build-cat-atlas.py 可帶參數 cat2。文件：PET-SPEC.md 第 7 節。

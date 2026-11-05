@@ -5,7 +5,8 @@ from PIL import Image
 from scipy import ndimage as ndi
 
 import os
-D = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'pixel-plaza', 'assets', 'cat') + '/'
+PET = sys.argv[1] if len(sys.argv) > 1 else 'cat'   # 'cat'（五樓）或 'cat2'（四樓）：來源 ai-views/<PET>-sheets/，輸出 assets/<PET>/
+D = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'pixel-plaza', 'assets', PET) + '/'
 POSES = [('stand', 'stand-sheet.webp'), ('walkA', 'walkA-sheet.png'), ('walkB', 'walkB-sheet.png'), ('sit', 'sit-sheet.png'),
          ('loaf', 'loaf-sheet.png'), ('sleep', 'sleep-sheet.png'), ('eat', 'eat-sheet.png'), ('run', 'run-sheet.png'),
          ('groom', 'groom-sheet.png'), ('belly', 'belly-sheet.png')]
@@ -51,7 +52,7 @@ def outline(crop):
 
 views = {}
 for pose, f in POSES:
-    im = Image.open(D + '../../ai-views/cat-sheets/' + pose + '-sheet.webp'); k = SC * 2172 / im.size[0]
+    _b = D + '../../ai-views/' + PET + '-sheets/' + pose + '-sheet'; im = Image.open(_b + ('.webp' if os.path.exists(_b + '.webp') else '.png')); k = SC * 2172 / im.size[0]
     rgba, keep = cutout(im, pose)
     gs = split3(keep)
     if pose == 'run' and len(gs) == 2: gs = [(gs[0][0], 546), (547, gs[0][1]), gs[1]]
@@ -65,7 +66,7 @@ for pose, f in POSES:
         w, h = crop.size; crop = crop.resize((max(1, round(w * k)), max(1, round(h * k))), Image.LANCZOS)
         row.append(outline(crop))
     # 斜 45° 兩格（ChatGPT 生成的 <姿勢>-q.png，正面斜、背面斜）：高度用相鄰兩個視角的平均來對齊，大小才一致
-    qim = Image.open(D + '../../ai-views/cat-sheets/' + pose + '-q.png'); qrgba, qkeep = cutout(qim, pose + '-q'); qg = split3(qkeep)
+    qim = Image.open(D + '../../ai-views/' + PET + '-sheets/' + pose + '-q.png'); qrgba, qkeep = cutout(qim, pose + '-q'); qg = split3(qkeep)
     if len(qg) != 2: print('  !! 斜角不是 2 組', pose, qg); sys.exit(1)
     qarr = np.asarray(qrgba); qrow = []
     hs = [c.size[1] - 2 * OUT for c in row]   # 原三格的貓高（去掉外框）

@@ -429,3 +429,13 @@ const PETS = {
 7. **瀏覽器預覽幀率低**：動畫與計時測試失真 → 用截圖喚醒、避免 rAF 計時。
 8. **ChatGPT 對話長了 DOM 虛擬化**：舊圖消失、數量判斷失效 → 抓「最後一張指定寬度的圖」。
 9. **Worker 沒部署**：功能看起來「壞了」→ 每次改 Worker 都提醒使用者部署；前端要有沒部署時的退路。
+
+---
+
+## 7. 多隻寵物（第二隻貓＝四樓貓，2026-11-05）
+- 程式：index.html 的貓模組整包包在 makeCat(DEF)，CAT_DEFS 目前兩筆：cat（五樓，無名小貓）、cat2（四樓，暫稱「四樓小貓」）。各自獨立的狀態、貼圖、時間表種子（DEF.seed）、localStorage 鍵、取名投票、互動事件。面板 #catP 共用，以 dataset.cat 區分目前是哪一隻。
+- DEF 欄位：id, pet, floor, ox（x 位移，四樓 FX4）, fr（用哪兩台冰箱定位）, name, title, seed, keyPrefix, lvKey, namedKey, atlas, cw, ch（圖集格子大小，見 cat-atlas.json）, officeKey, dbg（window.__cat／__cat2）。
+- 四樓貓窩與貓碗放在冰箱右側空地（不放廁所旁）；樓層可見性、問候、A* 路徑都依 DEF.floor。
+- Worker：pixelOfficeCat 多一個 pet 參數（cat2 → 鍵 cat2:名字、cat2:office、cat2:name，其餘用 cat:）；pixelOfficeState 另帶 cat2Office。部署 Worker 前，四樓貓的雲端存檔／取名／互動同步不會生效（退回本機暫存）。
+- 圖集：python3 tools/build-cat-atlas.py cat2（來源 ai-views/cat2-sheets/，輸出 assets/cat2/）。第二隻貓特徵：米色虎斑、粉彩串珠項圈＋金色鈴鐺、褐眼；格子 285×248。
+- 新增第三隻（含狗）：在 CAT_DEFS 加一筆、Worker 的 pk 白名單加一個前綴、pixelOfficeState 補 的 Office 欄位。

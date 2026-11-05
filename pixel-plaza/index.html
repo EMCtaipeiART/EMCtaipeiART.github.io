@@ -1386,8 +1386,7 @@ async function pollOnce(){
     const pre = earlyState; earlyState = null; let d = pre && live.version === 0 ? await pre : null;   // 開場預先送出的那份（只在還沒讀過狀態時用）
     if (!d || !d.ok) { const tq = Date.now(); const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify({action:'pixelOfficeState', since:live.version}), cache:'no-store'}); d = await r.json(); if (d && d.serverNow) { const off = d.serverNow + (Date.now() - tq) / 2 - Date.now(); clockOff = clockSet ? clockOff + (off - clockOff) * .3 : off; clockSet = true; } } if (!d || !d.ok) throw new Error('bad response');
     live.ok = true; live.at = Date.now(); if (typeof d.workday === 'boolean' && d.workday !== srvWorkday) { srvWorkday = d.workday; for (const c of Object.values(chars)) c.appliedStatus = null; }
-    if (d.catOffice) { catOffice.belong = Math.max(0, d.catOffice.belong | 0); catOffice.bowlAt = Math.max(catOffice.bowlAt, d.catOffice.bowlAt | 0); catOffice.waterAt = Math.max(catOffice.waterAt, d.catOffice.waterAt | 0); }   // 貓的歸屬感與貓碗是全員共用的：以伺服器為準（訪客也一樣）
-    if (d.catOffice && d.catOffice.act) catActIn(d.catOffice.act, d.serverNow);
+    CATS.forEach(c => c.applyState(d));   // 各隻貓的歸屬感、貓碗與互動事件
     if (Array.isArray(d.hidden)) applyHidden(d.hidden);
     if (!d.unchanged) {
       live.version = d.version || live.version;
@@ -1780,7 +1779,7 @@ const bootChars = cloudReady.then(() => {
 Promise.all([buildOffice(), loadIcons(), bootChars])
   .then(async () => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); setLoad('讀取出勤狀態', .9); live.version = 0; await Promise.race([pollNow(), new Promise(r => setTimeout(r, 12000))]);   // 人物都建好後才（重新）完整讀一次：先前 WebSocket 等提早的讀取當時人物還沒建完，那次的狀態與位置沒人接，之後讀到「沒變」就一直不補，進站後才慢慢補上
     { let n = 0; const tot = walkLoads.length; walkLoads.forEach(pr => pr.then(() => setLoad('載入走路動畫', .9 + .1 * ++n / tot))); setLoad('載入走路動畫', .9); await Promise.race([Promise.all(walkLoads), new Promise(r => setTimeout(r, 10000))]); }   // 最多等 10 秒，網路太慢就先進站，沒載完的人物走路時先用彈跳搖擺
- settleChars(); startLiveSync(); catInit(); showTitleCard(); window.__plaza = {remoteFromState, catAt, wanderStep, findPath, guestAt, guestGoFloor, updateElev, elevGo, floorOf, elevInteract, fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
+ settleChars(); startLiveSync(); CATS.forEach(c => c.init()); showTitleCard(); window.__plaza = {remoteFromState, catAt:CATS[0].at, wanderStep, findPath, guestAt, guestGoFloor, updateElev, elevGo, floorOf, elevInteract, fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
 
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
 const TILT = 0, STRETCH = 1 / Math.cos(Math.atan(8.4 / 9.4)), _e = new THREE.Euler(0, 0, 0, 'YXZ');   // 垂直站立：不再後傾（避免穿進桌子、牆），高度拉長 STRETCH 倍抵消俯視縮短
@@ -1851,7 +1850,7 @@ function onPick(e){
   if (!wheel.hidden) { wheelClose(); return; }   // 輪盤開著時，點外面只收合輪盤，人物先不動；下一下才移動
   ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
   const hits = ray.intersectObjects(pickables, true).filter((h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.desk && !pk.c.holder.visible); })), hit = hits.find(h => ((h.object.userData.pickRoot || h.object).userData.pick || {}).kind === 'char') || hits[0];
-  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { clickChar = pk.c; clickUntil = performance.now() + 3000; if (pk.c !== player && player && adminHome) select(pk.c.name); if (pk.c === player) wheelOpen(pk.c); else wheelClose(); if (false) { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); else if (pk.kind === 'fridge') fridgeInteract(); else if (pk.kind === 'cat') catClick(); else if (pk.kind === 'catbowl') catBowlClick(); else if (pk.kind === 'elev') elevInteract(); else if (pk.kind === 'seat') { const st = pk.seat || chairSeats.filter(q => q.kind === 'toilet').sort((a, b) => Math.hypot(a.x - pk.at.x, a.z - pk.at.z) - Math.hypot(b.x - pk.at.x, b.z - pk.at.z))[0]; if (st && player && !st.by && !st.hidden) { wantSeat = st; target = new THREE.Vector3(st.x, 0, st.z); } } return; } }
+  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { clickChar = pk.c; clickUntil = performance.now() + 3000; if (pk.c !== player && player && adminHome) select(pk.c.name); if (pk.c === player) wheelOpen(pk.c); else wheelClose(); if (false) { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); else if (pk.kind === 'fridge') fridgeInteract(); else if (pk.kind === 'cat') CATS.find(c => c.id === pk.id).click(); else if (pk.kind === 'catbowl') CATS.find(c => c.id === pk.id).bowlClick(); else if (pk.kind === 'elev') elevInteract(); else if (pk.kind === 'seat') { const st = pk.seat || chairSeats.filter(q => q.kind === 'toilet').sort((a, b) => Math.hypot(a.x - pk.at.x, a.z - pk.at.z) - Math.hypot(b.x - pk.at.x, b.z - pk.at.z))[0]; if (st && player && !st.by && !st.hidden) { wantSeat = st; target = new THREE.Vector3(st.x, 0, st.z); } } return; } }
   radialClose(); wantSeat = null; fridgeWant = false; wantElev = false; wheelClose();
   const p = new THREE.Vector3();
   if (e.pointerType === 'mouse') return;   // 桌面版：點地面不再自動走過去（用 WASD／方向鍵），只有點可點物件（椅子、馬桶、電梯…）才會走；手機（觸控）維持點地面走過去
@@ -2459,8 +2458,16 @@ function updateHud(){
 }
 setInterval(updateHud, 500);
 
+// ---- 辦公室貓（可多隻：每隻一個 makeCat(DEF)，各自獨立的狀態、貼圖、取名投票與雲端存檔；細節見 PET-SPEC.md）----
+const catPanel = document.createElement('div'); catPanel.id = 'catP'; catPanel.hidden = true; document.body.appendChild(catPanel);
+addEventListener('pointerdown', e => { if (!catPanel.hidden && !catPanel.contains(e.target)) catPanel.hidden = true; }, true);   // 點面板外面就收起來
+addEventListener('keydown', e => { if (e.key === 'Escape' && !catPanel.hidden) catPanel.hidden = true; });
+const CAT_DEFS = [
+  {id:'cat', pet:'', floor:5, ox:0, fr:[0, 1], name:'無名小貓', title:'辦公室的貓', seed:'cat:', keyPrefix:'pixelCat:', lvKey:'pixelCatLv:', namedKey:'pixelCatNamed', atlas:'assets/cat/cat-atlas.webp', cw:391, ch:253, officeKey:'catOffice', dbg:'__cat'},
+  {id:'cat2', pet:'cat2', floor:4, ox:FX4, fr:[2, 3], name:'四樓小貓', title:'四樓的貓', seed:'cat2:', keyPrefix:'pixelCat2:', lvKey:'pixelCat2Lv:', namedKey:'pixelCat2Named', atlas:'assets/cat2/cat-atlas.webp', cw:285, ch:248, officeKey:'cat2Office', dbg:'__cat2'}];
+function makeCat(DEF){
 // ---- 辦公室流浪貓（只住五樓；名字由大家提名投票決定，投票前暫稱「無名小貓」）：位置由時間決定（每 75 秒一個時段、rng 種子相同），所有人看到同一隻；互動進度走 pixelOfficeCat ----
-const CAT = {name:'無名小貓', walk:1.7, run:7.5, slot:75000};
+const CAT = {name:DEF.name, walk:1.7, run:7.5, slot:75000};
 const CAT_LV = ['路過', '常客', '室友', '家貓'], CAT_LV_AT = [0, 30, 80, 160], TRUST_LV = ['陌生', '好奇', '熟悉', '親近'], TRUST_AT = [0, 10, 25, 50];
 const CAT_GAIN = {feed:{trust:1, belong:3, cap:2}, treat:{trust:4, belong:1, cap:3}, play:{trust:3, belong:1, cap:3}, company:{trust:2, belong:0, cap:2}, pet:{trust:1, belong:0, cap:3}};   // 每天前幾次有效互動拿滿，之後不再增加（和 Worker 的 pixelOfficeCat 同一張表）
 const catDay = () => new Date(Date.now() + 288e5).toISOString().slice(0, 10);
@@ -2469,7 +2476,7 @@ let catState = {trust:0, day:'', daily:{}, total:{}}, catOffice = {belong:0, bow
 let catG = null, catParts = null, catBowl = null, catSpots = null, catLocal = null, catAnnoyed = 0, catGreeted = false, catCompany = null, catHeld = '', catTagEl = null, catCloudOk = null, catT0 = 0, catForce = null;
 const catPlans = new Map(), catPaths = new Map();
 const belongLv = () => catLvOf(catOffice.belong, CAT_LV_AT), trustLv = () => catLvOf(catState.trust, TRUST_AT);
-const catKey = n => 'pixelCat:' + (n || meName() || '');
+const catKey = n => DEF.keyPrefix + (n || meName() || '');
 function catSave(){ try { localStorage.setItem(catKey(), JSON.stringify({state:catState, office:catOffice, inv:catInv})); } catch (e) {} }
 function catRollDay(){ if (catState.day !== catDay()) { catState.day = catDay(); catState.daily = {}; } }
 function catLoadLocal(){ try { const d = JSON.parse(localStorage.getItem(catKey()) || 'null'); if (d) { Object.assign(catState, d.state || {}); Object.assign(catOffice, d.office || {}); Object.assign(catInv, d.inv || {}); } } catch (e) {} catRollDay(); }
@@ -2482,11 +2489,11 @@ function catApplyCloud(r){   // 雲端回傳：信任與次數取較大值，歸
 }
 async function catCloud(op, kind, effect){
   const name = meName(); if (!name || !live.ok || catCloudOk === false) return;
-  try { const r = await post({action:'pixelOfficeCat', name, op, kind, effect}); catCloudOk = true; catApplyCloud(r); }
+  try { const r = await post({action:'pixelOfficeCat', pet:DEF.pet, name, op, kind, effect}); catCloudOk = true; catApplyCloud(r); }
   catch (e) { if (catCloudOk === null) catCloudOk = false; }   // Worker 還沒部署：先暫存在這台電腦
 }
 function catCheckLevel(){   // 歸屬感升級：第一次達到才說一次
-  const lv = belongLv(), key = 'pixelCatLv:' + (meName() || ''); let seen = 0; try { seen = +localStorage.getItem(key) || 0; } catch (e) {}
+  const lv = belongLv(), key = DEF.lvKey + (meName() || ''); let seen = 0; try { seen = +localStorage.getItem(key) || 0; } catch (e) {}
   if (lv > seen) { try { localStorage.setItem(key, String(lv)); } catch (e) {} if (seen > 0 || lv > 0) showQuote(CAT.name + '・' + CAT_LV[lv], ['', CAT.name + '開始會睡在沒人坐的椅子上了', CAT.name + '會跳上沒人的桌子趴著了', CAT.name + '決定留下來了，整間辦公室都是牠的地盤（偶爾還會暴衝）'][lv]); }
 }
 // ---- 取名投票：資料在 Worker（pixelOfficeCat 的 nameGet／namePropose／nameVote／nameClose／nameRemove）；投票期 7 天，得票最高的名字就是貓的名字 ----
@@ -2496,18 +2503,18 @@ const catWhen = ms => { const d = new Date(ms + 288e5); return (d.getUTCMonth() 
 function catNameApply(v){
   if (!v) return; catNaming = v;
   if (v.winner && v.winner.text && CAT.name !== v.winner.text) {
-    CAT.name = v.winner.text; let told = ''; try { told = localStorage.getItem('pixelCatNamed') || ''; } catch (e) {}
-    if (told !== CAT.name) { try { localStorage.setItem('pixelCatNamed', CAT.name); } catch (e) {} setTimeout(() => showQuote('', '投票結果出爐！辦公室的貓叫「' + CAT.name + '」（' + v.winner.by + ' 提名，' + v.winner.votes + ' 票）'), 2500); }
+    CAT.name = v.winner.text; let told = ''; try { told = localStorage.getItem(DEF.namedKey) || ''; } catch (e) {}
+    if (told !== CAT.name) { try { localStorage.setItem(DEF.namedKey, CAT.name); } catch (e) {} setTimeout(() => showQuote('', '投票結果出爐！辦公室的貓叫「' + CAT.name + '」（' + v.winner.by + ' 提名，' + v.winner.votes + ' 票）'), 2500); }
   }
 }
 async function catNameCall(op, arg){
-  try { const r = await post({action:'pixelOfficeCat', name:meName() || '', op, arg:arg || ''}); catNameApply(r.naming); return r; }
+  try { const r = await post({action:'pixelOfficeCat', pet:DEF.pet, name:meName() || '', op, arg:arg || ''}); catNameApply(r.naming); return r; }
   catch (e) { return {ok:false, error:String(e && e.message || e)}; }   // Worker 還沒部署：面板上顯示「尚未開放」
 }
 async function catNameLoad(){
   const r = await catNameCall('nameGet');
   if (r.ok && !catNameHinted && catNaming && catNaming.phase === 'open' && meName() && !catNaming.myVote) { catNameHinted = true; setTimeout(() => showQuote('', '辦公室的貓還沒有名字！點牠就能提名、投票（' + catWhen(catNaming.closesAt) + ' 截止）'), 4000); }
-  const f = document.getElementById('catNameIn'); if (!catPanel.hidden && !(f && (f.value || document.activeElement === f))) catRender();
+  const f = document.getElementById('catNameIn'); if (catOwns() && !(f && (f.value || document.activeElement === f))) catRender();
 }
 function catNameHtml(){
   const v = catNaming; if (!v) return '<div class="cat-name"><h4>幫牠取名字</h4><p>取名投票還沒開放（雲端尚未更新），先叫牠「' + catEsc(CAT.name) + '」。</p></div>';
@@ -2527,16 +2534,16 @@ function catNameBind(){
 const CAT_POSES = ['stand', 'walkA', 'walkB', 'sit', 'loaf', 'sleep', 'eat', 'run', 'groom', 'belly'], CAT_CW = 391, CAT_CH = 253, CAT_K = .0042, CAT_FOOT = 11;   // 格子大小與腳底離格底的像素數見 assets/cat/cat-atlas.json
 function catBuild(){
   const g = new THREE.Group(), P = {g, ready:false};
-  const tex = new THREE.TextureLoader().load('assets/cat/cat-atlas.webp', () => { P.ready = true; });
+  const tex = new THREE.TextureLoader().load(DEF.atlas, () => { P.ready = true; });
   tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = tex.minFilter = THREE.LinearFilter; tex.generateMipmaps = false; tex.repeat.set(1 / 5, 1 / CAT_POSES.length);
-  const geo = new THREE.PlaneGeometry(CAT_CW * CAT_K, CAT_CH * CAT_K); geo.translate(0, CAT_CH * CAT_K / 2 - CAT_FOOT * CAT_K, 0);   // 腳底在格底上方 CAT_FOOT px（含黑外框）
+  const geo = new THREE.PlaneGeometry(DEF.cw * CAT_K, DEF.ch * CAT_K); geo.translate(0, DEF.ch * CAT_K / 2 - CAT_FOOT * CAT_K, 0);   // 腳底在格底上方 CAT_FOOT px（含黑外框）
   const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({map:tex, transparent:true, alphaTest:.4, side:THREE.DoubleSide}));
   m.userData.pickRoot = g; m.visible = false; g.add(m); P.sprite = m; P.tex = tex; return P;
 }
 function catBowlBuild(x, z){   // 共用貓碗（飼料碗＋水碗）
   const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
   const mk = (px, c) => { const b = new THREE.Mesh(new THREE.CylinderGeometry(.21, .17, .14, 24), new THREE.MeshLambertMaterial({color:0x3a8fd0})); b.position.set(px, .07, 0); b.userData.pickRoot = g; g.add(b); { const h = new THREE.Mesh(new THREE.CylinderGeometry(.21 + .02, .17 + .02, .14 + .04, 24), outlineMat); h.position.set(px, .07, 0); h.layers.set(HULL_LAYER); g.add(h); } const f = new THREE.Mesh(new THREE.CylinderGeometry(.17, .17, .03, 24), new THREE.MeshLambertMaterial({color:c})); f.position.set(px, .15, 0); f.userData.pickRoot = g; g.add(f); return f; };
-  const food = mk(-.3, 0x9b6a3c), water = mk(.3, 0x7fd0f2); g.userData.pick = {kind:'catbowl'}; pickables.push(g); return {g, food, water, x, z};
+  const food = mk(-.3, 0x9b6a3c), water = mk(.3, 0x7fd0f2); g.userData.pick = {kind:'catbowl', id:DEF.id}; pickables.push(g); return {g, food, water, x, z};
 }
 function catBoxBuild(x, z){   // 紙箱
   const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
@@ -2548,37 +2555,38 @@ function catInit(){
   if (catG) return; const meN = meName(); if (meN) catLoadLocal();
   // 找碗與紙箱的位置：茶水檯前面的空地
   const free = (x, z, r) => !blocked(x - r, z) && !blocked(x + r, z) && !blocked(x, z - r) && !blocked(x, z + r) && !blocked(x, z);
-  const f = fridges[0] && fridges[1] ? {x:(fridges[0].cx + fridges[1].cx) / 2, z:Math.max(fridges[0].zf, fridges[1].zf)} : {x:15, z:39};
+  const fa = fridges[DEF.fr[0]], fb = fridges[DEF.fr[1]], f = fa && fb ? {x:(fa.cx + fb.cx) / 2, z:Math.max(fa.zf, fb.zf)} : {x:15 + DEF.ox * U, z:39};
   const pick = (cands, r) => cands.find(c => free(c[0], c[1], r)) || cands[0];
-  const bw = pick([[f.x - 4.0, f.z + 1.2], [f.x - 3.0, f.z + 1.5], [f.x - 5.0, f.z + 1.2], [f.x - 2.0, f.z + 1.6]], .5);
+  let bw = pick([[f.x - 4.0, f.z + 1.2], [f.x - 3.0, f.z + 1.5], [f.x - 5.0, f.z + 1.2], [f.x - 2.0, f.z + 1.6]], .5);
+  if (DEF.floor === 4) { const gc = []; for (let gx = f.x + 3; gx <= f.x + 9.5; gx += .5) for (let gz = f.z + 1.5; gz <= f.z + 12; gz += .5) if (free(gx, gz, 1.1)) gc.push([gx, gz, Math.hypot(gx - (f.x + 5.5), gz - (f.z + 2.5))]); if (gc.length) { gc.sort((p, q) => p[2] - q[2]); bw = [gc[0][0], gc[0][1]]; } }   // 四樓：貓窩與貓碗放在冰箱右側的空地（不放廁所旁）
   // 紙箱（1.0×0.8）：在茶水檯前找一塊真的放得下的空地——和所有碰撞矩形（含薄薄的玻璃牆）都不重疊、也不壓到貓碗；從偏好位置往外找最近的
   const fitsBox = (x, z) => !blocked(x, z) && !rects.some(([a, b, c, d]) => x + .65 > a && x - .65 < c && z + .55 > b && z - .55 < d) && !(Math.abs(x - bw[0]) < 1.5 && Math.abs(z - bw[1]) < 1.1);
-  const boxCands = []; for (let gx = f.x - 10; gx <= f.x + 1; gx += .5) for (let gz = f.z + 1.4; gz <= f.z + 5; gz += .5) boxCands.push([gx, gz, Math.hypot(gx - (f.x - 5.6), gz - (f.z + 2.4))]);
+  const boxCands = []; for (let gx = f.x - 10 + (DEF.floor === 4 ? 12 : 0); gx <= f.x + 1 + (DEF.floor === 4 ? 9 : 0); gx += .5) for (let gz = f.z + 1.4; gz <= f.z + (DEF.floor === 4 ? 12 : 5); gz += .5) boxCands.push([gx, gz, (DEF.floor === 4 ? Math.hypot(gx - bw[0], gz - (bw[1] + 3)) : Math.hypot(gx - (f.x - 5.6), gz - (f.z + 2.4)))]);
   const bx = boxCands.sort((p, q) => p[2] - q[2]).find(c => fitsBox(c[0], c[1])) || [f.x - 6.7, f.z + 1.6];
   catBowl = catBowlBuild(bw[0], bw[1]); const box = catBoxBuild(bx[0], bx[1]); rects.push([bx[0] - .5, bx[1] - .4, bx[0] + .5, bx[1] + .4]);
   const owned = new Set(); for (const c of Object.values(chars)) { const st = c.home && stationOf(c); if (st && st.cell) owned.add(st.cell); }
-  const x5 = (FX4 - 100) * U, sortXZ = (a, b) => a.x - b.x || a.z - b.z;
-  const desks = deskCells.filter(k => k.x < x5 && !owned.has(k)).sort(sortXZ), chairs = chairSeats.filter(s => !s.kind && s.x < x5 && s.z > 300 * U && s.z < 1040 * U && !Object.values(chars).some(c => c.home && Math.hypot(c.home.x - s.x, c.home.z - s.z) < .6)).sort(sortXZ);
-  const el = elevSpot(5), doorP = pick([[el.x, el.z + 2.4], [el.x + 1.4, el.z + 2.4], [el.x - 1.4, el.z + 2.4], [el.x, el.z + 3.4]], .5);
-  const walk = []; { const [x0, z0, x1, z1] = WALK_AREA[5]; for (let x = x0; x < x1; x += 90) for (let z = z0; z < z1; z += 90) { const px = x * U, pz = z * U; if (free(px, pz, .6)) walk.push({x:px, z:pz}); } }
+  const x5 = (FX4 - 100) * U, onFl = x => (x < x5) === (DEF.floor === 5), sortXZ = (a, b) => a.x - b.x || a.z - b.z;
+  const desks = deskCells.filter(k => onFl(k.x) && !owned.has(k)).sort(sortXZ), chairs = chairSeats.filter(s => !s.kind && onFl(s.x) && s.z > (DEF.floor === 5 ? 300 : 380) * U && s.z < (DEF.floor === 5 ? 1040 : 1540) * U && !Object.values(chars).some(c => c.home && Math.hypot(c.home.x - s.x, c.home.z - s.z) < .6)).sort(sortXZ);
+  const el = elevSpot(DEF.floor), doorP = pick([[el.x, el.z + 2.4], [el.x + 1.4, el.z + 2.4], [el.x - 1.4, el.z + 2.4], [el.x, el.z + 3.4]], .5);
+  const walk = []; { const [x0, z0, x1, z1] = WALK_AREA[DEF.floor]; for (let x = x0; x < x1; x += 90) for (let z = z0; z < z1; z += 90) { const px = (x + DEF.ox) * U, pz = z * U; if (free(px, pz, .6)) walk.push({x:px, z:pz}); } }
   catSpots = {
     door:{x:doorP[0], z:doorP[1], y:0, face:Math.PI, pose:'sit'}, tea:{x:bw[0] - 1.25, z:bw[1], y:0, face:Math.PI / 2, pose:'eat'}, box:{x:bx[0], z:bx[1], y:.12, face:.6, pose:'loaf'},
     chairs:chairs.map(s => ({x:s.x, z:s.z, y:.52, face:s.face, pose:'loaf'})),
     desks:desks.map(k => { let seat = null, bd = 3; for (const s of chairSeats) { if (s.kind) continue; const d = Math.hypot(s.x - k.x, s.z - k.z); if (d < bd) { bd = d; seat = s; } } return {x:k.x, z:k.z + (seat && seat.z > k.z ? .3 : -.3), y:.95, face:seat && seat.z > k.z ? 0 : Math.PI, pose:'loaf'}; }),
     walk, bowl:{x:bw[0], z:bw[1]}
   };
-  const P = catParts = catBuild(); catG = P.g; catG.userData.pick = {kind:'cat'}; scene.add(catG); pickables.push(catG);
+  const P = catParts = catBuild(); catG = P.g; catG.userData.pick = {kind:'cat', id:DEF.id}; scene.add(catG); pickables.push(catG);
   catTagEl = document.createElement('div'); catTagEl.className = 'cui-tag cat-tag'; catTagEl.style.cssText = 'position:fixed;left:0;top:0;z-index:2;pointer-events:none;display:none'; document.body.appendChild(catTagEl);
   catT0 = performance.now();
   if (meN) { catCloud('get'); setInterval(() => catCloud('get'), 90000); }
   catNameLoad(); setInterval(catNameLoad, 90000);
-  window.__cat = {actIn:catActIn, now:syncNow, naming:() => catNaming, nameLoad:catNameLoad, click:catClick, act:catAct, bowlClick:catBowlClick, care:catCare, get spots(){ return catSpots; }, at:catAt, plan:catPlan, state:() => ({catState, catOffice, catInv}), local:() => catLocal, pos:() => catG.position.clone(), set(o){ Object.assign(catOffice, o); catPlans.clear(); }, force(o){ catForce = o; }, give(k, n){ catInv[k] = n; }};
+  window[DEF.dbg] = {actIn:catActIn, now:syncNow, naming:() => catNaming, nameLoad:catNameLoad, click:catClick, act:catAct, bowlClick:catBowlClick, care:catCare, get spots(){ return catSpots; }, at:catAt, plan:catPlan, state:() => ({catState, catOffice, catInv}), local:() => catLocal, pos:() => catG.position.clone(), set(o){ Object.assign(catOffice, o); catPlans.clear(); }, force(o){ catForce = o; }, give(k, n){ catInv[k] = n; }};
 }
 // 這個時段貓在哪、做什麼（所有人算出來一樣）
 function catTP(ms){ const d = new Date(ms + 288e5); return {h:d.getUTCHours() + d.getUTCMinutes() / 60, dow:d.getUTCDay()}; }
 function catPlan(s){
   const lv = belongLv(), key = s + ':' + lv; let p = catPlans.get(key); if (p) return p;
-  const r = rng('cat:' + s), tp = catTP(s * CAT.slot + CAT.slot / 2), rest = tp.h < 7 || tp.h >= 21 || tp.dow === 0 || tp.dow === 6, w = {};
+  const r = rng(DEF.seed + s), tp = catTP(s * CAT.slot + CAT.slot / 2), rest = tp.h < 7 || tp.h >= 21 || tp.dow === 0 || tp.dow === 6, w = {};
   if (rest) { w.box = 6; if (lv >= 1) w.chair = 3; }
   else if (tp.h < 10.5) { w.door = 6; w.tea = 1; w.box = 1; if (lv >= 1) { w.wander = 2; w.chair = 1; } }
   else if (tp.h >= 11.5 && tp.h < 14.5) { w.tea = 6; w.box = 1; if (lv >= 1) { w.chair = 2; w.wander = 1; } }
@@ -2595,7 +2603,7 @@ function catPlan(s){
 }
 function catRoute(from, pts){   // 沿著 A* 路徑串起來：回傳 {pts:[{x,z}], len}
   const out = [{x:from.x, z:from.z}]; let cur = from, len = 0;
-  for (const t of pts) { const seg = findPath({x:cur.x, z:cur.z}, t, 5) || [{x:t.x, z:t.z}]; for (const q of seg) { len += Math.hypot(q.x - out[out.length - 1].x, q.z - out[out.length - 1].z); out.push({x:q.x, z:q.z}); } cur = t; }
+  for (const t of pts) { const seg = findPath({x:cur.x, z:cur.z}, t, DEF.floor) || [{x:t.x, z:t.z}]; for (const q of seg) { len += Math.hypot(q.x - out[out.length - 1].x, q.z - out[out.length - 1].z); out.push({x:q.x, z:q.z}); } cur = t; }
   return {pts:out, len};
 }
 function catPathFor(s, plan, prev){
@@ -2691,7 +2699,7 @@ function catFxTick(dt, now){
   if (catFace > now && player && !player.sitting && catG) { const pp = player.holder.position; player.face = Math.atan2(catG.position.x - pp.x, catG.position.z - pp.z); }
   if (catCompany && catLocal && catLocal.mode === 'stay') { catCompany.h = (catCompany.h || 0) + dt; if (catCompany.h > 3.2) { catCompany.h = 0; catHearts(1); } catFace = now + 300; }
 }
-function catActOut(kind){ const name = meName(); if (!name || !live.ok || catCloudOk === false) return; post({action:'pixelOfficeCat', name, op:'act', kind}).catch(() => {}); }
+function catActOut(kind){ const name = meName(); if (!name || !live.ok || catCloudOk === false) return; post({action:'pixelOfficeCat', pet:DEF.pet, name, op:'act', kind}).catch(() => {}); }
 function catActIn(a, srvNow){   // 別人和貓互動：在我的畫面也播同樣動作（不計進度）
   if (!a || a.at <= catActSeen) return; const first = !catActSeen; catActSeen = a.at;
   if (first || a.name === meName() || !catG || !catG.visible || catLocal || (srvNow || Date.now()) - a.at > 6000) return;
@@ -2711,7 +2719,7 @@ function catWandUpdate(pp, tip, y){   // 玩家手上的逗貓棒：棒子從手
 }
 let catLast = 0;
 function updateCat(dt){
-  if (!catG) return; const now = performance.now(), vx = player ? player.holder.position.x : guestAt.x, on5 = vx < (FX4 - 100) * U; catG.visible = on5;
+  if (!catG) return; const now = performance.now(), vx = player ? player.holder.position.x : guestAt.x, on5 = (vx < (FX4 - 100) * U) === (DEF.floor === 5); catG.visible = on5;
   if (!on5 || performance.now() - catT0 < 600) { catTagEl.style.display = 'none'; return; }
   let a;
   if (catLocal) { const s = catStep(dt, now); a = {x:catG.position.x, z:catG.position.z, y:s.y, face:s.face, pose:s.pose, kind:'local'}; if (catLocal && catLocal.mode === 'play') {} else catToyHide(); }
@@ -2723,11 +2731,11 @@ function updateCat(dt){
   catPose(a, now);
   // 你靠近時：看你、不熟的人可能走開；陪伴計時；登入後熟人會走來蹭
   const pp = catPlayerPos(), near = pp ? Math.hypot(pp.x - catG.position.x, pp.z - catG.position.z) : 99;
-  if (!catPanel.hidden && pp && near > 7) catClose();   // 走遠了就自動收起來
+  if (catOwns() && pp && near > 7) catClose();   // 走遠了就自動收起來
   if (!catLocal && pp && near < 3.2 && a.speed === 0 && a.pose !== 'loaf' && catAnnoyed < now) { const lv = trustLv(); let df = Math.atan2(pp.x - catG.position.x, pp.z - catG.position.z) - catG.rotation.y; df = Math.atan2(Math.sin(df), Math.cos(df)); catG.rotation.y += df * Math.min(1, dt * 3); if (lv === 0 && near < 1.4 && Math.random() < dt * .25) { catLocal = null; const away = catSpots.walk.length ? catSpots.walk.reduce((b, q) => Math.hypot(q.x - pp.x, q.z - pp.z) > Math.hypot(b.x - pp.x, b.z - pp.z) && Math.hypot(q.x - catG.position.x, q.z - catG.position.z) < 9 ? q : b, catSpots.walk[0]) : null; if (away) { catGo([away], 3.2, catReturn); } } }
   catFxTick(dt, now);
   if (catCompany) { const moved = Math.hypot(pp.x - catCompany.x, pp.z - catCompany.z); if (moved > 1.2 || near > 4.5 || (catLocal && !['return', 'go', 'stay'].includes(catLocal.mode))) { catCompany = null; if (catLocal && catLocal.mode === 'stay') catReturn(); showQuote('', '陪伴中斷了'); catRender(); } else { catCompany.t += dt; if (catCompany.t >= 20) { catCompany = null; catHearts(3); catReturn(); catCare('company'); } } }
-  if (!catGreeted && player && !AWAY.has(player.status) && now - catT0 > 5000 && !catLocal && trustLv() >= 2 && (catState.total.feed | 0) + (catState.total.treat | 0) >= 3 && a.pose !== 'loaf' && floorOf(player) === 5 && near > 6) { catGreeted = true; catGo([{x:pp.x, z:pp.z + .9}], CAT.walk * 2.2, () => { catLocalStart('rub', 3.6, {}); catHeld = '♥'; setTimeout(() => { catHeld = ''; }, 3600); }); }
+  if (!catGreeted && player && !AWAY.has(player.status) && now - catT0 > 5000 && !catLocal && trustLv() >= 2 && (catState.total.feed | 0) + (catState.total.treat | 0) >= 3 && a.pose !== 'loaf' && floorOf(player) === DEF.floor && near > 6) { catGreeted = true; catGo([{x:pp.x, z:pp.z + .9}], CAT.walk * 2.2, () => { catLocalStart('rub', 3.6, {}); catHeld = '♥'; setTimeout(() => { catHeld = ''; }, 3600); }); }
   // 名牌：靠近時顯示心情
   const p = catG.position.clone(); p.y += 1.1 + catG.position.y; p.project(camera);
   const mood = catHeld || (a.pose === 'loaf' ? 'zzZ' : a.pose === 'eat' ? '吃飯中' : a.pose === 'run' ? '！' : a.pose === 'groom' ? '理毛' : ''), vis = p.z < 1 && Math.abs(p.x) < 1.1 && Math.abs(p.y) < 1.1 && (near < 9 || catHeld), html = CAT.name + (mood ? '　' + mood : '');
@@ -2736,9 +2744,7 @@ function updateCat(dt){
   if (catBowl) { catBowl.food.visible = catBowlFull(); catBowl.water.visible = catWaterFull(); }
 }
 // ---- 互動 ----
-const catPanel = document.createElement('div'); catPanel.id = 'catP'; catPanel.hidden = true; document.body.appendChild(catPanel);
-addEventListener('pointerdown', e => { if (!catPanel.hidden && !catPanel.contains(e.target)) catClose(); }, true);   // 點面板外面就收起來
-addEventListener('keydown', e => { if (e.key === 'Escape' && !catPanel.hidden) catClose(); });
+const catOwns = () => !catPanel.hidden && catPanel.dataset.cat === DEF.id;
 function catClose(){ catPanel.hidden = true; }
 function catMoodText(){
   const a = catAt(syncNow()), p = a.pose;
@@ -2746,9 +2752,10 @@ function catMoodText(){
   return p === 'loaf' ? '睡覺中' : p === 'eat' ? '吃飯中' : p === 'groom' ? '理毛中' : p === 'run' ? '突然暴衝中' : p === 'walk' ? '散步中' : p === 'sit' ? '坐著發呆' : '看著你';
 }
 function catRender(){
+  if (catPanel.dataset.cat !== DEF.id) return;
   catRollDay(); const tl = trustLv(), bl = belongLv(), bn = CAT_LV_AT[Math.min(3, bl + 1)], bPct = bl >= 3 ? 100 : Math.round((catOffice.belong - CAT_LV_AT[bl]) / (bn - CAT_LV_AT[bl]) * 100), tn = TRUST_AT[Math.min(3, tl + 1)], tPct = tl >= 3 ? Math.min(100, Math.round(catState.trust)) : Math.round((catState.trust - TRUST_AT[tl]) / (tn - TRUST_AT[tl]) * 100);
   const d = catState.daily, left = k => Math.max(0, CAT_GAIN[k].cap - (d[k] | 0));
-  catPanel.innerHTML = '<div class="fr-head"><span>' + CAT.name + '・辦公室的貓</span><button type="button" class="px-x fr-x" id="catX" title="關閉">✕</button></div>' +
+  catPanel.innerHTML = '<div class="fr-head"><span>' + CAT.name + '・' + DEF.title + '</span><button type="button" class="px-x fr-x" id="catX" title="關閉">✕</button></div>' +
     '<div class="cat-bars"><div><b>辦公室歸屬感</b><span>' + CAT_LV[bl] + '　' + catOffice.belong + '</span><i><u style="width:' + Math.max(4, bPct) + '%"></u></i></div><div><b>你的信任度</b><span>' + TRUST_LV[tl] + '</span><i><u style="width:' + Math.max(4, tPct) + '%"></u></i></div></div>' +
     '<p class="cat-mood">牠現在：' + catMoodText() + '</p><div class="cat-act">' +
     '<button type="button" data-a="call">叫牠過來</button><button type="button" data-a="pet">摸摸</button>' +
@@ -2759,7 +2766,7 @@ function catRender(){
     '<p class="fr-note">今天還能增加：點心 ' + left('treat') + '　逗貓 ' + left('play') + '　摸摸 ' + left('pet') + '　陪伴 ' + left('company') + '　餵食 ' + left('feed') + '。貓碗在茶水間旁，點碗就會加飼料和換水。' + (catCloudOk === false ? '（雲端存檔尚未啟用，先暫存在這台電腦）' : '') + '</p>';
   catPanel.querySelector('#catX').onclick = catClose; catNameBind(); catPanel.querySelectorAll('.cat-act button').forEach(b => b.onclick = () => catAct(b.dataset.a));
 }
-function catClick(){ if (!catG) return; catRender(); catPanel.hidden = false; }
+function catClick(){ if (!catG) return; catPanel.dataset.cat = DEF.id; catRender(); catPanel.hidden = false; }
 function catCare(kind, effect){   // 一次有效互動：每天前幾次增加進度，之後不再增加
   if (!meName()) { showQuote('', '登入後才會累積和' + CAT.name + '的感情'); return false; }
   catRollDay(); const g = CAT_GAIN[kind], n = catState.daily[kind] | 0; catState.total[kind] = (catState.total[kind] | 0) + 1; let gained = false;
@@ -2807,6 +2814,7 @@ function catAct(a){
     setTimeout(catToyHide, 6200); return;
   }
 }
+function catApplyState(d){ const o = d[DEF.officeKey]; if (!o) return; catOffice.belong = Math.max(0, o.belong | 0); catOffice.bowlAt = Math.max(catOffice.bowlAt, o.bowlAt | 0); catOffice.waterAt = Math.max(catOffice.waterAt, o.waterAt | 0); if (o.act) catActIn(o.act, d.serverNow); }
 function catBowlClick(){
   if (!player || AWAY.has(player.status)) return; const b = catBowl; if (!b) return; const pp = player.holder.position;
   if (Math.hypot(pp.x - b.x, pp.z - b.z) > 3.2) { target = new THREE.Vector3(b.x, 0, b.z + 1.3); showQuote('', '走到碗邊再點一次'); return; }
@@ -2814,6 +2822,9 @@ function catBowlClick(){
   else if (!catWaterFull()) { catCare('feed', 'water'); showQuote(CAT.name, '換了新鮮的水'); }
   else showQuote('', '碗裡還滿滿的');
 }
+return {id:DEF.id, at:catAt, init:catInit, update:updateCat, click:catClick, bowlClick:catBowlClick, applyState:catApplyState};
+}
+const CATS = CAT_DEFS.map(makeCat);
 function tick(){
   const dt = Math.min(clock.getDelta(), .05);
   if (player) {
@@ -2851,7 +2862,7 @@ function tick(){
     camera.position.copy(camPos); look.lerp(p, 1 - Math.pow(.001, dt)); camera.lookAt(look.x, 1, look.z);
   } else { const k = 1 - Math.pow(.0005, dt); camPos.lerp(new THREE.Vector3(guestAt.x, 10.9, guestAt.z + 12.2), k); camera.position.copy(camPos); look.lerp(new THREE.Vector3(guestAt.x, 1, guestAt.z), k); camera.lookAt(look); }   // 沒登入：滾輪／左鍵拖曳平移畫面，點電梯換看另一層
   { const cx = player ? player.holder.position : guestAt; sun.target.position.set(cx.x, 0, cx.z); sun.position.set(cx.x - 10, 26, cx.z + 10); }
-  updateCat(dt); updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay(); updateTags(); placeRadial(); updateFridge(); updateElev(); pushPosition(); trackLast();
+  CATS.forEach(c => c.update(dt)); updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay(); updateTags(); placeRadial(); updateFridge(); updateElev(); pushPosition(); trackLast();
   renderFrame();
   requestAnimationFrame(tick);
 }

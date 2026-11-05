@@ -2764,10 +2764,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     this.pixelOfficeApplyOffline(Date.now());
     const version = this.pixelOfficeVersion();
     // 全員共用的貓（歸屬感、貓碗）與伺服器時間：每個人（含訪客）每次輪詢都帶回，貓的行程才會在每個人畫面上一致（不依賴各人本機存檔與電腦時鐘）
-    let catOffice: Row = {};
-    try { const row = this.ctx.storage.sql.exec<{ value: string }>("SELECT value FROM pixel_office_settings WHERE key = 'cat:office'").toArray()[0]; catOffice = asRow(JSON.parse(row?.value || '{}')); } catch { catOffice = {}; }
-    const office = { belong: Math.max(0, Math.floor(Number(catOffice.belong) || 0)), bowlAt: Math.floor(Number(catOffice.bowlAt) || 0), waterAt: Math.floor(Number(catOffice.waterAt) || 0), act: this.pixelOfficeCatAct(catOffice.act) };
-    if (Number(payload.since) === version && version > 0) return { ok: true, action: 'pixelOfficeState', version, unchanged: true, workday: pixelOfficeIsWorkday(Date.now()), serverNow: Date.now(), catOffice: office };   // 國定假日要在不換版本時也傳到畫面
+    const catOfficeOf = (key: string) => { let o: Row = {}; try { const row = this.ctx.storage.sql.exec<{ value: string }>('SELECT value FROM pixel_office_settings WHERE key = ?', key).toArray()[0]; o = asRow(JSON.parse(row?.value || '{}')); } catch { o = {}; } return { belong: Math.max(0, Math.floor(Number(o.belong) || 0)), bowlAt: Math.floor(Number(o.bowlAt) || 0), waterAt: Math.floor(Number(o.waterAt) || 0), act: this.pixelOfficeCatAct(o.act) }; };
+    const office = catOfficeOf('cat:office'), office2 = catOfficeOf('cat2:office');
+    if (Number(payload.since) === version && version > 0) return { ok: true, action: 'pixelOfficeState', version, unchanged: true, workday: pixelOfficeIsWorkday(Date.now()), serverNow: Date.now(), catOffice: office, cat2Office: office2 };   // 國定假日要在不換版本時也傳到畫面
     const rows = this.ctx.storage.sql.exec<{ name: string; state: string; photo_version: number; updated_at: number }>(
       'SELECT name, state, photo_version, updated_at FROM pixel_office_people'
     ).toArray();
@@ -2779,7 +2778,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     // 稱號跟著狀態一起回：前端不必為了它多打一次 API，改了也會隨輪詢傳到每個人的畫面。
     const avatars: Record<string, number> = {};
     for (const row of this.ctx.storage.sql.exec<{ name: string; updated_at: number }>('SELECT name, updated_at FROM pixel_office_avatar_current').toArray()) avatars[row.name] = Number(row.updated_at) || 0;
-    return { ok: true, action: 'pixelOfficeState', version, serverNow: Date.now(), catOffice: office, people, staff: this.pixelOfficeStaff().map(item => ({ seat: item.seat, name: item.name })), staffMeetings: this.pixelOfficeStaffMeetings(), funClaims: this.pixelOfficeFunClaims(), levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories(), avatars, hours: { dayStart: pixelHours.dayStart, workEnd: pixelHours.workEnd, overtimeStart: pixelHours.overtimeStart, force: pixelForceNow(Date.now()) }, workday: pixelOfficeIsWorkday(Date.now()) };
+    return { ok: true, action: 'pixelOfficeState', version, serverNow: Date.now(), catOffice: office, cat2Office: office2, people, staff: this.pixelOfficeStaff().map(item => ({ seat: item.seat, name: item.name })), staffMeetings: this.pixelOfficeStaffMeetings(), funClaims: this.pixelOfficeFunClaims(), levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories(), avatars, hours: { dayStart: pixelHours.dayStart, workEnd: pixelHours.workEnd, overtimeStart: pixelHours.overtimeStart, force: pixelForceNow(Date.now()) }, workday: pixelOfficeIsWorkday(Date.now()) };
   }
 
   /** 辦公室小樂趣（便便、驚喜道具、遺落物、投影機）的「已被處理」紀錄：所有人共用。
@@ -2824,14 +2823,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   }
 
   private pixelOfficeCat(payload: ApiPayload): ApiResult {
-    const name = text(payload.name);
-    if (text(payload.op).startsWith('name')) return this.pixelOfficeCatNaming(payload, name);
+    const name = text(payload.name), pk = text(payload.pet) === 'cat2' ? 'cat2' : 'cat';   // 第二隻貓（四樓）用 cat2: 開頭的鍵，和第一隻完全分開
+    if (text(payload.op).startsWith('name')) return this.pixelOfficeCatNaming(payload, name, pk);
     if (!this.pixelOfficeKnownName(name)) return { ok: false, action: 'pixelOfficeCat', error: '找不到這位同仁' } as ApiResult;
     const sql = this.ctx.storage.sql, now = Date.now(), day = new Date(now + 8 * 3_600_000).toISOString().slice(0, 10);
     const read = (key: string): Row => { const row = sql.exec<{ value: string }>('SELECT value FROM pixel_office_settings WHERE key = ?', key).toArray()[0]; try { return asRow(JSON.parse(row?.value || '{}')); } catch { return {}; } };
     const write = (key: string, value: unknown) => sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', key, JSON.stringify(value), now);
     const CAT_CARE: Record<string, { trust: number; belong: number; cap: number }> = { feed: { trust: 1, belong: 3, cap: 2 }, treat: { trust: 4, belong: 1, cap: 3 }, play: { trust: 3, belong: 1, cap: 3 }, company: { trust: 2, belong: 0, cap: 2 }, pet: { trust: 1, belong: 0, cap: 3 } };
-    const meRaw = read('cat:' + name), officeRaw = read('cat:office');
+    const meRaw = read(pk + ':' + name), officeRaw = read(pk + ':office');
     let trust = Math.max(0, Math.min(100, Math.floor(Number(meRaw.trust) || 0)));
     let daily: Record<string, number> = meRaw.day === day ? Object.fromEntries(Object.entries(asRow(meRaw.daily)).map(([k, v]) => [k, Math.max(0, Math.floor(Number(v) || 0))])) : {};
     let belong = Math.max(0, Math.min(1_000_000, Math.floor(Number(officeRaw.belong) || 0)));
@@ -2839,7 +2838,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (text(payload.op) === 'act') {
       const kind = text(payload.kind);
       if (!['pet', 'treat', 'play', 'company'].includes(kind)) return { ok: false, action: 'pixelOfficeCat', error: 'invalid kind' } as ApiResult;
-      write('cat:office', { belong, bowlAt, waterAt, act: { name, kind, at: now } });
+      write(pk + ':office', { belong, bowlAt, waterAt, act: { name, kind, at: now } });
       return { ok: true, action: 'pixelOfficeCat' } as ApiResult;
     }
     if (text(payload.op) === 'care') {
@@ -2847,7 +2846,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (!rule) return { ok: false, action: 'pixelOfficeCat', error: 'invalid kind' } as ApiResult;
       if ((daily[kind] || 0) < rule.cap) { daily[kind] = (daily[kind] || 0) + 1; trust = Math.min(100, trust + rule.trust); belong += rule.belong; gained = true; }
       if (effect === 'food') bowlAt = now; else if (effect === 'water') waterAt = now;
-      write('cat:' + name, { trust, day, daily }); write('cat:office', { belong, bowlAt, waterAt, act: officeRaw.act });
+      write(pk + ':' + name, { trust, day, daily }); write(pk + ':office', { belong, bowlAt, waterAt, act: officeRaw.act });
     }
     return { ok: true, action: 'pixelOfficeCat', gained, cat: { trust, day, daily }, office: { belong, bowlAt, waterAt } } as ApiResult;
   }
@@ -2855,15 +2854,15 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   /** 貓的取名投票（cat:name）：op = nameGet／namePropose（text）／nameVote（id）／nameClose／nameRemove（id）。
    *  nameGet 任何人（含訪客）都能讀；其餘要是已知同仁。管理者＝名字是 Machi（和 pixelOfficeUpdate 一樣不驗證身分，只擋畫面上的操作）。
    *  有變動才寫入（寫入會更新時間戳、驚動所有人的輪詢）。 */
-  private pixelOfficeCatNaming(payload: ApiPayload, name: string): ApiResult {
+  private pixelOfficeCatNaming(payload: ApiPayload, name: string, pk = 'cat'): ApiResult {
     const op = text(payload.op), known = name !== '' && this.pixelOfficeKnownName(name), who = known ? name : '';
     if (name && !known && op !== 'nameGet') return { ok: false, action: 'pixelOfficeCat', error: '找不到這位同仁' } as ApiResult;
     const sql = this.ctx.storage.sql, now = Date.now(), admin = known && name.toLowerCase() === 'machi';
-    const row = sql.exec<{ value: string }>('SELECT value FROM pixel_office_settings WHERE key = ?', 'cat:name').toArray()[0];
+    const row = sql.exec<{ value: string }>('SELECT value FROM pixel_office_settings WHERE key = ?', pk + ':name').toArray()[0];
     let raw: unknown = null; try { raw = row ? JSON.parse(row.value) : null; } catch { raw = null; }
     const before: CatNaming = normalizeNaming(raw, now), res = applyNamingOp(before, op, who, text(payload.arg), now, admin);
     const json = JSON.stringify(res.naming);
-    if (!row || json !== JSON.stringify(before) || json !== row.value) sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', 'cat:name', json, now);
+    if (!row || json !== JSON.stringify(before) || json !== row.value) sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', pk + ':name', json, now);
     if (res.error) return { ok: false, action: 'pixelOfficeCat', error: res.error, naming: namingView(res.naming, who, admin) } as ApiResult;
     return { ok: true, action: 'pixelOfficeCat', naming: namingView(res.naming, who, admin) } as ApiResult;
   }
