@@ -1740,3 +1740,7 @@
 - 貓模組改成 makeCat(DEF) 工廠，同時跑兩隻：五樓無名小貓、四樓「四樓小貓」（可各自取名投票）。四樓貓窩／貓碗放在冰箱右側空地。
 - Worker：pixelOfficeCat 新增 pet 參數（cat2: 鍵）、pixelOfficeState 回傳 cat2Office。要到 worker 資料夾執行 wrangler deploy，四樓貓才有雲端存檔與同步。
 - 新圖集 assets/cat2/（ChatGPT 依設定稿生成 9 姿勢三視圖加 10 組 45 度斜角）；tools/build-cat-atlas.py 可帶參數 cat2。文件：PET-SPEC.md 第 7 節。
+
+
+## 2026-11-05 音樂可以關閉
+- 右下角 Spotify 小播放器加 ✕ 關閉鈕；頭上音樂泡泡播放時多一顆 ■ 停止；角色視窗音樂列加 ■（停止播放）與紅色 ✕（停止分享，原本有 handler 但沒有按鈕）。

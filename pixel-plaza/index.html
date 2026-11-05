@@ -247,7 +247,7 @@ button{font-family:inherit}
 .cui-story{position:relative;width:32px;height:24px;padding:0;border:0;background:none;cursor:pointer;animation:mpop 2.2s ease-in-out infinite}
 .cui-story img{width:100%;height:100%;image-rendering:pixelated}
 .cui-story b{position:absolute;right:-2px;top:-2px;width:10px;height:10px;border-radius:50%;background:#2fdc5a;border:2px solid #fff}
-#spotifyDock{position:fixed;right:12px;bottom:12px;width:min(340px,86vw);z-index:25;border-radius:14px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.4)}#spotifyDock[hidden]{display:none}
+#spotifyDock{position:fixed;right:12px;bottom:12px;width:min(340px,86vw);z-index:25;border-radius:14px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.4)}#spotifyDock[hidden]{display:none}#spotifyDock .dock-x{position:absolute;top:4px;right:4px;z-index:2}
 /* 限時動態檢視器 */
 #sv{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:rgba(0,0,0,.72);font-family:'Fredoka','Noto Sans TC',sans-serif;color:#fff}#sv[hidden]{display:none}
 .sv-box{position:relative;width:min(420px,96vw);max-height:96vh;display:grid;gap:8px;grid-template-rows:auto auto 1fr auto auto;padding:12px;box-sizing:border-box;border-radius:20px;background:rgba(7,40,22,.96);border:2px solid var(--line)}
@@ -2080,7 +2080,7 @@ async function musicMetadata(info){
 }
 let musicPlaying = {name:'', paused:true, audio:null, controller:null, started:false}, spotifyApiPromise = null;
 function spotifyApi(){ return spotifyApiPromise || (spotifyApiPromise = new Promise((resolve, reject) => { window.onSpotifyIframeApiReady = api => resolve(api); const tag = document.createElement('script'); tag.src = 'https://open.spotify.com/embed/iframe-api/v1'; tag.async = true; tag.onerror = () => { spotifyApiPromise = null; reject(Error('無法載入 Spotify 播放器')); }; document.head.append(tag); })); }
-function ensureSpotifyDock(){ let d = $('spotifyDock'); if (d) return d; d = document.createElement('div'); d.id = 'spotifyDock'; d.innerHTML = '<div class="dock-host"></div>'; document.body.append(d); return d; }
+function ensureSpotifyDock(){ let d = $('spotifyDock'); if (d) return d; d = document.createElement('div'); d.id = 'spotifyDock'; d.innerHTML = '<button type="button" class="px-x dock-x" title="關閉音樂">✕</button><div class="dock-host"></div>'; d.querySelector('.dock-x').onclick = () => { stopMusic(); }; document.body.append(d); return d; }
 function stopMusic(){
   if (musicPlaying.audio) musicPlaying.audio.pause();
   const d = $('spotifyDock'); if (d) { d.hidden = true; d.querySelector('.dock-host').replaceChildren(); }
@@ -2210,7 +2210,7 @@ function renderCharPage(force){
             <div class="cp-chips"><button type="button" id="cpClr">清除對話</button></div></div>
         </section>`}
         <section class="cp-panel p4"><header><h3>音樂</h3></header>
-          ${m ? '<div class="cp-music"><span class="note">🎧</span><div><b>' + esc(m.title || '音樂') + '</b><small>' + esc(m.url) + '</small></div><button type="button" id="cpMPlay">▶</button></div>' : ''}
+          ${m ? '<div class="cp-music"><span class="note">🎧</span><div><b>' + esc(m.title || '音樂') + '</b><small>' + esc(m.url) + '</small></div><button type="button" id="cpMPlay" title="播放／暫停">▶</button><button type="button" id="cpMOff" title="停止播放" style="background:#fff">■</button><button type="button" id="cpMStop" title="停止分享這首歌" style="background:#e5484d;color:#fff">✕</button></div>' : ''}
           <form class="cp-chat-in" id="cpMForm"><input id="cpMusic" type="text" placeholder="貼上 Spotify 或 Apple Music 網址" autocomplete="off"><button type="submit" class="send" title="分享">♪</button></form>
           <div class="cp-chips">${m ? '<button type="button" id="cpMStop">停止分享</button>' : ''}</div>
         </section>
@@ -2227,7 +2227,7 @@ function renderCharPage(force){
   if (mm) { const x = document.createElement('button'); x.type = 'button'; x.className = 'clr'; x.innerHTML = '清除心情'; x.onclick = () => setOwnMood(''); mm.appendChild(x); }
   const ta = radial.querySelector('#cpMsg'); if (ta) { ta.value = keepMsg != null ? keepMsg : (c.message || ''); radial.querySelector('#cpForm').onsubmit = e => { e.preventDefault(); setOwnMessage(ta.value.trim()); }; radial.querySelector('#cpClr').onclick = () => { ta.value = ''; setOwnMessage(''); }; }
   radial.querySelector('#cpMusic').value = keepMusic; radial.querySelector('#cpMForm').onsubmit = e => { e.preventDefault(); setOwnMusic(radial.querySelector('#cpMusic').value); };
-  const mp = radial.querySelector('#cpMPlay'); if (mp) mp.onclick = () => toggleMusic(c); const ms = radial.querySelector('#cpMStop'); if (ms) ms.onclick = clearOwnMusic;
+  const mp = radial.querySelector('#cpMPlay'); if (mp) mp.onclick = () => toggleMusic(c); const mo = radial.querySelector('#cpMOff'); if (mo) mo.onclick = () => stopMusic(); const ms = radial.querySelector('#cpMStop'); if (ms) ms.onclick = clearOwnMusic;
   const file = radial.querySelector('#cpFile'); radial.querySelector('#cpPost').onclick = () => file.click(); file.onchange = () => { const f = file.files[0]; file.value = ''; if (f) postStory(f); };
   radial.querySelectorAll('.cp-story .th').forEach(b => b.onclick = () => { radialClose(); openStory(c.name); });
   radial.querySelector('#cpX').onclick = radialClose; renderAdmin(); restoreFocus(); radial.querySelectorAll('.cp-story .rm').forEach(b => b.onclick = () => removeStory(b.dataset.id));
@@ -2305,7 +2305,7 @@ function updateTags(){
       p = c.holder.position.clone(); p.y += 2.7;
       const playing = musicPlaying.name === c.name && !musicPlaying.paused;
       // 對話與音樂共用同一個泡泡（寬度固定七個字），音樂列縮小放在對話下方；心情／動態圖示在泡泡上方
-      const msg = c.message ? '<div class="cui-msg">' + esc(c.message) + '</div>' : '', mus = m ? '<div class="cui-mus"><button type="button" class="mplay" data-n="' + esc(c.name) + '">' + (playing ? '⏸' : '▶') + '</button><span class="mt"><i>♪ ' + esc(m.title || '音樂') + '</i></span></div>' : '';
+      const msg = c.message ? '<div class="cui-msg">' + esc(c.message) + '</div>' : '', mus = m ? '<div class="cui-mus"><button type="button" class="mplay" data-n="' + esc(c.name) + '">' + (playing ? '⏸' : '▶') + '</button>' + (musicPlaying.name === c.name ? '<button type="button" class="mplay mstop" data-n="' + esc(c.name) + '" title="停止播放">■</button>' : '') + '<span class="mt"><i>♪ ' + esc(m.title || '音樂') + '</i></span></div>' : '';
       const bub = msg || mus ? '<div class="cui-bub tail' + (m ? ' hasmus' : '') + '">' + msg + mus + '</div>' : '';
       const ico = (nStory ? '<button type="button" class="cui-story" data-n="' + esc(c.name) + '" title="查看 ' + esc(c.name) + ' 的動態"><img alt="" src="' + storyIconURL + '">' + (storyUnread(c.name) ? '<b></b>' : '') + '</button>' : '') + (c.mood ? '<img class="cui-mood ' + c.mood + '" alt="" src="' + (ICON[moodSym[c.mood]] || '') + '">' : '');
       html = '<div class="cui-stack">' + (ico ? '<div class="cui-ico">' + ico + '</div>' : '') + bub + '</div>';
@@ -2318,7 +2318,7 @@ function updateTags(){
 }
 document.addEventListener('click', e => {
   const play = e.target.closest('.mplay'), story = e.target.closest('.cui-story');
-  if (play) { const c = chars[play.dataset.n]; if (c) toggleMusic(c); }
+  if (play && play.classList.contains('mstop')) stopMusic(); else if (play) { const c = chars[play.dataset.n]; if (c) toggleMusic(c); }
   if (story) openStory(story.dataset.n);
 });
 
