@@ -415,7 +415,7 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 <div id="drawer" hidden><div class="dr-head"><span>選擇角色</span><button class="px-x" type="button" title="關閉">✕</button></div><div id="roster"></div></div>
 <div id="dexPanel" hidden><div class="px-head"><span>📖 辦公室圖鑑</span><button class="px-x" type="button">✕</button></div><div id="dexBody"></div></div>
 <div id="helpPanel" hidden><div class="px-head"><span>❓ 操作說明</span><button class="px-x" type="button">✕</button></div>
-  <div class="help-list"><div>🎥 在空地按住滑鼠左鍵或右鍵拖曳（或 Q／E）旋轉視角，R 回正</div><div>🪑 點椅子或馬桶，人物會走過去坐下；要起身直接走動</div><div>🎮 點自己的人物或按「角色頁面」：狀態、心情、想說的話、音樂、限時動態（管理者另有全員上下班與班長工具）</div><div>✨ 撿地上的道具、沖馬桶、點投影機，圖鑑會記錄你的發現，每 5 個升一級</div><div>📡 角色依「凱曜設計部」的即時出勤狀態行動（在座／加班／用餐／廁所／會議／下班…）</div></div></div>
+  <div class="help-list"><div>🕹️ WASD／方向鍵移動，按住 Shift 加速跑步，點椅子／馬桶等物件會走過去（手機可點地面走過去，或用左下搖桿）</div><div>🎥 在空地按住滑鼠左鍵或右鍵拖曳（或 Q／E）旋轉視角，R 回正</div><div>🪑 點椅子或馬桶，人物會走過去坐下；要起身直接走動</div><div>🎮 點自己的人物或按「角色頁面」：狀態、心情、想說的話、音樂、限時動態（管理者另有全員上下班與班長工具）</div><div>✨ 撿地上的道具、沖馬桶、點投影機，圖鑑會記錄你的發現，每 5 個升一級</div><div>📡 角色依「凱曜設計部」的即時出勤狀態行動（在座／加班／用餐／廁所／會議／下班…）</div></div></div>
 <script type="module">
 import * as THREE from 'three';
 import {RoundedBoxGeometry} from '../character-studio/vendor/RoundedBoxGeometry.js';
@@ -769,7 +769,7 @@ function syncFun(){
 function collectDrop(d){ claims[d.id] = [1, Date.now()]; fnClaim(d.id, 1); stat.found++; saveStat(); const fresh = dexAdd('d', d.k); showQuote('', (fresh ? '🆕 新發現！' : '✨ ') + ITEMS[d.k][2] + '（累計撿到 ' + stat.found + ' 個）'); floatAt(d.x, 1.2, d.z, fresh ? '+1 新圖鑑！' : '+1'); syncFun(); }
 function collectNote(n){ claims[n.id] = [1, Date.now()]; fnClaim(n.id, 1); stat.notes++; saveStat(); const fresh = dexAdd('n', n.k); showQuote('', (fresh ? '🆕 ' : '') + NOTES[n.k][1] + '（累計 ' + stat.notes + ' 件）'); floatAt(n.x, 1.8, n.z, fresh ? '+1 新圖鑑！' : '+1'); syncFun(); }
 function flushPoop(p){ claims[p.id] = [1, Date.now()]; fnClaim(p.id, 1); stat.flush++; saveStat(); floatAt(p.t.x, 1.4, p.t.z, '+1 衛生之星'); showQuote('', rnd(['🚽 嘩～沖乾淨了！衛生之星 +1', '🚽 順手沖馬桶，同事感謝你！', '🚽 清潔小天使上線，今天運氣 +1', '🚽 沖水成功！廁所又恢復清爽']) + '（累計 ' + stat.flush + ' 次）'); syncFun(); }
-function startGameplay(){ syncFun(); setInterval(syncFun, 1000); }
+function startGameplay(){ syncFun(); setInterval(syncFun, 1000); syncScreens(); setInterval(syncScreens, 400); }
 let lastCollect = 0;
 function updateGameplay(){
   const t = performance.now() / 1000;
@@ -925,12 +925,12 @@ async function buildOffice(){
   pillar3d(725.5, 828, 55, 94);
   // 米黃桌組（左側上下兩組，各 2×2 合併）：南北兩側都有椅子
   [355, 592].forEach(top => { deskBlock3d(85, top, 2, 0xe8c795, 'laptop', false); for (const cx of [137.5, 242.5]) { officeChair3d(I(cx), I(top - 38), 'S'); officeChair3d(I(cx), I(top + 116), 'N'); } });
-  officeChair3d(I(222), I(955), 'N');
+  officeChair3d(I(222), I(895), 'N');
   buildFloor4(T, place);
   // 白色 L 型桌（左下）
   { const I = v => v * U; pbox(I(168), .12, I(45), 0xf3f3ee, I(224), .83, I(850.5)); pbox(I(52), .95, I(102), 0xf3f3ee, I(111), 0, I(879));
     for (const [x, z] of [[300, 836], [300, 866], [150, 836], [150, 866]]) pbox(.12, .83, .12, 0x14181c, I(x), 0, I(z), false);
-    laptop3d(I(224), I(852), -1);
+    laptop3d(I(224), I(852), 1);
     rects.push([I(85), I(828), I(137), I(930)], [I(137), I(828), I(308), I(873)]); }
   reflow5F(); upgradeMaterials();
   dropCache.clear(); noteCache.clear(); startGameplay();   // 場景（含四樓）全部蓋好、碰撞都齊了才開始算道具：否則每個人載入的時間點不同，算出來的位置會不一樣
@@ -964,7 +964,26 @@ function cabinet3d(x, z, w, d, h = 1.6){   // 紅色工具櫃：抽屜在右側�
   rects.push([I(x), I(z), I(x + w), I(z + d)]);
 }
 // 整塊辦公桌：cols 欄 × 2 排（上排人坐北側、螢幕朝北；下排人坐南側、螢幕朝南），桌腳在外緣與欄界
-const deskCells = [];
+const deskCells = [], screens = [];   // screens：每台筆電／螢幕的畫面（有人坐著才亮起工作畫面）
+let workTex = null;
+function workScreenTex(){   // 像素風「工作中」畫面：藍色標題列的視窗＋文字行＋圖片區
+  if (workTex) return workTex;
+  const c = document.createElement('canvas'); c.width = 64; c.height = 40; const g = c.getContext('2d');
+  g.fillStyle = '#1f3a6e'; g.fillRect(0, 0, 64, 40); g.fillStyle = '#f4f6fa'; g.fillRect(3, 4, 40, 33); g.fillStyle = '#3d7be0'; g.fillRect(3, 4, 40, 5);
+  g.fillStyle = '#8a94a6'; for (let i = 0; i < 5; i++) g.fillRect(6, 13 + i * 4, i % 2 ? 26 : 32, 2);
+  g.fillStyle = '#f2b84b'; g.fillRect(46, 6, 14, 12); g.fillStyle = '#4fbf7a'; g.fillRect(46, 21, 14, 8); g.fillStyle = '#e5604d'; g.fillRect(46, 32, 6, 4);
+  workTex = new THREE.CanvasTexture(c); workTex.magFilter = workTex.minFilter = THREE.NearestFilter; workTex.generateMipmaps = false; workTex.colorSpace = THREE.SRGBColorSpace; return workTex;
+}
+function syncScreens(){   // 椅子上有人（離這台螢幕最近的座位）→ 亮起工作畫面；沒人就是黑屏
+  for (const sc of screens) {
+    const sx = sc.mesh.position.x, sz = sc.mesh.position.z; let on = false; for (const st of chairSeats) { if (!st.by || st.kind) continue; if (Math.abs(st.x - sx) < .9 && Math.hypot(st.x - sx, st.z - sz) < 2.4 && (st.z - sz) * sc.dir > 0) { on = true; break; } }
+    if (sc.on === on) continue; sc.on = on;
+    const m = Array.isArray(sc.mesh.material) ? sc.mesh.material[sc.idx] : sc.mesh.material; if (!m) continue;
+    if (on) { m.map = workScreenTex(); m.color.setHex(0xffffff); if (m.emissive) { m.emissive.setHex(0xffffff); m.emissiveMap = workScreenTex(); m.emissiveIntensity = .75; } }
+    else { m.map = null; m.color.setHex(sc.base); if (m.emissive) { m.emissive.setHex(0x000000); m.emissiveMap = null; } }
+    m.needsUpdate = true;
+  }
+}
 const cellOf = (n0, x, z) => { const items = scene.children.slice(n0), top = items[0]; return {x, z, top, items:items.slice(2), color:top.material.color.getHex(), icon:null, sym:''}; };
 function deskBlock3d(x0, top, cols, color, kind, miniDesk){
   const I = v => v * U, W = 105, D = 47;
@@ -990,13 +1009,13 @@ function laptop3d(x, z, dir){   // 黑色筆電：dir = 螢幕朝向（-1 朝北
   const body = new THREE.MeshLambertMaterial({color:0x15181c}), face = new THREE.MeshLambertMaterial({color:0x2a3340});
   const mats = [body, body, body, body, dir > 0 ? face : body, dir > 0 ? body : face];
   const sy = .95 + .04 + .24 + .04, sz = z - dir * .25, tilt = -dir * .22;   // 螢幕再抬高一點，斜放後底邊不會插進桌面
-  const m = new THREE.Mesh(new THREE.BoxGeometry(.72, .48, .03), mats); m.position.set(x, sy, sz); m.rotation.x = tilt; scene.add(m);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(.72, .48, .03), mats); m.position.set(x, sy, sz); m.rotation.x = tilt; scene.add(m); screens.push({mesh:m, idx:dir > 0 ? 4 : 5, x, z, dir, base:0x2a3340, on:null});
   const h = new THREE.Mesh(new THREE.BoxGeometry(.76, .52, .07), outlineMat); h.position.copy(m.position); h.rotation.x = tilt; h.layers.set(HULL_LAYER); scene.add(h);
 }
 function monitor3d(x, z, dir, color){   // 螢幕：背面為機身色、正面（朝 dir）為深色螢幕
   const body = new THREE.MeshLambertMaterial({color}), face = new THREE.MeshLambertMaterial({color:color === 0x15181c ? 0x23303f : 0x2a3340});
   const mats = [body, body, body, body, dir > 0 ? face : body, dir > 0 ? body : face];
-  const m = new THREE.Mesh(new THREE.BoxGeometry(.9, .46, .08), mats); m.position.set(x, .95 + .1 + .23, z); scene.add(m); hull(scene, .9, .46, .08, x, .95 + .1 + .23, z);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(.9, .46, .08), mats); m.position.set(x, .95 + .1 + .23, z); scene.add(m); screens.push({mesh:m, idx:dir > 0 ? 4 : 5, x, z, dir, base:color === 0x15181c ? 0x23303f : 0x2a3340, on:null}); hull(scene, .9, .46, .08, x, .95 + .1 + .23, z);
   pbox(.16, .1, .14, color, x, .95, z, false); pbox(.38, .02, .24, color, x, .95, z, false);
 }
 function keyboard3d(x, z, color){ pbox(.7, .03, .22, color, x, .95, z, false); pbox(.1, .03, .14, color, x + .55, .95, z, false); }
