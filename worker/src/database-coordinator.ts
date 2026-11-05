@@ -1,3 +1,4 @@
+import { PIXEL_MOVE_MIN_GAP_MS, parseMove, sessionMatchesName } from './pixel-ws';
 import { DurableObject } from 'cloudflare:workers';
 import { DEFAULT_CUSTOMER_CC_EMAILS, publicSystemAnnouncement, systemAnnouncementReadRecords, TABLE_SCHEMAS } from '../../backend/schema.mjs';
 import { normalizeDesignType, splitDetailValues } from '../../backend/weighting.mjs';
@@ -5424,7 +5425,30 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return new Response(null, { status: 101, webSocket: pair[0] });
   }
 
-  webSocketMessage(): void { /* ping 由 setWebSocketAutoResponse 處理；前台不會送其他訊息 */ }
+  private pixelWsLast = new WeakMap<WebSocket, number>();
+  /** 前台送來的即時訊息：hello（登入確認，之後這條連線只能代表這位同仁）、p（位置，直接轉發給其他人，不寫資料庫）。ping 由 setWebSocketAutoResponse 處理。 */
+  async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
+    if (typeof message !== 'string' || message.length > 400) return;
+    let m: Record<string, unknown>;
+    try { m = asRow(JSON.parse(message)); } catch { return; }
+    if (m.t === 'hello') {
+      const name = text(m.name);
+      let ok = false;
+      if (this.pixelOfficeKnownName(name)) { try { ok = sessionMatchesName(await this.sessionFor({ token: text(m.token) } as ApiPayload), name); } catch { ok = false; } }
+      try { ws.serializeAttachment(ok ? { name } : {}); ws.send(JSON.stringify({ t: 'hi', ok })); } catch { /* 連線已斷 */ }
+      return;
+    }
+    const move = parseMove(m);
+    if (!move) return;
+    let who = '';
+    try { who = text((ws.deserializeAttachment() as { name?: string } | null)?.name); } catch { who = ''; }
+    if (!who) return;
+    const now = Date.now();
+    if (now - (this.pixelWsLast.get(ws) || 0) < PIXEL_MOVE_MIN_GAP_MS) return;
+    this.pixelWsLast.set(ws, now);
+    const out = JSON.stringify({ t: 'p', n: who, fx: move.fx, fy: move.fy, d: move.d, ts: now });
+    for (const socket of this.ctx.getWebSockets()) { if (socket === ws) continue; try { socket.send(out); } catch { /* 已失效 */ } }
+  }
 
   webSocketClose(ws: WebSocket, code: number): void { try { ws.close(code >= 1000 && code < 5000 && code !== 1005 && code !== 1006 ? code : 1000); } catch { /* 已關閉 */ } }
 
