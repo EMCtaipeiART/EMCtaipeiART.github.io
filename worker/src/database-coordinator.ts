@@ -2819,7 +2819,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   /** 最近一次有人和貓互動（讓其他人的畫面也播同樣動作）。只留 5 分鐘內的。 */
   private pixelOfficeCatAct(raw: unknown): { name: string; kind: string; at: number } | null {
     const a = asRow(raw), at = Math.floor(Number(a.at) || 0), kind = text(a.kind), name = text(a.name);
-    return name && ['pet', 'treat', 'play', 'company'].includes(kind) && Date.now() - at < 300_000 ? { name, kind, at } : null;
+    return name && ['pet', 'treat', 'play', 'company', 'call', 'greet'].includes(kind) && Date.now() - at < 300_000 ? { name, kind, at } : null;
   }
 
   private pixelOfficeCat(payload: ApiPayload): ApiResult {
@@ -2837,7 +2837,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     let bowlAt = Math.floor(Number(officeRaw.bowlAt) || 0), waterAt = Math.floor(Number(officeRaw.waterAt) || 0), gained = false;
     if (text(payload.op) === 'act') {
       const kind = text(payload.kind);
-      if (!['pet', 'treat', 'play', 'company'].includes(kind)) return { ok: false, action: 'pixelOfficeCat', error: 'invalid kind' } as ApiResult;
+      if (!['pet', 'treat', 'play', 'company', 'call', 'greet'].includes(kind)) return { ok: false, action: 'pixelOfficeCat', error: 'invalid kind' } as ApiResult;
       write(pk + ':office', { belong, bowlAt, waterAt, act: { name, kind, at: now } });
       return { ok: true, action: 'pixelOfficeCat' } as ApiResult;
     }
