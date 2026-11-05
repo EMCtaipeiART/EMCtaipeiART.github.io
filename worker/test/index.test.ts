@@ -2,7 +2,7 @@ import { env } from 'cloudflare:workers';
 import { reset, runInDurableObject, SELF } from 'cloudflare:test';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_CUSTOMER_NAMES, emptyDatabase } from '../../backend/schema.mjs';
-import { pixelOfficeBusyMeetingNow, pixelOfficeCalendarEventState, pixelOfficeMeetingRoomOf, pixelOfficeOfflineStatus, pixelOfficeIsWorkday, setPixelAllWorkUntil } from '../src/database-coordinator';
+import { pixelOfficeBusyMeetingNow, pixelOfficeCalendarEventState, pixelOfficeMeetingRoomOf, pixelOfficeOfflineStatus, pixelOfficeStaffStatus, pixelOfficeIsWorkday, setPixelAllWorkUntil } from '../src/database-coordinator';
 import { pruneIdempotency } from '../src/model';
 import type { DatabaseCoordinator } from '../src/database-coordinator';
 import { hasRowCapability, matchesCustomerEditRule, normalizeDepartmentName, normalizeSettingsDepartments } from '../src/model';
@@ -5527,6 +5527,12 @@ describe('Pixel Office look: custom outfits', () => {
 
 describe('pixel office offline status', () => {
   const at = (iso: string) => Date.parse(`${iso}+08:00`);
+  it('planning/project staff follow the time rule: lunch at noon, present in the day, off work otherwise', () => {
+    expect(pixelOfficeStaffStatus(at('2026-10-06T12:30:00'))).toBe('lunch');
+    expect(pixelOfficeStaffStatus(at('2026-10-06T10:00:00'))).toBe('present');
+    expect(pixelOfficeStaffStatus(at('2026-10-06T21:00:00'))).toBe('offwork');
+    expect(pixelOfficeStaffStatus(at('2026-10-10T10:00:00'))).toBe('offwork');
+  });
   it('a computer that just went to sleep on a weekday daytime counts as a short break, not off work', () => {
     expect(pixelOfficeOfflineStatus(at('2026-10-06T10:12:00'), at('2026-10-06T10:06:00'))).toBe('toilet');
     expect(pixelOfficeOfflineStatus(at('2026-10-06T15:30:00'), at('2026-10-06T15:00:00'))).toBe('toilet');

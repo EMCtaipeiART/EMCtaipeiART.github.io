@@ -47,6 +47,16 @@ const PIXEL_OFFICE_AUTO_STATUSES = ['present', 'overtime', 'lunch', 'toilet', 'o
 // 設計師電腦上的 NAS 爬蟲每分鐘會回報一次「電腦開著」（pixelOfficeHeartbeat）。超過這麼久沒收到，
 // 就當作電腦關機（或睡眠），把「在座／加班／用餐／廁所」改成下班。5 分鐘 = 容許漏報 4 次，避免網路小卡頓就誤判。
 const PIXEL_OFFICE_OFFLINE_MS = 5 * 60 * 1000;
+const PIXEL_OFFICE_STAFF_MANUAL_HOLD_MS = 5 * 60 * 1000;   // 企劃部／專案部手動狀態維持幾分鐘
+/** 企劃部／專案部同仁（沒有電腦心跳）依時間規則該有的狀態：午休用餐、上班時段在座、其餘下班。 */
+export function pixelOfficeStaffStatus(nowMs: number): 'present' | 'lunch' | 'offwork' {
+  const f = pixelForceNow(nowMs);
+  if (f === 'work') return 'present';
+  if (f === 'off' || !pixelOfficeIsWorkday(nowMs)) return 'offwork';
+  const { hour } = taipeiClock(nowMs);
+  if (hour >= pixelHours.dayStart && hour < pixelHours.workEnd) return hour >= pixelHours.lunchStart && hour < pixelHours.lunchEnd ? 'lunch' : 'present';
+  return 'offwork';
+}
 // 人離席之後電腦常常跟著睡著、心跳就停了：離席（廁所）狀態在最後一次心跳後這段時間內不當成下班。
 const PIXEL_OFFICE_AWAY_GRACE_MS = 60 * 60 * 1000;
 // 這個鐘點之後沒心跳就當作下班（睡著與關機從心跳分不出來，下班時段寧可判下班，免得關機的人掛著廁所）。
@@ -2146,7 +2156,22 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     // 假日（週六日與國定假日）沒有心跳超過門檻就直接下班，從來沒有心跳的人也算；
     // 但手動改過的狀態先保留兩小時（2026-11-02 改：取代 10-11 的「連手動也一律下班」）。
     const holiday = !pixelOfficeIsWorkday(nowMs);
+    // 企劃部／專案部同仁沒有電腦心跳：手動改的在座／加班／用餐／下班，五分鐘沒再改就回到時間規則（2026-11-05）。
+    const staffNames = new Set(this.pixelOfficeStaff().map(item => item.name));
     for (const row of rows) {
+      if (!staffNames.has(row.name)) continue;
+      let st: Row = {};
+      try { st = JSON.parse(row.state) as Row; } catch { st = {}; }
+      const cur = text(st.status) || 'present';
+      if (st.statusSource !== 'manual' || !['present', 'overtime', 'lunch', 'offwork'].includes(cur)) continue;
+      if (nowMs - (Number(st.statusAt) || 0) < PIXEL_OFFICE_STAFF_MANUAL_HOLD_MS) continue;
+      const want = pixelOfficeStaffStatus(nowMs);
+      st.statusSource = 'auto'; st.statusAt = nowMs; st.status = want;
+      const ver = Math.max(nowMs, this.pixelOfficeVersion() + 1);
+      this.ctx.storage.sql.exec('UPDATE pixel_office_people SET state = ?, updated_at = ? WHERE name = ?', JSON.stringify(st), ver, row.name);
+    }
+    for (const row of rows) {
+      if (staffNames.has(row.name)) continue;
       const lastSeen = Number(row.last_seen) || 0;
       if (lastSeen <= 0 && !holiday) continue;
       if (nowMs - lastSeen <= PIXEL_OFFICE_OFFLINE_MS) continue;
@@ -2903,6 +2928,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       } else {
       if (!PIXEL_OFFICE_STATUSES.includes(status)) throw new Error('狀態不正確');
       state.status = status;
+      // 企劃部／專案部下班後手動解除下班：先套用加班（2026-11-05）
+      if (status === 'present' && this.pixelOfficeStaff().some(item => item.name === name) && pixelOfficeStaffStatus(Date.now()) === 'offwork' && pixelForceNow(Date.now()) !== 'work') state.status = 'overtime';
       // 使用者在遊戲裡手動指定：在同一個時段內不會被自動狀態蓋掉（見 pixelOfficeHeartbeat）。
       // 記下指定當下「時間規則算出來的狀態」，跨到下一個時段（例如從白天到晚上、或隔天）就交還給自動，
       // 免得昨晚手動點的加班隔天中午還掛在那裡。
