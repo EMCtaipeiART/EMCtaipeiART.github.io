@@ -1448,7 +1448,7 @@ function remoteFromState(c, e){
 }
 const sitSpot = st => { const fw = st.fwd ?? (st.face === 0 ? .06 : .32); return {x:st.x + Math.sin(st.face) * fw, z:st.z + Math.cos(st.face) * fw}; };
 function remoteStep(c, dt){
-  const r = c.remote, p = c.holder.position;
+  const r = c.remote, p = c.holder.position; c.stepD = 0;
   if (Date.now() - r.at > REMOTE_PARK_MS) { c.remote = null; c.appliedStatus = null; applyStatus(c); return; }
   let dx = r.x - p.x, dz = r.z - p.z, d = Math.hypot(dx, dz);
   if (c.sitting) { const sp = sitSpot(c.sitting); if (Math.hypot(sp.x - r.x, sp.z - r.z) > .35) standUp(c); else { c.moving = 0; return; } dx = r.x - p.x; dz = r.z - p.z; d = Math.hypot(dx, dz); }
@@ -1464,14 +1464,16 @@ function remoteStep(c, dt){
     const ddx = ix - p.x, ddz = iz - p.z, jump = Math.hypot(ddx, ddz);
     if (jump > 14) { p.x = ix; p.z = iz; c.mvS = 0; }
     else {
-      const sp = dt > 0 ? jump / dt : 0; c.mvS = (c.mvS || 0) * .8 + sp * .2;
-      if (jump > .004) { if (jump > .02) c.face = Math.atan2(ddx, ddz); p.x = ix; p.z = iz; }
-      c.moving = c.mvS > 3.4 ? 7 : c.mvS > .5 ? 2.4 : 0;
+      const kk = 1 - Math.exp(-dt * 16), mx = ddx * kk, mz = ddz * kk, mv = Math.hypot(mx, mz);   // 在內插結果上再低通一次：樣本到達的節奏不均也不會讓速度忽快忽慢
+      const sp = dt > 0 ? mv / dt : 0; c.mvS = (c.mvS || 0) * .86 + sp * .14;
+      if (mv > .0015) { if (jump > .03) c.face = Math.atan2(ddx, ddz); p.x += mx; p.z += mz; c.stepD = mv; }
+      if (c.mvS > 1.1) c.walkOn = true; else if (c.mvS < .35) c.walkOn = false;   // 走／停用遲滯判斷，不會在邊界上抖動
+      c.moving = c.walkOn ? (c.mvS > (c.moving === 7 ? 3.0 : 4.4) ? 7 : 2.4) : 0;
     }
     if (!(rt >= b[b.length - 1].t && Math.hypot(r.x - p.x, r.z - p.z) < .06)) return;   // 還沒播到最後一個樣本：下一幀繼續；到了才走下面「停下來」的處理（入座、朝向）
     c.mvS = 0; d = 0;
   }
-  if (d > .06) { const step = Math.min(d, Math.max(7, d * 3.2) * dt); p.x += dx / d * step; p.z += dz / d * step; c.face = Math.atan2(dx, dz); c.moving = d > 1.6 ? 7 : 2.4; }
+  if (d > .06) { const step = Math.min(d, Math.max(7, d * 3.2) * dt); p.x += dx / d * step; p.z += dz / d * step; c.stepD = step; c.face = Math.atan2(dx, dz); c.moving = d > 1.6 ? 7 : 2.4; }
   else {
     c.moving = 0;
     const st = chairSeats.find(q => !q.by && !q.hidden && Math.hypot(sitSpot(q).x - p.x, sitSpot(q).z - p.z) < .2);
@@ -1770,7 +1772,7 @@ function updateSprite(c, dt){
   const rel = Math.atan2(Math.sin(c.face - toCam), Math.cos(c.face - toCam));   // 0 = 面向鏡頭
   const col = (Math.round(rel / (Math.PI * 2) * ANGLES) + ANGLES) % ANGLES;
   c.tex.offset.set(col / ANGLES, 0);
-  c.phase += dt * (c.moving > 3.5 ? 26 : 10) * (c.moving > 0 ? 1 : 0);   // 沒有走路影格的人，以彈跳加搖擺表現
+  c.phase += c.remote && c !== player && c.moving > 0 && c.stepD > 0 ? c.stepD * 3.9 : dt * (c.moving > 3.5 ? 26 : 10) * (c.moving > 0 ? 1 : 0);   // 別人的走路步伐跟著實際移動距離，腳步才不會滑   // 沒有走路影格的人，以彈跳加搖擺表現
   const sw = Math.sin(c.phase), wk = c.walkTex && c.moving > 0;
   let map = c.tex;
   if (wk) { const st = Math.floor(c.phase / (Math.PI / 2)) % 4; if (st % 2) { map = c.walkTex; map.offset.set(col / ANGLES, st === 1 ? .5 : 0); } }   // 4 格循環：站姿、左腳出、站姿、右腳出
