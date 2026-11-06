@@ -2523,7 +2523,7 @@ const PET_SAY = {
     petSleep:'牠被摸醒了，嘆了口氣換個地方繼續睡', petFlee:'牠害羞地退了一步',
     petOk:n => '「嗚～」牠翻出肚皮讓你摸（信任度 +' + n + '）', petMax:'牠舒服得直哼哼，但今天已經摸夠了',
     treatSleep:'牠鼻子動了動，但還沒睡醒', treatFull:'「汪……」牠今天吃太飽，連零食都吃不下了', treatEat:n => '「汪！」一口吞下點心，尾巴搖不停（信任度 +' + n + '）', treatNo:'牠聞了聞，竟然不吃（點心還在）',
-    playSleep:'牠打呼打得正香，等牠醒來再玩', playShy:'牠看了球一眼，還有點害羞', playGo:'「汪汪！」拖著長長的身子追球跑！',
+    playSleep:'牠打呼打得正香，等牠醒來再玩', playShy:'牠看了球一眼，還有點害羞', playGo:'你把球丟出去，「汪汪！」牠拖著長長的身子衝去撿回來！',
     bowlFood:'加了一份飯，牠搖著尾巴等不及了', bowlWater:'換了新鮮的水，牠咕嚕咕嚕喝了好幾口', bowlFull:'碗裡還滿滿的，牠一臉可惜',
     held:{eat:'好香！', sleepTouch:'嗯？'}, tag:{sleep:'呼嚕…', eat:'開飯！', run:'汪！', groom:'搖尾巴', enc:'汪！'},
     mood:{sleep:'打呼中', eat:'開飯中', groom:'搖尾巴', run:'衝刺中', walk:'慢慢晃悠', sit:'坐著等你', other:'看著你', play:'正在玩', annoyed:'想歇一下'}
@@ -2537,7 +2537,7 @@ const PET_SAY = {
     petSleep:'牠被摸醒了，迷迷糊糊地蹭了蹭你，又睡著了', petFlee:'牠害羞地笑了笑',
     petOk:n => '「嘿嘿～」牠笑瞇瞇地蹭你（信任度 +' + n + '）', petMax:'牠開心得直打滾，但今天已經摸夠了',
     treatSleep:'牠睡得正香，等牠醒來再餵', treatFull:'「汪～」牠舔舔嘴，今天已經吃得飽飽的了', treatEat:n => '「汪汪！」牠笑著一口吃掉，尾巴轉成螺旋槳（信任度 +' + n + '）', treatNo:'牠聞了聞，竟然不吃（點心還在）',
-    playSleep:'牠睡得正香，等牠醒來再玩', playShy:'牠盯著球，開心卻不好意思', playGo:'「汪汪汪！」牠追著球飛奔，毛都飄起來了！',
+    playSleep:'牠睡得正香，等牠醒來再玩', playShy:'牠盯著球，開心卻不好意思', playGo:'你把球丟出去，「汪汪汪！」牠飛奔去撿，毛都飄起來了！',
     bowlFood:'加了一份飯，牠高興得原地轉圈', bowlWater:'換了新鮮的水，牠喝得滿臉都是水', bowlFull:'碗裡還滿滿的，牠對你笑了一下',
     held:{eat:'好好吃！', sleepTouch:'嘿嘿'}, tag:{sleep:'zzZ', eat:'好好吃！', run:'汪汪汪！', groom:'嘿嘿', enc:'汪！'},
     mood:{sleep:'睡成毛球', eat:'吃飯中', groom:'開心搖尾巴', run:'狂奔中', walk:'開心散步', sit:'笑著等你', other:'看著你', play:'正在玩', annoyed:'想趴一下'}
@@ -2717,7 +2717,7 @@ function catInit(){
   if (meN) { catCloud('get'); setInterval(() => catCloud('get'), 90000); }
   catNameLoad(); setInterval(catNameLoad, 90000);
   petReg[DEF.id] = {ready:true, base:catBase, route:catRoute, along:alongPath, run:CAT.run, tp:catTP, lv:belongLv, spots:catSpots};
-  window[DEF.dbg] = {actIn:catActIn, now:syncNow, naming:() => catNaming, nameLoad:catNameLoad, click:catClick, act:catAct, bowlClick:catBowlClick, care:catCare, get spots(){ return catSpots; }, at:catAt, plan:catPlan, state:() => ({catState, catOffice, catInv}), local:() => catLocal, pos:() => catG.position.clone(), set(o){ Object.assign(catOffice, o); catPlans.clear(); }, force(o){ catForce = o; }, give(k, n){ catInv[k] = n; }};
+  window[DEF.dbg] = {actIn:catActIn, now:syncNow, naming:() => catNaming, nameLoad:catNameLoad, click:catClick, act:catAct, bowlClick:catBowlClick, care:catCare, get spots(){ return catSpots; }, at:catAt, plan:catPlan, state:() => ({catState, catOffice, catInv}), local:() => catLocal, startLocal:catLocalStart, pos:() => catG.position.clone(), set(o){ Object.assign(catOffice, o); catPlans.clear(); }, force(o){ catForce = o; }, give(k, n){ catInv[k] = n; }};
 }
 // 這個時段貓在哪、做什麼（所有人算出來一樣）
 function catTP(ms){ const d = new Date(ms + 288e5); return {h:d.getUTCHours() + d.getUTCMinutes() / 60, dow:d.getUTCDay()}; }
@@ -2819,6 +2819,31 @@ function catStep(dt, now){   // 回傳這一格的位置與姿勢（本機覆蓋
     if (now > L.until) { const th = L.after; if (th) { catLocal = null; th(); return {pose:'stand', y:0, face}; } catReturn(); }
     return {pose:L.mode === 'sniff' ? 'look' : L.mode, y:0, face};
   }
+  if (L.mode === 'fetch') {   // 狗：玩家丟球、狗跑去撿回來交給玩家（連玩三次）
+    const P = L.src || pp || {x:pos.x, z:pos.z}, ball = catBallShow();
+    if (!L.land) {
+      let q = null; for (let i = 0; i < 16 && !q; i++) { const ang = Math.random() * 6.28, r = 4.5 + Math.random() * 2.5, c = {x:P.x + Math.cos(ang) * r, z:P.z + Math.sin(ang) * r}; if (!blocked(c.x, c.z) && !blocked(c.x + .6, c.z) && !blocked(c.x - .6, c.z) && !blocked(c.x, c.z + .6) && !blocked(c.x, c.z - .6)) q = c; }
+      L.land = q || {x:P.x + 2.5, z:P.z}; L.ph = 'throw'; L.pt = 0; L.path = null; L.round = L.round | 0;
+    }
+    L.pt += dt;
+    if (L.ph === 'throw') {   // 球從玩家手上拋出去，狗坐著看
+      const k = Math.min(1, L.pt / .9); ball.position.set(P.x + (L.land.x - P.x) * k, .7 + Math.sin(k * Math.PI) * 2.2, P.z + (L.land.z - P.z) * k);
+      face = Math.atan2(L.land.x - pos.x, L.land.z - pos.z); pose = 'sit'; if (k >= 1) { L.ph = 'chase'; L.pt = 0; }
+      if (L.pt < .9 && player && !player.sitting && !L.src) player.face = Math.atan2(L.land.x - P.x, L.land.z - P.z);
+    } else if (L.ph === 'chase') {   // 衝去撿
+      if (!L.path) { L.path = catRoute({x:pos.x, z:pos.z}, [L.land]).pts.slice(1); L.speed = CAT.run; }
+      if (walkTo()) { L.ph = 'carry'; L.pt = 0; L.path = null; L.tries = 0; }
+      ball.position.set(L.land.x, .12, L.land.z);
+    } else if (L.ph === 'carry') {   // 叼著球跑回玩家身邊
+      if (!L.path) { const dx = P.x - L.land.x, dz = P.z - L.land.z, d = Math.hypot(dx, dz) || 1; L.path = catRoute({x:pos.x, z:pos.z}, [{x:P.x - dx / d * .9, z:P.z - dz / d * .9}]).pts.slice(1); L.speed = CAT.run; }
+      const arr = walkTo(); ball.position.set(pos.x + Math.sin(face) * .4, .3, pos.z + Math.cos(face) * .4);
+      if (arr) { if (Math.hypot(P.x - pos.x, P.z - pos.z) > 1.8 && (L.tries = (L.tries | 0) + 1) < 4) L.path = null; else { L.ph = 'drop'; L.pt = 0; catHearts(2); } }
+    } else {   // 把球放在玩家腳邊，搖尾巴
+      ball.position.set(pos.x + Math.sin(face) * .5, .12, pos.z + Math.cos(face) * .5); pose = 'groom'; face = Math.atan2(P.x - pos.x, P.z - pos.z);
+      if (L.pt > 1.1) { L.round++; if (L.round >= 3) { catLocal = null; catToyHide(); catLocalStart('belly', 2.2, {}); return {pose:'belly', y:0, face}; } L.land = null; }
+    }
+    return {pose, y, face};
+  }
   if (L.mode === 'play') {   // 逗貓棒：貓追著玩具點撲三下，最後翻肚
     const k = el / 6; if (k >= 1) { catLocal = null; catLocalStart('belly', 2.2, {}); return {pose:'belly', y:0, face}; }
     const ti = Math.min(2, Math.floor(k * 3)), tp = L.pts[ti], dx = tp.x - pos.x, dz = tp.z - pos.z, d = Math.hypot(dx, dz);
@@ -2854,12 +2879,14 @@ function catActIn(a, srvNow){   // 別人和貓互動：在我的畫面也播同
   const dur = {pet:6, treat:9, play:9, company:21, call:6, greet:6}[a.kind] || 6; catPartner = ch; catPartnerUntil = now + dur * 1000;
   if (a.kind === 'pet') catGo([{x:pp.x + .35, z:pp.z + .85}], CAT.walk * 2.2, () => { catLocalStart('rub', 3, {a:0}); catHeld = '♥'; catHearts(4); setTimeout(() => { catHeld = ''; }, 3000); });
   else if (a.kind === 'treat') catGo([{x:pp.x + .6, z:pp.z + .8}], CAT.walk * 2, () => { const c = catG.position, dx = c.x - pp.x, dz = c.z - pp.z, d = Math.hypot(dx, dz) || 1; catTreatShow(true, pp.x + dx / d * .45, .95, pp.z + dz / d * .45); catLocalStart('sniff', 2.2, {after:() => { catTreatShow(false); catLocalStart('eat', 3.2, {}); catHearts(2); }}); });
+  else if (a.kind === 'play' && DOG) catGo([{x:pp.x + 1.2, z:pp.z + 1.2}], CAT.walk * 2, () => { catLocalStart('fetch', 40, {src:{x:pp.x, z:pp.z}}); });
   else if (a.kind === 'play') catGo([{x:pp.x + 1.2, z:pp.z + 1.2}], CAT.walk * 2, () => { const pts = [0, 1, 2].map(() => ({x:pp.x + 1.5, z:pp.z})); const toy = catToyShow(true, pts[0]); catLocalStart('play', 6, {pts, toy}); catLocal.t0 = performance.now(); setTimeout(catToyHide, 6200); });
   else if (a.kind === 'company') catGo([{x:pp.x + .9, z:pp.z + .5}], CAT.walk * 2, () => catLocalStart('stay', 20, {}));
   else if (a.kind === 'call') catGo([{x:pp.x, z:pp.z + 1.0}], CAT.run * .8, () => { catLocalStart('look', 3, {}); catHeld = '♥'; setTimeout(() => { catHeld = ''; }, 3000); });
   else if (a.kind === 'greet') catGo([{x:pp.x, z:pp.z + .9}], CAT.run * .8, () => { catLocalStart('rub', 3.6, {}); catHeld = '♥'; setTimeout(() => { catHeld = ''; }, 3600); });
 }
-function catToyHide(){ if (catToyShow.m) catToyShow.m.visible = false; if (catToyShow.s) catToyShow.s.visible = false; }
+function catBallShow(){ if (!catBallShow.m) { const m = new THREE.Mesh(new THREE.SphereGeometry(.14, 14, 10), new THREE.MeshLambertMaterial({color:0xe8503a})); m.userData.noMask = true; scene.add(m); catBallShow.m = m; } catBallShow.m.visible = true; return catBallShow.m; }
+function catToyHide(){ if (catBallShow.m) catBallShow.m.visible = false; if (catToyShow.m) catToyShow.m.visible = false; if (catToyShow.s) catToyShow.s.visible = false; }
 function catWandUpdate(pp, tip, y){   // 玩家手上的逗貓棒：棒子從手伸到球
   if (!catToyShow.s) { const g = new THREE.CylinderGeometry(.025, .025, 1, 6); g.rotateX(Math.PI / 2); g.translate(0, 0, .5); const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({color:0x8a5a2b})); m.userData.noMask = true; scene.add(m); catToyShow.s = m; }
   const m = catToyShow.s, hx = pp.x + (tip.x - pp.x) * .25, hz = pp.z + (tip.z - pp.z) * .25, hy = 1.1; m.visible = true; m.position.set(hx, hy, hz);
@@ -2870,7 +2897,7 @@ function updateCat(dt){
   if (!catG) return; const now = performance.now(), vx = player ? player.holder.position.x : guestAt.x, on5 = (vx < (FX4 - 100) * U) === (DEF.floor === 5); catG.visible = on5;
   if (!on5 || performance.now() - catT0 < 600) { catTagEl.style.display = 'none'; if (!on5 && now - catOffSync > 400) { catOffSync = now; catGreeted = false; const b = catAt(syncNow()); catG.position.set(b.x, 0, b.z); catG.rotation.y = b.face; catLocal = null; catLast = 0; } return; }   // 玩家不在這層時貓照時間表悄悄移動，人回來時不會從舊位置滑過去
   let a;
-  if (catLocal) { const s = catStep(dt, now); a = {x:catG.position.x, z:catG.position.z, y:s.y, face:s.face, pose:s.pose, kind:'local'}; if (catLocal && catLocal.mode === 'play') {} else catToyHide(); }
+  if (catLocal) { const s = catStep(dt, now); a = {x:catG.position.x, z:catG.position.z, y:s.y, face:s.face, pose:s.pose, kind:'local'}; if (catLocal && (catLocal.mode === 'play' || catLocal.mode === 'fetch')) {} else catToyHide(); }
   else { a = catAt(syncNow()); }
   if (!catLocal) { const k = Math.min(1, dt * 12); if (!catLast) { catG.position.set(a.x, 0, a.z); } else { catG.position.x += (a.x - catG.position.x) * k; catG.position.z += (a.z - catG.position.z) * k; } let df = a.face - catG.rotation.y; df = Math.atan2(Math.sin(df), Math.cos(df)); catG.rotation.y += df * Math.min(1, dt * 9); }
   else { let df = a.face - catG.rotation.y; df = Math.atan2(Math.sin(df), Math.cos(df)); catG.rotation.y += df * Math.min(1, dt * 12); }
@@ -2896,7 +2923,7 @@ const catOwns = () => !catPanel.hidden && catPanel.dataset.cat === DEF.id;
 function catClose(){ catPanel.hidden = true; }
 function catMoodText(){
   const a = catAt(syncNow()), p = a.pose;
-  const M = SAY.mood; if (catLocal && catLocal.mode === 'play') return M.play; if (catAnnoyed > performance.now()) return M.annoyed;
+  const M = SAY.mood; if (catLocal && (catLocal.mode === 'play' || catLocal.mode === 'fetch')) return M.play; if (catAnnoyed > performance.now()) return M.annoyed;
   return p === 'loaf' ? M.sleep : p === 'eat' ? M.eat : p === 'groom' ? M.groom : p === 'run' ? M.run : p === 'walk' ? M.walk : p === 'sit' ? M.sit : M.other;
 }
 function catRender(){
@@ -2957,6 +2984,7 @@ function catAct(a){
   if (a === 'play') {
     if (sleeping) { showQuote(CAT.name, sy('playSleep')); return; }
     if (!DOG && trustLv() === 0) { catLocalStart('look', 2.5, {}); showQuote(CAT.name, sy('playShy')); return; }
+    if (DOG) { catLocalStart('fetch', 40, {}); catCare('play'); catActOut('play'); showQuote(CAT.name, sy('playGo')); catClose(); return; }
     const pts = [0, 1, 2].map(() => { const ang = Math.random() * 6.28, r = 1.4 + Math.random() * 1.4; let q = {x:pp.x + Math.cos(ang) * r, z:pp.z + Math.sin(ang) * r}; if (blocked(q.x, q.z)) q = {x:pp.x, z:pp.z + 1.4}; return q; });
     const toy = catToyShow(true, pts[0]); catLocalStart('play', 6, {pts, toy}); catLocal.t0 = performance.now(); catCare('play'); catActOut('play'); showQuote(CAT.name, sy('playGo')); catClose();
     setTimeout(catToyHide, 6200); return;
