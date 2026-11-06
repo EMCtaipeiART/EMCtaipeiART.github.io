@@ -378,6 +378,25 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 @media (max-width:640px){.cat-act{grid-template-columns:repeat(3,1fr)}}
 @media (max-width:640px){.hp-card{min-width:0}.hp-clock{top:84px;font-size:13px}#net{top:122px}#proj{top:150px}.hp-top button{padding:7px 11px}}
 
+/* 右上四顆按鈕：深綠底圓角卡片＋彩色圓框小圖示（2026-11-06，參考設定選單樣式） */
+.hp-top button.pk-orange,.hp-top button.pk-green,.hp-top button.pk-teal,.hp-top button.pk-red{--rg:#ffb54d;
+  height:48px!important;min-width:0!important;padding:0 18px 0 5px!important;gap:9px!important;display:flex!important;align-items:center;overflow:visible;
+  border:2px solid rgba(255,255,255,.14)!important;border-bottom-width:2px!important;border-radius:999px!important;
+  background:linear-gradient(180deg,rgba(14,66,40,.96),rgba(6,42,24,.96))!important;color:#fff;text-shadow:none;font:700 15px/1 'Fredoka','Noto Sans TC',sans-serif!important;
+  box-shadow:0 6px 14px rgba(0,0,0,.3)!important;transition:transform .1s,filter .15s}
+.hp-top button.pk-orange{--rg:#ffb54d}.hp-top button.pk-green{--rg:#5fdc8a}.hp-top button.pk-teal{--rg:#5cc6e0}.hp-top button.pk-red{--rg:#ff6f7f}
+.hp-top button.pk-orange::before,.hp-top button.pk-green::before,.hp-top button.pk-teal::before,.hp-top button.pk-red::before{display:none}
+.hp-top button.pk-orange:hover,.hp-top button.pk-green:hover,.hp-top button.pk-teal:hover,.hp-top button.pk-red:hover,
+.hp-top button.pk-orange:focus-visible,.hp-top button.pk-green:focus-visible,.hp-top button.pk-teal:focus-visible,.hp-top button.pk-red:focus-visible{padding:0 18px 0 5px!important;filter:brightness(1.15);transform:translateY(-2px)}
+.hp-top button.pk-orange:active,.hp-top button.pk-green:active,.hp-top button.pk-teal:active,.hp-top button.pk-red:active{transform:translateY(1px);border-bottom-width:2px!important}
+.hp-top button.pk-orange i,.hp-top button.pk-green i,.hp-top button.pk-teal i,.hp-top button.pk-red i{width:36px!important;height:36px!important;border-radius:50%!important;flex:none;
+  border:3px solid var(--rg);background:color-mix(in srgb,var(--rg) 22%,#082a18)!important;filter:none;box-sizing:border-box}
+.hp-top button.pk-orange i svg,.hp-top button.pk-green i svg,.hp-top button.pk-teal i svg,.hp-top button.pk-red i svg{width:19px!important;height:19px!important;color:#fff}
+.hp-top button.pk-orange span,.hp-top button.pk-green span,.hp-top button.pk-teal span,.hp-top button.pk-red span{display:inline!important;max-width:none!important;opacity:1!important;white-space:nowrap}
+@media (max-width:1000px){.hp-top button.pk-orange,.hp-top button.pk-green,.hp-top button.pk-teal,.hp-top button.pk-red{height:42px!important;padding:0 5px!important}
+  .hp-top button.pk-orange:hover,.hp-top button.pk-green:hover,.hp-top button.pk-teal:hover,.hp-top button.pk-red:hover{padding:0 5px!important}
+  .hp-top button.pk-orange span,.hp-top button.pk-green span,.hp-top button.pk-teal span,.hp-top button.pk-red span{display:none!important}
+  .hp-top button.pk-orange i,.hp-top button.pk-green i,.hp-top button.pk-teal i,.hp-top button.pk-red i{width:32px!important;height:32px!important}}
 </style></head><body>
 <script>if(/[?&]embed=1/.test(location.search))document.documentElement.classList.add('embed')</script>
 <div id="title">
