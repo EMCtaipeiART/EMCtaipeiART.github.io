@@ -91,10 +91,12 @@ function viewShop(){
  const m=$('#more');if(m)m.onclick=()=>{st.shown+=120;viewShop()};
 }
 function closedBanner(){return st.set?.closed?'<div class="note bad">本次團購已截止，無法再下單或修改。</div>':''}
+// 選到特定商品時跳出的提醒（可依品名新增）
+const NOTICES=[{re:/珂朗清矽水膠日拋/,text:'珂朗清矽水膠日拋30片裝訂購沒有60片裝，若不想要收到10片裝，請不要訂60片或120片的優惠，可以選擇30片裝'}];
 function addDialog(no,idx){
  const it=byNo(no),ex=idx!=null?st.cart[idx]:{qty:1};
  const bg=document.createElement('div');bg.className='modalbg';
- bg.innerHTML=`<div class="modal"><h3 style="margin-top:0">${esc(it.name)}</h3><div class="sub">${esc(it.brand)}｜${nt(it.price)}${it.range?'｜供應度數：'+esc(it.range):''}</div>
+ bg.innerHTML=`<div class="modal"><h3 style="margin-top:0">${esc(it.name)}</h3>${NOTICES.filter(n=>n.re.test(it.name)).map(n=>`<div class="note bad" style="margin:10px 0"><b>⚠ 注意</b><br>${esc(n.text)}</div>`).join('')}<div class="sub">${esc(it.brand)}｜${nt(it.price)}${it.range?'｜供應度數：'+esc(it.range):''}</div>
  ${it.power?`<label>度數（請對照供應度數；雙眼度數不同請分兩筆加入）</label><input id="f-sph" placeholder="例：300 或 -3.00" value="${esc(ex.sph||'')}">`:''}
  ${it.toric?`<div class="row2"><div><label>散光度數（無散光免填）</label><input id="f-cyl" placeholder="例：-0.75" value="${esc(ex.cyl||'')}"></div><div><label>散光角度</label><input id="f-axis" placeholder="例：180" value="${esc(ex.axis||'')}"></div></div>`:''}
  <div class="row2"><div><label>盒數／數量</label><input id="f-qty" type="number" min="1" max="99" value="${ex.qty}"></div><div><label>贈品填寫處（選填）</label><input id="f-gift" value="${esc(ex.gift||'')}"></div></div>
