@@ -4,5 +4,6 @@
   "compatibility_date": "2025-01-01",
   "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": ["/api/*"] },
   "d1_databases": [{ "binding": "DB", "database_name": "emc-lens-shop", "database_id": "49d89c5b-6e38-4a75-b1ff-daaef7c3a147" }],
-  "vars": { "MAIL_FROM": "EMC 隱形眼鏡團購 <shop@emc-art.com>", "SITE_URL": "" }
+  "routes": [{ "pattern": "shop.emc-art.com", "custom_domain": true }],
+  "vars": { "MAIL_FROM": "EMC 隱形眼鏡團購 <shop@emc-art.com>", "SITE_URL": "https://shop.emc-art.com" }
 }
