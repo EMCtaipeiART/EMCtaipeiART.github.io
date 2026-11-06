@@ -108,6 +108,9 @@ header .logo,header .dl{display:none}
 .sech{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 12px}.sech h2{margin:0}.sech span{color:var(--m);font-size:13px}
 @media(max-width:900px){.top{grid-template-columns:1fr}.feat,.flow{grid-template-columns:repeat(2,1fr)}.flow div:nth-child(3){border-left:0}.flow div:nth-child(n+3){border-top:1px solid #eef2f0}.hero2 h1{font-size:28px}}
 @media(max-width:620px){.cards{grid-template-columns:repeat(2,1fr);gap:10px}.pc img{height:120px}.item{grid-template-columns:96px 1fr auto;gap:10px;padding:12px}.item .no{display:none}.item button{grid-column:1/-1}.form2{grid-template-columns:1fr}.bar{padding:8px 12px}nav{margin-left:0}main{padding:16px 12px 50px}.hero{padding:18px}}
+/* 手機版：左右留白、綠底貼齊導覽列、導覽置中、金額列浮起避開瀏覽器底部工具列 */
+@media(max-width:620px){header .bar{justify-content:center}header nav{margin:0 auto;justify-content:center}main{padding:16px 18px 50px}main>.top:first-child{margin-top:-16px}main>.top:first-child .hero2{border-radius:0 0 22px 22px}#cbar{left:12px;right:12px;bottom:12px;border:1px solid var(--l);border-radius:16px;overflow:hidden}.cb-in{padding:10px 14px}body.hasbar main{padding-bottom:110px}}
+@supports(-webkit-touch-callout:none){@media(max-width:620px){#cbar{bottom:84px}body.hasbar main{padding-bottom:190px}}}
 </style>
 </head>
 <body>
