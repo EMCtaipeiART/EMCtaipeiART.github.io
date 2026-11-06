@@ -1,6 +1,7 @@
 import { buildCatalog } from './catalog.js';
 import { fillForms } from './xlsx.js';
 import { orderMail } from './mail.js';
+import { D1Files } from './store.js';
 
 const json = (o, status = 200, h = {}) => new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...h } });
 const err = (msg, status = 400) => json({ error: msg }, status);
@@ -70,6 +71,7 @@ async function mailOrder(env, req, order, kind) {
 }
 
 async function handle(req, env) {
+  env = { ...env, FILES: new D1Files(env.DB) };
   const url = new URL(req.url); const path = url.pathname; const method = req.method;
 
   if (path === '/api/catalog' && method === 'GET') {
