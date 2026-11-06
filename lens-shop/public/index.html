@@ -73,6 +73,7 @@ table.t{border-collapse:collapse;width:100%;font-size:14px}table.t th,table.t td
 .hero2:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.05) 0 2px,transparent 2px 18px)}
 .hero2:after{content:"";position:absolute;right:-70px;bottom:-90px;width:300px;height:300px;border-radius:50%;border:42px solid rgba(255,255,255,.08)}
 .hero2>*{position:relative;z-index:1}
+.hero2{display:block}.hero2 .hcd{position:absolute;right:34px;top:50%;transform:translateY(-50%);width:min(44%,420px);background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);border-radius:18px;padding:18px 20px;backdrop-filter:blur(4px)}.hcd small{display:block;margin-bottom:10px;font-size:12.5px;letter-spacing:.5px;opacity:.9}.hcd .cdn div{background:rgba(255,255,255,.95)}.hcd .cdn span{color:var(--m)}.flow .ok i{background:#fff;color:var(--bd);box-shadow:inset 0 0 0 2px var(--bd)}.flow em{font-style:normal;color:var(--b);font-weight:800}@media(max-width:900px){.hero2 .hcd{position:static;transform:none;width:auto;margin-top:20px}}
 .eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:700;opacity:.9}.eyebrow:before{content:"";width:22px;height:2px;background:#fff;opacity:.7}
 .hero2 h1{margin:10px 0 8px;font-size:34px;line-height:1.2;letter-spacing:.5px}
 .hero2 p{margin:0 0 20px;font-size:15px;opacity:.93;max-width:480px}
@@ -126,6 +127,8 @@ const thumb=i=>st.pimgs[i.no]?`<img class="th" loading="lazy" src="${esc(st.pimg
 const items=()=>st.cat?.items||[];const byNo=n=>items().find(i=>i.no===n);
 
 // ───── 選購 ─────
+const FLOW=[["選購商品","挑品項、填度數"],["送出訂單","確認信寄到信箱"],["依帳號匯款","帳號在確認信裡"],["回報匯款","後 5 碼或截圖"]];
+function flowHtml(done=[]){return`<div class="flow">${FLOW.map((x,i)=>`<div class="${done[i]?'ok':''}"><i>${done[i]?'✓':i+1}</i><section><b>${x[0]}${done[i]?' <em>✓</em>':''}</b><span>${x[1]}</span></section></div>`).join('')}</div>`}
 function viewShop(){
  if(!st.cat)return $('#app').innerHTML='<div class="note">目前尚未開放，請稍後再來。</div>';
  const brands=['全部',...new Set(items().map(i=>i.brand))];
@@ -134,8 +137,9 @@ function viewShop(){
  $('#app').innerHTML=`${closedBanner()}
  <section class="top"><div class="hero2"><span class="eyebrow">EMC GROUP BUY</span><h1>${esc(st.set?.shopName||'隱形眼鏡團購')}</h1>
   <p>公司團購價優惠。挑好商品、填好度數，一次下單，截止前都能回來修改。</p>
-  <div class="cta"><a class="p" href="#list" id="go">開始選購</a></div></div></section>
- <div class="flow"><div><i>1</i><section><b>選購商品</b><span>挑品項、填度數</span></section></div><div><i>2</i><section><b>送出訂單</b><span>確認信寄到信箱</span></section></div><div><i>3</i><section><b>依帳號匯款</b><span>帳號在確認信裡</span></section></div><div><i>4</i><section><b>回報匯款</b><span>後 5 碼或截圖</span></section></div></div>
+  <div class="cta"><a class="p" href="#list" id="go">開始選購</a></div>
+  <div class="hcd"><small>${st.set?.closed?'本次團購已結單':'距離截止'}</small><div class="cdn" id="cdn">${cdHtml()}</div></div></div></section>
+ ${flowHtml()}
  <div class="sech" id="list"><h2>選購商品</h2><span>共 ${items().length} 項</span></div>
  <div class="tools"><input type="search" id="q" placeholder="搜尋品牌、品名、編號…" value="${esc(st.q)}"></div>
  <div class="chips">${brands.map(b=>`<span class="chip ${b===st.brand?'on':''}" data-b="${esc(b)}">${esc(b)}</span>`).join('')}</div>
@@ -175,7 +179,7 @@ const pw=l=>[l.sph&&'度數 '+l.sph,l.cyl&&'散光 '+l.cyl,l.axis&&'角度 '+l.a
 function viewCart(){
  const lines=st.cart.map((l,i)=>({...l,i,it:byNo(l.no)})).filter(l=>l.it);
  const total=lines.reduce((s,l)=>s+l.it.price*l.qty,0);const edit=!!st.editTok;
- $('#app').innerHTML=`${closedBanner()}<h2>${edit?'修改我的訂單'+(st.editId?'（'+st.editId+'）':''):'購物車'}</h2>
+ $('#app').innerHTML=`${closedBanner()}${flowHtml([lines.length>0||edit,edit])}<h2>${edit?'修改我的訂單'+(st.editId?'（'+st.editId+'）':''):'購物車'}</h2>
  ${edit?'<div class="note ok">您正在修改已送出的訂單，修改完成後請按下方「儲存修改」。截止前都可再改。</div>':''}
  ${lines.length?`<div class="card"><table class="t"><thead><tr><th>品項</th><th>規格</th><th class="num">單價</th><th class="num">數量</th><th class="num">小計</th><th></th></tr></thead><tbody>
  ${lines.map(l=>`<tr><td>#${l.no} ${esc(l.it.brand)} ${esc(l.it.name)}</td><td class="sub">${esc(pw(l))}${l.gift?'<br>贈品：'+esc(l.gift):''}</td><td class="num">${nt(l.it.price)}</td><td class="num">${l.qty}</td><td class="num">${nt(l.it.price*l.qty)}</td>
