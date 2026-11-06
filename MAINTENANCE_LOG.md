@@ -1854,3 +1854,6 @@
 
 ## 2026-11-06 右上按鈕加底部厚邊
 - 四顆按鈕底邊加 5px 深綠厚邊與頂部高光，按下去會下沉。
+
+## 2026-11-06 修正「切換人物」按鈕對所有人顯示
+- 新按鈕樣式的 `display:flex!important` 蓋掉了 `hidden` 屬性，導致一般同仁也看得到；補上 `.hp-top button[hidden]{display:none!important}`，恢復只有管理者／Machi 看得到。
