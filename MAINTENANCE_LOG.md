@@ -1934,3 +1934,6 @@
 ## 2026-11-06 團購站網址移除 #
 - 前端路由由 hash（`/#/cart`）改為 History API 路徑（`/cart`、`/promo`、`/spec`、`/mine`、`/admin`、`/order/<token>`）；`wrangler.jsonc` assets 加 `not_found_handling: single-page-application`，直接輸入路徑也回傳首頁殼。
 - 舊的 `#/…` 連結（含之前寄出的確認信）載入時自動轉成新路徑；新確認信連結改為 `/order/<token>`。站內 `<a href="/…">` 由全域 click 攔截做無重載換頁，`/api/` 開頭不攔截。
+
+## 2026-11-06 團購站移除頂端倒數資訊
+- 頂端列左上的「截止：…（剩 X 天 X 小時）」隱藏（`header .dl`），截止資訊只留在首頁 hero 的倒數卡。
