@@ -2670,15 +2670,12 @@ function catBowlBuild(x, z, dog){   // 共用貓碗（飼料碗＋水碗）
   const food = mk(dog ? -.4 : -.3, 0x9b6a3c), water = mk(dog ? .4 : .3, 0x7fd0f2); g.userData.pick = {kind:'catbowl', id:DEF.id}; pickables.push(g); return {g, food, water, x, z};
 }
 function catBoxBuild(x, z, dog){   // 貓：紙箱；狗：藍色格紋大狗床（較大、有軟墊）
-  if (dog) {   // 圓形軟墊狗床：外圈藍色厚邊＋奶油色軟墊＋一根骨頭
+  if (dog) {   // 圓形軟墊狗床：外圈藍色厚邊＋奶油色軟墊
     const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
     const cyl = (r0, r1, h, py, c) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r0, r1, h, 32), new THREE.MeshLambertMaterial({color:c})); m.position.y = py; m.userData.pickRoot = g; g.add(m); return m; };
     cyl(.7, .66, .26, .13, 0x4a6fb5);
     { const h = new THREE.Mesh(new THREE.CylinderGeometry(.72, .68, .3, 32), outlineMat); h.position.y = .13; h.layers.set(HULL_LAYER); g.add(h); }
     cyl(.52, .52, .05, .27, 0xf3e3c3);
-    const bone = (px, pz) => { const m = new THREE.Mesh(new THREE.SphereGeometry(.07, 10, 8), new THREE.MeshLambertMaterial({color:0xffffff})); m.position.set(px, .34, pz); g.add(m); };
-    const bar = new THREE.Mesh(new THREE.BoxGeometry(.34, .06, .07), new THREE.MeshLambertMaterial({color:0xffffff})); bar.position.set(.02, .33, .08); bar.rotation.y = -.5; g.add(bar);
-    bone(-.14, .17); bone(-.14, .05); bone(.18, .11); bone(.18, -.01);
     return g;
   }
   const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
