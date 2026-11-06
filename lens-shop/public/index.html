@@ -73,6 +73,7 @@ table.t{border-collapse:collapse;width:100%;font-size:14px}table.t th,table.t td
 .hero2:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.05) 0 2px,transparent 2px 18px)}
 .hero2:after{content:"";position:absolute;right:-70px;bottom:-90px;width:300px;height:300px;border-radius:50%;border:42px solid rgba(255,255,255,.08)}
 #cbar{position:fixed;left:0;right:0;bottom:0;z-index:50;background:#fff;border-top:1px solid var(--l);box-shadow:0 -6px 24px rgba(0,0,0,.08);display:none}.cb-in{max-width:1100px;margin:auto;padding:12px 18px;display:flex;align-items:center;gap:20px}.cb-l{flex:1;min-width:0}.cb-l b{display:block;font-size:15px}.cb-l span{display:block;font-size:12.5px;color:var(--m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cb-t{text-align:right;font-size:12.5px;color:var(--m);white-space:nowrap}.cb-t b{display:block;font-size:22px;font-weight:900;color:var(--bd)}.cb-go{background:linear-gradient(180deg,var(--b2),var(--b));color:#fff;padding:12px 26px;border-radius:12px;font-weight:800;text-decoration:none;white-space:nowrap}body.hasbar main{padding-bottom:96px}@media(max-width:620px){.cb-l span{display:none}.cb-in{gap:12px}}
+.ni{position:relative;display:inline-flex!important;align-items:center;justify-content:center;width:40px;height:40px;padding:0!important}.ni svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.ni .n{position:absolute;top:0;right:-2px}
 .hero2>*{position:relative;z-index:1}
 .hero2{display:block}.hero2 .hcd{position:absolute;right:34px;top:50%;transform:translateY(-50%);width:min(44%,420px);background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);border-radius:18px;padding:18px 20px;backdrop-filter:blur(4px)}.hcd small{display:block;margin-bottom:10px;font-size:12.5px;letter-spacing:.5px;opacity:.9}.hcd .cdn div{background:rgba(255,255,255,.95)}.hcd .cdn span{color:var(--m)}.flow .ok i{background:#fff;color:var(--bd);box-shadow:inset 0 0 0 2px var(--bd)}.flow em{font-style:normal;color:var(--b);font-weight:800}@media(max-width:900px){.hero2 .hcd{position:static;transform:none;width:auto;margin-top:20px}}
 .eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:700;opacity:.9}.eyebrow:before{content:"";width:22px;height:2px;background:#fff;opacity:.7}
@@ -128,7 +129,8 @@ function dlText(){const s=st.set;if(!s)return'';if(s.closed)return'<b>已截止�
  const ms=Date.parse(s.deadline+(s.deadline.length<=16?':00+08:00':''))-Date.now();const d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5);
  return`截止：${fmtD(s.deadline)}（剩 <b>${d>0?d+' 天 ':''}${h} 小時</b>）`}
 function renderNav(){const r=(location.hash||'#/').split('/')[1]||'';const L=[['','開始選購'],['promo','促銷活動'],['spec','規格表'],['cart','購物車'],['mine','訂單列表'],['admin','管理']];
- $('#nav').innerHTML=L.map(([k,n])=>`<a href="#/${k}" class="${r===k||(k==='cart'&&r==='order')?'on':''}">${n}${k==='cart'&&st.cart.length?`<span class="n">${st.cart.reduce((s,l)=>s+l.qty,0)}</span>`:''}</a>`).join('');
+ const IC={"":"<path d=\"M3 11 12 4l9 7M5 10v10h14V10\"/>","promo":"<path d=\"M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8zM7.5 7.5h.01\"/>","spec":"<rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"2\"/><path d=\"M3 10h18M9 4v16\"/>","cart":"<path d=\"M3 3h2.5l2.2 12h10.6l2-8.5H6.4\"/><circle cx=\"9.5\" cy=\"19.5\" r=\"1.3\"/><circle cx=\"17\" cy=\"19.5\" r=\"1.3\"/>","mine":"<path d=\"M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01\"/>","admin":"<circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7\"/>"};
+ $('#nav').innerHTML=L.map(([k,n])=>`<a href="#/${k}" title="${n}" aria-label="${n}" class="ni ${r===k||(k==='cart'&&r==='order')?'on':''}"><svg viewBox="0 0 24 24">${IC[k]}</svg>${k==='cart'&&st.cart.length?`<span class="n">${st.cart.reduce((s,l)=>s+l.qty,0)}</span>`:''}</a>`).join('');
  $('#dl').innerHTML=dlText();$('#logo').textContent=st.set?.shopName||'隱形眼鏡團購';cartBar()}
 const thumb=i=>st.pimgs[i.no]?`<img class="th" loading="lazy" src="${esc(st.pimgs[i.no])}" alt="">`:`<div class="th ph">${esc(i.brand.slice(0,6))}</div>`;
 const items=()=>st.cat?.items||[];const byNo=n=>items().find(i=>i.no===n);
@@ -144,8 +146,7 @@ function viewShop(){
  $('#app').innerHTML=`${closedBanner()}
  <section class="top"><div class="hero2"><span class="eyebrow">EMC GROUP BUY</span><h1>${esc(st.set?.shopName||'隱形眼鏡團購')}</h1>
   <p>公司團購價優惠。挑好商品、填好度數，一次下單，截止前都能回來修改。</p>
-  <div class="cta"><a class="p" href="#list" id="go">開始選購</a></div>
-  <div class="hcd"><small>${st.set?.closed?'本次團購已結單':'距離截止'}</small><div class="cdn" id="cdn">${cdHtml()}</div></div></div></section>
+    <div class="hcd"><small>${st.set?.closed?'本次團購已結單':'距離截止'}</small><div class="cdn" id="cdn">${cdHtml()}</div></div></div></section>
  ${flowHtml()}
  <div class="sech" id="list"><h2>選購商品</h2><span>共 ${items().length} 項</span></div>
  <div class="tools"><input type="search" id="q" placeholder="搜尋品牌、品名、編號…" value="${esc(st.q)}"></div>
@@ -156,7 +157,6 @@ function viewShop(){
   <button data-add="${i.no}" ${st.set?.closed?'disabled':''}>加入</button></div>`).join('')||'<p style="padding:14px" class="muted">沒有符合的商品</p>'}</div>
  ${list.length>st.shown?`<p style="text-align:center"><button class="sec" id="more">再顯示更多（還有 ${list.length-st.shown} 項）</button></p>`:''}`;
  api('/orders-public').then(d=>{const e=$('#ocnt');if(e)e.textContent=d.count}).catch(()=>{});
- $('#go').onclick=e=>{e.preventDefault();$('#list').scrollIntoView({behavior:'smooth'})};
  $('#q').oninput=e=>{st.q=e.target.value;st.shown=60;const p=e.target.selectionStart;viewShop();const n=$('#q');n.focus();n.setSelectionRange(p,p)};
  document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{st.brand=c.dataset.b;st.shown=60;viewShop()});
  document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>addDialog(+b.dataset.add));
