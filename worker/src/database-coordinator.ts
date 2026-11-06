@@ -5115,6 +5115,25 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     await this.ctx.storage.put('notebookEncrypted', true);
   }
 
+  /** 2026-11-06：公司資訊（凱曜、承揚）當成一般記事本卡片，排在最前面；只加一次，之後可在網站內自行編輯／刪除。 */
+  private async notebookCompanySeedOnce(): Promise<void> {
+    if (await this.ctx.storage.get<boolean>('notebookCompanySeeded')) return;
+    const companies: Array<{ title: string; fields: NotebookField[] }> = [
+      { title: '凱曜網路股份有限公司', fields: [['電話', '(02)27171277'], ['傳真', '(02)27171677'], ['地址', '台北市松山區復興北路231巷19號5樓'], ['統編', '53521839']].map(([label, value]) => ({ label, value, secret: false })) },
+      { title: '承揚股份有限公司', fields: [['電話', '(02)87120868'], ['地址', '台北市松山區復興北路231巷32號3樓'], ['統編', '85007237']].map(([label, value]) => ({ label, value, secret: false })) }
+    ];
+    const sealed = await Promise.all(companies.map(company => this.sealFields(company.fields)));
+    const min = Number(this.ctx.storage.sql.exec<{ m: number | null }>('SELECT MIN(sort) AS m FROM notebook_items').toArray()[0]?.m ?? 10);
+    const now = Date.now();
+    this.ctx.storage.transactionSync(() => {
+      companies.forEach((company, index) => {
+        this.ctx.storage.sql.exec('INSERT INTO notebook_items(id, category, section, title, fields, sort, updated_at, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          crypto.randomUUID(), '公司資訊', '公司資訊', company.title, sealed[index], min - 40 + index * 10, now, 'Machi');
+      });
+    });
+    await this.ctx.storage.put('notebookCompanySeeded', true);
+  }
+
   /** 第一次使用且還沒有任何資料時，從原本的 Google 試算表匯入一次（之後完全在網站內編輯，不再讀試算表） */
   private async notebookSeedOnce(): Promise<string> {
     if (await this.ctx.storage.get<boolean>('notebookSeeded')) return '';
@@ -5191,6 +5210,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   private async notebookList(): Promise<ApiResult> {
     const seedError = await this.notebookSeedOnce();
+    await this.notebookCompanySeedOnce();
     await this.notebookEncryptAll();
     const items = await this.notebookRows();
     return { ok: true, action: 'getNotebook', items, categoryOrder: (await this.ctx.storage.get<string[]>('notebookCategoryOrder')) || [], seedError: items.length ? '' : seedError };

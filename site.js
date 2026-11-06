@@ -1170,17 +1170,11 @@
       const groups=[];for(const it of items){const key=(nb.cat==='all'?it.category+' / ':'')+(it.section||'未分區');let g=groups.find(x=>x.key===key);if(!g){g={key,list:[]};groups.push(g)}g.list.push(it)}
       return groups.map(g=>'<section class="nb-sec"><h3>'+esc(g.key)+'<small>'+g.list.length+'</small></h3><div class="nb-grid">'+g.list.map(nbCardHtml).join('')+'</div></section>').join('');
     }
-    /* 記事本最上方的公司資訊：每個欄位旁都有複製鍵（沿用 data-nb-copy） */
-    const NB_COMPANIES=[
-      {name:'凱曜網路股份有限公司',rows:[['電話','(02)27171277'],['傳真','(02)27171677'],['地址','台北市松山區復興北路231巷19號5樓'],['統編','53521839']]},
-      {name:'承揚股份有限公司',rows:[['電話','(02)87120868'],['傳真',''],['地址','台北市松山區復興北路231巷32號3樓'],['統編','85007237']]}
-    ];
-    const nbCompanyHtml=()=>'<div class="nb-co-wrap">'+NB_COMPANIES.map(c=>'<section class="nb-co"><h3>'+esc(c.name)+'<button type="button" class="nb-ic" data-nb-copy="'+esc(c.name)+'" title="複製公司名稱" aria-label="複製公司名稱">'+nbCopyIcon+'</button></h3><dl>'+c.rows.filter(r=>r[1]).map(r=>'<div class="nb-row"><dt>'+esc(r[0])+'</dt><dd><span class="nb-val">'+esc(r[1])+'</span><button type="button" class="nb-ic" data-nb-copy="'+esc(r[1])+'" title="複製" aria-label="複製'+esc(r[0])+'">'+nbCopyIcon+'</button></dd></div>').join('')+'</dl></section>').join('')+'</div>';
     function nbPaint(){
       const stage=$('stage'),nb=state.nb;if(state.view!=='notes'||!nb)return;
       const cats=nbCategories();
       stage.innerHTML='<div class="page notes-page"><div class="page-top"><div><h2 class="page-title">記事本</h2><p class="page-sub">設計部常用的工具、素材網站與廠商資訊。密碼預設遮住。</p></div><div class="wall-tools"><label class="search nb-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><input id="nbSearch" type="search" placeholder="搜尋名稱、網址、帳號…" value="'+esc(nb.q||'')+'" aria-label="搜尋記事本"></label><button type="button" class="btn primary" data-nb-new>＋ 新增</button></div></div>'
-        +nbCompanyHtml()+'<div class="nt-tabs" role="tablist"><button type="button" role="tab" class="nt-tab'+(nb.cat==='all'?' on':'')+'" data-nb-cat="all" draggable="false">全部<small>'+nb.items.length+'</small></button>'+cats.map(c=>'<button type="button" role="tab" draggable="true" title="拖曳可調整順序" class="nt-tab'+(nb.cat===c?' on':'')+'" data-nb-cat="'+esc(c)+'">'+esc(c)+'<small>'+nb.items.filter(i=>i.category===c).length+'</small></button>').join('')+'</div>'
+        +'<div class="nt-tabs" role="tablist"><button type="button" role="tab" class="nt-tab'+(nb.cat==='all'?' on':'')+'" data-nb-cat="all" draggable="false">全部<small>'+nb.items.length+'</small></button>'+cats.map(c=>'<button type="button" role="tab" draggable="true" title="拖曳可調整順序" class="nt-tab'+(nb.cat===c?' on':'')+'" data-nb-cat="'+esc(c)+'">'+esc(c)+'<small>'+nb.items.filter(i=>i.category===c).length+'</small></button>').join('')+'</div>'
         +'<div id="nbBody">'+nbBodyHtml()+'</div></div>';
     }
     const AS_DESIGNERS=['Machi','Anna','Amber','Leona','Noise'];

@@ -5573,8 +5573,8 @@ describe('記事本（notebook）', () => {
     const fetchSpy = mockSheets();
     const first = await api({ action: 'getNotebook' }, token) as { ok: boolean; items: Array<{ id: string; title: string; category: string; fields: Array<{ label: string; secret: boolean }> }> };
     expect(first.ok).toBe(true);
-    expect(first.items.map(i => i.title)).toEqual(['Tool A', 'Tool B', '廠商甲']);
-    expect(first.items[0].fields.find(f => f.label === '密碼')?.secret).toBe(true);
+    expect(first.items.map(i => i.title)).toEqual(['凱曜網路股份有限公司', '承揚股份有限公司', 'Tool A', 'Tool B', '廠商甲']);
+    expect(first.items[2].fields.find(f => f.label === '密碼')?.secret).toBe(true);
     const calls = fetchSpy.mock.calls.length;
     await api({ action: 'getNotebook' }, token);
     expect(fetchSpy.mock.calls.length).toBe(calls);
@@ -5588,7 +5588,7 @@ describe('記事本（notebook）', () => {
     expect(edited.items.find(i => i.id === mine.id)?.title).toBe('新工具 2');
 
     const moved = await api({ action: 'moveNotebookItem', id: edited.items[0].id, dir: 1 }, token) as { items: Array<{ id: string }> };
-    expect(moved.items).toHaveLength(4);
+    expect(moved.items).toHaveLength(6);
 
     const removed = await api({ action: 'deleteNotebookItem', id: mine.id }, token) as { items: Array<{ id: string }> };
     expect(removed.items.find(i => i.id === mine.id)).toBeUndefined();
