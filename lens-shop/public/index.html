@@ -160,7 +160,7 @@ function viewShop(){
   <button data-add="${i.no}" ${st.set?.closed?'disabled':''}>加入</button></div>`).join('')||'<p style="padding:14px" class="muted">沒有符合的商品</p>'}</div>
  ${list.length>st.shown?`<p style="text-align:center"><button class="sec" id="more">再顯示更多（還有 ${list.length-st.shown} 項）</button></p>`:''}`;
  api('/orders-public').then(d=>{const e=$('#ocnt');if(e)e.textContent=d.count}).catch(()=>{});
- $('#q').oninput=e=>{st.q=e.target.value;st.shown=60;const p=e.target.selectionStart;viewShop();const n=$('#q');n.focus();n.setSelectionRange(p,p)};
+ imeInput($('#q'),e=>{st.q=e.target.value;st.shown=60;const p=e.target.selectionStart;viewShop();const n=$('#q');n.focus();n.setSelectionRange(p,p)});
  document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{st.brand=c.dataset.b;st.shown=60;viewShop()});
  document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>addDialog(+b.dataset.add));
  const m=$('#more');if(m)m.onclick=()=>{st.shown+=120;viewShop()};
@@ -256,7 +256,7 @@ async function viewMine(){
  ${mine.length?`<div class="card"><p class="muted">這台瀏覽器下過的訂單（截止前可編輯）：</p>${mine.map(m=>`<p><a href="/order/${m.token}">訂單 ${m.id}（查看／修改）</a></p>`).join('')}</div>`:''}
  <div class="card" style="margin-top:12px"><b>找回我的訂單</b><p class="muted">在別台電腦或清除過瀏覽器？輸入下單時的 Email，系統會把修改連結寄給您。</p>
  <div class="tools"><input id="rec" type="email" placeholder="Email" value="${esc(st.who.email||'')}"><button id="recb">寄給我</button></div></div>`;
- $('#oq').oninput=e=>{st.oq=e.target.value;const p=e.target.selectionStart;viewMine().then(()=>{const n=$('#oq');n.focus();n.setSelectionRange(p,p)})};
+ imeInput($('#oq'),e=>{st.oq=e.target.value;const p=e.target.selectionStart;viewMine().then(()=>{const n=$('#oq');n.focus();n.setSelectionRange(p,p)})});
  $('#recb').onclick=async()=>{const email=$('#rec').value.trim();if(!email)return;await api('/recover',{method:'POST',json:{email}});alert('若此 Email 有訂單，連結已寄出，請查收信箱。')}}
 
 // ───── 促銷／期間限定／規格 ─────
@@ -287,9 +287,11 @@ function viewSpec(){
    return ri===0?`<th${at}>${esc(x)}</th>`:`<td${at}${c===0?' class="k"':''}>${esc(x).replace(/\n/g,'<br>')}</td>`}).join('')}</tr>`).join('');
   return`<div class="spec"><h3>${esc(head)}${extra?`<span class="sub"> ${esc(extra)}</span>`:''}</h3><table>${tr}</table></div>`}).join('');
  $('#app').innerHTML=`<h2>各品牌度數規格</h2><div class="tools"><input type="search" id="sq" placeholder="搜尋品牌或產品，例如：安視優、散光" value="${esc(st.sq||'')}"></div>${html||'<p class="muted">沒有符合的規格</p>'}`;
- $('#sq').oninput=e=>{st.sq=e.target.value;const p=e.target.selectionStart;viewSpec();const n=$('#sq');n.focus();n.setSelectionRange(p,p)}}
+ imeInput($('#sq'),e=>{st.sq=e.target.value;const p=e.target.selectionStart;viewSpec();const n=$('#sq');n.focus();n.setSelectionRange(p,p)})}
 
 // ───── 管理 ─────
+// 中文輸入法組字中不要重繪（會打斷選字）；組字結束才套用
+function imeInput(el,fn){let c=false;el.addEventListener('compositionstart',()=>{c=true});el.addEventListener('compositionend',e=>{c=false;fn(e)});el.oninput=e=>{if(!c&&!e.isComposing)fn(e)}}
 async function viewAdmin(){
  if(!st.admin){$('#app').innerHTML=`<h2>管理者登入</h2><div class="card"><div class="tools"><input id="pw" name="admin-pass" type="password" autocomplete="new-password" placeholder="管理者密碼"><button id="lg">登入</button></div></div>`;
   const go=async()=>{try{const d=await api('/admin/login',{method:'POST',json:{password:$('#pw').value}});st.admin=d.token;localStorage.lensAdmin=d.token;viewAdmin()}catch(e){alert(e.message)}};$('#lg').onclick=go;$('#pw').onkeydown=e=>{if(e.key==='Enter')go()};return}

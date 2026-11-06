@@ -1950,3 +1950,8 @@
 ## 2026-11-06 團購站後台密碼欄位無法輸入修正
 - 原因：`#pw` 的 `onkeydown=e=>e.key==='Enter'&&go()` 對非 Enter 鍵回傳 `false`，瀏覽器因此取消每個按鍵。改成 `{if(e.key==='Enter')go()}`；密碼欄位另加 `autocomplete="new-password"`。
 - 驗證：Chrome 真實按鍵輸入／刪除正常；已用 `wrangler deploy` 部署（Version 2b11d532），線上已生效。
+
+## 2026-11-06 團購站搜尋框支援中文輸入法
+- 原因：三個搜尋框（選購 `#q`、訂單列表 `#oq`、規格表 `#sq`）每個 `input` 事件都重繪畫面再重新聚焦，注音／拼音組字會被打斷。
+- 修法：新增 `imeInput()`，組字中（`compositionstart`～`compositionend`、`isComposing`）不重繪，選字完成才套用一次；一般英數輸入不受影響。注意 `compositionstart/end` 要用 `addEventListener`，沒有 `on…` 屬性。
+- 驗證：腳本語法檢查；以模擬組字事件測試（組字中 0 次、結束 1 次、一般輸入即時）。尚未用真實輸入法在線上實測。
