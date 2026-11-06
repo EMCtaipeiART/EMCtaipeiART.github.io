@@ -75,8 +75,8 @@ async function handle(req, env) {
   const url = new URL(req.url); const path = url.pathname; const method = req.method;
 
   if (path === '/api/catalog' && method === 'GET') {
-    const [cat, s] = await Promise.all([getCatalog(env), getSettings(env)]);
-    return json({ catalog: cat, settings: { shopName: s.shopName, deadline: s.deadline, closed: isClosed(s), bankName: s.bankName, bankAccount: s.bankAccount, accountName: s.accountName, notes: s.notes } },
+    const [cat, s, pimgs] = await Promise.all([getCatalog(env), getSettings(env), getKV(env, 'pimgs', {})]);
+    return json({ catalog: cat, pimgs, settings: { shopName: s.shopName, deadline: s.deadline, closed: isClosed(s), bankName: s.bankName, bankAccount: s.bankAccount, accountName: s.accountName, notes: s.notes } },
       200, { 'cache-control': 'public, max-age=30' });
   }
   if (path.startsWith('/api/img/') && method === 'GET') {
@@ -155,11 +155,32 @@ async function handle(req, env) {
         await setKV(env, 'settings', next); return json(next);
       }
     }
+    if (path === '/api/admin/product-image' && method === 'POST') {
+      const nos = (url.searchParams.get('nos') || '').split(',').map(Number).filter(Boolean).slice(0, 500);
+      if (!nos.length) return err('沒有指定商品');
+      const pimgs = await getKV(env, 'pimgs', {});
+      if (url.searchParams.get('clear')) { for (const n of nos) delete pimgs[n]; await setKV(env, 'pimgs', pimgs); return json({ ok: true }); }
+      const ct = req.headers.get('content-type') || '';
+      let src;
+      if (ct.includes('json')) {
+        const u = String((await req.json()).url || '').trim();
+        if (!/^https:\/\/[^\s]+$/i.test(u)) return err('圖片網址需為 https:// 開頭');
+        src = u;
+      } else {
+        const bytes = new Uint8Array(await req.arrayBuffer());
+        if (!/^image\/(jpeg|png|webp|gif)$/.test(ct) || bytes.length > 1.5e6 || !bytes.length) return err('圖片格式或大小不正確（上限 1.5MB）');
+        const key = 'p' + nos[0] + '_' + Date.now().toString(36);
+        await env.FILES.put('img/' + key, bytes, { httpMetadata: { contentType: ct } });
+        src = '/api/img/' + key;
+      }
+      for (const n of nos) pimgs[n] = src;
+      await setKV(env, 'pimgs', pimgs); return json({ ok: true, src });
+    }
     if (path === '/api/admin/upload' && method === 'POST') {
       const bytes = new Uint8Array(await req.arrayBuffer());
       if (bytes.length < 1000 || bytes[0] !== 0x50 || bytes[1] !== 0x4b) return err('這不是 .xlsx 檔案');
       let built; try { built = buildCatalog(bytes); } catch (e) { return err('讀取失敗：' + e.message); }
-      const old = await env.FILES.list({ prefix: 'img/' });
+      const old = await env.FILES.list({ prefix: 'img/lim' });
       if (old.objects.length) await env.FILES.delete(old.objects.map((o) => o.key));
       for (const im of built.images) await env.FILES.put('img/' + im.key, im.data, { httpMetadata: { contentType: im.mime } });
       await env.FILES.put('template.xlsx', bytes);

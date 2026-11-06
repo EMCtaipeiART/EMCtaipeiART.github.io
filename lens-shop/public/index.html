@@ -23,7 +23,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid #b9d0fb;border-color:v
 button,.btn{font:inherit;border:0;border-radius:8px;padding:8px 14px;background:var(--b);color:#fff;cursor:pointer;text-decoration:none;display:inline-block}
 button:hover{background:var(--bd)}button.sec{background:#e8ecf3;color:var(--t)}button.sec:hover{background:#dbe1ea}button.dng{background:var(--r)}button:disabled{opacity:.5;cursor:default}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.chip{padding:4px 11px;border-radius:16px;background:#fff;border:1px solid var(--l);cursor:pointer;font-size:13px}.chip.on{background:var(--b);color:#fff;border-color:var(--b)}
-.item{display:grid;grid-template-columns:48px 1fr auto auto;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--l)}
+.th{width:56px;height:56px;object-fit:contain;border-radius:8px;background:#f2f4f8;border:1px solid var(--l)}.th.ph{display:flex;align-items:center;justify-content:center;color:#aab;font-size:11px;text-align:center;overflow:hidden;line-height:1.2}
+.item{display:grid;grid-template-columns:44px 56px 1fr auto auto;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--l)}
 .item:last-child{border:0}.no{color:var(--m);font-size:13px}.nm{font-weight:500}.sub{color:var(--m);font-size:12.5px}
 .pr{text-align:right;white-space:nowrap}.pr b{font-size:17px;color:var(--r)}.pr s{color:var(--m);font-size:12px;display:block}
 .modalbg{position:fixed;inset:0;background:#0006;display:flex;align-items:center;justify-content:center;z-index:50;padding:12px}
@@ -45,7 +46,7 @@ table.t{border-collapse:collapse;width:100%;font-size:14px}table.t th,table.t td
 .spec td.k{font-weight:600;background:#fafbfd}.spec tr:hover td{background:#f6faff}
 .muted{color:var(--m)}.right{text-align:right}.sp{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .tag{font-size:11px;padding:1px 7px;border-radius:9px;background:#e8ecf3;margin-left:6px}.tag.x{background:#fdecec;color:var(--r)}
-@media(max-width:620px){.item{grid-template-columns:1fr auto}.item .no{display:none}.form2{grid-template-columns:1fr}}
+@media(max-width:620px){.item{grid-template-columns:56px 1fr auto}.item .no{display:none}.form2{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -55,7 +56,7 @@ table.t{border-collapse:collapse;width:100%;font-size:14px}table.t th,table.t td
 const $=(s,e=document)=>e.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const nt=n=>'NT$ '+Number(n).toLocaleString('en-US');
-const st={cat:null,set:null,cart:JSON.parse(localStorage.lensCart||'[]'),who:JSON.parse(localStorage.lensWho||'{}'),editTok:null,brand:'全部',q:'',admin:localStorage.lensAdmin||'',shown:60};
+const st={cat:null,set:null,cart:JSON.parse(localStorage.lensCart||'[]'),who:JSON.parse(localStorage.lensWho||'{}'),editTok:null,brand:'全部',q:'',admin:localStorage.lensAdmin||'',shown:60,pimgs:{}};
 const saveCart=()=>{localStorage.lensCart=JSON.stringify(st.cart);renderNav()};
 async function api(p,o={}){const h={...(o.headers||{})};if(o.admin)h.authorization='Bearer '+st.admin;if(o.json){h['content-type']='application/json';o.body=JSON.stringify(o.json)}
  const r=await fetch('/api'+p,{...o,headers:h});if(o.raw&&r.ok)return r;let d={};try{d=await r.json()}catch{}if(!r.ok){if(r.status===401&&o.admin){st.admin='';localStorage.removeItem('lensAdmin')}throw new Error(d.error||'連線失敗')}return d}
@@ -66,6 +67,7 @@ function dlText(){const s=st.set;if(!s)return'';if(s.closed)return'<b>已截止�
 function renderNav(){const r=(location.hash||'#/').split('/')[1]||'';const L=[['','選購'],['promo','促銷活動'],['limited','期間限定'],['spec','規格表'],['cart','購物車'],['mine','我的訂單'],['admin','管理']];
  $('#nav').innerHTML=L.map(([k,n])=>`<a href="#/${k}" class="${r===k||(k==='cart'&&r==='order')?'on':''}">${n}${k==='cart'&&st.cart.length?`<span class="n">${st.cart.reduce((s,l)=>s+l.qty,0)}</span>`:''}</a>`).join('');
  $('#dl').innerHTML=dlText();$('#logo').textContent=st.set?.shopName||'隱形眼鏡團購'}
+const thumb=i=>st.pimgs[i.no]?`<img class="th" loading="lazy" src="${esc(st.pimgs[i.no])}" alt="">`:`<div class="th ph">${esc(i.brand.slice(0,6))}</div>`;
 const items=()=>st.cat?.items||[];const byNo=n=>items().find(i=>i.no===n);
 
 // ───── 選購 ─────
@@ -77,7 +79,7 @@ function viewShop(){
  $('#app').innerHTML=`${closedBanner()}<h2>選購商品</h2>
  <div class="tools"><input type="search" id="q" placeholder="搜尋品牌、品名、編號…" value="${esc(st.q)}"></div>
  <div class="chips">${brands.map(b=>`<span class="chip ${b===st.brand?'on':''}" data-b="${esc(b)}">${esc(b)}</span>`).join('')}</div>
- <div class="card" style="padding:0">${list.slice(0,st.shown).map(i=>`<div class="item"><span class="no">#${i.no}</span>
+ <div class="card" style="padding:0">${list.slice(0,st.shown).map(i=>`<div class="item"><span class="no">#${i.no}</span>${thumb(i)}
   <div><div class="nm">${esc(i.name)}</div><div class="sub">${esc(i.brand)}${i.range?' ｜ '+esc(i.range):''}</div></div>
   <div class="pr"><b>${nt(i.price)}</b>${i.market?`<s>市價 ${nt(i.market)}</s>`:''}</div>
   <button data-add="${i.no}" ${st.set?.closed?'disabled':''}>加入</button></div>`).join('')||'<p style="padding:14px" class="muted">沒有符合的商品</p>'}</div>
@@ -191,11 +193,13 @@ async function viewAdmin(){
   <div class="card" style="margin-top:12px"><h3 style="margin-top:0">2. 團購設定</h3><div class="form2">${f('shopName','團購名稱')}${f('deadline','截止日期時間（台北時間）','datetime-local')}${f('bankName','銀行（含代碼）')}${f('bankAccount','匯款帳號')}${f('accountName','戶名')}${f('siteUrl','網站網址（信件連結用，可留空）')}</div>
   <label class="sub">信件／頁面附註</label><textarea data-k="notes" rows="2" style="width:100%">${esc(s.notes)}</textarea>
   <p><label><input type="checkbox" id="closed" ${s.closed?'checked':''}> 手動結單（勾選後同事無法再下單／修改）</label></p><button id="sv">儲存設定</button></div>
+  <div class="card" style="margin-top:12px"><h3 style="margin-top:0">4. 商品圖片</h3><p class="muted">選品牌後可逐項上傳圖片或貼 https 圖片網址；也能一次套用到整個品牌。圖片會自動縮小。</p><div id="pimgbox"></div></div>
   <div class="card" style="margin-top:12px"><div class="sp"><h3 style="margin:0">3. 訂單（${o.count} 筆有效，合計 ${nt(o.sum)}）</h3><button id="ex">一鍵下載彙整 Excel</button></div>
   <p class="muted">下載檔 = 原上傳的 Excel，只把訂單填入「填寫單1」（超過會接續填寫單2～4），原本的公式不會被覆蓋。</p>
   <table class="t"><thead><tr><th>編號</th><th>姓名／Email</th><th>內容</th><th class="num">金額</th><th></th></tr></thead><tbody>${o.orders.map(x=>`<tr style="${x.status==='cancelled'?'opacity:.5':''}"><td>${x.id}${x.status==='cancelled'?'<span class="tag x">取消</span>':''}</td><td>${esc(x.name)}<div class="sub">${esc(x.email)}</div></td>
    <td class="sub">${x.items.map(l=>`#${l.no} ${esc(l.name)} ${esc(pw(l))} ×${l.qty}`).join('<br>')}</td><td class="num">${nt(x.total)}</td><td><button class="sec" data-del="${x.id}">刪除</button></td></tr>`).join('')||'<tr><td colspan=5 class="muted">還沒有訂單</td></tr>'}</tbody></table>
   <h3>商品彙總（供向廠商叫貨）</h3><table class="t"><thead><tr><th>編號</th><th>品項</th><th class="num">總盒數</th><th class="num">金額</th></tr></thead><tbody>${o.tally.map(t=>`<tr><td>${t.no}</td><td>${esc(t.brand)} ${esc(t.name)}</td><td class="num">${t.qty}</td><td class="num">${nt(t.qty*t.price)}</td></tr>`).join('')}</tbody></table></div>`;
+  pimgUI();
   $('#lo').onclick=()=>{st.admin='';localStorage.removeItem('lensAdmin');viewAdmin()};
   $('#up').onclick=async()=>{const f=$('#xf').files[0];if(!f)return alert('請先選擇檔案');$('#upm').textContent='上傳解析中…';try{const d=await api('/admin/upload',{method:'POST',admin:1,body:f});$('#upm').textContent=`✔ 已更新：${d.items} 項商品、${d.limited} 張限定卡、規格表 ${d.specRows} 列`;st.cat=null;load()}catch(e){$('#upm').textContent='✘ '+e.message}};
   $('#sv').onclick=async()=>{const b={closed:$('#closed').checked};document.querySelectorAll('[data-k]').forEach(i=>b[i.dataset.k]=i.value);await api('/admin/settings',{method:'PUT',admin:1,json:b});toast('已儲存');load()};
@@ -203,11 +207,22 @@ async function viewAdmin(){
   document.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{if(confirm('永久刪除訂單 '+b.dataset.del+'？')){await api('/admin/orders/'+b.dataset.del,{method:'DELETE',admin:1});viewAdmin()}});
  }catch(e){alert(e.message);if(!st.admin)viewAdmin()}}
 
+async function shrink(file){const im=await createImageBitmap(file);const k=Math.min(1,480/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);return await new Promise(r=>c.toBlob(r,'image/jpeg',.85))}
+async function setImg(nos,file,url){if(url)await api('/admin/product-image?nos='+nos.join(','),{method:'POST',admin:1,json:{url}});else{const b=await shrink(file);await api('/admin/product-image?nos='+nos.join(','),{method:'POST',admin:1,headers:{'content-type':'image/jpeg'},body:b})}}
+function pimgUI(){const box=$('#pimgbox');if(!box||!st.cat)return;const brands=[...new Set(items().map(i=>i.brand))];
+ box.innerHTML='<select id="pb">'+brands.map(b=>'<option>'+esc(b)+'</option>').join('')+'</select> <span id="pm" class="muted"></span><div id="pl"></div>';
+ const draw=()=>{const b=$('#pb').value,L=items().filter(i=>i.brand===b);
+  $('#pl').innerHTML='<div class="tools" style="margin-top:10px"><b>整個品牌（'+L.length+' 項）套用同一張：</b><input type="file" accept="image/*" id="ball"><input id="burl" placeholder="或貼 https 圖片網址" style="flex:1"><button id="bgo">套用</button></div><table class="t"><tbody>'+L.map(i=>'<tr><td style="width:64px">'+thumb(i)+'</td><td>#'+i.no+' '+esc(i.name)+'</td><td style="white-space:nowrap"><input type="file" accept="image/*" data-f="'+i.no+'" style="width:190px"> <input data-u="'+i.no+'" placeholder="圖片網址" style="width:150px"> <button class="sec" data-s="'+i.no+'">儲存</button>'+(st.pimgs[i.no]?' <button class="sec" data-c="'+i.no+'">清除</button>':'')+'</td></tr>').join('')+'</tbody></table>';
+  const run=async(nos,f,u)=>{if(!f&&!u)return alert('請選擇圖片或貼網址');$('#pm').textContent='處理中…';try{await setImg(nos,f,u);await load();pimgUI();$('#pb').value=b;draw();$('#pm').textContent='✔ 已更新'}catch(e){$('#pm').textContent='✘ '+e.message}};
+  $('#bgo').onclick=()=>run(L.map(i=>i.no),$('#ball').files[0],$('#burl').value.trim());
+  document.querySelectorAll('[data-s]').forEach(x=>x.onclick=()=>run([+x.dataset.s],$('[data-f="'+x.dataset.s+'"]').files[0],$('[data-u="'+x.dataset.s+'"]').value.trim()));
+  document.querySelectorAll('[data-c]').forEach(x=>x.onclick=async()=>{await api('/admin/product-image?clear=1&nos='+x.dataset.c,{method:'POST',admin:1,json:{}});await load();pimgUI();$('#pb').value=b;draw()})};
+ $('#pb').onchange=draw;draw()}
 function route(){
  const h=(location.hash||'#/').split('/');renderNav();window.scrollTo(0,0);
  if(h[1]==='order')return h[2]&&viewOrder(h[2]);({'':viewShop,promo:viewPromo,limited:viewLimited,spec:viewSpec,cart:viewCart,mine:viewMine,admin:viewAdmin}[h[1]||'']||viewShop)();
 }
-async function load(){try{const d=await api('/catalog');st.cat=d.catalog;st.set=d.settings}catch(e){}route()}
+async function load(){try{const d=await api('/catalog');st.cat=d.catalog;st.set=d.settings;st.pimgs=d.pimgs||{}}catch(e){}route()}
 addEventListener('hashchange',route);load();setInterval(()=>{$('#dl').innerHTML=dlText()},60000);
 </script>
 </body>
