@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 10841,
+  "revision": 10842,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-06T06:19:26.760Z",
+  "updatedAt": "2026-11-06T06:19:38.149Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1170,7 +1170,7 @@
         {"案件編號":"26110032","修改次數":"0","建立日期":"2026/11/06 13:16:24","修改日期":"2026/11/06 13:16:24","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/06 13:16:24","圖片連結":"[{\"fileName\":\"261109_金士頓_UGC_帶著Kingston去流浪.png\",\"url\":\"https://lh3.googleusercontent.com/d/1q2dLT13aYgMymnIa3HZuZX-hJZBCdPku=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/06 13:16:24"},
         {"案件編號":"26100203","修改次數":"2","建立日期":"2026/11/06 13:20:42","修改日期":"2026-11-06","修改內容":"因應早上客戶提供透明殼，希望此批檔案也可以附上透明殼，再請協助，感恩","修改內容連結":"","修改人":"吳冠賢","確認修正日":"","待修改圖片":""},
         {"案件編號":"26110001","修改次數":"2","建立日期":"2026/11/06 13:21:10","修改日期":"2026-11-06","修改內容":"因應早上客戶提供透明殼，希望此批檔案也可以附上透明殼，再請協助，感恩","修改內容連結":"","修改人":"吳冠賢","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"soundcore_D1105_SEA_1080x1920_TW_22s_9_16_1.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1v9UiE7_obY5CdlubZuXdtvsUMnROpkrj=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/06 14:11:07"},
-        {"案件編號":"26110043","修改次數":"0","建立日期":"2026/11/06 14:19:26","修改日期":"2026/11/06 14:19:26","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/06 14:19:26","圖片連結":"[{\"fileName\":\"261106_Momo 雙11大促_CPAS_Liberty 5 Pro Max_情境.png\",\"url\":\"https://lh3.googleusercontent.com/d/17yWB7EP9YH6CEtdkWW8qTo7WyV9IEzJf=w1600\"},{\"fileName\":\"261106_Momo 雙11大促_CPAS_Liberty 5 Pro Max_電商.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Ja9_rBjIj5LAGzyFdUfoRW5An6QyqzwI=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/06 14:19:26"}
+        {"案件編號":"26110043","修改次數":"0","建立日期":"2026/11/06 14:19:26","修改日期":"2026/11/06 14:19:26","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/06 14:19:26","圖片連結":"[{\"fileName\":\"261106_Momo 雙11大促_CPAS_Liberty 5 Pro Max_情境.png\",\"url\":\"https://lh3.googleusercontent.com/d/17yWB7EP9YH6CEtdkWW8qTo7WyV9IEzJf=w1600\"},{\"fileName\":\"261106_Momo 雙11大促_CPAS_Liberty 5 Pro Max_電商.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Ja9_rBjIj5LAGzyFdUfoRW5An6QyqzwI=w1600\"},{\"fileName\":\"261106_Pchome雙11大促_CPAS_電商.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Vg3gREHb-44R37jVrr5QcLj3eNDwJ86s=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/06 14:19:38"}
       ]
     },
     "補充資料連結": {
