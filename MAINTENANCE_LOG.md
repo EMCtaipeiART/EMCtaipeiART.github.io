@@ -1937,3 +1937,6 @@
 
 ## 2026-11-06 團購站移除頂端倒數資訊
 - 頂端列左上的「截止：…（剩 X 天 X 小時）」隱藏（`header .dl`），截止資訊只留在首頁 hero 的倒數卡。
+
+## 2026-11-06 lens-shop 加入 CLAUDE.md 設定規範
+- 新增 `lens-shop/CLAUDE.md`：列出不可改的 Cloudflare 設定（wrangler.jsonc、secrets、D1 線上資料、後台上傳檔、DNS／Email）、可改範圍、部署與驗證方式、使用者決定的商業規則，供在其他電腦接手時遵守。
