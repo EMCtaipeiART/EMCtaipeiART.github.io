@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 10815,
+  "revision": 10816,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-06T04:27:09.899Z",
+  "updatedAt": "2026-11-06T04:28:03.358Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -2016,7 +2016,9 @@
         "案件摘要"
       ],
       "primaryKey": "案件編號",
-      "rows": []
+      "rows": [
+        {"案件編號":"26110041","申請人帳號":"riley.pan@emctaipei.com","申請人":"潘炬晨","申請時間":"2026-11-06T04:28:03.358Z","案件摘要":"soundcore_soundcore_PChome_雙11大促_CPAS廣告素材新增_電商*2、情境*1｜Leona｜未開始"}
+      ]
     },
     "短連結": {
       "headers": [
