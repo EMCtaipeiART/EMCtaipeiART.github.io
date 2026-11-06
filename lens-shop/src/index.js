@@ -78,7 +78,7 @@ async function sendMail(env, to, subject, html, text) {
 async function mailOrder(env, req, order, kind) {
   const s = await getSettings(env);
   const base = s.siteUrl || env.SITE_URL || new URL(req.url).origin;
-  const m = orderMail({ order: pubOrder(order), settings: s, link: `${base}/#/order/${order.token}`, kind });
+  const m = orderMail({ order: pubOrder(order), settings: s, link: `${base}/order/${order.token}`, kind });
   return sendMail(env, order.email, m.subject, m.html, m.text);
 }
 
@@ -168,7 +168,7 @@ async function handle(req, env) {
       const rs = await env.DB.prepare("SELECT * FROM orders WHERE email=? AND status='active' ORDER BY created_at").bind(email).all();
       if (rs.results.length) {
         const s = await getSettings(env); const base = s.siteUrl || env.SITE_URL || url.origin;
-        const links = rs.results.map((o) => `${base}/#/order/${o.token}`);
+        const links = rs.results.map((o) => `${base}/order/${o.token}`);
         await sendMail(env, email, `【${s.shopName}】您的訂單修改連結`,
           `<p>您好，以下是您的訂單連結（可查看／修改，直到截止）：</p><ul>${rs.results.map((o, i) => `<li>訂單 ${o.id}（NT$ ${o.total.toLocaleString('en-US')}）：<a href="${links[i]}">${links[i]}</a></li>`).join('')}</ul><p style="color:#999;font-size:12px">${SYSTEM_NOTE}</p>`,
           rs.results.map((o, i) => `訂單 ${o.id}：${links[i]}`).join('\n') + '\n\n' + SYSTEM_NOTE);

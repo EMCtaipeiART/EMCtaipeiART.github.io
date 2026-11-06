@@ -1930,3 +1930,7 @@
 
 ## 2026-11-06 團購站倒數卡加日期
 - 首頁 hero 的倒數卡改為：標題「團購截止時間」、大字完整日期（年月日＋週幾）與時間、「距離截止還有」＋天／小時／分鐘方塊。視窗寬度 1000px 以下卡片改排在文字下方。
+
+## 2026-11-06 團購站網址移除 #
+- 前端路由由 hash（`/#/cart`）改為 History API 路徑（`/cart`、`/promo`、`/spec`、`/mine`、`/admin`、`/order/<token>`）；`wrangler.jsonc` assets 加 `not_found_handling: single-page-application`，直接輸入路徑也回傳首頁殼。
+- 舊的 `#/…` 連結（含之前寄出的確認信）載入時自動轉成新路徑；新確認信連結改為 `/order/<token>`。站內 `<a href="/…">` 由全域 click 攔截做無重載換頁，`/api/` 開頭不攔截。
