@@ -2987,6 +2987,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const staffMember = this.pixelOfficeStaff().some(item => item.name === name);
     if (moved && text(state.status) === 'lunch' && pixelOfficeWorkStatus(Date.now()) === 'present') {
       state.status = 'present'; state.statusSource = staffMember ? 'manual' : 'auto'; delete state.activeSince; state.statusAt = Date.now();
+    } else if (moved && staffMember && text(state.status) === 'offwork' && state.statusSource !== 'calendar' && pixelOfficeStaffStatus(Date.now()) === 'offwork') {
+      // 下班也是同一套：走動解除下班（先套用加班），還在走動就重新計時，停下五分鐘回下班
+      state.status = 'overtime'; state.statusSource = 'manual'; delete state.activeSince; state.statusAt = Date.now();
     } else if (moved && staffMember && state.statusSource === 'manual' && ['present', 'overtime'].includes(text(state.status))) {
       state.statusAt = Date.now();
     }
