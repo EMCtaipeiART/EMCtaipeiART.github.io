@@ -52,15 +52,27 @@ function cleanLines(raw, catalog) {
 const totalOf = (lines) => lines.reduce((s, l) => s + l.price * l.qty, 0);
 const pubOrder = (o) => ({ id: o.id, name: o.name, email: o.email, items: JSON.parse(o.items), total: o.total, note: o.note, status: o.status, createdAt: o.created_at, updatedAt: o.updated_at });
 
+function parseFrom(f) { const m = /^(.*?)\s*<([^>]+)>\s*$/.exec(f || ''); return m ? { name: m[1].trim().replace(/^"|"$/g, ''), email: m[2] } : { name: '', email: (f || '').trim() }; }
 async function sendMail(env, to, subject, html, text) {
-  if (!env.RESEND_API_KEY) { console.log('[mail skipped: no RESEND_API_KEY]', to, subject); return 'skipped'; }
   try {
-    const r = await fetch('https://api.resend.com/emails', {
-      method: 'POST', headers: { authorization: 'Bearer ' + env.RESEND_API_KEY, 'content-type': 'application/json' },
-      body: JSON.stringify({ from: env.MAIL_FROM, to: [to], subject, html, text }),
-    });
-    if (!r.ok) { console.log('mail error', r.status, await r.text()); return 'failed'; }
-    return 'sent';
+    if (env.BREVO_API_KEY) {
+      const from = parseFrom(env.MAIL_FROM);
+      const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST', headers: { 'api-key': env.BREVO_API_KEY, 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({ sender: from.name ? from : { email: from.email }, to: [{ email: to }], subject, htmlContent: html, textContent: text }),
+      });
+      if (!r.ok) { console.log('brevo error', r.status, await r.text()); return 'failed'; }
+      return 'sent';
+    }
+    if (env.RESEND_API_KEY) {
+      const r = await fetch('https://api.resend.com/emails', {
+        method: 'POST', headers: { authorization: 'Bearer ' + env.RESEND_API_KEY, 'content-type': 'application/json' },
+        body: JSON.stringify({ from: env.MAIL_FROM, to: [to], subject, html, text }),
+      });
+      if (!r.ok) { console.log('mail error', r.status, await r.text()); return 'failed'; }
+      return 'sent';
+    }
+    console.log('[mail skipped: no mail key]', to, subject); return 'skipped';
   } catch (e) { console.log('mail exception', String(e)); return 'failed'; }
 }
 async function mailOrder(env, req, order, kind) {
