@@ -2981,8 +2981,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     }
     // 午餐時段只有電腦沒心跳（離線或閒置）才算用餐：人在遊戲裡走動就是回來了，解除用餐；之後心跳又停了，
     // 離線判斷（pixelOfficeApplyOffline）／心跳閒置判斷會再切回用餐，直到午休結束。
-    if (!('status' in patch) && text(state.status) === 'lunch' && ('x' in patch || 'y' in patch || 'fx' in patch || 'fy' in patch) && pixelOfficeWorkStatus(Date.now()) === 'present') {
-      state.status = 'present'; state.statusSource = 'auto'; delete state.activeSince; state.statusAt = Date.now();
+    // 企劃部／專案同仁沒有電腦心跳：走動解除用餐後記成「手動」，才不會被前端的時間規則馬上蓋回用餐；
+    // 只要還在走動就一直重新計時，停下來五分鐘（pixelOfficeApplyOffline）才回到時間規則（2026-11-06）。
+    const moved = !('status' in patch) && ('x' in patch || 'y' in patch || 'fx' in patch || 'fy' in patch);
+    const staffMember = this.pixelOfficeStaff().some(item => item.name === name);
+    if (moved && text(state.status) === 'lunch' && pixelOfficeWorkStatus(Date.now()) === 'present') {
+      state.status = 'present'; state.statusSource = staffMember ? 'manual' : 'auto'; delete state.activeSince; state.statusAt = Date.now();
+    } else if (moved && staffMember && state.statusSource === 'manual' && ['present', 'overtime'].includes(text(state.status))) {
+      state.statusAt = Date.now();
     }
     if ('x' in patch || 'y' in patch) {
       const x = Number(patch.x), y = Number(patch.y);
