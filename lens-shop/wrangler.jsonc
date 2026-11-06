@@ -1,0 +1,15 @@
+{
+  "name": "emc-lens-shop",
+  "main": "src/index.js",
+  "compatibility_date": "2025-01-01",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "shop.emc-art.com", "custom_domain": true }],
+  "assets": { "directory": "./public", "binding": "ASSETS", "not_found_handling": "single-page-application", "run_worker_first": ["/api/*"] },
+  "d1_databases": [{ "binding": "DB", "database_name": "emc-lens-shop", "database_id": "49d89c5b-6e38-4a75-b1ff-daaef7c3a147" }],
+  "vars": {
+    "MAIL_FROM": "EMC 隱眼團購小幫手 <shop@emc-art.com>",
+    "REPLY_TO": "machi.chen@emctaipei.com",
+    "SITE_URL": "https://shop.emc-art.com"
+  }
+}

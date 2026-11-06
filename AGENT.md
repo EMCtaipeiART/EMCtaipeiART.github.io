@@ -6697,3 +6697,13 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 發布內容包括22張角色素材、八道具向量、背景MP3及完整遊戲；排行榜維持本機紀錄。
 - 驗證：pre-push瀏覽器煙霧測試通過；線上遊戲／像素入口HTTP200、MP3 HTTP200；IAB正式站攻擊生命300→292。
 - 原C:/emc-site維持舊備份分支與測試工作內容；後續正式版修改請以發布工作目錄為準。
+
+### 2026-11-06 Asia/Taipei — 隱形眼鏡團購 /admin 密碼欄位無法輸入修正，原始碼納入 repo
+
+- 修改目的：`shop.emc-art.com/admin` 密碼欄位打字沒反應。原因是 `onkeydown=e=>e.key==='Enter'&&go()` 對非 Enter 鍵回傳 `false`，取消了按鍵。
+- 影響檔案：`lens-shop/public/index.html`（改成 `{if(e.key==='Enter')go()}`，密碼欄位加 `autocomplete="new-password"`）；新增 `lens-shop/`（由線上 source map 還原的 Worker 原始碼、wrangler.jsonc、README）。
+- 影響功能：團購站管理者登入。
+- 風險區塊：①首次部署漏了 `run_worker_first: ["/api/*"]`，`/admin`、`/cart` 短暫 404，已回滾並補上；②原始碼由 source map 還原，未與線上逐位元比對。
+- 已檢查／驗證方式：在 Chrome 以真實按鍵輸入／刪除成功；`/`、`/admin`、`/api/catalog` 皆 200；secrets 與 D1 綁定保留。
+- 部署狀態：已用 `wrangler deploy` 部署 Worker `emc-lens-shop`（Version 2b11d532）。
+- commit：見 git log
