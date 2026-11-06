@@ -85,6 +85,12 @@ async function handle(req, env) {
     return new Response(o.body, { headers: { 'content-type': o.httpMetadata?.contentType || 'image/jpeg', 'cache-control': 'public, max-age=86400' } });
   }
 
+  // 公開訂單列表（不含 Email 與修改連結）
+  if (path === '/api/orders-public' && method === 'GET') {
+    const rs = await env.DB.prepare("SELECT * FROM orders WHERE status='active' ORDER BY created_at DESC").all();
+    const orders = rs.results.map((o) => { const p = pubOrder(o); return { id: p.id, name: p.name, items: p.items.map((l) => ({ no: l.no, brand: l.brand, name: l.name, price: l.price, qty: l.qty, sph: l.sph, cyl: l.cyl, axis: l.axis, gift: l.gift })), total: p.total, updatedAt: p.updatedAt }; });
+    return json({ orders, count: orders.length, sum: orders.reduce((x, o) => x + o.total, 0) });
+  }
   // 同事：建立訂單
   if (path === '/api/orders' && method === 'POST') {
     const b = await req.json().catch(() => null); if (!b) return err('資料格式錯誤');

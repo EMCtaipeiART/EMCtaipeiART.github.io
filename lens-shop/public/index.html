@@ -64,7 +64,7 @@ function fmtD(d){if(!d)return'';const m=/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d
 function dlText(){const s=st.set;if(!s)return'';if(s.closed)return'<b>已截止／已結單</b>';if(!s.deadline)return'';
  const ms=Date.parse(s.deadline+(s.deadline.length<=16?':00+08:00':''))-Date.now();const d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5);
  return`截止：${fmtD(s.deadline)}（剩 <b>${d>0?d+' 天 ':''}${h} 小時</b>）`}
-function renderNav(){const r=(location.hash||'#/').split('/')[1]||'';const L=[['','選購'],['promo','促銷活動'],['limited','期間限定'],['spec','規格表'],['cart','購物車'],['mine','我的訂單'],['admin','管理']];
+function renderNav(){const r=(location.hash||'#/').split('/')[1]||'';const L=[['','選購'],['promo','促銷活動'],['limited','期間限定'],['spec','規格表'],['cart','購物車'],['mine','訂單列表'],['admin','管理']];
  $('#nav').innerHTML=L.map(([k,n])=>`<a href="#/${k}" class="${r===k||(k==='cart'&&r==='order')?'on':''}">${n}${k==='cart'&&st.cart.length?`<span class="n">${st.cart.reduce((s,l)=>s+l.qty,0)}</span>`:''}</a>`).join('');
  $('#dl').innerHTML=dlText();$('#logo').textContent=st.set?.shopName||'隱形眼鏡團購'}
 const thumb=i=>st.pimgs[i.no]?`<img class="th" loading="lazy" src="${esc(st.pimgs[i.no])}" alt="">`:`<div class="th ph">${esc(i.brand.slice(0,6))}</div>`;
@@ -146,10 +146,20 @@ async function viewOrder(tok){
   const e=$('#edit');if(e)e.onclick=()=>{st.cart=o.items.map(l=>({no:l.no,qty:l.qty,sph:l.sph,cyl:l.cyl,axis:l.axis,gift:l.gift}));st.editTok=tok;st.editId=o.id;st.who={name:o.name,email:o.email};st.note=o.note;saveCart();location.hash='#/cart'}
  }catch(e){$('#app').innerHTML=`<div class="note bad">${esc(e.message)}</div>`}}
 async function viewMine(){
- const mine=JSON.parse(localStorage.lensMine||'[]');
- $('#app').innerHTML=`<h2>我的訂單</h2>${mine.length?`<div class="card"><p class="muted">這台瀏覽器下過的訂單：</p>${mine.map(m=>`<p><a href="#/order/${m.token}">訂單 ${m.id}</a></p>`).join('')}</div>`:''}
- <div class="card" style="margin-top:12px"><b>找回訂單</b><p class="muted">在別台電腦或清除過瀏覽器？輸入下單時的 Email，系統會把訂單連結寄給您。</p>
+ $('#app').innerHTML='<h2>訂單列表</h2><p class="muted">載入中…</p>';
+ let d={orders:[],count:0,sum:0};try{d=await api('/orders-public')}catch(e){}
+ const mine=JSON.parse(localStorage.lensMine||'[]');const q=(st.oq||'').trim().toLowerCase();
+ const L=d.orders.filter(o=>!q||(o.name+o.items.map(l=>l.name+l.no).join(' ')).toLowerCase().includes(q));
+ $('#app').innerHTML=`<h2>訂單列表</h2><div class="note ok">目前共 <b>${d.count}</b> 筆訂單，合計 <b>${nt(d.sum)}</b></div>
+ <div class="tools"><input type="search" id="oq" placeholder="搜尋姓名或商品…" value="${esc(st.oq||'')}"></div>
+ ${L.map(o=>`<div class="card" style="margin-bottom:10px"><div class="sp"><b>${esc(o.name)}</b><span class="muted">訂單 ${o.id}｜${o.updatedAt.slice(0,16).replace('T',' ')}</span></div>
+ <table class="t"><tbody>${o.items.map(l=>`<tr><td>#${l.no} ${esc(l.brand)} ${esc(l.name)}<div class="sub">${esc(pw(l))}${l.gift?' 贈品：'+esc(l.gift):''}</div></td><td class="num">${nt(l.price)} × ${l.qty}</td><td class="num">${nt(l.price*l.qty)}</td></tr>`).join('')}</tbody></table>
+ <div class="total" style="margin:6px 0 0;font-size:16px">小計 <b>${nt(o.total)}</b></div></div>`).join('')||'<div class="card muted">沒有符合的訂單</div>'}
+ <h2 style="margin-top:26px">修改我的訂單</h2>
+ ${mine.length?`<div class="card"><p class="muted">這台瀏覽器下過的訂單（截止前可編輯）：</p>${mine.map(m=>`<p><a href="#/order/${m.token}">訂單 ${m.id}（查看／修改）</a></p>`).join('')}</div>`:''}
+ <div class="card" style="margin-top:12px"><b>找回我的訂單</b><p class="muted">在別台電腦或清除過瀏覽器？輸入下單時的 Email，系統會把修改連結寄給您。</p>
  <div class="tools"><input id="rec" type="email" placeholder="Email" value="${esc(st.who.email||'')}"><button id="recb">寄給我</button></div></div>`;
+ $('#oq').oninput=e=>{st.oq=e.target.value;const p=e.target.selectionStart;viewMine().then(()=>{const n=$('#oq');n.focus();n.setSelectionRange(p,p)})};
  $('#recb').onclick=async()=>{const email=$('#rec').value.trim();if(!email)return;await api('/recover',{method:'POST',json:{email}});alert('若此 Email 有訂單，連結已寄出，請查收信箱。')}}
 
 // ───── 促銷／期間限定／規格 ─────
