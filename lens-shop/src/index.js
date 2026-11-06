@@ -1,6 +1,6 @@
 import { buildCatalog } from './catalog.js';
 import { fillForms } from './xlsx.js';
-import { orderMail } from './mail.js';
+import { orderMail, SYSTEM_NOTE } from './mail.js';
 import { D1Files } from './store.js';
 
 const json = (o, status = 200, h = {}) => new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...h } });
@@ -59,7 +59,7 @@ async function sendMail(env, to, subject, html, text) {
       const from = parseFrom(env.MAIL_FROM);
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST', headers: { 'api-key': env.BREVO_API_KEY, 'content-type': 'application/json', accept: 'application/json' },
-        body: JSON.stringify({ sender: from.name ? from : { email: from.email }, to: [{ email: to }], subject, htmlContent: html, textContent: text }),
+        body: JSON.stringify({ sender: from.name ? from : { email: from.email }, replyTo: { email: env.REPLY_TO || from.email }, to: [{ email: to }], subject, htmlContent: html, textContent: text }),
       });
       if (!r.ok) { console.log('brevo error', r.status, await r.text()); return 'failed'; }
       return 'sent';
@@ -148,8 +148,8 @@ async function handle(req, env) {
         const s = await getSettings(env); const base = s.siteUrl || env.SITE_URL || url.origin;
         const links = rs.results.map((o) => `${base}/#/order/${o.token}`);
         await sendMail(env, email, `【${s.shopName}】您的訂單修改連結`,
-          `<p>您好，以下是您的訂單連結（可查看／修改，直到截止）：</p><ul>${rs.results.map((o, i) => `<li>訂單 ${o.id}（NT$ ${o.total.toLocaleString('en-US')}）：<a href="${links[i]}">${links[i]}</a></li>`).join('')}</ul>`,
-          rs.results.map((o, i) => `訂單 ${o.id}：${links[i]}`).join('\n'));
+          `<p>您好，以下是您的訂單連結（可查看／修改，直到截止）：</p><ul>${rs.results.map((o, i) => `<li>訂單 ${o.id}（NT$ ${o.total.toLocaleString('en-US')}）：<a href="${links[i]}">${links[i]}</a></li>`).join('')}</ul><p style="color:#999;font-size:12px">${SYSTEM_NOTE}</p>`,
+          rs.results.map((o, i) => `訂單 ${o.id}：${links[i]}`).join('\n') + '\n\n' + SYSTEM_NOTE);
       }
     }
     return json({ ok: true });

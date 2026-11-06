@@ -9,6 +9,8 @@ export function fmtDeadline(d) {
 }
 export const powerText = (l) => [l.sph && `度數 ${l.sph}`, l.cyl && `散光 ${l.cyl}`, l.axis && `角度 ${l.axis}`].filter(Boolean).join('／');
 
+export const SYSTEM_NOTE = '※ 此為系統自動發送的通知信，請勿直接回覆本信。如有問題請洽團購負責人。';
+
 export function orderMail({ order, settings, link, kind }) {
   const title = { new: '下單完成', update: '訂單已更新', cancel: '訂單已取消' }[kind];
   const shop = settings.shopName;
@@ -32,10 +34,10 @@ export function orderMail({ order, settings, link, kind }) {
   ${cancelled ? '' : `<div style="background:#f7f9fc;border-radius:8px;padding:12px 14px;margin:12px 0"><b>匯款資訊</b>${bank}<p style="margin:6px 0 0;color:#666;font-size:13px">匯款後請回覆此信或告知後 5 碼，以便核對。</p></div>
   <p><b>截止日期：${esc(fmtDeadline(settings.deadline))}</b>（截止前都可以修改訂單）</p>
   <p><a href="${esc(link)}" style="display:inline-block;background:#1c64f2;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">查看／修改我的訂單</a><br><span style="color:#888;font-size:12px">此連結為您個人專屬，請勿轉寄他人：${esc(link)}</span></p>`}
-  ${settings.notes ? `<p style="color:#666;font-size:13px;white-space:pre-line">${esc(settings.notes)}</p>` : ''}</div>`;
+  ${settings.notes ? `<p style="color:#666;font-size:13px;white-space:pre-line">${esc(settings.notes)}</p>` : ''}<hr style="border:0;border-top:1px solid #eee;margin:18px 0 8px"><p style="color:#999;font-size:12px">${SYSTEM_NOTE}</p></div>`;
   const text = [`${shop}｜${title}`, `訂單編號：${order.id}`, '',
     ...order.items.map((l) => `${l.no} ${l.brand} ${l.name} ${powerText(l)} ${nt(l.price)} x ${l.qty} = ${nt(l.price * l.qty)}`), '',
     `金額：${nt(order.total)}`, cancelled ? '' : `匯款：${settings.bankName} ${settings.bankAccount} ${settings.accountName}`,
-    cancelled ? '' : `截止日期：${fmtDeadline(settings.deadline)}`, cancelled ? '' : `修改訂單：${link}`].join('\n');
+    cancelled ? '' : `截止日期：${fmtDeadline(settings.deadline)}`, cancelled ? '' : `修改訂單：${link}`, '', SYSTEM_NOTE].join('\n');
   return { subject, html, text };
 }

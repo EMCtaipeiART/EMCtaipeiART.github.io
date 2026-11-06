@@ -1889,3 +1889,7 @@
 ## 2026-11-06 團購站商品外盒圖
 - 選購頁加商品縮圖（96×80）；後台「商品圖片」可上傳／貼網址／依品牌套用。
 - 用瀏覽器從品牌台灣官網（愛爾康、安視優、博士倫、酷柏、海昌）找外盒圖，規則在 `lens-shop/tools/box-rules.mjs`（品名正規表示式→圖片網址），`box-build.mjs` 產生寫入遠端 D1 的 SQL。已涵蓋約 103 項；彩色日拋逐色盒、日系／韓系品牌尚未處理。
+
+## 2026-11-06 團購站寄信改用 Brevo
+- `lens-shop` 寄信走 Brevo API（secret `BREVO_API_KEY`），寄件人 `EMC 隱眼團購小幫手 <shop@emc-art.com>`，`REPLY_TO` 為 machi.chen@emctaipei.com；信末加「系統自動信件請勿回覆」警語。emc-art.com 的 Brevo DNS（brevo-code、DKIM×2、DMARC）已在 Cloudflare 設好。
+- 已實測下單／取消信可收到。
