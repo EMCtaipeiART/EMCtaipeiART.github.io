@@ -2669,11 +2669,16 @@ function catBowlBuild(x, z, dog){   // 共用貓碗（飼料碗＋水碗）
   const food = mk(dog ? -.4 : -.3, 0x9b6a3c), water = mk(dog ? .4 : .3, 0x7fd0f2); g.userData.pick = {kind:'catbowl', id:DEF.id}; pickables.push(g); return {g, food, water, x, z};
 }
 function catBoxBuild(x, z, dog){   // 貓：紙箱；狗：藍色格紋大狗床（較大、有軟墊）
-  if (dog) {
+  if (dog) {   // 圓形軟墊狗床：外圈藍色厚邊＋奶油色軟墊＋一根骨頭
     const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
-    const wall = (w, h, d, px, py, pz, c) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({color:c})); m.position.set(px, py, pz); g.add(m); hull(g, w, h, d, px, py, pz, .02); };
-    wall(1.5, .1, 1.1, 0, .05, 0, 0x4a6fb5); wall(1.5, .3, .16, 0, .15, .47, 0x4a6fb5); wall(1.5, .22, .16, 0, .11, -.47, 0x4a6fb5); wall(.16, .3, 1.1, -.67, .15, 0, 0x4a6fb5); wall(.16, .22, 1.1, .67, .11, 0, 0x4a6fb5);
-    const ins = new THREE.Mesh(new THREE.BoxGeometry(1.2, .06, .8), new THREE.MeshLambertMaterial({color:0xf3e3c3})); ins.position.y = .13; g.add(ins); return g;
+    const cyl = (r0, r1, h, py, c) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r0, r1, h, 32), new THREE.MeshLambertMaterial({color:c})); m.position.y = py; m.userData.pickRoot = g; g.add(m); return m; };
+    cyl(.7, .66, .26, .13, 0x4a6fb5);
+    { const h = new THREE.Mesh(new THREE.CylinderGeometry(.72, .68, .3, 32), outlineMat); h.position.y = .13; h.layers.set(HULL_LAYER); g.add(h); }
+    cyl(.52, .52, .05, .27, 0xf3e3c3);
+    const bone = (px, pz) => { const m = new THREE.Mesh(new THREE.SphereGeometry(.07, 10, 8), new THREE.MeshLambertMaterial({color:0xffffff})); m.position.set(px, .34, pz); g.add(m); };
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(.34, .06, .07), new THREE.MeshLambertMaterial({color:0xffffff})); bar.position.set(.02, .33, .08); bar.rotation.y = -.5; g.add(bar);
+    bone(-.14, .17); bone(-.14, .05); bone(.18, .11); bone(.18, -.01);
+    return g;
   }
   const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
   const wall = (w, h, d, px, py, pz) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({color:0xc58b4a})); m.position.set(px, py, pz); g.add(m); hull(g, w, h, d, px, py, pz, .02); };
@@ -2694,7 +2699,7 @@ function catInit(){
   const fitsBox = (x, z) => !blocked(x, z) && !rects.some(([a, b, c, d]) => x + (DOG ? .9 : .65) > a && x - (DOG ? .9 : .65) < c && z + (DOG ? .7 : .55) > b && z - (DOG ? .7 : .55) < d) && !(Math.abs(x - bw[0]) < 1.5 && Math.abs(z - bw[1]) < 1.1) && petSites.every(q => Math.hypot(q[0] - x, q[1] - z) > 2.6);
   const boxCands = []; for (let gx = f.x - 10 + (DEF.floor === 4 ? 12 : DOG ? 7 : 0); gx <= f.x + 1 + (DEF.floor === 4 ? 9 : DOG ? 0 : 0); gx += .5) for (let gz = f.z + 1.4; gz <= f.z + (DEF.floor === 4 ? (DOG ? 9 : 12) : DOG ? 11 : 5); gz += .5) boxCands.push([gx, gz, (DEF.floor === 4 || DOG ? Math.hypot(gx - bw[0], gz - (bw[1] + 3)) : Math.hypot(gx - (f.x - 5.6), gz - (f.z + 2.4)))]);
   const bx = boxCands.sort((p, q) => p[2] - q[2]).find(c => fitsBox(c[0], c[1])) || [f.x - 6.7, f.z + 1.6];
-  petSites.push([bw[0], bw[1]], [bx[0], bx[1]]); catBowl = catBowlBuild(bw[0], bw[1], DOG); const box = catBoxBuild(bx[0], bx[1], DOG); rects.push(DOG ? [bx[0] - .75, bx[1] - .55, bx[0] + .75, bx[1] + .55] : [bx[0] - .5, bx[1] - .4, bx[0] + .5, bx[1] + .4]);
+  petSites.push([bw[0], bw[1]], [bx[0], bx[1]]); catBowl = catBowlBuild(bw[0], bw[1], DOG); const box = catBoxBuild(bx[0], bx[1], DOG); rects.push(DOG ? [bx[0] - .72, bx[1] - .72, bx[0] + .72, bx[1] + .72] : [bx[0] - .5, bx[1] - .4, bx[0] + .5, bx[1] + .4]);
   const owned = new Set(); for (const c of Object.values(chars)) { const st = c.home && stationOf(c); if (st && st.cell) owned.add(st.cell); }
   const x5 = (FX4 - 100) * U, onFl = x => (x < x5) === (DEF.floor === 5), sortXZ = (a, b) => a.x - b.x || a.z - b.z;
   const desks = deskCells.filter(k => onFl(k.x) && !owned.has(k)).sort(sortXZ), chairs = chairSeats.filter(s => !s.kind && onFl(s.x) && s.z > (DEF.floor === 5 ? 300 : 380) * U && s.z < (DEF.floor === 5 ? 1040 : 1540) * U && !Object.values(chars).some(c => c.home && Math.hypot(c.home.x - s.x, c.home.z - s.z) < .6)).sort(sortXZ);
