@@ -50,7 +50,7 @@ function cleanLines(raw, catalog) {
   });
 }
 const totalOf = (lines) => lines.reduce((s, l) => s + l.price * l.qty, 0);
-const pubOrder = (o) => ({ id: o.id, name: o.name, email: o.email, items: JSON.parse(o.items), total: o.total, note: o.note, status: o.status, createdAt: o.created_at, updatedAt: o.updated_at });
+const pubOrder = (o) => ({ id: o.id, name: o.name, email: o.email, items: JSON.parse(o.items), total: o.total, note: o.note, status: o.status, createdAt: o.created_at, updatedAt: o.updated_at, pay: o.pay_at ? { last5: o.pay_last5 || '', at: o.pay_at, hasImg: !!o.pay_img } : null });
 
 function parseFrom(f) { const m = /^(.*?)\s*<([^>]+)>\s*$/.exec(f || ''); return m ? { name: m[1].trim().replace(/^"|"$/g, ''), email: m[2] } : { name: '', email: (f || '').trim() }; }
 async function sendMail(env, to, subject, html, text) {
@@ -100,7 +100,7 @@ async function handle(req, env) {
   // 公開訂單列表（不含 Email 與修改連結）
   if (path === '/api/orders-public' && method === 'GET') {
     const rs = await env.DB.prepare("SELECT * FROM orders WHERE status='active' ORDER BY created_at DESC").all();
-    const orders = rs.results.map((o) => { const p = pubOrder(o); return { id: p.id, name: p.name, items: p.items.map((l) => ({ no: l.no, brand: l.brand, name: l.name, price: l.price, qty: l.qty, sph: l.sph, cyl: l.cyl, axis: l.axis, gift: l.gift })), total: p.total, updatedAt: p.updatedAt }; });
+    const orders = rs.results.map((o) => { const p = pubOrder(o); return { id: p.id, name: p.name, items: p.items.map((l) => ({ no: l.no, brand: l.brand, name: l.name, price: l.price, qty: l.qty, sph: l.sph, cyl: l.cyl, axis: l.axis, gift: l.gift })), total: p.total, updatedAt: p.updatedAt, paid: !!p.pay }; });
     return json({ orders, count: orders.length, sum: orders.reduce((x, o) => x + o.total, 0) });
   }
   // 同事：建立訂單
@@ -118,6 +118,28 @@ async function handle(req, env) {
     return json({ order: pubOrder(o), token: o.token, mail });
   }
   let m;
+  if ((m = path.match(/^\/api\/orders\/([0-9a-f]{32})\/payment$/)) && method === 'POST') {
+    const o = await env.DB.prepare('SELECT * FROM orders WHERE token=?').bind(m[1]).first();
+    if (!o) return err('找不到訂單', 404);
+    if (o.status !== 'active') return err('此訂單已取消', 403);
+    const ct = req.headers.get('content-type') || '';
+    let last5 = o.pay_last5, img = o.pay_img;
+    if (ct.includes('json')) {
+      const b = await req.json().catch(() => ({})); const v = String(b.last5 || '').trim();
+      if (v && !/^\d{5}$/.test(v)) return err('後五碼需為 5 位數字');
+      if (v) last5 = v;
+    } else {
+      const bytes = new Uint8Array(await req.arrayBuffer());
+      if (!/^image\/(jpeg|png|webp)$/.test(ct) || !bytes.length || bytes.length > 1.5e6) return err('截圖格式或大小不正確（上限 1.5MB）');
+      const key = 'p_' + o.id + '_' + Date.now().toString(36);
+      await new D1Files(env.DB).put('pay/' + key, bytes, { httpMetadata: { contentType: ct } });
+      img = key;
+    }
+    if (!last5 && !img) return err('請填寫匯款帳號後五碼，或上傳匯款截圖');
+    await env.DB.prepare('UPDATE orders SET pay_last5=?, pay_img=?, pay_at=COALESCE(pay_at, ?), updated_at=updated_at WHERE id=?').bind(last5 || null, img || null, now(), o.id).run();
+    const n = await env.DB.prepare('SELECT * FROM orders WHERE id=?').bind(o.id).first();
+    return json({ order: pubOrder(n) });
+  }
   if ((m = path.match(/^\/api\/orders\/([0-9a-f]{32})$/))) {
     const o = await env.DB.prepare('SELECT * FROM orders WHERE token=?').bind(m[1]).first();
     if (!o) return err('找不到訂單', 404);
@@ -194,6 +216,13 @@ async function handle(req, env) {
       for (const n of nos) pimgs[n] = src;
       await setKV(env, 'pimgs', pimgs); return json({ ok: true, src });
     }
+    if ((m = path.match(/^\/api\/admin\/payimg\/(p_[0-9A-F]+_[a-z0-9]+)$/)) && method === 'GET') {
+      const o = await new D1Files(env.DB).get('pay/' + m[1]); if (!o) return err('找不到圖片', 404);
+      return new Response(o.body, { headers: { 'content-type': o.httpMetadata?.contentType || 'image/jpeg', 'cache-control': 'private, max-age=300' } });
+    }
+    if ((m = path.match(/^\/api\/admin\/orders\/([0-9A-F]{8})\/payment$/)) && method === 'DELETE') {
+      await env.DB.prepare('UPDATE orders SET pay_last5=NULL, pay_img=NULL, pay_at=NULL WHERE id=?').bind(m[1]).run(); return json({ ok: true });
+    }
     if (path === '/api/admin/upload' && method === 'POST') {
       const bytes = new Uint8Array(await req.arrayBuffer());
       if (bytes.length < 1000 || bytes[0] !== 0x50 || bytes[1] !== 0x4b) return err('這不是 .xlsx 檔案');
@@ -207,7 +236,7 @@ async function handle(req, env) {
     }
     if (path === '/api/admin/orders' && method === 'GET') {
       const rs = await env.DB.prepare('SELECT * FROM orders ORDER BY created_at DESC').all();
-      const orders = rs.results.map(pubOrder);
+      const orders = rs.results.map((o) => ({ ...pubOrder(o), payImg: o.pay_img || null }));
       const tally = {};
       for (const o of orders) if (o.status === 'active') for (const l of o.items) { const t = (tally[l.no] ||= { no: l.no, brand: l.brand, name: l.name, price: l.price, qty: 0 }); t.qty += l.qty; }
       const active = orders.filter((o) => o.status === 'active');

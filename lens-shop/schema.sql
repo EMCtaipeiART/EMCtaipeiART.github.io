@@ -9,7 +9,10 @@ CREATE TABLE IF NOT EXISTS orders (
   note TEXT NOT NULL DEFAULT '',
   status TEXT NOT NULL DEFAULT 'active',
   created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  updated_at TEXT NOT NULL,
+  pay_last5 TEXT,
+  pay_img TEXT,
+  pay_at TEXT
 );
 CREATE INDEX IF NOT EXISTS orders_email ON orders(email);
 CREATE TABLE IF NOT EXISTS files (k TEXT NOT NULL, i INTEGER NOT NULL, mime TEXT, data BLOB NOT NULL, PRIMARY KEY (k, i));

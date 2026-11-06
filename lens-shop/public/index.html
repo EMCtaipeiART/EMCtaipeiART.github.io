@@ -44,6 +44,7 @@ table.t{border-collapse:collapse;width:100%;font-size:14px}table.t th,table.t td
 .spec table{border-collapse:collapse;font-size:13.5px;min-width:100%;background:#fff;border:1px solid var(--l)}
 .spec td,.spec th{border:1px solid var(--l);padding:6px 9px;vertical-align:middle}.spec th{background:#e8f0fe;color:var(--bd);white-space:nowrap}
 .spec td.k{font-weight:600;background:#fafbfd}.spec tr:hover td{background:#f6faff}
+.paid{background:#e3f7ec;color:#0b7a4b;border:1px solid #a9e2c4;border-radius:12px;padding:1px 9px;font-size:12px;font-weight:600;margin-left:8px}.unpaid{background:#f1f3f6;color:#7a8190;border-radius:12px;padding:1px 9px;font-size:12px;margin-left:8px}
 .muted{color:var(--m)}.right{text-align:right}.sp{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .tag{font-size:11px;padding:1px 7px;border-radius:9px;background:#e8ecf3;margin-left:6px}.tag.x{background:#fdecec;color:var(--r)}
 @media(max-width:620px){.item{grid-template-columns:96px 1fr auto}.item .no{display:none}.form2{grid-template-columns:1fr}}
@@ -133,7 +134,7 @@ function viewCart(){
 }
 function done(d){const o=d.order,mail={sent:'確認信已寄到 '+esc(o.email)+'，請查收（若沒看到請檢查垃圾郵件）。',skipped:'（系統尚未設定寄信，沒有寄出確認信，請截圖保存本頁。）',failed:'確認信寄送失敗，請截圖保存本頁，或到「我的訂單」查看。'}[d.mail]||'';
  $('#app').innerHTML=`<div class="note ok"><h2 style="margin-top:0">✔ 訂單已送出（編號 ${o.id}）</h2>${mail}</div><div class="card">${orderTable(o)}
- <p>${bankHtml()}</p><p class="muted">截止前可從確認信的專屬連結，或「我的訂單」回來修改。</p><div class="acts"><a class="btn" href="#/mine">我的訂單</a><a class="btn sec" href="#/">回首頁</a></div></div>`}
+ <p>${bankHtml()}</p><p class="muted">匯款完成後，請回到「訂單列表」下方「修改我的訂單」，或用確認信的專屬連結，回報匯款後 5 碼／截圖。截止前也可回來修改訂單。</p><div class="acts"><a class="btn" href="#/mine">我的訂單</a><a class="btn sec" href="#/">回首頁</a></div></div>`}
 function orderTable(o){return`<table class="t"><tbody>${o.items.map(l=>`<tr><td>#${l.no} ${esc(l.brand)} ${esc(l.name)}<div class="sub">${esc(pw(l))}${l.gift?' 贈品：'+esc(l.gift):''}</div></td><td class="num">${nt(l.price)} × ${l.qty}</td><td class="num">${nt(l.price*l.qty)}</td></tr>`).join('')}</tbody></table><div class="total">合計 <b>${nt(o.total)}</b></div>`}
 function bankHtml(){const s=st.set||{};return s.bankAccount?`<b>匯款資訊</b>：${esc(s.bankName)}　帳號 <b>${esc(s.bankAccount)}</b>　戶名 ${esc(s.accountName)}`:''}
 
@@ -142,9 +143,22 @@ async function viewOrder(tok){
  try{const d=await api('/orders/'+tok);const o=d.order;
   $('#app').innerHTML=`${d.closed?'<div class="note bad">已截止，無法修改。</div>':''}<h2>訂單 ${o.id} ${o.status==='cancelled'?'<span class="tag x">已取消</span>':''}</h2><div class="card">
   <p>${esc(o.name)}（${esc(o.email)}）｜下單 ${o.createdAt.slice(0,16).replace('T',' ')}${o.updatedAt!==o.createdAt?'｜最後修改 '+o.updatedAt.slice(0,16).replace('T',' '):''}</p>${orderTable(o)}<p>${bankHtml()}</p>
-  <div class="acts"><a class="btn sec" href="#/mine">返回</a>${!d.closed?'<button id="edit">編輯這筆訂單</button>':''}</div></div>`;
+  <div class="acts"><a class="btn sec" href="#/mine">返回</a>${!d.closed?'<button id="edit">編輯這筆訂單</button>':''}</div></div>${o.status==='active'?payCard(o):''}`;
+  bindPay(tok,o);
   const e=$('#edit');if(e)e.onclick=()=>{st.cart=o.items.map(l=>({no:l.no,qty:l.qty,sph:l.sph,cyl:l.cyl,axis:l.axis,gift:l.gift}));st.editTok=tok;st.editId=o.id;st.who={name:o.name,email:o.email};st.note=o.note;saveCart();location.hash='#/cart'}
  }catch(e){$('#app').innerHTML=`<div class="note bad">${esc(e.message)}</div>`}}
+function payCard(o){const p=o.pay;
+ return `<div class="card" style="margin-top:12px"><h3 style="margin-top:0">匯款回報 ${p?'<span class="paid">✔ 已付款</span>':'<span class="unpaid">未付款</span>'}</h3>
+ <p class="muted">${bankHtml()||'請依確認信中的帳號匯款。'}</p>
+ ${p?`<p>已回報：${p.last5?'帳號後五碼 <b>'+esc(p.last5)+'</b>':''}${p.last5&&p.hasImg?'、':''}${p.hasImg?'已上傳匯款截圖':''}（${p.at.slice(0,16).replace('T',' ')}）</p><p class="muted">需要補充或更正，可以再送一次。</p>`:'<p>匯款完成後，請在這裡回報帳號後 5 碼或上傳匯款截圖。</p>'}
+ <div class="form2"><input id="pay5" inputmode="numeric" maxlength="5" placeholder="匯款帳號後 5 碼" value="${esc(p?.last5||'')}"><input id="payimg" type="file" accept="image/*"></div>
+ <div class="acts"><button id="paygo">送出匯款回報</button></div></div>`}
+function bindPay(tok,o){const b=$('#paygo');if(!b)return;b.onclick=async()=>{const v=$('#pay5').value.trim(),f=$('#payimg').files[0];
+  if(!v&&!f)return alert('請填寫帳號後五碼，或上傳匯款截圖');if(v&&!/^\d{5}$/.test(v))return alert('後五碼需為 5 位數字');
+  b.disabled=true;b.textContent='送出中…';
+  try{if(v)await api('/orders/'+tok+'/payment',{method:'POST',json:{last5:v}});
+   if(f){const blob=await shrink(f,1400);await api('/orders/'+tok+'/payment',{method:'POST',headers:{'content-type':'image/jpeg'},body:blob})}
+   toast('已回報匯款，謝謝！');viewOrder(tok)}catch(e){alert(e.message);b.disabled=false;b.textContent='送出匯款回報'}}}
 async function viewMine(){
  $('#app').innerHTML='<h2>訂單列表</h2><p class="muted">載入中…</p>';
  let d={orders:[],count:0,sum:0};try{d=await api('/orders-public')}catch(e){}
@@ -152,7 +166,7 @@ async function viewMine(){
  const L=d.orders.filter(o=>!q||(o.name+o.items.map(l=>l.name+l.no).join(' ')).toLowerCase().includes(q));
  $('#app').innerHTML=`<h2>訂單列表</h2><div class="note ok">目前共 <b>${d.count}</b> 筆訂單，合計 <b>${nt(d.sum)}</b></div>
  <div class="tools"><input type="search" id="oq" placeholder="搜尋姓名或商品…" value="${esc(st.oq||'')}"></div>
- ${L.map(o=>`<div class="card" style="margin-bottom:10px"><div class="sp"><b>${esc(o.name)}</b><span class="muted">訂單 ${o.id}｜${o.updatedAt.slice(0,16).replace('T',' ')}</span></div>
+ ${L.map(o=>`<div class="card" style="margin-bottom:10px"><div class="sp"><b>${esc(o.name)}${o.paid?'<span class="paid">✔ 已付款</span>':'<span class="unpaid">未付款</span>'}</b><span class="muted">訂單 ${o.id}｜${o.updatedAt.slice(0,16).replace('T',' ')}</span></div>
  <table class="t"><tbody>${o.items.map(l=>`<tr><td>#${l.no} ${esc(l.brand)} ${esc(l.name)}<div class="sub">${esc(pw(l))}${l.gift?' 贈品：'+esc(l.gift):''}</div></td><td class="num">${nt(l.price)} × ${l.qty}</td><td class="num">${nt(l.price*l.qty)}</td></tr>`).join('')}</tbody></table>
  <div class="total" style="margin:6px 0 0;font-size:16px">小計 <b>${nt(o.total)}</b></div></div>`).join('')||'<div class="card muted">沒有符合的訂單</div>'}
  <h2 style="margin-top:26px">修改我的訂單</h2>
@@ -206,18 +220,20 @@ async function viewAdmin(){
   <div class="card" style="margin-top:12px"><h3 style="margin-top:0">4. 商品圖片</h3><p class="muted">選品牌後可逐項上傳圖片或貼 https 圖片網址；也能一次套用到整個品牌。圖片會自動縮小。</p><div id="pimgbox"></div></div>
   <div class="card" style="margin-top:12px"><div class="sp"><h3 style="margin:0">3. 訂單（${o.count} 筆有效，合計 ${nt(o.sum)}）</h3><button id="ex">一鍵下載彙整 Excel</button></div>
   <p class="muted">下載檔 = 原上傳的 Excel，只把訂單填入「填寫單1」（超過會接續填寫單2～4），原本的公式不會被覆蓋。</p>
-  <table class="t"><thead><tr><th>編號</th><th>姓名／Email</th><th>內容</th><th class="num">金額</th><th></th></tr></thead><tbody>${o.orders.map(x=>`<tr style="${x.status==='cancelled'?'opacity:.5':''}"><td>${x.id}${x.status==='cancelled'?'<span class="tag x">取消</span>':''}</td><td>${esc(x.name)}<div class="sub">${esc(x.email)}</div></td>
-   <td class="sub">${x.items.map(l=>`#${l.no} ${esc(l.name)} ${esc(pw(l))} ×${l.qty}`).join('<br>')}</td><td class="num">${nt(x.total)}</td><td><button class="sec" data-del="${x.id}">刪除</button></td></tr>`).join('')||'<tr><td colspan=5 class="muted">還沒有訂單</td></tr>'}</tbody></table>
+  <table class="t"><thead><tr><th>編號</th><th>姓名／Email</th><th>內容</th><th class="num">金額</th><th></th></tr></thead><tbody>${o.orders.map(x=>`<tr style="${x.status==='cancelled'?'opacity:.5':''}"><td>${x.id}${x.status==='cancelled'?'<span class="tag x">取消</span>':''}${x.pay?'<br><span class="paid" style="margin:0">✔ 已付款</span>':''}</td><td>${esc(x.name)}<div class="sub">${esc(x.email)}</div></td>
+   <td class="sub">${x.items.map(l=>`#${l.no} ${esc(l.name)} ${esc(pw(l))} ×${l.qty}`).join('<br>')}</td><td class="num">${nt(x.total)}${x.pay?`<div class="sub">後五碼 ${esc(x.pay.last5||'—')}${x.payImg?` <a href="#" data-pi="${x.payImg}">看截圖</a>`:''}<br><a href="#" data-rp="${x.id}">撤銷付款</a></div>`:''}</td><td><button class="sec" data-del="${x.id}">刪除</button></td></tr>`).join('')||'<tr><td colspan=5 class="muted">還沒有訂單</td></tr>'}</tbody></table>
   <h3>商品彙總（供向廠商叫貨）</h3><table class="t"><thead><tr><th>編號</th><th>品項</th><th class="num">總盒數</th><th class="num">金額</th></tr></thead><tbody>${o.tally.map(t=>`<tr><td>${t.no}</td><td>${esc(t.brand)} ${esc(t.name)}</td><td class="num">${t.qty}</td><td class="num">${nt(t.qty*t.price)}</td></tr>`).join('')}</tbody></table></div>`;
   pimgUI();
   $('#lo').onclick=()=>{st.admin='';localStorage.removeItem('lensAdmin');viewAdmin()};
   $('#up').onclick=async()=>{const f=$('#xf').files[0];if(!f)return alert('請先選擇檔案');$('#upm').textContent='上傳解析中…';try{const d=await api('/admin/upload',{method:'POST',admin:1,body:f});$('#upm').textContent=`✔ 已更新：${d.items} 項商品、${d.limited} 張限定卡、規格表 ${d.specRows} 列`;st.cat=null;load()}catch(e){$('#upm').textContent='✘ '+e.message}};
   $('#sv').onclick=async()=>{const b={closed:$('#closed').checked};document.querySelectorAll('[data-k]').forEach(i=>b[i.dataset.k]=i.value);await api('/admin/settings',{method:'PUT',admin:1,json:b});toast('已儲存');load()};
   $('#ex').onclick=async()=>{try{const r=await api('/admin/export',{admin:1,raw:1});const ov=+r.headers.get('x-overflow-rows');const bl=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download='團購訂單彙整_'+new Date().toISOString().slice(0,10)+'.xlsx';a.click();if(ov)alert('注意：有 '+ov+' 列超出填寫單1～4的容量，未寫入。')}catch(e){alert(e.message)}};
+  document.querySelectorAll('[data-pi]').forEach(a=>a.onclick=async e=>{e.preventDefault();const r=await api('/admin/payimg/'+a.dataset.pi,{admin:1,raw:1});window.open(URL.createObjectURL(await r.blob()))});
+  document.querySelectorAll('[data-rp]').forEach(a=>a.onclick=async e=>{e.preventDefault();if(confirm('撤銷訂單 '+a.dataset.rp+' 的付款標記？')){await api('/admin/orders/'+a.dataset.rp+'/payment',{method:'DELETE',admin:1});viewAdmin()}});
   document.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{if(confirm('永久刪除訂單 '+b.dataset.del+'？')){await api('/admin/orders/'+b.dataset.del,{method:'DELETE',admin:1});viewAdmin()}});
  }catch(e){alert(e.message);if(!st.admin)viewAdmin()}}
 
-async function shrink(file){const im=await createImageBitmap(file);const k=Math.min(1,480/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);return await new Promise(r=>c.toBlob(r,'image/jpeg',.85))}
+async function shrink(file,max=480){const im=await createImageBitmap(file);const k=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);return await new Promise(r=>c.toBlob(r,'image/jpeg',.8))}
 async function setImg(nos,file,url){if(url)await api('/admin/product-image?nos='+nos.join(','),{method:'POST',admin:1,json:{url}});else{const b=await shrink(file);await api('/admin/product-image?nos='+nos.join(','),{method:'POST',admin:1,headers:{'content-type':'image/jpeg'},body:b})}}
 function pimgUI(){const box=$('#pimgbox');if(!box||!st.cat)return;const brands=[...new Set(items().map(i=>i.brand))];
  box.innerHTML='<select id="pb">'+brands.map(b=>'<option>'+esc(b)+'</option>').join('')+'</select> <span id="pm" class="muted"></span><div id="pl"></div>';

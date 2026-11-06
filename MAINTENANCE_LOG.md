@@ -1893,3 +1893,6 @@
 ## 2026-11-06 團購站寄信改用 Brevo
 - `lens-shop` 寄信走 Brevo API（secret `BREVO_API_KEY`），寄件人 `EMC 隱眼團購小幫手 <shop@emc-art.com>`，`REPLY_TO` 為 machi.chen@emctaipei.com；信末加「系統自動信件請勿回覆」警語。emc-art.com 的 Brevo DNS（brevo-code、DKIM×2、DMARC）已在 Cloudflare 設好。
 - 已實測下單／取消信可收到。
+
+## 2026-11-06 團購站匯款回報
+- orders 加 `pay_last5/pay_img/pay_at` 欄位（已對線上 D1 執行 ALTER）；同事在訂單頁回報後五碼或上傳匯款截圖（用訂單專屬連結，截止後仍可回報），訂單列表顯示「已付款」徽章；後台可看後五碼／截圖、撤銷付款標記。確認信的匯款說明改為「回系統回報」。
