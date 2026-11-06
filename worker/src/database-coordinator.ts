@@ -2338,9 +2338,30 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     await this.ctx.storage.put('seed:陳雅筠', Date.now());
   }
 
+  /** 2026-11-06 一次性資料補登：謝榕（專案部）的角色已在角色工坊發佈，但還沒走完「建立你的角色」最後一步（頭像快照要本人登入才能送），
+   * 所以後端不認得她，點她的人物會出現「找不到這位同仁」。直接排進下一個空的同仁座位、狀態在座。 */
+  private async seedStaffRong(): Promise<void> {
+    if (await this.ctx.storage.get('seed:謝榕')) return;
+    this.ctx.storage.transactionSync(() => {
+      const sql = this.ctx.storage.sql, name = '謝榕';
+      const seat = this.pixelOfficeAssignSeat(name, 'poppy.hsieh@emctaipei.com');
+      if (seat < 0) return;
+      const existing = sql.exec<{ state: string }>('SELECT state FROM pixel_office_people WHERE name = ?', name).toArray()[0];
+      let state: Row = {};
+      try { state = existing ? JSON.parse(existing.state) as Row : {}; } catch { state = {}; }
+      if (!state.status) state.status = 'present';
+      const pos = PIXEL_OFFICE_STAFF_SEAT_POS[seat];
+      if (pos && state.x === undefined) { state.x = pos[0]; state.y = pos[1]; state.dir = 'down'; }
+      const version = Math.max(Date.now(), this.pixelOfficeVersion() + 1);
+      sql.exec('INSERT INTO pixel_office_people(name, state, photo, photo_version, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(name) DO UPDATE SET state = excluded.state, updated_at = excluded.updated_at', name, JSON.stringify(state), '', 0, version);
+    });
+    if (this.pixelOfficeStaff().some(item => item.name === '謝榕')) await this.ctx.storage.put('seed:謝榕', Date.now());
+  }
+
   async runPixelOfficeCalendarSync(nowMs = Date.now()): Promise<Row> {
     try { await this.seedStaffLanTing(); } catch { /* 下一分鐘再試 */ }
     try { await this.seedStaffYaYun(); } catch { /* 下一分鐘再試 */ }
+    try { await this.seedStaffRong(); } catch { /* 下一分鐘再試 */ }
     setPixelHours(await this.ctx.storage.get<PixelHours>('pixelHours'));
     setPixelAllWorkUntil(await this.ctx.storage.get<number>('pixelAllWorkUntil'));
     setPixelForceMode(await this.ctx.storage.get<string>('pixelForceMode'));
