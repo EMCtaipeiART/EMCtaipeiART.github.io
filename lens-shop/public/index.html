@@ -291,8 +291,8 @@ function viewSpec(){
 
 // ───── 管理 ─────
 async function viewAdmin(){
- if(!st.admin){$('#app').innerHTML=`<h2>管理者登入</h2><div class="card"><div class="tools"><input id="pw" type="password" placeholder="管理者密碼"><button id="lg">登入</button></div></div>`;
-  const go=async()=>{try{const d=await api('/admin/login',{method:'POST',json:{password:$('#pw').value}});st.admin=d.token;localStorage.lensAdmin=d.token;viewAdmin()}catch(e){alert(e.message)}};$('#lg').onclick=go;$('#pw').onkeydown=e=>e.key==='Enter'&&go();return}
+ if(!st.admin){$('#app').innerHTML=`<h2>管理者登入</h2><div class="card"><div class="tools"><input id="pw" name="admin-pass" type="password" autocomplete="new-password" placeholder="管理者密碼"><button id="lg">登入</button></div></div>`;
+  const go=async()=>{try{const d=await api('/admin/login',{method:'POST',json:{password:$('#pw').value}});st.admin=d.token;localStorage.lensAdmin=d.token;viewAdmin()}catch(e){alert(e.message)}};$('#lg').onclick=go;$('#pw').onkeydown=e=>{if(e.key==='Enter')go()};return}
  try{const [s,o]=await Promise.all([api('/admin/settings',{admin:1}),api('/admin/orders',{admin:1})]);
   const f=(k,l,t='text')=>`<label class="sub">${l}</label><input data-k="${k}" type="${t}" value="${esc(s[k])}" style="width:100%">`;
   $('#app').innerHTML=`<div class="sp"><h2>管理後台</h2><button class="sec" id="lo">登出</button></div>
