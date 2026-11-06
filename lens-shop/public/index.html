@@ -185,7 +185,10 @@ function bindPay(tok,o){const b=$('#paygo');if(!b)return;b.onclick=async()=>{con
 async function viewMine(){
  $('#app').innerHTML='<h2>訂單列表</h2><p class="muted">載入中…</p>';
  let d={orders:[],count:0,sum:0};try{d=await api('/orders-public')}catch(e){}
- const mine=JSON.parse(localStorage.lensMine||'[]');const q=(st.oq||'').trim().toLowerCase();
+ let mine=JSON.parse(localStorage.lensMine||'[]');
+ const chk=await Promise.all(mine.map(m=>api('/orders/'+m.token).then(r=>r.order.status==='active'?m:null,e=>/找不到/.test(e.message)?null:m)));
+ mine=chk.filter(Boolean);localStorage.lensMine=JSON.stringify(mine);
+ const q=(st.oq||'').trim().toLowerCase();
  const L=d.orders.filter(o=>!q||(o.name+o.items.map(l=>l.name+l.no).join(' ')).toLowerCase().includes(q));
  $('#app').innerHTML=`<h2>訂單列表</h2><div class="note ok">目前共 <b>${d.count}</b> 筆訂單，合計 <b>${nt(d.sum)}</b></div>
  <div class="tools"><input type="search" id="oq" placeholder="搜尋姓名或商品…" value="${esc(st.oq||'')}"></div>
