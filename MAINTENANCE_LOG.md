@@ -1857,3 +1857,6 @@
 
 ## 2026-11-06 修正「切換人物」按鈕對所有人顯示
 - 新按鈕樣式的 `display:flex!important` 蓋掉了 `hidden` 屬性，導致一般同仁也看得到；補上 `.hp-top button[hidden]{display:none!important}`，恢復只有管理者／Machi 看得到。
+
+## 2026-11-06 右上四顆按鈕換成 Codex 生成的像素圖示
+- 新圖示放 `pixel-plaza/assets/ui/hp-people|role|dex|close.png`（96px），按鈕圓框內改用背景圖（22px、pixelated），原細線 SVG 隱藏。
