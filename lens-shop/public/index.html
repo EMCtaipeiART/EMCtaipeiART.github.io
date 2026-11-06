@@ -208,7 +208,7 @@ function viewCart(){
  const co=$('#cancelo');if(co)co.onclick=async()=>{if(!confirm('確定取消整筆訂單？'))return;try{await api('/orders/'+st.editTok,{method:'DELETE'});st.cart=[];st.editTok=null;saveCart();toast('訂單已取消');location.hash='#/mine'}catch(e){alert(e.message)}};
 }
 function done(d){const o=d.order,mail={sent:'確認信已寄到 '+esc(o.email)+'，請查收（若沒看到請檢查垃圾郵件）。',skipped:'（系統尚未設定寄信，沒有寄出確認信，請截圖保存本頁。）',failed:'確認信寄送失敗，請截圖保存本頁，或到「我的訂單」查看。'}[d.mail]||'';
- $('#app').innerHTML=`<div class="note ok"><h2 style="margin-top:0">✔ 訂單已送出（編號 ${o.id}）</h2>${mail}</div><div class="card">${orderTable(o)}
+ $('#app').innerHTML=`${flowHtml([1,1])}<div class="note ok"><h2 style="margin-top:0">✔ 訂單已送出（編號 ${o.id}）</h2>${mail}</div><div class="card">${orderTable(o)}
  <p>${bankHtml()}</p><p class="muted">匯款完成後，請回到「訂單列表」下方「修改我的訂單」，或用確認信的專屬連結，回報匯款後 5 碼／截圖。截止前也可回來修改訂單。</p><div class="acts"><a class="btn" href="#/mine">我的訂單</a><a class="btn sec" href="#/">回首頁</a></div></div>`}
 function orderTable(o){return`<table class="t"><tbody>${o.items.map(l=>`<tr><td>#${l.no} ${esc(l.brand)} ${esc(l.name)}<div class="sub">${esc(pw(l))}${l.gift?' 贈品：'+esc(l.gift):''}</div></td><td class="num">${nt(l.price)} × ${l.qty}</td><td class="num">${nt(l.price*l.qty)}</td></tr>`).join('')}</tbody></table><div class="total">合計 <b>${nt(o.total)}</b></div>`}
 function bankHtml(){const s=st.set||{};return s.bankAccount?`<b>匯款資訊</b>：${esc(s.bankName)}　帳號 <b>${esc(s.bankAccount)}</b>　戶名 ${esc(s.accountName)}`:''}
@@ -216,7 +216,7 @@ function bankHtml(){const s=st.set||{};return s.bankAccount?`<b>匯款資訊</b>
 async function viewOrder(tok){
  $('#app').innerHTML='<p class="muted">載入訂單…</p>';
  try{const d=await api('/orders/'+tok);const o=d.order;
-  $('#app').innerHTML=`${d.closed?'<div class="note bad">已截止，無法修改。</div>':''}<h2>訂單 ${o.id} ${o.status==='cancelled'?'<span class="tag x">已取消</span>':''}</h2><div class="card">
+  $('#app').innerHTML=`${o.status==='active'?flowHtml([1,1,!!o.pay,!!o.pay]):''}${d.closed?'<div class="note bad">已截止，無法修改。</div>':''}<h2>訂單 ${o.id} ${o.status==='cancelled'?'<span class="tag x">已取消</span>':''}</h2><div class="card">
   <p>${esc(o.name)}（${esc(o.email)}）｜下單 ${o.createdAt.slice(0,16).replace('T',' ')}${o.updatedAt!==o.createdAt?'｜最後修改 '+o.updatedAt.slice(0,16).replace('T',' '):''}</p>${orderTable(o)}<p>${bankHtml()}</p>
   <div class="acts"><a class="btn sec" href="#/mine">返回</a>${!d.closed?'<button id="edit">編輯這筆訂單</button>':''}</div></div>${o.status==='active'?payCard(o):''}`;
   bindPay(tok,o);
