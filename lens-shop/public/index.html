@@ -238,11 +238,12 @@ async function viewMine(){
  $('#app').innerHTML='<h2>訂單列表</h2><p class="muted">載入中…</p>';
  let d={orders:[],count:0,sum:0};try{d=await api('/orders-public')}catch(e){}
  let mine=JSON.parse(localStorage.lensMine||'[]');
- const chk=await Promise.all(mine.map(m=>api('/orders/'+m.token).then(r=>r.order.status==='active'?m:null,e=>/找不到/.test(e.message)?null:m)));
+ const chk=await Promise.all(mine.map(m=>api('/orders/'+m.token).then(r=>r.order.status==='active'?{...m,paid:!!r.order.pay}:null,e=>/找不到/.test(e.message)?null:m)));
  mine=chk.filter(Boolean);localStorage.lensMine=JSON.stringify(mine);
  const q=(st.oq||'').trim().toLowerCase();
  const L=d.orders.filter(o=>!q||(o.name+o.items.map(l=>l.name+l.no).join(' ')).toLowerCase().includes(q));
- $('#app').innerHTML=`<h2>訂單列表</h2><div class="note ok">目前共 <b>${d.count}</b> 筆訂單，合計 <b>${nt(d.sum)}</b></div>
+ const hv=mine.length>0,hp=mine.some(m=>m.paid);
+ $('#app').innerHTML=`${flowHtml([hv,hv,hp,hp])}<h2>訂單列表</h2><div class="note ok">目前共 <b>${d.count}</b> 筆訂單，合計 <b>${nt(d.sum)}</b></div>
  <div class="tools"><input type="search" id="oq" placeholder="搜尋姓名或商品…" value="${esc(st.oq||'')}"></div>
  ${L.map(o=>`<div class="card" style="margin-bottom:10px"><div class="sp"><b>${esc(o.name)}${o.paid?'<span class="paid">✔ 已付款</span>':'<span class="unpaid">未付款</span>'}</b><span class="muted">訂單 ${o.id}｜${o.updatedAt.slice(0,16).replace('T',' ')}</span></div>
  <table class="t"><tbody>${o.items.map(l=>`<tr><td>#${l.no} ${esc(l.brand)} ${esc(l.name)}<div class="sub">${esc(pw(l))}${l.gift?' 贈品：'+esc(l.gift):''}</div></td><td class="num">${nt(l.price)} × ${l.qty}</td><td class="num">${nt(l.price*l.qty)}</td></tr>`).join('')}</tbody></table>
