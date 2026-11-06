@@ -1860,3 +1860,7 @@
 
 ## 2026-11-06 右上四顆按鈕換成 Codex 生成的像素圖示
 - 新圖示放 `pixel-plaza/assets/ui/hp-people|role|dex|close.png`（96px），按鈕圓框內改用背景圖（22px、pixelated），原細線 SVG 隱藏。
+
+## 2026-11-06 修正訪客仍看得到「切換人物」、圖示對齊
+- 先前的 hidden 規則優先權不夠（.hp-top button.pk-teal 的 display:flex!important 更強），改成 `button.pk-xxx[hidden]` 才真的隱藏，只有管理者／Machi 看得到。
+- 四個圖示重新以質心置中並放大到 24px。
