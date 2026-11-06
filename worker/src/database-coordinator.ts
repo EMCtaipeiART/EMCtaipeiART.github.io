@@ -3569,6 +3569,29 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'personaAvatarSnapshot', name, version: now, seat, changed: !before || before.look_key !== lookKey };
   }
 
+  /** 管理者在角色工坊代同事發佈角色後，直接幫他完成「入座」：企劃部／專案部／呈鈺顧問的同仁排進下一個空座位、狀態在座（不用本人再登入走完最後一步）。已有座位就不動。 */
+  private characterSeatFor(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): ApiResult {
+    const current = this.requireSession(session);
+    if (!hasCapability(database, current, 'database.manage')) throw new Error('只有管理者可以幫同事完成設定');
+    const name = text(payload.name);
+    if (!name || PIXEL_OFFICE_NAMES.includes(name)) return { ok: true, action: 'characterSeatFor', name, seat: -1, skipped: true };
+    const row = (database.tables['設定']?.rows || []).find(item => text(item['名字']) === name);
+    const department = normalizeDepartmentName(row?.['部門']);
+    if (!row || !/^(企劃部|專案部|呈鈺顧問)$/.test(department)) return { ok: true, action: 'characterSeatFor', name, seat: -1, skipped: true };
+    const sql = this.ctx.storage.sql;
+    const seat = this.pixelOfficeAssignSeat(name, text(row['帳號']));
+    if (seat < 0) return { ok: true, action: 'characterSeatFor', name, seat: -1, full: true };
+    const existing = sql.exec<{ state: string }>('SELECT state FROM pixel_office_people WHERE name = ?', name).toArray()[0];
+    let state: Row = {};
+    try { state = existing ? JSON.parse(existing.state) as Row : {}; } catch { state = {}; }
+    if (!state.status) state.status = 'present';
+    const pos = PIXEL_OFFICE_STAFF_SEAT_POS[seat];
+    if (pos && state.x === undefined) { state.x = pos[0]; state.y = pos[1]; state.dir = 'down'; }
+    const version = Math.max(Date.now(), this.pixelOfficeVersion() + 1);
+    sql.exec('INSERT INTO pixel_office_people(name, state, photo, photo_version, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(name) DO UPDATE SET state = excluded.state, updated_at = excluded.updated_at', name, JSON.stringify(state), '', 0, version);
+    return { ok: true, action: 'characterSeatFor', name, seat };
+  }
+
   /** 角色工坊「發佈給誰」的名單：Pixel Office 12 位人物＋帳號設定（設定表）裡所有有名字的人員（不分部門）。只有管理者能讀。 */
   private characterRoster(database: DatabaseSnapshot, session: SessionRecord | null): ApiResult {
     const current = this.requireSession(session);
@@ -5628,6 +5651,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
       if (action === 'coinMe') return await this.coinMe(database, session);
       if (action === 'characterRoster') return this.characterRoster(database, session);
+      if (action === 'characterSeatFor') return this.characterSeatFor(payload, database, session);
       if (action === 'personaAvatarSnapshot') return this.personaAvatarSnapshot(payload, database, session);
       if (action === 'pixelOfficePunish') return await this.pixelOfficePunish(payload, database, session);
       if (action === 'coinTransfer') return await this.coinTransfer(payload, database, session);
