@@ -1,0 +1,14 @@
+CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS orders (
+  id TEXT PRIMARY KEY,
+  token TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  items TEXT NOT NULL,
+  total INTEGER NOT NULL,
+  note TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'active',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS orders_email ON orders(email);

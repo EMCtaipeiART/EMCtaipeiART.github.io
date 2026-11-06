@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>隱形眼鏡團購</title>
+<style>
+:root{--b:#1c64f2;--bd:#1648b8;--bg:#f5f7fb;--c:#fff;--t:#1f2430;--m:#6b7280;--l:#e5e8ee;--r:#d63b3b;--g:#12805c}
+*{box-sizing:border-box}body{margin:0;font:15px/1.55 -apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--t)}
+header{background:var(--c);border-bottom:1px solid var(--l);position:sticky;top:0;z-index:20}
+.bar{max-width:1100px;margin:auto;padding:10px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.logo{font-weight:700;font-size:18px}.dl{font-size:13px;color:var(--m)}.dl b{color:var(--r)}
+nav{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+nav a{padding:7px 12px;border-radius:8px;color:var(--t);text-decoration:none;font-size:14px}nav a.on{background:#e8f0fe;color:var(--bd);font-weight:600}
+nav a .n{background:var(--r);color:#fff;border-radius:10px;padding:0 6px;font-size:12px;margin-left:3px}
+main{max-width:1100px;margin:auto;padding:16px}
+h2{margin:6px 0 12px;font-size:20px}h3{margin:18px 0 8px}
+.card{background:var(--c);border:1px solid var(--l);border-radius:12px;padding:14px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+input,select,textarea{font:inherit;padding:8px 10px;border:1px solid #cfd5df;border-radius:8px;background:#fff;max-width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid #b9d0fb;border-color:var(--b)}
+.tools input[type=search]{flex:1;min-width:180px}
+button,.btn{font:inherit;border:0;border-radius:8px;padding:8px 14px;background:var(--b);color:#fff;cursor:pointer;text-decoration:none;display:inline-block}
+button:hover{background:var(--bd)}button.sec{background:#e8ecf3;color:var(--t)}button.sec:hover{background:#dbe1ea}button.dng{background:var(--r)}button:disabled{opacity:.5;cursor:default}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.chip{padding:4px 11px;border-radius:16px;background:#fff;border:1px solid var(--l);cursor:pointer;font-size:13px}.chip.on{background:var(--b);color:#fff;border-color:var(--b)}
+.item{display:grid;grid-template-columns:48px 1fr auto auto;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--l)}
+.item:last-child{border:0}.no{color:var(--m);font-size:13px}.nm{font-weight:500}.sub{color:var(--m);font-size:12.5px}
+.pr{text-align:right;white-space:nowrap}.pr b{font-size:17px;color:var(--r)}.pr s{color:var(--m);font-size:12px;display:block}
+.modalbg{position:fixed;inset:0;background:#0006;display:flex;align-items:center;justify-content:center;z-index:50;padding:12px}
+.modal{background:#fff;border-radius:14px;padding:18px;width:min(440px,100%);max-height:92vh;overflow:auto}
+.modal label{display:block;font-size:13px;color:var(--m);margin:10px 0 3px}.modal input{width:100%}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.acts{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+table.t{border-collapse:collapse;width:100%;font-size:14px}table.t th,table.t td{padding:8px;border-bottom:1px solid var(--l);text-align:left;vertical-align:top}table.t th{background:#f2f4f8;font-weight:600}
+.num{text-align:right!important}.total{font-size:20px;text-align:right;margin:12px 0}.total b{color:var(--r)}
+.note{background:#fff8e6;border:1px solid #f3dca0;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+.ok{background:#e9f8f1;border-color:#b6e5d0}.bad{background:#fdecec;border-color:#f3b9b9}
+.form2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.form2 input{width:100%}
+.promo p{margin:0 0 6px}.promo .h{font-weight:700;font-size:16px;margin-top:14px;color:var(--bd)}.promo .big{white-space:pre-line}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.pc{background:#fff;border:1px solid var(--l);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.pc img{width:100%;height:150px;object-fit:contain;background:#fafafa}.pc .bd{padding:10px;flex:1;display:flex;flex-direction:column;gap:3px}.pc .bd button{margin-top:auto}
+.spec{margin-bottom:18px;overflow-x:auto}.spec h3{margin:0 0 6px;position:sticky;left:0}
+.spec table{border-collapse:collapse;font-size:13.5px;min-width:100%;background:#fff;border:1px solid var(--l)}
+.spec td,.spec th{border:1px solid var(--l);padding:6px 9px;vertical-align:middle}.spec th{background:#e8f0fe;color:var(--bd);white-space:nowrap}
+.spec td.k{font-weight:600;background:#fafbfd}.spec tr:hover td{background:#f6faff}
+.muted{color:var(--m)}.right{text-align:right}.sp{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.tag{font-size:11px;padding:1px 7px;border-radius:9px;background:#e8ecf3;margin-left:6px}.tag.x{background:#fdecec;color:var(--r)}
+@media(max-width:620px){.item{grid-template-columns:1fr auto}.item .no{display:none}.form2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><div class="bar"><div class="logo" id="logo">隱形眼鏡團購</div><div class="dl" id="dl"></div><nav id="nav"></nav></div></header>
+<main id="app"><p class="muted">載入中…</p></main>
+<script>
+const $=(s,e=document)=>e.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nt=n=>'NT$ '+Number(n).toLocaleString('en-US');
+const st={cat:null,set:null,cart:JSON.parse(localStorage.lensCart||'[]'),who:JSON.parse(localStorage.lensWho||'{}'),editTok:null,brand:'全部',q:'',admin:localStorage.lensAdmin||'',shown:60};
+const saveCart=()=>{localStorage.lensCart=JSON.stringify(st.cart);renderNav()};
+async function api(p,o={}){const h={...(o.headers||{})};if(o.admin)h.authorization='Bearer '+st.admin;if(o.json){h['content-type']='application/json';o.body=JSON.stringify(o.json)}
+ const r=await fetch('/api'+p,{...o,headers:h});if(o.raw&&r.ok)return r;let d={};try{d=await r.json()}catch{}if(!r.ok){if(r.status===401&&o.admin){st.admin='';localStorage.removeItem('lensAdmin')}throw new Error(d.error||'連線失敗')}return d}
+function fmtD(d){if(!d)return'';const m=/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/.exec(d);return m?`${m[1]}/${m[2]}/${m[3]}${m[4]?' '+m[4]+':'+m[5]:''}`:d}
+function dlText(){const s=st.set;if(!s)return'';if(s.closed)return'<b>已截止／已結單</b>';if(!s.deadline)return'';
+ const ms=Date.parse(s.deadline+(s.deadline.length<=16?':00+08:00':''))-Date.now();const d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5);
+ return`截止：${fmtD(s.deadline)}（剩 <b>${d>0?d+' 天 ':''}${h} 小時</b>）`}
+function renderNav(){const r=(location.hash||'#/').split('/')[1]||'';const L=[['','選購'],['promo','促銷活動'],['limited','期間限定'],['spec','規格表'],['cart','購物車'],['mine','我的訂單'],['admin','管理']];
+ $('#nav').innerHTML=L.map(([k,n])=>`<a href="#/${k}" class="${r===k||(k==='cart'&&r==='order')?'on':''}">${n}${k==='cart'&&st.cart.length?`<span class="n">${st.cart.reduce((s,l)=>s+l.qty,0)}</span>`:''}</a>`).join('');
+ $('#dl').innerHTML=dlText();$('#logo').textContent=st.set?.shopName||'隱形眼鏡團購'}
+const items=()=>st.cat?.items||[];const byNo=n=>items().find(i=>i.no===n);
+
+// ───── 選購 ─────
+function viewShop(){
+ if(!st.cat)return $('#app').innerHTML='<div class="note">目前尚未開放，請稍後再來。</div>';
+ const brands=['全部',...new Set(items().map(i=>i.brand))];
+ const q=st.q.trim().toLowerCase();
+ const list=items().filter(i=>(st.brand==='全部'||i.brand===st.brand)&&(!q||(i.brand+i.name+i.no).toLowerCase().includes(q)));
+ $('#app').innerHTML=`${closedBanner()}<h2>選購商品</h2>
+ <div class="tools"><input type="search" id="q" placeholder="搜尋品牌、品名、編號…" value="${esc(st.q)}"></div>
+ <div class="chips">${brands.map(b=>`<span class="chip ${b===st.brand?'on':''}" data-b="${esc(b)}">${esc(b)}</span>`).join('')}</div>
+ <div class="card" style="padding:0">${list.slice(0,st.shown).map(i=>`<div class="item"><span class="no">#${i.no}</span>
+  <div><div class="nm">${esc(i.name)}</div><div class="sub">${esc(i.brand)}${i.range?' ｜ '+esc(i.range):''}</div></div>
+  <div class="pr"><b>${nt(i.price)}</b>${i.market?`<s>市價 ${nt(i.market)}</s>`:''}</div>
+  <button data-add="${i.no}" ${st.set?.closed?'disabled':''}>加入</button></div>`).join('')||'<p style="padding:14px" class="muted">沒有符合的商品</p>'}</div>
+ ${list.length>st.shown?`<p style="text-align:center"><button class="sec" id="more">再顯示更多（還有 ${list.length-st.shown} 項）</button></p>`:''}`;
+ $('#q').oninput=e=>{st.q=e.target.value;st.shown=60;const p=e.target.selectionStart;viewShop();const n=$('#q');n.focus();n.setSelectionRange(p,p)};
+ document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{st.brand=c.dataset.b;st.shown=60;viewShop()});
+ document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>addDialog(+b.dataset.add));
+ const m=$('#more');if(m)m.onclick=()=>{st.shown+=120;viewShop()};
+}
+function closedBanner(){return st.set?.closed?'<div class="note bad">本次團購已截止，無法再下單或修改。</div>':''}
+function addDialog(no,idx){
+ const it=byNo(no),ex=idx!=null?st.cart[idx]:{qty:1};
+ const bg=document.createElement('div');bg.className='modalbg';
+ bg.innerHTML=`<div class="modal"><h3 style="margin-top:0">${esc(it.name)}</h3><div class="sub">${esc(it.brand)}｜${nt(it.price)}${it.range?'｜供應度數：'+esc(it.range):''}</div>
+ ${it.power?`<label>度數（請對照供應度數；雙眼度數不同請分兩筆加入）</label><input id="f-sph" placeholder="例：300 或 -3.00" value="${esc(ex.sph||'')}">`:''}
+ ${it.toric?`<div class="row2"><div><label>散光度數（無散光免填）</label><input id="f-cyl" placeholder="例：-0.75" value="${esc(ex.cyl||'')}"></div><div><label>散光角度</label><input id="f-axis" placeholder="例：180" value="${esc(ex.axis||'')}"></div></div>`:''}
+ <div class="row2"><div><label>盒數／數量</label><input id="f-qty" type="number" min="1" max="99" value="${ex.qty}"></div><div><label>贈品填寫處（選填）</label><input id="f-gift" value="${esc(ex.gift||'')}"></div></div>
+ <div class="acts"><button class="sec" id="f-x">取消</button><button id="f-ok">${idx!=null?'更新':'加入購物車'}</button></div></div>`;
+ document.body.appendChild(bg);$('#f-x',bg).onclick=()=>bg.remove();
+ $('#f-ok',bg).onclick=()=>{const g=id=>($(id,bg)?.value||'').trim();const line={no,qty:Math.max(1,Math.min(99,parseInt(g('#f-qty'))||1)),sph:g('#f-sph'),cyl:g('#f-cyl'),axis:g('#f-axis'),gift:g('#f-gift')};
+  if(it.power&&!line.sph)return alert('請填寫度數（0 度請填 0）');if((line.cyl||line.axis)&&!(line.cyl&&line.axis))return alert('散光度數與角度需一併填寫');
+  if(idx!=null)st.cart[idx]=line;else st.cart.push(line);saveCart();bg.remove();if(idx!=null)viewCart();else toast('已加入購物車')};
+}
+function toast(t){const d=document.createElement('div');d.textContent=t;d.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:9px 18px;border-radius:20px;z-index:99';document.body.appendChild(d);setTimeout(()=>d.remove(),1400)}
+
+// ───── 購物車／下單 ─────
+const pw=l=>[l.sph&&'度數 '+l.sph,l.cyl&&'散光 '+l.cyl,l.axis&&'角度 '+l.axis].filter(Boolean).join('／');
+function viewCart(){
+ const lines=st.cart.map((l,i)=>({...l,i,it:byNo(l.no)})).filter(l=>l.it);
+ const total=lines.reduce((s,l)=>s+l.it.price*l.qty,0);const edit=!!st.editTok;
+ $('#app').innerHTML=`${closedBanner()}<h2>${edit?'修改我的訂單'+(st.editId?'（'+st.editId+'）':''):'購物車'}</h2>
+ ${edit?'<div class="note ok">您正在修改已送出的訂單，修改完成後請按下方「儲存修改」。截止前都可再改。</div>':''}
+ ${lines.length?`<div class="card"><table class="t"><thead><tr><th>品項</th><th>規格</th><th class="num">單價</th><th class="num">數量</th><th class="num">小計</th><th></th></tr></thead><tbody>
+ ${lines.map(l=>`<tr><td>#${l.no} ${esc(l.it.brand)} ${esc(l.it.name)}</td><td class="sub">${esc(pw(l))}${l.gift?'<br>贈品：'+esc(l.gift):''}</td><td class="num">${nt(l.it.price)}</td><td class="num">${l.qty}</td><td class="num">${nt(l.it.price*l.qty)}</td>
+ <td style="white-space:nowrap"><button class="sec" data-e="${l.i}">編輯</button> <button class="sec" data-d="${l.i}">刪除</button></td></tr>`).join('')}</tbody></table>
+ <div class="total">合計：<b>${nt(total)}</b></div>
+ <div class="form2"><input id="c-name" placeholder="姓名（必填）" value="${esc(st.who.name||'')}"><input id="c-email" type="email" placeholder="Email（必填，訂單確認信寄到這裡）" value="${esc(st.who.email||'')}"></div>
+ <textarea id="c-note" rows="2" style="width:100%" placeholder="備註（選填）">${esc(st.note||'')}</textarea>
+ <div class="acts"><a class="btn sec" href="#/">繼續選購</a>${edit?'<button class="dng" id="cancelo">取消整筆訂單</button>':''}<button id="submit" ${st.set?.closed?'disabled':''}>${edit?'儲存修改':'送出訂單'}</button></div></div>`
+ :'<div class="card">購物車是空的。<a href="#/">去選購</a></div>'}`;
+ document.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{st.cart.splice(+b.dataset.d,1);saveCart();viewCart()});
+ document.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>addDialog(st.cart[+b.dataset.e].no,+b.dataset.e));
+ const sb=$('#submit');if(sb)sb.onclick=async()=>{const name=$('#c-name').value.trim(),email=$('#c-email').value.trim();if(!name||!email)return alert('請填寫姓名與 Email');
+  st.who={name,email};localStorage.lensWho=JSON.stringify(st.who);sb.disabled=true;sb.textContent='送出中…';
+  try{const body={name,email,note:$('#c-note').value,items:st.cart};
+   const d=edit?await api('/orders/'+st.editTok,{method:'PUT',json:body}):await api('/orders',{method:'POST',json:body});
+   st.cart=[];st.editTok=null;saveCart();
+   if(d.token){const mine=JSON.parse(localStorage.lensMine||'[]');mine.push({token:d.token,id:d.order.id});localStorage.lensMine=JSON.stringify(mine)}
+   done(d)}catch(e){alert(e.message);sb.disabled=false;sb.textContent=edit?'儲存修改':'送出訂單'}};
+ const co=$('#cancelo');if(co)co.onclick=async()=>{if(!confirm('確定取消整筆訂單？'))return;try{await api('/orders/'+st.editTok,{method:'DELETE'});st.cart=[];st.editTok=null;saveCart();toast('訂單已取消');location.hash='#/mine'}catch(e){alert(e.message)}};
+}
+function done(d){const o=d.order,mail={sent:'確認信已寄到 '+esc(o.email)+'，請查收（若沒看到請檢查垃圾郵件）。',skipped:'（系統尚未設定寄信，沒有寄出確認信，請截圖保存本頁。）',failed:'確認信寄送失敗，請截圖保存本頁，或到「我的訂單」查看。'}[d.mail]||'';
+ $('#app').innerHTML=`<div class="note ok"><h2 style="margin-top:0">✔ 訂單已送出（編號 ${o.id}）</h2>${mail}</div><div class="card">${orderTable(o)}
+ <p>${bankHtml()}</p><p class="muted">截止前可從確認信的專屬連結，或「我的訂單」回來修改。</p><div class="acts"><a class="btn" href="#/mine">我的訂單</a><a class="btn sec" href="#/">回首頁</a></div></div>`}
+function orderTable(o){return`<table class="t"><tbody>${o.items.map(l=>`<tr><td>#${l.no} ${esc(l.brand)} ${esc(l.name)}<div class="sub">${esc(pw(l))}${l.gift?' 贈品：'+esc(l.gift):''}</div></td><td class="num">${nt(l.price)} × ${l.qty}</td><td class="num">${nt(l.price*l.qty)}</td></tr>`).join('')}</tbody></table><div class="total">合計 <b>${nt(o.total)}</b></div>`}
+function bankHtml(){const s=st.set||{};return s.bankAccount?`<b>匯款資訊</b>：${esc(s.bankName)}　帳號 <b>${esc(s.bankAccount)}</b>　戶名 ${esc(s.accountName)}`:''}
+
+async function viewOrder(tok){
+ $('#app').innerHTML='<p class="muted">載入訂單…</p>';
+ try{const d=await api('/orders/'+tok);const o=d.order;
+  $('#app').innerHTML=`${d.closed?'<div class="note bad">已截止，無法修改。</div>':''}<h2>訂單 ${o.id} ${o.status==='cancelled'?'<span class="tag x">已取消</span>':''}</h2><div class="card">
+  <p>${esc(o.name)}（${esc(o.email)}）｜下單 ${o.createdAt.slice(0,16).replace('T',' ')}${o.updatedAt!==o.createdAt?'｜最後修改 '+o.updatedAt.slice(0,16).replace('T',' '):''}</p>${orderTable(o)}<p>${bankHtml()}</p>
+  <div class="acts"><a class="btn sec" href="#/mine">返回</a>${!d.closed?'<button id="edit">編輯這筆訂單</button>':''}</div></div>`;
+  const e=$('#edit');if(e)e.onclick=()=>{st.cart=o.items.map(l=>({no:l.no,qty:l.qty,sph:l.sph,cyl:l.cyl,axis:l.axis,gift:l.gift}));st.editTok=tok;st.editId=o.id;st.who={name:o.name,email:o.email};st.note=o.note;saveCart();location.hash='#/cart'}
+ }catch(e){$('#app').innerHTML=`<div class="note bad">${esc(e.message)}</div>`}}
+async function viewMine(){
+ const mine=JSON.parse(localStorage.lensMine||'[]');
+ $('#app').innerHTML=`<h2>我的訂單</h2>${mine.length?`<div class="card"><p class="muted">這台瀏覽器下過的訂單：</p>${mine.map(m=>`<p><a href="#/order/${m.token}">訂單 ${m.id}</a></p>`).join('')}</div>`:''}
+ <div class="card" style="margin-top:12px"><b>找回訂單</b><p class="muted">在別台電腦或清除過瀏覽器？輸入下單時的 Email，系統會把訂單連結寄給您。</p>
+ <div class="tools"><input id="rec" type="email" placeholder="Email" value="${esc(st.who.email||'')}"><button id="recb">寄給我</button></div></div>`;
+ $('#recb').onclick=async()=>{const email=$('#rec').value.trim();if(!email)return;await api('/recover',{method:'POST',json:{email}});alert('若此 Email 有訂單，連結已寄出，請查收信箱。')}}
+
+// ───── 促銷／期間限定／規格 ─────
+function viewPromo(){
+ const L=st.cat?.exclusive||[];
+ $('#app').innerHTML=`<h2>全台獨家活動</h2><div class="card promo">${L.map((t,i)=>{const h=/^[★◆<＜]|^<|新上市|停賣商品|^(嬌生|博士倫|美若康|視茂|愛爾康|酷柏)/.test(t)&&t.length<40;return`<p class="${h?'h':'big'}">${esc(t)}</p>`}).join('')||'<p class="muted">尚無內容</p>'}</div>`}
+function viewLimited(){
+ const lim=st.cat?.limited||{cards:[],note:[]};const cards=lim.cards;const groups=[...new Set(cards.map(c=>c.group))];
+ const others=items().filter(i=>i.no>=401&&i.no<=499&&!cards.find(c=>c.no===i.no));
+ $('#app').innerHTML=`${closedBanner()}<h2>期間限定</h2><div class="note">${esc(lim.title||'')}　（訂單滿兩萬元即可加購）</div>
+ ${groups.map(g=>`<h3>${esc(g)}</h3><div class="cards">${cards.filter(c=>c.group===g).map(c=>`<div class="pc">${c.img?`<img loading="lazy" src="/api/img/${c.img}">`:''}<div class="bd"><span class="no">#${c.no}</span><b>${esc(c.model)}</b><span class="sub">框 ${esc(c.frame)}｜片 ${esc(c.lens)}</span>
+  <div class="pr right">${c.market?`<s>建議 ${nt(c.market)}</s>`:''}<b>${nt(c.price)}</b></div><button data-add="${c.no}">加入</button></div></div>`).join('')}</div>`).join('')}
+ ${others.length?`<h3>其他限定品項</h3><div class="card" style="padding:0">${others.map(i=>`<div class="item"><span class="no">#${i.no}</span><div><div class="nm">${esc(i.name)}</div><div class="sub">${esc(i.brand)}</div></div><div class="pr"><b>${nt(i.price)}</b></div><button data-add="${i.no}">加入</button></div>`).join('')}</div>`:''}`;
+ document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>addDialog(+b.dataset.add))}
+function viewSpec(){
+ const sp=st.cat?.specs;if(!sp)return $('#app').innerHTML='<div class="note">尚無規格表</div>';
+ const G=sp.grid,secs=[];
+ for(let r=0;r<G.length-1;r++){if(G[r][0]&&G[r+1][0]==='產品'&&!G[r].slice(1).some((x,i)=>i<3&&x&&0)){secs.push({t:r,h:r+1})}}
+ secs.forEach((s,i)=>{s.end=(secs[i+1]?secs[i+1].t:G.length)-1});
+ const cov=new Set(),span={};for(const m of sp.merges){const a=m.r1-1,b=m.c1-1;span[a+','+b]=[m.r2-m.r1+1,m.c2-m.c1+1];for(let r=m.r1-1;r<m.r2;r++)for(let c=m.c1-1;c<m.c2;c++)if(r!==a||c!==b)cov.add(r+','+c)}
+ const q=(st.sq||'').toLowerCase();
+ const html=secs.map(s=>{const rows=[];for(let r=s.h;r<=s.end;r++)if(G[r].some(x=>x))rows.push(r);
+  let nc=1;rows.forEach(r=>G[r].forEach((x,c)=>{if(x&&c+1>nc)nc=c+1}));
+  const head=G[s.t][0],extra=G[s.t].slice(1).filter(Boolean).join('　');
+  if(q&&!(head+rows.map(r=>G[r].join(' ')).join(' ')).toLowerCase().includes(q))return'';
+  const tr=rows.map((r,ri)=>`<tr>${G[r].slice(0,nc).map((x,c)=>{if(cov.has(r+','+c))return'';const sg=span[r+','+c];const at=sg?` rowspan="${Math.min(sg[0],s.end-r+1)}" colspan="${Math.min(sg[1],nc-c)}"`:'';
+   return ri===0?`<th${at}>${esc(x)}</th>`:`<td${at}${c===0?' class="k"':''}>${esc(x).replace(/\n/g,'<br>')}</td>`}).join('')}</tr>`).join('');
+  return`<div class="spec"><h3>${esc(head)}${extra?`<span class="sub"> ${esc(extra)}</span>`:''}</h3><table>${tr}</table></div>`}).join('');
+ $('#app').innerHTML=`<h2>各品牌度數規格</h2><div class="tools"><input type="search" id="sq" placeholder="搜尋品牌或產品，例如：安視優、散光" value="${esc(st.sq||'')}"></div>${html||'<p class="muted">沒有符合的規格</p>'}`;
+ $('#sq').oninput=e=>{st.sq=e.target.value;const p=e.target.selectionStart;viewSpec();const n=$('#sq');n.focus();n.setSelectionRange(p,p)}}
+
+// ───── 管理 ─────
+async function viewAdmin(){
+ if(!st.admin){$('#app').innerHTML=`<h2>管理者登入</h2><div class="card"><div class="tools"><input id="pw" type="password" placeholder="管理者密碼"><button id="lg">登入</button></div></div>`;
+  const go=async()=>{try{const d=await api('/admin/login',{method:'POST',json:{password:$('#pw').value}});st.admin=d.token;localStorage.lensAdmin=d.token;viewAdmin()}catch(e){alert(e.message)}};$('#lg').onclick=go;$('#pw').onkeydown=e=>e.key==='Enter'&&go();return}
+ try{const [s,o]=await Promise.all([api('/admin/settings',{admin:1}),api('/admin/orders',{admin:1})]);
+  const f=(k,l,t='text')=>`<label class="sub">${l}</label><input data-k="${k}" type="${t}" value="${esc(s[k])}" style="width:100%">`;
+  $('#app').innerHTML=`<div class="sp"><h2>管理後台</h2><button class="sec" id="lo">登出</button></div>
+  <div class="card"><h3 style="margin-top:0">1. 上傳報價 Excel</h3><p class="muted">選擇含「報價單／全台獨家活動／期間限定／各品牌度數規格／填寫單1」的 .xlsx，網站會自動更新價格與內容，並作為匯出的範本。</p>
+  <input type="file" id="xf" accept=".xlsx"> <button id="up">上傳並更新</button> <span id="upm" class="muted"></span></div>
+  <div class="card" style="margin-top:12px"><h3 style="margin-top:0">2. 團購設定</h3><div class="form2">${f('shopName','團購名稱')}${f('deadline','截止日期時間（台北時間）','datetime-local')}${f('bankName','銀行（含代碼）')}${f('bankAccount','匯款帳號')}${f('accountName','戶名')}${f('siteUrl','網站網址（信件連結用，可留空）')}</div>
+  <label class="sub">信件／頁面附註</label><textarea data-k="notes" rows="2" style="width:100%">${esc(s.notes)}</textarea>
+  <p><label><input type="checkbox" id="closed" ${s.closed?'checked':''}> 手動結單（勾選後同事無法再下單／修改）</label></p><button id="sv">儲存設定</button></div>
+  <div class="card" style="margin-top:12px"><div class="sp"><h3 style="margin:0">3. 訂單（${o.count} 筆有效，合計 ${nt(o.sum)}）</h3><button id="ex">一鍵下載彙整 Excel</button></div>
+  <p class="muted">下載檔 = 原上傳的 Excel，只把訂單填入「填寫單1」（超過會接續填寫單2～4），原本的公式不會被覆蓋。</p>
+  <table class="t"><thead><tr><th>編號</th><th>姓名／Email</th><th>內容</th><th class="num">金額</th><th></th></tr></thead><tbody>${o.orders.map(x=>`<tr style="${x.status==='cancelled'?'opacity:.5':''}"><td>${x.id}${x.status==='cancelled'?'<span class="tag x">取消</span>':''}</td><td>${esc(x.name)}<div class="sub">${esc(x.email)}</div></td>
+   <td class="sub">${x.items.map(l=>`#${l.no} ${esc(l.name)} ${esc(pw(l))} ×${l.qty}`).join('<br>')}</td><td class="num">${nt(x.total)}</td><td><button class="sec" data-del="${x.id}">刪除</button></td></tr>`).join('')||'<tr><td colspan=5 class="muted">還沒有訂單</td></tr>'}</tbody></table>
+  <h3>商品彙總（供向廠商叫貨）</h3><table class="t"><thead><tr><th>編號</th><th>品項</th><th class="num">總盒數</th><th class="num">金額</th></tr></thead><tbody>${o.tally.map(t=>`<tr><td>${t.no}</td><td>${esc(t.brand)} ${esc(t.name)}</td><td class="num">${t.qty}</td><td class="num">${nt(t.qty*t.price)}</td></tr>`).join('')}</tbody></table></div>`;
+  $('#lo').onclick=()=>{st.admin='';localStorage.removeItem('lensAdmin');viewAdmin()};
+  $('#up').onclick=async()=>{const f=$('#xf').files[0];if(!f)return alert('請先選擇檔案');$('#upm').textContent='上傳解析中…';try{const d=await api('/admin/upload',{method:'POST',admin:1,body:f});$('#upm').textContent=`✔ 已更新：${d.items} 項商品、${d.limited} 張限定卡、規格表 ${d.specRows} 列`;st.cat=null;load()}catch(e){$('#upm').textContent='✘ '+e.message}};
+  $('#sv').onclick=async()=>{const b={closed:$('#closed').checked};document.querySelectorAll('[data-k]').forEach(i=>b[i.dataset.k]=i.value);await api('/admin/settings',{method:'PUT',admin:1,json:b});toast('已儲存');load()};
+  $('#ex').onclick=async()=>{try{const r=await api('/admin/export',{admin:1,raw:1});const ov=+r.headers.get('x-overflow-rows');const bl=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download='團購訂單彙整_'+new Date().toISOString().slice(0,10)+'.xlsx';a.click();if(ov)alert('注意：有 '+ov+' 列超出填寫單1～4的容量，未寫入。')}catch(e){alert(e.message)}};
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{if(confirm('永久刪除訂單 '+b.dataset.del+'？')){await api('/admin/orders/'+b.dataset.del,{method:'DELETE',admin:1});viewAdmin()}});
+ }catch(e){alert(e.message);if(!st.admin)viewAdmin()}}
+
+function route(){
+ const h=(location.hash||'#/').split('/');renderNav();window.scrollTo(0,0);
+ if(h[1]==='order')return h[2]&&viewOrder(h[2]);({'':viewShop,promo:viewPromo,limited:viewLimited,spec:viewSpec,cart:viewCart,mine:viewMine,admin:viewAdmin}[h[1]||'']||viewShop)();
+}
+async function load(){try{const d=await api('/catalog');st.cat=d.catalog;st.set=d.settings}catch(e){}route()}
+addEventListener('hashchange',route);load();setInterval(()=>{$('#dl').innerHTML=dlText()},60000);
+</script>
+</body>
+</html>

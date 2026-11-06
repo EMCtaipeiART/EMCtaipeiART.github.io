@@ -1,0 +1,8 @@
+{
+  "name": "emc-lens-shop",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "wrangler dev", "deploy": "wrangler deploy", "test": "node test/xlsx.test.mjs" },
+  "dependencies": { "fflate": "^0.8.2" },
+  "devDependencies": { "wrangler": "^4" }
+}

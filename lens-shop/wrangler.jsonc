@@ -1,0 +1,9 @@
+{
+  "name": "emc-lens-shop",
+  "main": "src/index.js",
+  "compatibility_date": "2025-01-01",
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": ["/api/*"] },
+  "d1_databases": [{ "binding": "DB", "database_name": "emc-lens-shop", "database_id": "REPLACE_AFTER_d1_create" }],
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "emc-lens-shop" }],
+  "vars": { "MAIL_FROM": "EMC 隱形眼鏡團購 <shop@emc-art.com>", "SITE_URL": "" }
+}
