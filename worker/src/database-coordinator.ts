@@ -81,7 +81,7 @@ const PIXEL_OFFICE_LEVEL_GROUPS = ['graphic', 'video'];
 // 依歷史案件的「設計種類」分的：Noise 的案件幾乎全是影片／影音／拍攝／動畫，其餘四位都是平面為大宗。
 const PIXEL_OFFICE_VIDEO_MEMBERS = ['Noise'];
 const PIXEL_OFFICE_DEFAULT_LEVEL_TITLES: Record<string, string[]> = {
-  graphic: ['改稿見習生', '對齊強迫症', '客戶翻譯機', '一稿過傳說', '打回重做剋星', '最終版_final_真的最終'],
+  graphic: ['改稿見習生', '對齊強迫症', '客戶翻譯機', '一稿過傳說', '打回重做剋星', 'final_真的最終版'],
   video: ['時間軸迷途者', '轉場收集家', '渲染等待者', '一剪入魂', '爆款製造機', '導演剪輯版之神']
 };
 const PIXEL_OFFICE_LEVEL_TITLE_MAX = 12;
