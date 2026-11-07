@@ -10,7 +10,8 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const P = (x, z) => V(x * U, 0, z * U);                 // px → 世界座標（地面）
 const params = new URLSearchParams(location.search);
 const HERO = ['Machi', 'Anna', 'Amber', 'Leona', 'Noise'].includes(params.get('hero')) ? '' : (params.get('hero') || '');   // 設計部五位本來就是主角；其他人（企劃、專案同事）才演最後那位新同事                   // 服裝頁傳進來的「你」：新同事那一幕由你的角色演
-const ONLY_ACT = params.has('act') ? Number(params.get('act')) : -1;   // 測試用：只演某一幕
+const ACT_RANGE = (params.get('act') || '').split('-').map(Number).filter(n => !Number.isNaN(n));   // 測試用：act=5 只演第 6 幕、act=5-6 演第 6～7 幕
+const ONLY_ACT = ACT_RANGE.length ? ACT_RANGE[0] : -1;
 
 const cin = window.__cinema = { active: false, cast: new Set(), t: 0, timeScale: 1, stepChar: null, camera: null };
 
@@ -30,14 +31,15 @@ css.textContent = `
 #cin .card h1{margin:0;font-size:clamp(22px,4.6vw,52px);font-weight:900;letter-spacing:.08em}
 #cin .fade{position:absolute;inset:0;background:#000;opacity:1;transition:opacity .7s}
 #cin .fade.off{opacity:0}
+#cin .clk{position:absolute;left:3%;top:12%;color:#fff;font-size:clamp(12px,1.6vw,18px);font-weight:800;letter-spacing:.12em;background:rgba(0,0,0,.5);padding:3px 12px;border-radius:999px;opacity:0;transition:opacity .4s}
 #cin .cap{position:absolute;right:3%;top:12%;color:#fff;font-size:12px;font-weight:800;letter-spacing:.2em;background:rgba(0,0,0,.45);padding:3px 10px;border-radius:999px}
 `;
 document.head.appendChild(css);
 const root = document.createElement('div'); root.id = 'cin';
-root.innerHTML = '<div class="bar t"></div><div class="bar b"></div><div class="sub"></div><div class="card"><small></small><h1></h1></div><div class="cap"></div><div class="fade"></div>';
+root.innerHTML = '<div class="bar t"></div><div class="bar b"></div><div class="sub"></div><div class="card"><small></small><h1></h1></div><div class="cap"></div><div class="clk"></div><div class="fade"></div>';
 document.body.appendChild(root);
 const $s = sel => root.querySelector(sel);
-const sub = $s('.sub'), card = $s('.card'), fade = $s('.fade'), cap = $s('.cap');
+const sub = $s('.sub'), card = $s('.card'), fade = $s('.fade'), cap = $s('.cap'), clk = $s('.clk');
 const COLORS = { Machi: '#7be08a', Anna: '#ff9cc0', Amber: '#ffc864', Leona: '#b7a2ff', Noise: '#7cc4ff' };
 let subTimer = 0;
 const say = (who, text, sec = 2.4) => {
@@ -63,6 +65,7 @@ const free = (x, z) => {   // 找離 (x,z) 最近、沒被家具擋住的地面�
 const actor = {};
 function stepChar(c, dt) {
   const s = c.cin; c.wander = false; c.remote = false;
+  if (s.path.length && c.sitting) standUp(c);
   if (!c.holder.visible) c.holder.visible = true;
   if (s.path.length && !c.sitting) {
     const wp = s.path[0], p = c.holder.position, dx = wp.x - p.x, dz = wp.z - p.z, d = Math.hypot(dx, dz);
@@ -148,80 +151,99 @@ const freeSeat = (x, z) => {   // 離 (x,z) 最近的空椅子（五樓辦公桌
 };
 const midOf = (a, b) => { const p = pos(a), q = pos(b); return V((p.x + q.x) / 2, 0, (p.z + q.z) / 2); };
 
+const stamp = t => { clk.textContent = t; clk.style.opacity = t ? '1' : '0'; };
+const nar = (text, sec = 2.6) => { sub.innerHTML = `<i style="font-weight:600;opacity:.92">${text}</i>`; sub.classList.add('on'); return wait(sec).then(() => { sub.classList.remove('on'); return wait(0.25); }); };
+const nearDesk = (name, dx = 70, dz = 60) => { const p = pos(name); return [p.x / U + dx, p.z / U + dz]; };
+
+// 《最後一版》：週五 09:00 客戶一句「可以再活潑一點，但要高級」，19:00 前要交件。全片倒數，最後新同事一句話解了圍。
 const acts = [
-  async () => {   // 一、早安，辦公室（片頭＋空拍＋桌邊閒聊）
-    await fadeIn(); await showCard('EMC PIXEL OFFICE', '辦公室日常', 2.6);
-    await shot(V(14, 19, 44), V(18, 0, 24), 0, 50); await shot(V(18, 11, 36), V(18, 0, 24), 6, 46);
+  async () => {   // 一、09:00 客戶來信
+    restoreAll(); stamp('');
+    await fadeIn(); await showCard('EMC PIXEL OFFICE', '《最後一版》', 2.6);
+    stamp('週五  09:00');
+    await shot(V(14, 19, 44), V(18, 0, 24), 0, 50); await shot(V(18, 11, 36), V(18, 0, 24), 5, 46);
+    await showCard('客戶來信', '「可以再活潑一點，但要高級。」', 3.4);
     await shot(V(17.5, 3.6, 32.5), V(17.5, 1.3, 24), 0, 38);
-    await say('Noise', '早安～今天誰要當咖啡機的第一位客人？', 2.6);
-    await say('Amber', '我。昨天改稿改到凌晨。', 2.2);
-    await say('Leona', '你每次都這樣說。', 1.8);
-    await say('Amber', '這次是真的！', 1.6);
+    await say('Machi', '沒問題，今天一定交。', 2.4);
+    await say('Anna', '他說沒問題的次數，比我們喝水的次數還多。', 3.2);
+    await say('Amber', '我先去泡咖啡。', 2);
+    await say('Leona', '你上次也這樣說，然後三個小時沒回來。', 3.2);
   },
-  async () => {   // 二、咖啡續命（跟拍）
-    await fadeOut(); restoreAll();
-    await shot(V(11, 3.4, 31), V(15, 1.3, 27), 0, 40); await fadeIn();
-    const a = walk('Amber', TEA[0], TEA[1]); const b = (async () => { await wait(0.8); await walk('Anna', TEA[0] + 70, TEA[1] + 20); })();
-    follow('Amber', 4, 3.2, 5.5, 40);
-    await a; await b;
-    lookAtActor('Amber', 'Anna'); lookAtActor('Anna', 'Amber');
-    const m = midOf('Amber', 'Anna'); await shot(V(m.x + 1.5, 2.0, m.z - 4.8), V(m.x, 1.3, m.z), 2.4, 34);
-    await say('Anna', '你今天第幾杯了？', 2); await say('Amber', '不要問，問就是第三杯。', 2.4); await say('Anna', '靈感都在咖啡裡。', 2);
+  async () => {   // 二、11:00 第七版
+    await fadeOut(); restoreAll(); stamp('11:00');
+    const e = spawnAtElevator('Noise'); await shot(V(e.x + 3, 2.4, e.z + 6), V(e.x, 1.3, e.z), 0, 38); await fadeIn();
+    const w = walk('Noise', 700, 1010, true); follow('Noise', -3, 2.8, 5.5, 40); await w;
+    lookAtActor('Noise', 'Machi'); const mp = pos('Machi'); await shot(V(mp.x + 3.2, 2.6, mp.z + 4.4), V(mp.x - 0.4, 1.3, mp.z), 2, 32);
+    await say('Noise', '企劃說，客戶覺得……還是不夠活潑。', 3);
+    await say('Machi', '……不夠活潑。', 1.8); cam.shake = 0.3;
+    await say('Anna', '已經是第七版了。', 2);
+    await say('Machi', '再活潑一點，就變成夜市了。', 2.8);
+    await nar('（貓走過 Machi 的鍵盤，躺了下來。Machi 假裝沒看到。）', 3.2);
   },
-  async () => {   // 三、改稿風暴（過肩鏡頭＋震動）
-    await fadeOut(); restoreAll(); await shot(V(21.5, 3.2, 33), V(20.2, 1.2, 28.4), 0, 36); await fadeIn();
-    const n = walk('Noise', 700, 1010, true); await wait(0.5);
-    follow('Noise', -3, 2.6, 5, 40); await n;
-    lookAtActor('Noise', 'Machi'); const mp = pos('Machi');
-    await shot(V(mp.x + 3.2, 2.6, mp.z + 4.4), V(mp.x - 0.4, 1.3, mp.z), 2, 32);
-    await say('Noise', '客戶說，再改一版。', 2.2); hop('Machi');
-    await say('Machi', '……好。', 1.5); await say('Machi', '這是第幾版了？', 2);
-    cam.shake = 0.35; await say('Noise', 'final_真的最終版_2。', 2.6); hop('Machi');
+  async () => {   // 三、13:30 布丁
+    await fadeOut(); restoreAll(); stamp('13:30');
+    await shot(V(9, 3.2, 33), V(14, 1.3, 30), 0, 40); await fadeIn();
+    const a = walk('Leona', FRIDGE[0], FRIDGE[1]); const b = (async () => { await wait(1); await walk('Amber', FRIDGE[0] + 60, FRIDGE[1] + 10); })();
+    follow('Leona', -4, 3.2, -5, 40); await a; await b;
+    lookAtActor('Leona', 'Amber'); lookAtActor('Amber', 'Leona');
+    const m = midOf('Leona', 'Amber'); await shot(V(m.x + 1.5, 2.1, m.z - 4.6), V(m.x, 1.3, m.z), 2.4, 34);
+    await say('Leona', '這個布丁，上星期就在了。', 2.6); await say('Amber', '你記得這麼清楚？', 2);
+    await say('Leona', '它的日期，比我們的專案還早。', 2.8); await say('Amber', '它沒加班，還活得比我們久。', 2.8);
+    await nar('（她們關上冰箱，沒有人敢拿。）', 2.8);
   },
-  async () => {   // 四、企劃來串場
-    await fadeOut(); restoreAll();
+  async () => {   // 四、15:30 企劃來串場
+    await fadeOut(); restoreAll(); stamp('15:30');
     const pl = actor.planner; if (!pl) return;
     const e = spawnAtElevator(pl.name); await shot(V(e.x + 3, 2.4, e.z + 6), V(e.x, 1.3, e.z), 0, 38); await fadeIn();
     const w = walk(pl.name, 700, 1010); follow(pl.name, -3.5, 3, 5.5, 40); await w;
     lookAtActor(pl.name, 'Machi'); const mp = pos('Machi'); await shot(V(mp.x + 3.2, 2.6, mp.z + 4.4), V(mp.x - 0.4, 1.3, mp.z), 2, 32);
-    await say(pl.name, 'Machi，這個案子今天可以嗎？', 2.8); await say('Machi', '……可以。', 1.6); await say('Machi', '一定可以。', 1.8); hop('Machi');
-    await say('Leona', '（小聲）他在說謊。', 2.2);
+    await say(pl.name, '客戶說，他有一個小小的想法。', 2.8);
+    await nar('（全場同時停手。）', 1.8);
+    await say('Anna', '小小的，是多小？', 2); await say(pl.name, '就是……整個換掉。', 2.4);
+    await say('Machi', '……沒問題。', 2); hop('Machi'); hop('Anna'); hop('Amber'); hop('Leona');
+    await nar('（三個人同時把頭埋進手裡。）', 2.6);
   },
-  async () => {   // 五、會議室開會（長推軌＋轉場字卡）
-    await fadeOut(); restoreAll();
+  async () => {   // 五、17:30 會議室大戰
+    await fadeOut(); restoreAll(); stamp('17:30');
     await shot(V(24, 5, 40), V(26, 0.8, 41), 0, 44); await fadeIn();
-    const a = walk('Leona', MEET[0] - 40, MEET[1]), b = walk('Noise', MEET[0] + 60, MEET[1] + 30);
-    await shot(V(24, 3.4, 46.5), V(26, 1.2, 40), 5, 42); await a; await b;
-    lookAtActor('Leona', 'Noise'); lookAtActor('Noise', 'Leona');
-    await say('Leona', '五分鐘就好。', 1.8); await say('Noise', '上次你也這樣說。', 2.2);
-    await fadeOut(); await showCard('兩小時後', '會議還在繼續', 2.2);
+    const a = walk('Leona', MEET[0] - 50, MEET[1]), b = walk('Noise', MEET[0] + 70, MEET[1] + 30), c = walk('Machi', MEET[0], MEET[1] - 40);
+    await shot(V(24, 3.4, 46.5), V(26, 1.2, 40), 5, 42); await a; await b; await c;
+    lookAtActor('Leona', 'Noise'); lookAtActor('Noise', 'Leona'); lookAtActor('Machi', 'Leona');
+    await say('Leona', '這個字體太正式。', 2); await say('Noise', '這個字體太像考卷。', 2.2); await say('Machi', '我們已經吵了二十分鐘了。', 2.6);
+    await nar('（他們吵的，是同一個字體。）', 2.8); stamp('18:00');
   },
-  async () => {   // 六、冰箱裡的布丁
-    await fadeOut(); restoreAll();
-    await shot(V(9, 3.2, 33), V(14, 1.3, 30), 0, 40); await fadeIn();
-    const a = walk('Leona', FRIDGE[0], FRIDGE[1]); const b = (async () => { await wait(1); await walk('Machi', FRIDGE[0] + 60, FRIDGE[1] + 10); })();
-    follow('Leona', -4, 3.2, -5, 40); await a; await b;
-    lookAtActor('Leona', 'Machi'); lookAtActor('Machi', 'Leona');
-    const m = midOf('Leona', 'Machi'); await shot(V(m.x + 1.5, 2.1, m.z - 4.6), V(m.x, 1.3, m.z), 2.4, 34);
-    await say('Leona', '冰箱裡那個布丁，是誰的？', 2.6); await say('Machi', '上星期就在了，我不敢動。', 2.6);
-    await say('Leona', '它會不會比我們都資深？', 2.4); await say('Machi', '而且它沒有加班。', 2.2);
+  async () => {   // 六、18:40 絕望時刻＋新同事到
+    await fadeOut(); restoreAll(); stamp('18:40');
+    await shot(V(17.5, 3.0, 32.5), V(17.5, 1.2, 25), 0, 40); await fadeIn();
+    await say('Amber', '我看這張圖，已經看了十三個小時。', 3); await say('Anna', '你看看窗外，天都黑了。', 2.6);
+    const nc = actor.newcomer, nm = nc.name, label = cin.label, e = spawnAtElevator(nm);
+    await fadeOut(); await shot(V(e.x + 3, 2.4, e.z + 6.5), V(e.x, 1.3, e.z), 0, 38); await fadeIn();
+    await say(label, '大家好……我今天第一天上班。', 2.8);
+    const w = walk(nm, 700, 1010); follow(nm, -3.5, 3, 5.5, 40); await w;
+    lookAtActor(nm, 'Machi'); const mp = pos('Machi'); await shot(V(mp.x + 3.2, 2.6, mp.z + 4.4), V(mp.x - 0.4, 1.3, mp.z), 2, 32);
+    await say('Machi', '你好，歡迎。我們在改圖。', 2.6);
+    await nar('（新同事走到桌邊，看了一眼螢幕。）', 2.6);
   },
-  async () => {   // 七、新同事入職（片尾：走進來、找到位置、坐下；那個位置就是「你」）
-    await fadeOut(); restoreAll();
-    const nc = actor.newcomer, nm = nc.name, label = HERO || '新同事', e = spawnAtElevator(nm);
-    const st = freeSeat(568, 560), sx = st ? st.x / U : 568, sz = st ? st.z / U : 560;
-    showMarker(P(sx, sz));
-    await shot(V(e.x + 3, 2.4, e.z + 6.5), V(e.x, 1.3, e.z), 0, 38); await fadeIn();
-    await say(label, '大家早……我今天第一天上班。', 2.6);
-    const w = walk(nm, sx, sz + 70); await shot(V(14, 4.4, 24), V(11, 1.2, 15), 4, 42);
-    await say('Machi', '新同事來了！', 1.8); await say('Anna', '歡迎入職，你的位置留好了。', 2.8);
-    await w; cta(true);
-    const sp = P(sx, sz); await shot(V(sp.x + 3.5, 3.2, sp.z + 5.2), V(sp.x, 1.1, sp.z), 2.5, 38);
-    await say(label, '是這裡嗎？', 1.8);
+  async () => {   // 七、18:55 新同事的一句話，結尾
+    const nc = actor.newcomer, nm = nc.name, label = cin.label; stamp('18:55');
+    const mp = pos('Machi'); await shot(V(mp.x + 2.6, 2.3, mp.z + 4.2), V(mp.x - 0.2, 1.3, mp.z), 2, 30);
+    await say(label, '那個……第三版，不是挺好的嗎？', 3);
+    await wait(2.6);
+    await say('Machi', '……第三版。', 2);
+    await say('Anna', '我們為什麼，從第三版開始往後改？', 3); await say('Amber', '因為我們以為，改得越多越好。', 3);
+    await nar('（Machi 按下寄出。）', 2); stamp('18:59');
+    cam.shake = 0.3; await nar('（貓從鍵盤上跳下來，檔名多了一個「_2」。）', 3);
+    await showCard('企劃傳來訊息', '「客戶說，第三版剛剛好。」', 3.2);
+    stamp('19:00');
+    await shot(V(mp.x + 2.6, 2.3, mp.z + 4.2), V(mp.x - 0.2, 1.3, mp.z), 0, 32);
+    await say('Machi', '歡迎入職。你的位置在那邊。', 2.8); lookAt('Machi', 568, 560);
+    const st = freeSeat(568, 560), sx = st ? st.x / U : 568, sz = st ? st.z / U : 560; showMarker(P(sx, sz)); cta(true);
+    const w = walk(nm, sx, sz + 70); await shot(V(14, 4.4, 24), V(11, 1.2, 15), 4, 42); await w;
+    await say('Machi', '提醒你，我們的檔名，都叫 final。', 3);
+    const sp = P(sx, sz); await shot(V(sp.x + 3.5, 3.2, sp.z + 5.2), V(sp.x, 1.1, sp.z), 2.2, 38);
     if (st) api.sitAt(nc, st); hideMarker(); hop(nm);
-    await say(label, '輪到我了！', 2);
     await shot(V(sp.x + 8, 13, sp.z + 14), V(sp.x, 0.5, sp.z - 3), 4.5, 46);
-    await showCard('下一位', '就是你', 2.8); cta(false);
+    await showCard('下一位', '就是你', 2.8); cta(false); stamp('');
   },
 ];
 
@@ -230,11 +252,13 @@ async function run() {
   while (!window.__plaza || !Object.keys(chars).length) await new Promise(r => setTimeout(r, 400));
   await api.cloudReady;
   for (const n of CAST) { const c = chars[n]; if (!c) return; actor[n] = c; }
+  const on5F = ch => ch && ch.holder.position.x / U < 1500;   // 只用五樓的人演新同事和企劃：四樓的人在四樓座位，遊戲會一直把他們拉回去坐
   const taken = new Set([...CAST, HERO]);
-  const stand = chars[HERO] || ['謝榕', '傅思凱', '陳雅筠'].map(n => chars[n]).find(Boolean);
-  const planner = ['吳冠賢', '余采馨'].filter(n => !taken.has(n)).map(n => chars[n]).find(Boolean);
+  const stand = on5F(chars[HERO]) ? chars[HERO] : ['王穗紜', '謝榕', '陳雅筠'].map(n => chars[n]).find(on5F);
+  cin.label = stand && stand.name === HERO ? HERO : '新同事';
+  const planner = ['吳冠賢', '廖秦葦', '李明庭'].filter(n => !taken.has(n)).map(n => chars[n]).find(ch => on5F(ch) && ch !== stand);
   if (stand) { actor[stand.name] = stand; actor.newcomer = stand; }
-  if (planner && planner !== stand) { actor[planner.name] = planner; actor.planner = planner; }
+  if (planner) { actor[planner.name] = planner; actor.planner = planner; }
   if (!stand) return;
   for (const c of new Set(Object.values(actor))) {
     cin.cast.add(c); c.cin = { path: [], speed: 2.6, done: null, look: null, goal: null, stuck: { t: 0, x: 0, z: 0 }, home: { x: c.holder.position.x, z: c.holder.position.z } };
@@ -242,7 +266,7 @@ async function run() {
   }
   cin.active = true; root.classList.add('on');
   window.parent !== window && window.parent.postMessage({ type: 'cinemaReady' }, '*');
-  const order = ONLY_ACT >= 0 ? [ONLY_ACT] : acts.map((_, i) => i);
+  const order = ACT_RANGE.length ? Array.from({ length: (ACT_RANGE[1] ?? ACT_RANGE[0]) - ACT_RANGE[0] + 1 }, (_, i) => ACT_RANGE[0] + i) : acts.map((_, i) => i);
   for (;;) {
     for (const i of order) { caption('SCENE ' + (order.indexOf(i) + 1) + ' / ' + order.length); try { await acts[i](); } catch (e) { console.warn('cinema act', i, e); } }
     await fadeOut();
