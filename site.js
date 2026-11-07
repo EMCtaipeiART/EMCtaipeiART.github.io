@@ -248,7 +248,7 @@
     /* ---------- 設計師列 ---------- */
     function designerCases(name){const c={'未開始':0,'執行中':0,'過稿中':0,'修改中':0,'已完成':0};/* 團隊案量是全體共用的數字，不受檢視者的客戶別權限影響 */for(const r of allRowsRaw())if(norm(r['設計負責人'])===norm(name)&&r['狀態'] in c)c[r['狀態']]++;return c}
     function levelInfo(name){
-      const cfg=state.levelConfig||{steps:[1,10,20,30,40,50],videoMembers:['Noise'],titles:{graphic:['設計新秀','資深設計師','設計菁英','設計大師','傳奇設計師','設計神話'],video:['影音新秀','資深剪輯師','影音菁英','影音大師','傳奇導演','影像神話']}};
+      const cfg=state.levelConfig||{steps:[1,10,20,30,40,50],videoMembers:['Noise'],titles:{graphic:['改稿見習生','對齊強迫症','客戶翻譯機','一稿過傳說','打回重做剋星','最終版_final_真的最終'],video:['時間軸迷途者','轉場收集家','渲染等待者','一剪入魂','爆款製造機','導演剪輯版之神']}};
       if(!state.archive)return null;
       const score=state.archive[name]||0,level=Math.floor(Math.sqrt(score/10))+1,current=10*(level-1)**2,next=10*level**2;
       const group=(cfg.videoMembers||[]).includes(name)?'video':'graphic',list=(cfg.titles&&cfg.titles[group])||[];

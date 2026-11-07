@@ -4298,8 +4298,8 @@ describe('Pixel Office shared state', () => {
       steps: [1, 10, 20, 30, 40, 50],
       videoMembers: ['Noise'],
       titles: {
-        graphic: ['設計新秀', '資深設計師', '設計菁英', '設計大師', '傳奇設計師', '設計神話'],
-        video: ['影音新秀', '資深剪輯師', '影音菁英', '影音大師', '傳奇導演', '影像神話']
+        graphic: ['改稿見習生', '對齊強迫症', '客戶翻譯機', '一稿過傳說', '打回重做剋星', '最終版_final_真的最終'],
+        video: ['時間軸迷途者', '轉場收集家', '渲染等待者', '一剪入魂', '爆款製造機', '導演剪輯版之神']
       }
     });
 
@@ -4313,8 +4313,8 @@ describe('Pixel Office shared state', () => {
       titles: { graphic: ['小美工', '', '  切版王  ', '排版之神', '傳奇設計師', '一二三四五六七八九十十一十二十三'] }
     });
     expect((saved.titles as Record<string, string[]>).graphic)
-      .toEqual(['小美工', '資深設計師', '切版王', '排版之神', '傳奇設計師', '一二三四五六七八九十十一']);
-    expect((saved.titles as Record<string, string[]>).video[0]).toBe('影音新秀');
+      .toEqual(['小美工', '對齊強迫症', '切版王', '排版之神', '傳奇設計師', '一二三四五六七八九十十一']);
+    expect((saved.titles as Record<string, string[]>).video[0]).toBe('時間軸迷途者');
 
     // 改了稱號也要讓別人的畫面更新：版本號要跟著跳，不能等到有人換狀態才生效。
     const after = await api({ action: 'pixelOfficeState', since: state.version });
