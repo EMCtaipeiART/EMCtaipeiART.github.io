@@ -333,7 +333,7 @@ button{font-family:inherit}
 .hp-top button i svg,.hp-br button i svg{display:block;width:24px;height:24px;stroke-width:2.1}
 .hp-top button span,.hp-br button span{color:#fff;position:relative}
 .hp-top button:hover span,.hp-br button:hover span{margin-left:8px}
-html.embed #hud,html.embed #dock,html.embed #proj,html.embed .lbl{display:none!important}   /* ?embed=1：嵌在網站設計師面板裡的精簡畫面 */
+html.embed #hud,html.embed #dock,html.embed #proj,html.embed .lbl,html.cinema body>*:not(canvas):not(#cin):not(script):not(style){display:none!important}   /* ?embed=1：嵌在網站設計師面板裡的精簡畫面 */
 #elevFx{position:fixed;inset:0;z-index:50;pointer-events:none;font-family:'Fredoka','Noto Sans TC',sans-serif;color:#fff}
 #elevFx.on,#elevFx.out{pointer-events:auto}
 .ef-grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(var(--cols),1fr);grid-template-rows:repeat(var(--rows),1fr)}
@@ -1435,7 +1435,7 @@ async function pollOnce(){
     if (Array.isArray(d.hidden)) applyHidden(d.hidden);
     if (!d.unchanged) {
       live.version = d.version || live.version;
-      if (d.hours) { srvHours = d.hours; const f = d.hours.force === 'work' || d.hours.force === 'off' ? d.hours.force : ''; if (f !== hoursForce) { hoursForce = f; for (const c of Object.values(chars)) c.appliedStatus = null; } }
+      if (d.hours) { srvHours = d.hours; const f = d.hours.force === 'work' || d.hours.force === 'off' ? d.hours.force : ''; if (f !== hoursForce && !window.__cinemaForce) { hoursForce = f; for (const c of Object.values(chars)) c.appliedStatus = null; } }
       for (const e of d.people || []) { const c = chars[e.name]; if (!c) continue; c.hasState = true; remoteFromState(c, e); const rs = typeof e.status === 'string' ? e.status : 'present'; if (c.autoPendingUntil > Date.now() && rs !== 'present') { c.rawStatus = c.rawStatus || 'present'; } else { c.autoPendingUntil = 0; c.rawStatus = rs; } c.status = forcedStatus(c.rawStatus, c); c.mood = e.mood || ''; c.message = e.message || ''; c.statusSource = e.statusSource || ''; c.meetingRoom = typeof e.meetingRoom === 'string' ? e.meetingRoom : ''; c.music = e.music && e.music.url ? {url:e.music.url, title:e.music.title || '', provider:e.music.provider || ''} : null; applyStatus(c); }
       if (d.stories) applyStories(d.stories);
       if (d.funClaims) applyFunClaims(d.funClaims);
@@ -3024,6 +3024,12 @@ function catBowlClick(){
 return {id:DEF.id, at:catAt, init:catInit, update:updateCat, click:catClick, bowlClick:catBowlClick, applyState:catApplyState};
 }
 const CATS = CAT_DEFS.map(makeCat);
+/* ?cinema=1：辦公室劇場（服裝頁開場）。cinema.js 接手幾位演員與鏡頭，演出有分鏡、有腳本的短劇；沒有這個參數時下面的兩個接點都不會動 */
+if (/[?&]cinema=1/.test(location.search)) {
+  document.documentElement.classList.add('cinema'); hoursForce = 'work'; window.__cinemaForce = true; AWAY_DESK.clear();   // 劇場永遠是上班時間的辦公室（桌子不收、人不走）
+  window.__cineApi = {THREE, scene, camera, chars, U, blocked, findPath, moveChar, sitAt, standUp, sun, chairSeats, renderer, NAMES, cloudReady, setYaw: v => { camYaw = v; }};
+  import('./cinema.js').catch(e => console.warn('cinema', e));
+}
 function tick(){
   const dt = Math.min(clock.getDelta(), .05);
   if (player) {
@@ -3049,13 +3055,15 @@ function tick(){
     if (wantSeat) { const st = wantSeat; if (st.by || st.hidden || player.sitting) wantSeat = null; else if (Math.hypot(st.x - player.holder.position.x, st.z - player.holder.position.z) < 1.0) { wantSeat = null; target = null; sitAt(player, st); } }
   }
   for (const c of Object.values(chars)) {
-    if (c.remote && c !== player) remoteStep(c, dt);
+    if (window.__cinema && window.__cinema.cast.has(c)) window.__cinema.stepChar(c, dt);
+    else if (c.remote && c !== player) remoteStep(c, dt);
     else if (c.wander && !c.sitting) wanderSynced(c);
     if (c.sitting) { const sp = sitSpot(c.sitting); if (Math.hypot(sp.x - c.holder.position.x, sp.z - c.holder.position.z) > .6 || (c.moving > 0 && c === player)) releaseSeat(c); }   // 走動中就不是坐著：離開座位的人一律解除入座
     updateSprite(c, dt); stationFx(c, dt);
     if (c.hopAt) { const k = (performance.now() - c.hopAt) / 600; if (k >= 1) { c.hopAt = 0; c.holder.position.y = 0; } else c.holder.position.y = Math.abs(Math.sin(k * Math.PI * 2)) * .6 * (1 - k); }
   }
-  if (player) {
+  if (window.__cinema && window.__cinema.active) window.__cinema.camera(dt);
+  else if (player) {
     const p = player.holder.position;
     { const o = camOff(10.9 * camZoom, 12.2 * camZoom); camPos.lerp(new THREE.Vector3(p.x + o.x, o.y, p.z + o.z), 1 - Math.pow(.001, dt)); }
     camera.position.copy(camPos); look.lerp(p, 1 - Math.pow(.001, dt)); camera.lookAt(look.x, 1, look.z);
