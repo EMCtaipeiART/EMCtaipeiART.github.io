@@ -993,7 +993,7 @@
       {k:'notes',label:'記事本',title:'記事本（設計部資源）',ok:()=>loggedIn()&&(hasDesignerRole()||isAdminAcct()||isMachiUser()),svg:'<path d="M6 3.5h11a1.5 1.5 0 0 1 1.5 1.5v14A1.5 1.5 0 0 1 17 20.5H6zM6 3.5v17M9.5 8h5.5M9.5 12h5.5M9.5 16h3.5"/>'},
       {k:'assign',label:'分配',title:'專案分配（客戶別）',ok:()=>loggedIn()&&(hasDesignerRole()||isAdminAcct()||isMachiUser()),svg:'<circle cx="8" cy="8" r="2.6"/><circle cx="17" cy="9" r="2.1"/><path d="M3.5 18c.4-3 2.2-4.6 4.5-4.6s4.1 1.6 4.5 4.6M14 17.5c.3-2.2 1.5-3.4 3.2-3.4s2.9 1.2 3.3 3.4"/>'},
       {k:'owner',label:'進度',title:'您的案件進度',ok:()=>loggedIn()&&(isAdminAcct()||!(/設計/.test(sessionDept())||isDesignerSession())),svg:'<circle cx="12" cy="12" r="8.5"/><path d="m8.2 12.4 2.6 2.6 5-5.6"/>'},
-      {k:'outfit',label:'服裝',title:'AI 服裝生成器・平台幣',ok:()=>loggedIn()&&outfitAllowed(),svg:'<path d="M8.5 4 3.5 7l2 3.5L8 9.4V20h8V9.4l2.5 1.1 2-3.5-5-3c-.4 1.3-1.9 2.2-3.5 2.2S8.9 5.3 8.5 4z"/>'},
+      {k:'outfit',label:'角色',title:'建立角色・座位・平台幣',ok:()=>loggedIn()&&outfitAllowed(),svg:'<path d="M8.5 4 3.5 7l2 3.5L8 9.4V20h8V9.4l2.5 1.1 2-3.5-5-3c-.4 1.3-1.9 2.2-3.5 2.2S8.9 5.3 8.5 4z"/>'},
       {k:'dashboard',label:'儀表板',title:'設計儀表板',ok:()=>loggedIn()&&acc('page.dashboard',hasDesignerRole()),svg:'<path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/>'},
       {k:'lunch',label:'午餐地圖',title:'凱曜午餐探險隊（map.emc-art.com）',ok:()=>loggedIn(),svg:'<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/>'},
       {k:'archive',menu:true,label:'歷史庫',title:'歷史資料庫管理',ok:()=>loggedIn()&&acc('page.archive',isAdminAcct()||isMachi0())&&acc('archive.edit',isAdminAcct()||isMachi0()),svg:'<path d="M3.5 7.5h17v3h-17zM5 10.5V19h14v-8.5M10 14h4"/>'},
