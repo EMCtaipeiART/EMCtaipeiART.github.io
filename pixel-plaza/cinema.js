@@ -10,7 +10,7 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const P = (x, z) => V(x * U, 0, z * U);                 // px → 世界座標（地面）
 const params = new URLSearchParams(location.search);
 const HERO = ['Machi', 'Anna', 'Amber', 'Leona', 'Noise'].includes(params.get('hero')) ? '' : (params.get('hero') || '');   // 設計部五位本來就是主角；其他人（企劃、專案同事）才演最後那位新同事                   // 服裝頁傳進來的「你」：新同事那一幕由你的角色演
-const ACT_RANGE = (params.get('act') || '').split('-').map(Number).filter(n => !Number.isNaN(n));   // 測試用：act=5 只演第 6 幕、act=5-6 演第 6～7 幕
+const ACT_RANGE = params.has('act') && params.get('act') !== '' ? params.get('act').split('-').map(Number).filter(n => !Number.isNaN(n)) : [];   // 測試用：act=5 只演第 6 幕、act=5-6 演第 6～7 幕
 const ONLY_ACT = ACT_RANGE.length ? ACT_RANGE[0] : -1;
 
 const cin = window.__cinema = { active: false, cast: new Set(), t: 0, timeScale: 1, stepChar: null, camera: null };
