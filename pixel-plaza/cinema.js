@@ -9,7 +9,7 @@ const { THREE, camera, chars, U, blocked, findPath, moveChar, standUp, sun } = a
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const P = (x, z) => V(x * U, 0, z * U);                 // px → 世界座標（地面）
 const params = new URLSearchParams(location.search);
-const HERO = params.get('hero') || '';                   // 服裝頁傳進來的「你」：新同事那一幕由你的角色演
+const HERO = ['Machi', 'Anna', 'Amber', 'Leona', 'Noise'].includes(params.get('hero')) ? '' : (params.get('hero') || '');   // 設計部五位本來就是主角；其他人（企劃、專案同事）才演最後那位新同事                   // 服裝頁傳進來的「你」：新同事那一幕由你的角色演
 const ONLY_ACT = params.has('act') ? Number(params.get('act')) : -1;   // 測試用：只演某一幕
 
 const cin = window.__cinema = { active: false, cast: new Set(), t: 0, timeScale: 1, stepChar: null, camera: null };
