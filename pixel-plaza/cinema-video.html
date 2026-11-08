@@ -27,6 +27,8 @@
   #pz{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.9);width:clamp(54px,9vw,86px);height:clamp(54px,9vw,86px);border-radius:50%;background:rgba(0,0,0,.55);display:grid;place-items:center;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
   #pz.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
   #pz svg{width:42%;height:42%;fill:#fff}
+  #mask{position:absolute;border-radius:10px;backdrop-filter:blur(16px) brightness(.55);-webkit-backdrop-filter:blur(16px) brightness(.55);background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .12s}
+  #mask.on{opacity:1}
   #ld{position:absolute;right:3%;top:6%;color:#fff;font-size:12px;font-weight:700;letter-spacing:.15em;background:rgba(0,0,0,.55);padding:4px 12px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none}
   #ld.on{opacity:1}
   #ctl{position:absolute;right:10px;top:10px;display:none;gap:6px}
@@ -42,6 +44,7 @@
   <div id="poster"></div>
   <video id="vA" playsinline preload="auto" aria-label="辦公室小短劇《最後一版》"></video>
   <video id="vB" playsinline preload="auto" aria-hidden="true"></video>
+  <div id="mask"></div>
   <div id="sub" aria-live="polite"></div>
   <div id="scn"><small></small><b></b></div>
   <div id="end"><div><small>EMC PIXEL OFFICE</small><h1>下一位，就是你</h1></div></div>
@@ -57,10 +60,10 @@
 </div>
 <script>
 (function () {
-  var params = new URLSearchParams(location.search), embedded = params.get('embed') === '1', VER = '3';
+  var params = new URLSearchParams(location.search), embedded = params.get('embed') === '1', VER = '4';
   if (!embedded) document.body.classList.add('solo');
   var $ = function (id) { return document.getElementById(id); };
-  var subEl = $('sub'), scnEl = $('scn'), endEl = $('end'), pzEl = $('pz'), ldEl = $('ld'), barI = document.querySelector('#bar i'), poster = $('poster');
+  var maskEl = $('mask'), subEl = $('sub'), scnEl = $('scn'), endEl = $('end'), pzEl = $('pz'), ldEl = $('ld'), barI = document.querySelector('#bar i'), poster = $('poster');
   var COLORS = { Machi: '#7be08a', Anna: '#ff9cc0', Amber: '#ffc864', Leona: '#b7a2ff', Noise: '#7cc4ff', '企劃': '#ffe082', '新同事': '#ffd0e0' };
   var TITLES = ['客戶來信', '第七版', '布丁', '小小的想法', '會議室大戰', '歡迎入職'], NUM = ['一', '二', '三', '四', '五', '六'];
   var PAD = 0.12;   // 每個分幕檔開頭多錄了約 0.12 秒，字幕時間與切換點都要加上
@@ -109,10 +112,16 @@
   function replay() { ended = false; autoPaused = false; userPaused = false; pzEl.classList.remove('on'); endEl.classList.remove('on'); curScn = -2; say({ type: 'cinemaEnded', on: false }); if (idx === 0) { cur.currentTime = 0; cur.play().catch(fallbackMuted); } else { prepared = -1; goto(0); } }
 
   // ---------- 字幕、幕標題、進度 ----------
+  function layoutMask() {   // 影片是 16:9、在舞台裡置中縮放；遮罩蓋在影片自帶字幕所在的下緣（影片高度 82%～94%、寬度中間 76%）
+    var W = innerWidth, H = innerHeight, vw = Math.min(W, H * 16 / 9), vh = vw * 9 / 16, l = (W - vw) / 2, t = (H - vh) / 2;
+    maskEl.style.left = (l + vw * 0.12) + 'px'; maskEl.style.width = (vw * 0.76) + 'px'; maskEl.style.top = (t + vh * 0.82) + 'px'; maskEl.style.height = (vh * 0.12) + 'px';
+  }
+  addEventListener('resize', layoutMask); layoutMask();
   function showCue(i) {
     if (i === curCue) return; curCue = i;
-    if (i < 0 || !subsOn) { subEl.classList.remove('on'); return; }
-    var c = scenes[idx].cues[i]; subEl.innerHTML = (c.who ? '<b style="color:' + (COLORS[c.who] || '#ffe082') + '">' + esc(c.who) + '</b>' : '') + esc(c.text); subEl.classList.add('on');
+    var c = i >= 0 ? scenes[idx].cues[i] : null; maskEl.classList.toggle('on', Boolean(c && c.mask));   // 就算關了字幕，也要蓋住影片自帶的簡體字
+    if (!c || !subsOn) { subEl.classList.remove('on'); return; }
+     subEl.innerHTML = (c.who ? '<b style="color:' + (COLORS[c.who] || '#ffe082') + '">' + esc(c.who) + '</b>' : '') + esc(c.text); subEl.classList.add('on');
   }
   function tick() {
     if (!scenes.length) { requestAnimationFrame(tick); return; }
