@@ -53,6 +53,7 @@
   <div id="bar"><i></i></div>
   <div id="ctl">
     <button id="bPlay" type="button">暫停</button>
+    <button id="bPrev" type="button">上一句</button>
     <button id="bNext" type="button">下一句</button>
     <button id="bSub" type="button">字幕：開</button>
     <button id="bMute" type="button">開聲音</button>
@@ -60,7 +61,7 @@
 </div>
 <script>
 (function () {
-  var params = new URLSearchParams(location.search), embedded = params.get('embed') === '1', VER = '7';
+  var params = new URLSearchParams(location.search), embedded = params.get('embed') === '1', VER = '8';
   if (!embedded) document.body.classList.add('solo');
   var $ = function (id) { return document.getElementById(id); };
   var maskEl = $('mask'), subEl = $('sub'), scnEl = $('scn'), endEl = $('end'), pzEl = $('pz'), ldEl = $('ld'), barI = document.querySelector('#bar i'), poster = $('poster');
@@ -69,7 +70,7 @@
   var PAD = 0.12;   // 每個分幕檔開頭多錄了約 0.12 秒，字幕時間與切換點都要加上
   var scenes = [], offs = [], total = 0;
   var vids = [$('vA'), $('vB')], cur = vids[0], nxt = vids[1];
-  var urls = [], idx = 0, prepared = -1, waiting = -1, loadedTo = 0, loading = false;
+  var urls = [], idx = 0, prepared = -1, waiting = -1, loadedTo = 0, loading = false, pendingSeek = null;
   var conn = navigator.connection || {}, lean = innerWidth < 720 || conn.saveData || /(^|-)(2g|3g)$/.test(conn.effectiveType || '');   // 手機／省流量／慢網路：不一次把後面五幕全抓下來，只提前抓下一幕
   var ready = false, ended = false, userPaused = false, autoPaused = false, inView = true, subsOn = true, ctaOn = false, curCue = -1, curScn = -1, muted = false;
   var say = function (m) { try { parent.postMessage(m, '*'); } catch (e) {} };
@@ -105,7 +106,7 @@
     }
     waiting = -1; ldEl.classList.remove('on');
     var old = cur; cur = nxt; nxt = old; idx = i; prepared = -1; curScn = -2; curCue = -2;
-    cur.muted = muted; cur.currentTime = 0; autoPaused = false;
+    cur.muted = muted; cur.currentTime = pendingSeek || 0; pendingSeek = null; autoPaused = false;
     cur.classList.add('on'); old.classList.remove('on');
     if (!userPaused) cur.play().catch(fallbackMuted);
     setTimeout(function () { old.pause(); }, 120);
@@ -148,6 +149,17 @@
     if (nx !== null) { cur.currentTime = Math.max(0, nx); if (cur.paused && !userPaused) cur.play().catch(function () {}); return; }
     if (idx < scenes.length - 1) goto(idx + 1); else finish();
   }
+  function jumpTo(si, time) {   // 跳到某一幕的某個時間（同一幕直接 seek；跨幕先切幕再 seek）
+    if (si === idx) { cur.currentTime = time; if (cur.paused && !userPaused) cur.play().catch(function () {}); return; }
+    pendingSeek = time; goto(si);
+  }
+  function prev() {   // 上一句：目前這句已經播超過一點點就回到這句開頭，否則回到前一句；第一句之前回到片頭
+    if (ended) { ended = false; endEl.classList.remove('on'); say({ type: 'cinemaEnded', on: false }); }
+    var t = cur.currentTime - PAD - 0.8, best = null, si, ci, cs;
+    for (si = idx; si >= 0 && !best; si--) { cs = scenes[si].cues; for (ci = cs.length - 1; ci >= 0; ci--) { if (si === idx && cs[ci].s >= t) continue; best = { si: si, s: cs[ci].s }; break; } }
+    if (!best) best = { si: 0, s: 0 };
+    jumpTo(best.si, Math.max(0, best.s - 0.25) + PAD);
+  }
   function toggle() {
     if (ended || waiting >= 0) return;
     if (userPaused) { userPaused = false; autoPaused = false; cur.play().catch(fallbackMuted); pzEl.classList.remove('on'); $('bPlay').textContent = '暫停'; }
@@ -170,10 +182,12 @@
   addEventListener('message', function (e) {
     var d = e.data; if (!d || typeof d !== 'object') return;
     if (d.type === 'cinemaSkip') skip();
+    if (d.type === 'cinemaPrev') prev();
     if (d.type === 'cinemaReplay') replay();
     if (d.type === 'cinemaToggle') toggle();
     if (d.type === 'cinemaMute') setMuted(Boolean(d.muted));
   });
+  $('bPrev').onclick = function (e) { e.stopPropagation(); prev(); };
   $('bNext').onclick = function (e) { e.stopPropagation(); skip(); };
   $('bPlay').onclick = function (e) { e.stopPropagation(); toggle(); };
   $('bSub').onclick = function (e) { e.stopPropagation(); subsOn = !subsOn; this.textContent = '字幕：' + (subsOn ? '開' : '關'); curCue = -2; };

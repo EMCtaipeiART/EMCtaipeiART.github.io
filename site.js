@@ -1130,14 +1130,15 @@
     const OUTFIT_ORIGIN='https://emc-ai-stage-classifier.machi-chen.workers.dev';
     function renderOutfitPage(){
       const t=session().token;if(!t||!outfitAllowed()){show(state.home||'board');return}
-      $('stage').innerHTML='<div class="outfit-page"><iframe class="outfit-frame" id="outfitFrame" scrolling="no" title="AI 服裝生成器" allow="clipboard-write; autoplay" src="'+OUTFIT_ORIGIN+'/outfit#embed=1&theme='+currentTheme()+'&t='+encodeURIComponent(t)+'"></iframe></div>';
+      $('stage').innerHTML='<div class="outfit-page"><iframe class="outfit-frame" id="outfitFrame" scrolling="no" title="AI 服裝生成器" allow="clipboard-write; autoplay; fullscreen" src="'+OUTFIT_ORIGIN+'/outfit#embed=1&theme='+currentTheme()+'&t='+encodeURIComponent(t)+'"></iframe></div>';
     }
     /* 服裝頁（iframe）會回報內容高度：把 iframe 撐到那麼高，整頁由這一層捲動，左右空白處也能滑 */
     /* 個人形象完成（頭像快照已存）：重新載入一次，頭像框就會換成新的 */
     window.addEventListener('message',e=>{if(e.origin===OUTFIT_ORIGIN&&e.data&&e.data.type==='emcPersonaDone')setTimeout(()=>location.reload(),800)});
     /* 服裝頁（iframe）要求捲回它的頂端：外層捲到 iframe 上緣（留出上方固定列的高度） */
     window.addEventListener('message',e=>{if(e.origin!==OUTFIT_ORIGIN||!e.data||e.data.type!=='emcOutfitScroll')return;const f=$('outfitFrame');if(!f)return;const top=f.getBoundingClientRect().top+window.scrollY+(Number(e.data.y)||0)-96;window.scrollTo({top:Math.max(0,top),behavior:'smooth'})});
-    window.addEventListener('message',e=>{if(e.origin!==OUTFIT_ORIGIN||!e.data||e.data.type!=='emcOutfitHeight')return;const f=$('outfitFrame'),h=Math.round(Number(e.data.height)||0);if(f&&h>200)f.style.height=h+'px'});
+    window.addEventListener('message',e=>{if(e.origin!==OUTFIT_ORIGIN||!e.data||e.data.type!=='emcOutfitFullscreen')return;const f=$('outfitFrame');if(!f)return;if(e.data.on){if(!f.dataset.full){f.dataset.prevStyle=f.getAttribute('style')||'';f.dataset.prevScroll=String(window.scrollY)}f.dataset.full='1';f.style.cssText+=';position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;z-index:2147483000;background:#000;border:0';document.documentElement.style.overflow='hidden'}else if(f.dataset.full){delete f.dataset.full;f.setAttribute('style',f.dataset.prevStyle||'');document.documentElement.style.overflow='';window.scrollTo(0,Number(f.dataset.prevScroll)||0)}});   // 角色頁的影片「假全螢幕」（iPhone 不支援元素全螢幕）：把整個角色頁撐滿視窗
+    window.addEventListener('message',e=>{if(e.origin!==OUTFIT_ORIGIN||!e.data||e.data.type!=='emcOutfitHeight')return;const f=$('outfitFrame'),h=Math.round(Number(e.data.height)||0);if(f&&f.dataset.full)return;if(f&&h>200)f.style.height=h+'px'});
     function sendOutfitTheme(){const f=$('outfitFrame');try{f&&f.contentWindow&&f.contentWindow.postMessage({type:'emcTheme',theme:currentTheme()},OUTFIT_ORIGIN)}catch(err){}}
     /* ---------- 記事本：設計部常用的工具、素材網站、廠商資訊（卡片式、可新增／編輯／刪除／調整順序）。
        資料存在後端（Worker 資料庫，不進公開的 GitHub）；登入且是設計部／管理者才讀得到。密碼預設遮住，按眼睛顯示、按複製直接複製 ---------- */
