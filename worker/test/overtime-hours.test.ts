@@ -16,3 +16,13 @@ describe('加班（遮罩）固定 19:00～隔天 06:00', () => {
     setPixelHours(null);
   });
 });
+
+describe('假日電腦開著算加班（設計部）', () => {
+  const sunday = (hour: number) => Date.parse(`2026-11-08T${String(hour).padStart(2, '0')}:30:00+08:00`);
+  it('假日：電腦開著、人在電腦前 = 加班；閒置超過門檻 = 下班', () => {
+    setPixelHours(null);
+    expect(pixelOfficeWorkStatus(sunday(11))).toBe('overtime');
+    expect(pixelOfficeWorkStatus(sunday(11), 10)).toBe('overtime');
+    expect(pixelOfficeWorkStatus(sunday(11), 600)).toBe('offwork');
+  });
+});

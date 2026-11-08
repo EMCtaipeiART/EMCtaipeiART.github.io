@@ -5150,17 +5150,17 @@ describe('Pixel Office shared state', () => {
       at('2026-09-22T04:30:00Z');
       expect(await statusNow()).toBe('offwork');
 
-      // 星期六：電腦開著也是下班。
+      // 星期六：電腦開著、人在電腦前算加班（2026-11-08 起）。
       at('2026-09-26T02:00:00Z');
-      expect(await heartbeat(5)).toMatchObject({ status: 'offwork' });
+      expect(await heartbeat(5)).toMatchObject({ status: 'overtime' });
 
-      // 國定假日（9/28 教師節，星期一）：電腦開著也是下班。
+      // 國定假日（9/28 教師節，星期一）：電腦開著也算加班。
       at('2026-09-28T02:00:00Z');
-      expect(await heartbeat(5)).toMatchObject({ status: 'offwork' });
+      expect(await heartbeat(5)).toMatchObject({ status: 'overtime' });
 
-      // 假日的晚上也不會變成加班。
+      // 假日的晚上也是加班。
       at('2026-09-28T12:00:00Z');
-      expect(await heartbeat(5)).toMatchObject({ status: 'offwork' });
+      expect(await heartbeat(5)).toMatchObject({ status: 'overtime' });
 
       // 收假後的星期二早上：自動回到在座。
       at('2026-09-29T01:00:00Z');

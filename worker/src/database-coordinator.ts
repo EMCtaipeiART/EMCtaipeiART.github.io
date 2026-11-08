@@ -164,13 +164,18 @@ export function pixelOfficeIsWorkday(nowMs: number): boolean {
 
 /**
  * 電腦開著時這個時間點應該顯示的狀態。
- * 週六日與國定假日一律下班（就算電腦開著）。平日只要鍵鼠閒置超過門檻就是人離開座位了——中午
+ * 週六日與國定假日：電腦離線是下班；電腦開著、人在電腦前就是加班（2026-11-08 起，設計部假日開電腦要算加班），
+ * 閒置超過門檻才算下班。平日只要鍵鼠閒置超過門檻就是人離開座位了——中午
  * 12～14 點顯示用餐，其他時段顯示廁所（含晚上的加班時段：閒置著就不算還在工作）。人在電腦前的話，
  * 晚上七點之後是加班，其餘是在座。idleSeconds 沒帶（爬蟲版本較舊、或作業系統查不到閒置時間）就
  * 永遠當作人在電腦前，不會判成離席。
  */
 export function pixelOfficeWorkStatus(nowMs: number, idleSeconds?: number): 'present' | 'overtime' | 'lunch' | 'toilet' | 'offwork' {
-  if (!pixelOfficeIsWorkday(nowMs)) return 'offwork';
+  if (!pixelOfficeIsWorkday(nowMs)) {
+    const idleH = Number(idleSeconds);
+    if (pixelForceNow(nowMs) === 'off' || (Number.isFinite(idleH) && idleH >= PIXEL_OFFICE_AWAY_IDLE_SECONDS)) return 'offwork';
+    return pixelForceNow(nowMs) === 'work' ? 'present' : pixelHours.enabled ? 'overtime' : 'present';
+  }
   const { hour } = taipeiClock(nowMs);
   const idle = Number(idleSeconds);
   if (Number.isFinite(idle) && idle >= PIXEL_OFFICE_AWAY_IDLE_SECONDS) {
@@ -2988,7 +2993,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (!PIXEL_OFFICE_STATUSES.includes(status)) throw new Error('狀態不正確');
       state.status = status;
       // 企劃部／專案部下班後手動解除下班：先套用加班（2026-11-05）
-      if (status === 'present' && this.pixelOfficeStaff().some(item => item.name === name) && pixelOfficeStaffStatus(Date.now()) === 'offwork' && pixelForceNow(Date.now()) !== 'work') state.status = 'overtime';
+      if (status === 'present' && pixelOfficeStaffStatus(Date.now()) === 'offwork' && pixelForceNow(Date.now()) !== 'work' && (this.pixelOfficeStaff().some(item => item.name === name) || !pixelOfficeIsWorkday(Date.now()))) state.status = 'overtime';   // 設計部在假日也一樣（2026-11-08）：手動／走動回到「在座」算加班（平日晚上設計部維持手動指定的在座）
       // 使用者在遊戲裡手動指定：在同一個時段內不會被自動狀態蓋掉（見 pixelOfficeHeartbeat）。
       // 記下指定當下「時間規則算出來的狀態」，跨到下一個時段（例如從白天到晚上、或隔天）就交還給自動，
       // 免得昨晚手動點的加班隔天中午還掛在那裡。
