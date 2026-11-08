@@ -1413,13 +1413,15 @@ function syncEmptyDesks(){   // 沒人坐的辦公桌：和大家一樣照上下
     if (off) iconSprite(k, 'power'); else if (k.icon) k.icon.visible = false;
   }
 }
+const IDLE_LOCK_MS = 5 * 60 * 1000;   // 企劃／專案同仁：下班時段（假日、晚上）走動或操作會解除下班，五分鐘沒有新動作才鎖回去
+const isStaffName = n => STAFF_NAMES.includes(n) || extraNames.includes(n);
 const STAFF_NAMES = ['廖秦葦', '李明庭', '鄭筱舢', '吳冠賢', '余采馨', '黎子瑄', '王藍庭'];   // 後端 pixelOfficeStaff 的同仁座位（企劃部／專案部）
 function syncExtraStatus(){   // 額外人物沒有後端狀態：依時間規則（平日 8–19 上班、午休、週末與國定假日下班），全員上班／下班按鈕也算
   const st = hoursForce === 'work' ? 'present' : hoursForce === 'off' ? 'offwork' : simStatus(true);
-  for (const n of extraNames) { const c = chars[n]; if (c && !c.hasState && (c.status !== st || c.appliedStatus == null)) { c.status = st; applyStatus(c); } }   // 後端有狀態的同仁（c.hasState）由下面那段處理，不能在這裡被時間規則蓋掉
+  for (const n of extraNames) { const c = chars[n]; if (!c) continue; if (c.localAwake) { if (Date.now() - (c.actAt || 0) < IDLE_LOCK_MS) continue; c.localAwake = false; c.rawStatus = 'present'; c.appliedStatus = null; } if (c.remote && !remoteParked(c) && c !== player) continue; if (!c.hasState && (c.status !== st || c.appliedStatus == null)) { c.status = st; applyStatus(c, c === player); } }   // 後端有狀態的同仁（c.hasState）由下面那段處理，不能在這裡被時間規則蓋掉
   // 企劃部／專案部同仁沒有電腦心跳，後端狀態一直是「在座」：照時間規則（午休用餐、下班後／假日下班）；手動指定、行事曆（會議／休假／公出）、本人在線上時不動
   for (const n of new Set([...STAFF_NAMES, ...extraNames])) {
-    const c = chars[n]; if (!c || c === player || c.entered || c.statusSource === 'manual' || (c.remote && !remoteParked(c))) continue;
+    const c = chars[n]; if (!c || c === player || c.localAwake || c.entered || c.statusSource === 'manual' || (c.remote && !remoteParked(c))) continue;
     if (!['present', 'overtime', 'offwork', 'lunch'].includes(c.rawStatus || 'present')) continue;
     const st = hoursForce === 'work' ? 'present' : hoursForce === 'off' ? 'offwork' : simStatus(true);
     if (c.status !== st || c.appliedStatus == null) { c.status = st; applyStatus(c); }
@@ -1439,7 +1441,7 @@ async function pollOnce(){
       for (const e of d.people || []) { const c = chars[e.name]; if (!c) continue; c.hasState = true; remoteFromState(c, e); const rs = typeof e.status === 'string' ? e.status : 'present'; if (c.autoPendingUntil > Date.now() && rs !== 'present') { c.rawStatus = c.rawStatus || 'present'; } else { c.autoPendingUntil = 0; c.rawStatus = rs; } c.status = forcedStatus(c.rawStatus, c); c.mood = e.mood || ''; c.message = e.message || ''; c.statusSource = e.statusSource || ''; c.meetingRoom = typeof e.meetingRoom === 'string' ? e.meetingRoom : ''; c.music = e.music && e.music.url ? {url:e.music.url, title:e.music.title || '', provider:e.music.provider || ''} : null; applyStatus(c); }
       if (d.stories) applyStories(d.stories);
       if (d.funClaims) applyFunClaims(d.funClaims);
-      if (entryRelease && player) { entryRelease = false; player.entered = true; if (player.status === 'offwork' || player.rawStatus === 'offwork') { setOwnStatus('present'); showQuote('', '歡迎進來，已解除下班狀態'); } }   // 登入後進入辦公室：解除下班（全員下班時除外）
+      if (entryRelease && player) { entryRelease = false; player.entered = true; player.actAt = Date.now(); if (player.status === 'offwork' || player.rawStatus === 'offwork') { setOwnStatus('present'); showQuote('', '歡迎進來，已解除下班狀態'); } }   // 登入後進入辦公室：解除下班（全員下班時除外）
     }
   } catch (err) {
     live.ok = false;
@@ -1459,6 +1461,7 @@ const posSent = {x:-99, z:-99, t:0};
 const faceDir = f => { const dx = Math.sin(f), dz = Math.cos(f); return Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 'right' : 'left') : (dz > 0 ? 'down' : 'up'); };
 function pushPosition(){
   const c = player; if (!c || !live.ok || AWAY.has(c.status)) return;
+  if (isStaffName(c.name) && simStatus(true) === 'offwork' && hoursForce !== 'work' && Date.now() - (c.actAt || 0) > IDLE_LOCK_MS) return;   // 下班時段、五分鐘沒有動作：不再回報在線，讓狀態自然鎖回下班
   // 坐在自己座位上也每 45 秒回報一次：這是「人在線上」的訊號，別人（含訪客）才不會在「全員下班」時把在線的人顯示成下班
   posSent.home = false;
   const now = performance.now(), p = c.holder.position, moved = Math.hypot(p.x - posSent.x, p.z - posSent.z) > .12;
@@ -2072,7 +2075,8 @@ async function adminCall(action, extra){ return post({action, ...(extra || {}), 
 let awayReleasing = 0;
 function releaseAway(c){   // 本人在遊戲裡操作（走動／點物件）卻還掛著離開辦公室的狀態：解除，人物回到座位並可以走
   if (!c || !AWAY.has(c.status) || performance.now() - awayReleasing < 3000) return; awayReleasing = performance.now();
-  c.rawStatus = 'present'; c.status = forcedStatus('present', c); c.appliedStatus = null; c.autoPendingUntil = Date.now() + 25000; applyStatus(c, true);
+  c.actAt = Date.now(); if (isStaffName(c.name)) c.localAwake = true;   // 企劃／專案：本機也記住「現在是醒著的」，五分鐘沒動作才由時間規則收回
+  c.rawStatus = 'present'; c.status = forcedStatus(c.localAwake && simStatus(true) === 'offwork' && hoursForce !== 'work' ? 'overtime' : 'present', c); c.appliedStatus = null; c.autoPendingUntil = Date.now() + 25000; applyStatus(c, true);
   writeState(c, {status:'present'}).then(ok => { if (ok) live.version = 0; }); setTimeout(() => { live.version = 0; }, 26000);
 }
 function hopChar(c){ c.hopAt = performance.now(); }
@@ -3047,7 +3051,7 @@ function tick(){
       if (dir.length() < (routePts.length > 1 ? .3 : .2)) { if (routePts.length) routePts.shift(); if (!routePts.length) target = null; dir.set(0, 0, 0); }
       else if (performance.now() - routeStuck.t > 900) { const moved = Math.hypot(player.holder.position.x - routeStuck.x, player.holder.position.z - routeStuck.z); routeStuck = {t:performance.now(), x:player.holder.position.x, z:player.holder.position.z}; if (moved < .15) { routePts = findPath(player.holder.position, target, floorOf(player)); } }
     }
-    if ((dir.lengthSq() > .01 || target) && AWAY.has(player.status)) releaseAway(player);   // 有操作就解除「用餐／下班…」，不會卡住不能動
+    if (dir.lengthSq() > .01 || target) { player.actAt = Date.now(); if (AWAY.has(player.status)) releaseAway(player); }   // 有操作就解除「用餐／下班…」，不會卡住不能動
     if (!radial.hidden || !$('sv').hidden || AWAY.has(player.status) || elevBusy) { dir.set(0, 0, 0); target = null; }   // 角色頁面開著時人物不跟著走
     if (player.sitting && dir.lengthSq() > 1e-4) standUp(player);
     if (!player.sitting) { unstick(player); moveChar(player, dir, run ? 7 : 2.4, dt); }
