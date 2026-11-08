@@ -33,7 +33,7 @@ jobs:
   make:
     needs: check
     if: needs.check.outputs.list != '[]'
-    runs-on: [self-hosted, windows, walk]
+    runs-on: [self-hosted, macOS, walk]
     timeout-minutes: 45
     strategy:
       max-parallel: 1

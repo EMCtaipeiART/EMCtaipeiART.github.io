@@ -4,7 +4,7 @@
 
 ## 流程（GitHub Actions：`.github/workflows/walk-frames.yml`）
 1. **檢查（雲端，免費）**：每 30 分鐘、手動執行、或收到 `character-published` 請求時，跑 `walk-check.mjs --ci`。沒有新人物就結束。
-2. **製作（公司電腦的自架執行器）**：有新人物才交給標籤為 `self-hosted, windows, walk` 的執行器，跑 `walk-make.mjs`（下載站姿圖 → Codex 畫走路表 → 去背對位 → 自動檢查）。
+2. **製作（公司電腦的自架執行器）**：有新人物才交給標籤為 `self-hosted, macOS, walk` 的執行器，跑 `walk-make.mjs`（下載站姿圖 → Codex 畫走路表 → 去背對位 → 自動檢查）。
 3. **待審分支**：成品只推到 `walk-pending/<名字>-v<版本>`，**不會上線**。
 4. **人工把關**：請 Claude「看一下待審的走路影格」。Claude 取出分支裡 `pixel-plaza/sprites-walk-hd/<名字>.png` 目視檢查（服裝顏色與站姿一致、沒缺手腳或裁切、沒有洋紅殘邊、前後左右方向合理、兩排腳步不同），沒問題才把這三個檔案和 `walk-manifest.json` 合併進 main 並推送，再刪待審分支。不合格就刪分支，下一輪會重做（或請 Claude 手動調整）。
 
@@ -14,12 +14,13 @@
 - `walk-make.mjs <名字> <版本>`：失敗以非 0 結束且不改檔（3 下載失敗、4 Codex 沒出圖、5 自動檢查失敗、6 找不到 Chrome）。
 - `walk-lib.mjs`：共用設定。`SKIP` 內的人物（廖秦葦＝聖誕樹）不處理。
 
-## 公司電腦設定（一次性）
-1. 安裝 Node 20+、Git、Chrome、Codex CLI，並用**平常使用的 Windows 帳號**登入 Codex（自己登入，不要貼到任何地方）。確認 `codex exec` 能用圖片生成。
-2. 在 GitHub 專案 Settings → Actions → Runners → New self-hosted runner（Windows x64），照頁面指示下載並用頁面上的一次性註冊碼設定。名稱隨意，**額外標籤填 `walk`**。
-3. 執行器要用**同一個 Windows 帳號**執行（Codex 登入是帳號專屬）：互動式 `run.cmd`，或設成服務時選該帳號。
+## 公司電腦設定（一次性，macOS）
+1. 安裝 Node 20+、Git、Google Chrome、Codex CLI（Homebrew 或官方安裝），並用**平常使用的 Mac 使用者帳號**登入 Codex（自己登入，不要貼到任何地方）。確認 `codex exec` 能用圖片生成。
+2. 在 GitHub 專案 Settings → Actions → Runners → New self-hosted runner，系統選 **macOS**、架構依機型（Apple 晶片選 ARM64，Intel 選 x64），照頁面指示下載並用頁面上的一次性註冊碼設定（`./config.sh`）。**額外標籤填 `walk`**。
+3. 執行器要用**同一個 Mac 帳號**執行（Codex 登入是帳號專屬）：先用 `./run.sh` 手動試跑；要常駐就 `./svc.sh install` 後 `./svc.sh start`（登入使用者的啟動項，Mac 要登入、不睡眠才會接工作）。
 4. GitHub 專案 Settings → Actions → General：外部協作者的 workflow 一律要核准（專案是公開的，自架執行器不可對外部提交的修改請求啟動；本流程只由 schedule／手動／dispatch 觸發）。
-5. Chrome 不在預設位置時設環境變數 `CHROME_PATH`；想指定暫存位置設 `WALK_JOBS`。
+5. Chrome 不在 `/Applications/Google Chrome.app` 時設環境變數 `CHROME_PATH`；想指定暫存位置設 `WALK_JOBS`。
+6. 讓 Mac 在工作時不睡眠（系統設定 → 電池／節能，或 `caffeinate`）；睡著時工作會排隊，醒來後才處理。
 
 ## 想改成「發佈當下立即處理」
 讓角色工坊後端在發佈完成後呼叫 GitHub `POST /repos/EMCtaipeiART/EMCtaipeiART.github.io/dispatches`，body `{"event_type":"character-published"}`（需一組只有這個專案 contents 權限的 token，放在後端 secret）。不加也行，最慢 30 分鐘內會被排程撿到。
