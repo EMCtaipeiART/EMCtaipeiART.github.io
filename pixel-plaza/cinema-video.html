@@ -20,14 +20,24 @@
   body.solo #ctl{display:flex}
   #ctl button{border:0;border-radius:999px;padding:7px 14px;font:700 13px/1 inherit;color:#fff;background:rgba(0,0,0,.6);cursor:pointer}
   #ctl button:hover{background:rgba(0,0,0,.85)}
+  #scn{position:absolute;left:3%;top:6%;display:flex;align-items:baseline;gap:10px;color:#fff;background:rgba(0,0,0,.55);padding:6px 16px;border-radius:999px;opacity:0;transform:translateY(-6px);transition:opacity .35s,transform .35s;pointer-events:none}
+  #scn.on{opacity:1;transform:none}
+  #scn small{font-size:clamp(11px,1.4vw,14px);letter-spacing:.3em;opacity:.8}
+  #scn b{font-size:clamp(15px,2.4vw,26px);font-weight:900;letter-spacing:.08em}
+  #end{position:absolute;inset:0;display:grid;place-content:center;text-align:center;color:#fff;background:#000;opacity:0;pointer-events:none;transition:opacity 1s}
+  #end.on{opacity:1}
+  #end small{display:block;letter-spacing:.6em;font-size:clamp(12px,2vw,20px);opacity:.85;margin-bottom:.7em}
+  #end h1{margin:0;font-size:clamp(30px,7vw,72px);font-weight:900;letter-spacing:.1em;text-shadow:0 0 24px rgba(123,224,138,.45)}
   #poster{position:absolute;inset:0;background:var(--bg) url(cinema/poster.webp) center/contain no-repeat}
 </style>
 </head>
 <body>
 <div id="stage">
   <div id="poster"></div>
-  <video id="v" playsinline loop preload="auto" poster="cinema/poster.webp" aria-label="辦公室小短劇《最後一版》"></video>
+  <video id="v" playsinline preload="auto" poster="cinema/poster.webp" aria-label="辦公室小短劇《最後一版》"></video>
   <div id="sub" aria-live="polite"></div>
+  <div id="scn"><small></small><b></b></div>
+  <div id="end"><div><small>EMC PIXEL OFFICE</small><h1>下一位，就是你</h1></div></div>
   <div id="bar"><i></i></div>
   <div id="ctl">
     <button id="bPlay" type="button">暫停</button>
@@ -42,7 +52,9 @@
   if (!embedded) document.body.classList.add('solo');
   var v = document.getElementById('v'), subEl = document.getElementById('sub'), barI = document.querySelector('#bar i'), poster = document.getElementById('poster');
   var COLORS = { Machi: '#7be08a', Anna: '#ff9cc0', Amber: '#ffc864', Leona: '#b7a2ff', Noise: '#7cc4ff', '企劃': '#ffe082' };
-  var data = { total: 0, scenes: [0], cues: [] }, subsOn = true, ready = false, ctaOn = false, curCue = -1;
+  var data = { total: 0, scenes: [0], cues: [] }, subsOn = true, ready = false, ctaOn = false, curCue = -1, ended = false, curScn = -1;
+  var TITLES = ['客戶來信', '第七版', '布丁', '小小的想法', '會議室大戰', '歡迎入職'], NUM = ['一', '二', '三', '四', '五', '六'];
+  var scnEl = document.getElementById('scn'), endEl = document.getElementById('end');
   var say = function (m) { try { parent.postMessage(m, '*'); } catch (e) {} };
   function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function showCue(i) {
@@ -55,26 +67,36 @@
     for (var i = 0; i < data.cues.length; i++) if (t >= data.cues[i].s && t < data.cues[i].e) { idx = i; break; }
     showCue(idx);
     var total = data.total || (isFinite(v.duration) ? v.duration : 0);   // 錄製出來的 webm 沒有長度資訊，總長度用 cues.json 的
-    if (total) { barI.style.width = Math.min(100, t / total * 100) + '%'; if (t >= total - 0.12) v.currentTime = 0; }
+    if (total) { barI.style.width = Math.min(100, t / total * 100) + '%'; if (t >= total - 0.12 && !ended) finish(); }
+    var si = -1;   // 每一幕開始時，左上角浮出「第幾幕＋主題」（第一幕要等片頭字卡演完）
+    for (var k = 0; k < data.scenes.length; k++) { var from = data.scenes[k] + (k === 0 ? 1.9 : 0.3); if (t >= from && t < from + 2.8) si = k; }
+    if (si !== curScn) { curScn = si; if (si < 0) scnEl.classList.remove('on'); else { scnEl.querySelector('small').textContent = '第' + NUM[si] + '幕'; scnEl.querySelector('b').textContent = TITLES[si] || ''; scnEl.classList.add('on'); } }
     var last = data.scenes.length ? data.scenes[data.scenes.length - 1] : 0, on = data.scenes.length > 1 && t >= last + 5;   // 最後一幕後段：請外面的按鈕閃一下
     if (on !== ctaOn) { ctaOn = on; say({ type: 'cinemaCta', on: on }); }
     requestAnimationFrame(tick);
   }
-  function skip() {   // 下一句：跳到下一句台詞開始；沒有下一句就跳到下一幕；已經是最後就回到開頭
+  function finish() {   // 片尾：黑幕「下一位，就是你」停住，不再循環；外面出現「再看一次」
+    ended = true; v.pause(); endEl.classList.add('on'); say({ type: 'cinemaEnded', on: true });
+  }
+  function replay() { ended = false; endEl.classList.remove('on'); curScn = -2; v.currentTime = 0; v.play().catch(function () {}); say({ type: 'cinemaEnded', on: false }); }
+  function skip() {
+    if (ended) { replay(); return; }   // 下一句：跳到下一句台詞開始；沒有下一句就跳到下一幕；已經是最後就回到開頭
     var t = v.currentTime + 0.15, i, nx = null;
     for (i = 0; i < data.cues.length; i++) if (data.cues[i].s > t) { nx = data.cues[i].s - 0.25; break; }
     for (i = 0; i < data.scenes.length; i++) if (data.scenes[i] > t && (nx === null || data.scenes[i] < nx)) { nx = data.scenes[i]; break; }
-    v.currentTime = nx === null ? 0 : Math.max(0, nx);
+    if (nx === null) { finish(); return; }   // 後面沒有台詞也沒有下一幕：直接到片尾黑幕
+    v.currentTime = Math.max(0, nx);
     if (v.paused) v.play().catch(function () {});
   }
   var userPaused = false;
   function label() { document.getElementById('bMute').textContent = v.muted ? '開聲音' : '關聲音'; }
   function fallbackMuted() { v.muted = true; label(); say({ type: 'cinemaMuted', muted: true }); v.play().catch(function () {}); }   // 瀏覽器不讓有聲播放：改成靜音繼續播，並告訴外面按鈕
   function setMuted(m) { v.muted = m; label(); if (!m) v.play().then(function () { say({ type: 'cinemaMuted', muted: false }); }).catch(fallbackMuted); }
-  v.addEventListener('pause', function () { if (!userPaused && !document.hidden && !v.ended && !v.muted) fallbackMuted(); });   // 解除靜音被瀏覽器暫停時自動接著播
+  v.addEventListener('pause', function () { if (!userPaused && !ended && !document.hidden && !v.ended && !v.muted) fallbackMuted(); });   // 解除靜音被瀏覽器暫停時自動接著播
   addEventListener('message', function (e) {
     var d = e.data; if (!d || typeof d !== 'object') return;
     if (d.type === 'cinemaSkip') skip();
+    if (d.type === 'cinemaReplay') replay();
     if (d.type === 'cinemaMute') setMuted(Boolean(d.muted));
   });
   document.getElementById('bNext').onclick = skip;
@@ -89,7 +111,7 @@
     say({ type: 'cinemaReady' }); requestAnimationFrame(tick);
   });
   v.src = 'cinema/last-version.webm?v=1';
-  document.addEventListener('visibilitychange', function () { if (document.hidden) v.pause(); else v.play().catch(function () {}); });
+  document.addEventListener('visibilitychange', function () { if (document.hidden) v.pause(); else if (!ended) v.play().catch(function () {}); });
 })();
 </script>
 </body>
