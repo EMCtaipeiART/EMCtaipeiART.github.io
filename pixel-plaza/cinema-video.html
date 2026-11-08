@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>最後一版</title>
+<style>
+  :root{--bg:#0d1117;--fg:#fff}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);overflow:hidden;font-family:'Noto Sans TC','Fredoka',system-ui,sans-serif}
+  #stage{position:fixed;inset:0;display:grid;place-items:center}
+  video{width:100%;height:100%;object-fit:contain;background:var(--bg);opacity:0;transition:opacity .6s}
+  video.on{opacity:1}
+  #sub{position:absolute;left:50%;bottom:7%;transform:translateX(-50%);max-width:88%;text-align:center;color:var(--fg);font-weight:700;font-size:clamp(13px,2.4vw,24px);line-height:1.45;padding:4px 14px;border-radius:8px;background:rgba(0,0,0,.62);opacity:0;transition:opacity .18s;pointer-events:none;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+  #sub.on{opacity:1}
+  #sub b{margin-right:8px;font-weight:800}
+  #bar{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.15)}
+  #bar i{display:block;height:100%;width:0;background:#7be08a}
+  #ctl{position:absolute;right:10px;top:10px;display:none;gap:6px}
+  body.solo #ctl{display:flex}
+  #ctl button{border:0;border-radius:999px;padding:7px 14px;font:700 13px/1 inherit;color:#fff;background:rgba(0,0,0,.6);cursor:pointer}
+  #ctl button:hover{background:rgba(0,0,0,.85)}
+  #poster{position:absolute;inset:0;background:var(--bg) url(cinema/poster.webp) center/contain no-repeat}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="poster"></div>
+  <video id="v" muted playsinline loop preload="auto" poster="cinema/poster.webp" aria-label="辦公室小短劇《最後一版》"></video>
+  <div id="sub" aria-live="polite"></div>
+  <div id="bar"><i></i></div>
+  <div id="ctl">
+    <button id="bPlay" type="button">暫停</button>
+    <button id="bNext" type="button">下一句</button>
+    <button id="bSub" type="button">字幕：開</button>
+    <button id="bMute" type="button">開聲音</button>
+  </div>
+</div>
+<script>
+(function () {
+  var params = new URLSearchParams(location.search), embedded = params.get('embed') === '1';
+  if (!embedded) document.body.classList.add('solo');
+  var v = document.getElementById('v'), subEl = document.getElementById('sub'), barI = document.querySelector('#bar i'), poster = document.getElementById('poster');
+  var COLORS = { Machi: '#7be08a', Anna: '#ff9cc0', Amber: '#ffc864', Leona: '#b7a2ff', Noise: '#7cc4ff', '企劃': '#ffe082' };
+  var data = { total: 0, scenes: [0], cues: [] }, subsOn = true, ready = false, ctaOn = false, curCue = -1;
+  var say = function (m) { try { parent.postMessage(m, '*'); } catch (e) {} };
+  function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function showCue(i) {
+    if (i === curCue) return; curCue = i;
+    if (i < 0 || !subsOn) { subEl.classList.remove('on'); return; }
+    var c = data.cues[i]; subEl.innerHTML = (c.who ? '<b style="color:' + (COLORS[c.who] || '#ffe082') + '">' + esc(c.who) + '</b>' : '') + esc(c.text); subEl.classList.add('on');
+  }
+  function tick() {
+    var t = v.currentTime, idx = -1;
+    for (var i = 0; i < data.cues.length; i++) if (t >= data.cues[i].s && t < data.cues[i].e) { idx = i; break; }
+    showCue(idx);
+    var total = data.total || (isFinite(v.duration) ? v.duration : 0);   // 錄製出來的 webm 沒有長度資訊，總長度用 cues.json 的
+    if (total) { barI.style.width = Math.min(100, t / total * 100) + '%'; if (t >= total - 0.12) v.currentTime = 0; }
+    var last = data.scenes.length ? data.scenes[data.scenes.length - 1] : 0, on = data.scenes.length > 1 && t >= last + 5;   // 最後一幕後段：請外面的按鈕閃一下
+    if (on !== ctaOn) { ctaOn = on; say({ type: 'cinemaCta', on: on }); }
+    requestAnimationFrame(tick);
+  }
+  function skip() {   // 下一句：跳到下一句台詞開始；沒有下一句就跳到下一幕；已經是最後就回到開頭
+    var t = v.currentTime + 0.15, i, nx = null;
+    for (i = 0; i < data.cues.length; i++) if (data.cues[i].s > t) { nx = data.cues[i].s - 0.25; break; }
+    for (i = 0; i < data.scenes.length; i++) if (data.scenes[i] > t && (nx === null || data.scenes[i] < nx)) { nx = data.scenes[i]; break; }
+    v.currentTime = nx === null ? 0 : Math.max(0, nx);
+    if (v.paused) v.play().catch(function () {});
+  }
+  function setMuted(m) { v.muted = m; document.getElementById('bMute').textContent = m ? '開聲音' : '關聲音'; if (!m && v.paused) v.play().catch(function () {}); }
+  addEventListener('message', function (e) {
+    var d = e.data; if (!d || typeof d !== 'object') return;
+    if (d.type === 'cinemaSkip') skip();
+    if (d.type === 'cinemaMute') { setMuted(Boolean(d.muted)); if (!d.muted && v.muted) say({ type: 'cinemaMuted', muted: true }); }
+  });
+  document.getElementById('bNext').onclick = skip;
+  document.getElementById('bPlay').onclick = function () { if (v.paused) { v.play(); this.textContent = '暫停'; } else { v.pause(); this.textContent = '播放'; } };
+  document.getElementById('bSub').onclick = function () { subsOn = !subsOn; this.textContent = '字幕：' + (subsOn ? '開' : '關'); curCue = -2; };
+  document.getElementById('bMute').onclick = function () { setMuted(!v.muted); };
+  fetch('cinema/cues.json?v=1').then(function (r) { return r.json(); }).then(function (j) { data = j; }).catch(function () {});
+  v.addEventListener('canplay', function () {
+    if (ready) return; ready = true; v.classList.add('on'); poster.style.display = 'none';
+    v.play().catch(function () {}); say({ type: 'cinemaReady' }); requestAnimationFrame(tick);
+  });
+  v.src = 'cinema/last-version.webm?v=1';
+  document.addEventListener('visibilitychange', function () { if (document.hidden) v.pause(); else v.play().catch(function () {}); });
+})();
+</script>
+</body>
+</html>
