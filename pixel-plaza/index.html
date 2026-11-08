@@ -1418,13 +1418,19 @@ const isStaffName = n => STAFF_NAMES.includes(n) || extraNames.includes(n);
 const STAFF_NAMES = ['廖秦葦', '李明庭', '鄭筱舢', '吳冠賢', '余采馨', '黎子瑄', '王藍庭'];   // 後端 pixelOfficeStaff 的同仁座位（企劃部／專案部）
 function syncExtraStatus(){   // 額外人物沒有後端狀態：依時間規則（平日 8–19 上班、午休、週末與國定假日下班），全員上班／下班按鈕也算
   const st = hoursForce === 'work' ? 'present' : hoursForce === 'off' ? 'offwork' : simStatus(true);
-  for (const n of extraNames) { const c = chars[n]; if (!c) continue; if (c.localAwake) { if (Date.now() - (c.actAt || 0) < IDLE_LOCK_MS) continue; c.localAwake = false; c.rawStatus = 'present'; c.appliedStatus = null; } if (c.remote && !remoteParked(c) && c !== player) continue; if (!c.hasState && (c.status !== st || c.appliedStatus == null)) { c.status = st; applyStatus(c, c === player); } }   // 後端有狀態的同仁（c.hasState）由下面那段處理，不能在這裡被時間規則蓋掉
+  for (const n of extraNames) { const c = chars[n]; if (!c) continue; if (c.localAwake) { if (Date.now() - (c.actAt || 0) < IDLE_LOCK_MS) continue; c.localAwake = false; c.rawStatus = 'present'; c.appliedStatus = null; } if ((c.remote && !remoteParked(c) && c !== player) || (c === player && Date.now() - (c.actAt || 0) < IDLE_LOCK_MS)) continue; if (!c.hasState && (c.status !== st || c.appliedStatus == null)) { c.status = st; applyStatus(c, c === player); } }   // 後端有狀態的同仁（c.hasState）由下面那段處理，不能在這裡被時間規則蓋掉
   // 企劃部／專案部同仁沒有電腦心跳，後端狀態一直是「在座」：照時間規則（午休用餐、下班後／假日下班）；手動指定、行事曆（會議／休假／公出）、本人在線上時不動
   for (const n of new Set([...STAFF_NAMES, ...extraNames])) {
     const c = chars[n]; if (!c || c === player || c.localAwake || c.entered || c.statusSource === 'manual' || (c.remote && !remoteParked(c))) continue;
     if (!['present', 'overtime', 'offwork', 'lunch'].includes(c.rawStatus || 'present')) continue;
     const st = hoursForce === 'work' ? 'present' : hoursForce === 'off' ? 'offwork' : simStatus(true);
     if (c.status !== st || c.appliedStatus == null) { c.status = st; applyStatus(c); }
+  }
+  // 下班時段（假日、晚上）人在線上走動的企劃／專案同仁：一律顯示加班中（後端存的是舊的「在座」時不會自己變加班）
+  if (hoursForce !== 'work' && simStatus(true) === 'offwork') for (const n of new Set([...STAFF_NAMES, ...extraNames])) {
+    const c = chars[n]; if (!c || c.statusSource === 'calendar' || !['present', 'overtime'].includes(c.rawStatus || 'present')) continue;
+    const online = c === player ? Date.now() - (c.actAt || 0) < IDLE_LOCK_MS : (c.localAwake || (c.remote && !remoteParked(c)));
+    if (online && c.status !== 'overtime') { c.status = 'overtime'; c.appliedStatus = null; applyStatus(c, c === player); }
   }
   syncEmptyDesks();
 }
