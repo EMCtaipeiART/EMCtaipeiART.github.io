@@ -4,14 +4,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import os from 'node:os';
 import { createRequire } from 'node:module';
 import { PLAZA, API, MANIFEST, readManifest } from './walk-lib.mjs';
 
 const [name, version] = process.argv.slice(2);
 if (!name || !version) { console.error('usage: node walk-make.mjs <name> <version>'); process.exit(2); }
-const require = createRequire('C:/emc-site/package.json');
+// 路徑自動偵測（換電腦不用改）：套件讀專案根目錄的 node_modules；Chrome 可用 CHROME_PATH 指定；工作資料夾可用 WALK_JOBS 指定
+const require = createRequire(path.join(PLAZA, '..', 'package.json'));
 const puppeteer = require('puppeteer-core');
-const job = `D:/codex-sui/jobs/job-${Date.now()}`;
+const CHROME = [process.env.CHROME_PATH, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe', path.join(process.env.LOCALAPPDATA || '', 'Google/Chrome/Application/chrome.exe'), '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome'].find(p => p && fs.existsSync(p));
+if (!CHROME) { console.error('Chrome not found; set CHROME_PATH'); process.exit(6); }
+const job = `${(process.env.WALK_JOBS || path.join(os.tmpdir(), 'walk-jobs')).split(path.sep).join('/')}/job-${Date.now()}`;
 fs.mkdirSync(`${job}/out`, { recursive: true });
 const REF = `${job}/ref_stand_12angles.png`, SHEET = `${job}/out/walk_7x2.png`;
 
@@ -37,7 +41,7 @@ fs.writeFileSync(`${job}/codex.log`, (cx.stdout || '') + (cx.stderr || ''));
 if (!fs.existsSync(SHEET)) { console.error('codex produced no sheet; see ' + job + '/codex.log'); process.exit(4); }
 
 // 3) 去洋紅背景、依站姿高度/腳底/中心對位成 240x240，補鏡像成 12 視角
-const browser = await puppeteer.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: 'new', args: ['--no-sandbox'] });
+const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--no-sandbox'] });
 const page = await browser.newPage();
 const b64 = f => 'data:image/png;base64,' + fs.readFileSync(f).toString('base64');
 const out = await page.evaluate(async (w64, s64) => {
