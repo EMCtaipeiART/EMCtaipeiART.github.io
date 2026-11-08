@@ -3038,7 +3038,7 @@ const CATS = CAT_DEFS.map(makeCat);
 if (/[?&]cinema=1/.test(location.search)) {
   document.documentElement.classList.add('cinema'); hoursForce = 'work'; window.__cinemaForce = true; AWAY_DESK.clear();   // 劇場永遠是上班時間的辦公室（桌子不收、人不走）
   window.__cineApi = {THREE, scene, camera, chars, U, blocked, findPath, moveChar, sitAt, standUp, sun, chairSeats, renderer, NAMES, cloudReady, setYaw: v => { camYaw = v; }};
-  import('./cinema.js?v=20261113').catch(e => console.warn('cinema', e));
+  import('./cinema.js?v=20261114').catch(e => console.warn('cinema', e));
 }
 function tick(){
   const dt = Math.min(clock.getDelta(), .05);

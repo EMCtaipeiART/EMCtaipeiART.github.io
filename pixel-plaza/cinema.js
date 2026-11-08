@@ -246,26 +246,23 @@ const acts = [
     await say('Machi', '你好，歡迎。我們在改圖。', 2.6);
     await nar('（新同事走到桌邊，看了一眼螢幕。）', 2.6);
   },
-  async () => {   // 七、18:55 新同事的一句話，結尾
+  async () => {   // 七、18:55 新同事的一句話，結尾（精簡版：約 30 秒）
     const nc = actor.newcomer, nm = nc.name, label = cin.label; stamp('18:55');
-    const mp = pos('Machi'); await duoShot(2, 34);
-    await say(label, '那個……第三版，不是挺好的嗎？', 3);
-    await wait(2.6);
-    await say('Machi', '……第三版。', 2);
-    await say('Anna', '我們為什麼，從第三版開始往後改？', 3); await say('Amber', '因為我們以為，改得越多越好。', 3);
-    await nar('（Machi 按下寄出。）', 2); stamp('18:59');
-    cam.shake = 0.3; await nar('（貓從鍵盤上跳下來，檔名多了一個「_2」。）', 3);
-    await showCard('企劃傳來訊息', '「客戶說，第三版剛剛好。」', 3.2);
-    stamp('19:00');
-    await duoShot(0, 34);
-    await say('Machi', '歡迎入職。你的位置在那邊。', 2.8); lookAt('Machi', 568, 560);
+    await duoShot(1.5, 34);
+    await say(label, '那個……第三版，不是挺好的嗎？', 2.8);
+    await say('Machi', '……第三版。', 1.6);
+    await say('Anna', '我們為什麼，一直在往後改？', 2.4); await say('Amber', '因為我們以為，改得越多越好。', 2.8);
+    await nar('（Machi 按下寄出。貓跳下鍵盤，檔名多了一個「_2」。）', 3); stamp('18:59'); cam.shake = 0.3;
+    await showCard('企劃傳來訊息', '「客戶說，第三版剛剛好。」', 2.6);
+    stamp('19:00'); await duoShot(0, 34);
+    await say('Machi', '歡迎入職。你的位置在那邊。', 2.4); lookAt('Machi', 568, 560);
     const st = freeSeat(568, 560), sx = st ? st.x / U : 568, sz = st ? st.z / U : 560; showMarker(P(sx, sz)); cta(true);
-    const w = walk(nm, sx, sz + 70); await shot(V(14, 4.4, 24), V(11, 1.2, 15), 4, 42); await w;
-    await say('Machi', '提醒你，我們的檔名，都叫 final。', 3);
-    const sp = P(sx, sz); await shot(V(sp.x + 3.5, 3.2, sp.z + 5.2), V(sp.x, 1.1, sp.z), 2.2, 38);
+    const w = walk(nm, sx, sz + 70); const cam1 = shot(V(14, 4.4, 24), V(11, 1.2, 15), 4, 42);
+    await say('Machi', '提醒你，我們的檔名，都叫 final。', 2.8); await Promise.all([w, cam1]);
+    const sp = P(sx, sz); await shot(V(sp.x + 3.5, 3.2, sp.z + 5.2), V(sp.x, 1.1, sp.z), 1.6, 38);
     if (st) api.sitAt(nc, st); hideMarker(); hop(nm);
-    await shot(V(sp.x + 8, 13, sp.z + 14), V(sp.x, 0.5, sp.z - 3), 4.5, 46);
-    await showCard('下一位', '就是你', 2.8); cta(false); stamp('');
+    await shot(V(sp.x + 8, 13, sp.z + 14), V(sp.x, 0.5, sp.z - 3), 3.5, 46);
+    await showCard('下一位', '就是你', 2.6); cta(false); stamp('');
   },
 ];
 
