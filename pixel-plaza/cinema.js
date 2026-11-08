@@ -42,10 +42,26 @@ const $s = sel => root.querySelector(sel);
 const sub = $s('.sub'), card = $s('.card'), fade = $s('.fade'), cap = $s('.cap'), clk = $s('.clk');
 const COLORS = { Machi: '#7be08a', Anna: '#ff9cc0', Amber: '#ffc864', Leona: '#b7a2ff', Noise: '#7cc4ff' };
 let subTimer = 0;
+// 一句一句的台詞：可以被「下一句」跳過；沒有台詞在演時，按下去就先快轉到下一句出現
+let curLine = null, boosted = 0, lastSpk = null;
+const lineWait = sec => {
+  if (boosted) { cin.timeScale = boosted; boosted = 0; }
+  return new Promise(res => { const w = { at: cin.t + sec, res }; waiters.push(w); curLine = w; });
+};
+cin.skip = () => {
+  if (curLine && waiters.includes(curLine)) { curLine.at = cin.t; return; }
+  if (!boosted) { boosted = cin.timeScale; cin.timeScale = boosted * 6; }
+};
+window.addEventListener('message', e => { if (e.source === window.parent && e.data && e.data.type === 'cinemaSkip') cin.skip(); });
+const spkName = who => actor[who] ? who : (who === (HERO || '新同事') && actor.newcomer ? actor.newcomer.name : null);
+const faceTo = (n, o) => { const c = actor[n], p = c.holder.position, q = actor[o].holder.position; if (c.sitting) c.face = Math.atan2(q.x - p.x, q.z - p.z); else lookAtActor(n, o); };
+const faceEach = (x, y) => { faceTo(x, y); faceTo(y, x); };
 const say = (who, text, sec = 2.4) => {
   sub.innerHTML = `<b style="color:${COLORS[who] || '#ffe082'}">${who}</b>${text}`; sub.classList.add('on');
   clearTimeout(subTimer);
-  return wait(sec).then(() => { sub.classList.remove('on'); return wait(0.25); });
+  const sn = spkName(who);   // 對話時兩個人面對面：說話的人轉向上一個說話的人，對方也轉過來
+  if (sn) { if (lastSpk && lastSpk !== sn && actor[lastSpk]) { faceEach(sn, lastSpk); } lastSpk = sn; }
+  return lineWait(sec).then(() => { sub.classList.remove('on'); return wait(0.25); });
 };
 const caption = text => { cap.textContent = text; cap.style.display = text ? '' : 'none'; };
 const showCard = async (small, title, sec = 2.4) => { card.querySelector('small').textContent = small; card.querySelector('h1').textContent = title; card.classList.add('on'); await wait(sec); card.classList.remove('on'); await wait(0.5); };
@@ -143,7 +159,7 @@ const hideMarker = () => { marker.g.visible = false; };
 cin.tickMarker = () => { if (!marker.g.visible) return; const t = cin.t; marker.ring.scale.setScalar(1 + Math.sin(t * 4) * 0.08); marker.arrow.position.y = 2.7 + Math.sin(t * 4) * 0.18; marker.label.position.y = 3.5; };
 
 const spawnAtElevator = name => { const c = actor[name]; if (c.sitting) standUp(c); const e = free(ELEV[0], ELEV[1]); c.holder.position.copy(e); c.cin.path = []; c.cin.look = null; return e; };
-const restoreAll = () => { for (const c of new Set(Object.values(actor))) { c.cin.path = []; c.cin.look = null; if (c.sitting) standUp(c); const h = c.cin.home; c.holder.position.set(h.x, 0, h.z); api.sitAt(c, { x: h.x, z: h.z }); } };
+const restoreAll = () => { lastSpk = null; for (const c of new Set(Object.values(actor))) { c.cin.path = []; c.cin.look = null; if (c.sitting) standUp(c); const h = c.cin.home; c.holder.position.set(h.x, 0, h.z); api.sitAt(c, { x: h.x, z: h.z }); } };
 const freeSeat = (x, z) => {   // 離 (x,z) 最近的空椅子（五樓辦公桌區）
   let best = null, bd = 1e9;
   for (const st of api.chairSeats) { if (st.by || st.hidden || st.kind) continue; const px = st.x / U, pz = st.z / U; if (px < 300 || px > 1100 || pz < 300 || pz > 1000) continue; const d = Math.hypot(px - x, pz - z); if (d < bd) { bd = d; best = st; } }
@@ -152,7 +168,7 @@ const freeSeat = (x, z) => {   // 離 (x,z) 最近的空椅子（五樓辦公桌
 const midOf = (a, b) => { const p = pos(a), q = pos(b); return V((p.x + q.x) / 2, 0, (p.z + q.z) / 2); };
 
 const stamp = t => { clk.textContent = t; clk.style.opacity = t ? '1' : '0'; };
-const nar = (text, sec = 2.6) => { sub.innerHTML = `<i style="font-weight:600;opacity:.92">${text}</i>`; sub.classList.add('on'); return wait(sec).then(() => { sub.classList.remove('on'); return wait(0.25); }); };
+const nar = (text, sec = 2.6) => { sub.innerHTML = `<i style="font-weight:600;opacity:.92">${text}</i>`; sub.classList.add('on'); lastSpk = null; return lineWait(sec).then(() => { sub.classList.remove('on'); return wait(0.25); }); };
 const nearDesk = (name, dx = 70, dz = 60) => { const p = pos(name); return [p.x / U + dx, p.z / U + dz]; };
 
 // 《最後一版》：週五 09:00 客戶一句「可以再活潑一點，但要高級」，19:00 前要交件。全片倒數，最後新同事一句話解了圍。
