@@ -78,7 +78,7 @@
   function finish() {   // 片尾：黑幕「下一位，就是你」停住，不再循環；外面出現「再看一次」
     ended = true; v.pause(); endEl.classList.add('on'); say({ type: 'cinemaEnded', on: true });
   }
-  function replay() { ended = false; endEl.classList.remove('on'); curScn = -2; v.currentTime = 0; v.play().catch(function () {}); say({ type: 'cinemaEnded', on: false }); }
+  function replay() { ended = false; autoPaused = false; endEl.classList.remove('on'); curScn = -2; v.currentTime = 0; v.play().catch(function () {}); say({ type: 'cinemaEnded', on: false }); }
   function skip() {
     if (ended) { replay(); return; }   // 下一句：跳到下一句台詞開始；沒有下一句就跳到下一幕；已經是最後就回到開頭
     var t = v.currentTime + 0.15, i, nx = null;
@@ -88,11 +88,22 @@
     v.currentTime = Math.max(0, nx);
     if (v.paused) v.play().catch(function () {});
   }
-  var userPaused = false;
+  var userPaused = false, autoPaused = false, inView = true;
+  // 離開頁面（切換分頁／捲出畫面／換到別頁）就暫停，回來接著播；片尾停住和使用者自己按暫停的不受影響
+  function applyActive() {
+    if (!ready || ended || userPaused) return;
+    var on = !document.hidden && inView;
+    if (on && v.paused) { autoPaused = false; v.play().catch(function () {}); }
+    else if (!on && !v.paused) { autoPaused = true; v.pause(); }
+  }
+  document.addEventListener('visibilitychange', applyActive);
+  addEventListener('pagehide', function () { if (!v.paused) { autoPaused = true; v.pause(); } });
+  addEventListener('pageshow', applyActive);
+  if ('IntersectionObserver' in window) new IntersectionObserver(function (es) { inView = es[es.length - 1].isIntersecting; applyActive(); }, { threshold: 0.2 }).observe(document.getElementById('stage'));
   function label() { document.getElementById('bMute').textContent = v.muted ? '開聲音' : '關聲音'; }
   function fallbackMuted() { v.muted = true; label(); say({ type: 'cinemaMuted', muted: true }); v.play().catch(function () {}); }   // 瀏覽器不讓有聲播放：改成靜音繼續播，並告訴外面按鈕
   function setMuted(m) { v.muted = m; label(); if (!m) v.play().then(function () { say({ type: 'cinemaMuted', muted: false }); }).catch(fallbackMuted); }
-  v.addEventListener('pause', function () { if (!userPaused && !ended && !document.hidden && !v.ended && !v.muted) fallbackMuted(); });   // 解除靜音被瀏覽器暫停時自動接著播
+  v.addEventListener('pause', function () { if (!userPaused && !autoPaused && !ended && !document.hidden && !v.ended && !v.muted) fallbackMuted(); });   // 解除靜音被瀏覽器暫停時自動接著播
   addEventListener('message', function (e) {
     var d = e.data; if (!d || typeof d !== 'object') return;
     if (d.type === 'cinemaSkip') skip();
@@ -103,15 +114,14 @@
   document.getElementById('bPlay').onclick = function () { if (v.paused) { userPaused = false; v.play(); this.textContent = '暫停'; } else { userPaused = true; v.pause(); this.textContent = '播放'; } };
   document.getElementById('bSub').onclick = function () { subsOn = !subsOn; this.textContent = '字幕：' + (subsOn ? '開' : '關'); curCue = -2; };
   document.getElementById('bMute').onclick = function () { setMuted(!v.muted); };
-  fetch('cinema/cues.json?v=1').then(function (r) { return r.json(); }).then(function (j) { data = j; }).catch(function () {});
+  fetch('cinema/cues.json?v=2').then(function (r) { return r.json(); }).then(function (j) { data = j; }).catch(function () {});
   v.addEventListener('canplay', function () {
     if (ready) return; ready = true; v.classList.add('on'); poster.style.display = 'none';
     v.muted = false; label();   // 預設有聲；瀏覽器擋下來就退回靜音（見 fallbackMuted）
     v.play().then(function () { say({ type: 'cinemaMuted', muted: false }); }).catch(fallbackMuted);
     say({ type: 'cinemaReady' }); requestAnimationFrame(tick);
   });
-  v.src = 'cinema/last-version.webm?v=1';
-  document.addEventListener('visibilitychange', function () { if (document.hidden) v.pause(); else if (!ended) v.play().catch(function () {}); });
+  v.src = 'cinema/last-version.webm?v=2';
 })();
 </script>
 </body>
