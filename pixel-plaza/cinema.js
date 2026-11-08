@@ -93,6 +93,9 @@ function stepChar(c, dt) {
   } else if (!s.path.length) { c.moving = 0; if (s.look && !c.sitting) { c.face = Math.atan2(s.look.x - c.holder.position.x, s.look.z - c.holder.position.z); } }
 }
 cin.stepChar = (c, dt) => { let d = dt * cin.timeScale; while (d > 1e-4) { const s = Math.min(d, 0.04); stepChar(c, s); d -= s; } };   // 小步前進：測試時加速、或畫面卡頓時，也不會一步跨過轉角卡牆
+// 新同事站在 Machi 旁邊「隔開一步」的位置，不要貼在一起
+const standBeside = () => { const m = pos('Machi'); const f = free(m.x / U + 115, m.z / U + 100); return [f.x / U, f.z / U]; };
+const duoShot = (dur, fov = 34) => { const m = pos('Machi'), n = pos(actor.newcomer.name), cx = (m.x + n.x) / 2, cz = (m.z + n.z) / 2; return shot(V(cx + 1.2, 2.5, cz + 6.8), V(cx, 1.3, cz), dur, fov); };
 const walk = (name, x, z, run = false) => new Promise(res => {
   const c = actor[name]; if (c.sitting) standUp(c);
   const goal = free(x, z); c.cin.goal = goal; c.cin.look = null; c.cin.speed = run ? 5.2 : 2.6;
@@ -105,6 +108,7 @@ const lookAtActor = (name, other) => { const o = actor[other].holder.position; a
 const hop = name => { actor[name].hopAt = performance.now(); };
 const sitHome = name => { const c = actor[name], h = c.cin.home; if (c.sitting) return; c.holder.position.set(h.x, 0, h.z); c.cin.path = []; c.cin.look = null; api.sitAt(c, { x: h.x, z: h.z }); };
 const pos = name => actor[name].holder.position;
+cin.dbg = () => { const o = {}; for (const n of ["Machi", "Anna", "Amber", "Leona", "Noise"]) o[n] = [Math.round(pos(n).x / U), Math.round(pos(n).z / U), actor[n].sitting ? 1 : 0]; o.newcomer = [actor.newcomer.name, Math.round(pos(actor.newcomer.name).x / U), Math.round(pos(actor.newcomer.name).z / U)]; return o; };
 
 // ---------- 鏡頭 ----------
 const cam = { p: V(18, 14, 40), l: V(18, 0, 22), fov: 45, tw: null, follow: null, shake: 0 };
@@ -237,14 +241,14 @@ const acts = [
     const nc = actor.newcomer, nm = nc.name, label = cin.label, e = spawnAtElevator(nm);
     await fadeOut(); await shot(V(e.x + 3, 2.4, e.z + 6.5), V(e.x, 1.3, e.z), 0, 38); await fadeIn();
     await say(label, '大家好……我今天第一天上班。', 2.8);
-    const w = walk(nm, 700, 1010); follow(nm, -3.5, 3, 5.5, 40); await w;
-    lookAtActor(nm, 'Machi'); const mp = pos('Machi'); await shot(V(mp.x + 3.2, 2.6, mp.z + 4.4), V(mp.x - 0.4, 1.3, mp.z), 2, 32);
+    const sb = standBeside(), w = walk(nm, sb[0], sb[1]); follow(nm, -3.5, 3, 5.5, 40); await w;
+    lookAtActor(nm, 'Machi'); await duoShot(2, 34);
     await say('Machi', '你好，歡迎。我們在改圖。', 2.6);
     await nar('（新同事走到桌邊，看了一眼螢幕。）', 2.6);
   },
   async () => {   // 七、18:55 新同事的一句話，結尾
     const nc = actor.newcomer, nm = nc.name, label = cin.label; stamp('18:55');
-    const mp = pos('Machi'); await shot(V(mp.x + 2.6, 2.3, mp.z + 4.2), V(mp.x - 0.2, 1.3, mp.z), 2, 30);
+    const mp = pos('Machi'); await duoShot(2, 34);
     await say(label, '那個……第三版，不是挺好的嗎？', 3);
     await wait(2.6);
     await say('Machi', '……第三版。', 2);
@@ -253,7 +257,7 @@ const acts = [
     cam.shake = 0.3; await nar('（貓從鍵盤上跳下來，檔名多了一個「_2」。）', 3);
     await showCard('企劃傳來訊息', '「客戶說，第三版剛剛好。」', 3.2);
     stamp('19:00');
-    await shot(V(mp.x + 2.6, 2.3, mp.z + 4.2), V(mp.x - 0.2, 1.3, mp.z), 0, 32);
+    await duoShot(0, 34);
     await say('Machi', '歡迎入職。你的位置在那邊。', 2.8); lookAt('Machi', 568, 560);
     const st = freeSeat(568, 560), sx = st ? st.x / U : 568, sz = st ? st.z / U : 560; showMarker(P(sx, sz)); cta(true);
     const w = walk(nm, sx, sz + 70); await shot(V(14, 4.4, 24), V(11, 1.2, 15), 4, 42); await w;
