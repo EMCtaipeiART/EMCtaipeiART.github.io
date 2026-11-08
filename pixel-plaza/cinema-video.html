@@ -60,7 +60,7 @@
 </div>
 <script>
 (function () {
-  var params = new URLSearchParams(location.search), embedded = params.get('embed') === '1', VER = '6';
+  var params = new URLSearchParams(location.search), embedded = params.get('embed') === '1', VER = '7';
   if (!embedded) document.body.classList.add('solo');
   var $ = function (id) { return document.getElementById(id); };
   var maskEl = $('mask'), subEl = $('sub'), scnEl = $('scn'), endEl = $('end'), pzEl = $('pz'), ldEl = $('ld'), barI = document.querySelector('#bar i'), poster = $('poster');
@@ -69,7 +69,8 @@
   var PAD = 0.12;   // 每個分幕檔開頭多錄了約 0.12 秒，字幕時間與切換點都要加上
   var scenes = [], offs = [], total = 0;
   var vids = [$('vA'), $('vB')], cur = vids[0], nxt = vids[1];
-  var urls = [], idx = 0, prepared = -1, waiting = -1;
+  var urls = [], idx = 0, prepared = -1, waiting = -1, loadedTo = 0, loading = false;
+  var conn = navigator.connection || {}, lean = innerWidth < 720 || conn.saveData || /(^|-)(2g|3g)$/.test(conn.effectiveType || '');   // 手機／省流量／慢網路：不一次把後面五幕全抓下來，只提前抓下一幕
   var ready = false, ended = false, userPaused = false, autoPaused = false, inView = true, subsOn = true, ctaOn = false, curCue = -1, curScn = -1, muted = false;
   var say = function (m) { try { parent.postMessage(m, '*'); } catch (e) {} };
   function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -83,12 +84,14 @@
     nxt.addEventListener('loadeddata', function () { prepared = i; if (waiting === i) goto(i); }, { once: true });
   }
   function backgroundLoad(i) {
-    if (i >= scenes.length) return;
+    if (i >= scenes.length || loading) return;
+    if (lean && i > idx + 1) return;   // 輕量模式：最多領先目前這一幕一幕
+    loading = true;
     fetch('cinema/' + scenes[i].file + '?v=' + VER, { priority: 'low' }).then(function (r) { return r.blob(); }).then(function (b) {
-      urls[i] = URL.createObjectURL(b);
+      urls[i] = URL.createObjectURL(b); loadedTo = i; loading = false;
       if (i === idx + 1 || waiting === i) prepare(i);
       backgroundLoad(i + 1);
-    }).catch(function () { setTimeout(function () { backgroundLoad(i); }, 4000); });
+    }).catch(function () { loading = false; setTimeout(function () { backgroundLoad(i); }, 4000); });
   }
 
   // ---------- 切幕 ----------
@@ -107,6 +110,7 @@
     if (!userPaused) cur.play().catch(fallbackMuted);
     setTimeout(function () { old.pause(); }, 120);
     if (urls[i + 1]) prepare(i + 1);
+    backgroundLoad(loadedTo + 1);   // 輕量模式下，每切到新的一幕才往後多抓一幕
   }
   function finish() { ended = true; cur.pause(); endEl.classList.add('on'); pzEl.classList.remove('on'); say({ type: 'cinemaEnded', on: true }); }
   function replay() { ended = false; autoPaused = false; userPaused = false; pzEl.classList.remove('on'); endEl.classList.remove('on'); curScn = -2; say({ type: 'cinemaEnded', on: false }); if (idx === 0) { cur.currentTime = 0; cur.play().catch(fallbackMuted); } else { prepared = -1; goto(0); } }
@@ -179,12 +183,16 @@
   // ---------- 啟動 ----------
   fetch('cinema/scenes.json?v=' + VER).then(function (r) { return r.json(); }).then(function (j) {
     scenes = j.scenes; var acc = 0; scenes.forEach(function (s) { offs.push(acc); acc += s.dur; }); total = acc;
+    if (!cur.canPlayType || !cur.canPlayType('video/webm; codecs="vp9, opus"')) { say({ type: 'cinemaFail' }); return; }   // 這個瀏覽器放不了 webm：讓外面維持劇照，不要一直轉圈
     cur.muted = false; label(); cur.src = srcOf(0);
-    cur.addEventListener('canplay', function () {
+    function onReady() {
       if (ready) return; ready = true; cur.classList.add('on'); poster.style.display = 'none';
-      cur.play().then(function () { say({ type: 'cinemaMuted', muted: false }); }).catch(fallbackMuted);
       say({ type: 'cinemaReady' }); backgroundLoad(1); requestAnimationFrame(tick);
-    }, { once: true });
+    }
+    ['loadeddata', 'playing', 'canplay'].forEach(function (ev) { cur.addEventListener(ev, onReady, { once: true }); });
+    cur.load();
+    cur.play().then(function () { say({ type: 'cinemaMuted', muted: false }); }).catch(fallbackMuted);   // 不等 canplay 就開播：iOS 沒有手勢時不會預先載入影片資料，等 canplay 會一直等
+    setTimeout(function () { if (!ready) say({ type: 'cinemaFail' }); }, 25000);
   }).catch(function () {});
 })();
 </script>
