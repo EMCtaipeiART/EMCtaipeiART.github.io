@@ -1,0 +1,65 @@
+name: New character walk frames (build for review)
+
+# 角色工坊發佈新人物／新服裝後，替他們做走路與跑步影格。
+# 只在雲端做「檢查」；有新人物才把「製作」交給公司電腦上的自架執行器（要有 Codex）。
+# 製作結果只推到待審分支 walk-pending/<名字>-v<版本>，不會直接上線；Claude 看過圖之後才合併到 main。
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+  repository_dispatch:
+    types: [character-published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: walk-frames
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      list: ${{ steps.c.outputs.list }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - id: c
+        run: echo "list=$(node pixel-plaza/tools/walk-check.mjs --ci)" >> "$GITHUB_OUTPUT"
+
+  make:
+    needs: check
+    if: needs.check.outputs.list != '[]'
+    runs-on: [self-hosted, windows, walk]
+    timeout-minutes: 45
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        item: ${{ fromJSON(needs.check.outputs.list) }}
+    env:
+      NAME: ${{ matrix.item.name }}
+      VERSION: ${{ matrix.item.version }}
+      BRANCH: ${{ matrix.item.branch }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Install deps
+        shell: bash
+        run: npm install --no-audit --no-fund --ignore-scripts
+      - name: Generate walk frames (Codex)
+        shell: bash
+        run: node pixel-plaza/tools/walk-make.mjs "$NAME" "$VERSION"
+      - name: Push to review branch
+        shell: bash
+        run: |
+          git config user.name "walk-frames-bot"
+          git config user.email "walk-frames-bot@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add pixel-plaza/sprites-walk-hd pixel-plaza/sprites-walk pixel-plaza/walk-manifest.json
+          git commit -m "pixel-plaza: walk frames for $NAME v$VERSION (pending review)"
+          git push origin "$BRANCH"
