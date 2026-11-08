@@ -1130,7 +1130,7 @@
     const OUTFIT_ORIGIN='https://emc-ai-stage-classifier.machi-chen.workers.dev';
     function renderOutfitPage(){
       const t=session().token;if(!t||!outfitAllowed()){show(state.home||'board');return}
-      $('stage').innerHTML='<div class="outfit-page"><iframe class="outfit-frame" id="outfitFrame" scrolling="no" title="AI 服裝生成器" allow="clipboard-write" src="'+OUTFIT_ORIGIN+'/outfit#embed=1&theme='+currentTheme()+'&t='+encodeURIComponent(t)+'"></iframe></div>';
+      $('stage').innerHTML='<div class="outfit-page"><iframe class="outfit-frame" id="outfitFrame" scrolling="no" title="AI 服裝生成器" allow="clipboard-write; autoplay" src="'+OUTFIT_ORIGIN+'/outfit#embed=1&theme='+currentTheme()+'&t='+encodeURIComponent(t)+'"></iframe></div>';
     }
     /* 服裝頁（iframe）會回報內容高度：把 iframe 撐到那麼高，整頁由這一層捲動，左右空白處也能滑 */
     /* 個人形象完成（頭像快照已存）：重新載入一次，頭像框就會換成新的 */

@@ -26,7 +26,7 @@
 <body>
 <div id="stage">
   <div id="poster"></div>
-  <video id="v" muted playsinline loop preload="auto" poster="cinema/poster.webp" aria-label="辦公室小短劇《最後一版》"></video>
+  <video id="v" playsinline loop preload="auto" poster="cinema/poster.webp" aria-label="辦公室小短劇《最後一版》"></video>
   <div id="sub" aria-live="polite"></div>
   <div id="bar"><i></i></div>
   <div id="ctl">
@@ -67,20 +67,26 @@
     v.currentTime = nx === null ? 0 : Math.max(0, nx);
     if (v.paused) v.play().catch(function () {});
   }
-  function setMuted(m) { v.muted = m; document.getElementById('bMute').textContent = m ? '開聲音' : '關聲音'; if (!m && v.paused) v.play().catch(function () {}); }
+  var userPaused = false;
+  function label() { document.getElementById('bMute').textContent = v.muted ? '開聲音' : '關聲音'; }
+  function fallbackMuted() { v.muted = true; label(); say({ type: 'cinemaMuted', muted: true }); v.play().catch(function () {}); }   // 瀏覽器不讓有聲播放：改成靜音繼續播，並告訴外面按鈕
+  function setMuted(m) { v.muted = m; label(); if (!m) v.play().then(function () { say({ type: 'cinemaMuted', muted: false }); }).catch(fallbackMuted); }
+  v.addEventListener('pause', function () { if (!userPaused && !document.hidden && !v.ended && !v.muted) fallbackMuted(); });   // 解除靜音被瀏覽器暫停時自動接著播
   addEventListener('message', function (e) {
     var d = e.data; if (!d || typeof d !== 'object') return;
     if (d.type === 'cinemaSkip') skip();
-    if (d.type === 'cinemaMute') { setMuted(Boolean(d.muted)); if (!d.muted && v.muted) say({ type: 'cinemaMuted', muted: true }); }
+    if (d.type === 'cinemaMute') setMuted(Boolean(d.muted));
   });
   document.getElementById('bNext').onclick = skip;
-  document.getElementById('bPlay').onclick = function () { if (v.paused) { v.play(); this.textContent = '暫停'; } else { v.pause(); this.textContent = '播放'; } };
+  document.getElementById('bPlay').onclick = function () { if (v.paused) { userPaused = false; v.play(); this.textContent = '暫停'; } else { userPaused = true; v.pause(); this.textContent = '播放'; } };
   document.getElementById('bSub').onclick = function () { subsOn = !subsOn; this.textContent = '字幕：' + (subsOn ? '開' : '關'); curCue = -2; };
   document.getElementById('bMute').onclick = function () { setMuted(!v.muted); };
   fetch('cinema/cues.json?v=1').then(function (r) { return r.json(); }).then(function (j) { data = j; }).catch(function () {});
   v.addEventListener('canplay', function () {
     if (ready) return; ready = true; v.classList.add('on'); poster.style.display = 'none';
-    v.play().catch(function () {}); say({ type: 'cinemaReady' }); requestAnimationFrame(tick);
+    v.muted = false; label();   // 預設有聲；瀏覽器擋下來就退回靜音（見 fallbackMuted）
+    v.play().then(function () { say({ type: 'cinemaMuted', muted: false }); }).catch(fallbackMuted);
+    say({ type: 'cinemaReady' }); requestAnimationFrame(tick);
   });
   v.src = 'cinema/last-version.webm?v=1';
   document.addEventListener('visibilitychange', function () { if (document.hidden) v.pause(); else v.play().catch(function () {}); });
