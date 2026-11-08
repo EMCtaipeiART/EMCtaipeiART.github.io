@@ -60,7 +60,7 @@
 </div>
 <script>
 (function () {
-  var params = new URLSearchParams(location.search), embedded = params.get('embed') === '1', VER = '4';
+  var params = new URLSearchParams(location.search), embedded = params.get('embed') === '1', VER = '5';
   if (!embedded) document.body.classList.add('solo');
   var $ = function (id) { return document.getElementById(id); };
   var maskEl = $('mask'), subEl = $('sub'), scnEl = $('scn'), endEl = $('end'), pzEl = $('pz'), ldEl = $('ld'), barI = document.querySelector('#bar i'), poster = $('poster');
@@ -112,9 +112,9 @@
   function replay() { ended = false; autoPaused = false; userPaused = false; pzEl.classList.remove('on'); endEl.classList.remove('on'); curScn = -2; say({ type: 'cinemaEnded', on: false }); if (idx === 0) { cur.currentTime = 0; cur.play().catch(fallbackMuted); } else { prepared = -1; goto(0); } }
 
   // ---------- 字幕、幕標題、進度 ----------
-  function layoutMask() {   // 影片是 16:9、在舞台裡置中縮放；遮罩蓋在影片自帶字幕所在的下緣（影片高度 82%～94%、寬度中間 76%）
+  function layoutMask() {   // 影片是 16:9、在舞台裡置中縮放；遮罩蓋在影片自帶字幕所在的下緣（影片高度 77%～96%、寬度中間 76%）
     var W = innerWidth, H = innerHeight, vw = Math.min(W, H * 16 / 9), vh = vw * 9 / 16, l = (W - vw) / 2, t = (H - vh) / 2;
-    maskEl.style.left = (l + vw * 0.12) + 'px'; maskEl.style.width = (vw * 0.76) + 'px'; maskEl.style.top = (t + vh * 0.82) + 'px'; maskEl.style.height = (vh * 0.12) + 'px';
+    maskEl.style.left = (l + vw * 0.12) + 'px'; maskEl.style.width = (vw * 0.76) + 'px'; maskEl.style.top = (t + vh * 0.77) + 'px'; maskEl.style.height = (vh * 0.19) + 'px';
   }
   addEventListener('resize', layoutMask); layoutMask();
   function showCue(i) {
