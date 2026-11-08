@@ -60,7 +60,7 @@
 </div>
 <script>
 (function () {
-  var params = new URLSearchParams(location.search), embedded = params.get('embed') === '1', VER = '5';
+  var params = new URLSearchParams(location.search), embedded = params.get('embed') === '1', VER = '6';
   if (!embedded) document.body.classList.add('solo');
   var $ = function (id) { return document.getElementById(id); };
   var maskEl = $('mask'), subEl = $('sub'), scnEl = $('scn'), endEl = $('end'), pzEl = $('pz'), ldEl = $('ld'), barI = document.querySelector('#bar i'), poster = $('poster');
