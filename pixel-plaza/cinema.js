@@ -206,9 +206,11 @@ const acts = [
   async () => {   // 五、17:30 會議室大戰
     await fadeOut(); restoreAll(); stamp('17:30');
     await shot(V(24, 5, 40), V(26, 0.8, 41), 0, 44); await fadeIn();
-    const a = walk('Leona', MEET[0] - 50, MEET[1]), b = walk('Noise', MEET[0] + 70, MEET[1] + 30), c = walk('Machi', MEET[0], MEET[1] - 40);
-    await shot(V(24, 3.4, 46.5), V(26, 1.2, 40), 5, 42); await a; await b; await c;
-    lookAtActor('Leona', 'Noise'); lookAtActor('Noise', 'Leona'); lookAtActor('Machi', 'Leona');
+    const ms = api.chairSeats.filter(st => !st.by && !st.hidden && !st.kind && Math.hypot(st.x / U - MEET[0], st.z / U - MEET[1]) < 320).sort((p, q) => Math.hypot(p.x / U - MEET[0], p.z / U - MEET[1]) - Math.hypot(q.x / U - MEET[0], q.z / U - MEET[1])).slice(0, 3);
+    const who = ['Leona', 'Noise', 'Machi'];
+    const walks = who.map((n, i) => ms[i] ? walk(n, ms[i].x / U, ms[i].z / U) : walk(n, MEET[0] + (i - 1) * 60, MEET[1]));
+    await shot(V(24, 3.4, 46.5), V(26, 1.2, 40), 5, 42); await Promise.all(walks);
+    who.forEach((n, i) => { if (ms[i] && !actor[n].sitting) api.sitAt(actor[n], ms[i]); });
     await say('Leona', '這個字體太正式。', 2); await say('Noise', '這個字體太像考卷。', 2.2); await say('Machi', '我們已經吵了二十分鐘了。', 2.6);
     await nar('（他們吵的，是同一個字體。）', 2.8); stamp('18:00');
   },
