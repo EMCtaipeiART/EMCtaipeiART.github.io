@@ -516,6 +516,7 @@ function configureDesignerDirectory(rows=[]){
   const fallbackNames=new Set(DEFAULT_DESIGNER_DIRECTORY.map(row=>row.name)),active=rows.filter(row=>{
     const group=String(row['組別']||'').trim(),visible=String(row['設計師顯示']||'').trim().toLowerCase(),name=String(row['原始名字']||row['名字']||'').trim();
     if(!/^(?:平面|影音)$/.test(group)||!name)return false;
+    if(/^(?:x|v|true|1|隱藏)$/i.test(String(row['隱藏人物']||'').trim()))return false;
     return visible?!/^(?:x|false|0|停用|否)$/.test(visible):fallbackNames.has(name)
   }).map(row=>({name:String(row['原始名字']||row['名字']).trim(),displayName:String(row['顯示名']||row['原始名字']||row['名字']).trim(),group:String(row['組別']).trim(),rotation:Number(row['新專案輪值'])||99,avatar:String(row['頭像連結']||''),account:String(row['帳號']||''),capacity:Number(row['每週標準分數'])||0})).sort((left,right)=>['平面','影音'].indexOf(left.group)-['平面','影音'].indexOf(right.group)||left.rotation-right.rotation||left.name.localeCompare(right.name,'zh-Hant'));
   designerDirectory=active.length?active:DEFAULT_DESIGNER_DIRECTORY.map(row=>({...row}));DESIGNERS=designerDirectory.map(row=>row.name);rebuildDesignerGroups()

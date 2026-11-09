@@ -2017,3 +2017,6 @@
 
 ## 2026-11-09 後台下拉選單箭頭跑版修正
 - lens-shop/public/index.html：select 改自訂樣式（移除原生箭頭、右側內距 38px、綠色小箭頭），避免箭頭貼邊跑版。
+
+## 2026-11-09 設計儀表板排除「隱藏人物」
+- `design_dashboard.html` 的 `configureDesignerDirectory` 加入判斷：帳號設定勾了「隱藏人物」（測試人員，如設計測試組）不進設計師名單，因此不出現在設計儀表板各頁。
