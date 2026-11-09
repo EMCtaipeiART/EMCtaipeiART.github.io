@@ -3617,6 +3617,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return {
       ok: true, action: 'coinMe', account: current.account, name, designer: Boolean(name), pixelDesigner, admin,
       department: normalizeDepartmentName(settingsRow(database, current.account || current.user)?.['部門']),
+      settingsName: text(settingsRow(database, current.account || current.user)?.['名字']),   // 帳號設定裡的名字（沒有平台幣的帳號，例如測試員，角色工坊用它當發佈名字）
       balance: name ? tenthsToCoins(this.coinBalance(name)) : 0,
       spendPerGeneration: tenthsToCoins(COIN_SPEND_PER_GENERATION), spendPerRegeneration: tenthsToCoins(COIN_SPEND_PER_REGENERATION), startDate: COIN_START_DATE,
       recent, directory: [...PIXEL_OFFICE_NAMES, ...this.coinStaffRows(database).map(row => text(row['名字']))].filter(item => item !== name)
