@@ -2444,6 +2444,9 @@ function startGame(){
   adminHome = Boolean(handoff && handoff.monitor); $('bPeople').hidden = !adminHome;   // 只有管理者帳號能切換、操控其他人物
   $('bPeople').onclick = () => { $('drawer').hidden = !$('drawer').hidden; }; $('roster').addEventListener('click', e => { if (e.target.closest('button')) $('drawer').hidden = true; });
   if (meName()) { select(meName()); entryRelease = true; progLoad(); }
+  // 角色工坊的額外人物、或身分資料較晚載入時，進站當下對不到人物：之後對到就自動選上，不用再點人物
+  if (handoff && !player) { let n = 0; const iv = setInterval(() => { if (player || ++n > 120) { clearInterval(iv); return; } const m = meName(); if (m && chars[m]) { select(m); entryRelease = true; progLoad(); clearInterval(iv); } }, 500); }
+  try { window.focus(); } catch (e) {}   // 內嵌在網站時 iframe 要有鍵盤焦點，方向鍵／WASD 才會動
   $('title').classList.add('gone'); setTimeout(() => { $('title').style.display = 'none'; }, 450);
 }
 $('tGo').onclick = startGame; $('tGuest').onclick = startGame;
