@@ -45,6 +45,7 @@ button:disabled{opacity:.45;cursor:default;transform:none;filter:none}
 .item:hover{background:#fafdfb}.item:last-child{border:0}
 .no{color:var(--f);font-size:12.5px;font-variant-numeric:tabular-nums}.nm{font-weight:600}.sub{color:var(--m);font-size:12.5px}
 .pr{text-align:right;white-space:nowrap}.pr b{font-size:18px;color:var(--bd);font-weight:900}.pr s{color:var(--f);font-size:12px;display:block}
+.th{cursor:zoom-in}#lb{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:99;cursor:zoom-out;padding:16px}#lb img{max-width:min(92vw,480px);max-height:86vh;border-radius:14px;background:#fff;box-shadow:0 10px 40px rgba(0,0,0,.4);object-fit:contain}
 .th{width:96px;height:80px;object-fit:contain;border-radius:10px;background:#f6f9f7;border:1px solid var(--l)}
 .th.ph{display:flex;align-items:center;justify-content:center;color:#a9b5af;font-size:11px;text-align:center;overflow:hidden;line-height:1.25;padding:4px}
 .modalbg{position:fixed;inset:0;background:rgba(14,28,20,.5);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:50;padding:12px;animation:fd .15s}
@@ -60,7 +61,7 @@ table.t{border-collapse:collapse;width:100%;font-size:14px}table.t th,table.t td
 .promo p{margin:0 0 7px}.promo .h{font-weight:700;font-size:16px;margin-top:16px;color:var(--bd)}.promo .big{white-space:pre-line}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
 .pc{background:#fff;border:1px solid var(--l);border-radius:var(--rad);overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--sh);transition:.15s}.pc:hover{transform:translateY(-3px);box-shadow:var(--sh2)}
-.pc img{width:100%;height:160px;object-fit:contain;background:#f8faf9}.pc .bd{padding:12px;flex:1;display:flex;flex-direction:column;gap:3px}.pc .bd button{margin-top:auto}
+.pc img{cursor:zoom-in;width:100%;height:160px;object-fit:contain;background:#f8faf9}.pc .bd{padding:12px;flex:1;display:flex;flex-direction:column;gap:3px}.pc .bd button{margin-top:auto}
 .spec{margin-bottom:20px;overflow-x:auto}.spec h3{margin:0 0 8px;position:sticky;left:0}
 .spec table{border-collapse:separate;border-spacing:0;font-size:13.5px;min-width:100%;background:#fff;border:1px solid var(--l);border-radius:12px;overflow:hidden}
 .spec td,.spec th{border-bottom:1px solid #eef2f0;border-right:1px solid #eef2f0;padding:8px 11px;vertical-align:middle}.spec th{background:var(--bs);color:var(--bd);white-space:nowrap;font-weight:700}
@@ -109,7 +110,7 @@ header .logo,header .dl{display:none}
 .feat b{display:block;font-size:15px}.feat span{font-size:12.5px;color:var(--m)}
 .sech{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 12px}.sech h2{margin:0}.sech span{color:var(--m);font-size:13px}
 @media(max-width:900px){.top{grid-template-columns:1fr}.feat,.flow{grid-template-columns:repeat(2,1fr)}.flow div:nth-child(3){border-left:0}.flow div:nth-child(n+3){border-top:1px solid #eef2f0}.hero2 h1{font-size:28px}}
-@media(max-width:620px){.cards{grid-template-columns:repeat(2,1fr);gap:10px}.pc img{height:120px}.item{grid-template-columns:96px 1fr auto;gap:10px;padding:12px}.item .no{display:none}.item button{grid-column:1/-1}.form2{grid-template-columns:1fr}.bar{padding:8px 12px}nav{margin-left:0}main{padding:16px 12px 50px}.hero{padding:18px}}
+@media(max-width:620px){.cards{grid-template-columns:repeat(2,1fr);gap:10px}.pc img{cursor:zoom-in;height:120px}.item{grid-template-columns:96px 1fr auto;gap:10px;padding:12px}.item .no{display:none}.item button{grid-column:1/-1}.form2{grid-template-columns:1fr}.bar{padding:8px 12px}nav{margin-left:0}main{padding:16px 12px 50px}.hero{padding:18px}}
 /* 手機版：左右留白、綠底貼齊導覽列、導覽置中、金額列浮起避開瀏覽器底部工具列 */
 @media(max-width:620px){header .bar{justify-content:center}header nav{margin:0 auto;justify-content:center}main{padding:16px 18px 50px}main>.top:first-child{margin-top:-16px}main>.top:first-child .hero2{border-radius:0 0 22px 22px}#cbar{left:12px;right:12px;bottom:12px;border:1px solid var(--l);border-radius:16px;overflow:hidden}.cb-in{padding:10px 14px}body.hasbar main{padding-bottom:110px}}
 @supports(-webkit-touch-callout:none){@media(max-width:620px){#cbar{bottom:40px}body.hasbar main{padding-bottom:150px}}}
@@ -125,6 +126,7 @@ table.ord,table.ord tbody{display:block}table.ord thead{display:none}table.ord t
 <script>
 const $=(s,e=document)=>e.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+document.addEventListener('click',e=>{const im=e.target.closest&&e.target.closest('img.th,.pc img');if(!im)return;e.preventDefault();e.stopPropagation();const o=document.createElement('div');o.id='lb';o.innerHTML='<img src="'+im.currentSrc.replace(/"/g,'')+'" alt="">';const c=()=>{o.remove();document.removeEventListener('keydown',k)};const k=ev=>{if(ev.key==='Escape')c()};o.onclick=c;document.addEventListener('keydown',k);document.body.appendChild(o)},true);
 const nt=n=>'NT$ '+Number(n).toLocaleString('en-US');
 // 訂單時間以 UTC ISO 字串儲存，顯示時一律換算成台灣時間（UTC+8）
 const tp=iso=>{const d=new Date(iso);return isNaN(d)?String(iso||'').slice(0,16).replace('T',' '):new Date(d.getTime()+8*36e5).toISOString().slice(0,16).replace('T',' ')};
