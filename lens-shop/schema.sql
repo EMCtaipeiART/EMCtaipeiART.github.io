@@ -16,3 +16,5 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 CREATE INDEX IF NOT EXISTS orders_email ON orders(email);
 CREATE TABLE IF NOT EXISTS files (k TEXT NOT NULL, i INTEGER NOT NULL, mime TEXT, data BLOB NOT NULL, PRIMARY KEY (k, i));
+
+-- 多團購（既有資料庫請另執行：ALTER TABLE orders ADD COLUMN campaign TEXT NOT NULL DEFAULT 'lens';）

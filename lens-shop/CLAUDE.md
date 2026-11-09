@@ -4,7 +4,7 @@
 > **不要把密碼、token、API 金鑰寫進任何檔案或對話。**
 
 ## 這是什麼
-- 網址 https://shop.emc-art.com（Cloudflare Worker `emc-lens-shop`＋靜態資源 `public/`＋D1 資料庫）。
+- 網址 https://shop.emc-art.com（多團購：`/g/<團購代號>/…`；根目錄只有一個進行中團購時自動導入，多個時顯示選單 `/campaigns`；舊網址與 `/order/<token>` 仍可用）（Cloudflare Worker `emc-lens-shop`＋靜態資源 `public/`＋D1 資料庫）。
 - 前端單檔 `public/index.html`（路徑式路由 `/cart`、`/promo`、`/spec`、`/mine`、`/admin`、`/order/<token>`，沒有 `#`）；後端 `src/index.js`、`src/mail.js`、`src/xlsx.js`、`src/catalog.js`、`src/store.js`。細節看 `README.md`。
 
 ## 🔒 設定規範（不要動，除非使用者明確指名要改）
@@ -20,6 +20,13 @@
 ## 可以放心改的
 - `public/index.html`（版面、文字、樣式）、`src/mail.js`（信件文案／配色）、`tools/`、`test/`、`README.md`。
 - 改 `src/*.js`（邏輯）可以，但改到 API 回傳格式或訂單／Excel 回填流程時，先跑 `npm test` 並說明影響。
+
+## 多團購架構（2026-11-09）
+- 團購清單存在 kv `campaigns`（`id`、`status: open|ended`）。預設團購 `lens` **沿用舊 key（不加前綴）**，所以舊資料不需搬遷；其他團購的 kv key 為 `<id>:settings`／`<id>:pimgs`，檔案為 `<id>/template.xlsx`、`<id>/catalog.json`，期間限定圖為 `img/<id>_lim…`。
+- `orders.campaign` 欄位標示訂單屬於哪個團購（預設 `lens`）；API 以 `?c=<id>` 指定團購（沒帶＝`lens`），token 開頭的訂單 API 以訂單自己的團購為準。
+- 結束團購＝`status: ended`（訂單保留、不能下單／修改、可重新開放），**沒有刪除團購的功能**。團購代號限英文小寫／數字／-，不可用 `lim` 開頭或保留字（order、g、api、admin、campaigns）。
+- 購物車依團購分開存（`lensCart`＝lens，`lensCart_<id>`＝其他）。後台「0. 團購管理」可切換、新增、結束／重新開放。
+- 新環境第一次需對 D1 執行：`ALTER TABLE orders ADD COLUMN campaign TEXT NOT NULL DEFAULT 'lens'`（線上已執行過）。
 
 ## 部署與驗證（在這個資料夾）
 - 部署：`npx wrangler deploy`（只上傳程式與 `public/`；不會動 D1 資料與 secrets）。需要已登入 Cloudflare；沒登入就請使用者在本機執行，不要請他貼 token。

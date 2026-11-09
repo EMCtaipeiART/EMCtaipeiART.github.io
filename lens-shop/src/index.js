@@ -12,8 +12,15 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 async function getKV(env, k, d = null) { const r = await env.DB.prepare('SELECT v FROM kv WHERE k=?').bind(k).first(); return r ? JSON.parse(r.v) : d; }
 async function setKV(env, k, v) { await env.DB.prepare('INSERT INTO kv(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v').bind(k, JSON.stringify(v)).run(); }
-const getSettings = async (env) => ({ ...DEFAULTS, ...(await getKV(env, 'settings', {})) });
-async function getCatalog(env) { const o = await env.FILES.get('catalog.json'); return o ? JSON.parse(await o.text()) : null; }
+// 多團購：預設團購 'lens' 沿用舊資料的 key（不需搬遷），其他團購的 key 加上 <id>: / <id>/ 前綴
+const DEFAULT_CID = 'lens';
+const kk = (cid, k) => (cid === DEFAULT_CID ? k : cid + ':' + k);
+const fk = (cid, k) => (cid === DEFAULT_CID ? k : cid + '/' + k);
+const getSettings = async (env, cid = DEFAULT_CID) => ({ ...DEFAULTS, ...(await getKV(env, kk(cid, 'settings'), {})) });
+async function getCatalog(env, cid = DEFAULT_CID) { const o = await env.FILES.get(fk(cid, 'catalog.json')); return o ? JSON.parse(await o.text()) : null; }
+async function getCamps(env) { const c = await getKV(env, 'campaigns', null); return c && c.length ? c : [{ id: DEFAULT_CID, status: 'open', createdAt: '' }]; }
+const isEnded = (camps, cid) => (camps.find((c) => c.id === cid) || {}).status === 'ended';
+const CID_RE = /^[a-z0-9-]{1,20}$/;
 
 // 截止時間以台北時間解讀（YYYY-MM-DDTHH:mm）
 const deadlineMs = (s) => (s.deadline ? Date.parse(s.deadline + (s.deadline.length <= 16 ? ':00+08:00' : '')) : NaN);
@@ -50,7 +57,7 @@ function cleanLines(raw, catalog) {
   });
 }
 const totalOf = (lines) => lines.reduce((s, l) => s + l.price * l.qty, 0);
-const pubOrder = (o) => ({ id: o.id, name: o.name, email: o.email, items: JSON.parse(o.items), total: o.total, note: o.note, status: o.status, createdAt: o.created_at, updatedAt: o.updated_at, pay: o.pay_at ? { last5: o.pay_last5 || '', at: o.pay_at, hasImg: !!o.pay_img } : null });
+const pubOrder = (o) => ({ campaign: o.campaign || DEFAULT_CID, id: o.id, name: o.name, email: o.email, items: JSON.parse(o.items), total: o.total, note: o.note, status: o.status, createdAt: o.created_at, updatedAt: o.updated_at, pay: o.pay_at ? { last5: o.pay_last5 || '', at: o.pay_at, hasImg: !!o.pay_img } : null });
 
 function parseFrom(f) { const m = /^(.*?)\s*<([^>]+)>\s*$/.exec(f || ''); return m ? { name: m[1].trim().replace(/^"|"$/g, ''), email: m[2] } : { name: '', email: (f || '').trim() }; }
 async function sendMail(env, to, subject, html, text) {
@@ -76,7 +83,7 @@ async function sendMail(env, to, subject, html, text) {
   } catch (e) { console.log('mail exception', String(e)); return 'failed'; }
 }
 async function mailOrder(env, req, order, kind) {
-  const s = await getSettings(env);
+  const s = await getSettings(env, order.campaign || DEFAULT_CID);
   const base = s.siteUrl || env.SITE_URL || new URL(req.url).origin;
   const m = orderMail({ order: pubOrder(order), settings: s, link: `${base}/order/${order.token}`, kind });
   return sendMail(env, order.email, m.subject, m.html, m.text);
@@ -85,10 +92,21 @@ async function mailOrder(env, req, order, kind) {
 async function handle(req, env) {
   env = { ...env, FILES: new D1Files(env.DB) };
   const url = new URL(req.url); const path = url.pathname; const method = req.method;
+  const cid = url.searchParams.get('c') || DEFAULT_CID;
+  if (!CID_RE.test(cid)) return err('團購代號不正確');
+  const camps = await getCamps(env);
+  if (!camps.some((c) => c.id === cid)) return err('找不到這個團購', 404);
+  const closedNow = (s, c = cid) => isClosed(s) || isEnded(camps, c);
+
+  if (path === '/api/campaigns' && method === 'GET') {
+    const list = await Promise.all(camps.map(async (c) => { const s = await getSettings(env, c.id); const cat = await getCatalog(env, c.id);
+      return { id: c.id, name: s.shopName, deadline: s.deadline, ended: isEnded(camps, c.id), closed: closedNow(s, c.id), ready: !!cat }; }));
+    return json({ campaigns: list }, 200, { 'cache-control': 'public, max-age=15' });
+  }
 
   if (path === '/api/catalog' && method === 'GET') {
-    const [cat, s, pimgs] = await Promise.all([getCatalog(env), getSettings(env), getKV(env, 'pimgs', {})]);
-    return json({ catalog: cat, pimgs, settings: { shopName: s.shopName, deadline: s.deadline, closed: isClosed(s), bankName: s.bankName, bankAccount: s.bankAccount, accountName: s.accountName, notes: s.notes } },
+    const [cat, s, pimgs] = await Promise.all([getCatalog(env, cid), getSettings(env, cid), getKV(env, kk(cid, 'pimgs'), {})]);
+    return json({ catalog: cat, pimgs, settings: { shopName: s.shopName, deadline: s.deadline, closed: closedNow(s), bankName: s.bankName, bankAccount: s.bankAccount, accountName: s.accountName, notes: s.notes } },
       200, { 'cache-control': 'public, max-age=30' });
   }
   if (path.startsWith('/api/img/') && method === 'GET') {
@@ -99,21 +117,21 @@ async function handle(req, env) {
 
   // 公開訂單列表（不含 Email 與修改連結）
   if (path === '/api/orders-public' && method === 'GET') {
-    const rs = await env.DB.prepare("SELECT * FROM orders WHERE status='active' ORDER BY created_at DESC").all();
+    const rs = await env.DB.prepare("SELECT * FROM orders WHERE status='active' AND campaign=? ORDER BY created_at DESC").bind(cid).all();
     const orders = rs.results.map((o) => { const p = pubOrder(o); return { id: p.id, name: p.name, items: p.items.map((l) => ({ no: l.no, brand: l.brand, name: l.name, price: l.price, qty: l.qty, sph: l.sph, cyl: l.cyl, axis: l.axis, gift: l.gift })), total: p.total, updatedAt: p.updatedAt, paid: !!p.pay }; });
     return json({ orders, count: orders.length, sum: orders.reduce((x, o) => x + o.total, 0) });
   }
   // 同事：建立訂單
   if (path === '/api/orders' && method === 'POST') {
     const b = await req.json().catch(() => null); if (!b) return err('資料格式錯誤');
-    const s = await getSettings(env); if (isClosed(s)) return err('已截止，無法再下單', 403);
+    const s = await getSettings(env, cid); if (closedNow(s)) return err('已截止，無法再下單', 403);
     const name = String(b.name || '').trim().slice(0, 30), email = String(b.email || '').trim().toLowerCase().slice(0, 120);
     if (!name) return err('請填寫姓名'); if (!EMAIL_RE.test(email)) return err('Email 格式不正確');
-    const cat = await getCatalog(env); if (!cat) return err('目前尚未開放下單', 503);
+    const cat = await getCatalog(env, cid); if (!cat) return err('目前尚未開放下單', 503);
     let lines; try { lines = cleanLines(b.items, cat); } catch (e) { return err(e.message); }
-    const o = { id: rid(4).toUpperCase(), token: rid(16), name, email, items: JSON.stringify(lines), total: totalOf(lines), note: String(b.note || '').slice(0, 200), status: 'active', created_at: now(), updated_at: now() };
-    await env.DB.prepare('INSERT INTO orders(id,token,name,email,items,total,note,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)')
-      .bind(o.id, o.token, o.name, o.email, o.items, o.total, o.note, o.status, o.created_at, o.updated_at).run();
+    const o = { id: rid(4).toUpperCase(), token: rid(16), name, email, items: JSON.stringify(lines), total: totalOf(lines), note: String(b.note || '').slice(0, 200), status: 'active', created_at: now(), updated_at: now(), campaign: cid };
+    await env.DB.prepare('INSERT INTO orders(id,token,name,email,items,total,note,status,created_at,updated_at,campaign) VALUES(?,?,?,?,?,?,?,?,?,?,?)')
+      .bind(o.id, o.token, o.name, o.email, o.items, o.total, o.note, o.status, o.created_at, o.updated_at, o.campaign).run();
     const mail = await mailOrder(env, req, o, 'new');
     return json({ order: pubOrder(o), token: o.token, mail });
   }
@@ -143,12 +161,12 @@ async function handle(req, env) {
   if ((m = path.match(/^\/api\/orders\/([0-9a-f]{32})$/))) {
     const o = await env.DB.prepare('SELECT * FROM orders WHERE token=?').bind(m[1]).first();
     if (!o) return err('找不到訂單', 404);
-    const s = await getSettings(env);
-    if (method === 'GET') return json({ order: pubOrder(o), closed: isClosed(s) });
-    if (isClosed(s)) return err('已截止，無法再修改', 403);
+    const oc = o.campaign || DEFAULT_CID; const s = await getSettings(env, oc);
+    if (method === 'GET') return json({ order: pubOrder(o), closed: closedNow(s, oc) });
+    if (closedNow(s, oc)) return err('已截止，無法再修改', 403);
     if (method === 'PUT') {
       const b = await req.json().catch(() => null); if (!b) return err('資料格式錯誤');
-      const cat = await getCatalog(env); let lines; try { lines = cleanLines(b.items, cat); } catch (e) { return err(e.message); }
+      const cat = await getCatalog(env, oc); let lines; try { lines = cleanLines(b.items, cat); } catch (e) { return err(e.message); }
       const name = String(b.name || o.name).trim().slice(0, 30);
       await env.DB.prepare("UPDATE orders SET name=?,items=?,total=?,note=?,status='active',updated_at=? WHERE id=?")
         .bind(name, JSON.stringify(lines), totalOf(lines), String(b.note ?? o.note).slice(0, 200), now(), o.id).run();
@@ -167,7 +185,7 @@ async function handle(req, env) {
     if (EMAIL_RE.test(email)) {
       const rs = await env.DB.prepare("SELECT * FROM orders WHERE email=? AND status='active' ORDER BY created_at").bind(email).all();
       if (rs.results.length) {
-        const s = await getSettings(env); const base = s.siteUrl || env.SITE_URL || url.origin;
+        const s = await getSettings(env); const base = s.siteUrl || env.SITE_URL || url.origin; s.shopName = 'EMC 團購';
         const links = rs.results.map((o) => `${base}/order/${o.token}`);
         await sendMail(env, email, `【${s.shopName}】您的訂單修改連結`,
           `<p>您好，以下是您的訂單連結（可查看／修改，直到截止）：</p><ul>${rs.results.map((o, i) => `<li>訂單 ${o.id}（NT$ ${o.total.toLocaleString('en-US')}）：<a href="${links[i]}">${links[i]}</a></li>`).join('')}</ul><p style="color:#999;font-size:12px">${SYSTEM_NOTE}</p>`,
@@ -188,18 +206,33 @@ async function handle(req, env) {
   if (path.startsWith('/api/admin/')) {
     if (!(await isAdmin(req, env))) return err('請先登入管理者', 401);
     if (path === '/api/admin/settings') {
-      if (method === 'GET') return json(await getSettings(env));
+      if (method === 'GET') return json(await getSettings(env, cid));
       if (method === 'PUT') {
-        const b = await req.json(); const cur = await getSettings(env); const next = { ...cur };
+        const b = await req.json(); const cur = await getSettings(env, cid); const next = { ...cur };
         for (const k of Object.keys(DEFAULTS)) if (k in b) next[k] = k === 'closed' ? !!b[k] : String(b[k] ?? '').slice(0, 2000);
-        await setKV(env, 'settings', next); return json(next);
+        await setKV(env, kk(cid, 'settings'), next); return json(next);
       }
+    }
+    if (path === '/api/admin/campaigns' && method === 'POST') {
+      const b = await req.json().catch(() => ({})); const id = String(b.id || '').trim().toLowerCase(); const name = String(b.name || '').trim().slice(0, 60);
+      if (!CID_RE.test(id) || id.startsWith('lim') || ['order', 'g', 'api', 'admin', 'campaigns'].includes(id)) return err('代號只能用英文小寫、數字、-（1–20 字），且不可用保留字');
+      if (!name) return err('請填寫團購名稱');
+      if (camps.some((c) => c.id === id)) return err('這個代號已存在');
+      await setKV(env, 'campaigns', [...camps, { id, status: 'open', createdAt: now() }]);
+      await setKV(env, kk(id, 'settings'), { ...DEFAULTS, shopName: name });
+      return json({ ok: true, id });
+    }
+    if ((m = path.match(/^\/api\/admin\/campaigns\/([a-z0-9-]{1,20})$/)) && method === 'PUT') {
+      const b = await req.json().catch(() => ({})); const st = b.status === 'ended' ? 'ended' : 'open';
+      if (!camps.some((c) => c.id === m[1])) return err('找不到這個團購', 404);
+      await setKV(env, 'campaigns', camps.map((c) => (c.id === m[1] ? { ...c, status: st, endedAt: st === 'ended' ? now() : undefined } : c)));
+      return json({ ok: true });
     }
     if (path === '/api/admin/product-image' && method === 'POST') {
       const nos = (url.searchParams.get('nos') || '').split(',').map(Number).filter(Boolean).slice(0, 500);
       if (!nos.length) return err('沒有指定商品');
-      const pimgs = await getKV(env, 'pimgs', {});
-      if (url.searchParams.get('clear')) { for (const n of nos) delete pimgs[n]; await setKV(env, 'pimgs', pimgs); return json({ ok: true }); }
+      const pimgs = await getKV(env, kk(cid, 'pimgs'), {});
+      if (url.searchParams.get('clear')) { for (const n of nos) delete pimgs[n]; await setKV(env, kk(cid, 'pimgs'), pimgs); return json({ ok: true }); }
       const ct = req.headers.get('content-type') || '';
       let src;
       if (ct.includes('json')) {
@@ -214,7 +247,7 @@ async function handle(req, env) {
         src = '/api/img/' + key;
       }
       for (const n of nos) pimgs[n] = src;
-      await setKV(env, 'pimgs', pimgs); return json({ ok: true, src });
+      await setKV(env, kk(cid, 'pimgs'), pimgs); return json({ ok: true, src });
     }
     if ((m = path.match(/^\/api\/admin\/payimg\/(p_[0-9A-F]+_[a-z0-9]+)$/)) && method === 'GET') {
       const o = await new D1Files(env.DB).get('pay/' + m[1]); if (!o) return err('找不到圖片', 404);
@@ -227,15 +260,17 @@ async function handle(req, env) {
       const bytes = new Uint8Array(await req.arrayBuffer());
       if (bytes.length < 1000 || bytes[0] !== 0x50 || bytes[1] !== 0x4b) return err('這不是 .xlsx 檔案');
       let built; try { built = buildCatalog(bytes); } catch (e) { return err('讀取失敗：' + e.message); }
-      const old = await env.FILES.list({ prefix: 'img/lim' });
+      const ip = cid === DEFAULT_CID ? '' : cid + '_';
+      if (ip) { for (const im of built.images) im.key = ip + im.key; for (const c of built.catalog.limited.cards) if (c.img) c.img = ip + c.img; }
+      const old = await env.FILES.list({ prefix: 'img/' + ip + 'lim' });
       if (old.objects.length) await env.FILES.delete(old.objects.map((o) => o.key));
       for (const im of built.images) await env.FILES.put('img/' + im.key, im.data, { httpMetadata: { contentType: im.mime } });
-      await env.FILES.put('template.xlsx', bytes);
-      await env.FILES.put('catalog.json', JSON.stringify(built.catalog), { httpMetadata: { contentType: 'application/json' } });
+      await env.FILES.put(fk(cid, 'template.xlsx'), bytes);
+      await env.FILES.put(fk(cid, 'catalog.json'), JSON.stringify(built.catalog), { httpMetadata: { contentType: 'application/json' } });
       return json({ ok: true, items: built.catalog.items.length, exclusive: built.catalog.exclusive.length, limited: built.catalog.limited.cards.length, specRows: built.catalog.specs?.grid.length || 0, bytes: bytes.length });
     }
     if (path === '/api/admin/orders' && method === 'GET') {
-      const rs = await env.DB.prepare('SELECT * FROM orders ORDER BY created_at DESC').all();
+      const rs = await env.DB.prepare('SELECT * FROM orders WHERE campaign=? ORDER BY created_at DESC').bind(cid).all();
       const orders = rs.results.map((o) => ({ ...pubOrder(o), payImg: o.pay_img || null }));
       const tally = {};
       for (const o of orders) if (o.status === 'active') for (const l of o.items) { const t = (tally[l.no] ||= { no: l.no, brand: l.brand, name: l.name, price: l.price, qty: 0 }); t.qty += l.qty; }
@@ -246,8 +281,8 @@ async function handle(req, env) {
       await env.DB.prepare('DELETE FROM orders WHERE id=?').bind(m[1]).run(); return json({ ok: true });
     }
     if (path === '/api/admin/export' && method === 'GET') {
-      const t = await env.FILES.get('template.xlsx'); if (!t) return err('尚未上傳 Excel', 404);
-      const rs = await env.DB.prepare("SELECT * FROM orders WHERE status='active' ORDER BY created_at").all();
+      const t = await env.FILES.get(fk(cid, 'template.xlsx')); if (!t) return err('尚未上傳 Excel', 404);
+      const rs = await env.DB.prepare("SELECT * FROM orders WHERE status='active' AND campaign=? ORDER BY created_at").bind(cid).all();
       const rows = [];
       for (const o of rs.results) {
         pubOrder(o).items.forEach((l, i) => rows.push({ name: o.name, no: l.no, sph: l.sph, cyl: l.cyl, axis: l.axis, qty: l.qty, gift: l.gift, personTotal: i === 0 ? o.total : null }));

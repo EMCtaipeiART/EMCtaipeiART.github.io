@@ -1979,3 +1979,10 @@
 - iMac：`pixel-plaza/tools/local-worker.mjs`＋`chroma.py`（洋紅去背檢查），launchd 常駐；`walk-make.mjs` 新增 `WALK_OUT_DIR`。實測謝榕：走路影格約 2 分鐘、8 角度約 4 分鐘，圖與透明背景都正常（測試用的 8 角度合圖已還原成原圖）。
 - 前端：製作進度軸（三視圖確認→8 個角度→檢查並上線→走路與跑步影格→完成），顯示來源（家裡電腦／雲端 API）、各步驟剩餘時間與百分比。元宇宙優先讀雲端走路影格；舊的每 30 分鐘 GitHub 排程停用（保留手動備援）。
 - 未驗證：進度軸畫面（需登入的 iframe，只做了型別檢查與後端實測）。
+
+## 2026-11-09 團購站改為多團購版本
+- 可同時開多個團購：網址 `/g/<代號>/…`，`/campaigns` 團購選單（導覽列多團購時顯示格狀圖示）；只有一個進行中團購時 `/` 直接導入；舊網址 `/cart`、`/#/…`、`/order/<token>` 皆相容（訂單連結會自動切到該訂單的團購）。
+- 後端：新增 `GET /api/campaigns`、`POST /api/admin/campaigns`、`PUT /api/admin/campaigns/:id`；所有 API 以 `?c=` 指定團購；設定、Excel、商品圖、訂單、匯出都依團購分開。預設團購 `lens` 沿用原 key，舊資料不搬遷。
+- 資料庫：線上 D1 已執行 `ALTER TABLE orders ADD COLUMN campaign TEXT NOT NULL DEFAULT 'lens'`（3 筆既有訂單皆歸 lens，已核對筆數）。
+- 結束團購＝訂單保留、不可再下單／修改，可重新開放；訂單列表、購物車、進度條都依團購分開。後台新增「0. 團購管理」（切換／新增／結束）。
+- 本機以 wrangler dev 驗證：兩個團購訂單互不混、結束後擋下單、匯出分開、舊網址轉址。
