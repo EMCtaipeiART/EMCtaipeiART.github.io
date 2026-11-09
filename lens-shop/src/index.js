@@ -18,6 +18,7 @@ async function ensureChat(env) {
     env.DB.prepare('CREATE INDEX IF NOT EXISTS chat_c ON chat(campaign,id)'),
     env.DB.prepare('CREATE TABLE IF NOT EXISTS chat_presence (campaign TEXT NOT NULL, sid TEXT NOT NULL, name TEXT, seen INTEGER NOT NULL, PRIMARY KEY (campaign,sid))'),
   ]);
+  for (const c of ['sid TEXT', 'up INTEGER NOT NULL DEFAULT 0', 'del INTEGER NOT NULL DEFAULT 0', 'ed INTEGER NOT NULL DEFAULT 0']) { try { await env.DB.prepare('ALTER TABLE chat ADD COLUMN ' + c).run(); } catch { /* 已存在 */ } }
   chatReady = true;
 }
 async function getKV(env, k, d = null) { const r = await env.DB.prepare('SELECT v FROM kv WHERE k=?').bind(k).first(); return r ? JSON.parse(r.v) : d; }
@@ -138,11 +139,12 @@ async function handle(req, env) {
     const online = async () => (await env.DB.prepare('SELECT COUNT(*) c FROM chat_presence WHERE campaign=? AND seen>?').bind(cid, nowMs - 45000).first()).c;
     const touch = (sid, name) => sid ? env.DB.prepare('INSERT INTO chat_presence(campaign,sid,name,seen) VALUES(?,?,?,?) ON CONFLICT(campaign,sid) DO UPDATE SET name=excluded.name,seen=excluded.seen').bind(cid, String(sid).slice(0, 40), String(name || '').slice(0, 20), nowMs).run() : null;
     if (path === '/api/chat' && method === 'GET') {
-      const after = parseInt(url.searchParams.get('after') || '0', 10) || 0;
-      const rs = after > 0
-        ? await env.DB.prepare('SELECT id,name n,text t,img,at FROM chat WHERE campaign=? AND id>? ORDER BY id LIMIT 200').bind(cid, after).all()
-        : await env.DB.prepare('SELECT id,name n,text t,img,at FROM (SELECT * FROM chat WHERE campaign=? ORDER BY id DESC LIMIT 150) ORDER BY id').bind(cid).all();
-      return json({ msgs: rs.results, online: await online() }, 200, { 'cache-control': 'no-store' });
+      const u = url.searchParams.get('u'), sid = url.searchParams.get('sid') || '';
+      const cols = 'id,name n,text t,img,at,ed,del,up,(sid=?) m';
+      const rs = u == null
+        ? await env.DB.prepare('SELECT ' + cols + ' FROM (SELECT * FROM chat WHERE campaign=? AND del=0 ORDER BY id DESC LIMIT 150) ORDER BY id').bind(sid, cid).all()
+        : await env.DB.prepare('SELECT ' + cols + ' FROM chat WHERE campaign=? AND up>? ORDER BY id LIMIT 300').bind(sid, cid, parseInt(u, 10) || 0).all();
+      return json({ msgs: rs.results.map((r) => ({ ...r, m: !!r.m })), online: await online(), now: nowMs }, 200, { 'cache-control': 'no-store' });
     }
     if (path === '/api/chat/ping' && method === 'POST') {
       const b = await req.json().catch(() => ({})); await touch(b.sid, b.name);
@@ -160,12 +162,17 @@ async function handle(req, env) {
       const name = String(b.name || '').trim().slice(0, 20), text = String(b.text || '').trim().slice(0, 500);
       const img = /^\/api\/img\/chat_[\w]+$/.test(b.img || '') ? b.img : '';
       if (!name) return err('請先設定暱稱'); if (!text && !img) return err('請輸入內容');
-      const r = await env.DB.prepare('INSERT INTO chat(campaign,name,text,img,at) VALUES(?,?,?,?,?)').bind(cid, name, text, img, now()).run();
+      const r = await env.DB.prepare('INSERT INTO chat(campaign,name,text,img,at,sid,up) VALUES(?,?,?,?,?,?,?)').bind(cid, name, text, img, now(), String(b.sid || '').slice(0, 40), nowMs).run();
       await touch(b.sid, name); return json({ ok: true, id: r.meta.last_row_id });
     }
-    if (path === '/api/chat/delete' && method === 'POST') {
-      if (!(await isAdmin(req, env))) return err('請先登入管理者', 401);
-      await env.DB.prepare('DELETE FROM chat WHERE campaign=? AND id=?').bind(cid, parseInt(url.searchParams.get('id') || '0', 10)).run(); return json({ ok: true });
+    if ((path === '/api/chat/delete' || path === '/api/chat/edit') && method === 'POST') {
+      const b = await req.json().catch(() => ({})); const id = parseInt(url.searchParams.get('id') || '0', 10);
+      const row = await env.DB.prepare('SELECT sid FROM chat WHERE campaign=? AND id=? AND del=0').bind(cid, id).first(); if (!row) return err('找不到這則訊息', 404);
+      const own = row.sid && row.sid === String(b.sid || '');
+      if (!own && !(await isAdmin(req, env))) return err('只能修改自己的訊息', 403);
+      if (path.endsWith('delete')) await env.DB.prepare('UPDATE chat SET del=1,text=\'\',img=\'\',up=? WHERE id=?').bind(nowMs, id).run();
+      else { const text = String(b.text || '').trim().slice(0, 500); if (!text) return err('請輸入內容'); await env.DB.prepare('UPDATE chat SET text=?,ed=1,up=? WHERE id=? AND img=\'\'').bind(text, nowMs, id).run(); }
+      return json({ ok: true });
     }
     return err('找不到', 404);
   }
