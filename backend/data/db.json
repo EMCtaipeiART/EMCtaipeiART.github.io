@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 11024,
+  "revision": 11025,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-09T10:03:58.454Z",
+  "updatedAt": "2026-11-09T10:04:08.371Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1207,7 +1207,7 @@
         {"案件編號":"26110013","修改次數":"1","建立日期":"2026/11/09 16:27:40","修改日期":"2026-11-09","修改內容":"去信請協助修改調整\n調整內容請詳見簡報P.14\n希望可以明天11/10下午15:00前收到修改\n有任何問題可隨時溝通 謝謝~","修改內容連結":"[{\"text\":\"簡報P.14\",\"url\":\"https://docs.google.com/presentation/d/19T7I9Ef7eGjYDud8X3ws3ebfyNqCc8Z9TBSPbXu8FiA/edit?slide=id.h2ba28c41ecbe35c6_0_0#slide=id.h2ba28c41ecbe35c6_0_0\"}]","修改人":"鄭筱舢","確認修正日":"","待修改圖片":""},
         {"案件編號":"26100137","修改次數":"0","建立日期":"2026/11/09 17:13:05","修改日期":"2026/11/09 17:13:05","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/09 17:13:05","圖片連結":"[{\"fileName\":\"261110_ANKER_A1638_momo_桃金日.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ya-nCiNk73muFhwYepmk2MjmltcZUNj8=w1600\"},{\"fileName\":\"261110_ANKER_A1664_momo_桃金日.png\",\"url\":\"https://lh3.googleusercontent.com/d/1uDlJDo1AaSbUEhgutz5IXYT2dk8QiuEk=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/09 17:13:05"},
         {"案件編號":"26110033","修改次數":"0","建立日期":"2026/11/09 17:59:47","修改日期":"2026/11/09 17:59:47","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/09 17:59:47","圖片連結":"[{\"fileName\":\"261111_金士頓_MSI UGC抽獎.png\",\"url\":\"https://lh3.googleusercontent.com/d/1fXZI7Drbj7TOjtE648pn7UhLlHnpnBG7=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/09 17:59:47"},
-        {"案件編號":"26110065","修改次數":"0","建立日期":"2026/11/09 18:00:28","修改日期":"2026/11/09 18:00:28","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/09 18:00:28","圖片連結":"[{\"fileName\":\"261109_Momo 雙11大促_CPAS_AeroClip 2_電商_B.png\",\"url\":\"https://lh3.googleusercontent.com/d/1XLoSq4e4rdoKbvChFS3fNHDK2qmBVuYD=w1600\"},{\"fileName\":\"261109_Momo 雙11大促_CPAS_AeroClip 2_電商_Ａ.png\",\"url\":\"https://lh3.googleusercontent.com/d/1pMGp89ju7oH2zpTWUgN944sw9dmz5_bG=w1600\"},{\"fileName\":\"261109_Shopee雙11最強購物節_CPAS_AeroClip 2_電商_A.png\",\"url\":\"https://lh3.googleusercontent.com/d/1nHUppaWzlzK-HkhMAz08SWBzIuGTk-_Z=w1600\"},{\"fileName\":\"261109_Shopee雙11最強購物節_CPAS_AeroClip 2_電商_B.png\",\"url\":\"https://lh3.googleusercontent.com/d/14J0J-EDcBnKcix0wKToLqhr7x-cONGbQ=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/09 18:03:58"}
+        {"案件編號":"26110065","修改次數":"0","建立日期":"2026/11/09 18:00:28","修改日期":"2026/11/09 18:00:28","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/09 18:00:28","圖片連結":"[{\"fileName\":\"261109_Momo 雙11大促_CPAS_AeroClip 2_電商_B.png\",\"url\":\"https://lh3.googleusercontent.com/d/1XLoSq4e4rdoKbvChFS3fNHDK2qmBVuYD=w1600\"},{\"fileName\":\"261109_Momo 雙11大促_CPAS_AeroClip 2_電商_Ａ.png\",\"url\":\"https://lh3.googleusercontent.com/d/1pMGp89ju7oH2zpTWUgN944sw9dmz5_bG=w1600\"},{\"fileName\":\"261109_Shopee雙11最強購物節_CPAS_AeroClip 2_電商_A.png\",\"url\":\"https://lh3.googleusercontent.com/d/1nHUppaWzlzK-HkhMAz08SWBzIuGTk-_Z=w1600\"},{\"fileName\":\"261109_Shopee雙11最強購物節_CPAS_AeroClip 2_電商_B.png\",\"url\":\"https://lh3.googleusercontent.com/d/14J0J-EDcBnKcix0wKToLqhr7x-cONGbQ=w1600\"},{\"fileName\":\"261109_PChome雙11購物節_CPAS_AeroClip2_雙11.png\",\"url\":\"https://lh3.googleusercontent.com/d/1neSk2vZI6buHmjOio7Uu56sOAmikNSYX=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/09 18:04:08"}
       ]
     },
     "補充資料連結": {
