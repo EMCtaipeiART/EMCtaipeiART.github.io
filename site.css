@@ -1630,3 +1630,8 @@ html[data-theme="dark"] .dr-nas b,html[data-theme="dark"] .dr-cls b,html[data-th
 html[data-theme="dark"] .dr-nas-list li{background:#26302c}
 html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
 @media(max-width:720px){.dc-slot-b .dc-ev{font-size:12px;height:auto;padding:2px 8px;border-left:3px solid var(--c);border-radius:6px;margin-top:0;white-space:normal;line-height:1.45}.dc-slot-b{gap:4px}.dc-slot-b .dc-ev i{display:block;margin-left:0}}
+
+/* 幾點前收稿 */
+.ci-due{display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:7px;font-size:11.5px;font-weight:800;background:var(--st-doing-bg);color:var(--st-doing-ink);border:1px solid var(--st-doing-line);white-space:nowrap}
+.lt-due{display:block;font-size:11.5px;font-weight:800;color:var(--st-doing-ink);white-space:nowrap}
+.lt-due-inline{margin-left:6px;vertical-align:1px}

@@ -6522,3 +6522,4 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 2026-11-04 修正：NAS 資料夾全部設定失敗的提示改顯示實際原因
 - 2026-11-04 診斷：信件串無可顯示信件時回報寄件帳號、封數與標籤（GMAIL_THREAD_EMPTY）；Worker 已部署
 - 2026-11-04 設計師回覆信的「NAS 路徑／合併信件分類」區塊補上深色模式（改用 --panel 變數＋深色覆寫）。
+- 2026-11-09 新增案件欄位「幾點前收到稿件」（收稿時間，選填 HH:MM，欄位 key dueTime／表頭「收稿時間」）：填單／編輯／批次沿用、卡牌黃色「HH:MM 前」標籤、列表專案名稱旁與結束欄、詳情頁結束日期後顯示；後端 model.ts／schema.mjs 加欄位，需 wrangler deploy。
