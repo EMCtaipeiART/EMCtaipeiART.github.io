@@ -3655,6 +3655,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const name = this.coinHolderName(database, current);
     if (!name) {
       if (hasCapability(database, current, 'database.manage')) return { ok: true, action: 'coinReserve', exempt: true, account: current.account, name: '', balance: 0 };
+      // 測試員（例如「設計測試組」）沒有平台幣帳戶：測試時不扣款，和管理者一樣免扣
+      if (normalizeDepartmentName(settingsRow(database, current.account || current.user)?.['部門']) === '測試員') return { ok: true, action: 'coinReserve', exempt: true, account: current.account, name: '', balance: 0 };
       throw new Error('只有設計師、企劃部、專案部帳號有平台幣，才能使用服裝生成器');
     }
     const generationId = text(payload.ref);
