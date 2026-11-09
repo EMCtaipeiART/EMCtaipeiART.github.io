@@ -50,6 +50,17 @@ button:disabled{opacity:.45;cursor:default;transform:none;filter:none}
 .rv{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.cap{display:inline-flex;align-items:center;gap:5px;max-width:100%;background:#fff8dc;border:1px solid #f1d77a;border-radius:99px;padding:2px 10px;font-size:12px;color:#5a4300;line-height:1.6}
 .cap b{white-space:nowrap}.cap .st{color:#f5a700;letter-spacing:-1px;white-space:nowrap}.cap .tx{display:inline-block;max-width:150px;overflow:hidden;white-space:nowrap;vertical-align:middle}.cap .tx>span{display:inline-block;white-space:nowrap}.cap .tx.mq>span{animation:mq 6s linear infinite alternate}
 .stars{display:flex;gap:4px;font-size:34px;line-height:1;margin:6px 0}.stars i{font-style:normal;cursor:pointer;color:#d8d8d8;user-select:none}.stars i.on{color:#f5a700}
+#chb{position:fixed;right:14px;bottom:14px;z-index:60;display:inline-flex;align-items:center;gap:10px;background:linear-gradient(180deg,#1db843,var(--b));color:#fff;border:0;border-radius:99px;padding:12px 20px;font-weight:700;font-size:15px;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer}#chb i{width:9px;height:9px;border-radius:50%;background:#fff}#chb s{text-decoration:none;opacity:.6}#chb u{position:absolute;top:-3px;right:-3px;width:14px;height:14px;border-radius:50%;background:#e5484d;border:2px solid #fff;display:none}#chb.un u{display:block}body.hasbar #chb{bottom:92px}
+#chp{position:fixed;right:14px;bottom:14px;width:380px;height:min(600px,calc(100vh - 28px));z-index:70;background:#fff;border-radius:18px;box-shadow:0 12px 48px rgba(0,0,0,.35);display:none;flex-direction:column;overflow:hidden}#chp.on{display:flex}
+.ch-h{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:linear-gradient(180deg,#1db843,var(--b));color:#fff}.ch-h b{font-size:16px;display:block}.ch-h span{font-size:12px;opacity:.9}.ch-h button{background:rgba(255,255,255,.2);box-shadow:none;padding:6px 12px}
+.ch-b{flex:1;overflow-y:auto;padding:12px;background:#e9efe9;display:flex;flex-direction:column;gap:8px}.ch-d{align-self:center;background:rgba(0,0,0,.12);color:#fff;border-radius:99px;font-size:11.5px;padding:2px 12px;margin:6px 0}
+.ch-m{display:flex;gap:8px;max-width:86%;align-items:flex-start}.ch-m.me{align-self:flex-end;flex-direction:row-reverse}.ch-av{flex:none;width:34px;height:34px;border-radius:50%;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px}
+.ch-c{min-width:0}.ch-n{font-size:11.5px;color:#556;margin:0 0 2px 2px}.ch-r{display:flex;align-items:flex-end;gap:5px}.ch-m.me .ch-r{flex-direction:row-reverse}
+.ch-bb{background:#fff;border-radius:14px;padding:8px 12px;font-size:14.5px;line-height:1.45;white-space:pre-wrap;word-break:break-word;box-shadow:0 1px 1px rgba(0,0,0,.08)}.ch-m.me .ch-bb{background:#8ce99a}.ch-bb img{display:block;max-width:220px;max-height:260px;border-radius:10px;cursor:zoom-in}.ch-bb.im{padding:3px;background:transparent;box-shadow:none}
+.ch-t{font-size:10.5px;color:#667;white-space:nowrap}.ch-x{font-size:11px;color:#c33;cursor:pointer;margin-left:4px}
+.ch-f{display:flex;align-items:flex-end;gap:8px;padding:10px;border-top:1px solid var(--l);background:#fff}.ch-f textarea{flex:1;resize:none;height:40px;max-height:96px;border-radius:20px;padding:9px 14px}.ch-f button{padding:0;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none}.ch-f button.sec{box-shadow:none}.ch-f svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.ch-nm{padding:6px 12px;font-size:12px;color:#556;background:#f6f9f7;border-top:1px solid var(--l)}.ch-nm a{color:var(--bd);cursor:pointer;text-decoration:underline}
+@media(max-width:620px){#chp{right:0;left:0;bottom:0;width:auto;height:86vh;border-radius:18px 18px 0 0}#chb{right:10px}}
 .th{cursor:zoom-in}#lb{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:99;cursor:zoom-out;padding:16px}#lb img{max-width:min(92vw,480px);max-height:86vh;border-radius:14px;background:#fff;box-shadow:0 10px 40px rgba(0,0,0,.4);object-fit:contain}
 .th{width:96px;height:80px;object-fit:contain;border-radius:10px;background:#f6f9f7;border:1px solid var(--l)}
 .th.ph{display:flex;align-items:center;justify-content:center;color:#a9b5af;font-size:11px;text-align:center;overflow:hidden;line-height:1.25;padding:4px}
@@ -131,7 +142,7 @@ table.ord,table.ord tbody{display:block}table.ord thead{display:none}table.ord t
 <script>
 const $=(s,e=document)=>e.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-document.addEventListener('click',e=>{const im=e.target.closest&&e.target.closest('img.th,.pc img');if(!im)return;e.preventDefault();e.stopPropagation();const o=document.createElement('div');o.id='lb';o.innerHTML='<img src="'+im.currentSrc.replace(/"/g,'')+'" alt="">';const c=()=>{o.remove();document.removeEventListener('keydown',k)};const k=ev=>{if(ev.key==='Escape')c()};o.onclick=c;document.addEventListener('keydown',k);document.body.appendChild(o)},true);
+document.addEventListener('click',e=>{const im=e.target.closest&&e.target.closest('img.th,.pc img,.ch-bb img');if(!im)return;e.preventDefault();e.stopPropagation();const o=document.createElement('div');o.id='lb';o.innerHTML='<img src="'+im.currentSrc.replace(/"/g,'')+'" alt="">';const c=()=>{o.remove();document.removeEventListener('keydown',k)};const k=ev=>{if(ev.key==='Escape')c()};o.onclick=c;document.addEventListener('keydown',k);document.body.appendChild(o)},true);
 const nt=n=>'NT$ '+Number(n).toLocaleString('en-US');
 // 訂單時間以 UTC ISO 字串儲存，顯示時一律換算成台灣時間（UTC+8）
 const tp=iso=>{const d=new Date(iso);return isNaN(d)?String(iso||'').slice(0,16).replace('T',' '):new Date(d.getTime()+8*36e5).toISOString().slice(0,16).replace('T',' ')};
@@ -162,7 +173,7 @@ function dlText(){const s=st.set;if(!s)return'';if(s.closed)return'<b>已截止�
 function renderNav(){const r=P().page;const L=[...((st.camps||[]).length>1?[['campaigns','全部團購']]:[]),['','開始選購'],['promo','促銷活動'],['spec','規格表'],['cart','購物車'],['mine','訂單列表'],['admin','管理']];
  const IC={"":"<path d=\"M3 11 12 4l9 7M5 10v10h14V10\"/>","promo":"<path d=\"M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8zM7.5 7.5h.01\"/>","spec":"<rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"2\"/><path d=\"M3 10h18M9 4v16\"/>","cart":"<path d=\"M3 3h2.5l2.2 12h10.6l2-8.5H6.4\"/><circle cx=\"9.5\" cy=\"19.5\" r=\"1.3\"/><circle cx=\"17\" cy=\"19.5\" r=\"1.3\"/>","campaigns":"<rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1.5\"/>","mine":"<path d=\"M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01\"/>","admin":"<circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7\"/>"};
  $('#nav').innerHTML=L.map(([k,n])=>`<a href="${k==='campaigns'?'/campaigns':H('/'+k)}" title="${n}" aria-label="${n}" class="ni ${r===k||(k==='cart'&&r==='order')?'on':''}"><svg viewBox="0 0 24 24">${IC[k]}</svg><em class="lb">${n}</em>${k==='cart'&&st.cart.length?`<span class="n">${st.cart.reduce((s,l)=>s+l.qty,0)}</span>`:''}</a>`).join('');
- $('#dl').innerHTML=dlText();$('#logo').textContent=st.set?.shopName||'隱形眼鏡團購';cartBar()}
+ $('#dl').innerHTML=dlText();$('#logo').textContent=st.set?.shopName||'隱形眼鏡團購';cartBar();chatInit()}
 const thumb=i=>st.pimgs[i.no]?`<img class="th" loading="lazy" src="${esc(st.pimgs[i.no])}" alt="">`:`<div class="th ph">${esc(i.brand.slice(0,6))}</div>`;
 const items=()=>st.cat?.items||[];const byNo=n=>items().find(i=>i.no===n);
 
@@ -210,6 +221,46 @@ function reviewDialog(no){const it=byNo(no);let n=0;const mine=(st.rev[no]||[]).
  bg.querySelector('#rv-x').onclick=()=>bg.remove();bg.onclick=e=>{if(e.target===bg)bg.remove()};
  bg.querySelector('#rv-ok').onclick=async()=>{const name=bg.querySelector('#rv-n').value.trim(),m=bg.querySelector('#rv-m');if(!name)return m.textContent='請填寫姓名';if(!n)return m.textContent='請選擇星級';
   try{st.rev=await api('/reviews',{method:'POST',json:{no,name,stars:n,text:bg.querySelector('#rv-t').value}});st.who={...st.who,name};localStorage.lensWho=JSON.stringify(st.who);bg.remove();viewShop()}catch(e){m.textContent=e.message}}}
+
+// ───── 即時聊天室 ─────
+const CH={sid:localStorage.lensSid||(localStorage.lensSid=Math.random().toString(36).slice(2,12)),cid:null,last:0,msgs:[],online:0,open:false,unread:0,timer:null,ping:0};
+const chName=()=>localStorage.lensChatName||st.who?.name||(localStorage.lensChatName='訪客'+Math.floor(1000+Math.random()*9000));
+const chCol=n=>{let h=0;for(const c of n)h=(h*31+c.charCodeAt(0))%360;return`hsl(${h} 45% 48%)`};
+const chTime=iso=>{const d=new Date(Date.parse(iso)+8*36e5);return d.toISOString().slice(11,16)};
+const chDay=iso=>{const d=new Date(Date.parse(iso)+8*36e5),t=new Date(Date.now()+8*36e5),k=x=>x.toISOString().slice(0,10);if(k(d)===k(t))return'今天';if(k(d)===k(new Date(t-864e5)))return'昨天';return(d.getUTCMonth()+1)+'月'+d.getUTCDate()+'日 週'+'日一二三四五六'[d.getUTCDay()]};
+function chatInit(){
+ const show=st.cid&&P().page!=='admin';let b=document.getElementById('chb');
+ if(!show){if(b)b.style.display='none';return}
+ if(!b){b=document.createElement('button');b.id='chb';b.onclick=chatToggle;document.body.appendChild(b);const pn=document.createElement('div');pn.id='chp';document.body.appendChild(pn)}
+ b.style.display='';
+ if(CH.cid!==st.cid){CH.cid=st.cid;CH.last=0;CH.msgs=[];CH.unread=0;chatPoll()}
+ if(!CH.timer)CH.timer=setInterval(()=>{if(document.hidden)return;chatPoll()},3000);
+ chatBtn()}
+function chatBtn(){const b=document.getElementById('chb');if(!b)return;b.className=CH.unread&&!CH.open?'un':'';b.innerHTML=`<i></i>即時聊天室<s>|</s>${CH.online} 人<u></u>`;b.style.display=CH.open?'none':''}
+async function chatPoll(){if(!st.cid)return;const cid=CH.cid;try{
+  if(Date.now()-CH.ping>20000){CH.ping=Date.now();const r=await api('/chat/ping',{method:'POST',json:{sid:CH.sid,name:chName()}});CH.online=r.online}
+  const d=await api('/chat?after='+CH.last);if(cid!==CH.cid)return;CH.online=d.online;
+  if(d.msgs.length){const fresh=CH.last>0;CH.msgs=CH.msgs.concat(d.msgs);CH.last=d.msgs[d.msgs.length-1].id;if(fresh&&!CH.open)CH.unread+=d.msgs.filter(m=>m.n!==chName()).length;if(CH.open)chatRender()}
+  else if(CH.last===0&&CH.open)chatRender();
+  if(CH.open)chatHead();chatBtn()}catch(e){}}
+function chatHead(){const h=document.getElementById('chn');if(h)h.textContent=`${CH.online} 在線 · 每 3 秒更新`}
+function chatToggle(){CH.open=!CH.open;CH.unread=0;const p=document.getElementById('chp');p.classList.toggle('on',CH.open);chatBtn();if(!CH.open)return;
+ p.innerHTML=`<div class="ch-h"><div><b>${esc(st.set?.shopName||'團購')} 聊天室</b><span id="chn"></span></div><button id="chx">收起</button></div><div class="ch-b" id="chl"></div>
+ <div class="ch-nm">以 <b id="chnm"></b> 的身分留言 · <a id="chrn">改暱稱</a></div>
+ <div class="ch-f"><input type="file" id="chf" accept="image/*" hidden><button class="sec" id="chi" title="傳圖片"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-8 8"/></svg></button><textarea id="cht" placeholder="輸入訊息…" maxlength="500"></textarea><button id="chs" title="送出"><svg viewBox="0 0 24 24" style="stroke:#fff"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div>`;
+ document.getElementById('chnm').textContent=chName();chatHead();chatRender();
+ document.getElementById('chx').onclick=chatToggle;
+ document.getElementById('chrn').onclick=()=>{const n=(prompt('你的暱稱（最多 20 字）',chName())||'').trim().slice(0,20);if(n){localStorage.lensChatName=n;document.getElementById('chnm').textContent=n;chatRender()}};
+ const t=document.getElementById('cht'),send=async(img)=>{const text=t.value.trim();if(!text&&!img)return;try{await api('/chat',{method:'POST',json:{sid:CH.sid,name:chName(),text:img?'':text,img:img||''}});if(!img)t.value='';t.style.height='40px';await chatPoll();chatRender(true)}catch(e){alert(e.message)}};
+ document.getElementById('chs').onclick=()=>send();t.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();send()}};t.oninput=()=>{t.style.height='40px';t.style.height=Math.min(96,t.scrollHeight)+'px'};
+ document.getElementById('chi').onclick=()=>document.getElementById('chf').click();
+ document.getElementById('chf').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{const bl=await chatShrink(f);const r=await api('/chat/image',{method:'POST',body:bl,headers:{'content-type':'image/jpeg'}});await send(r.img)}catch(x){alert(x.message||'圖片傳送失敗')}}}
+function chatShrink(f){return new Promise((ok,no)=>{const im=new Image(),u=URL.createObjectURL(f);im.onload=()=>{const k=Math.min(1,1000/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);c.toBlob(b=>b?ok(b):no(new Error('圖片處理失敗')),'image/jpeg',.78)};im.onerror=()=>no(new Error('無法讀取這張圖片'));im.src=u})}
+function chatRender(bottom){const l=document.getElementById('chl');if(!l)return;const me=chName(),near=bottom||l.scrollHeight-l.scrollTop-l.clientHeight<80;let day='',h='';
+ for(const m of CH.msgs){const d=chDay(m.at);if(d!==day){day=d;h+=`<div class="ch-d">${esc(d)}</div>`}const mine=m.n===me;
+  h+=`<div class="ch-m ${mine?'me':''}">${mine?'':`<div class="ch-av" style="background:${chCol(m.n)}">${esc([...m.n][0]||'?')}</div>`}<div class="ch-c">${mine?'':`<div class="ch-n">${esc(m.n)}</div>`}<div class="ch-r"><div class="ch-bb ${m.img?'im':''}">${m.img?`<img loading="lazy" src="${esc(m.img)}" alt="">`:esc(m.t)}</div><span class="ch-t">${chTime(m.at)}${st.admin?` <span class="ch-x" data-del="${m.id}">刪</span>`:''}</span></div></div></div>`}
+ l.innerHTML=h||'<div class="ch-d">還沒有訊息，來打聲招呼吧</div>';if(near)l.scrollTop=l.scrollHeight;
+ l.querySelectorAll('.ch-x').forEach(x=>x.onclick=async()=>{if(!confirm('刪除這則訊息？'))return;try{await api('/chat/delete?id='+x.dataset.del,{method:'POST',admin:1,json:{}});CH.msgs=CH.msgs.filter(m=>m.id!=x.dataset.del);chatRender()}catch(e){alert(e.message)}})}
 function dlFull(){const d=st.set?.deadline;if(!d)return'';const m=/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/.exec(d);if(!m)return esc(d);const w='日一二三四五六'[new Date(Date.UTC(+m[1],+m[2]-1,+m[3])).getUTCDay()];return`<b>${m[1]} 年 ${+m[2]} 月 ${+m[3]} 日（週${w}）</b>${m[4]?` ${m[4]}:${m[5]} 截止`:' 截止'}`}
 function cdHtml(){const s=st.set;if(!s||s.closed)return'<div><b>—</b><span>已結單</span></div>';if(!s.deadline)return'<div><b>—</b><span>未設定</span></div>';const ms=Math.max(0,Date.parse(s.deadline+(s.deadline.length<=16?':00+08:00':''))-Date.now());const d=Math.floor(ms/864e5),hh=Math.floor(ms%864e5/36e5),m=Math.floor(ms%36e5/6e4),sc=Math.floor(ms%6e4/1e3),p=x=>String(x).padStart(2,'0');return`<div><b>${d}</b><span>天</span></div><div><b>${p(hh)}</b><span>小時</span></div><div><b>${p(m)}</b><span>分鐘</span></div><div class="sec"><b>${p(sc)}</b><span>秒</span></div>`}
 function closedBanner(){return st.set?.closed?'<div class="note bad">本次團購已截止，無法再下單或修改。</div>':''}

@@ -10,6 +10,16 @@ const rid = (n = 16) => { const b = crypto.getRandomValues(new Uint8Array(n)); r
 const DEFAULTS = { shopName: '隱形眼鏡團購', deadline: '', closed: false, bankName: '', bankAccount: '', accountName: '', notes: '', siteUrl: '' };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+let chatReady = false;
+async function ensureChat(env) {
+  if (chatReady) return;
+  await env.DB.batch([
+    env.DB.prepare('CREATE TABLE IF NOT EXISTS chat (id INTEGER PRIMARY KEY AUTOINCREMENT, campaign TEXT NOT NULL, name TEXT NOT NULL, text TEXT NOT NULL DEFAULT \'\', img TEXT NOT NULL DEFAULT \'\', at TEXT NOT NULL)'),
+    env.DB.prepare('CREATE INDEX IF NOT EXISTS chat_c ON chat(campaign,id)'),
+    env.DB.prepare('CREATE TABLE IF NOT EXISTS chat_presence (campaign TEXT NOT NULL, sid TEXT NOT NULL, name TEXT, seen INTEGER NOT NULL, PRIMARY KEY (campaign,sid))'),
+  ]);
+  chatReady = true;
+}
 async function getKV(env, k, d = null) { const r = await env.DB.prepare('SELECT v FROM kv WHERE k=?').bind(k).first(); return r ? JSON.parse(r.v) : d; }
 async function setKV(env, k, v) { await env.DB.prepare('INSERT INTO kv(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v').bind(k, JSON.stringify(v)).run(); }
 // 多團購：預設團購 'lens' 沿用舊資料的 key（不需搬遷），其他團購的 key 加上 <id>: / <id>/ 前綴
@@ -120,6 +130,44 @@ async function handle(req, env) {
     const rs = await env.DB.prepare("SELECT * FROM orders WHERE status='active' AND campaign=? ORDER BY created_at DESC").bind(cid).all();
     const orders = rs.results.map((o) => { const p = pubOrder(o); return { id: p.id, name: p.name, items: p.items.map((l) => ({ no: l.no, brand: l.brand, name: l.name, price: l.price, qty: l.qty, sph: l.sph, cyl: l.cyl, axis: l.axis, gift: l.gift })), total: p.total, updatedAt: p.updatedAt, paid: !!p.pay }; });
     return json({ orders, count: orders.length, sum: orders.reduce((x, o) => x + o.total, 0) });
+  }
+  // 即時聊天室（表 chat、chat_presence；第一次使用時自動建立，不動既有資料）
+  if (path.startsWith('/api/chat')) {
+    await ensureChat(env);
+    const nowMs = Date.now();
+    const online = async () => (await env.DB.prepare('SELECT COUNT(*) c FROM chat_presence WHERE campaign=? AND seen>?').bind(cid, nowMs - 45000).first()).c;
+    const touch = (sid, name) => sid ? env.DB.prepare('INSERT INTO chat_presence(campaign,sid,name,seen) VALUES(?,?,?,?) ON CONFLICT(campaign,sid) DO UPDATE SET name=excluded.name,seen=excluded.seen').bind(cid, String(sid).slice(0, 40), String(name || '').slice(0, 20), nowMs).run() : null;
+    if (path === '/api/chat' && method === 'GET') {
+      const after = parseInt(url.searchParams.get('after') || '0', 10) || 0;
+      const rs = after > 0
+        ? await env.DB.prepare('SELECT id,name n,text t,img,at FROM chat WHERE campaign=? AND id>? ORDER BY id LIMIT 200').bind(cid, after).all()
+        : await env.DB.prepare('SELECT id,name n,text t,img,at FROM (SELECT * FROM chat WHERE campaign=? ORDER BY id DESC LIMIT 150) ORDER BY id').bind(cid).all();
+      return json({ msgs: rs.results, online: await online() }, 200, { 'cache-control': 'no-store' });
+    }
+    if (path === '/api/chat/ping' && method === 'POST') {
+      const b = await req.json().catch(() => ({})); await touch(b.sid, b.name);
+      if (Math.random() < 0.02) await env.DB.prepare('DELETE FROM chat_presence WHERE seen<?').bind(nowMs - 864e5).run();
+      return json({ online: await online() }, 200, { 'cache-control': 'no-store' });
+    }
+    if (path === '/api/chat/image' && method === 'POST') {
+      const ct = req.headers.get('content-type') || ''; const bytes = new Uint8Array(await req.arrayBuffer());
+      if (!/^image\/(jpeg|png|webp|gif)$/.test(ct) || !bytes.length || bytes.length > 900000) return err('圖片格式或大小不正確（上限 900KB）');
+      const key = 'chat_' + rid(10); await env.FILES.put('img/' + key, bytes, { httpMetadata: { contentType: ct } });
+      return json({ img: '/api/img/' + key });
+    }
+    if (path === '/api/chat' && method === 'POST') {
+      const b = await req.json().catch(() => null); if (!b) return err('資料格式錯誤');
+      const name = String(b.name || '').trim().slice(0, 20), text = String(b.text || '').trim().slice(0, 500);
+      const img = /^\/api\/img\/chat_[\w]+$/.test(b.img || '') ? b.img : '';
+      if (!name) return err('請先設定暱稱'); if (!text && !img) return err('請輸入內容');
+      const r = await env.DB.prepare('INSERT INTO chat(campaign,name,text,img,at) VALUES(?,?,?,?,?)').bind(cid, name, text, img, now()).run();
+      await touch(b.sid, name); return json({ ok: true, id: r.meta.last_row_id });
+    }
+    if (path === '/api/chat/delete' && method === 'POST') {
+      if (!(await isAdmin(req, env))) return err('請先登入管理者', 401);
+      await env.DB.prepare('DELETE FROM chat WHERE campaign=? AND id=?').bind(cid, parseInt(url.searchParams.get('id') || '0', 10)).run(); return json({ ok: true });
+    }
+    return err('找不到', 404);
   }
   // 商品評論（kv：<團購>:reviews = { 編號: [{n,s,t,at}] }）
   if (path === '/api/reviews' && method === 'GET') return json(await getKV(env, kk(cid, 'reviews'), {}));
