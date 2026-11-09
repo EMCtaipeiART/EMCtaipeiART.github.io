@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 10948,
+  "revision": 10949,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-09T04:20:09.162Z",
+  "updatedAt": "2026-11-09T04:21:27.746Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -2107,7 +2107,8 @@
         {"短碼":"ON小幫手表單","原始網址":"https://docs.google.com/spreadsheets/d/1N1NLzMmwziR9yz2IY9c8KA5yTmQl8qlwN67jNLAz0PA/edit?gid=798870149#gid=798870149","名稱":"小幫手ON","專案":"","可見範圍":"僅自己","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"hsuan.li@emctaipei.com","建立者":"黎子瑄","建立時間":"2026/11/04 20:03:43","更新時間":"2026/11/04 20:03:43"},
         {"短碼":"ON大表","原始網址":"https://docs.google.com/spreadsheets/d/1tmOSJZihgUk-G3kGlPlHr8oeuWeZrPokzIktl6pWa34/edit?gid=798870149#gid=798870149","名稱":"ON客戶表單","專案":"","可見範圍":"同組","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"hsuan.li@emctaipei.com","建立者":"黎子瑄","建立時間":"2026/11/05 12:30:35","更新時間":"2026/11/05 12:30:35"},
         {"短碼":"261109Drinks","原始網址":"https://get-app.nidin.shop/gb/menu/22092/dCWrE2EunJ?openExternalBrowser=1","名稱":"1109Drinks","專案":"","可見範圍":"僅自己","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"david.liao@emctaipei.com","建立者":"廖秦葦","建立時間":"2026/11/05 14:51:34","更新時間":"2026/11/05 14:51:34"},
-        {"短碼":"tG5Lsr","原始網址":"https://docs.google.com/presentation/d/1q0GsIJ35S2Rfmg7Aareh9Z7PtX9pLzhe/edit?slide=id.h6559b2b1aa3fa3c6_1_7#slide=id.h6559b2b1aa3fa3c6_1_7","名稱":"","專案":"","可見範圍":"同組","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/11/09 12:20:09","更新時間":"2026/11/09 12:20:09"}
+        {"短碼":"tG5Lsr","原始網址":"https://docs.google.com/presentation/d/1q0GsIJ35S2Rfmg7Aareh9Z7PtX9pLzhe/edit?slide=id.h6559b2b1aa3fa3c6_1_7#slide=id.h6559b2b1aa3fa3c6_1_7","名稱":"","專案":"","可見範圍":"同組","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/11/09 12:20:09","更新時間":"2026/11/09 12:20:09"},
+        {"短碼":"CZjcsy","原始網址":"https://drive.google.com/drive/folders/1UoUrsQ27ZPXWCJTv1UUzx0AI9qB89bPm","名稱":"","專案":"","可見範圍":"同組","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/11/09 12:21:27","更新時間":"2026/11/09 12:21:27"}
       ]
     }
   },
