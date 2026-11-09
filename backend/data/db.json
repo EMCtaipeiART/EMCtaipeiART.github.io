@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 10950,
+  "revision": 10951,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-09T04:22:22.896Z",
+  "updatedAt": "2026-11-09T04:38:47.622Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -2109,7 +2109,8 @@
         {"短碼":"261109Drinks","原始網址":"https://get-app.nidin.shop/gb/menu/22092/dCWrE2EunJ?openExternalBrowser=1","名稱":"1109Drinks","專案":"","可見範圍":"僅自己","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"david.liao@emctaipei.com","建立者":"廖秦葦","建立時間":"2026/11/05 14:51:34","更新時間":"2026/11/05 14:51:34"},
         {"短碼":"tG5Lsr","原始網址":"https://docs.google.com/presentation/d/1q0GsIJ35S2Rfmg7Aareh9Z7PtX9pLzhe/edit?slide=id.h6559b2b1aa3fa3c6_1_7#slide=id.h6559b2b1aa3fa3c6_1_7","名稱":"","專案":"","可見範圍":"同組","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/11/09 12:20:09","更新時間":"2026/11/09 12:20:09"},
         {"短碼":"CZjcsy","原始網址":"https://drive.google.com/drive/folders/1UoUrsQ27ZPXWCJTv1UUzx0AI9qB89bPm","名稱":"","專案":"","可見範圍":"同組","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/11/09 12:21:27","更新時間":"2026/11/09 12:21:27"},
-        {"短碼":"6Hxp4b","原始網址":"https://drive.google.com/file/d/1LHV92QkM6BGNrIaYU_TkmXUiuIHAE0wC/view?usp=sharing","名稱":"","專案":"","可見範圍":"同組","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/11/09 12:22:22","更新時間":"2026/11/09 12:22:22"}
+        {"短碼":"6Hxp4b","原始網址":"https://drive.google.com/file/d/1LHV92QkM6BGNrIaYU_TkmXUiuIHAE0wC/view?usp=sharing","名稱":"","專案":"","可見範圍":"同組","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/11/09 12:22:22","更新時間":"2026/11/09 12:22:22"},
+        {"短碼":"ZURfVs","原始網址":"https://drive.google.com/file/d/1ZyKsC9A0TLPjbpIro4RhFD7-tBxsh6Ep/view?usp=sharing","名稱":"","專案":"","可見範圍":"同組","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/11/09 12:38:47","更新時間":"2026/11/09 12:38:47"}
       ]
     }
   },
