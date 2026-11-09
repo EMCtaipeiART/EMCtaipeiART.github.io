@@ -2029,3 +2029,8 @@
 
 ## 2026-11-09 後台訂單標題與商品彙總合計
 - lens-shop/public/index.html：「3. 訂單」標題改為「N 筆有效單，M 筆已付款單，已付 NT$ X」；商品彙總表最下方加「整團金額」（總盒數＋總金額）。
+
+## 2026-11-09 星歐、昆凌 QUINLIVAN 商品圖
+- 來源：使用者提供的官網 quinlivan-official.com（Maison 6 色，圖為鏡片花色）、larganmed.com.tw（星歐 24 項，圖為模特照＋花色小圖）。縮成 480px JPEG 寫入線上 D1（files＋合併 pimgs，原 103 項保留，共 133 項）。
+- 沒有圖的：昆凌「聖光系列」6 項（官網無此系列）、星歐XBBLens 比比粉粉 1 項。
+- 工具：lens-shop/tools/brand-img-build.mjs（需先備好 jobs.json 與 out/ 縮圖）。
