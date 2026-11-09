@@ -5489,6 +5489,18 @@ describe('平台幣', () => {
     expect(await api({ action: 'coinRefund', ref: generation, serviceKey: SERVICE })).toMatchObject({ ok: true, refunded: false });
   });
 
+  it('exempts 測試員 department accounts (no coin account) from the character-generation charge', async () => {
+    const tester = await seedSession('tester@emctaipei.test', '設計測試組');
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      const database = JSON.parse(stored.json) as DatabaseSnapshot;
+      database.tables['設定'].rows.push({ '部門': '測試員', '組別': '影音', '名字': '設計測試組', '顯示名': '設計測試組', '帳號': 'tester@emctaipei.test' });
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+    });
+    expect(await api({ action: 'coinReserve', ref: uuid(), serviceKey: SERVICE }, tester)).toMatchObject({ ok: true, exempt: true });
+  });
+
   it('exempts admins without a designer identity and blocks other non-designers', async () => {
     const boss = await seedSession('boss@emctaipei.test', 'Boss');
     await seedAccountPermission('boss@emctaipei.test', '管理者', ['database.manage']);
