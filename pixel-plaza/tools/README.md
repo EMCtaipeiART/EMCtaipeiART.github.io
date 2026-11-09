@@ -24,3 +24,11 @@
 
 ## 想改成「發佈當下立即處理」
 讓角色工坊後端在發佈完成後呼叫 GitHub `POST /repos/EMCtaipeiART/EMCtaipeiART.github.io/dispatches`，body `{"event_type":"character-published"}`（需一組只有這個專案 contents 權限的 token，放在後端 secret）。不加也行，最慢 30 分鐘內會被排程撿到。
+
+## 2026-11-09 改成「本機算圖工作者」（取代每 30 分鐘排程）
+角色工坊（emc-ai-stage-classifier）建立角色時，**8 個角度**與**走路／跑步影格**改由 Machi 的 iMac 用 Codex 做（免 API 費用）。電腦沒開機就自動退回原本的雲端 API 算圖（8 角度）；走路影格不急，排隊等電腦開機。
+- 工作者：`local-worker.mjs`（常駐，launchd：`~/Library/LaunchAgents/com.emc.local-worker.plist`，記錄 `~/.emc-local-worker/worker.log`）。每 20 秒向角色工坊打心跳並領單；超過 2 分鐘沒心跳＝沒開機。
+- 金鑰：`~/.emc-local-worker/key`（600 權限，不進 Git），與 Worker 秘密 `LOCAL_WORKER_KEY` 相同。換電腦：複製這份 key、把 plist 裝到新電腦、確認 Codex 已登入即可。
+- 流程：三視圖對位確認 → 角色工坊把 grid 任務排進佇列（電腦在線）→ iMac 領單、Codex 畫 4×2 合圖（洋紅背景）→ `chroma.py` 去背與檢查 → 上傳 → 前端自動接續到檢查畫面 → 使用者「確認上線」後排入 walk 任務 → iMac 跑 `walk-make.mjs`（`WALK_OUT_DIR` 模式，不動專案檔）→ 上傳到雲端 `charpub/<名字>/walk(-hd).png`；3D 辦公室讀 `characters` API 的 `walks` 版本表，雲端走路影格優先於專案裡的靜態檔。
+- 進度軸：前端 `Timeline`（character-workshop.tsx）顯示 5 個步驟、各步驟剩餘時間（預估值由後端記錄實際耗時的移動平均）。
+- 重新啟動／停止：`launchctl unload|load ~/Library/LaunchAgents/com.emc.local-worker.plist`。

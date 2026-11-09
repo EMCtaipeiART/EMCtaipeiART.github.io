@@ -4,8 +4,8 @@ name: New character walk frames (build for review)
 # 只在雲端做「檢查」；有新人物才把「製作」交給公司電腦上的自架執行器（要有 Codex）。
 # 製作結果只推到待審分支 walk-pending/<名字>-v<版本>，不會直接上線；Claude 看過圖之後才合併到 main。
 on:
-  schedule:
-    - cron: '*/30 * * * *'
+  # 2026-11-09：每 30 分鐘的排程停用——走路影格改由 iMac 上的本機工作者（pixel-plaza/tools/local-worker.mjs）在角色上線時自動做；
+  # 這份流程保留手動／dispatch 觸發，當作備援。
   workflow_dispatch:
   repository_dispatch:
     types: [character-published]

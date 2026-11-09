@@ -456,7 +456,7 @@ const RH = 300;                        // 復古模式的內部渲染高度（�
 const NAMES = ['Amber','Anna','Leona','Machi','Noise','余采馨','吳冠賢','廖秦葦','李明庭','鄭筱舢','黎子瑄','王藍庭'];
 // 人物圖集：預設讀本機靜態檔；角色工坊發佈過的人改讀雲端（圖集 12 個面向，版本號變了網址就變，不怕快取）
 const CHAR_API = (location.hostname === 'localhost' && new URLSearchParams(location.search).get('charApi')) || 'https://emc-ai-stage-classifier.machi-chen.workers.dev/api/public/characters';   // ?charApi= 只在 localhost 有效（測試用）
-let cloudChars = {}, cloudSeats = {}, walkVer = {};   // walkVer：走路影格版本表（walk-manifest.json，排程自動產生的人物也靠它補上走路）
+let cloudChars = {}, cloudSeats = {}, walkVer = {}, cloudWalks = {};   // walkVer：走路影格版本表（walk-manifest.json，排程自動產生的人物也靠它補上走路）
 let clockOff = 0, clockSet = false;   // 本機時鐘與伺服器的差：貓的行程、道具時段都用伺服器時間，每個人畫面才會同步（電腦時鐘差幾十秒就會看到不一樣的貓）
 const syncNow = () => Date.now() + clockOff;
 // 開場就同時送出出勤狀態請求（不等場景和角色圖載完）；pollOnce 第一次直接用這份，之後照常輪詢
@@ -466,7 +466,7 @@ const cloudReady = (localStorage.getItem('noCloudChars') === '1' ? Promise.resol
   for (let k = 0; k < 2 && !j; k++) { try { const r = await fetch(CHAR_API, {signal: AbortSignal.timeout(k ? 8000 : 5000)}); if (r.ok) j = await r.json(); } catch (e) {} }
   if (j && j.characters) { try { localStorage.setItem('plazaCloudChars', JSON.stringify(j)); } catch (e) {} }
   else { try { j = JSON.parse(localStorage.getItem('plazaCloudChars') || 'null'); } catch (e) {} }
-  cloudChars = (j && j.characters) || {}; cloudSeats = (j && j.seats) || {};
+  cloudChars = (j && j.characters) || {}; cloudSeats = (j && j.seats) || {}; cloudWalks = (j && j.walks) || {};   // walks：家裡電腦（Codex）做好、存在雲端的走路影格版本
   try { const m = await fetch('walk-manifest.json?t=' + Math.floor(Date.now() / 120000)); if (m.ok) walkVer = await m.json(); } catch (e) {}
 })());
 const url = n => cloudChars[n] ? CHAR_API + '/' + encodeURIComponent(n) + '/' + (HD ? 'atlas-hd' : 'atlas') + '.png?v=' + cloudChars[n] : (HD ? 'sprites-hd/' + n + '.webp' : 'sprites/' + n + '.png');
@@ -1302,7 +1302,12 @@ async function addChar(name, i){
   scene.add(holder);
   const c = {name, holder, sprite, tex, face:seat ? (seat[3] === 'top' ? 0 : Math.PI) : -a, moving:0, phase:Math.random() * 9, wander:!seat, t:Math.random() * 5, dir:new THREE.Vector3()};
   chars[name] = c;
-  if (WALK_NAMES.includes(name) || walkVer[name]) walkLoads.push(loadTex((HD ? 'sprites-walk-hd/' + name + '.webp' : 'sprites-walk/' + name + '.png') + (walkVer[name] ? '?v=' + walkVer[name] : '')).then(t => { t.repeat.y = .5; c.walkTex = t; }).catch(() => {}));   // 走路影格（2 排：左腳出、右腳出），沒有就退回彈跳搖擺
+  if (WALK_NAMES.includes(name) || walkVer[name] || cloudWalks[name]) {
+    const staticUrl = (HD ? 'sprites-walk-hd/' + name + '.webp' : 'sprites-walk/' + name + '.png') + (walkVer[name] ? '?v=' + walkVer[name] : '');
+    const cloudUrl = cloudWalks[name] ? CHAR_API + '/' + encodeURIComponent(name) + '/' + (HD ? 'walk-hd' : 'walk') + '.png?v=' + cloudWalks[name] : '';
+    const useTex = t => { t.repeat.y = .5; c.walkTex = t; };
+    walkLoads.push((cloudUrl ? loadTex(cloudUrl).catch(() => loadTex(staticUrl)) : loadTex(staticUrl)).then(useTex).catch(() => {}));   // 雲端的走路影格優先（家裡電腦自動做的），沒有再用專案裡的靜態檔
+  }   // 走路影格（2 排：左腳出、右腳出），沒有就退回彈跳搖擺
   c.home = seat ? {x:holder.position.x, z:holder.position.z, face:c.face} : null; c.status = 'present';
   sprite.userData.pick = {kind:'char', c}; pickables.push(sprite);
   const tag = document.createElement('div'); tag.className = 'ctag'; document.body.appendChild(tag); c.tag = tag;

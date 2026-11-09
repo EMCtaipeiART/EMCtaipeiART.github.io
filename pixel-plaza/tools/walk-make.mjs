@@ -94,6 +94,12 @@ if (out.problems.length) { console.error('sanity failed: ' + out.problems.join('
 
 // 4) 寫入成品與 manifest；預覽圖留在工作資料夾給人/Claude 目視檢查
 fs.writeFileSync(`${job}/preview.png`, Buffer.from(out.hd, 'base64'));
+if (process.env.WALK_OUT_DIR) {   // 本機工作者模式：只輸出到指定資料夾（由工作者上傳到雲端），不動專案檔案與 manifest
+  fs.writeFileSync(path.join(process.env.WALK_OUT_DIR, 'walk-hd.png'), Buffer.from(out.hd, 'base64'));
+  fs.writeFileSync(path.join(process.env.WALK_OUT_DIR, 'walk.png'), Buffer.from(out.lo, 'base64'));
+  console.log(JSON.stringify({ ok: true, name, version, preview: `${job}/preview.png` }));
+  process.exit(0);
+}
 fs.writeFileSync(path.join(PLAZA, 'sprites-walk-hd', name + '.png'), Buffer.from(out.hd, 'base64'));
 fs.writeFileSync(path.join(PLAZA, 'sprites-walk-hd', name + '.webp'), Buffer.from(out.hdw, 'base64'));
 fs.writeFileSync(path.join(PLAZA, 'sprites-walk', name + '.png'), Buffer.from(out.lo, 'base64'));

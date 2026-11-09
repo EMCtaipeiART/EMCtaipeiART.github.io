@@ -11,7 +11,7 @@ export const readManifest = () => JSON.parse(fs.readFileSync(MANIFEST, 'utf8'));
 export async function pending() {
   const r = await fetch(API, { signal: AbortSignal.timeout(15000) });
   if (!r.ok) throw new Error('characters API ' + r.status);
-  const cloud = (await r.json()).characters || {};
+  const body = await r.json(), cloud = body.characters || {}, walks = body.walks || {};   // walks：家裡電腦工作者已放到雲端的走路影格版本，不用再重做
   const have = readManifest();
-  return Object.entries(cloud).filter(([n, v]) => !SKIP.includes(n) && have[n] !== v).map(([name, version]) => ({ name, version, was: have[name] ?? null }));
+  return Object.entries(cloud).filter(([n, v]) => !SKIP.includes(n) && have[n] !== v && walks[n] !== v).map(([name, version]) => ({ name, version, was: have[name] ?? null }));
 }
