@@ -153,7 +153,8 @@ function cartBar(){let b=document.getElementById('cbar');if(!b){b=document.creat
  const r=P().page;const lines=st.cart.map(l=>({...l,it:byNo(l.no)})).filter(l=>l.it);
  if(!lines.length||!['','promo','spec'].includes(r)||st.set?.closed){b.style.display='none';document.body.classList.remove('hasbar');return}
  const total=lines.reduce((x,l)=>x+l.it.price*l.qty,0),n=lines.reduce((x,l)=>x+l.qty,0);
- b.innerHTML=`<div class="cb-in"><div class="cb-l"><b>已選 ${n} 件</b><span>${lines.map(l=>esc(l.it.name)+(l.qty>1?'×'+l.qty:'')).join('、')}</span></div><div class="cb-t">目前金額<b>${nt(total)}</b></div><a class="cb-go" href="${H('/cart')}">送出訂單</a></div>`;
+ b.innerHTML=`<div class="cb-in"><div class="cb-l"><b>已選 ${n} 件 <em style="font-style:normal;font-weight:600;font-size:12.5px;color:var(--bd)">查看購物車 ›</em></b><span>${lines.map(l=>esc(l.it.name)+(l.qty>1?'×'+l.qty:'')).join('、')}</span></div><div class="cb-t">目前金額<b>${nt(total)}</b></div><a class="cb-go" href="${H('/cart')}">送出訂單</a></div>`;
+ b.style.cursor='pointer';b.title='查看購物車';b.onclick=e=>{if(e.target.closest('.cb-go'))return;go(H('/cart'))};
  b.style.display='block';document.body.classList.add('hasbar')}
 // ── 多團購：網址 /g/<團購代號>/<頁面>；/order/<token> 為全域；/ 與 /campaigns 為團購選單 ──
 const cartKey=()=>st.cid==='lens'?'lensCart':'lensCart_'+st.cid;
