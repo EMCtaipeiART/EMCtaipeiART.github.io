@@ -121,6 +121,20 @@ async function handle(req, env) {
     const orders = rs.results.map((o) => { const p = pubOrder(o); return { id: p.id, name: p.name, items: p.items.map((l) => ({ no: l.no, brand: l.brand, name: l.name, price: l.price, qty: l.qty, sph: l.sph, cyl: l.cyl, axis: l.axis, gift: l.gift })), total: p.total, updatedAt: p.updatedAt, paid: !!p.pay }; });
     return json({ orders, count: orders.length, sum: orders.reduce((x, o) => x + o.total, 0) });
   }
+  // 商品評論（kv：<團購>:reviews = { 編號: [{n,s,t,at}] }）
+  if (path === '/api/reviews' && method === 'GET') return json(await getKV(env, kk(cid, 'reviews'), {}));
+  if (path === '/api/reviews' && method === 'POST') {
+    const b = await req.json().catch(() => null); if (!b) return err('資料格式錯誤');
+    const no = String(parseInt(b.no, 10) || ''); const name = String(b.name || '').trim().slice(0, 20);
+    const stars = Math.round(Number(b.stars)); const text = String(b.text || '').trim().slice(0, 120);
+    if (!no || !name) return err('請填寫姓名'); if (!(stars >= 1 && stars <= 5)) return err('請選擇星級');
+    const cat = await getCatalog(env, cid); if (!cat || !cat.items.some((i) => String(i.no) === no)) return err('找不到商品', 404);
+    const all = await getKV(env, kk(cid, 'reviews'), {});
+    const list = (all[no] || []).filter((r) => r.n !== name);
+    list.push({ n: name, s: stars, t: text, at: now() });
+    all[no] = list.slice(-60); await setKV(env, kk(cid, 'reviews'), all);
+    return json(all);
+  }
   // 同事：建立訂單
   if (path === '/api/orders' && method === 'POST') {
     const b = await req.json().catch(() => null); if (!b) return err('資料格式錯誤');

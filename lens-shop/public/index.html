@@ -45,6 +45,11 @@ button:disabled{opacity:.45;cursor:default;transform:none;filter:none}
 .item:hover{background:#fafdfb}.item:last-child{border:0}
 .no{color:var(--f);font-size:12.5px;font-variant-numeric:tabular-nums}.nm{font-weight:600}.sub{color:var(--m);font-size:12.5px}
 .pr{text-align:right;white-space:nowrap}.pr b{font-size:18px;color:var(--bd);font-weight:900}.pr s{color:var(--f);font-size:12px;display:block}
+@keyframes mq{0%,12%{transform:translateX(0)}88%,100%{transform:translateX(var(--mx))}}
+.acts{display:flex;gap:8px}button.cm{background:linear-gradient(180deg,#ffd84d,#f5b800);color:#5a4300;box-shadow:0 2px 0 #c28f00,0 4px 10px rgba(245,184,0,.25)}
+.rv{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.cap{display:inline-flex;align-items:center;gap:5px;max-width:100%;background:#fff8dc;border:1px solid #f1d77a;border-radius:99px;padding:2px 10px;font-size:12px;color:#5a4300;line-height:1.6}
+.cap b{white-space:nowrap}.cap .st{color:#f5a700;letter-spacing:-1px;white-space:nowrap}.cap .tx{display:inline-block;max-width:150px;overflow:hidden;white-space:nowrap;vertical-align:middle}.cap .tx>span{display:inline-block;white-space:nowrap}.cap .tx.mq>span{animation:mq 6s linear infinite alternate}
+.stars{display:flex;gap:4px;font-size:34px;line-height:1;margin:6px 0}.stars i{font-style:normal;cursor:pointer;color:#d8d8d8;user-select:none}.stars i.on{color:#f5a700}
 .th{cursor:zoom-in}#lb{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:99;cursor:zoom-out;padding:16px}#lb img{max-width:min(92vw,480px);max-height:86vh;border-radius:14px;background:#fff;box-shadow:0 10px 40px rgba(0,0,0,.4);object-fit:contain}
 .th{width:96px;height:80px;object-fit:contain;border-radius:10px;background:#f6f9f7;border:1px solid var(--l)}
 .th.ph{display:flex;align-items:center;justify-content:center;color:#a9b5af;font-size:11px;text-align:center;overflow:hidden;line-height:1.25;padding:4px}
@@ -110,7 +115,7 @@ header .logo,header .dl{display:none}
 .feat b{display:block;font-size:15px}.feat span{font-size:12.5px;color:var(--m)}
 .sech{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 12px}.sech h2{margin:0}.sech span{color:var(--m);font-size:13px}
 @media(max-width:900px){.top{grid-template-columns:1fr}.feat,.flow{grid-template-columns:repeat(2,1fr)}.flow div:nth-child(3){border-left:0}.flow div:nth-child(n+3){border-top:1px solid #eef2f0}.hero2 h1{font-size:28px}}
-@media(max-width:620px){.cards{grid-template-columns:repeat(2,1fr);gap:10px}.pc img{cursor:zoom-in;height:120px}.item{grid-template-columns:96px 1fr auto;gap:10px;padding:12px}.item .no{display:none}.item button{grid-column:1/-1}.form2{grid-template-columns:1fr}.bar{padding:8px 12px}nav{margin-left:0}main{padding:16px 12px 50px}.hero{padding:18px}}
+@media(max-width:620px){.cards{grid-template-columns:repeat(2,1fr);gap:10px}.pc img{cursor:zoom-in;height:120px}.item{grid-template-columns:96px 1fr auto;gap:10px;padding:12px}.item .no{display:none}.item .acts{grid-column:1/-1}.item .acts button{flex:1}.form2{grid-template-columns:1fr}.bar{padding:8px 12px}nav{margin-left:0}main{padding:16px 12px 50px}.hero{padding:18px}}
 /* 手機版：左右留白、綠底貼齊導覽列、導覽置中、金額列浮起避開瀏覽器底部工具列 */
 @media(max-width:620px){header .bar{justify-content:center}header nav{margin:0 auto;justify-content:center}main{padding:16px 18px 50px}main>.top:first-child{margin-top:-16px}main>.top:first-child .hero2{border-radius:0 0 22px 22px}#cbar{left:12px;right:12px;bottom:12px;border:1px solid var(--l);border-radius:16px;overflow:hidden}.cb-in{padding:10px 14px}body.hasbar main{padding-bottom:110px}}
 @supports(-webkit-touch-callout:none){@media(max-width:620px){#cbar{bottom:40px}body.hasbar main{padding-bottom:150px}}}
@@ -130,7 +135,7 @@ document.addEventListener('click',e=>{const im=e.target.closest&&e.target.closes
 const nt=n=>'NT$ '+Number(n).toLocaleString('en-US');
 // 訂單時間以 UTC ISO 字串儲存，顯示時一律換算成台灣時間（UTC+8）
 const tp=iso=>{const d=new Date(iso);return isNaN(d)?String(iso||'').slice(0,16).replace('T',' '):new Date(d.getTime()+8*36e5).toISOString().slice(0,16).replace('T',' ')};
-const st={cid:null,camps:null,cat:null,set:null,cart:[],who:JSON.parse(localStorage.lensWho||'{}'),editTok:null,brand:'全部',q:'',admin:localStorage.lensAdmin||'',shown:60,pimgs:{}};
+const st={cid:null,camps:null,cat:null,set:null,cart:[],who:JSON.parse(localStorage.lensWho||'{}'),editTok:null,brand:'全部',q:'',admin:localStorage.lensAdmin||'',shown:60,pimgs:{},rev:{}};
 function cartBar(){let b=document.getElementById('cbar');if(!b){b=document.createElement('div');b.id='cbar';document.body.appendChild(b)}
  const r=P().page;const lines=st.cart.map(l=>({...l,it:byNo(l.no)})).filter(l=>l.it);
  if(!lines.length||!['','promo','spec'].includes(r)||st.set?.closed){b.style.display='none';document.body.classList.remove('hasbar');return}
@@ -142,8 +147,9 @@ const cartKey=()=>st.cid==='lens'?'lensCart':'lensCart_'+st.cid;
 const H=p=>'/g/'+st.cid+p;
 function P(){const h=location.pathname.split('/');if(h[1]==='g')return{cid:h[2]||'lens',page:h[3]||'',arg:h[4]};return{cid:null,page:h[1]||'',arg:h[2]}}
 const saveCart=()=>{localStorage.setItem(cartKey(),JSON.stringify(st.cart));renderNav();cartBar()};
+async function fetchRev(){try{st.rev=await api('/reviews')}catch(e){st.rev={}}}
 async function fetchCat(){try{const d=await api('/catalog');st.cat=d.catalog;st.set=d.settings;st.pimgs=d.pimgs||{}}catch(e){}}
-async function ensureCampaign(cid){if(st.cid===cid&&st.set)return;st.cid=cid;st.cat=null;st.set=null;st.pimgs={};st.editTok=null;st.brand='全部';st.q='';st.shown=60;
+async function ensureCampaign(cid){if(st.cid===cid&&st.set)return;st.cid=cid;st.cat=null;st.set=null;st.pimgs={};st.rev={};st.revLoaded=0;st.editTok=null;st.brand='全部';st.q='';st.shown=60;
  try{st.cart=JSON.parse(localStorage.getItem(cartKey())||'[]')}catch{st.cart=[]}await fetchCat()}
 async function loadCamps(){try{st.camps=(await api('/campaigns?t='+Date.now())).campaigns}catch(e){st.camps=st.camps||[]}return st.camps}
 async function api(p,o={}){const h={...(o.headers||{})};if(o.admin)h.authorization='Bearer '+st.admin;if(o.json){h['content-type']='application/json';o.body=JSON.stringify(o.json)}
@@ -177,16 +183,33 @@ function viewShop(){
  <div class="tools"><input type="search" id="q" placeholder="搜尋品牌、品名、編號…" value="${esc(st.q)}"></div>
  <div class="chips">${brands.map(b=>`<span class="chip ${b===st.brand?'on':''}" data-b="${esc(b)}">${esc(b)}</span>`).join('')}</div>
  <div class="card" style="padding:0">${list.slice(0,st.shown).map(i=>`<div class="item"><span class="no">#${i.no}</span>${thumb(i)}
-  <div><div class="nm">${esc(i.name)}</div><div class="sub">${esc(i.brand)}${i.range?' ｜ '+esc(i.range):''}</div></div>
+  <div><div class="nm">${esc(i.name)}</div><div class="sub">${esc(i.brand)}${i.range?' ｜ '+esc(i.range):''}</div>${capsules(i.no)}</div>
   <div class="pr"><b>${nt(i.price)}</b>${i.market?`<s>市價 ${nt(i.market)}</s>`:''}</div>
-  <button data-add="${i.no}" ${st.set?.closed?'disabled':''}>加入</button></div>`).join('')||'<p style="padding:14px" class="muted">沒有符合的商品</p>'}</div>
+  <div class="acts"><button class="cm" data-cm="${i.no}">評論</button><button data-add="${i.no}" ${st.set?.closed?'disabled':''}>加入</button></div></div>`).join('')||'<p style="padding:14px" class="muted">沒有符合的商品</p>'}</div>
  ${list.length>st.shown?`<p style="text-align:center"><button class="sec" id="more">再顯示更多（還有 ${list.length-st.shown} 項）</button></p>`:''}`;
+ if(!st.revLoaded){st.revLoaded=1;fetchRev().then(()=>{if($('#list')&&!document.querySelector('.modalbg'))viewShop()})}
  api('/orders-public').then(d=>{const e=$('#ocnt');if(e)e.textContent=d.count}).catch(()=>{});
  imeInput($('#q'),e=>{st.q=e.target.value;st.shown=60;const p=e.target.selectionStart;viewShop();const n=$('#q');n.focus();n.setSelectionRange(p,p)});
  document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{st.brand=c.dataset.b;st.shown=60;viewShop()});
  document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>addDialog(+b.dataset.add));
+ document.querySelectorAll('[data-cm]').forEach(b=>b.onclick=()=>reviewDialog(+b.dataset.cm));
+ setTimeout(fitMq,0);
  const m=$('#more');if(m)m.onclick=()=>{st.shown+=120;viewShop()};
 }
+
+function capsules(no){const L=(st.rev[no]||[]).slice(-3).reverse();return L.length?`<div class="rv">${L.map(r=>`<span class="cap"><b>${esc(r.n)}</b><span class="st">${'★'.repeat(r.s)}</span>${r.t?`<span class="tx"><span>${esc(r.t)}</span></span>`:''}</span>`).join('')}</div>`:''}
+function fitMq(){document.querySelectorAll('.cap .tx').forEach(t=>{const sp=t.firstChild,d=sp.scrollWidth-t.clientWidth;if(d>2){t.classList.add('mq');t.style.setProperty('--mx',-d+'px')}})}
+function reviewDialog(no){const it=byNo(no);let n=0;const mine=(st.rev[no]||[]).find(r=>r.n===(st.who.name||''));if(mine)n=mine.s;
+ const bg=document.createElement('div');bg.className='modalbg';
+ bg.innerHTML=`<div class="modal"><h3 style="margin-top:0">評論：${esc(it.name)}</h3><label>姓名</label><input id="rv-n" maxlength="20" value="${esc(st.who.name||'')}" placeholder="你的名字">
+ <label>星級</label><div class="stars" id="rv-s">${[1,2,3,4,5].map(k=>`<i data-k="${k}" class="${k<=n?'on':''}">★</i>`).join('')}</div>
+ <label>留言（選填，最多 120 字）</label><textarea id="rv-t" rows="3" maxlength="120" style="width:100%">${esc(mine?.t||'')}</textarea>
+ <p class="sub">同一姓名對同一商品只會留一則，再送出會覆蓋。</p><div class="tools" style="justify-content:flex-end"><button class="sec" id="rv-x">取消</button><button class="cm" id="rv-ok">送出評論</button></div><p id="rv-m" class="sub" style="color:var(--r)"></p></div>`;
+ document.body.appendChild(bg);const paint=()=>bg.querySelectorAll('#rv-s i').forEach(i=>i.classList.toggle('on',+i.dataset.k<=n));
+ bg.querySelectorAll('#rv-s i').forEach(i=>i.onclick=()=>{n=+i.dataset.k;paint()});
+ bg.querySelector('#rv-x').onclick=()=>bg.remove();bg.onclick=e=>{if(e.target===bg)bg.remove()};
+ bg.querySelector('#rv-ok').onclick=async()=>{const name=bg.querySelector('#rv-n').value.trim(),m=bg.querySelector('#rv-m');if(!name)return m.textContent='請填寫姓名';if(!n)return m.textContent='請選擇星級';
+  try{st.rev=await api('/reviews',{method:'POST',json:{no,name,stars:n,text:bg.querySelector('#rv-t').value}});st.who={...st.who,name};localStorage.lensWho=JSON.stringify(st.who);bg.remove();viewShop()}catch(e){m.textContent=e.message}}}
 function dlFull(){const d=st.set?.deadline;if(!d)return'';const m=/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/.exec(d);if(!m)return esc(d);const w='日一二三四五六'[new Date(Date.UTC(+m[1],+m[2]-1,+m[3])).getUTCDay()];return`<b>${m[1]} 年 ${+m[2]} 月 ${+m[3]} 日（週${w}）</b>${m[4]?` ${m[4]}:${m[5]} 截止`:' 截止'}`}
 function cdHtml(){const s=st.set;if(!s||s.closed)return'<div><b>—</b><span>已結單</span></div>';if(!s.deadline)return'<div><b>—</b><span>未設定</span></div>';const ms=Math.max(0,Date.parse(s.deadline+(s.deadline.length<=16?':00+08:00':''))-Date.now());const d=Math.floor(ms/864e5),hh=Math.floor(ms%864e5/36e5),m=Math.floor(ms%36e5/6e4),sc=Math.floor(ms%6e4/1e3),p=x=>String(x).padStart(2,'0');return`<div><b>${d}</b><span>天</span></div><div><b>${p(hh)}</b><span>小時</span></div><div><b>${p(m)}</b><span>分鐘</span></div><div class="sec"><b>${p(sc)}</b><span>秒</span></div>`}
 function closedBanner(){return st.set?.closed?'<div class="note bad">本次團購已截止，無法再下單或修改。</div>':''}
