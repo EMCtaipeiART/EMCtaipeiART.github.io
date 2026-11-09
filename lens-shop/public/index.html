@@ -129,7 +129,7 @@ header .logo,header .dl{display:none}
 @media(max-width:620px){.cards{grid-template-columns:repeat(2,1fr);gap:10px}.pc img{cursor:zoom-in;height:120px}.item{grid-template-columns:96px 1fr auto;gap:10px;padding:12px}.item .no{display:none}.item .acts{grid-column:1/-1}.item .acts button{flex:1}.form2{grid-template-columns:1fr}.bar{padding:8px 12px}nav{margin-left:0}main{padding:16px 12px 50px}.hero{padding:18px}}
 /* 手機版：左右留白、綠底貼齊導覽列、導覽置中、金額列浮起避開瀏覽器底部工具列 */
 @media(max-width:620px){header .bar{justify-content:center}header nav{margin:0 auto;justify-content:center}main{padding:16px 18px 50px}main>.top:first-child{margin-top:-16px}main>.top:first-child .hero2{border-radius:0 0 22px 22px}#cbar{left:12px;right:12px;bottom:12px;border:1px solid var(--l);border-radius:16px;overflow:hidden}.cb-in{padding:10px 14px}body.hasbar main{padding-bottom:110px}}
-@supports(-webkit-touch-callout:none){@media(max-width:620px){#cbar{bottom:40px}body.hasbar main{padding-bottom:150px}}}
+@supports(-webkit-touch-callout:none){@media(max-width:620px){#cbar{left:0;right:0;bottom:0;border-left:0;border-right:0;border-bottom:0;border-radius:18px 18px 0 0}#cbar .cb-in{padding-bottom:50px}body.hasbar main{padding-bottom:170px}}}
 /* 手機版後台：商品圖列與訂單表改成直式排列，避免橫向撐破畫面 */
 @media(max-width:620px){.card{overflow-x:auto}
 table.pimg,table.pimg tbody{display:block}table.pimg tr{display:grid;grid-template-columns:64px 1fr;gap:8px 12px;padding:12px 0;border-bottom:1px solid #eef2f0}table.pimg td{display:block;border:0;padding:0;width:auto!important}table.pimg td:nth-child(3){grid-column:1/-1;white-space:normal!important;display:flex;flex-wrap:wrap;gap:8px}table.pimg td:nth-child(3) input{width:100%!important;flex:1 1 100%}
