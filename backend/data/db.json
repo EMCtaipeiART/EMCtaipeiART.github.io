@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 11102,
+  "revision": 11103,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-10T08:56:23.374Z",
+  "updatedAt": "2026-11-10T08:56:29.715Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1226,7 +1226,7 @@
         {"案件編號":"26110074","修改次數":"0","建立日期":"2026/11/10 15:37:14","修改日期":"2026/11/10 15:37:14","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/10 15:37:14","圖片連結":"[{\"fileName\":\"261110_王品_雙星熱年菜_logo_享鴨logo_1200x1200.png\",\"url\":\"https://lh3.googleusercontent.com/d/13v3ZupNX1ZMsRcnzlEIAMkeuR5GEWEBE=w1600\"},{\"fileName\":\"261110_王品_雙星熱年菜_logo_享鴨logo_1200x300.png\",\"url\":\"https://lh3.googleusercontent.com/d/1XkjuKw5keQuz5rMRpvGXwNMgb9i7aLJ0=w1600\"},{\"fileName\":\"261110_王品_雙星熱年菜_logo_莆田logo_1200x1200.png\",\"url\":\"https://lh3.googleusercontent.com/d/1GYglxTJOOizKrccqd2taZwvOzA8zKom4=w1600\"},{\"fileName\":\"261110_王品_雙星熱年菜_logo_莆田logo_1200x300.png\",\"url\":\"https://lh3.googleusercontent.com/d/1jKIzNC0wpepAIj60ciLP98vNPSGZq_zh=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/10 15:37:14"},
         {"案件編號":"26110073","修改次數":"0","建立日期":"2026/11/10 15:38:18","修改日期":"2026/11/10 15:38:18","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/10 15:38:18","圖片連結":"[{\"fileName\":\"261110_王品_雙星熱年菜_PMAX.png\",\"url\":\"https://lh3.googleusercontent.com/d/1LhJC9X5fYTwaOdrO5Scd_tz46hfvGINF=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/10 15:38:18"},
         {"案件編號":"26110077","修改次數":"0","建立日期":"2026/11/10 16:24:07","修改日期":"2026/11/10 16:24:07","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/10 16:24:07","圖片連結":"[{\"fileName\":\"261103_保誠人壽_選舉公報_v2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1DKAI67lP8lTWf76F6I24g8wsp8hor4ts=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/10 16:24:07"},
-        {"案件編號":"26110033","修改次數":"0","建立日期":"2026/11/10 16:48:26","修改日期":"2026/11/10 16:48:26","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/10 16:48:26","圖片連結":"[{\"fileName\":\"261110_金士頓_MSI UGC抽獎.png\",\"url\":\"https://lh3.googleusercontent.com/d/1u2_dH8UWkDfeAFpS99Nr7lHyFg0muXbq=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/10 16:48:26"}
+        {"案件編號":"26110033","修改次數":"0","建立日期":"2026/11/10 16:48:26","修改日期":"2026/11/10 16:48:26","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/10 16:48:26","圖片連結":"[{\"fileName\":\"261110_金士頓_MSI UGC抽獎.png\",\"url\":\"https://lh3.googleusercontent.com/d/1u2_dH8UWkDfeAFpS99Nr7lHyFg0muXbq=w1600\"},{\"fileName\":\"261110_金士頓_MSI UGC抽獎.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/14gfgzXhI5YbNckuKKx1ua0ldFiCUl08t=w1600\"}]","圖片來源":"mail-inline-upload","圖片更新時間":"2026/11/10 16:56:29"}
       ]
     },
     "補充資料連結": {
