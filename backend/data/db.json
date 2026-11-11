@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 11258,
+  "revision": 11259,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-11T10:14:51.219Z",
+  "updatedAt": "2026-11-11T10:15:07.735Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1261,7 +1261,7 @@
         {"案件編號":"26110071","修改次數":"0","建立日期":"2026/11/11 17:44:37","修改日期":"2026/11/11 17:44:37","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/11 17:44:37","圖片連結":"[{\"fileName\":\"261111_保誠人壽_聖誕賀卡_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1JIHwQYS1VbvmkKLfhRoye492SYPu-8MO=w1600\"},{\"fileName\":\"261111_保誠人壽_聖誕賀卡_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1q1cnYp7SIbAxTKVHkdxFHzX0T0JD3RvU=w1600\"},{\"fileName\":\"261111_保誠人壽_聖誕賀卡_03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1kDpUyP1fCYzeHd7QYbu4Rch33hXld2Gk=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/11 17:44:37"},
         {"案件編號":"26100203","修改次數":"3","建立日期":"2026/11/11 18:11:30","修改日期":"2026-11-11","修改內容":"今日廣告月會後客戶希望調整，強化金氏認證或Mfi，來信提供修改需求如附件P98，在請協助於週四下午16:00前收到(還須進稿)，再請協助，感恩","修改內容連結":"[{\"text\":\"如附件P98\",\"url\":\"https://docs.google.com/presentation/d/1MboNzlrJIQEKgKOsBW80YccK6xjde8fwsV1g9fqRWpA/edit?slide=id.h3d5df39d2c043d7e_0_24#slide=id.h3d5df39d2c043d7e_0_24\"}]","修改人":"吳冠賢","確認修正日":"","待修改圖片":""},
         {"案件編號":"26110001","修改次數":"3","建立日期":"2026/11/11 18:12:17","修改日期":"2026-11-11","修改內容":"今日廣告月會後客戶希望調整，強化金氏認證或Mfi，來信提供修改需求如附件P99~P102，在請協助於週四下午16:00前收到(還須進稿)，再請協助，感恩","修改內容連結":"[{\"text\":\"如附件P99~P102\",\"url\":\"https://docs.google.com/presentation/d/1MboNzlrJIQEKgKOsBW80YccK6xjde8fwsV1g9fqRWpA/edit?slide=id.h3d5df39d2c043d7e_0_0#slide=id.h3d5df39d2c043d7e_0_0\"}]","修改人":"吳冠賢","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"261106_官網_新品上市CPAS_AeroClip 2_影片_vo3.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1oPJZ01YvwQy_lWH6rqbchc-_YI7B__Bx=w1600\"},{\"fileName\":\"261106_官網_新品上市CPAS_AeroClip-2_情境_vo3.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1kHq_zZOcX1Va0sAOVUZgx293HbTDl6N6=w1600\"},{\"fileName\":\"261106_官網_新品上市CPAS_AeroClip-2_電商_vo3.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1hOKS1qxMlxA-G08cp6gzYey6mXKw67fT=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/11 18:13:16"},
-        {"案件編號":"26110054","修改次數":"1","建立日期":"2026/11/11 18:14:04","修改日期":"2026-11-11","修改內容":"報告！AeroClip 2有兩張圖不壓時間，詳細請看：調整需求。再麻煩協助微調了，感恩的心！","修改內容連結":"[{\"text\":\"調整需求\",\"url\":\"https://docs.google.com/presentation/d/1KmG7gkox3va5dWT4xQDuha5MWjGEPNcP/edit?slide=id.h493048d03186a211_0_4#slide=id.h493048d03186a211_0_4\"}]","修改人":"Machi","確認修正日":"","待修改圖片":""}
+        {"案件編號":"26110054","修改次數":"1","建立日期":"2026/11/11 18:14:04","修改日期":"2026-11-11","修改內容":"報告！AeroClip 2有兩張圖不壓時間，詳細請看：調整需求。再麻煩協助微調了，感恩的心！","修改內容連結":"[{\"text\":\"調整需求\",\"url\":\"https://docs.google.com/presentation/d/1KmG7gkox3va5dWT4xQDuha5MWjGEPNcP/edit?slide=id.h493048d03186a211_0_4#slide=id.h493048d03186a211_0_4\"}]","修改人":"Machi","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"261109_PChome24力CPAS_AeroClip2_情境.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ZGLvtin7uR9fs0_ivdXnsDG3mOaW9XoQ=w1600\"},{\"fileName\":\"261109_PChome24力CPAS_AeroClip2_電商_11月檔期.png\",\"url\":\"https://lh3.googleusercontent.com/d/1HnnbpkKY9qKwMzlQJZPo7K1ezCRjkCOP=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/11 18:15:07"}
       ]
     },
     "補充資料連結": {
