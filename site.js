@@ -2776,7 +2776,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         }
         if(d.scheduleOpen&&d.scheduledAt){
           const scheduledAt=toIso(d.scheduledAt);
-          if(d.reply)await api('scheduleCaseReply',{caseId:d.id,...base,scheduledAt});
+          if(d.reply){await api('scheduleCaseReply',{caseId:d.id,...base,scheduledAt});if(d.mode==='modification')await recordModificationFromReply(d,bodyHtml)}
           else await api('scheduleCaseMail',{caseId:ids[0],caseIds:ids,...base,subject:d.subject,scheduledAt});
           d.scheduledDone=true;
         }else if(d.reply){await api('replyCaseMail',{caseId:d.id,...base});if(d.mode==='modification')await recordModificationFromReply(d,bodyHtml)}
