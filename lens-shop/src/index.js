@@ -356,7 +356,7 @@ async function handle(req, env) {
     if (!adm && !(usr && usr.can_create)) return err('請先登入管理者，或使用有開團權限的帳號登入', 401);
     const own = (id) => adm || (usr && (camps.find((c) => c.id === id) || {}).owner === usr.email);
     if (!adm) {
-      const cp = path.match(/^\/api\/admin\/campaigns\/([a-z0-9-]{1,20})$/); const od = path.match(/^\/api\/admin\/orders\/([0-9A-F]{8})(?:\/payment)?$/);
+      const cp = path.match(/^\/api\/admin\/campaigns\/([a-z0-9-]{1,20})$/); const od = path.match(/^\/api\/admin\/orders\/([0-9A-F]{8})(?:\/payment|\/unavailable)?$/);
       let ok;
       if (path === '/api/admin/accounts' || path.startsWith('/api/admin/accounts/') || path === '/api/admin/auth') ok = false;
       else if ((path === '/api/admin/campaigns' && method === 'POST') || path === '/api/admin/drink-parse') ok = true;
@@ -459,6 +459,28 @@ async function handle(req, env) {
       await env.FILES.put(fk(cid, 'template.xlsx'), bytes);
       await env.FILES.put(fk(cid, 'catalog.json'), JSON.stringify(built.catalog), { httpMetadata: { contentType: 'application/json' } });
       return json({ ok: true, items: built.catalog.items.length, exclusive: built.catalog.exclusive.length, limited: built.catalog.limited.cards.length, specRows: built.catalog.specs?.grid.length || 0, bytes: bytes.length });
+    }
+    if ((m = path.match(/^\/api\/admin\/orders\/([0-9A-F]{8})\/unavailable$/)) && method === 'POST') {
+      const b = await req.json().catch(() => ({}));
+      const o = await env.DB.prepare('SELECT * FROM orders WHERE id=?').bind(m[1]).first(); if (!o) return err('找不到訂單', 404);
+      const its = JSON.parse(o.items); const idx = (Array.isArray(b.items) ? b.items : []).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n < its.length);
+      const reason = String(b.reason || '').trim().slice(0, 300); if (!idx.length) return err('請選擇無法下單的品項'); if (!reason) return err('請填寫原因');
+      const c = camps.find((x) => x.id === (o.campaign || DEFAULT_CID)) || {}; const s2 = await getSettings(env, o.campaign || DEFAULT_CID);
+      const hh = (x) => String(x ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const list = idx.map((i) => `${its[i].name}${its[i].opts ? '（' + its[i].opts + '）' : ''} ×${its[i].qty}`);
+      const base = s2.siteUrl || env.SITE_URL || new URL(req.url).origin;
+      const subject = `【${s2.shopName}】您訂的品項無法下單`;
+      const html = `<div style="font-family:-apple-system,'Noto Sans TC',sans-serif;max-width:600px;margin:auto;color:#222"><h2 style="color:#c0392b">有品項無法下單</h2><p>${hh(o.name)} 您好，您在「${hh(s2.shopName)}」訂的以下品項<b>無法下單</b>：</p><ul>${list.map((x) => `<li>${hh(x)}</li>`).join('')}</ul><p><b>原因：</b>${hh(reason)}</p><p>其餘品項不受影響。如需更換品項，請聯絡團購負責人，或到訂單頁修改（若仍在開放期間）：<a href="${base}/order/${o.token}">查看我的訂單</a></p><p style="color:#888;font-size:12px">${hh(SYSTEM_NOTE)}</p></div>`;
+      const text = `${o.name} 您好，您在「${s2.shopName}」訂的以下品項無法下單：
+${list.join('\n')}
+原因：${reason}
+其餘品項不受影響，如需更換請聯絡團購負責人。
+訂單：${base}/order/${o.token}
+${SYSTEM_NOTE}`;
+      const r1 = await sendMail(env, o.email, subject, html, text);
+      const org = c.owner || env.REPLY_TO; let r2 = 'skip';
+      if (org && org !== o.email) r2 = await sendMail(env, org, `${subject}（${o.name}）`, html, text);
+      return json({ ok: true, mail: r1, organizer: r2 });
     }
     if (path === '/api/admin/orders' && method === 'GET') {
       const rs = await env.DB.prepare('SELECT * FROM orders WHERE campaign=? ORDER BY created_at DESC').bind(cid).all();
