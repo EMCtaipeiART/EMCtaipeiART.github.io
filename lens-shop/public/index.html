@@ -384,6 +384,7 @@ summary{min-height:40px;padding:8px 0;color:var(--bd)}
 .pcd .bdg.go{background:#FFB800;color:#4a3200;font-weight:700;border-color:#e0a200}
 .pcd .bdg.go{background:#FFD25A;color:#5a3d00;border-color:#efbd35}
 .pcd .cv:has(>.ph.kc){background:linear-gradient(135deg,#8f78f2,#4a35b5)}.atg.kc{background:#efe9ff;color:#5b3fc4}.acd .ast:not(.x){background:#FFD25A;color:#5a3d00;padding:3px 10px;border-radius:99px;font-weight:700}
+.jnl{color:#159E31;font-weight:700;text-decoration:none}.jnl:hover{text-decoration:underline}a.card.jn:hover{border-color:#8ec99e}
 </style>
 </head>
 <body>
@@ -754,7 +755,7 @@ async function viewAdmin(){
   const setHtml=()=>`<div><h3 style="margin:0 0 10px">設定：${esc(cur.name||st.cid||'')}</h3><div class="form2">${f('shopName','團購名稱')}${f('goal','達標金額（NT$，開團成功門檻；留空或 0＝不設門檻）','number')}${f('drinkLink','餐飲團開團連結（貼上Uber Eats ／你訂開團網址）')}${f('deadline','截止日期時間（台北時間）','datetime-local')}${f('bankName','銀行（含代碼）')}${f('bankAccount','匯款帳號')}${f('accountName','戶名')}${f('linePay','LINE Pay （貼 LINE 加好友連結或填 LINE ID）')}${f('siteUrl','網站網址（信件連結用，可留空）')}</div>
   <div class="fld" style="margin-top:6px"><label class="sub">信件／頁面附註</label><textarea data-k="notes" rows="2" style="width:100%">${esc(s.notes)}</textarea></div>
   <p><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="closed" style="width:auto" ${s.closed?'checked':''}> 手動結單（勾選後同事無法再下單／修改）</label></p><button id="sv">儲存設定</button>${st.cat?.drink?'<button class="sec" id="rimg" style="margin-left:8px">重新抓取商品圖片</button>':''}${st.cat?.drink?'':'<div style="margin-top:12px"><label class="sub">更新報價 Excel（取代目前價格與範本，訂單保留）</label><div><input type="file" id="xf" accept=".xlsx"> <button class="sec" id="up">上傳並更新</button> <span id="upm" class="muted"></span></div></div>'}</div>`;
-  $('#app').innerHTML=`<style>#app>.card{margin-top:18px!important}</style><div class="sp"><h2>管理後台${isAdm?'':'（'+esc(st.user.name)+'）'}</h2><button class="sec" id="lo">登出</button></div>
+  $('#app').innerHTML=`<style>#app>.card{margin-top:18px!important}</style><div class="sp"><h2>管理後台${isAdm?'':'（'+esc(st.user.name)+'）'}</h2><span style="display:flex;gap:8px">${st.user?'<a class="btn sec" href="/joined">我參加過的團</a>':''}<button class="sec" id="lo">登出</button></span></div>
   <div class="card"><h3 style="margin-top:0">團購管理</h3><p class="muted">點卡片切換並顯示該團購的訂單；「管理／設定」開啟設定視窗。結束後訂單會保留，同事不能再下單或修改。</p>
   <div class="acg">${cs.filter(c=>!c.ended).map(c=>`<div class="acd ${c.id===st.cid?'on':''}" data-cid="${esc(c.id)}" style="cursor:pointer"><span class="atg ${c.custom?'kc':c.drink?'dk':''}">${kindName(c)}</span><span class="ast ${c.ended?'x':''}">${c.ended?'已結束':'進行中'}</span><h4>${esc(c.name)}</h4><div class="sub">${c.drink&&c.store?esc(c.store)+'　':''}代號 ${esc(c.id)}</div><div class="sub">${c.count} 人下單　${nt(c.sum)}${c.goal?'　目標 '+nt(c.goal):''}</div>
    <div class="acts"><button data-mg="${esc(c.id)}">${c.id===st.cid?'設定':'管理'}</button><button class="sec" data-ce="${esc(c.id)}" data-en="${c.ended?0:1}">${c.ended?'重新開放':'結束'}</button>${c.id==='lens'?'':`<button class="sec" data-dl="${esc(c.id)}" style="color:#b42323">刪除</button>`}</div></div>`).join('')}
@@ -856,6 +857,7 @@ async function route(){
  if(st.camps&&p.cid!==null&&p.page!=='order'&&!st.camps.some(c=>c.id===p.cid)){st.cid=null;st.set=null;st.cat=null;history.replaceState(null,'','/campaigns');return route()}
  if(p.page==='order'&&p.cid===null)return p.arg&&viewOrder(p.arg);
  if(p.cid===null&&p.page==='campaigns'){renderNav();return viewPicker()}
+ if(p.cid===null&&p.page==='joined'){renderNav();return viewJoined()}
  if(p.cid===null){ // 根目錄與舊網址
   if(location.pathname==='/'){renderNav();return viewPicker()}
   history.replaceState(null,'','/g/'+newestCid()+'/'+p.page+(p.arg?'/'+p.arg:''));return route()}
@@ -876,10 +878,17 @@ function pcCard(c){const goal=c.goal||0,pct=goal?Math.round(c.sum/goal*100):0,ok
   <div class="ft"><b>${nt(c.sum)}</b><span>${c.count} 人</span><span>${dtxt?dtxt+'達標':left}</span></div>
   ${goal?`<div class="sub" style="margin-top:4px">目標 ${nt(goal)}${ok?'　✓ 已達標':'　還差 '+nt(Math.max(0,goal-c.sum))}</div>`:''}
   ${c.names&&c.names.length?`<div class="who">${c.names.slice(0,6).map(n=>`<span>${esc(n)}</span>`).join('')}${c.nameCount>6?`<span>等 ${c.nameCount} 人</span>`:''}</div>`:'<div class="sub" style="margin-top:10px">還沒有人下單，搶頭香！</div>'}</div><button type="button" class="shr" data-share="${esc(c.id)}" data-nm="${esc(c.name)}" title="複製分享連結" aria-label="複製分享連結"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button></a>`}
+async function viewJoined(){
+ if(!st.user){$('#app').innerHTML=`<div class="lgp"><div class="lg-h"><div class="lg-ic"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg></div><h3>登入</h3><p class="muted">登入後可查看你參加過的團購。</p></div><div id="lbx"></div></div>`;loginBox($('#lbx'),()=>{renderNav();viewJoined()});return}
+ $('#app').innerHTML='<div class="sech"><h2>我參加過的團</h2></div><p class="muted">載入中…</p>';
+ let d={orders:[]};try{d=await api('/auth/orders')}catch(e){$('#app').innerHTML='<h2>我參加過的團</h2><div class="card muted">'+esc(e.message)+'</div>';return}
+ const os=d.orders,sum=os.filter(o=>o.status==='active').reduce((a,o)=>a+o.total,0);
+ const row=o=>`<a class="card jn" href="/order/${esc(o.token)}" style="display:block;text-decoration:none;color:inherit;margin-top:12px"><div class="sp"><h3 style="margin:0">${esc(o.campaignName)}</h3><span class="atg ${o.status!=='active'?'':o.ended?'':'dk'}" style="${o.status!=='active'?'background:#f0f3f1;color:#6b7771':o.ended?'background:#e8f4ec;color:#159E31':''}">${o.status!=='active'?'已取消':o.ended?'已結束':'進行中'}</span></div><div class="sub" style="margin:6px 0">${fmtT(o.createdAt)}　${o.paid?'已回報匯款':'未回報匯款'}</div><div>${o.items.slice(0,4).map(l=>esc(l.name)+(l.qty>1?' ×'+l.qty:'')).join('、')}${o.items.length>4?'…等 '+o.items.length+' 項':''}</div><div style="text-align:right;margin-top:6px"><b style="color:#159E31;font-size:18px">${nt(o.total)}</b></div></a>`;
+ $('#app').innerHTML=`<div class="sech"><h2>我參加過的團</h2><span>共 ${os.length} 筆　合計 ${nt(sum)}</span></div>${os.length?os.map(row).join(''):'<div class="card muted" style="margin-top:14px">還沒有用這個帳號下過單。<br>（只有登入後、或用同一個 Email 下的訂單會顯示在這裡）</div>'}`}
 function viewPicker(){
  const cs=st.camps||[];const open=cs.filter(c=>!c.ended),end=cs.filter(c=>c.ended);
  const newCard=`<a class="pcd" href="#" id="newcamp" style="display:flex;align-items:center;justify-content:center;min-height:220px;border:2px dashed #159E31;background:#f4fbf6;color:#159E31;text-align:center"><div><div style="font-size:44px;line-height:1">＋</div><h3 style="margin:8px 0 4px;color:#159E31">我要開團</h3><div class="sub">登入後即可開團<br>隱眼團、餐飲團或自訂團</div></div></a>`;
- $('#app').innerHTML=`<div class="sech"><h2>團購</h2><span>共 ${cs.length} 團</span></div>${open.length?`<div class="pgrid">${newCard}${open.map(pcCard).join('')}</div>`:`<div class="pgrid">${newCard}</div><div class="card muted" style="margin-top:14px">目前沒有進行中的團購</div>`}${end.length?`<h3 style="margin-top:28px">已結束的團購</h3><div class="pgrid">${end.map(pcCard).join('')}</div>`:''}`}
+ $('#app').innerHTML=`<div class="sech"><h2>團購</h2><span>${st.user?'<a href="/joined" class="jnl">我參加過的團</a>　':''}共 ${cs.length} 團</span></div>${open.length?`<div class="pgrid">${newCard}${open.map(pcCard).join('')}</div>`:`<div class="pgrid">${newCard}</div><div class="card muted" style="margin-top:14px">目前沒有進行中的團購</div>`}${end.length?`<h3 style="margin-top:28px">已結束的團購</h3><div class="pgrid">${end.map(pcCard).join('')}</div>`:''}`}
 document.addEventListener('click',e=>{const a=e.target.closest('#newcamp');if(!a)return;e.preventDefault();if(!st.admin&&!st.user){try{loginDialog()}catch(_){go('/admin')}return}openNewCampaign()});
 const onPicker=()=>{const p=P();return p.cid===null&&p.page==='campaigns'||location.pathname==='/'};
 const refreshPicker=async()=>{if(document.hidden||!onPicker()||document.querySelector('.modalbg'))return;await loadCamps();if(onPicker()&&!document.querySelector('.modalbg'))viewPicker()};

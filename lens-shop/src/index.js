@@ -227,8 +227,9 @@ async function handle(req, env, ctx) {
       await env.DB.prepare('UPDATE accounts SET name=? WHERE email=?').bind(name, me.email).run(); return json({ user: { email: me.email, name, canCreate: true } });
     }
     if (path === '/api/auth/orders' && method === 'GET') {
-      const rs = await env.DB.prepare("SELECT id,token,campaign,total,status FROM orders WHERE email=? ORDER BY created_at DESC LIMIT 200").bind(me.email).all();
-      return json({ orders: rs.results }, 200, { 'cache-control': 'no-store' });
+      const rs = await env.DB.prepare("SELECT * FROM orders WHERE email=? ORDER BY created_at DESC LIMIT 200").bind(me.email).all();
+      const orders = rs.results.map((o) => { const p = pubOrder(o); const c = camps.find((x) => x.id === o.campaign); return { id: o.id, token: o.token, campaign: o.campaign, campaignName: c ? c.name : o.campaign, ended: c ? c.status === 'ended' : true, total: o.total, status: o.status, createdAt: o.created_at, paid: !!p.pay, items: p.items.map((l) => ({ name: l.name, qty: l.qty, opts: l.opts })) }; });
+      return json({ orders }, 200, { 'cache-control': 'no-store' });
     }
     return err('找不到', 404);
   }
