@@ -2116,3 +2116,9 @@
 - 「0. 團購管理」改為卡片：每團一張（類型徽章 隱眼團／飲料團、進行中／已結束、人數與金額、管理／結束／重新開放），另有「＋ 新增團購」卡。新增時選類型：隱眼團＝名稱＋代號，建立後上傳 Excel；飲料團＝貼揪團連結按「解析」，成功後帶入店名並可開團。團購名稱、代號都自動產生（名稱預設店名或「隱形眼鏡團購 月/日」，代號 lens／drink＋月日，重複自動加字母）且可手動修改。
 - 新增 `src/ubereats.js`：Uber Eats 揪團頁的 HTML 本身就含店名與完整菜單，伺服器直接讀取；選項（冰量／甜度／加料）逐項呼叫 getMenuItemV1（每批 25 項，由前端分批呼叫避免單次請求過多）。`POST /api/admin/drink-parse`（先回店名與品項，再分批回選項）；`POST /api/admin/campaigns` 可一併帶 menu、link。你訂連結只驗證格式，店名與菜單仍需 Claude 用瀏覽器抓（建立後後台會提示）。
 - 注意：Uber 若擋掉 Cloudflare 伺服器連線，解析會顯示錯誤訊息，此時改請 Claude 抓取。
+
+## 2026-11-12 lens-shop：同事 Google 登入與開團權限
+- 新增 Google 帳號登入（GIS ID token → /api/auth/google 驗證 → 自家 HMAC token，header `x-user`）；accounts 表（email、name、can_create）。
+- 登入後下單自動帶姓名／Email；聊天室以 `u:<email>` 認本人，可編輯／刪除自己的訊息。
+- 後台：有開團權限的同事可建立並只管理自己的團購（campaigns.owner）；管理者（密碼）可見全部，並有「帳號與登入設定」卡片（Google 用戶端 ID、新帳號預設可開團、逐帳號開關）。
+- 需管理者先在後台貼上 Google OAuth 用戶端 ID，登入才會啟用。

@@ -1,5 +1,6 @@
 import { buildCatalog } from './catalog.js';
 import { buildDrinkCatalog, pickDrink } from './drink.js';
+import { ensureAccounts, signUser, getUser as getUserRaw, verifyGoogle } from './auth.js';
 import { checkLink, parseUberJoin, fetchGroups } from './ubereats.js';
 import { fillForms } from './xlsx.js';
 import { orderMail, SYSTEM_NOTE } from './mail.js';
@@ -51,6 +52,8 @@ async function isAdmin(req, env) {
   const [exp, sig] = t.split('.'); if (!exp || !sig || +exp < Date.now()) return false;
   return (await hmac(env, exp)) === sig;
 }
+
+const getUser = (req, env) => getUserRaw(hmac, env, req);
 
 // ── 訂單驗證 ──
 function cleanLines(raw, catalog) {
@@ -112,7 +115,36 @@ async function handle(req, env) {
   if (!camps.some((c) => c.id === cid)) return err('找不到這個團購', 404);
   const closedNow = (s, c = cid) => isClosed(s) || isEnded(camps, c);
 
+  // ── 同事帳號（Google 登入）──
+  if (path.startsWith('/api/auth/')) {
+    await ensureAccounts(env);
+    const cfg = await getKV(env, 'auth', { clientId: '', defaultCreate: true });
+    if (path === '/api/auth/config' && method === 'GET') return json({ clientId: cfg.clientId || '' }, 200, { 'cache-control': 'no-store' });
+    if (path === '/api/auth/google' && method === 'POST') {
+      const b = await req.json().catch(() => ({})); let g;
+      try { g = await verifyGoogle(b.credential, cfg.clientId); } catch (e) { return err(e.message, 401); }
+      const row = await env.DB.prepare('SELECT * FROM accounts WHERE email=?').bind(g.email).first();
+      if (!row) await env.DB.prepare('INSERT INTO accounts(email,name,can_create,created_at,last_login) VALUES(?,?,?,?,?)').bind(g.email, g.name, cfg.defaultCreate === false ? 0 : 1, now(), now()).run();
+      else await env.DB.prepare('UPDATE accounts SET last_login=? WHERE email=?').bind(now(), g.email).run();
+      const u = row || { email: g.email, name: g.name, can_create: cfg.defaultCreate === false ? 0 : 1 };
+      return json({ token: await signUser(hmac, env, g.email), user: { email: u.email, name: u.name, canCreate: !!u.can_create } });
+    }
+    const me = await getUser(req, env);
+    if (!me) return err('請先登入', 401);
+    if (path === '/api/auth/me' && method === 'GET') return json({ user: { email: me.email, name: me.name, canCreate: !!me.can_create } }, 200, { 'cache-control': 'no-store' });
+    if (path === '/api/auth/me' && method === 'PUT') {
+      const b = await req.json().catch(() => ({})); const name = String(b.name || '').trim().slice(0, 30); if (!name) return err('請填寫姓名');
+      await env.DB.prepare('UPDATE accounts SET name=? WHERE email=?').bind(name, me.email).run(); return json({ user: { email: me.email, name, canCreate: !!me.can_create } });
+    }
+    if (path === '/api/auth/orders' && method === 'GET') {
+      const rs = await env.DB.prepare("SELECT id,token,campaign,total,status FROM orders WHERE email=? ORDER BY created_at DESC LIMIT 200").bind(me.email).all();
+      return json({ orders: rs.results }, 200, { 'cache-control': 'no-store' });
+    }
+    return err('找不到', 404);
+  }
+
   if (path === '/api/campaigns' && method === 'GET') {
+    const usr = await getUser(req, env);
     const list = await Promise.all(camps.map(async (c) => {
       const s = await getSettings(env, c.id); const cat = await getCatalog(env, c.id);
       const rs = await env.DB.prepare("SELECT name,total,created_at FROM orders WHERE campaign=? AND status='active' ORDER BY created_at").bind(c.id).all();
@@ -125,7 +157,7 @@ async function handle(req, env) {
       return { id: c.id, name: s.shopName, deadline: s.deadline, ended: isEnded(camps, c.id), closed: closedNow(s, c.id), ready: !!cat,
         goal, sum, count: rs.results.length, names: names.slice(0, 8), nameCount: names.length, reachedAt,
         startAt: c.createdAt || (rs.results[0] && rs.results[0].created_at) || '', covers,
-        drink: !!(cat && cat.drink), store: cat && cat.drink ? cat.store : '', link: cat && cat.drink ? cat.link : '' };
+        drink: !!(cat && cat.drink), store: cat && cat.drink ? cat.store : '', link: cat && cat.drink ? cat.link : '', mine: !!(usr && c.owner && c.owner === usr.email), owned: !!c.owner };
     }));
     return json({ campaigns: list }, 200, { 'cache-control': 'public, max-age=15' });
   }
@@ -154,8 +186,9 @@ async function handle(req, env) {
     const nowMs = Date.now();
     const online = async () => (await env.DB.prepare('SELECT COUNT(*) c FROM chat_presence WHERE campaign=? AND seen>?').bind(cid, nowMs - 45000).first()).c;
     const touch = (sid, name) => sid ? env.DB.prepare('INSERT INTO chat_presence(campaign,sid,name,seen) VALUES(?,?,?,?) ON CONFLICT(campaign,sid) DO UPDATE SET name=excluded.name,seen=excluded.seen').bind(cid, String(sid).slice(0, 40), String(name || '').slice(0, 20), nowMs).run() : null;
+    const usr = await getUser(req, env); const mySid = usr ? 'u:' + usr.email : '';
     if (path === '/api/chat' && method === 'GET') {
-      const u = url.searchParams.get('u'), sid = url.searchParams.get('sid') || '';
+      const u = url.searchParams.get('u'), sid = mySid || url.searchParams.get('sid') || '';
       const cols = 'id,name n,text t,img,at,ed,del,up,(sid=?) m';
       const rs = u == null
         ? await env.DB.prepare('SELECT ' + cols + ' FROM (SELECT * FROM chat WHERE campaign=? AND del=0 ORDER BY id DESC LIMIT 150) ORDER BY id').bind(sid, cid).all()
@@ -163,7 +196,7 @@ async function handle(req, env) {
       return json({ msgs: rs.results.map((r) => ({ ...r, m: !!r.m })), online: await online(), now: nowMs }, 200, { 'cache-control': 'no-store' });
     }
     if (path === '/api/chat/ping' && method === 'POST') {
-      const b = await req.json().catch(() => ({})); await touch(b.sid, b.name);
+      const b = await req.json().catch(() => ({})); await touch(mySid || b.sid, usr ? usr.name : b.name);
       if (Math.random() < 0.02) await env.DB.prepare('DELETE FROM chat_presence WHERE seen<?').bind(nowMs - 864e5).run();
       return json({ online: await online() }, 200, { 'cache-control': 'no-store' });
     }
@@ -175,16 +208,16 @@ async function handle(req, env) {
     }
     if (path === '/api/chat' && method === 'POST') {
       const b = await req.json().catch(() => null); if (!b) return err('資料格式錯誤');
-      const name = String(b.name || '').trim().slice(0, 20), text = String(b.text || '').trim().slice(0, 500);
+      const name = String(usr ? usr.name : b.name || '').trim().slice(0, 20), text = String(b.text || '').trim().slice(0, 500);
       const img = /^\/api\/img\/chat_[\w]+$/.test(b.img || '') ? b.img : '';
       if (!name) return err('請先設定暱稱'); if (!text && !img) return err('請輸入內容');
-      const r = await env.DB.prepare('INSERT INTO chat(campaign,name,text,img,at,sid,up) VALUES(?,?,?,?,?,?,?)').bind(cid, name, text, img, now(), String(b.sid || '').slice(0, 40), nowMs).run();
-      await touch(b.sid, name); return json({ ok: true, id: r.meta.last_row_id });
+      const r = await env.DB.prepare('INSERT INTO chat(campaign,name,text,img,at,sid,up) VALUES(?,?,?,?,?,?,?)').bind(cid, name, text, img, now(), mySid || String(b.sid || '').slice(0, 40), nowMs).run();
+      await touch(mySid || b.sid, name); return json({ ok: true, id: r.meta.last_row_id });
     }
     if ((path === '/api/chat/delete' || path === '/api/chat/edit') && method === 'POST') {
       const b = await req.json().catch(() => ({})); const id = parseInt(url.searchParams.get('id') || '0', 10);
       const row = await env.DB.prepare('SELECT sid FROM chat WHERE campaign=? AND id=? AND del=0').bind(cid, id).first(); if (!row) return err('找不到這則訊息', 404);
-      const own = row.sid && row.sid === String(b.sid || '');
+      const own = row.sid && (row.sid === mySid || (!mySid.startsWith('u:') || true) && row.sid === String(b.sid || ''));
       if (!own && !(await isAdmin(req, env))) return err('只能修改自己的訊息', 403);
       if (path.endsWith('delete')) await env.DB.prepare('UPDATE chat SET del=1,text=\'\',img=\'\',up=? WHERE id=?').bind(nowMs, id).run();
       else { const text = String(b.text || '').trim().slice(0, 500); if (!text) return err('請輸入內容'); await env.DB.prepare('UPDATE chat SET text=?,ed=1,up=? WHERE id=? AND img=\'\'').bind(text, nowMs, id).run(); }
@@ -210,7 +243,8 @@ async function handle(req, env) {
   if (path === '/api/orders' && method === 'POST') {
     const b = await req.json().catch(() => null); if (!b) return err('資料格式錯誤');
     const s = await getSettings(env, cid); if (closedNow(s)) return err('已截止，無法再下單', 403);
-    const name = String(b.name || '').trim().slice(0, 30), email = String(b.email || '').trim().toLowerCase().slice(0, 120);
+    const usr = await getUser(req, env);
+    const name = String(b.name || (usr && usr.name) || '').trim().slice(0, 30), email = String(b.email || (usr && usr.email) || '').trim().toLowerCase().slice(0, 120);
     if (!name) return err('請填寫姓名'); if (!EMAIL_RE.test(email)) return err('Email 格式不正確');
     const cat = await getCatalog(env, cid); if (!cat) return err('目前尚未開放下單', 503);
     let lines; try { lines = cleanLines(b.items, cat); } catch (e) { return err(e.message); }
@@ -289,7 +323,26 @@ async function handle(req, env) {
     return json({ token: exp + '.' + (await hmac(env, exp)) });
   }
   if (path.startsWith('/api/admin/')) {
-    if (!(await isAdmin(req, env))) return err('請先登入管理者', 401);
+    const adm = await isAdmin(req, env); const usr = adm ? null : await getUser(req, env);
+    if (!adm && !(usr && usr.can_create)) return err('請先登入管理者，或使用有開團權限的帳號登入', 401);
+    const own = (id) => adm || (usr && (camps.find((c) => c.id === id) || {}).owner === usr.email);
+    if (!adm) {
+      const cp = path.match(/^\/api\/admin\/campaigns\/([a-z0-9-]{1,20})$/); const od = path.match(/^\/api\/admin\/orders\/([0-9A-F]{8})(?:\/payment)?$/);
+      let ok;
+      if (path === '/api/admin/accounts' || path.startsWith('/api/admin/accounts/') || path === '/api/admin/auth') ok = false;
+      else if ((path === '/api/admin/campaigns' && method === 'POST') || path === '/api/admin/drink-parse') ok = true;
+      else if (cp) ok = own(cp[1]);
+      else if (od) ok = own(((await env.DB.prepare('SELECT campaign FROM orders WHERE id=?').bind(od[1]).first()) || {}).campaign);
+      else ok = own(cid);
+      if (!ok) return err('這個團購不是您開的，沒有權限', 403);
+    }
+    if (path === '/api/admin/auth' && method === 'GET') { await ensureAccounts(env); const a = await getKV(env, 'auth', { clientId: '', defaultCreate: true }); return json({ clientId: a.clientId || '', defaultCreate: a.defaultCreate !== false }); }
+    if (path === '/api/admin/auth' && method === 'PUT') { const b = await req.json().catch(() => ({})); const a = { clientId: String(b.clientId || '').trim().slice(0, 200), defaultCreate: !!b.defaultCreate }; await setKV(env, 'auth', a); return json(a); }
+    if (path === '/api/admin/accounts' && method === 'GET') { await ensureAccounts(env); const rs = await env.DB.prepare('SELECT email,name,can_create,created_at,last_login FROM accounts ORDER BY created_at').all(); return json({ accounts: rs.results.map((a) => ({ ...a, can_create: !!a.can_create })) }); }
+    if ((m = path.match(/^\/api\/admin\/accounts\/(.+)$/)) && method === 'PUT') {
+      const b = await req.json().catch(() => ({})); const email = decodeURIComponent(m[1]).toLowerCase();
+      await env.DB.prepare('UPDATE accounts SET can_create=? WHERE email=?').bind(b.canCreate ? 1 : 0, email).run(); return json({ ok: true });
+    }
     if (path === '/api/admin/settings') {
       if (method === 'GET') return json(await getSettings(env, cid));
       if (method === 'PUT') {
@@ -305,7 +358,7 @@ async function handle(req, env) {
       if (camps.some((c) => c.id === id)) return err('這個代號已存在');
       let built = null;
       if (b.menu) { try { built = buildDrinkCatalog(b.menu); } catch (e) { return err('菜單格式不正確：' + e.message); } }
-      await setKV(env, 'campaigns', [...camps, { id, status: 'open', createdAt: now() }]);
+      await setKV(env, 'campaigns', [...camps, { id, status: 'open', createdAt: now(), ...(usr ? { owner: usr.email } : {}) }]);
       await setKV(env, kk(id, 'settings'), { ...DEFAULTS, shopName: name, drinkLink: /^https:\/\//.test(b.link || '') ? String(b.link).slice(0, 500) : '' });
       if (built) { await env.FILES.put(fk(id, 'catalog.json'), JSON.stringify(built.catalog), { httpMetadata: { contentType: 'application/json' } }); await setKV(env, kk(id, 'pimgs'), built.pimgs); }
       return json({ ok: true, id });

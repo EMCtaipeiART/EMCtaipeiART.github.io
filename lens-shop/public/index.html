@@ -156,7 +156,7 @@ document.addEventListener('click',e=>{const im=e.target.closest&&e.target.closes
 const nt=n=>'NT$ '+Number(n).toLocaleString('en-US');
 // 訂單時間以 UTC ISO 字串儲存，顯示時一律換算成台灣時間（UTC+8）
 const tp=iso=>{const d=new Date(iso);return isNaN(d)?String(iso||'').slice(0,16).replace('T',' '):new Date(d.getTime()+8*36e5).toISOString().slice(0,16).replace('T',' ')};
-const st={cid:null,camps:null,cat:null,set:null,cart:[],who:JSON.parse(localStorage.lensWho||'{}'),editTok:null,brand:'全部',q:'',admin:localStorage.lensAdmin||'',shown:60,pimgs:{},rev:{}};
+const st={cid:null,camps:null,cat:null,set:null,cart:[],who:JSON.parse(localStorage.lensWho||'{}'),editTok:null,brand:'全部',q:'',admin:localStorage.lensAdmin||'',user:JSON.parse(localStorage.lensUser||'null'),shown:60,pimgs:{},rev:{}};
 function cartBar(){let b=document.getElementById('cbar');if(!b){b=document.createElement('div');b.id='cbar';document.body.appendChild(b)}
  const r=P().page;const lines=st.cart.map(l=>({...l,it:byNo(l.no)})).filter(l=>l.it);
  if(!lines.length||!['','promo','spec'].includes(r)||st.set?.closed){b.style.display='none';document.body.classList.remove('hasbar');return}
@@ -174,16 +174,17 @@ async function fetchCat(){try{const d=await api('/catalog');st.cat=d.catalog;st.
 async function ensureCampaign(cid){if(st.cid===cid&&st.set)return;st.cid=cid;st.cat=null;st.set=null;st.pimgs={};st.rev={};st.revLoaded=0;st.editTok=null;st.brand='全部';st.q='';st.shown=60;
  try{st.cart=JSON.parse(localStorage.getItem(cartKey())||'[]')}catch{st.cart=[]}await fetchCat()}
 async function loadCamps(){try{st.camps=(await api('/campaigns?t='+Date.now())).campaigns}catch(e){st.camps=st.camps||[]}return st.camps}
-async function api(p,o={}){const h={...(o.headers||{})};if(o.admin)h.authorization='Bearer '+st.admin;if(o.json){h['content-type']='application/json';o.body=JSON.stringify(o.json)}
- if(st.cid&&!/^\/(campaigns|admin\/login|admin\/campaigns)/.test(p)&&!/^\/orders\/[0-9a-f]{32}/.test(p))p+=(p.includes('?')?'&':'?')+'c='+encodeURIComponent(st.cid);
- const r=await fetch('/api'+p,{...o,headers:h});if(o.raw&&r.ok)return r;let d={};try{d=await r.json()}catch{}if(!r.ok){if(r.status===401&&o.admin){st.admin='';localStorage.removeItem('lensAdmin')}throw new Error(d.error||'連線失敗')}return d}
+async function api(p,o={}){const h={...(o.headers||{})};if(o.admin&&st.admin)h.authorization='Bearer '+st.admin;if(st.user)h['x-user']=st.user.token;if(o.json){h['content-type']='application/json';o.body=JSON.stringify(o.json)}
+ if(st.cid&&!/^\/(campaigns|auth\/|admin\/login|admin\/campaigns|admin\/accounts|admin\/auth)/.test(p)&&!/^\/orders\/[0-9a-f]{32}/.test(p))p+=(p.includes('?')?'&':'?')+'c='+encodeURIComponent(st.cid);
+ const r=await fetch('/api'+p,{...o,headers:h});if(o.raw&&r.ok)return r;let d={};try{d=await r.json()}catch{}if(!r.ok){if(r.status===401&&st.user&&!o.admin&&/請先登入/.test(d.error||'')){st.user=null;localStorage.removeItem('lensUser')}if(r.status===401&&o.admin){st.admin='';localStorage.removeItem('lensAdmin')}throw new Error(d.error||'連線失敗')}return d}
 function fmtD(d){if(!d)return'';const m=/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/.exec(d);return m?`${m[1]}/${m[2]}/${m[3]}${m[4]?' '+m[4]+':'+m[5]:''}`:d}
 function dlText(){const s=st.set;if(!s)return'';if(s.closed)return'<b>已截止／已結單</b>';if(!s.deadline)return'';
  const ms=Date.parse(s.deadline+(s.deadline.length<=16?':00+08:00':''))-Date.now();const d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5);
  return`截止：${fmtD(s.deadline)}（剩 <b>${d>0?d+' 天 ':''}${h} 小時</b>）`}
 function renderNav(){const r=P().page;const L=[...((st.camps||[]).length>1?[['campaigns','全部團購']]:[]),['','開始選購'],...(isDrink()?[]:[['promo','促銷活動'],['spec','規格表']]),['cart','購物車'],['mine','訂單列表'],['admin','管理']];
  const IC={"":"<path d=\"M3 11 12 4l9 7M5 10v10h14V10\"/>","promo":"<path d=\"M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8zM7.5 7.5h.01\"/>","spec":"<rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"2\"/><path d=\"M3 10h18M9 4v16\"/>","cart":"<path d=\"M3 3h2.5l2.2 12h10.6l2-8.5H6.4\"/><circle cx=\"9.5\" cy=\"19.5\" r=\"1.3\"/><circle cx=\"17\" cy=\"19.5\" r=\"1.3\"/>","campaigns":"<rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1.5\"/>","mine":"<path d=\"M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01\"/>","admin":"<circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7\"/>"};
- $('#nav').innerHTML=L.map(([k,n])=>`<a href="${k==='campaigns'?'/campaigns':H('/'+k)}" title="${n}" aria-label="${n}" class="ni ${r===k||(k==='cart'&&r==='order')?'on':''}"><svg viewBox="0 0 24 24">${IC[k]}</svg><em class="lb">${n}</em>${k==='cart'&&st.cart.length?`<span class="n">${st.cart.reduce((s,l)=>s+l.qty,0)}</span>`:''}</a>`).join('');
+ $('#nav').innerHTML=L.map(([k,n])=>`<a href="${k==='campaigns'?'/campaigns':H('/'+k)}" title="${n}" aria-label="${n}" class="ni ${r===k||(k==='cart'&&r==='order')?'on':''}"><svg viewBox="0 0 24 24">${IC[k]}</svg><em class="lb">${n}</em>${k==='cart'&&st.cart.length?`<span class="n">${st.cart.reduce((s,l)=>s+l.qty,0)}</span>`:''}</a>`).join('')+`<a href="#" id="acct" class="ni ${st.user?'on':''}" title="${st.user?esc(st.user.name):'同事登入'}"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg><em class="lb">${st.user?esc(st.user.name):'同事登入'}</em></a>`;
+ $('#acct').onclick=e=>{e.preventDefault();st.user?accountDialog():loginDialog()};
  $('#dl').innerHTML=dlText();$('#logo').textContent=st.set?.shopName||'隱形眼鏡團購';document.title=st.set?.shopName||'隱形眼鏡團購';cartBar();chatInit()}
 const thumb=i=>st.pimgs[i.no]?`<img class="th" loading="lazy" src="${esc(st.pimgs[i.no])}" alt="">`:`<div class="th ph">${esc(i.brand.slice(0,6))}</div>`;
 const items=()=>st.cat?.items||[];const byNo=n=>items().find(i=>i.no===n);
@@ -236,7 +237,16 @@ function reviewDialog(no){const it=byNo(no);let n=0;const mine=(st.rev[no]||[]).
 
 // ───── 即時聊天室 ─────
 const CH={sid:localStorage.lensSid||(localStorage.lensSid=Math.random().toString(36).slice(2,12)),cid:null,up:null,busy:0,msgs:[],online:0,open:false,unread:0,timer:null,ping:0};
-const chName=()=>localStorage.lensChatName||st.who?.name||(localStorage.lensChatName='訪客'+Math.floor(1000+Math.random()*9000));
+let GIS=null;
+async function gsiLoad(){if(window.google&&google.accounts&&google.accounts.id)return;await new Promise((ok,no)=>{const x=document.createElement('script');x.src='https://accounts.google.com/gsi/client';x.onload=ok;x.onerror=()=>no(new Error('無法載入 Google 登入'));document.head.appendChild(x)})}
+function setUser(d){st.user={token:d.token||(st.user&&st.user.token),...d.user};localStorage.lensUser=JSON.stringify(st.user);st.who={name:st.user.name,email:st.user.email};localStorage.lensWho=JSON.stringify(st.who);localStorage.lensChatName=st.user.name}
+function logoutUser(){st.user=null;localStorage.removeItem('lensUser');renderNav();route&&route()}
+async function googleButton(el,done){el.innerHTML='<span class="muted">載入 Google 登入…</span>';try{const c=await api('/auth/config');if(!c.clientId){el.innerHTML='<span class="muted">管理者尚未設定 Google 登入</span>';return}await gsiLoad();google.accounts.id.initialize({client_id:c.clientId,callback:async r=>{try{const d=await api('/auth/google',{method:'POST',json:{credential:r.credential}});setUser(d);toast('已登入：'+st.user.name);done&&done()}catch(e){alert(e.message)}}});el.innerHTML='';google.accounts.id.renderButton(el,{theme:'outline',size:'large',text:'signin_with',locale:'zh-TW'})}catch(e){el.innerHTML='<span class="muted">'+esc(e.message)+'</span>'}}
+function loginDialog(){const bg=document.createElement('div');bg.className='modalbg';bg.innerHTML='<div class="modal"><h3 style="margin-top:0">同事登入</h3><p class="muted">用 Google 帳號登入（gmail.com、emctaipei.com 都可以）。登入後下單會自動記錄姓名與 Email，聊天室可編輯、刪除自己的訊息。</p><div id="gbtn" style="min-height:44px"></div><div class="acts" style="margin-top:12px"><button class="sec" id="gx">關閉</button></div></div>';document.body.appendChild(bg);bg.querySelector('#gx').onclick=()=>bg.remove();googleButton(bg.querySelector('#gbtn'),()=>{bg.remove();renderNav();route&&route()})}
+function accountDialog(){const u=st.user,bg=document.createElement('div');bg.className='modalbg';bg.innerHTML=`<div class="modal"><h3 style="margin-top:0">我的帳號</h3><label class="sub">Email</label><div style="margin-bottom:8px">${esc(u.email)}</div><label class="sub">顯示姓名（下單與聊天室使用）</label><input id="an" maxlength="30" value="${esc(u.name)}" style="width:100%"><div class="acts" style="margin-top:12px"><button class="sec" id="ax">關閉</button><button class="sec" id="alo">登出</button><button id="asv">儲存</button></div></div>`;document.body.appendChild(bg);
+ bg.querySelector('#ax').onclick=()=>bg.remove();bg.querySelector('#alo').onclick=()=>{bg.remove();logoutUser()};
+ bg.querySelector('#asv').onclick=async()=>{try{const d=await api('/auth/me',{method:'PUT',json:{name:bg.querySelector('#an').value}});setUser(d);bg.remove();toast('已儲存');renderNav()}catch(e){alert(e.message)}}}
+const chName=()=>(st.user&&st.user.name)||localStorage.lensChatName||st.who?.name||(localStorage.lensChatName='訪客'+Math.floor(1000+Math.random()*9000));
 const chCol=n=>{let h=0;for(const c of n)h=(h*31+c.charCodeAt(0))%360;return`hsl(${h} 45% 48%)`};
 const chTime=iso=>{const d=new Date(Date.parse(iso)+8*36e5);return d.toISOString().slice(11,16)};
 const chDay=iso=>{const d=new Date(Date.parse(iso)+8*36e5),t=new Date(Date.now()+8*36e5),k=x=>x.toISOString().slice(0,10);if(k(d)===k(t))return'今天';if(k(d)===k(new Date(t-864e5)))return'昨天';return(d.getUTCMonth()+1)+'月'+d.getUTCDate()+'日 週'+'日一二三四五六'[d.getUTCDay()]};
@@ -429,12 +439,22 @@ function viewSpec(){
 // ───── 管理 ─────
 // 中文輸入法組字中不要重繪（會打斷選字）；組字結束才套用
 function imeInput(el,fn){let c=false;el.addEventListener('compositionstart',()=>{c=true});el.addEventListener('compositionend',e=>{c=false;fn(e)});el.oninput=e=>{if(!c&&!e.isComposing)fn(e)}}
+async function acctAdminUI(){const box=document.getElementById('acbox');if(!box)return;try{const [a,l]=await Promise.all([api('/admin/auth',{admin:1}),api('/admin/accounts',{admin:1})]);
+ box.innerHTML=`<p class="muted">到 Google Cloud Console 建立「OAuth 用戶端 ID（網頁應用程式）」，已授權的 JavaScript 來源填 ${esc(location.origin)}，把用戶端 ID 貼在下面（不是機密，可公開）。</p><div class="tools"><input id="gcid" placeholder="xxxx.apps.googleusercontent.com" value="${esc(a.clientId)}" style="flex:1;min-width:260px"><button id="gsv">儲存</button></div>
+ <p><label><input type="checkbox" id="gdef" ${a.defaultCreate?'checked':''}> 新登入的帳號預設可以開團</label></p>
+ <table class="t"><thead><tr><th>姓名</th><th>Email</th><th>最近登入</th><th>可開團</th></tr></thead><tbody>${l.accounts.map(x=>`<tr><td>${esc(x.name)}</td><td class="sub">${esc(x.email)}</td><td class="sub">${esc((x.last_login||'').slice(0,16).replace('T',' '))}</td><td><input type="checkbox" data-ac="${esc(x.email)}" ${x.can_create?'checked':''}></td></tr>`).join('')||'<tr><td colspan="4" class="muted">還沒有同事登入</td></tr>'}</tbody></table>`;
+ document.getElementById('gsv').onclick=async()=>{try{await api('/admin/auth',{method:'PUT',admin:1,json:{clientId:document.getElementById('gcid').value,defaultCreate:document.getElementById('gdef').checked}});toast('已儲存')}catch(e){alert(e.message)}};
+ box.querySelectorAll('[data-ac]').forEach(c=>c.onchange=async()=>{try{await api('/admin/accounts/'+encodeURIComponent(c.dataset.ac),{method:'PUT',admin:1,json:{canCreate:c.checked}});toast('已更新')}catch(e){alert(e.message);c.checked=!c.checked}})}catch(e){box.textContent=e.message}}
 async function viewAdmin(){
- if(!st.admin){$('#app').innerHTML=`<h2>管理者登入</h2><div class="card"><div class="tools"><input id="pw" name="admin-pass" type="password" autocomplete="new-password" placeholder="管理者密碼"><button id="lg">登入</button></div></div>`;
+ if(!st.admin&&!(st.user&&st.user.canCreate)){$('#app').innerHTML=`<h2>管理者登入</h2><div class="card"><div class="tools"><input id="pw" name="admin-pass" type="password" autocomplete="new-password" placeholder="管理者密碼"><button id="lg">登入</button></div></div><div class="card"><h3 style="margin-top:0">同事登入（開團）</h3><p class="muted">用 Google 帳號登入，有開團權限的同事可以建立並管理自己的團購。</p><div id="gbtn2" style="min-height:44px"></div></div>`;googleButton($('#gbtn2'),()=>{renderNav();viewAdmin()});
   const go=async()=>{try{const d=await api('/admin/login',{method:'POST',json:{password:$('#pw').value}});st.admin=d.token;localStorage.lensAdmin=d.token;viewAdmin()}catch(e){alert(e.message)}};$('#lg').onclick=go;$('#pw').onkeydown=e=>{if(e.key==='Enter')go()};return}
- try{const [s,o,cs]=await Promise.all([api('/admin/settings',{admin:1}),api('/admin/orders',{admin:1}),loadCamps()]);const cur=cs.find(c=>c.id===st.cid)||{};
+ try{const isAdm=!!st.admin;const cs0=await loadCamps();const cs=isAdm?cs0:cs0.filter(c=>c.mine);const curm=cs.find(c=>c.id===st.cid);
+  if(!isAdm&&!curm&&cs.length&&st.cid!==cs[0].id){return go('/g/'+cs[0].id+'/admin')}
+  const lite=!isAdm&&!curm;
+  const [s,o]=lite?[{shopName:'',goal:'',drinkLink:'',notes:'',closed:false},{count:0,orders:[],tally:[]}]:await Promise.all([api('/admin/settings',{admin:1}),api('/admin/orders',{admin:1})]);const cur=cs.find(c=>c.id===st.cid)||{};
   const f=(k,l,t='text')=>`<label class="sub">${l}</label><input data-k="${k}" type="${t}" value="${esc(s[k])}" style="width:100%">`;
-  $('#app').innerHTML=`<div class="sp"><h2>管理後台</h2><button class="sec" id="lo">登出</button></div>
+  $('#app').innerHTML=`<div class="sp"><h2>管理後台${isAdm?'':'（'+esc(st.user.name)+'）'}</h2><button class="sec" id="lo">${isAdm?'登出':'離開管理'}</button></div>
+  ${isAdm?'<div class="card" style="margin-top:12px"><h3 style="margin-top:0">帳號與登入設定</h3><div id="acbox"><span class="muted">載入中…</span></div></div>':''}
   <div class="card"><h3 style="margin-top:0">0. 團購管理</h3><p class="muted">點卡片的「管理」切換要設定的團購；下方的設定、商品圖與訂單都屬於目前管理中的團購。結束後訂單會保留，同事不能再下單或修改。</p>
   <div class="acg">${cs.map(c=>`<div class="acd ${c.id===st.cid?'on':''}"><span class="atg ${c.drink?'dk':''}">${c.drink?'飲料團':'隱眼團'}</span><span class="ast ${c.ended?'x':''}">${c.ended?'已結束':'進行中'}</span><h4>${esc(c.name)}</h4><div class="sub">${c.drink&&c.store?esc(c.store)+'　':''}代號 ${esc(c.id)}</div><div class="sub">${c.count} 人下單　${nt(c.sum)}${c.goal?'　目標 '+nt(c.goal):''}</div>
    <div class="acts"><button ${c.id===st.cid?'class="sec" disabled':''} data-mg="${esc(c.id)}">${c.id===st.cid?'管理中':'管理'}</button><button class="sec" data-ce="${esc(c.id)}" data-en="${c.ended?0:1}">${c.ended?'重新開放':'結束'}</button></div></div>`).join('')}
@@ -486,7 +506,9 @@ async function viewAdmin(){
   $('#mup').onclick=async()=>{const f=$('#mf').files[0];if(!f)return alert('請先選擇菜單檔（.json）');if(!confirm('匯入菜單會取代這個團購目前的商品目錄（訂單保留）。確定？'))return;
    try{const menu=JSON.parse(await f.text());const d=await api('/admin/drink-menu',{method:'POST',admin:1,json:{menu,link:$('#mlink').value.trim()}});toast('已匯入 '+d.items+' 項');await fetchCat();viewAdmin()}catch(e){alert(e.message)}};
   const cp=$('#cpy');if(cp)cp.onclick=async()=>{const NL='\n';const act=o.orders.filter(x=>x.status!=='cancelled');const t=act.map(x=>x.name+NL+x.items.map(l=>'  '+l.name+(l.opts?'（'+l.opts+'）':'')+(l.gift?' 備註：'+l.gift:'')+' ×'+l.qty).join(NL)).join(NL+NL)+NL+NL+'— 彙總 —'+NL+o.tally.map(t=>t.name+(t.opts?'（'+t.opts+'）':'')+' ×'+t.qty).join(NL)+NL+'合計 '+o.tally.reduce((n,t)=>n+t.qty,0)+' 杯，NT$ '+o.sum;try{await navigator.clipboard.writeText(t);toast('已複製點餐清單')}catch(e){prompt('請手動複製：',t)}};
-  $('#lo').onclick=()=>{st.admin='';localStorage.removeItem('lensAdmin');viewAdmin()};
+  $('#lo').onclick=()=>{if(isAdm){st.admin='';localStorage.removeItem('lensAdmin');viewAdmin()}else go('/')};
+  if(lite)document.querySelectorAll('#app > .card').forEach((c,i)=>{if(i>0)c.style.display='none'});
+  if(isAdm)acctAdminUI();
   $('#up').onclick=async()=>{const f=$('#xf').files[0];if(!f)return alert('請先選擇檔案');$('#upm').textContent='上傳解析中…';try{const d=await api('/admin/upload',{method:'POST',admin:1,body:f});$('#upm').textContent=`✔ 已更新：${d.items} 項商品、${d.limited} 張限定卡、規格表 ${d.specRows} 列`;st.cat=null;load()}catch(e){$('#upm').textContent='✘ '+e.message}};
   $('#sv').onclick=async()=>{const b={closed:$('#closed').checked};document.querySelectorAll('[data-k]').forEach(i=>b[i.dataset.k]=i.value);await api('/admin/settings',{method:'PUT',admin:1,json:b});toast('已儲存');load()};
   const exb=$('#ex');if(exb)exb.onclick=async()=>{try{const r=await api('/admin/export',{admin:1,raw:1});const ov=+r.headers.get('x-overflow-rows');const bl=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download='團購訂單彙整_'+new Date(Date.now()+8*36e5).toISOString().slice(0,10)+'.xlsx';a.click();if(ov)alert('注意：有 '+ov+' 列超出填寫單1～4的容量，未寫入。')}catch(e){alert(e.message)}};
