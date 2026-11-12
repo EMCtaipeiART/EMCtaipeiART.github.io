@@ -445,6 +445,12 @@ async function acctAdminUI(){const box=document.getElementById('acbox');if(!box)
  <table class="t"><thead><tr><th>姓名</th><th>Email</th><th>最近登入</th><th>可開團</th></tr></thead><tbody>${l.accounts.map(x=>`<tr><td>${esc(x.name)}</td><td class="sub">${esc(x.email)}</td><td class="sub">${esc((x.last_login||'').slice(0,16).replace('T',' '))}</td><td><input type="checkbox" data-ac="${esc(x.email)}" ${x.can_create?'checked':''}></td></tr>`).join('')||'<tr><td colspan="4" class="muted">還沒有同事登入</td></tr>'}</tbody></table>`;
  document.getElementById('gsv').onclick=async()=>{try{await api('/admin/auth',{method:'PUT',admin:1,json:{clientId:document.getElementById('gcid').value.trim()||'__keep__',defaultCreate:document.getElementById('gdef').checked}});toast('已儲存')}catch(e){alert(e.message)}};
  box.querySelectorAll('[data-ac]').forEach(c=>c.onchange=async()=>{try{await api('/admin/accounts/'+encodeURIComponent(c.dataset.ac),{method:'PUT',admin:1,json:{canCreate:c.checked}});toast('已更新')}catch(e){alert(e.message);c.checked=!c.checked}})}catch(e){box.textContent=e.message}}
+async function viewSummary(){const t=new URLSearchParams(location.search).get('t')||'';let d;try{d=await api('/summary?t='+encodeURIComponent(t))}catch(e){$('#app').innerHTML='<div class="card">'+esc(e.message)+'</div>';return}
+ const plat=d.platform==='ubereats'?'Uber Eats 揪團':d.platform==='nidin'?'你訂開團':'揪團';
+ $('#app').innerHTML=`<style>@media print{#nav,.noprint,header{display:none!important}body{background:#fff}.card{box-shadow:none;border:0}}</style><div class="card"><div class="sp"><h2 style="margin:0">${esc(d.shopName)}　訂單明細</h2><button class="noprint" onclick="window.print()">列印／存成 PDF</button></div>
+ <p class="muted">${d.store?esc(d.store)+'　':''}${d.orders.length} 人、${d.cups} 杯，合計 ${nt(d.sum)}${d.link?'　<a href="'+esc(d.link)+'" target="_blank" rel="noopener">前往'+plat+'</a>':''}</p>
+ <h3>品項彙總</h3><table class="t"><thead><tr><th>品項</th><th>選項</th><th class="num">杯數</th></tr></thead><tbody>${d.tally.map(x=>`<tr><td>${esc(x.name)}</td><td class="sub">${esc(x.opts)}</td><td class="num">${x.qty}</td></tr>`).join('')}</tbody></table>
+ <h3>每人明細</h3><table class="t"><thead><tr><th>姓名</th><th>品項</th><th class="num">金額</th></tr></thead><tbody>${d.orders.map(o=>`<tr><td><b>${esc(o.name)}</b></td><td>${o.items.map(l=>esc(l.name)+(l.opts?'（'+esc(l.opts)+'）':'')+' ×'+l.qty+(l.gift?' 備註：'+esc(l.gift):'')).join('<br>')}</td><td class="num">${nt(o.total)}</td></tr>`).join('')}</tbody></table></div>`}
 async function viewAdmin(){
  if(!st.admin&&!(st.user&&st.user.canCreate)){$('#app').innerHTML=`<h2>管理者登入</h2><div class="card"><div class="tools"><input id="pw" name="admin-pass" type="password" autocomplete="new-password" placeholder="管理者密碼"><button id="lg">登入</button></div></div><div class="card"><h3 style="margin-top:0">同事登入（開團）</h3><p class="muted">用 Google 帳號登入，有開團權限的同事可以建立並管理自己的團購。</p><div id="gbtn2" style="min-height:44px"></div></div>`;googleButton($('#gbtn2'),()=>{renderNav();viewAdmin()});
   const go=async()=>{try{const d=await api('/admin/login',{method:'POST',json:{password:$('#pw').value}});st.admin=d.token;localStorage.lensAdmin=d.token;viewAdmin()}catch(e){alert(e.message)}};$('#lg').onclick=go;$('#pw').onkeydown=e=>{if(e.key==='Enter')go()};return}
@@ -482,7 +488,7 @@ async function viewAdmin(){
   <h3>商品彙總（供向廠商叫貨）</h3><table class="t"><thead><tr><th>編號</th><th>品項</th><th class="num">總盒數</th><th class="num">金額</th></tr></thead><tbody>${o.tally.map(t=>`<tr><td>${t.no}</td><td>${esc(t.brand)} ${esc(t.name)}${t.opts?'<div class="sub">'+esc(t.opts)+'</div>':''}</td><td class="num">${t.qty}</td><td class="num">${nt(t.qty*t.price)}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan=2><b>整團金額</b></td><td class="num"><b>${o.tally.reduce((n,t)=>n+t.qty,0)}</b></td><td class="num"><b>${nt(o.sum)}</b></td></tr></tfoot></table></div>`;
   pimgUI();
   document.querySelectorAll('[data-mg]').forEach(b=>b.onclick=()=>go('/g/'+b.dataset.mg+'/admin'));
-  document.querySelectorAll('[data-ce]').forEach(b=>b.onclick=async()=>{const id=b.dataset.ce,ending=b.dataset.en==='1',c=cs.find(x=>x.id===id)||{};if(!confirm(ending?'結束「'+(c.name||id)+'」？結束後同事無法再下單或修改（訂單與資料保留，可隨時重新開放）。':'重新開放「'+(c.name||id)+'」？'))return;try{await api('/admin/campaigns/'+encodeURIComponent(id),{method:'PUT',admin:1,json:{status:ending?'ended':'open'}});await loadCamps();if(id===st.cid)await fetchCat();viewAdmin()}catch(e){alert(e.message)}});
+  document.querySelectorAll('[data-ce]').forEach(b=>b.onclick=async()=>{const id=b.dataset.ce,ending=b.dataset.en==='1',c=cs.find(x=>x.id===id)||{};if(!confirm(ending?'結束「'+(c.name||id)+'」？結束後同事無法再下單或修改（訂單與資料保留，可隨時重新開放）。':'重新開放「'+(c.name||id)+'」？'))return;try{const rr=await api('/admin/campaigns/'+encodeURIComponent(id),{method:'PUT',admin:1,json:{status:ending?'ended':'open'}});if(rr.mail==='sent')toast('已結束，訂單明細信已寄給開團者');await loadCamps();if(id===st.cid)await fetchCat();viewAdmin()}catch(e){alert(e.message)}});
   {const np={type:'lens',menu:null,link:'',touched:{nm:0,id:0},pending:false};const ids=cs.map(c=>c.id);
    const dd=new Date(Date.now()+8*3600e3),md=String(dd.getUTCMonth()+1).padStart(2,'0')+String(dd.getUTCDate()).padStart(2,'0');
    const genId=()=>{const base=(np.type==='drink'?'drink':'lens')+md;let x=base,k=0;while(ids.includes(x)||x.startsWith('lim'))x=base+'abcdefghijklmnopqrstuvwxyz'[k++%26]+(k>26?k:'');return x};
@@ -517,7 +523,7 @@ async function viewAdmin(){
   if(lite)document.querySelectorAll('#app > .card').forEach((c,i)=>{if(i>0)c.style.display='none'});
   if(isAdm)acctAdminUI();
   const upb=$('#up');if(upb)upb.onclick=async()=>{const f=$('#xf').files[0];if(!f)return alert('請先選擇檔案');$('#upm').textContent='上傳解析中…';try{const d=await api('/admin/upload',{method:'POST',admin:1,body:f});$('#upm').textContent=`✔ 已更新：${d.items} 項商品、${d.limited} 張限定卡、規格表 ${d.specRows} 列`;st.cat=null;load()}catch(e){$('#upm').textContent='✘ '+e.message}};
-  $('#sv').onclick=async()=>{const b={closed:$('#closed').checked};document.querySelectorAll('[data-k]').forEach(i=>b[i.dataset.k]=i.value);await api('/admin/settings',{method:'PUT',admin:1,json:b});toast('已儲存');load()};
+  $('#sv').onclick=async()=>{const b={closed:$('#closed').checked};document.querySelectorAll('[data-k]').forEach(i=>b[i.dataset.k]=i.value);const sr=await api('/admin/settings',{method:'PUT',admin:1,json:b});toast(sr.mail==='sent'?'已儲存，訂單明細信已寄給開團者':'已儲存');load()};
   const exb=$('#ex');if(exb)exb.onclick=async()=>{try{const r=await api('/admin/export',{admin:1,raw:1});const ov=+r.headers.get('x-overflow-rows');const bl=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download='團購訂單彙整_'+new Date(Date.now()+8*36e5).toISOString().slice(0,10)+'.xlsx';a.click();if(ov)alert('注意：有 '+ov+' 列超出填寫單1～4的容量，未寫入。')}catch(e){alert(e.message)}};
   document.querySelectorAll('[data-pi]').forEach(a=>a.onclick=async e=>{e.preventDefault();const r=await api('/admin/payimg/'+a.dataset.pi,{admin:1,raw:1});window.open(URL.createObjectURL(await r.blob()))});
   document.querySelectorAll('[data-rp]').forEach(a=>a.onclick=async e=>{e.preventDefault();if(confirm('撤銷訂單 '+a.dataset.rp+' 的付款標記？')){await api('/admin/orders/'+a.dataset.rp+'/payment',{method:'DELETE',admin:1});viewAdmin()}});
@@ -544,7 +550,7 @@ async function route(){
   if(location.pathname==='/'){renderNav();return viewPicker()}
   history.replaceState(null,'','/g/lens/'+p.page+(p.arg?'/'+p.arg:''));return route()}
  await ensureCampaign(p.cid);renderNav();
- ({'':viewShop,promo:viewPromo,limited:viewPromo,spec:viewSpec,cart:viewCart,mine:viewMine,admin:viewAdmin}[p.page]||viewShop)();
+ ({'':viewShop,promo:viewPromo,limited:viewPromo,spec:viewSpec,cart:viewCart,mine:viewMine,admin:viewAdmin,summary:viewSummary}[p.page]||viewShop)();
 }
 async function load(){await fetchCat();route()}
 function pcCard(c){const goal=c.goal||0,pct=goal?Math.round(c.sum/goal*100):0,ok=goal&&c.sum>=goal,over=c.ended||c.closed;

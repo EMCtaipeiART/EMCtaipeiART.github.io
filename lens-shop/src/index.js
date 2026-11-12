@@ -100,6 +100,30 @@ async function sendMail(env, to, subject, html, text) {
     console.log('[mail skipped: no mail key]', to, subject); return 'skipped';
   } catch (e) { console.log('mail exception', String(e)); return 'failed'; }
 }
+
+// ── 飲料團結單：寄訂單明細信給開團者（含可存成 PDF 的明細頁連結）──
+const sumToken = async (env, cid) => (await hmac(env, 'sum:' + cid)).slice(0, 24);
+async function summaryData(env, cid) {
+  const cat = await getCatalog(env, cid); const s = await getSettings(env, cid);
+  const rs = await env.DB.prepare("SELECT name,items,total,note FROM orders WHERE status='active' AND campaign=? ORDER BY created_at").bind(cid).all();
+  const orders = rs.results.map((o) => ({ name: o.name, note: o.note || '', total: o.total, items: JSON.parse(o.items).map((l) => ({ name: l.name, opts: l.opts || '', qty: l.qty, price: l.price, gift: l.gift || '' })) }));
+  const tally = new Map(); let cups = 0;
+  for (const o of orders) for (const l of o.items) { const k = l.name + '|' + l.opts; const t = tally.get(k) || { name: l.name, opts: l.opts, qty: 0 }; t.qty += l.qty; cups += l.qty; tally.set(k, t); }
+  return { shopName: s.shopName, store: (cat && cat.store) || '', platform: (cat && cat.platform) || '', link: (cat && cat.link) || s.drinkLink || '', orders, tally: [...tally.values()], cups, sum: orders.reduce((n, o) => n + o.total, 0) };
+}
+async function mailDrinkSummary(env, req, cid, camps) {
+  const cat = await getCatalog(env, cid); if (!cat || !cat.drink) return 'skip';
+  const c = camps.find((x) => x.id === cid) || {}; const to = c.owner || env.REPLY_TO; if (!to) return 'skip';
+  const d = await summaryData(env, cid); if (!d.orders.length) return 'skip';
+  const base = (await getSettings(env, cid)).siteUrl || env.SITE_URL || new URL(req.url).origin;
+  const url = `${base}/g/${cid}/summary?t=${await sumToken(env, cid)}`;
+  const h = (x) => String(x ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const plat = d.platform === 'ubereats' ? 'Uber Eats 揪團' : d.platform === 'nidin' ? '你訂開團' : '揪團';
+  const rows = d.orders.map((o) => `<tr><td style="padding:6px 8px;border-bottom:1px solid #e5efe8;vertical-align:top"><b>${h(o.name)}</b></td><td style="padding:6px 8px;border-bottom:1px solid #e5efe8">${o.items.map((l) => `${h(l.name)}${l.opts ? '（' + h(l.opts) + '）' : ''} ×${l.qty}`).join('<br>')}</td><td style="padding:6px 8px;border-bottom:1px solid #e5efe8;text-align:right;white-space:nowrap">NT$ ${o.total}</td></tr>`).join('');
+  const html = `<div style="font-family:-apple-system,'Noto Sans TC',sans-serif;max-width:640px;margin:auto;color:#222"><h2 style="color:#159E31">${h(d.shopName)} 已結單，可以下單了</h2><p>共 ${d.orders.length} 人、${d.cups} 杯，合計 NT$ ${d.sum}。請到${plat}依下列明細加入品項後送出：</p>${d.link ? `<p><a href="${h(d.link)}" style="background:#159E31;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;display:inline-block">前往${plat}</a></p>` : ''}<table style="border-collapse:collapse;width:100%;font-size:14px"><tr style="background:#f2f8f4"><th style="text-align:left;padding:6px 8px">姓名</th><th style="text-align:left;padding:6px 8px">品項</th><th style="text-align:right;padding:6px 8px">金額</th></tr>${rows}</table><p style="margin-top:18px"><a href="${url}">開啟明細頁，可列印或另存成 PDF</a></p><p style="color:#888;font-size:12px">${h(SYSTEM_NOTE)}</p></div>`;
+  const text = `${d.shopName} 已結單（${d.orders.length} 人、${d.cups} 杯、NT$ ${d.sum}）\n` + d.orders.map((o) => `${o.name}：` + o.items.map((l) => `${l.name}${l.opts ? '（' + l.opts + '）' : ''}×${l.qty}`).join('、')).join('\n') + `\n\n明細頁（可存成 PDF）：${url}\n${SYSTEM_NOTE}`;
+  return sendMail(env, to, `【${d.shopName}】已結單，訂單明細（${d.cups} 杯）`, html, text);
+}
 async function mailOrder(env, req, order, kind) {
   const s = await getSettings(env, order.campaign || DEFAULT_CID);
   const base = s.siteUrl || env.SITE_URL || new URL(req.url).origin;
@@ -116,6 +140,10 @@ async function handle(req, env) {
   if (!camps.some((c) => c.id === cid)) return err('找不到這個團購', 404);
   const closedNow = (s, c = cid) => isClosed(s) || isEnded(camps, c);
 
+  if (path === '/api/summary' && method === 'GET') {
+    if (url.searchParams.get('t') !== (await sumToken(env, cid))) return err('連結無效', 403);
+    return json(await summaryData(env, cid), 200, { 'cache-control': 'no-store' });
+  }
   // ── 同事帳號（Google 登入）──
   if (path.startsWith('/api/auth/')) {
     await ensureAccounts(env);
@@ -349,7 +377,9 @@ async function handle(req, env) {
       if (method === 'PUT') {
         const b = await req.json(); const cur = await getSettings(env, cid); const next = { ...cur };
         for (const k of Object.keys(DEFAULTS)) if (k in b) next[k] = k === 'closed' ? !!b[k] : String(b[k] ?? '').slice(0, 2000);
-        await setKV(env, kk(cid, 'settings'), next); return json(next);
+        await setKV(env, kk(cid, 'settings'), next);
+        if (next.closed && !cur.closed) next.mail = await mailDrinkSummary(env, req, cid, camps);
+        return json(next);
       }
     }
     if (path === '/api/admin/campaigns' && method === 'POST') {
@@ -367,8 +397,10 @@ async function handle(req, env) {
     if ((m = path.match(/^\/api\/admin\/campaigns\/([a-z0-9-]{1,20})$/)) && method === 'PUT') {
       const b = await req.json().catch(() => ({})); const st = b.status === 'ended' ? 'ended' : 'open';
       if (!camps.some((c) => c.id === m[1])) return err('找不到這個團購', 404);
+      const was = (camps.find((c) => c.id === m[1]) || {}).status;
       await setKV(env, 'campaigns', camps.map((c) => (c.id === m[1] ? { ...c, status: st, endedAt: st === 'ended' ? now() : undefined } : c)));
-      return json({ ok: true });
+      const mail = st === 'ended' && was !== 'ended' ? await mailDrinkSummary(env, req, m[1], camps) : 'skip';
+      return json({ ok: true, mail });
     }
     if (path === '/api/admin/drink-parse' && method === 'POST') {
       const b = await req.json().catch(() => ({})); let c;
