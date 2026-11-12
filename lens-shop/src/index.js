@@ -4,7 +4,7 @@ import { ensureAccounts, signUser, getUser as getUserRaw, verifyGoogle } from '.
 import { parseNidin } from './nidin.js';
 import { checkLink, parseUberJoin, fetchGroups } from './ubereats.js';
 import { fillForms } from './xlsx.js';
-import { orderMail, SYSTEM_NOTE } from './mail.js';
+import { orderMail, SYSTEM_NOTE, lineLink } from './mail.js';
 import { D1Files } from './store.js';
 
 const json = (o, status = 200, h = {}) => new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...h } });
@@ -258,7 +258,7 @@ async function handle(req, env, ctx) {
     const out = await edgeGet('catalog/' + cid, 30, async () => {
       const [cat, s, pimgs] = await Promise.all([getCatalog(env, cid), getSettings(env, cid), getKV(env, kk(cid, 'pimgs'), {})]);
       if (cat && cat.drink && /^https:\/\//.test(s.drinkLink || '')) { const h = new URL(s.drinkLink).hostname; cat.link = s.drinkLink; cat.platform = /uber/.test(h) ? 'ubereats' : /nidin/.test(h) ? 'nidin' : cat.platform; }
-      return { catalog: cat, pimgs, settings: { shopName: s.shopName, deadline: s.deadline, closed: closedNow(s), bankName: s.bankName, bankAccount: s.bankAccount, accountName: s.accountName, linePay: s.linePay, notes: s.notes, goal: s.goal, drinkLink: s.drinkLink } };
+      return { catalog: cat, pimgs, settings: { shopName: s.shopName, deadline: s.deadline, closed: closedNow(s), bankName: s.bankName, bankAccount: s.bankAccount, accountName: s.accountName, linePay: lineLink(s.linePay), notes: s.notes, goal: s.goal, drinkLink: s.drinkLink } };
     }, ctx);
     return json(out, 200, { 'cache-control': 'no-store' });
   }
