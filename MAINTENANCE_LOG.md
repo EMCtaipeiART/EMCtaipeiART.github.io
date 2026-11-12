@@ -2182,3 +2182,7 @@
 - 監看程式輪詢 10 秒→3 秒；Claude 備援改用 sonnet 並精簡指令。
 - 工具放在 ~/.claude/tools/fill-watch/（不在 Git），同一份也放在私有 repo EMCtaipeiART/lens-shop-filler（雲端用，fill.yml 先走 API 快速路徑，失敗才裝 Claude 備援）。若平台改版需要同步更新兩處。
 - 測試時 drink1112a 與 drink1112 各多送了一筆重複的測試訂單（團購小幫手），請團長手動刪除。
+
+## 2026-11-12 lens-shop：全部團購第一張卡「我要開團」、登入者都能開團
+- 團購列表第一張卡為虛線「＋ 我要開團」：未登入跳 Google 登入視窗，已登入前往後台並捲到「我要開團」卡。
+- 後端 /api/admin/* 閘門改為任何已登入帳號即可（不再看 can_create），canCreate 一律 true；後台「可開團」勾選不再影響權限。只能管理自己開的團的規則不變。

@@ -201,14 +201,14 @@ async function handle(req, env) {
       if (!row) await env.DB.prepare('INSERT INTO accounts(email,name,can_create,created_at,last_login) VALUES(?,?,?,?,?)').bind(g.email, g.name, cfg.defaultCreate === false ? 0 : 1, now(), now()).run();
       else await env.DB.prepare('UPDATE accounts SET last_login=? WHERE email=?').bind(now(), g.email).run();
       const u = row || { email: g.email, name: g.name, can_create: cfg.defaultCreate === false ? 0 : 1 };
-      return json({ token: await signUser(hmac, env, g.email), user: { email: u.email, name: u.name, canCreate: !!u.can_create } });
+      return json({ token: await signUser(hmac, env, g.email), user: { email: u.email, name: u.name, canCreate: true } });
     }
     const me = await getUser(req, env);
     if (!me) return err('請先登入', 401);
-    if (path === '/api/auth/me' && method === 'GET') return json({ user: { email: me.email, name: me.name, canCreate: !!me.can_create } }, 200, { 'cache-control': 'no-store' });
+    if (path === '/api/auth/me' && method === 'GET') return json({ user: { email: me.email, name: me.name, canCreate: true } }, 200, { 'cache-control': 'no-store' });
     if (path === '/api/auth/me' && method === 'PUT') {
       const b = await req.json().catch(() => ({})); const name = String(b.name || '').trim().slice(0, 30); if (!name) return err('請填寫姓名');
-      await env.DB.prepare('UPDATE accounts SET name=? WHERE email=?').bind(name, me.email).run(); return json({ user: { email: me.email, name, canCreate: !!me.can_create } });
+      await env.DB.prepare('UPDATE accounts SET name=? WHERE email=?').bind(name, me.email).run(); return json({ user: { email: me.email, name, canCreate: true } });
     }
     if (path === '/api/auth/orders' && method === 'GET') {
       const rs = await env.DB.prepare("SELECT id,token,campaign,total,status FROM orders WHERE email=? ORDER BY created_at DESC LIMIT 200").bind(me.email).all();
@@ -398,7 +398,7 @@ async function handle(req, env) {
   }
   if (path.startsWith('/api/admin/')) {
     const adm = await isAdmin(req, env); const usr = adm ? null : await getUser(req, env);
-    if (!adm && !(usr && usr.can_create)) return err('請先登入管理者，或使用有開團權限的帳號登入', 401);
+    if (!adm && !usr) return err('請先登入管理者，或使用有開團權限的帳號登入', 401);
     const own = (id) => adm || (usr && (camps.find((c) => c.id === id) || {}).owner === usr.email);
     if (!adm) {
       const cp = path.match(/^\/api\/admin\/campaigns\/([a-z0-9-]{1,20})$/); const od = path.match(/^\/api\/admin\/orders\/([0-9A-F]{8})(?:\/payment|\/unavailable)?$/);
