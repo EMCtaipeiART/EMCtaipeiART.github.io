@@ -1587,7 +1587,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     function closeModModal(){$('modModal').hidden=true;state.modId=''}
     async function submitMod(){
       const id=state.modId,f=$('mmForm'),row=allRows().find(r=>idKey(r)===id);if(!id||!row)return;
-      const date=f.elements.modifyDate.value,content=f.elements.content.value.trim();if(!date||!content){toast('請填寫修改日期與修改內容',true);return}
+      const date=f.elements.modifyDate.value,content=f.elements.content.value.trim();if(!date||!content){toast('請填寫預計收到日與修改內容',true);return}
       if(!loggedIn()){toast('請先登入',true);return}
       const btn=$('mmSubmit');btn.disabled=true;btn.textContent='寫入中…';
       try{
