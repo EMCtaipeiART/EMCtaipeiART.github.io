@@ -414,7 +414,7 @@ async function viewAdmin(){
   <div class="card"><h3 style="margin-top:0">0. 團購管理</h3><p class="muted">目前管理：<b>${esc(cur.name||st.cid)}</b>（代號 ${esc(st.cid)}）。下方的 Excel、設定、商品圖與訂單都屬於這個團購；結束後訂單會保留，同事不能再下單或修改。</p>
   <div class="tools"><select id="csel">${cs.map(c=>`<option value="${esc(c.id)}" ${c.id===st.cid?'selected':''}>${esc(c.name)}${c.ended?'（已結束）':''}</option>`).join('')}</select><button class="sec" id="cend">${cur.ended?'重新開放此團購':'結束此團購'}</button></div>
   <div class="tools" style="margin-top:8px"><input id="cnid" placeholder="新團購代號（英文小寫，如 glasses）"><input id="cnnm" placeholder="新團購名稱"><button id="cnew">新增團購</button></div></div>
-  <div class="card"><h3 style="margin-top:0">1. 上傳報價 Excel</h3><p class="muted">選擇含「報價單／全台獨家活動／期間限定／各品牌度數規格／填寫單1」的 .xlsx，網站會自動更新價格與內容，並作為匯出的範本。</p>
+  <div class="card" style="margin-top:12px"><h3 style="margin-top:0">1. 上傳報價 Excel</h3><p class="muted">選擇含「報價單／全台獨家活動／期間限定／各品牌度數規格／填寫單1」的 .xlsx，網站會自動更新價格與內容，並作為匯出的範本。</p>
   <input type="file" id="xf" accept=".xlsx"> <button id="up">上傳並更新</button> <span id="upm" class="muted"></span></div>
   <div class="card" style="margin-top:12px"><h3 style="margin-top:0">2. 團購設定</h3><div class="form2">${f('shopName','團購名稱')}${f('goal','達標金額（NT$，開團成功門檻；留空或 0＝不設門檻）','number')}${f('deadline','截止日期時間（台北時間）','datetime-local')}${f('bankName','銀行（含代碼）')}${f('bankAccount','匯款帳號')}${f('accountName','戶名')}${f('siteUrl','網站網址（信件連結用，可留空）')}</div>
   <label class="sub">信件／頁面附註</label><textarea data-k="notes" rows="2" style="width:100%">${esc(s.notes)}</textarea>
