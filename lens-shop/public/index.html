@@ -496,7 +496,7 @@ async function viewAdmin(){
    $('#nnm').oninput=()=>np.touched.nm=1;$('#nid').oninput=()=>np.touched.id=1;
    $('#nparse').onclick=async()=>{const link=$('#nlink').value.trim(),msg=$('#nmsg'),btn=$('#nparse');if(!link)return alert('請先貼上揪團連結');btn.disabled=true;np.menu=null;np.pending=false;msg.style.color='';
     try{msg.textContent='解析中…讀取店家與品項';const d=await api('/admin/drink-parse',{method:'POST',admin:1,json:{link}});
-     if(d.pending){np.pending=true;np.link=d.link;np.platform='nidin';msg.textContent='✔ 連結格式正確（你訂）。你訂的店名與菜單需請 Claude 用瀏覽器抓取：先按「開團」建立，再告訴 Claude 即可。'}
+     if(d.menu){np.menu=d.menu;np.link=d.link;np.platform='nidin';if(!np.touched.nm)$('#nnm').value=d.store;msg.style.color='var(--b)';msg.textContent='✔ 解析成功（你訂）：'+d.store+'，共 '+d.menu.items.length+' 項飲料'+(d.open?'':'（注意：這個你訂團單目前不是開放狀態）')+'。可修改名稱後按「開團」。'}
      else{const groups={};for(let i=0;i<d.items.length;i+=25){msg.textContent='解析中…讀取選項 '+Math.min(i+25,d.items.length)+' / '+d.items.length;const r=await api('/admin/drink-parse',{method:'POST',admin:1,json:{link,ids:d.items.slice(i,i+25).map(x=>x.id)}});Object.assign(groups,r.groups)}
       const ok=d.items.filter(x=>groups[x.id]),bad=d.items.length-ok.length;
       if(!ok.length)throw new Error('讀不到品項選項，請稍後再試或請 Claude 抓取');

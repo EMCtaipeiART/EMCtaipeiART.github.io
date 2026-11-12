@@ -1,6 +1,7 @@
 import { buildCatalog } from './catalog.js';
 import { buildDrinkCatalog, pickDrink } from './drink.js';
 import { ensureAccounts, signUser, getUser as getUserRaw, verifyGoogle } from './auth.js';
+import { parseNidin } from './nidin.js';
 import { checkLink, parseUberJoin, fetchGroups } from './ubereats.js';
 import { fillForms } from './xlsx.js';
 import { orderMail, SYSTEM_NOTE } from './mail.js';
@@ -372,7 +373,7 @@ async function handle(req, env) {
     if (path === '/api/admin/drink-parse' && method === 'POST') {
       const b = await req.json().catch(() => ({})); let c;
       try { c = checkLink(b.link); } catch (e) { return err(e.message); }
-      if (c.platform === 'nidin') return json({ platform: 'nidin', pending: true, link: c.url });
+      if (c.platform === 'nidin') { let r; try { r = await parseNidin(c.url); } catch (e) { return err(e.message); } return json({ platform: 'nidin', link: c.url, store: r.store, open: r.open, menu: { store: r.store, platform: 'nidin', link: c.url, items: r.items } }); }
       let r; try { r = await parseUberJoin(c.url); } catch (e) { return err(e.message); }
       if (Array.isArray(b.ids)) { const its = r.items.filter((i) => b.ids.includes(i.id)).slice(0, 30); return json({ groups: await fetchGroups(r.storeUuid, its) }); }
       return json({ platform: 'ubereats', link: c.url, store: r.store, count: r.items.length, items: r.items.map(({ id, name, price, cat, img }) => ({ id, name, price, cat, img })) });
