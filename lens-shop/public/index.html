@@ -480,7 +480,7 @@ async function viewAdmin(){
 
 
 
-  <div class="card" style="margin-top:12px"><div class="sp"><h3 style="margin:0">訂單（${o.count} 筆有效單，${o.orders.filter(x=>x.status!=='cancelled'&&x.pay).length} 筆已付款單，已付 ${nt(o.orders.filter(x=>x.status!=='cancelled'&&x.pay).reduce((n,x)=>n+x.total,0))}）</h3><div class="tools" style="margin:0"><button class="${s.closed?'sec':''}" id="cls">${s.closed?'重新開單':'結單'}</button>${st.cat?.drink?'<button id="cpy">複製點餐清單</button>':'<button id="ex">一鍵下載彙整 Excel</button>'}</div></div>
+  <div class="card" style="margin-top:12px"><div class="sp"><h3 style="margin:0">訂單（${o.count} 筆有效單，${o.orders.filter(x=>x.status!=='cancelled'&&x.pay).length} 筆已付款單，已付 ${nt(o.orders.filter(x=>x.status!=='cancelled'&&x.pay).reduce((n,x)=>n+x.total,0))}）</h3><div class="tools" style="margin:0"><span id="fillst" class="muted" style="align-self:center"></span><button class="${s.closed?'sec':''}" id="cls">${s.closed?'重新開單':'結單'}</button>${st.cat?.drink?'<button id="cpy">複製點餐清單</button>':'<button id="ex">一鍵下載彙整 Excel</button>'}</div></div>
   <p class="muted">下載檔 = 原上傳的 Excel，只把訂單填入「填寫單1」（超過會接續填寫單2～4），原本的公式不會被覆蓋。</p>
   <table class="t ord"><thead><tr><th>編號</th><th>姓名／Email</th><th>內容</th><th class="num">金額</th><th></th></tr></thead><tbody>${o.orders.map(x=>`<tr style="${x.status==='cancelled'?'opacity:.5':''}"><td>${x.id}${x.status==='cancelled'?'<span class="tag x">取消</span>':''}${x.pay?'<br><span class="paid" style="margin:0">✔ 已付款</span>':''}</td><td>${esc(x.name)}<div class="sub">${esc(x.email)}</div></td>
    <td class="sub">${x.items.map(l=>`${isDrink()?'':'#'+l.no+' '}${esc(l.name)} ${esc(pw(l))} ×${l.qty}`).join('<br>')}</td><td class="num">${nt(x.total)}${x.pay?`<div class="sub">後五碼 ${esc(x.pay.last5||'—')}${x.payImg?` <a href="#" data-pi="${x.payImg}">看截圖</a>`:''}<br><a href="#" data-rp="${x.id}">撤銷付款</a></div>`:''}</td><td><button class="sec" data-ua="${x.id}">商品無法下單</button> <button class="sec" data-del="${x.id}">刪除</button></td></tr>`).join('')||'<tr><td colspan=5 class="muted">還沒有訂單</td></tr>'}</tbody></table>
@@ -528,8 +528,14 @@ async function viewAdmin(){
    bg.querySelector('#ua-x').onclick=()=>bg.remove();
    bg.querySelector('#ua-s').onclick=async()=>{const items=[...bg.querySelectorAll('[data-ui]:checked')].map(i=>+i.dataset.ui),reason=bg.querySelector('#ua-r').value.trim();if(!items.length)return alert('請勾選無法下單的品項');if(!reason)return alert('請填寫原因');
     try{const r=await api('/admin/orders/'+od.id+'/unavailable',{method:'POST',admin:1,json:{items,reason}});bg.remove();toast(r.mail==='sent'?'已寄出通知信（下單者與開團者）':'通知信未寄出（信件服務未啟用）')}catch(e){alert(e.message)}}});
+  const fillUI=async()=>{const el=$('#fillst');if(!el||!isDrink()||!s.closed)return;let f;try{f=await api('/admin/fill',{admin:1})}catch(e){return}
+   const lab={pending:'⏳ 等待自動填單…',filling:'⏳ 自動填單中…',done:'✅ 已自動填入，明細信已寄出',failed:'⚠️ 自動填單失敗，已寄手動下單信',manual:'✉️ 明細信已寄出'}[f.status];if(!lab){el.innerHTML='';return}
+   const act=f.status==='pending'||f.status==='filling';el.innerHTML=lab+(act?' <button class="sec" id="fillmail" style="padding:2px 8px">直接寄明細信</button>':'');
+   const fb=$('#fillmail');if(fb)fb.onclick=async()=>{if(!confirm('不等自動填單，立刻寄明細信給開團者？'))return;try{await api('/admin/fill/mail',{method:'POST',admin:1,json:{}});toast('已寄出');fillUI()}catch(e){alert(e.message)}};
+   if(act&&location.pathname.endsWith('/admin')){clearTimeout(window.fillT);window.fillT=setTimeout(()=>{if(document.getElementById('fillst'))fillUI()},8000)}};
+  fillUI();
   $('#cls').onclick=async()=>{const closing=!s.closed;if(!confirm(closing?'結單後同事無法再下單或修改（訂單保留，可按「重新開單」恢復）。'+(isDrink()?'系統會寄訂單明細信給開團者。':'')+'確定結單？':'重新開放同事下單？'))return;
-   try{const r=await api('/admin/settings',{method:'PUT',admin:1,json:{closed:closing}});toast(closing?(r.mail==='sent'?'已結單，訂單明細信已寄給開團者':'已結單'):'已重新開單');await fetchCat();viewAdmin()}catch(e){alert(e.message)}};
+   try{const r=await api('/admin/settings',{method:'PUT',admin:1,json:{closed:closing}});toast(closing?(r.mail==='sent'?'已結單，訂單明細信已寄給開團者':r.mail==='waiting'?'已結單，系統自動填單中，完成後會寄信給開團者':'已結單'):'已重新開單');await fetchCat();viewAdmin()}catch(e){alert(e.message)}};
   const cp=$('#cpy');if(cp)cp.onclick=async()=>{const NL='\n';const act=o.orders.filter(x=>x.status!=='cancelled');const t=act.map(x=>x.name+NL+x.items.map(l=>'  '+l.name+(l.opts?'（'+l.opts+'）':'')+(l.gift?' 備註：'+l.gift:'')+' ×'+l.qty).join(NL)).join(NL+NL)+NL+NL+'— 彙總 —'+NL+o.tally.map(t=>t.name+(t.opts?'（'+t.opts+'）':'')+' ×'+t.qty).join(NL)+NL+'合計 '+o.tally.reduce((n,t)=>n+t.qty,0)+' 杯，NT$ '+o.sum;try{await navigator.clipboard.writeText(t);toast('已複製點餐清單')}catch(e){prompt('請手動複製：',t)}};
   $('#lo').onclick=()=>{if(isAdm){st.admin='';localStorage.removeItem('lensAdmin');viewAdmin()}else go('/')};
   if(lite)document.querySelectorAll('#app > .card').forEach((c,i)=>{if(i>1)c.style.display='none'});

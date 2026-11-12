@@ -2169,3 +2169,7 @@
 
 ## 2026-11-12 lens-shop：Uber 菜單促銷區塊分類修正
 - ubereats.js：「Free with NT$700 purchase」這類促銷區塊視為精選（featured），品項改歸原本分類，避免分類名稱變成「Free with NT$700 pur」。已開的團購（drink1112）目錄需重新匯入才會更新。
+
+## 2026-11-12 lens-shop：結單後等自動填單完成才寄明細信＋後台顯示填單狀態
+- 本機監看程式每 10 秒向 /api/fill/ping 回報心跳（需新 secret FILL_KEY，只存在 Cloudflare 與本機 ~/.claude/tools/fill-watch/key）。心跳在 5 分鐘內且該團在清單內時，結單只標記 pending、不寄信；填單開始回報 filling，完成回報 done（寄「已自動填入」明細信並附核對摘要），3 次都失敗回報 failed（寄「請手動下單」信）。
+- 心跳不在（Mac 關機等）時照舊結單立刻寄信。後台訂單卡顯示填單狀態，等待中可按「直接寄明細信」。重新開單會清除狀態。

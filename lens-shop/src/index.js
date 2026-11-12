@@ -111,7 +111,7 @@ async function summaryData(env, cid) {
   for (const o of orders) for (const l of o.items) { const k = l.name + '|' + l.opts; const t = tally.get(k) || { name: l.name, opts: l.opts, qty: 0 }; t.qty += l.qty; cups += l.qty; tally.set(k, t); }
   return { shopName: s.shopName, store: (cat && cat.store) || '', platform: (cat && cat.platform) || '', link: (cat && cat.link) || s.drinkLink || '', orders, tally: [...tally.values()], cups, sum: orders.reduce((n, o) => n + o.total, 0) };
 }
-async function mailDrinkSummary(env, req, cid, camps) {
+async function mailDrinkSummary(env, req, cid, camps, opt = {}) {
   const cat = await getCatalog(env, cid); if (!cat || !cat.drink) return 'skip';
   const c = camps.find((x) => x.id === cid) || {}; const to = c.owner || env.REPLY_TO; if (!to) return 'skip';
   const d = await summaryData(env, cid); if (!d.orders.length) return 'skip';
@@ -120,10 +120,23 @@ async function mailDrinkSummary(env, req, cid, camps) {
   const h = (x) => String(x ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const plat = d.platform === 'ubereats' ? 'Uber Eats 揪團' : d.platform === 'nidin' ? '你訂開團' : '揪團';
   const rows = d.orders.map((o) => `<tr><td style="padding:6px 8px;border-bottom:1px solid #e5efe8;vertical-align:top"><b>${h(o.name)}</b></td><td style="padding:6px 8px;border-bottom:1px solid #e5efe8">${o.items.map((l) => `${h(l.name)}${l.opts ? '（' + h(l.opts) + '）' : ''} ×${l.qty}`).join('<br>')}</td><td style="padding:6px 8px;border-bottom:1px solid #e5efe8;text-align:right;white-space:nowrap">NT$ ${o.total}</td></tr>`).join('');
-  const html = `<div style="font-family:-apple-system,'Noto Sans TC',sans-serif;max-width:640px;margin:auto;color:#222"><h2 style="color:#159E31">${h(d.shopName)} 已結單，可以下單了</h2><p>共 ${d.orders.length} 人、${d.cups} 杯，合計 NT$ ${d.sum}。請到${plat}依下列明細加入品項後送出：</p>${d.link ? `<p><a href="${h(d.link)}" style="background:#159E31;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;display:inline-block">前往${plat}</a></p>` : ''}<table style="border-collapse:collapse;width:100%;font-size:14px"><tr style="background:#f2f8f4"><th style="text-align:left;padding:6px 8px">姓名</th><th style="text-align:left;padding:6px 8px">品項</th><th style="text-align:right;padding:6px 8px">金額</th></tr>${rows}</table><p style="margin-top:18px"><a href="${url}">開啟明細頁，可列印或另存成 PDF</a></p><p style="color:#888;font-size:12px">${h(SYSTEM_NOTE)}</p></div>`;
+  const html = `<div style="font-family:-apple-system,'Noto Sans TC',sans-serif;max-width:640px;margin:auto;color:#222"><h2 style="color:${opt.mode === 'failed' ? '#c0392b' : '#159E31'}">${h(d.shopName)} ${opt.mode === 'done' ? '已結單，已自動填入揪團單' : opt.mode === 'failed' ? '已結單，自動填單失敗' : '已結單，可以下單了'}</h2>${opt.mode === 'done' ? `<p style="background:#eaf6ee;padding:10px 12px;border-radius:8px">系統已把下列訂單自動加入${plat}並核對金額，請到揪團單確認後結帳。${opt.note ? '<br><span style="color:#555;font-size:13px">' + h(opt.note) + '</span>' : ''}</p>` : opt.mode === 'failed' ? `<p style="background:#fdecea;padding:10px 12px;border-radius:8px"><b>自動填單沒有完成，請依下列明細手動加入。</b>${opt.note ? '<br><span style="color:#555;font-size:13px">' + h(opt.note) + '</span>' : ''}</p>` : ''}<p>共 ${d.orders.length} 人、${d.cups} 杯，合計 NT$ ${d.sum}。${opt.mode === 'done' ? '明細如下：' : '請到' + plat + '依下列明細加入品項後送出：'}</p>${d.link ? `<p><a href="${h(d.link)}" style="background:#159E31;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;display:inline-block">前往${plat}</a></p>` : ''}<table style="border-collapse:collapse;width:100%;font-size:14px"><tr style="background:#f2f8f4"><th style="text-align:left;padding:6px 8px">姓名</th><th style="text-align:left;padding:6px 8px">品項</th><th style="text-align:right;padding:6px 8px">金額</th></tr>${rows}</table><p style="margin-top:18px"><a href="${url}">開啟明細頁，可列印或另存成 PDF</a></p><p style="color:#888;font-size:12px">${h(SYSTEM_NOTE)}</p></div>`;
   const text = `${d.shopName} 已結單（${d.orders.length} 人、${d.cups} 杯、NT$ ${d.sum}）\n` + d.orders.map((o) => `${o.name}：` + o.items.map((l) => `${l.name}${l.opts ? '（' + l.opts + '）' : ''}×${l.qty}`).join('、')).join('\n') + `\n\n明細頁（可存成 PDF）：${url}\n${SYSTEM_NOTE}`;
-  return sendMail(env, to, `【${d.shopName}】已結單，訂單明細（${d.cups} 杯）`, html, text);
+  return sendMail(env, to, `【${d.shopName}】${opt.mode === 'done' ? '已結單，已自動填入揪團單' : opt.mode === 'failed' ? '已結單，自動填單失敗請手動下單' : '已結單，訂單明細'}（${d.cups} 杯）`, html, text);
 }
+
+// ── 結單後自動填單：先等填完再寄信（本機監看程式有回報心跳才啟用；否則立刻寄）──
+const fillKey = (cid) => kk(cid, 'fill');
+async function closeNotify(env, req, cid, camps) {
+  const w = await getKV(env, 'fillWatch', null); const cat = await getCatalog(env, cid);
+  const on = w && Date.now() - w.at < 300000 && (w.cids || []).includes(cid) && cat && cat.drink && ['ubereats', 'nidin'].includes(cat.platform);
+  if (!on) return mailDrinkSummary(env, req, cid, camps);
+  const d = await summaryData(env, cid); if (!d.orders.length) return 'skip';
+  await setKV(env, fillKey(cid), { status: 'pending', at: Date.now(), mailed: false });
+  return 'waiting';
+}
+const sameKey = (a, b) => { a = String(a || ''); b = String(b || ''); if (!a || a.length !== b.length) return false; let r = 0; for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i); return r === 0; };
+
 async function mailOrder(env, req, order, kind) {
   const s = await getSettings(env, order.campaign || DEFAULT_CID);
   const base = s.siteUrl || env.SITE_URL || new URL(req.url).origin;
@@ -143,6 +156,22 @@ async function handle(req, env) {
   if (path === '/api/summary' && method === 'GET') {
     if (url.searchParams.get('t') !== (await sumToken(env, cid))) return err('連結無效', 403);
     return json(await summaryData(env, cid), 200, { 'cache-control': 'no-store' });
+  }
+  // ── 本機填單監看程式回報（需 x-fill-key）──
+  if (path === '/api/fill/ping' && method === 'POST') {
+    if (!sameKey(req.headers.get('x-fill-key'), env.FILL_KEY)) return err('未授權', 401);
+    const b = await req.json().catch(() => ({})); const cids = (Array.isArray(b.cids) ? b.cids : []).filter((x) => CID_RE.test(String(x))).slice(0, 50);
+    await setKV(env, 'fillWatch', { at: Date.now(), cids });
+    const pending = []; for (const c of cids) { const f = await getKV(env, fillKey(c), null); if (f && (f.status === 'pending' || f.status === 'filling')) pending.push(c); }
+    return json({ ok: true, pending });
+  }
+  if (path === '/api/fill/status' && method === 'POST') {
+    if (!sameKey(req.headers.get('x-fill-key'), env.FILL_KEY)) return err('未授權', 401);
+    const b = await req.json().catch(() => ({})); const f = await getKV(env, fillKey(cid), null);
+    if (!f || !['pending', 'filling'].includes(f.status) || !['filling', 'done', 'failed'].includes(b.status)) return json({ ok: true, ignored: true });
+    const note = String(b.note || '').slice(0, 600); const nf = { ...f, status: b.status, note, at: Date.now() };
+    if ((b.status === 'done' || b.status === 'failed') && !f.mailed) { nf.mailed = true; nf.mail = await mailDrinkSummary(env, req, cid, camps, { mode: b.status, note }); }
+    await setKV(env, fillKey(cid), nf); return json({ ok: true, status: nf.status, mail: nf.mail });
   }
   // ── 同事帳號（Google 登入）──
   if (path.startsWith('/api/auth/')) {
@@ -372,13 +401,19 @@ async function handle(req, env) {
       const b = await req.json().catch(() => ({})); const email = decodeURIComponent(m[1]).toLowerCase();
       await env.DB.prepare('UPDATE accounts SET can_create=? WHERE email=?').bind(b.canCreate ? 1 : 0, email).run(); return json({ ok: true });
     }
+    if (path === '/api/admin/fill' && method === 'GET') return json((await getKV(env, fillKey(cid), null)) || { status: 'none' });
+    if (path === '/api/admin/fill/mail' && method === 'POST') {
+      const f = (await getKV(env, fillKey(cid), null)) || {}; const mail = await mailDrinkSummary(env, req, cid, camps);
+      await setKV(env, fillKey(cid), { ...f, status: 'manual', mailed: true, mail, at: Date.now() }); return json({ ok: true, mail });
+    }
     if (path === '/api/admin/settings') {
       if (method === 'GET') return json(await getSettings(env, cid));
       if (method === 'PUT') {
         const b = await req.json(); const cur = await getSettings(env, cid); const next = { ...cur };
         for (const k of Object.keys(DEFAULTS)) if (k in b) next[k] = k === 'closed' ? !!b[k] : String(b[k] ?? '').slice(0, 2000);
         await setKV(env, kk(cid, 'settings'), next);
-        if (next.closed && !cur.closed) next.mail = await mailDrinkSummary(env, req, cid, camps);
+        if (next.closed && !cur.closed) next.mail = await closeNotify(env, req, cid, camps);
+        if (!next.closed && cur.closed) await setKV(env, fillKey(cid), null);
         return json(next);
       }
     }
@@ -400,7 +435,7 @@ async function handle(req, env) {
       if (!camps.some((c) => c.id === m[1])) return err('找不到這個團購', 404);
       const was = (camps.find((c) => c.id === m[1]) || {}).status;
       await setKV(env, 'campaigns', camps.map((c) => (c.id === m[1] ? { ...c, status: st, endedAt: st === 'ended' ? now() : undefined } : c)));
-      const mail = st === 'ended' && was !== 'ended' ? await mailDrinkSummary(env, req, m[1], camps) : 'skip';
+      const mail = st === 'ended' && was !== 'ended' ? await closeNotify(env, req, m[1], camps) : 'skip';
       return json({ ok: true, mail });
     }
     if (path === '/api/admin/drink-parse' && method === 'POST') {
