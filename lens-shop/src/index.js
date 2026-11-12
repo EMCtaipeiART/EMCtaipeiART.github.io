@@ -230,7 +230,7 @@ async function handle(req, env, ctx) {
 
   if (path === '/api/campaigns' && method === 'GET') {
     const usr = await getUser(req, env);
-    const base = await edgeGet('campaigns', 30, async () => {
+    const base = await edgeGet('campaigns', 10, async () => {
       const list = await Promise.all(camps.map(async (c) => {
         const [s, cat, rs, pimgs] = await Promise.all([getSettings(env, c.id), getCatalog(env, c.id), env.DB.prepare("SELECT name,total,created_at FROM orders WHERE campaign=? AND status='active' ORDER BY created_at").bind(c.id).all(), getKV(env, kk(c.id, 'pimgs'), {})]);
         const goal = Math.max(0, parseInt(String(s.goal || '0').replace(/[^\d]/g, ''), 10) || 0);
