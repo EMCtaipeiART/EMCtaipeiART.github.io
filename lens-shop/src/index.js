@@ -1,4 +1,5 @@
 import { buildCatalog } from './catalog.js';
+import { buildDrinkCatalog, pickDrink } from './drink.js';
 import { fillForms } from './xlsx.js';
 import { orderMail, SYSTEM_NOTE } from './mail.js';
 import { D1Files } from './store.js';
@@ -62,8 +63,9 @@ function cleanLines(raw, catalog) {
     const qty = Number(l.qty);
     if (!Number.isInteger(qty) || qty < 1 || qty > 99) throw new Error(`第 ${idx + 1} 筆（${it.name}）：數量需為 1–99`);
     const sph = t(l.sph), cyl = t(l.cyl), axis = t(l.axis);
-    if (it.power && !sph) throw new Error(`第 ${idx + 1} 筆（${it.name}）：請填寫度數（0 度請填 0）`);
+    if (!catalog.drink && it.power && !sph) throw new Error(`第 ${idx + 1} 筆（${it.name}）：請填寫度數（0 度請填 0）`);
     if (it.toric && (cyl || axis) && !(cyl && axis)) throw new Error(`第 ${idx + 1} 筆（${it.name}）：散光度數與角度需一併填寫`);
+    if (catalog.drink) { const d = pickDrink(it, l, idx); return { no: it.no, brand: it.brand, name: it.name, price: it.price + d.extra, qty, sph: '', cyl: '', axis: '', gift: t(l.gift, 40), sel: d.sel, opts: d.opts }; }
     return { no: it.no, brand: it.brand, name: it.name, price: it.price, qty, sph, cyl, axis, gift: t(l.gift, 40) };
   });
 }
@@ -121,7 +123,8 @@ async function handle(req, env) {
       const covers = [...new Set(Object.values(pimgs))].filter((u) => typeof u === 'string').slice(0, 4);
       return { id: c.id, name: s.shopName, deadline: s.deadline, ended: isEnded(camps, c.id), closed: closedNow(s, c.id), ready: !!cat,
         goal, sum, count: rs.results.length, names: names.slice(0, 8), nameCount: names.length, reachedAt,
-        startAt: c.createdAt || (rs.results[0] && rs.results[0].created_at) || '', covers };
+        startAt: c.createdAt || (rs.results[0] && rs.results[0].created_at) || '', covers,
+        drink: !!(cat && cat.drink), store: cat && cat.drink ? cat.store : '', link: cat && cat.drink ? cat.link : '' };
     }));
     return json({ campaigns: list }, 200, { 'cache-control': 'public, max-age=15' });
   }
@@ -140,7 +143,7 @@ async function handle(req, env) {
   // 公開訂單列表（不含 Email 與修改連結）
   if (path === '/api/orders-public' && method === 'GET') {
     const rs = await env.DB.prepare("SELECT * FROM orders WHERE status='active' AND campaign=? ORDER BY created_at DESC").bind(cid).all();
-    const orders = rs.results.map((o) => { const p = pubOrder(o); return { id: p.id, name: p.name, items: p.items.map((l) => ({ no: l.no, brand: l.brand, name: l.name, price: l.price, qty: l.qty, sph: l.sph, cyl: l.cyl, axis: l.axis, gift: l.gift })), total: p.total, updatedAt: p.updatedAt, paid: !!p.pay }; });
+    const orders = rs.results.map((o) => { const p = pubOrder(o); return { id: p.id, name: p.name, items: p.items.map((l) => ({ no: l.no, brand: l.brand, name: l.name, price: l.price, qty: l.qty, sph: l.sph, cyl: l.cyl, axis: l.axis, gift: l.gift, opts: l.opts })), total: p.total, updatedAt: p.updatedAt, paid: !!p.pay }; });
     return json({ orders, count: orders.length, sum: orders.reduce((x, o) => x + o.total, 0) });
   }
   // 即時聊天室（表 chat、chat_presence；第一次使用時自動建立，不動既有資料）
@@ -308,6 +311,14 @@ async function handle(req, env) {
       await setKV(env, 'campaigns', camps.map((c) => (c.id === m[1] ? { ...c, status: st, endedAt: st === 'ended' ? now() : undefined } : c)));
       return json({ ok: true });
     }
+    if (path === '/api/admin/drink-menu' && method === 'POST') {
+      const b = await req.json().catch(() => null); if (!b) return err('資料格式錯誤');
+      let built; try { built = buildDrinkCatalog(b.menu || b); } catch (e) { return err('菜單格式不正確：' + e.message); }
+      if (b.link !== undefined) built.catalog.link = /^https:\/\/[^\s]+$/i.test(b.link) ? b.link : '';
+      await env.FILES.put(fk(cid, 'catalog.json'), JSON.stringify(built.catalog), { httpMetadata: { contentType: 'application/json' } });
+      await setKV(env, kk(cid, 'pimgs'), built.pimgs);
+      return json({ ok: true, items: built.catalog.items.length, images: Object.keys(built.pimgs).length });
+    }
     if (path === '/api/admin/product-image' && method === 'POST') {
       const nos = (url.searchParams.get('nos') || '').split(',').map(Number).filter(Boolean).slice(0, 500);
       if (!nos.length) return err('沒有指定商品');
@@ -353,9 +364,9 @@ async function handle(req, env) {
       const rs = await env.DB.prepare('SELECT * FROM orders WHERE campaign=? ORDER BY created_at DESC').bind(cid).all();
       const orders = rs.results.map((o) => ({ ...pubOrder(o), payImg: o.pay_img || null }));
       const tally = {};
-      for (const o of orders) if (o.status === 'active') for (const l of o.items) { const t = (tally[l.no] ||= { no: l.no, brand: l.brand, name: l.name, price: l.price, qty: 0 }); t.qty += l.qty; }
+      for (const o of orders) if (o.status === 'active') for (const l of o.items) { const t = (tally[l.no + '|' + (l.opts || '')] ||= { no: l.no, brand: l.brand, name: l.name, price: l.price, opts: l.opts || '', qty: 0 }); t.qty += l.qty; }
       const active = orders.filter((o) => o.status === 'active');
-      return json({ orders, tally: Object.values(tally).sort((a, b) => a.no - b.no), sum: active.reduce((s, o) => s + o.total, 0), count: active.length });
+      return json({ orders, tally: Object.values(tally).sort((a, b) => a.no - b.no || String(a.opts).localeCompare(String(b.opts))), sum: active.reduce((s, o) => s + o.total, 0), count: active.length });
     }
     if ((m = path.match(/^\/api\/admin\/orders\/([0-9A-F]{8})$/)) && method === 'DELETE') {
       await env.DB.prepare('DELETE FROM orders WHERE id=?').bind(m[1]).run(); return json({ ok: true });

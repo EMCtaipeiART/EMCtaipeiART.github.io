@@ -7,7 +7,7 @@ export function fmtDeadline(d) {
   const wd = '日一二三四五六'[new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])).getUTCDay()];
   return `${m[1]}/${m[2]}/${m[3]}（${wd}）${m[4] ? ` ${m[4]}:${m[5]}` : ''}`;
 }
-export const powerText = (l) => [l.sph && `度數 ${l.sph}`, l.cyl && `散光 ${l.cyl}`, l.axis && `角度 ${l.axis}`].filter(Boolean).join('／');
+export const powerText = (l) => l.opts || [l.sph && `度數 ${l.sph}`, l.cyl && `散光 ${l.cyl}`, l.axis && `角度 ${l.axis}`].filter(Boolean).join('／');
 
 export const SYSTEM_NOTE = '※ 此為系統自動發送的通知信，請勿直接回覆本信。如有問題請洽團購負責人。';
 

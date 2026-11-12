@@ -2094,3 +2094,10 @@
 
 ## 2026-11-12 後台第 0、1 區塊間距
 - 「1. 上傳報價 Excel」卡片補上 margin-top:12px，與其他區塊一致。
+
+## 2026-11-12 飲料團（Uber Eats／你訂 通用菜單）
+- 新增「飲料團」團購類型：菜單目錄加 `drink:true`、`store`、`platform`、`link`，每個品項帶選項群組 `groups:[{n,min,max,o:[[名稱,加價]]}]`（冰量／甜度／加料／茶湯…），沿用原本的達標卡牌、聊天室、評論、訂單與匯款流程。
+- 資料來源：不用逐項點開，直接讀平台前端資料——Uber Eats 用頁面內的 `getMenuItemV1`（逐項選項與加價）、你訂用頁面 Vue 元件的 `menu` 資料（品項＋adjust／option）。`tools/drink-normalize.mjs` 把兩個原始檔（`tools/ue-qingxin-menu.json`、`tools/nidin-lephare-menu.json`）整理成通用格式 `menus/qingxin-minsheng.json`、`menus/lephare-minsheng.json`（清掉 Uber 的份量標記、去掉塑膠袋／購物袋）。
+- 後端：新增 `src/drink.js`（`buildDrinkCatalog`、`pickDrink`）；`cleanLines` 驗證必選／最多選、加價算進單價並存 `sel`、`opts`；`POST /api/admin/drink-menu` 匯入菜單（同時把 Uber 圖片網址寫入 pimgs）；彙總依「品項＋選項」分列；`/api/campaigns` 帶 drink／store／link；信件與訂單顯示改用 `opts`。
+- 前端：飲料版加入視窗（選項晶片、即時單價）、購物車／訂單依選項計價、飲料團隱藏促銷與規格、選購頁有「前往店家頁」按鈕、後台新增「飲料團：匯入菜單」與「複製點餐清單」（取代 Excel 下載）。
+- 本機用 wrangler dev 驗證兩份菜單匯入、下單、必選檢查、加價；已部署。線上尚未建立任何飲料團（需在後台新增團購後匯入 menus/*.json）。

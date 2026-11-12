@@ -158,7 +158,7 @@ const st={cid:null,camps:null,cat:null,set:null,cart:[],who:JSON.parse(localStor
 function cartBar(){let b=document.getElementById('cbar');if(!b){b=document.createElement('div');b.id='cbar';document.body.appendChild(b)}
  const r=P().page;const lines=st.cart.map(l=>({...l,it:byNo(l.no)})).filter(l=>l.it);
  if(!lines.length||!['','promo','spec'].includes(r)||st.set?.closed){b.style.display='none';document.body.classList.remove('hasbar');return}
- const total=lines.reduce((x,l)=>x+l.it.price*l.qty,0),n=lines.reduce((x,l)=>x+l.qty,0);
+ const total=lines.reduce((x,l)=>x+lp(l)*l.qty,0),n=lines.reduce((x,l)=>x+l.qty,0);
  b.innerHTML=`<div class="cb-in"><div class="cb-l"><b>已選 ${n} 件 <em style="font-style:normal;font-weight:600;font-size:12.5px;color:var(--bd)">查看購物車 ›</em></b><span>${lines.map(l=>esc(l.it.name)+(l.qty>1?'×'+l.qty:'')).join('、')}</span></div><div class="cb-t">目前金額<b>${nt(total)}</b></div><a class="cb-go" href="${H('/cart')}">送出訂單</a></div>`;
  b.style.cursor='pointer';b.title='查看購物車';b.onclick=e=>{if(e.target.closest('.cb-go'))return;go(H('/cart'))};
  b.style.display='block';document.body.classList.add('hasbar')}
@@ -179,7 +179,7 @@ function fmtD(d){if(!d)return'';const m=/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d
 function dlText(){const s=st.set;if(!s)return'';if(s.closed)return'<b>已截止／已結單</b>';if(!s.deadline)return'';
  const ms=Date.parse(s.deadline+(s.deadline.length<=16?':00+08:00':''))-Date.now();const d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5);
  return`截止：${fmtD(s.deadline)}（剩 <b>${d>0?d+' 天 ':''}${h} 小時</b>）`}
-function renderNav(){const r=P().page;const L=[...((st.camps||[]).length>1?[['campaigns','全部團購']]:[]),['','開始選購'],['promo','促銷活動'],['spec','規格表'],['cart','購物車'],['mine','訂單列表'],['admin','管理']];
+function renderNav(){const r=P().page;const L=[...((st.camps||[]).length>1?[['campaigns','全部團購']]:[]),['','開始選購'],...(isDrink()?[]:[['promo','促銷活動'],['spec','規格表']]),['cart','購物車'],['mine','訂單列表'],['admin','管理']];
  const IC={"":"<path d=\"M3 11 12 4l9 7M5 10v10h14V10\"/>","promo":"<path d=\"M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8zM7.5 7.5h.01\"/>","spec":"<rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"2\"/><path d=\"M3 10h18M9 4v16\"/>","cart":"<path d=\"M3 3h2.5l2.2 12h10.6l2-8.5H6.4\"/><circle cx=\"9.5\" cy=\"19.5\" r=\"1.3\"/><circle cx=\"17\" cy=\"19.5\" r=\"1.3\"/>","campaigns":"<rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1.5\"/>","mine":"<path d=\"M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01\"/>","admin":"<circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7\"/>"};
  $('#nav').innerHTML=L.map(([k,n])=>`<a href="${k==='campaigns'?'/campaigns':H('/'+k)}" title="${n}" aria-label="${n}" class="ni ${r===k||(k==='cart'&&r==='order')?'on':''}"><svg viewBox="0 0 24 24">${IC[k]}</svg><em class="lb">${n}</em>${k==='cart'&&st.cart.length?`<span class="n">${st.cart.reduce((s,l)=>s+l.qty,0)}</span>`:''}</a>`).join('');
  $('#dl').innerHTML=dlText();$('#logo').textContent=st.set?.shopName||'隱形眼鏡團購';cartBar();chatInit()}
@@ -188,21 +188,21 @@ const items=()=>st.cat?.items||[];const byNo=n=>items().find(i=>i.no===n);
 
 // ───── 選購 ─────
 const FLOW=[["選購商品","挑品項、填度數"],["送出訂單","確認信寄到信箱"],["依帳號匯款","帳號在確認信裡"],["回報匯款","後 5 碼或截圖"]];
-function flowHtml(done=[]){return`<div class="flow">${FLOW.map((x,i)=>`<div class="${done[i]?'ok':''}"><i>${done[i]?'✓':i+1}</i><section><b>${x[0]}${done[i]?' <em>✓</em>':''}</b><span>${x[1]}</span></section></div>`).join('')}</div>`}
+function flowHtml(done=[]){return`<div class="flow">${FLOW.map((x,i)=>`<div class="${done[i]?'ok':''}"><i>${done[i]?'✓':i+1}</i><section><b>${x[0]}${done[i]?' <em>✓</em>':''}</b><span>${i===0&&isDrink()?"挑飲料、選甜度冰量":x[1]}</span></section></div>`).join('')}</div>`}
 function viewShop(){
  if(!st.cat)return $('#app').innerHTML='<div class="note">目前尚未開放，請稍後再來。</div>';
  const brands=['全部',...new Set(items().map(i=>i.brand))];
  const q=st.q.trim().toLowerCase();
  const list=items().filter(i=>(st.brand==='全部'||i.brand===st.brand)&&(!q||(i.brand+i.name+i.no).toLowerCase().includes(q)));
  $('#app').innerHTML=`${closedBanner()}
- <section class="top"><div class="hero2"><span class="eyebrow">EMC GROUP BUY</span><h1>${esc(st.set?.shopName||'隱形眼鏡團購')}</h1>
-  <p>公司團購價優惠。挑好商品、填好度數，一次下單，截止前都能回來修改。</p>
+ <section class="top"><div class="hero2"><span class="eyebrow">${isDrink()?'DRINK GROUP BUY':'EMC GROUP BUY'}</span><h1>${esc(st.set?.shopName||'隱形眼鏡團購')}</h1>
+  <p>${isDrink()?esc(st.cat.store||'')+'　挑好飲料、選好甜度冰量，一次下單，截止前都能回來修改。':'公司團購價優惠。挑好商品、填好度數，一次下單，截止前都能回來修改。'}</p>${isDrink()&&st.cat.link?`<p style="margin-top:6px"><a class="btn sec" target="_blank" rel="noopener" href="${esc(st.cat.link)}">前往${st.cat.platform==='ubereats'?' Uber Eats ':st.cat.platform==='nidin'?' 你訂 ':' '}店家頁</a></p>`:''}
     <div class="hcd"><small>${st.set?.closed?'本次團購已結單':'團購截止時間'}</small><div class="dd">${dlFull()}</div><div class="dsub">${st.set?.closed?'':'距離截止還有'}</div><div class="cdn" id="cdn">${cdHtml()}</div></div></div></section>
  ${flowHtml()}
- <div class="sech" id="list"><h2>選購商品</h2><span>共 ${items().length} 項</span></div>
+ <div class="sech" id="list"><h2>${isDrink()?'選購飲料':'選購商品'}</h2><span>共 ${items().length} 項</span></div>
  <div class="tools"><input type="search" id="q" placeholder="搜尋品牌、品名、編號…" value="${esc(st.q)}"></div>
  <div class="chips">${brands.map(b=>`<span class="chip ${b===st.brand?'on':''}" data-b="${esc(b)}">${esc(b)}</span>`).join('')}</div>
- <div class="card" style="padding:0">${list.slice(0,st.shown).map(i=>`<div class="item"><span class="no">#${i.no}</span>${thumb(i)}
+ <div class="card" style="padding:0">${list.slice(0,st.shown).map(i=>`<div class="item">${isDrink()?'':`<span class="no">#${i.no}</span>`}${thumb(i)}
   <div><div class="nm">${esc(i.name)}</div><div class="sub">${esc(i.brand)}${i.range?' ｜ '+esc(i.range):''}</div>${capsules(i.no)}</div>
   <div class="pr"><b>${nt(i.price)}</b>${i.market?`<s>市價 ${nt(i.market)}</s>`:''}</div>
   <div class="acts"><button class="cm" data-cm="${i.no}">評論</button><button data-add="${i.no}" ${st.set?.closed?'disabled':''}>加入</button></div></div>`).join('')||'<p style="padding:14px" class="muted">沒有符合的商品</p>'}</div>
@@ -281,7 +281,25 @@ function cdHtml(){const s=st.set;if(!s||s.closed)return'<div><b>—</b><span>已
 function closedBanner(){return st.set?.closed?'<div class="note bad">本次團購已截止，無法再下單或修改。</div>':''}
 // 選到特定商品時跳出的提醒（可依品名新增）
 const NOTICES=[{re:/珂朗清矽水膠日拋/,text:'珂朗清矽水膠日拋30片裝訂購沒有60片裝，若不想要收到10片裝，請不要訂60片或120片的優惠，可以選擇30片裝'}];
+function drinkDialog(no,idx){
+ const it=byNo(no),ex=idx!=null?st.cart[idx]:{qty:1};const sel=it.groups.map((g,gi)=>[...((ex.sel&&ex.sel[gi])||[])]);
+ const bg=document.createElement('div');bg.className='modalbg';
+ const grp=()=>it.groups.map((g,gi)=>`<div style="margin:12px 0 4px"><label><b>${esc(g.n)}</b> <span class="sub">${g.min?'必選':'選填'}${g.max>1?'，最多 '+g.max+' 項':''}</span></label><div class="chips">${g.o.map((o,oi)=>`<span class="chip ${sel[gi].includes(oi)?'on':''}" data-g="${gi}" data-o="${oi}">${esc(o[0])}${o[1]?' +'+o[1]:''}</span>`).join('')}</div></div>`).join('');
+ const price=()=>{let x=it.price;it.groups.forEach((g,gi)=>sel[gi].forEach(n=>x+=g.o[n][1]));return x};
+ bg.innerHTML=`<div class="modal"><h3 style="margin-top:0">${esc(it.name)}</h3><div class="sub">${esc(it.brand)}｜${nt(it.price)}</div><div id="dg">${grp()}</div>
+ <div class="row2"><div><label>杯數</label><input id="f-qty" type="number" min="1" max="99" value="${ex.qty}"></div><div><label>備註（選填）</label><input id="f-gift" value="${esc(ex.gift||'')}" placeholder="例：不要吸管"></div></div>
+ <div class="total" style="text-align:right">每杯 <b id="dp">${nt(price())}</b></div>
+ <div class="acts"><button class="sec" id="f-x">取消</button><button id="f-ok">${idx!=null?'更新':'加入購物車'}</button></div></div>`;
+ document.body.appendChild(bg);$('#f-x',bg).onclick=()=>bg.remove();
+ const bind=()=>bg.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{const gi=+c.dataset.g,oi=+c.dataset.o,g=it.groups[gi],a=sel[gi],k=a.indexOf(oi);
+  if(k>=0){if(g.max===1&&g.min===1)return;a.splice(k,1)}else{if(g.max===1)a.length=0;else if(a.length>=g.max)return toast('「'+g.n+'」最多選 '+g.max+' 項');a.push(oi)}
+  $('#dg',bg).innerHTML=grp();$('#dp',bg).textContent=nt(price());bind()});bind();
+ $('#f-ok',bg).onclick=()=>{for(let gi=0;gi<it.groups.length;gi++)if(sel[gi].length<it.groups[gi].min)return alert('請選擇「'+it.groups[gi].n+'」');
+  const line={no,qty:Math.max(1,Math.min(99,parseInt($('#f-qty',bg).value)||1)),gift:$('#f-gift',bg).value.trim(),sel:sel.map(a=>[...a].sort((x,y)=>x-y))};
+  if(idx!=null)st.cart[idx]=line;else st.cart.push(line);saveCart();bg.remove();if(idx!=null)viewCart();else toast('已加入購物車')};
+}
 function addDialog(no,idx){
+ if(isDrink())return drinkDialog(no,idx);
  const it=byNo(no),ex=idx!=null?st.cart[idx]:{qty:1};
  const bg=document.createElement('div');bg.className='modalbg';
  bg.innerHTML=`<div class="modal"><h3 style="margin-top:0">${esc(it.name)}</h3>${NOTICES.filter(n=>n.re.test(it.name)).map(n=>`<div class="note bad" style="margin:10px 0"><b>⚠ 注意</b><br>${esc(n.text)}</div>`).join('')}<div class="sub">${esc(it.brand)}｜${nt(it.price)}${it.range?'｜供應度數：'+esc(it.range):''}</div>
@@ -297,14 +315,17 @@ function addDialog(no,idx){
 function toast(t){const d=document.createElement('div');d.textContent=t;d.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:9px 18px;border-radius:20px;z-index:99';document.body.appendChild(d);setTimeout(()=>d.remove(),1400)}
 
 // ───── 購物車／下單 ─────
-const pw=l=>[l.sph&&'度數 '+l.sph,l.cyl&&'散光 '+l.cyl,l.axis&&'角度 '+l.axis].filter(Boolean).join('／');
+const isDrink=()=>!!st.cat?.drink;
+function optText(it,sel){return it.groups.map((g,gi)=>(sel[gi]||[]).map(n=>g.o[n]&&g.o[n][0]).filter(Boolean)).flat().join('／')}
+function lp(l){const it=byNo(l.no);if(!it)return 0;let x=it.price;if(it.groups&&l.sel)it.groups.forEach((g,gi)=>(l.sel[gi]||[]).forEach(n=>{if(g.o[n])x+=g.o[n][1]}));return x}
+const pw=l=>l.opts||(l.sel&&byNo(l.no)?optText(byNo(l.no),l.sel):'')||[l.sph&&'度數 '+l.sph,l.cyl&&'散光 '+l.cyl,l.axis&&'角度 '+l.axis].filter(Boolean).join('／');
 function viewCart(){
  const lines=st.cart.map((l,i)=>({...l,i,it:byNo(l.no)})).filter(l=>l.it);
- const total=lines.reduce((s,l)=>s+l.it.price*l.qty,0);const edit=!!st.editTok;
+ const total=lines.reduce((s,l)=>s+lp(l)*l.qty,0);const edit=!!st.editTok;
  $('#app').innerHTML=`${closedBanner()}${flowHtml([lines.length>0||edit,edit])}<h2>${edit?'修改我的訂單'+(st.editId?'（'+st.editId+'）':''):'購物車'}</h2>
  ${edit?'<div class="note ok">您正在修改已送出的訂單，修改完成後請按下方「儲存修改」。截止前都可再改。</div>':''}
  ${lines.length?`<div class="card"><table class="t"><thead><tr><th>品項</th><th>規格</th><th class="num">單價</th><th class="num">數量</th><th class="num">小計</th><th></th></tr></thead><tbody>
- ${lines.map(l=>`<tr><td>#${l.no} ${esc(l.it.brand)} ${esc(l.it.name)}</td><td class="sub">${esc(pw(l))}${l.gift?'<br>贈品：'+esc(l.gift):''}</td><td class="num">${nt(l.it.price)}</td><td class="num">${l.qty}</td><td class="num">${nt(l.it.price*l.qty)}</td>
+ ${lines.map(l=>`<tr><td>${isDrink()?'':'#'+l.no+' '}${esc(l.it.brand)} ${esc(l.it.name)}</td><td class="sub">${esc(pw(l))}${l.gift?'<br>贈品：'+esc(l.gift):''}</td><td class="num">${nt(lp(l))}</td><td class="num">${l.qty}</td><td class="num">${nt(lp(l)*l.qty)}</td>
  <td style="white-space:nowrap"><button class="sec" data-e="${l.i}">編輯</button> <button class="sec" data-d="${l.i}">刪除</button></td></tr>`).join('')}</tbody></table>
  <div class="total">合計：<b>${nt(total)}</b></div>
  <div class="form2"><input id="c-name" placeholder="姓名（必填）" value="${esc(st.who.name||'')}"><input id="c-email" type="email" placeholder="Email（必填，訂單確認信寄到這裡）" value="${esc(st.who.email||'')}"></div>
@@ -325,7 +346,7 @@ function viewCart(){
 function done(d){const o=d.order,mail={sent:'確認信已寄到 '+esc(o.email)+'，請查收（若沒看到請檢查垃圾郵件）。',skipped:'（系統尚未設定寄信，沒有寄出確認信，請截圖保存本頁。）',failed:'確認信寄送失敗，請截圖保存本頁，或到「我的訂單」查看。'}[d.mail]||'';
  $('#app').innerHTML=`${flowHtml([1,1])}<div class="note ok"><h2 style="margin-top:0">✔ 訂單已送出（編號 ${o.id}）</h2>${mail}</div><div class="card">${orderTable(o)}
  <p>${bankHtml()}</p><p class="muted">匯款完成後，請回到「訂單列表」下方「修改我的訂單」，或用確認信的專屬連結，回報匯款後 5 碼／截圖。截止前也可回來修改訂單。</p><div class="acts"><a class="btn" href="/mine">我的訂單</a><a class="btn sec" href="/">回首頁</a></div></div>`}
-function orderTable(o){return`<table class="t"><tbody>${o.items.map(l=>`<tr><td>#${l.no} ${esc(l.brand)} ${esc(l.name)}<div class="sub">${esc(pw(l))}${l.gift?' 贈品：'+esc(l.gift):''}</div></td><td class="num">${nt(l.price)} × ${l.qty}</td><td class="num">${nt(l.price*l.qty)}</td></tr>`).join('')}</tbody></table><div class="total">合計 <b>${nt(o.total)}</b></div>`}
+function orderTable(o){return`<table class="t"><tbody>${o.items.map(l=>`<tr><td>${isDrink()?'':'#'+l.no+' '}${esc(l.brand)} ${esc(l.name)}<div class="sub">${esc(pw(l))}${l.gift?' 贈品：'+esc(l.gift):''}</div></td><td class="num">${nt(l.price)} × ${l.qty}</td><td class="num">${nt(l.price*l.qty)}</td></tr>`).join('')}</tbody></table><div class="total">合計 <b>${nt(o.total)}</b></div>`}
 function bankHtml(){const s=st.set||{};return s.bankAccount?`<b>匯款資訊</b>：${esc(s.bankName)}　帳號 <b>${esc(s.bankAccount)}</b>　戶名 ${esc(s.accountName)}`:''}
 
 async function viewOrder(tok){
@@ -335,7 +356,7 @@ async function viewOrder(tok){
   <p>${esc(o.name)}（${esc(o.email)}）｜下單 ${tp(o.createdAt)}${o.updatedAt!==o.createdAt?'｜最後修改 '+tp(o.updatedAt):''}</p>${orderTable(o)}<p>${bankHtml()}</p>
   <div class="acts"><a class="btn sec" href="${H('/mine')}">返回</a>${!d.closed?'<button id="edit">編輯這筆訂單</button>':''}</div></div>${o.status==='active'?payCard(o):''}`;
   bindPay(tok,o);
-  const e=$('#edit');if(e)e.onclick=()=>{st.cart=o.items.map(l=>({no:l.no,qty:l.qty,sph:l.sph,cyl:l.cyl,axis:l.axis,gift:l.gift}));st.editTok=tok;st.editId=o.id;st.who={name:o.name,email:o.email};st.note=o.note;saveCart();go(H('/cart'))}
+  const e=$('#edit');if(e)e.onclick=()=>{st.cart=o.items.map(l=>({no:l.no,qty:l.qty,sph:l.sph,cyl:l.cyl,axis:l.axis,gift:l.gift,sel:l.sel}));st.editTok=tok;st.editId=o.id;st.who={name:o.name,email:o.email};st.note=o.note;saveCart();go(H('/cart'))}
  }catch(e){$('#app').innerHTML=`<div class="note bad">${esc(e.message)}</div>`}}
 function payCard(o){const p=o.pay;
  return `<div class="card" style="margin-top:12px"><h3 style="margin-top:0">匯款回報 ${p?'<span class="paid">✔ 已付款</span>':'<span class="unpaid">未付款</span>'}</h3>
@@ -362,7 +383,7 @@ async function viewMine(){
  $('#app').innerHTML=`${flowHtml([hv,hv,hp,hp])}<h2>訂單列表</h2><div class="note ok">目前共 <b>${d.count}</b> 筆訂單，合計 <b>${nt(d.sum)}</b></div>
  <div class="tools"><input type="search" id="oq" placeholder="搜尋姓名或商品…" value="${esc(st.oq||'')}"></div>
  ${L.map(o=>`<div class="card" style="margin-bottom:10px"><div class="sp"><b>${esc(o.name)}${o.paid?'<span class="paid">✔ 已付款</span>':'<span class="unpaid">未付款</span>'}</b><span class="muted">訂單 ${o.id}｜${tp(o.updatedAt)}</span></div>
- <table class="t"><tbody>${o.items.map(l=>`<tr><td>#${l.no} ${esc(l.brand)} ${esc(l.name)}<div class="sub">${esc(pw(l))}${l.gift?' 贈品：'+esc(l.gift):''}</div>${capsules(l.no)}</td><td class="num">${nt(l.price)} × ${l.qty}</td><td class="num">${nt(l.price*l.qty)}</td></tr>`).join('')}</tbody></table>
+ <table class="t"><tbody>${o.items.map(l=>`<tr><td>${isDrink()?'':'#'+l.no+' '}${esc(l.brand)} ${esc(l.name)}<div class="sub">${esc(pw(l))}${l.gift?' 贈品：'+esc(l.gift):''}</div>${capsules(l.no)}</td><td class="num">${nt(l.price)} × ${l.qty}</td><td class="num">${nt(l.price*l.qty)}</td></tr>`).join('')}</tbody></table>
  <div class="total" style="margin:6px 0 0;font-size:16px">小計 <b>${nt(o.total)}</b></div></div>`).join('')||'<div class="card muted">沒有符合的訂單</div>'}
  <h2 style="margin-top:26px">修改我的訂單</h2>
  ${mine.length?`<div class="card"><p class="muted">這台瀏覽器下過的訂單（截止前可編輯）：</p>${mine.map(m=>`<p><a href="/order/${m.token}">訂單 ${m.id}（查看／修改）</a></p>`).join('')}</div>`:''}
@@ -414,21 +435,26 @@ async function viewAdmin(){
   <div class="card"><h3 style="margin-top:0">0. 團購管理</h3><p class="muted">目前管理：<b>${esc(cur.name||st.cid)}</b>（代號 ${esc(st.cid)}）。下方的 Excel、設定、商品圖與訂單都屬於這個團購；結束後訂單會保留，同事不能再下單或修改。</p>
   <div class="tools"><select id="csel">${cs.map(c=>`<option value="${esc(c.id)}" ${c.id===st.cid?'selected':''}>${esc(c.name)}${c.ended?'（已結束）':''}</option>`).join('')}</select><button class="sec" id="cend">${cur.ended?'重新開放此團購':'結束此團購'}</button></div>
   <div class="tools" style="margin-top:8px"><input id="cnid" placeholder="新團購代號（英文小寫，如 glasses）"><input id="cnnm" placeholder="新團購名稱"><button id="cnew">新增團購</button></div></div>
+  <div class="card" style="margin-top:12px"><h3 style="margin-top:0">飲料團：匯入菜單</h3><p class="muted">選擇整理好的飲料菜單 .json（清心福全、樂法等，由 Claude 從 Uber Eats／你訂抓取）。匯入後這個團購就會變成「飲料團」，並取代目前的商品目錄（訂單保留）。${st.cat?.drink?'<br>目前菜單：<b>'+esc(st.cat.store||'')+'</b>，共 '+st.cat.items.length+' 項。':''}</p>
+  <div class="tools"><input type="file" id="mf" accept=".json"><input id="mlink" placeholder="店家頁／開團連結（https://…，選填）" value="${esc(st.cat?.link||'')}"><button id="mup">匯入菜單</button></div></div>
   <div class="card" style="margin-top:12px"><h3 style="margin-top:0">1. 上傳報價 Excel</h3><p class="muted">選擇含「報價單／全台獨家活動／期間限定／各品牌度數規格／填寫單1」的 .xlsx，網站會自動更新價格與內容，並作為匯出的範本。</p>
   <input type="file" id="xf" accept=".xlsx"> <button id="up">上傳並更新</button> <span id="upm" class="muted"></span></div>
   <div class="card" style="margin-top:12px"><h3 style="margin-top:0">2. 團購設定</h3><div class="form2">${f('shopName','團購名稱')}${f('goal','達標金額（NT$，開團成功門檻；留空或 0＝不設門檻）','number')}${f('deadline','截止日期時間（台北時間）','datetime-local')}${f('bankName','銀行（含代碼）')}${f('bankAccount','匯款帳號')}${f('accountName','戶名')}${f('siteUrl','網站網址（信件連結用，可留空）')}</div>
   <label class="sub">信件／頁面附註</label><textarea data-k="notes" rows="2" style="width:100%">${esc(s.notes)}</textarea>
   <p><label><input type="checkbox" id="closed" ${s.closed?'checked':''}> 手動結單（勾選後同事無法再下單／修改）</label></p><button id="sv">儲存設定</button></div>
   <div class="card" style="margin-top:12px"><h3 style="margin-top:0">4. 商品圖片</h3><p class="muted">選品牌後可逐項上傳圖片或貼 https 圖片網址；也能一次套用到整個品牌。圖片會自動縮小。</p><div id="pimgbox"></div></div>
-  <div class="card" style="margin-top:12px"><div class="sp"><h3 style="margin:0">3. 訂單（${o.count} 筆有效單，${o.orders.filter(x=>x.status!=='cancelled'&&x.pay).length} 筆已付款單，已付 ${nt(o.orders.filter(x=>x.status!=='cancelled'&&x.pay).reduce((n,x)=>n+x.total,0))}）</h3><button id="ex">一鍵下載彙整 Excel</button></div>
+  <div class="card" style="margin-top:12px"><div class="sp"><h3 style="margin:0">3. 訂單（${o.count} 筆有效單，${o.orders.filter(x=>x.status!=='cancelled'&&x.pay).length} 筆已付款單，已付 ${nt(o.orders.filter(x=>x.status!=='cancelled'&&x.pay).reduce((n,x)=>n+x.total,0))}）</h3>${st.cat?.drink?'<button id="cpy">複製點餐清單</button>':'<button id="ex">一鍵下載彙整 Excel</button>'}</div>
   <p class="muted">下載檔 = 原上傳的 Excel，只把訂單填入「填寫單1」（超過會接續填寫單2～4），原本的公式不會被覆蓋。</p>
   <table class="t ord"><thead><tr><th>編號</th><th>姓名／Email</th><th>內容</th><th class="num">金額</th><th></th></tr></thead><tbody>${o.orders.map(x=>`<tr style="${x.status==='cancelled'?'opacity:.5':''}"><td>${x.id}${x.status==='cancelled'?'<span class="tag x">取消</span>':''}${x.pay?'<br><span class="paid" style="margin:0">✔ 已付款</span>':''}</td><td>${esc(x.name)}<div class="sub">${esc(x.email)}</div></td>
-   <td class="sub">${x.items.map(l=>`#${l.no} ${esc(l.name)} ${esc(pw(l))} ×${l.qty}`).join('<br>')}</td><td class="num">${nt(x.total)}${x.pay?`<div class="sub">後五碼 ${esc(x.pay.last5||'—')}${x.payImg?` <a href="#" data-pi="${x.payImg}">看截圖</a>`:''}<br><a href="#" data-rp="${x.id}">撤銷付款</a></div>`:''}</td><td><button class="sec" data-del="${x.id}">刪除</button></td></tr>`).join('')||'<tr><td colspan=5 class="muted">還沒有訂單</td></tr>'}</tbody></table>
-  <h3>商品彙總（供向廠商叫貨）</h3><table class="t"><thead><tr><th>編號</th><th>品項</th><th class="num">總盒數</th><th class="num">金額</th></tr></thead><tbody>${o.tally.map(t=>`<tr><td>${t.no}</td><td>${esc(t.brand)} ${esc(t.name)}</td><td class="num">${t.qty}</td><td class="num">${nt(t.qty*t.price)}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan=2><b>整團金額</b></td><td class="num"><b>${o.tally.reduce((n,t)=>n+t.qty,0)}</b></td><td class="num"><b>${nt(o.sum)}</b></td></tr></tfoot></table></div>`;
+   <td class="sub">${x.items.map(l=>`${isDrink()?'':'#'+l.no+' '}${esc(l.name)} ${esc(pw(l))} ×${l.qty}`).join('<br>')}</td><td class="num">${nt(x.total)}${x.pay?`<div class="sub">後五碼 ${esc(x.pay.last5||'—')}${x.payImg?` <a href="#" data-pi="${x.payImg}">看截圖</a>`:''}<br><a href="#" data-rp="${x.id}">撤銷付款</a></div>`:''}</td><td><button class="sec" data-del="${x.id}">刪除</button></td></tr>`).join('')||'<tr><td colspan=5 class="muted">還沒有訂單</td></tr>'}</tbody></table>
+  <h3>商品彙總（供向廠商叫貨）</h3><table class="t"><thead><tr><th>編號</th><th>品項</th><th class="num">總盒數</th><th class="num">金額</th></tr></thead><tbody>${o.tally.map(t=>`<tr><td>${t.no}</td><td>${esc(t.brand)} ${esc(t.name)}${t.opts?'<div class="sub">'+esc(t.opts)+'</div>':''}</td><td class="num">${t.qty}</td><td class="num">${nt(t.qty*t.price)}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan=2><b>整團金額</b></td><td class="num"><b>${o.tally.reduce((n,t)=>n+t.qty,0)}</b></td><td class="num"><b>${nt(o.sum)}</b></td></tr></tfoot></table></div>`;
   pimgUI();
   $('#csel').onchange=e=>go('/g/'+e.target.value+'/admin');
   $('#cend').onclick=async()=>{const ending=!cur.ended;if(!confirm(ending?'結束「'+(cur.name||st.cid)+'」？結束後同事無法再下單或修改（訂單與資料保留，可隨時重新開放）。':'重新開放這個團購？'))return;try{await api('/admin/campaigns/'+encodeURIComponent(st.cid),{method:'PUT',admin:1,json:{status:ending?'ended':'open'}});await loadCamps();await fetchCat();viewAdmin()}catch(e){alert(e.message)}};
   $('#cnew').onclick=async()=>{const id=$('#cnid').value.trim().toLowerCase(),name=$('#cnnm').value.trim();if(!id||!name)return alert('請填寫代號與名稱');try{await api('/admin/campaigns',{method:'POST',admin:1,json:{id,name}});await loadCamps();toast('已新增團購');go('/g/'+id+'/admin')}catch(e){alert(e.message)}};
+  $('#mup').onclick=async()=>{const f=$('#mf').files[0];if(!f)return alert('請先選擇菜單檔（.json）');if(!confirm('匯入菜單會取代這個團購目前的商品目錄（訂單保留）。確定？'))return;
+   try{const menu=JSON.parse(await f.text());const d=await api('/admin/drink-menu',{method:'POST',admin:1,json:{menu,link:$('#mlink').value.trim()}});toast('已匯入 '+d.items+' 項');await fetchCat();viewAdmin()}catch(e){alert(e.message)}};
+  const cp=$('#cpy');if(cp)cp.onclick=async()=>{const NL='\n';const act=o.orders.filter(x=>x.status!=='cancelled');const t=act.map(x=>x.name+NL+x.items.map(l=>'  '+l.name+(l.opts?'（'+l.opts+'）':'')+(l.gift?' 備註：'+l.gift:'')+' ×'+l.qty).join(NL)).join(NL+NL)+NL+NL+'— 彙總 —'+NL+o.tally.map(t=>t.name+(t.opts?'（'+t.opts+'）':'')+' ×'+t.qty).join(NL)+NL+'合計 '+o.tally.reduce((n,t)=>n+t.qty,0)+' 杯，NT$ '+o.sum;try{await navigator.clipboard.writeText(t);toast('已複製點餐清單')}catch(e){prompt('請手動複製：',t)}};
   $('#lo').onclick=()=>{st.admin='';localStorage.removeItem('lensAdmin');viewAdmin()};
   $('#up').onclick=async()=>{const f=$('#xf').files[0];if(!f)return alert('請先選擇檔案');$('#upm').textContent='上傳解析中…';try{const d=await api('/admin/upload',{method:'POST',admin:1,body:f});$('#upm').textContent=`✔ 已更新：${d.items} 項商品、${d.limited} 張限定卡、規格表 ${d.specRows} 列`;st.cat=null;load()}catch(e){$('#upm').textContent='✘ '+e.message}};
   $('#sv').onclick=async()=>{const b={closed:$('#closed').checked};document.querySelectorAll('[data-k]').forEach(i=>b[i.dataset.k]=i.value);await api('/admin/settings',{method:'PUT',admin:1,json:b});toast('已儲存');load()};
@@ -467,7 +493,7 @@ function pcCard(c){const goal=c.goal||0,pct=goal?Math.round(c.sum/goal*100):0,ok
  const left=over?'已結束':!c.deadline?'進行中':ms<=0?'已截止':ms>=864e5?'<em>'+Math.floor(ms/864e5)+'</em> 天':'<em>'+Math.max(1,Math.floor(ms/36e5))+'</em> 小時';
  const days=ok&&c.reachedAt&&c.startAt?Math.max(1,Math.ceil((Date.parse(c.reachedAt)-Date.parse(c.startAt))/864e5)):0;
  const cv=c.covers&&c.covers.length?`<div class="cv ${c.covers.length<2?'one':''}">${c.covers.slice(0,c.covers.length<2?1:4).map(u=>`<img loading="lazy" src="${esc(u)}" alt="">`).join('')}</div>`:`<div class="cv"><div class="ph">${esc(c.name)}</div></div>`;
- return`<a class="pcd" href="/g/${c.id}/">${cv}<span class="bdg ${st0[1]}">${st0[0]}</span><div class="bd2"><h3>${esc(c.name)}</h3>
+ return`<a class="pcd" href="/g/${c.id}/">${cv}<span class="bdg ${st0[1]}">${st0[0]}</span><div class="bd2"><h3>${esc(c.name)}</h3>${c.drink?`<div class="sub" style="margin:-6px 0 8px">飲料團｜${esc(c.store||'')}</div>`:''}
   ${goal?`<div class="pgb"><div class="bar2"><i style="width:${Math.min(100,pct)}%"></i></div><span class="pct">${pct.toLocaleString('en-US')}%</span></div>`:'<div class="sub">本團不設達標門檻</div>'}
   <div class="ft"><b>${nt(c.sum)}</b><span>${c.count} 人</span><span>${days?'<em>'+days+' 天</em>達標':left}</span></div>
   ${goal?`<div class="sub" style="margin-top:4px">目標 ${nt(goal)}${ok?'　✓ 已達標':'　還差 '+nt(Math.max(0,goal-c.sum))}</div>`:''}
