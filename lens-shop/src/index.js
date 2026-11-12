@@ -7,7 +7,7 @@ const json = (o, status = 200, h = {}) => new Response(JSON.stringify(o), { stat
 const err = (msg, status = 400) => json({ error: msg }, status);
 const now = () => new Date().toISOString();
 const rid = (n = 16) => { const b = crypto.getRandomValues(new Uint8Array(n)); return [...b].map((x) => x.toString(16).padStart(2, '0')).join(''); };
-const DEFAULTS = { shopName: '隱形眼鏡團購', deadline: '', closed: false, bankName: '', bankAccount: '', accountName: '', notes: '', siteUrl: '' };
+const DEFAULTS = { shopName: '隱形眼鏡團購', deadline: '', closed: false, bankName: '', bankAccount: '', accountName: '', notes: '', siteUrl: '', goal: '' };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 let chatReady = false;
@@ -110,14 +110,25 @@ async function handle(req, env) {
   const closedNow = (s, c = cid) => isClosed(s) || isEnded(camps, c);
 
   if (path === '/api/campaigns' && method === 'GET') {
-    const list = await Promise.all(camps.map(async (c) => { const s = await getSettings(env, c.id); const cat = await getCatalog(env, c.id);
-      return { id: c.id, name: s.shopName, deadline: s.deadline, ended: isEnded(camps, c.id), closed: closedNow(s, c.id), ready: !!cat }; }));
+    const list = await Promise.all(camps.map(async (c) => {
+      const s = await getSettings(env, c.id); const cat = await getCatalog(env, c.id);
+      const rs = await env.DB.prepare("SELECT name,total,created_at FROM orders WHERE campaign=? AND status='active' ORDER BY created_at").bind(c.id).all();
+      const goal = Math.max(0, parseInt(String(s.goal || '0').replace(/[^\d]/g, ''), 10) || 0);
+      let sum = 0, reachedAt = '';
+      for (const o of rs.results) { sum += o.total; if (goal && !reachedAt && sum >= goal) reachedAt = o.created_at; }
+      const names = [...new Set(rs.results.map((o) => o.name).reverse())];
+      const pimgs = await getKV(env, kk(c.id, 'pimgs'), {});
+      const covers = [...new Set(Object.values(pimgs))].filter((u) => typeof u === 'string').slice(0, 4);
+      return { id: c.id, name: s.shopName, deadline: s.deadline, ended: isEnded(camps, c.id), closed: closedNow(s, c.id), ready: !!cat,
+        goal, sum, count: rs.results.length, names: names.slice(0, 8), nameCount: names.length, reachedAt,
+        startAt: c.createdAt || (rs.results[0] && rs.results[0].created_at) || '', covers };
+    }));
     return json({ campaigns: list }, 200, { 'cache-control': 'public, max-age=15' });
   }
 
   if (path === '/api/catalog' && method === 'GET') {
     const [cat, s, pimgs] = await Promise.all([getCatalog(env, cid), getSettings(env, cid), getKV(env, kk(cid, 'pimgs'), {})]);
-    return json({ catalog: cat, pimgs, settings: { shopName: s.shopName, deadline: s.deadline, closed: closedNow(s), bankName: s.bankName, bankAccount: s.bankAccount, accountName: s.accountName, notes: s.notes } },
+    return json({ catalog: cat, pimgs, settings: { shopName: s.shopName, deadline: s.deadline, closed: closedNow(s), bankName: s.bankName, bankAccount: s.bankAccount, accountName: s.accountName, notes: s.notes, goal: s.goal } },
       200, { 'cache-control': 'public, max-age=30' });
   }
   if (path.startsWith('/api/img/') && method === 'GET') {
