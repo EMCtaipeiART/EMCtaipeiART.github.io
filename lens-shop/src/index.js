@@ -41,6 +41,17 @@ const CID_RE = /^[a-z0-9-]{1,20}$/;
 const deadlineMs = (s) => (s.deadline ? Date.parse(s.deadline + (s.deadline.length <= 16 ? ':00+08:00' : '')) : NaN);
 const isClosed = (s) => s.closed || (!isNaN(deadlineMs(s)) && Date.now() > deadlineMs(s));
 
+// ── 邊緣快取（Cache API）：公開唯讀資料短時間快取，寫入時清除 ──
+const EDGE = 'https://shop.emc-art.com/__edge/';
+async function edgeGet(k, ttl, compute, ctx) {
+  const key = new Request(EDGE + k);
+  try { const hit = await caches.default.match(key); if (hit) return await hit.json(); } catch {}
+  const v = await compute();
+  try { const put = caches.default.put(key, new Response(JSON.stringify(v), { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=' + ttl } })); ctx && ctx.waitUntil ? ctx.waitUntil(put) : await put; } catch {}
+  return v;
+}
+async function edgePurge(cid) { try { await Promise.all([caches.default.delete(new Request(EDGE + 'campaigns')), caches.default.delete(new Request(EDGE + 'catalog/' + cid))]); } catch {} }
+
 // ── 管理者簽章 ──
 async function hmac(env, data) {
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode((env.SESSION_SECRET || env.ADMIN_PASSWORD || '') + '|lens'), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
@@ -159,7 +170,7 @@ async function mailOrder(env, req, order, kind) {
   return sendMail(env, order.email, m.subject, m.html, m.text);
 }
 
-async function handle(req, env) {
+async function handle(req, env, ctx) {
   env = { ...env, FILES: new D1Files(env.DB) };
   const url = new URL(req.url); const path = url.pathname; const method = req.method;
   const cid = url.searchParams.get('c') || DEFAULT_CID;
@@ -219,28 +230,32 @@ async function handle(req, env) {
 
   if (path === '/api/campaigns' && method === 'GET') {
     const usr = await getUser(req, env);
-    const list = await Promise.all(camps.map(async (c) => {
-      const s = await getSettings(env, c.id); const cat = await getCatalog(env, c.id);
-      const rs = await env.DB.prepare("SELECT name,total,created_at FROM orders WHERE campaign=? AND status='active' ORDER BY created_at").bind(c.id).all();
-      const goal = Math.max(0, parseInt(String(s.goal || '0').replace(/[^\d]/g, ''), 10) || 0);
-      let sum = 0, reachedAt = '';
-      for (const o of rs.results) { sum += o.total; if (goal && !reachedAt && sum >= goal) reachedAt = o.created_at; }
-      const names = [...new Set(rs.results.map((o) => o.name).reverse())];
-      const pimgs = await getKV(env, kk(c.id, 'pimgs'), {});
-      const covers = [...new Set(Object.values(pimgs))].filter((u) => typeof u === 'string').slice(0, 4);
-      return { id: c.id, name: s.shopName, deadline: s.deadline, ended: isEnded(camps, c.id), closed: closedNow(s, c.id), ready: !!cat,
-        goal, sum, count: rs.results.length, names: names.slice(0, 8), nameCount: names.length, reachedAt,
-        startAt: c.createdAt || (rs.results[0] && rs.results[0].created_at) || '', covers,
-        drink: !!(cat && cat.drink), store: cat && cat.drink ? cat.store : '', link: cat && cat.drink ? cat.link : '', mine: !!(usr && c.owner && c.owner === usr.email), owned: !!c.owner };
-    }));
-    return json({ campaigns: list }, 200, { 'cache-control': 'public, max-age=15' });
+    const base = await edgeGet('campaigns', 30, async () => {
+      const list = await Promise.all(camps.map(async (c) => {
+        const [s, cat, rs, pimgs] = await Promise.all([getSettings(env, c.id), getCatalog(env, c.id), env.DB.prepare("SELECT name,total,created_at FROM orders WHERE campaign=? AND status='active' ORDER BY created_at").bind(c.id).all(), getKV(env, kk(c.id, 'pimgs'), {})]);
+        const goal = Math.max(0, parseInt(String(s.goal || '0').replace(/[^\d]/g, ''), 10) || 0);
+        let sum = 0, reachedAt = '';
+        for (const o of rs.results) { sum += o.total; if (goal && !reachedAt && sum >= goal) reachedAt = o.created_at; }
+        const names = [...new Set(rs.results.map((o) => o.name).reverse())];
+        const covers = [...new Set(Object.values(pimgs))].filter((u) => typeof u === 'string').slice(0, 4);
+        return { id: c.id, name: s.shopName, deadline: s.deadline, ended: isEnded(camps, c.id), closed: closedNow(s, c.id), ready: !!cat,
+          goal, sum, count: rs.results.length, names: names.slice(0, 8), nameCount: names.length, reachedAt,
+          startAt: c.createdAt || (rs.results[0] && rs.results[0].created_at) || '', covers,
+          drink: !!(cat && cat.drink), store: cat && cat.drink ? cat.store : '', link: cat && cat.drink ? cat.link : '', owned: !!c.owner, _o: c.owner || '' };
+      }));
+      return list;
+    }, ctx);
+    const list = base.map(({ _o, ...x }) => ({ ...x, mine: !!(usr && _o && _o === usr.email) }));
+    return json({ campaigns: list }, 200, { 'cache-control': 'no-store' });
   }
 
   if (path === '/api/catalog' && method === 'GET') {
-    const [cat, s, pimgs] = await Promise.all([getCatalog(env, cid), getSettings(env, cid), getKV(env, kk(cid, 'pimgs'), {})]);
-    if (cat && cat.drink && /^https:\/\//.test(s.drinkLink || '')) { const h = new URL(s.drinkLink).hostname; cat.link = s.drinkLink; cat.platform = /uber/.test(h) ? 'ubereats' : /nidin/.test(h) ? 'nidin' : cat.platform; }
-    return json({ catalog: cat, pimgs, settings: { shopName: s.shopName, deadline: s.deadline, closed: closedNow(s), bankName: s.bankName, bankAccount: s.bankAccount, accountName: s.accountName, notes: s.notes, goal: s.goal, drinkLink: s.drinkLink } },
-      200, { 'cache-control': 'public, max-age=30' });
+    const out = await edgeGet('catalog/' + cid, 30, async () => {
+      const [cat, s, pimgs] = await Promise.all([getCatalog(env, cid), getSettings(env, cid), getKV(env, kk(cid, 'pimgs'), {})]);
+      if (cat && cat.drink && /^https:\/\//.test(s.drinkLink || '')) { const h = new URL(s.drinkLink).hostname; cat.link = s.drinkLink; cat.platform = /uber/.test(h) ? 'ubereats' : /nidin/.test(h) ? 'nidin' : cat.platform; }
+      return { catalog: cat, pimgs, settings: { shopName: s.shopName, deadline: s.deadline, closed: closedNow(s), bankName: s.bankName, bankAccount: s.bankAccount, accountName: s.accountName, notes: s.notes, goal: s.goal, drinkLink: s.drinkLink } };
+    }, ctx);
+    return json(out, 200, { 'cache-control': 'no-store' });
   }
   if (path.startsWith('/api/img/') && method === 'GET') {
     const o = await env.FILES.get('img/' + decodeURIComponent(path.slice(9)).replace(/[^\w.\-]/g, ''));
@@ -566,7 +581,18 @@ ${SYSTEM_NOTE}`;
 }
 
 export default {
-  async fetch(req, env) {
-    try { return await handle(req, env); } catch (e) { console.log('error', e && e.stack || String(e)); return err('伺服器錯誤：' + (e.message || e), 500); }
+  async fetch(req, env, ctx) {
+    try {
+      if (req.method === 'GET') { // 快取命中就不必先查資料庫
+        const u = new URL(req.url);
+        try {
+          if (u.pathname === '/api/campaigns' && !req.headers.get('x-user')) { const hit = await caches.default.match(new Request(EDGE + 'campaigns')); if (hit) return json({ campaigns: (await hit.json()).map(({ _o, ...x }) => ({ ...x, mine: false })) }, 200, { 'cache-control': 'no-store' }); }
+          else if (u.pathname === '/api/catalog' && /^[a-z0-9-]{1,20}$/.test(u.searchParams.get('c') || 'lens')) { const hit = await caches.default.match(new Request(EDGE + 'catalog/' + (u.searchParams.get('c') || 'lens'))); if (hit) return json(await hit.json(), 200, { 'cache-control': 'no-store' }); }
+        } catch {}
+      }
+      const res = await handle(req, env, ctx);
+      if (req.method !== 'GET' && req.method !== 'HEAD' && res.status < 400 && new URL(req.url).pathname.startsWith('/api/')) { const cid = new URL(req.url).searchParams.get('c') || 'lens'; ctx.waitUntil(edgePurge(/^[a-z0-9-]{1,20}$/.test(cid) ? cid : 'lens')); }
+      return res;
+    } catch (e) { console.log('error', e && e.stack || String(e)); return err('伺服器錯誤：' + (e.message || e), 500); }
   },
 };

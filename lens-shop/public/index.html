@@ -562,7 +562,7 @@ function pimgUI(){const box=$('#pimgbox');if(!box||!st.cat)return;const brands=[
  $('#pb').onchange=draw;draw()}
 async function route(){
  const p=P();window.scrollTo(0,0);
- if(!st.camps)await loadCamps();
+ if(!st.camps){const p0=P();if(p0.cid!==null&&p0.page!=='order')await Promise.all([loadCamps(),ensureCampaign(p0.cid)]);else await loadCamps()}
  if(p.page==='order'&&p.cid===null)return p.arg&&viewOrder(p.arg);
  if(p.cid===null&&p.page==='campaigns'){renderNav();return viewPicker()}
  if(p.cid===null){ // 根目錄與舊網址
