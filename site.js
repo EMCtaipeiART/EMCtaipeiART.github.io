@@ -182,7 +182,7 @@
       rows:[],localRows:new Map(),settings:[],avatars:new Map(),customers:[],weights:[],mods:new Map(),people:{},levelConfig:null,archive:null,archiveLoading:false,
       loaded:false,view:'board',query:'',latestLimit:LATEST_PAGE,layouts:(()=>{const rd=k=>{try{return localStorage.getItem(k)}catch(err){return null}},old=rd('v5Layout'),pick=k=>{const v=rd(k)||old;return v==='list'?'list':'grid'};return {home:pick('v5LayoutHome'),projects:pick('v5LayoutProjects')}})(),
       /* 首頁「最新案件列表」與專案頁各自記住網格／列表，不再互相連動（沿用舊的單一設定當作兩邊的初始值） */
-      get layout(){return this.layouts[this.view==='projects'?'projects':'home']},set layout(v){this.layouts[this.view==='projects'?'projects':'home']=v==='list'?'list':'grid'},sort:'desc',filtersHome:(()=>{const f={months:new Set(),statuses:new Set(),designers:new Set()};try{let raw=localStorage.getItem('v5Filters');if(localStorage.getItem('v5FiltersV')!=='2'){raw=null;localStorage.setItem('v5FiltersV','2');window.__filtReset=true}const a=JSON.parse(raw||'null');if(a)for(const k of Object.keys(f))if(Array.isArray(a[k]))a[k].forEach(v=>f[k].add(String(v)));if(!raw){const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));f.months.add(p.year+'/'+p.month)}}catch(err){}return f})(),_fp:null,
+      get layout(){return this.layouts[this.view==='projects'?'projects':'home']},set layout(v){this.layouts[this.view==='projects'?'projects':'home']=v==='list'?'list':'grid'},sort:'desc',filtersHome:(()=>{const f={months:new Set(),statuses:new Set(),designers:new Set()};try{let raw=localStorage.getItem('v5Filters');if(localStorage.getItem('v5FiltersV')!=='3'){raw=null;localStorage.setItem('v5FiltersV','3');localStorage.removeItem('v5FiltersProjects');window.__filtReset=true;window.__monthsAllReset=true}const a=JSON.parse(raw||'null');if(a)for(const k of Object.keys(f))if(Array.isArray(a[k]))a[k].forEach(v=>f[k].add(String(v)));}catch(err){}return f})(),_fp:null,
       /* 首頁「最新案件列表」與專案頁各自一份篩選（月份／狀態／設計人），不再互相連動；雲端同步沿用在首頁那份（filtersHome），專案頁的只記在這個瀏覽器 */
       get filtersProjects(){if(!this._fp){const f={months:new Set(),statuses:new Set(),designers:new Set()};let raw=null;try{raw=localStorage.getItem('v5FiltersProjects')}catch(err){}if(raw){try{const a=JSON.parse(raw);for(const k of Object.keys(f))if(Array.isArray(a[k]))a[k].forEach(v=>f[k].add(String(v)))}catch(err){}}else for(const k of Object.keys(f))this.filtersHome[k].forEach(v=>f[k].add(v));this._fp=f}return this._fp},
       get filters(){return this.view==='projects'?this.filtersProjects:this.filtersHome},filterOpen:false,loginMenu:false,pendingStart:'',editing:false,editRow:null,saving:false,edits:new Map(),limits:{todo:COLUMN_PAGE,doing:COLUMN_PAGE,review:COLUMN_PAGE,revise:COLUMN_PAGE,done:COLUMN_PAGE,pause:COLUMN_PAGE},boardCols:(()=>{try{const n=+localStorage.getItem('v5BoardCols');return n>=1&&n<=4?n:3}catch(err){return 3}})(),home:'board',sortKey:'id',sortDir:'desc',lb:[],lbList:null,lbIdx:0,cols:null,colsOpen:false,colDrag:'',plistLimit:50,drag:null,pendingMove:null,
@@ -756,7 +756,7 @@
     function passFilters(r){const f=state.filters;return (!f.months.size||f.months.has(monthKey(r)))&&(!statusFilterOn()||!f.statuses.size||f.statuses.has(String(r['狀態']||'').trim()))&&(!f.designers.size||f.designers.has(String(r['設計負責人']||'').trim()))}
     function filterPopHtml(){
       const f=state.filters,months=[...new Set(allRows().map(monthKey).filter(Boolean))].sort().reverse();
-      const group=(title,key,items,scroll)=>`<div><h4>${title}</h4><div class="chips"${scroll?' style="max-height:132px;overflow:auto"':''}>${items.map(([v,l])=>`<label${key==='statuses'&&ST[v]?` class="${ST[v].cls}"`:key==='months'?' class="mon"':key==='designers'?` class="dsg" style="--dc:${DC_COLORS[v]||'#7b8a83'}"`:''}><input type="checkbox" data-filter="${key}" value="${esc(v)}"${(key!=='months'&&!f[key].size)||f[key].has(v)?' checked':''}>${esc(l)}</label>`).join('')}</div></div>`;
+      const group=(title,key,items,scroll)=>`<div><h4>${title}</h4><div class="chips"${scroll?' style="max-height:132px;overflow:auto"':''}>${items.map(([v,l])=>`<label${key==='statuses'&&ST[v]?` class="${ST[v].cls}"`:key==='months'?' class="mon"':key==='designers'?` class="dsg" style="--dc:${DC_COLORS[v]||'#7b8a83'}"`:''}><input type="checkbox" data-filter="${key}" value="${esc(v)}"${!f[key].size||f[key].has(v)?' checked':''}>${esc(l)}</label>`).join('')}</div></div>`;
       return `<div class="filter-pop" role="dialog" aria-label="篩選案件">${group('月份','months',months.map(m=>[m,m]),true)}${statusFilterOn()?group('案件狀態','statuses',STATUS_FILTER.map(k=>[k,ST[k].label])):''}${group('設計人','designers',designerNames().map(n=>[n,n]))}${state.view==='projects'?`<div><h4>顯示的狀態欄位（勾選＝顯示，取消勾選整欄隱藏，網格與列表都適用）</h4><div class="chips">${COLUMNS.map(c=>`<label${ST[c.status]?` class="${ST[c.status].cls}"`:''}><input type="checkbox" data-grid-status="${c.status}"${gridStatusHide().has(c.status)?'':' checked'}>${c.title}</label>`).join('')}</div><div style="margin-top:8px;display:flex;gap:6px"><button type="button" class="mini-btn" data-grid-none>全部隱藏</button><button type="button" class="mini-btn" data-grid-reset>全部顯示</button></div></div>`:''}<div class="filter-foot"><span style="font-size:12px;color:var(--muted);font-weight:700">可複選；沒勾選＝不限</span><button type="button" data-filter-clear>恢復預設</button></div></div>`;
     }
     const NUM_ZH=['零','一','二','三','四','五','六','七','八','九','十'];
@@ -970,8 +970,9 @@
         const data=await api('getUserSettings',{account:selfAccount()}),st=data.settings||{};try{applyCloudColOrder(st.columnOrder||st['專案欄位順序'])}catch(err){}try{applyCloudTheme(String(st.theme||''))}catch(err){}
         const sp=v=>String(v||'').split(/\s*,\s*/).map(x=>x.trim()).filter(Boolean);
         let applied=false,needPush=false;
+        const monthsReset=Boolean(window.__monthsAllReset);
         for(const k of Object.keys(FILT)){
-          const fl=st[FILT[k].cloud]||{},cloud={months:sp(fl.month),statuses:sp(fl.status),designers:sp(fl.designer)};
+          const fl=st[FILT[k].cloud]||{},cloud={months:monthsReset?[]:sp(fl.month),statuses:sp(fl.status),designers:sp(fl.designer)};
           const has=cloud.months.length||cloud.statuses.length||cloud.designers.length,cs=filtArr({months:cloud.months,statuses:cloud.statuses,designers:cloud.designers});
           const apply=()=>{const f=FILT[k].f;f.months=new Set(cloud.months);f.statuses=new Set(cloud.statuses);f.designers=new Set(cloud.designers);FILT[k].synced=filtSnap(k);try{localStorage.setItem(FILT[k].ls,JSON.stringify(cloud))}catch(e){}applied=true};
           if(FILT[k].synced===null){
@@ -984,6 +985,7 @@
           if(cs!==FILT[k].synced&&!document.querySelector('.filter-pop'))apply();
         }
         if(applied&&!document.querySelector('.filter-pop')){if(state.view==='projects')renderProjects();else if(state.view==='board')renderBoard()}
+        if(monthsReset){window.__monthsAllReset=false;needPush=true}
         if(needPush){saveFilters();pushFilters()}
       }catch(err){}}
     function rerenderList(){saveFilters();if(state.view==='projects')renderProjects();else renderBoard()}
@@ -4464,7 +4466,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(t.matches?.('[data-grid-status]')){const gh=gridStatusHide();t.checked?gh.delete(t.dataset.gridStatus):gh.add(t.dataset.gridStatus);try{localStorage.setItem('v5GridStatus',JSON.stringify([...gh]))}catch(err){}state.latestLimit=LATEST_PAGE;rerenderList();return}
       if(t.matches?.('[data-col-show]')){ensureCols();t.checked?state.cols.hidden.delete(t.dataset.colShow):state.cols.hidden.add(t.dataset.colShow);if(state.cols.hidden.size>=COL_DEFS.length)state.cols.hidden.delete('id');saveCols();rerenderList();return}
       if(t.matches?.('[data-ai-file]')){addAiFiles(t.files);return}
-      if(t.matches?.('[data-filter]')){const key=t.dataset.filter,set=state.filters[key];if(key!=='months'){const all=[...document.querySelectorAll('[data-filter="'+key+'"]')].map(i=>i.value);if(!set.size)all.forEach(v=>set.add(v));t.checked?set.add(t.value):set.delete(t.value);if(set.size>=all.length||!set.size)set.clear()}else{t.checked?set.add(t.value):set.delete(t.value)}state.latestLimit=LATEST_PAGE;rerenderList();return}
+      if(t.matches?.('[data-filter]')){const key=t.dataset.filter,set=state.filters[key];{const all=[...document.querySelectorAll('[data-filter="'+key+'"]')].map(i=>i.value);if(!set.size)all.forEach(v=>set.add(v));t.checked?set.add(t.value):set.delete(t.value);if(set.size>=all.length||!set.size)set.clear()}state.latestLimit=LATEST_PAGE;rerenderList();return}
       if(t.id==='clientSelect'){
         let created=false;
         if(t.value==='__new__'){const name=await addCustomerFlow();t.value=name;created=Boolean(name)}
