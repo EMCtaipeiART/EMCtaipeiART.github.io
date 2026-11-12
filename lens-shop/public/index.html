@@ -191,7 +191,7 @@ const items=()=>st.cat?.items||[];const byNo=n=>items().find(i=>i.no===n);
 
 // ───── 選購 ─────
 const FLOW=[["選購商品","挑品項、填度數"],["送出訂單","確認信寄到信箱"],["依帳號匯款","帳號在確認信裡"],["回報匯款","後 5 碼或截圖"]];
-function flowHtml(done=[]){return`<div class="flow">${FLOW.map((x,i)=>`<div class="${done[i]?'ok':''}"><i>${done[i]?'✓':i+1}</i><section><b>${x[0]}${done[i]?' <em>✓</em>':''}</b><span>${i===0&&isDrink()?"挑飲料、選甜度冰量":x[1]}</span></section></div>`).join('')}</div>`}
+function flowHtml(done=[]){return`<div class="flow">${FLOW.map((x,i)=>`<div class="${done[i]?'ok':''}"><i>${done[i]?'✓':i+1}</i><section><b>${x[0]}${done[i]?' <em>✓</em>':''}</b><span>${i===0&&isDrink()?(isCustom()?"挑商品、選選項":"挑飲料、選甜度冰量"):x[1]}</span></section></div>`).join('')}</div>`}
 function dkList(list){if(!isDrink())return list;const ord=[...new Set(items().map(i=>i.brand))];const L=[...list].sort((a,b)=>ord.indexOf(a.brand)-ord.indexOf(b.brand));const o=[];let last=null;for(const i of L){if(i.brand!==last){o.push({h:i.brand});last=i.brand}o.push(i)}return o}
 function viewShop(){
  if(!st.cat)return $('#app').innerHTML='<div class="note">目前尚未開放，請稍後再來。</div>';
@@ -199,7 +199,7 @@ function viewShop(){
  const q=st.q.trim().toLowerCase();
  const list=items().filter(i=>(st.brand==='全部'||i.brand===st.brand)&&(!q||(i.brand+i.name+i.no).toLowerCase().includes(q)));
  $('#app').innerHTML=`${closedBanner()}
- <section class="top"><div class="hero2"><span class="eyebrow">${isDrink()?'DRINK GROUP BUY':'EMC GROUP BUY'}</span><h1>${esc(st.set?.shopName||'隱形眼鏡團購')}</h1>
+ <section class="top"><div class="hero2"><span class="eyebrow">${isDrink()&&!isCustom()?'DRINK GROUP BUY':'EMC GROUP BUY'}</span><h1>${esc(st.set?.shopName||'隱形眼鏡團購')}</h1>
   <p>${isDrink()?esc(st.cat.store||'')+'　'+(st.cat.platform===''?'挑好商品、選好選項，一次下單，截止前都能回來修改。':'挑好飲料、選好甜度冰量，一次下單，截止前都能回來修改。')+'':'公司團購價優惠。挑好商品、填好度數，一次下單，截止前都能回來修改。'}</p>${isDrink()&&st.cat.link?`<p style="margin-top:6px"><a class="btn sec" target="_blank" rel="noopener" href="${esc(st.cat.link)}">前往${st.cat.platform==='ubereats'?' Uber Eats ':st.cat.platform==='nidin'?' 你訂 ':' '}店家頁</a></p>`:''}
     <div class="hcd"><small>${st.set?.closed?'本次團購已結單':'團購截止時間'}</small><div class="dd">${dlFull()}</div><div class="dsub">${st.set?.closed?'':'距離截止還有'}</div><div class="cdn" id="cdn">${cdHtml()}</div></div></div></section>
  ${flowHtml()}
@@ -339,8 +339,8 @@ function drinkDialog(no,idx){
  const grp=()=>it.groups.map((g,gi)=>`<div style="margin:12px 0 4px"><label><b>${esc(g.n)}</b> <span class="sub">${g.min?'必選':'選填'}${g.max>1?'，最多 '+g.max+' 項':''}</span></label><div class="chips">${g.o.map((o,oi)=>`<span class="chip ${sel[gi].includes(oi)?'on':''}" data-g="${gi}" data-o="${oi}">${esc(o[0])}${o[1]?' +'+o[1]:''}</span>`).join('')}</div></div>`).join('');
  const price=()=>{let x=it.price;it.groups.forEach((g,gi)=>sel[gi].forEach(n=>x+=g.o[n][1]));return x};
  bg.innerHTML=`<div class="modal"><h3 style="margin-top:0">${esc(it.name)}</h3><div class="sub">${esc(it.brand)}｜${nt(it.price)}</div><div id="dg">${grp()}</div>
- <div class="row2"><div><label>杯數</label><input id="f-qty" type="number" min="1" max="99" value="${ex.qty}"></div><div><label>備註（選填）</label><input id="f-gift" value="${esc(ex.gift||'')}" placeholder="例：不要吸管"></div></div>
- <div class="total" style="text-align:right">每杯 <b id="dp">${nt(price())}</b></div>
+ <div class="row2"><div><label>${unitW()==="份"?"數量":"杯數"}</label><input id="f-qty" type="number" min="1" max="99" value="${ex.qty}"></div><div><label>備註（選填）</label><input id="f-gift" value="${esc(ex.gift||'')}" placeholder="${isCustom()?'例：包裝方式、送禮':'例：不要吸管'}"></div></div>
+ <div class="total" style="text-align:right">${isCustom()?"單價":"每杯"} <b id="dp">${nt(price())}</b></div>
  <div class="acts"><button class="sec" id="f-x">取消</button><button id="f-ok">${idx!=null?'更新':'加入購物車'}</button></div></div>`;
  document.body.appendChild(bg);$('#f-x',bg).onclick=()=>bg.remove();
  const bind=()=>bg.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{const gi=+c.dataset.g,oi=+c.dataset.o,g=it.groups[gi],a=sel[gi],k=a.indexOf(oi);
@@ -367,7 +367,8 @@ function addDialog(no,idx){
 function toast(t){const d=document.createElement('div');d.textContent=t;d.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:9px 18px;border-radius:20px;z-index:99';document.body.appendChild(d);setTimeout(()=>d.remove(),1400)}
 
 // ───── 購物車／下單 ─────
-const isDrink=()=>!!st.cat?.drink;
+const isDrink=()=>!!st.cat?.drink;const isCustom=()=>!!(st.cat?.drink&&st.cat.platform==='');const unitW=()=>isCustom()?'份':'杯';
+const kindName=c=>c.custom?'自訂團':c.drink?'飲料團':'隱眼團';
 function optText(it,sel){return it.groups.map((g,gi)=>(sel[gi]||[]).map(n=>g.o[n]&&g.o[n][0]).filter(Boolean)).flat().join('／')}
 function lp(l){const it=byNo(l.no);if(!it)return 0;let x=it.price;if(it.groups&&l.sel)it.groups.forEach((g,gi)=>(l.sel[gi]||[]).forEach(n=>{if(g.o[n])x+=g.o[n][1]}));return x}
 const pw=l=>l.opts||(l.sel&&byNo(l.no)?optText(byNo(l.no),l.sel):'')||[l.sph&&'度數 '+l.sph,l.cyl&&'散光 '+l.cyl,l.axis&&'角度 '+l.axis].filter(Boolean).join('／');
@@ -487,8 +488,8 @@ async function acctAdminUI(){const box=document.getElementById('acbox');if(!box)
 async function viewSummary(){const t=new URLSearchParams(location.search).get('t')||'';let d;try{d=await api('/summary?t='+encodeURIComponent(t))}catch(e){$('#app').innerHTML='<div class="card">'+esc(e.message)+'</div>';return}
  const plat=d.platform==='ubereats'?'Uber Eats 揪團':d.platform==='nidin'?'你訂開團':'揪團';
  $('#app').innerHTML=`<style>@media print{#nav,.noprint,header{display:none!important}body{background:#fff}.card{box-shadow:none;border:0}}</style><div class="card"><div class="sp"><h2 style="margin:0">${esc(d.shopName)}　訂單明細</h2><button class="noprint" onclick="window.print()">列印／存成 PDF</button></div>
- <p class="muted">${d.store?esc(d.store)+'　':''}${d.orders.length} 人、${d.cups} 杯，合計 ${nt(d.sum)}${d.link?'　<a href="'+esc(d.link)+'" target="_blank" rel="noopener">前往'+plat+'</a>':''}</p>
- <h3>品項彙總</h3><table class="t"><thead><tr><th>品項</th><th>選項</th><th class="num">杯數</th></tr></thead><tbody>${d.tally.map(x=>`<tr><td>${esc(x.name)}</td><td class="sub">${esc(x.opts)}</td><td class="num">${x.qty}</td></tr>`).join('')}</tbody></table>
+ <p class="muted">${d.store?esc(d.store)+'　':''}${d.orders.length} 人、${d.cups} ${d.platform===''?'份':'杯'}，合計 ${nt(d.sum)}${d.link?'　<a href="'+esc(d.link)+'" target="_blank" rel="noopener">前往'+plat+'</a>':''}</p>
+ <h3>品項彙總</h3><table class="t"><thead><tr><th>品項</th><th>選項</th><th class="num">${d.platform===''?'數量':'杯數'}</th></tr></thead><tbody>${d.tally.map(x=>`<tr><td>${esc(x.name)}</td><td class="sub">${esc(x.opts)}</td><td class="num">${x.qty}</td></tr>`).join('')}</tbody></table>
  <h3>每人明細</h3><table class="t"><thead><tr><th>姓名</th><th>品項</th><th class="num">金額</th></tr></thead><tbody>${d.orders.map(o=>`<tr><td><b>${esc(o.name)}</b></td><td>${o.items.map(l=>esc(l.name)+(l.opts?'（'+esc(l.opts)+'）':'')+' ×'+l.qty+(l.gift?' 備註：'+esc(l.gift):'')).join('<br>')}</td><td class="num">${nt(o.total)}</td></tr>`).join('')}</tbody></table></div>`}
 async function viewAdmin(){
  if(!st.admin&&!(st.user&&st.user.canCreate)){$('#app').innerHTML=`<h2>管理者登入</h2><div class="card"><div class="tools"><input id="pw" name="admin-pass" type="password" autocomplete="new-password" placeholder="管理者密碼"><button id="lg">登入</button></div></div><div class="card"><h3 style="margin-top:0">同事登入（開團）</h3><p class="muted">用 Google 帳號登入，有開團權限的同事可以建立並管理自己的團購。</p><div id="gbtn2" style="min-height:44px"></div></div>`;googleButton($('#gbtn2'),()=>{renderNav();viewAdmin()});
@@ -503,11 +504,11 @@ async function viewAdmin(){
   <p><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="closed" style="width:auto" ${s.closed?'checked':''}> 手動結單（勾選後同事無法再下單／修改）</label></p><button id="sv">儲存設定</button>${st.cat?.drink?'<button class="sec" id="rimg" style="margin-left:8px">重新抓取商品圖片</button>':''}${st.cat?.drink?'':'<div style="margin-top:12px"><label class="sub">更新報價 Excel（取代目前價格與範本，訂單保留）</label><div><input type="file" id="xf" accept=".xlsx"> <button class="sec" id="up">上傳並更新</button> <span id="upm" class="muted"></span></div></div>'}</div>`;
   $('#app').innerHTML=`<style>#app>.card{margin-top:18px!important}</style><div class="sp"><h2>管理後台${isAdm?'':'（'+esc(st.user.name)+'）'}</h2><button class="sec" id="lo">${isAdm?'登出':'離開管理'}</button></div>
   <div class="card"><h3 style="margin-top:0">團購管理</h3><p class="muted">點卡片切換並顯示該團購的訂單；「管理／設定」開啟設定視窗。結束後訂單會保留，同事不能再下單或修改。</p>
-  <div class="acg">${cs.filter(c=>!c.ended).map(c=>`<div class="acd ${c.id===st.cid?'on':''}" data-cid="${esc(c.id)}" style="cursor:pointer"><span class="atg ${c.drink?'dk':''}">${c.drink?'飲料團':'隱眼團'}</span><span class="ast ${c.ended?'x':''}">${c.ended?'已結束':'進行中'}</span><h4>${esc(c.name)}</h4><div class="sub">${c.drink&&c.store?esc(c.store)+'　':''}代號 ${esc(c.id)}</div><div class="sub">${c.count} 人下單　${nt(c.sum)}${c.goal?'　目標 '+nt(c.goal):''}</div>
+  <div class="acg">${cs.filter(c=>!c.ended).map(c=>`<div class="acd ${c.id===st.cid?'on':''}" data-cid="${esc(c.id)}" style="cursor:pointer"><span class="atg ${c.drink?'dk':''}">${kindName(c)}</span><span class="ast ${c.ended?'x':''}">${c.ended?'已結束':'進行中'}</span><h4>${esc(c.name)}</h4><div class="sub">${c.drink&&c.store?esc(c.store)+'　':''}代號 ${esc(c.id)}</div><div class="sub">${c.count} 人下單　${nt(c.sum)}${c.goal?'　目標 '+nt(c.goal):''}</div>
    <div class="acts"><button data-mg="${esc(c.id)}">${c.id===st.cid?'設定':'管理'}</button><button class="sec" data-ce="${esc(c.id)}" data-en="${c.ended?0:1}">${c.ended?'重新開放':'結束'}</button>${c.id==='lens'?'':`<button class="sec" data-dl="${esc(c.id)}" style="color:#b42323">刪除</button>`}</div></div>`).join('')}
   </div>
   <h3 style="margin:26px 0 8px">歷史團購（已結束）</h3>
-  ${cs.some(c=>c.ended)?`<div style="overflow-x:auto"><table class="t hist"><thead><tr><th>團購</th><th>類型</th><th>開團時間</th><th>結束時間</th><th class="num">人數</th><th class="num">金額</th><th></th></tr></thead><tbody>${cs.filter(c=>c.ended).sort((a,b)=>String(b.endedAt||b.startAt||'').localeCompare(String(a.endedAt||a.startAt||''))).map(c=>`<tr data-cid="${esc(c.id)}" style="cursor:pointer"><td><b>${esc(c.name)}</b><div class="sub">${c.drink&&c.store?esc(c.store)+'　':''}代號 ${esc(c.id)}</div></td><td>${c.drink?'飲料團':'隱眼團'}</td><td class="sub">${fmtT(c.startAt)}</td><td class="sub">${fmtT(c.endedAt)||'—'}</td><td class="num">${c.count}</td><td class="num">${nt(c.sum)}</td><td style="white-space:nowrap"><button data-hv="${esc(c.id)}">管理</button> <button class="sec" data-ce="${esc(c.id)}" data-en="0">重新開放</button>${c.id==='lens'?'':` <button class="sec" data-dl="${esc(c.id)}" style="color:#b42323">刪除</button>`}</td></tr>`).join('')}</tbody></table></div>`:'<div class="muted">還沒有已結束的團購</div>'}
+  ${cs.some(c=>c.ended)?`<div style="overflow-x:auto"><table class="t hist"><thead><tr><th>團購</th><th>類型</th><th>開團時間</th><th>結束時間</th><th class="num">人數</th><th class="num">金額</th><th></th></tr></thead><tbody>${cs.filter(c=>c.ended).sort((a,b)=>String(b.endedAt||b.startAt||'').localeCompare(String(a.endedAt||a.startAt||''))).map(c=>`<tr data-cid="${esc(c.id)}" style="cursor:pointer"><td><b>${esc(c.name)}</b><div class="sub">${c.drink&&c.store?esc(c.store)+'　':''}代號 ${esc(c.id)}</div></td><td>${kindName(c)}</td><td class="sub">${fmtT(c.startAt)}</td><td class="sub">${fmtT(c.endedAt)||'—'}</td><td class="num">${c.count}</td><td class="num">${nt(c.sum)}</td><td style="white-space:nowrap"><button data-hv="${esc(c.id)}">管理</button> <button class="sec" data-ce="${esc(c.id)}" data-en="0">重新開放</button>${c.id==='lens'?'':` <button class="sec" data-dl="${esc(c.id)}" style="color:#b42323">刪除</button>`}</td></tr>`).join('')}</tbody></table></div>`:'<div class="muted">還沒有已結束的團購</div>'}
   </div>
 </div>
 
@@ -613,14 +614,14 @@ function pcCard(c){const goal=c.goal||0,pct=goal?Math.round(c.sum/goal*100):0,ok
  const left=over?'已結束':!c.deadline?'進行中':`<span class="cdl" data-dl="${Date.parse(c.deadline+(c.deadline.length<=16?':00+08:00':''))}">${cdTxt(ms)}</span>`;
  const days=ok&&c.reachedAt&&c.startAt?Math.max(1,Math.ceil((Date.parse(c.reachedAt)-Date.parse(c.startAt))/864e5)):0;
  const cv=c.covers&&c.covers.length?`<div class="cv ${c.covers.length<2?'one':''}">${c.covers.slice(0,c.covers.length<2?1:4).map(u=>`<img loading="lazy" src="${esc(u)}" alt="">`).join('')}</div>`:`<div class="cv"><div class="ph">${esc(c.name)}</div></div>`;
- return`<a class="pcd" href="/g/${c.id}/">${cv}<span class="bdg ${st0[1]}">${st0[0]}</span><div class="bd2"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>${esc(c.name)}</span>${res?`<span class="bdg ${res[1]}" style="position:static;flex:none;white-space:nowrap">${res[0]}</span>`:''}</h3>${c.drink?`<div class="sub" style="margin:-6px 0 8px">飲料團｜${esc(c.store||'')}</div>`:''}
+ return`<a class="pcd" href="/g/${c.id}/">${cv}<span class="bdg ${st0[1]}">${st0[0]}</span><div class="bd2"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>${esc(c.name)}</span>${res?`<span class="bdg ${res[1]}" style="position:static;flex:none;white-space:nowrap">${res[0]}</span>`:''}</h3>${c.drink?`<div class="sub" style="margin:-6px 0 8px">${kindName(c)}${c.custom?'':'｜'+esc(c.store||'')}</div>`:''}
   ${goal?`<div class="pgb"><div class="bar2"><i style="width:${Math.min(100,pct)}%"></i></div><span class="pct">${pct.toLocaleString('en-US')}%</span></div>`:'<div class="sub">本團不設達標門檻</div>'}
   <div class="ft"><b>${nt(c.sum)}</b><span>${c.count} 人</span><span>${days?'<em>'+days+' 天</em>達標':left}</span></div>
   ${goal?`<div class="sub" style="margin-top:4px">目標 ${nt(goal)}${ok?'　✓ 已達標':'　還差 '+nt(Math.max(0,goal-c.sum))}</div>`:''}
   ${c.names&&c.names.length?`<div class="who">${c.names.slice(0,6).map(n=>`<span>${esc(n)}</span>`).join('')}${c.nameCount>6?`<span>等 ${c.nameCount} 人</span>`:''}</div>`:'<div class="sub" style="margin-top:10px">還沒有人下單，搶頭香！</div>'}</div></a>`}
 function viewPicker(){
  const cs=st.camps||[];const open=cs.filter(c=>!c.ended),end=cs.filter(c=>c.ended);
- const newCard=`<a class="pcd" href="#" id="newcamp" style="display:flex;align-items:center;justify-content:center;min-height:220px;border:2px dashed #159E31;background:#f4fbf6;color:#159E31;text-align:center"><div><div style="font-size:44px;line-height:1">＋</div><h3 style="margin:8px 0 4px;color:#159E31">我要開團</h3><div class="sub">登入後即可開團<br>隱眼團或飲料團</div></div></a>`;
+ const newCard=`<a class="pcd" href="#" id="newcamp" style="display:flex;align-items:center;justify-content:center;min-height:220px;border:2px dashed #159E31;background:#f4fbf6;color:#159E31;text-align:center"><div><div style="font-size:44px;line-height:1">＋</div><h3 style="margin:8px 0 4px;color:#159E31">我要開團</h3><div class="sub">登入後即可開團<br>隱眼團、飲料團或自訂團</div></div></a>`;
  $('#app').innerHTML=`<div class="sech"><h2>團購</h2><span>共 ${cs.length} 團</span></div>${open.length?`<div class="pgrid">${newCard}${open.map(pcCard).join('')}</div>`:`<div class="pgrid">${newCard}</div><div class="card muted" style="margin-top:14px">目前沒有進行中的團購</div>`}${end.length?`<h3 style="margin-top:28px">已結束的團購</h3><div class="pgrid">${end.map(pcCard).join('')}</div>`:''}`}
 document.addEventListener('click',e=>{const a=e.target.closest('#newcamp');if(!a)return;e.preventDefault();if(!st.admin&&!st.user){try{loginDialog()}catch(_){go('/admin')}return}openNewCampaign()});
 const onPicker=()=>{const p=P();return p.cid===null&&p.page==='campaigns'||location.pathname==='/'};
