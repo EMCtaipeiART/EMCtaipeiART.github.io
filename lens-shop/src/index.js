@@ -11,7 +11,7 @@ const json = (o, status = 200, h = {}) => new Response(JSON.stringify(o), { stat
 const err = (msg, status = 400) => json({ error: msg }, status);
 const now = () => new Date().toISOString();
 const rid = (n = 16) => { const b = crypto.getRandomValues(new Uint8Array(n)); return [...b].map((x) => x.toString(16).padStart(2, '0')).join(''); };
-const DEFAULTS = { shopName: '隱形眼鏡團購', deadline: '', closed: false, bankName: '', bankAccount: '', accountName: '', notes: '', siteUrl: '', goal: '', drinkLink: '' };
+const DEFAULTS = { shopName: '隱形眼鏡團購', deadline: '', closed: false, bankName: '', bankAccount: '', accountName: '', linePay: '', notes: '', siteUrl: '', goal: '', drinkLink: '' };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 let chatReady = false;
@@ -258,7 +258,7 @@ async function handle(req, env, ctx) {
     const out = await edgeGet('catalog/' + cid, 30, async () => {
       const [cat, s, pimgs] = await Promise.all([getCatalog(env, cid), getSettings(env, cid), getKV(env, kk(cid, 'pimgs'), {})]);
       if (cat && cat.drink && /^https:\/\//.test(s.drinkLink || '')) { const h = new URL(s.drinkLink).hostname; cat.link = s.drinkLink; cat.platform = /uber/.test(h) ? 'ubereats' : /nidin/.test(h) ? 'nidin' : cat.platform; }
-      return { catalog: cat, pimgs, settings: { shopName: s.shopName, deadline: s.deadline, closed: closedNow(s), bankName: s.bankName, bankAccount: s.bankAccount, accountName: s.accountName, notes: s.notes, goal: s.goal, drinkLink: s.drinkLink } };
+      return { catalog: cat, pimgs, settings: { shopName: s.shopName, deadline: s.deadline, closed: closedNow(s), bankName: s.bankName, bankAccount: s.bankAccount, accountName: s.accountName, linePay: s.linePay, notes: s.notes, goal: s.goal, drinkLink: s.drinkLink } };
     }, ctx);
     return json(out, 200, { 'cache-control': 'no-store' });
   }
@@ -464,7 +464,7 @@ async function handle(req, env, ctx) {
       if (b.menu) { try { built = buildDrinkCatalog(b.menu); } catch (e) { return err('菜單格式不正確：' + e.message); } }
       else if (b.manual) built = { catalog: { drink: true, store: name, platform: '', link: '', items: [], exclusive: [], limited: { title: '', cards: [], note: [] }, specs: null, builtAt: now() }, pimgs: {} };
       await setKV(env, 'campaigns', [...camps, { id, status: 'open', createdAt: now(), ...(usr ? { owner: usr.email } : {}) }]);
-      const init = {}; for (const k of ['goal', 'deadline', 'bankName', 'bankAccount', 'accountName', 'notes']) if (b.settings && b.settings[k] != null) init[k] = String(b.settings[k]).slice(0, 2000);
+      const init = {}; for (const k of ['goal', 'deadline', 'bankName', 'bankAccount', 'accountName', 'linePay', 'notes']) if (b.settings && b.settings[k] != null) init[k] = String(b.settings[k]).slice(0, 2000);
       await setKV(env, kk(id, 'settings'), { ...DEFAULTS, ...init, shopName: name, drinkLink: /^https:\/\//.test(b.link || '') ? String(b.link).slice(0, 500) : '' });
       if (built) { await env.FILES.put(fk(id, 'catalog.json'), JSON.stringify(built.catalog), { httpMetadata: { contentType: 'application/json' } }); await setKV(env, kk(id, 'pimgs'), built.pimgs); }
       return json({ ok: true, id });

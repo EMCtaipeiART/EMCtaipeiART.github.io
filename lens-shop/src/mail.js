@@ -22,8 +22,9 @@ export function orderMail({ order, settings, link, kind }) {
     <td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right">${nt(l.price)}</td>
     <td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:center">${l.qty}</td>
     <td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right">${nt(l.price * l.qty)}</td></tr>`).join('');
-  const bank = settings.bankAccount
-    ? `<p style="margin:4px 0">銀行：${esc(settings.bankName)}<br>帳號：<b style="font-size:16px">${esc(settings.bankAccount)}</b><br>戶名：${esc(settings.accountName)}</p>` : '<p style="margin:4px 0;color:#888">（匯款帳號尚未設定）</p>';
+  const lp = settings.linePay ? `<p style="margin:4px 0">LINE Pay Money：<b style="font-size:16px">${esc(settings.linePay)}</b></p>` : '';
+  const bank = (settings.bankAccount
+    ? `<p style="margin:4px 0">銀行：${esc(settings.bankName)}<br>帳號：<b style="font-size:16px">${esc(settings.bankAccount)}</b><br>戶名：${esc(settings.accountName)}</p>` : '') + lp || '<p style="margin:4px 0;color:#888">（匯款帳號尚未設定）</p>';
   const html = `<div style="font-family:-apple-system,'Microsoft JhengHei',sans-serif;max-width:640px;margin:auto;color:#222">
   <h2 style="margin:0 0 8px">${esc(shop)}｜${title}</h2>
   <p>${esc(order.name)} 您好，${cancelled ? '您的訂單已取消，以下為取消前的內容。' : '以下是您的訂單內容：'}</p>
@@ -37,7 +38,7 @@ export function orderMail({ order, settings, link, kind }) {
   ${settings.notes ? `<p style="color:#666;font-size:13px;white-space:pre-line">${esc(settings.notes)}</p>` : ''}<hr style="border:0;border-top:1px solid #eee;margin:18px 0 8px"><p style="color:#999;font-size:12px">${SYSTEM_NOTE}</p></div>`;
   const text = [`${shop}｜${title}`, `訂單編號：${order.id}`, '',
     ...order.items.map((l) => `${l.no} ${l.brand} ${l.name} ${powerText(l)} ${nt(l.price)} x ${l.qty} = ${nt(l.price * l.qty)}`), '',
-    `金額：${nt(order.total)}`, cancelled ? '' : `匯款：${settings.bankName} ${settings.bankAccount} ${settings.accountName}`,
+    `金額：${nt(order.total)}`, cancelled ? '' : `匯款：${settings.bankAccount ? settings.bankName + ' ' + settings.bankAccount + ' ' + settings.accountName : ''}${settings.linePay ? ' LINE Pay Money ' + settings.linePay : ''}`,
     cancelled ? '' : `截止日期：${fmtDeadline(settings.deadline)}`, cancelled ? '' : `修改訂單：${link}`, '', SYSTEM_NOTE].join('\n');
   return { subject, html, text };
 }
