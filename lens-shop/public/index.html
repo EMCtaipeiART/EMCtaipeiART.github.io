@@ -545,9 +545,11 @@ async function chatPoll(){if(!st.cid||CH.busy)return;CH.busy=1;const cid=CH.cid;
   for(const m of d.msgs){const k=CH.msgs.findIndex(x=>x.id===m.id);if(m.del){if(k>=0){CH.msgs.splice(k,1);changed=true}continue}
    if(k>=0){CH.msgs[k]=m;changed=true}else{CH.msgs.push(m);changed=true;if(!first&&!m.m)add++}CH.up=Math.max(CH.up||0,m.up||0)}
   CH.msgs.sort((a,b)=>a.id-b.id);if(first)CH.up=Math.max(CH.up||0,d.now-3000);if(add&&!CH.open)CH.unread+=add;
+  {const mx=CH.msgs.reduce((a,m)=>Math.max(a,m.id),0),k='lensChatSeen_'+cid;let seen=null;try{seen=localStorage.getItem(k)}catch(e){}
+   if(CH.open||seen===null){try{localStorage.setItem(k,String(mx))}catch(e){}}else if(first&&!CH.open){CH.unread=CH.msgs.filter(m=>!m.m&&m.id>+seen).length}}
   if(changed&&CH.open)chatRender();if(CH.open)chatHead();chatBtn()}catch(e){}finally{CH.busy=0}}
 function chatHead(){const h=document.getElementById('chn');if(h)h.textContent=`${CH.online} 在線 · 每 3 秒更新`}
-function chatToggle(){CH.open=!CH.open;CH.unread=0;const p=document.getElementById('chp');p.classList.toggle('on',CH.open);chatBtn();if(!CH.open)return;
+function chatToggle(){CH.open=!CH.open;CH.unread=0;try{localStorage.setItem('lensChatSeen_'+CH.cid,String(CH.msgs.reduce((a,m)=>Math.max(a,m.id),0)))}catch(e){}const p=document.getElementById('chp');p.classList.toggle('on',CH.open);chatBtn();if(!CH.open)return;
  p.innerHTML=`<div class="ch-h"><div><b>${esc(st.set?.shopName||'團購')} 聊天室</b><span id="chn"></span></div><button id="chx" title="收起" aria-label="收起"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button></div><div class="ch-b" id="chl"></div>
  <div class="ch-nm">以 <b id="chnm"></b> 的身分留言 · <a id="chrn">改暱稱</a></div>
  <div class="ch-f"><input type="file" id="chf" accept="image/*" hidden><button class="sec" id="chi" title="傳圖片"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-8 8"/></svg></button><textarea id="cht" placeholder="輸入訊息…" maxlength="500"></textarea><button id="chs" title="送出"><svg viewBox="0 0 24 24" style="stroke:#fff"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div>`;
