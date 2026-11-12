@@ -138,28 +138,24 @@ async function mailDrinkSummary(env, req, cid, camps, opt = {}) {
 
 // ── 結單後自動填單：先等填完再寄信（本機監看程式有回報心跳才啟用；否則立刻寄）──
 const fillKey = (cid) => kk(cid, 'fill');
+const localAlive = async (env, cid) => { const w = await getKV(env, 'fillWatch', null); return !!(w && Date.now() - w.at < 300000 && (w.cids || []).includes(cid)); };
 async function closeNotify(env, req, cid, camps) {
-  const w = await getKV(env, 'fillWatch', null); const cat = await getCatalog(env, cid);
-  const on = w && Date.now() - w.at < 300000 && (w.cids || []).includes(cid) && cat && cat.drink && ['ubereats', 'nidin'].includes(cat.platform);
-  const plat = cat && cat.drink && ['ubereats', 'nidin'].includes(cat.platform);
-  if (!on) {
-    // 本機監看程式不在線：改由 GitHub Actions 雲端代填（只填還沒填過的訂單）
-    if (plat && env.GH_DISPATCH_TOKEN) {
-      const rs = await env.DB.prepare("SELECT id FROM orders WHERE status='active' AND campaign=?").bind(cid).all();
-      const had = new Set(await getKV(env, kk(cid, 'filledIds'), [])); const ids = rs.results.map((r) => r.id).filter((i) => !had.has(i));
-      if (ids.length) {
-        try {
-          const r = await fetch('https://api.github.com/repos/EMCtaipeiART/lens-shop-filler/actions/workflows/fill.yml/dispatches', { method: 'POST', headers: { authorization: 'Bearer ' + env.GH_DISPATCH_TOKEN, accept: 'application/vnd.github+json', 'user-agent': 'lens-shop', 'content-type': 'application/json' }, body: JSON.stringify({ ref: 'main', inputs: { cid, orders: ids.join(','), dry: 'false' } }) });
-          if (r.status === 204) { await setKV(env, fillKey(cid), { status: 'pending', at: Date.now(), mailed: false, via: 'cloud', ids }); return 'waiting'; }
-          console.log('dispatch failed', r.status);
-        } catch (e) { console.log('dispatch exception', String(e)); }
-      }
-    }
-    return mailDrinkSummary(env, req, cid, camps);
+  const cat = await getCatalog(env, cid); const plat = cat && cat.drink && ['ubereats', 'nidin'].includes(cat.platform);
+  if (!plat) return mailDrinkSummary(env, req, cid, camps);
+  const rs = await env.DB.prepare("SELECT id FROM orders WHERE status='active' AND campaign=?").bind(cid).all();
+  if (!rs.results.length) return 'skip';
+  const had = new Set(await getKV(env, kk(cid, 'filledIds'), [])); const ids = rs.results.map((r) => r.id).filter((i) => !had.has(i));
+  if (!ids.length) return mailDrinkSummary(env, req, cid, camps, { mode: 'done', note: '沒有需要新填入的訂單（先前已填入）' });
+  // 主要：GitHub 雲端代填；本機監看程式只當備援（雲端失敗或太久沒開始才接手）
+  if (env.GH_DISPATCH_TOKEN) {
+    try {
+      const r = await fetch('https://api.github.com/repos/EMCtaipeiART/lens-shop-filler/actions/workflows/fill.yml/dispatches', { method: 'POST', headers: { authorization: 'Bearer ' + env.GH_DISPATCH_TOKEN, accept: 'application/vnd.github+json', 'user-agent': 'lens-shop', 'content-type': 'application/json' }, body: JSON.stringify({ ref: 'main', inputs: { cid, orders: ids.join(','), dry: 'false' } }) });
+      if (r.status === 204) { await setKV(env, fillKey(cid), { status: 'pending', at: Date.now(), mailed: false, via: 'cloud', ids }); return 'waiting'; }
+      console.log('dispatch failed', r.status);
+    } catch (e) { console.log('dispatch exception', String(e)); }
   }
-  const d = await summaryData(env, cid); if (!d.orders.length) return 'skip';
-  await setKV(env, fillKey(cid), { status: 'pending', at: Date.now(), mailed: false });
-  return 'waiting';
+  if (await localAlive(env, cid)) { await setKV(env, fillKey(cid), { status: 'pending', at: Date.now(), mailed: false, via: 'local', ids }); return 'waiting'; }
+  return mailDrinkSummary(env, req, cid, camps);
 }
 const sameKey = (a, b) => { a = String(a || ''); b = String(b || ''); if (!a || a.length !== b.length) return false; let r = 0; for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i); return r === 0; };
 
@@ -188,16 +184,25 @@ async function handle(req, env, ctx) {
     if (!sameKey(req.headers.get('x-fill-key'), env.FILL_KEY)) return err('未授權', 401);
     const b = await req.json().catch(() => ({})); const cids = (Array.isArray(b.cids) ? b.cids : []).filter((x) => CID_RE.test(String(x))).slice(0, 50);
     await setKV(env, 'fillWatch', { at: Date.now(), cids });
-    const pending = []; for (const c of cids) { const f = await getKV(env, fillKey(c), null); if (f && (f.status === 'pending' || f.status === 'filling')) pending.push(c); }
+    const pending = []; for (const c of cids) { const f = await getKV(env, fillKey(c), null); if (f && (f.status === 'pending' || f.status === 'filling')) pending.push({ cid: c, status: f.status, via: f.via || 'local', age: Math.round((Date.now() - f.at) / 1000), ids: f.ids || [] }); }
     return json({ ok: true, pending });
+  }
+  if (path === '/api/fill/filled' && method === 'POST') { // 把已在別處填過的訂單編號記入（避免重複填）
+    if (!sameKey(req.headers.get('x-fill-key'), env.FILL_KEY)) return err('未授權', 401);
+    const b = await req.json().catch(() => ({})); const add = (Array.isArray(b.ids) ? b.ids : []).filter((x) => /^[0-9A-F]{8}$/.test(String(x)));
+    await setKV(env, kk(cid, 'filledIds'), [...new Set([...(await getKV(env, kk(cid, 'filledIds'), [])), ...add])]); return json({ ok: true, count: add.length });
   }
   if (path === '/api/fill/status' && method === 'POST') {
     if (!sameKey(req.headers.get('x-fill-key'), env.FILL_KEY)) return err('未授權', 401);
     const b = await req.json().catch(() => ({})); const f = await getKV(env, fillKey(cid), null);
     if (!f || !['pending', 'filling'].includes(f.status) || !['filling', 'done', 'failed'].includes(b.status)) return json({ ok: true, ignored: true });
-    const note = String(b.note || '').slice(0, 600); const nf = { ...f, status: b.status, note, at: Date.now() };
+    const note = String(b.note || '').slice(0, 600); const src = b.takeover ? 'local' : (b.src || f.via || 'local');
+    if (b.takeover) { await setKV(env, fillKey(cid), { ...f, status: 'filling', via: 'local', at: Date.now() }); return json({ ok: true, status: 'filling' }); }
+    // 雲端失敗但本機備援在線：不寄失敗信，交給本機接手
+    if (b.status === 'failed' && src === 'cloud' && (await localAlive(env, cid))) { await setKV(env, fillKey(cid), { ...f, status: 'pending', via: 'local', at: Date.now(), note }); return json({ ok: true, status: 'pending', handoff: 'local' }); }
+    const nf = { ...f, status: b.status, note, at: Date.now(), via: f.via };
     if ((b.status === 'done' || b.status === 'failed') && !f.mailed) { nf.mailed = true; nf.mail = await mailDrinkSummary(env, req, cid, camps, { mode: b.status, note }); }
-    if (b.status === 'done') { const rs = await env.DB.prepare("SELECT id FROM orders WHERE status='active' AND campaign=?").bind(cid).all(); await setKV(env, kk(cid, 'filledIds'), [...new Set([...(await getKV(env, kk(cid, 'filledIds'), [])), ...rs.results.map((r) => r.id)])]); }
+    if (b.status === 'done') await setKV(env, kk(cid, 'filledIds'), [...new Set([...(await getKV(env, kk(cid, 'filledIds'), [])), ...(f.ids || [])])]);
     await setKV(env, fillKey(cid), nf); return json({ ok: true, status: nf.status, mail: nf.mail });
   }
   // ── 同事帳號（Google 登入）──

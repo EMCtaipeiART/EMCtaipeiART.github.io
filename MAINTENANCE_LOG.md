@@ -2230,3 +2230,7 @@
 
 ## 2026-11-12 lens-shop：CLAUDE.md 新增「用到的外部 API 與金鑰」整理
 - 列出 Brevo、GitHub、FILL_KEY、Claude API、你訂、Uber Eats、Google 登入與本站 API 的用途、金鑰存放位置與注意事項（不含金鑰值）。
+
+## 2026-11-12 lens-shop：改由 GitHub 雲端為主要填單者，本機當備援
+- closeNotify：飲料團（Uber/你訂）結單一律先觸發雲端工作流程（ids 排除 kv filledIds）；失敗才看本機心跳；都沒有就立刻寄信。ping 回傳待處理清單（cid/status/via/age/ids）；status 支援 takeover、雲端 failed 且本機在線時改交本機（不寄失敗信）；done 時把該次 ids 記入 filledIds；新增 /api/fill/filled 可補記已填訂單。
+- watch.py 重寫為備援模式（雲端失敗／240 秒未開始／720 秒未完成才接手，固定程式優先，再退 claude）；雲端工作流程開始時回報 filling。已把本機 done.json 的 drink1112／drink1112a 已填訂單補記進 filledIds，避免雲端重複填。

@@ -55,7 +55,7 @@
 | 項目 | 用途 | 金鑰存放 | 備註 |
 |---|---|---|---|
 | Brevo 郵件 API | 訂單確認信、結單明細信、商品無法下單通知信 | Cloudflare secret `BREVO_API_KEY` | 沒有金鑰時信件只記 log、不寄 |
-| GitHub API | 結單時觸發私有 repo `EMCtaipeiART/lens-shop-filler` 的 `fill.yml`（雲端代填） | Cloudflare secret `GH_DISPATCH_TOKEN`（fine-grained，僅該 repo 的 Actions 讀寫） | 本機監看程式在線時不觸發 |
+| GitHub API（主要填單者） | 結單時一律觸發私有 repo `EMCtaipeiART/lens-shop-filler` 的 `fill.yml`（雲端代填） | Cloudflare secret `GH_DISPATCH_TOKEN`（fine-grained，僅該 repo 的 Actions 讀寫） | 雲端是主力；本機監看程式只當備援 |
 | 本站填單回報 `/api/fill/ping`、`/api/fill/status` | 本機監看程式／雲端工作流程回報填單進度，完成才寄明細信 | Cloudflare secret `FILL_KEY`；本機 `~/.claude/tools/fill-watch/key`；repo `lens-shop-filler` 的 secret `FILL_KEY` | 用 `x-fill-key` 標頭驗證 |
 | Claude API | 只有雲端代填的固定程式失敗時，才退回 AI 操作瀏覽器 | repo `lens-shop-filler` 的 secret `ANTHROPIC_API_KEY` | 平常不會呼叫；本機備援用的是登入的 Claude 帳號，不走這把金鑰 |
 | 你訂公開 API `loctw-service-api.nidin.shop/shopper/v2` | 解析菜單（`onShelfMenu`）、商品圖（`store/<id>/productImages`）、訪客填單（`registerGuest`／`loginWebGuest`／`carts/subItem`／`order/productCouponFlow`） | 不需要 | 非官方文件，介面改版會失效 |
@@ -64,3 +64,4 @@
 | 本站 `/api/*` | 團購列表、商品目錄、訂單、聊天室、後台管理 | 管理密碼 `ADMIN_PASSWORD`（Cloudflare secret）或使用者簽章 token | `/api/campaigns`、`/api/catalog` 有 Cache API 邊緣快取（寫入時清除） |
 
 - 本機填單工具在 `~/.claude/tools/fill-watch/`（不在 Git）：`watch.py`、`fill-nidin.mjs`、`fill-uber.cjs`、`ubereats.mjs`、`allow.json`；雲端副本在私有 repo `lens-shop-filler`，兩邊要一起更新。
+- **填單流程（2026-11-12 起）**：結單 → 網站算出尚未填的訂單（kv `<id>:filledIds` 排除已填者）→ 觸發 GitHub 雲端填單（固定程式優先，失敗才用 Claude API 瀏覽器）→ 完成回報 `done` 才寄明細信。本機 `watch.py` 只是備援：雲端回報失敗（網站改標 via=local）、雲端 pending 超過 240 秒沒開始、或 filling 超過 720 秒沒完成時才接手；本機也失敗（3 次）才寄「請手動下單」信。網站沒有 GH_DISPATCH_TOKEN 或觸發失敗時：本機在線就由本機填，都不行就立刻寄明細信。
