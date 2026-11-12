@@ -2304,3 +2304,6 @@
 
 ## 2026-11-12 lens-shop：LINE 連結自動產生 QR Code
 - 新增 public/qrcode.js（qrcode-generator 2.0.4，MIT）。LINE Pay Money 欄位為 https 連結時，匯款資訊除了按鈕，還會顯示可掃描的 QR Code（電腦上開頁面、用手機掃）。確認信維持按鈕。
+
+## 2026-11-12 lens-shop：訂單頁 LINE 區塊去重、電腦只留 QR
+- 訂單頁上方訂單卡不再重複顯示匯款資訊（保留「匯款回報」卡內的）；LINE 連結在電腦版只顯示 QR Code、手機版只顯示按鈕；信件不變。

@@ -379,6 +379,7 @@ summary{min-height:40px;padding:8px 0;color:var(--bd)}
 .pcd{position:relative}.shr{position:absolute;right:14px;bottom:14px;width:34px;height:34px;border-radius:50%;border:1px solid #e3ebe5;background:#fff;display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer;color:#6b7771;box-shadow:0 2px 8px #10261812}.shr svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.shr:hover{color:#159E31;border-color:#159E31;background:#e8f4ec}
 .lpb{display:inline-block;background:#06C755;color:#fff!important;text-decoration:none;font-weight:700;padding:6px 16px;border-radius:99px;font-size:14px;line-height:1.4}.lpb:hover{filter:brightness(.95)}
 .lpq{display:flex;align-items:center;gap:12px;margin-top:10px}.lpq img{width:132px;height:132px;image-rendering:pixelated;border:1px solid #e3ebe5;border-radius:12px;padding:6px;background:#fff}.lpq span{color:#6b7771;font-size:13px}
+@media(min-width:721px){.lpb{display:none}}@media(max-width:720px){.lpq{display:none}}
 </style>
 </head>
 <body>
@@ -652,7 +653,7 @@ async function viewOrder(tok){
  $('#app').innerHTML='<p class="muted">載入訂單…</p>';
  try{const d=await api('/orders/'+tok);const o=d.order;await ensureCampaign(o.campaign||'lens');renderNav();
   $('#app').innerHTML=`${o.status==='active'?flowHtml([1,1,!!o.pay,!!o.pay]):''}${d.closed?'<div class="note bad">已截止，無法修改。</div>':''}<h2>訂單 ${o.id} ${o.status==='cancelled'?'<span class="tag x">已取消</span>':''}</h2><div class="card">
-  <p>${esc(o.name)}（${esc(o.email)}）｜下單 ${tp(o.createdAt)}${o.updatedAt!==o.createdAt?'｜最後修改 '+tp(o.updatedAt):''}</p>${orderTable(o)}<p>${bankHtml()}</p>
+  <p>${esc(o.name)}（${esc(o.email)}）｜下單 ${tp(o.createdAt)}${o.updatedAt!==o.createdAt?'｜最後修改 '+tp(o.updatedAt):''}</p>${orderTable(o)}
   <div class="acts"><a class="btn sec" href="${H('/mine')}">返回</a>${!d.closed?'<button id="edit">編輯這筆訂單</button>':''}</div></div>${o.status==='active'?payCard(o):''}`;
   bindPay(tok,o);
   const e=$('#edit');if(e)e.onclick=()=>{st.cart=o.items.map(l=>({no:l.no,qty:l.qty,sph:l.sph,cyl:l.cyl,axis:l.axis,gift:l.gift,sel:l.sel}));st.editTok=tok;st.editId=o.id;st.who={name:o.name,email:o.email};st.note=o.note;saveCart();go(H('/cart'))}
