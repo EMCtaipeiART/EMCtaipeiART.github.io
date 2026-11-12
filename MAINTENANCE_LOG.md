@@ -2295,3 +2295,6 @@
 
 ## 2026-11-12 lens-shop：匯款資訊加入 LINE Pay Money
 - 設定與開團視窗新增「LINE Pay Money 帳號（選填）」（kv settings.linePay）；訂單頁／送出後頁面的匯款資訊、確認信（HTML 與純文字）都會顯示；只填 LINE Pay 不填銀行也能正常顯示。
+
+## 2026-11-12 lens-shop：LINE Pay Money 可點開按鈕
+- LINE Pay Money 欄位若填 https 連結，訂單頁顯示綠色「LINE Pay Money 付款」按鈕、確認信也是按鈕；填 ID／電話則維持文字。
