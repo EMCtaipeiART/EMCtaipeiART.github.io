@@ -376,6 +376,7 @@ summary{min-height:40px;padding:8px 0;color:var(--bd)}
 .lg-ic{width:52px;height:52px;border-radius:16px;background:#e8f4ec;display:inline-flex;align-items:center;justify-content:center}.lg-ic svg{width:26px;height:26px;fill:none;stroke:#159E31;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .lgm{position:relative;width:min(400px,100%)}.lg-x{position:absolute;top:10px;right:12px;width:36px;height:36px;border-radius:50%;border:0;background:transparent;color:#6b7771;font-size:24px;line-height:1;padding:0;cursor:pointer}.lg-x:hover{background:#f1f4f2}
 .lgp{max-width:400px;margin:40px auto;padding:32px 28px;background:#fff;border:1px solid #e3ebe5;border-radius:20px;box-shadow:0 12px 40px #10261814}
+.pcd{position:relative}.shr{position:absolute;right:14px;bottom:14px;width:34px;height:34px;border-radius:50%;border:1px solid #e3ebe5;background:#fff;display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer;color:#6b7771;box-shadow:0 2px 8px #10261812}.shr svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.shr:hover{color:#159E31;border-color:#159E31;background:#e8f4ec}
 </style>
 </head>
 <body>
@@ -603,6 +604,7 @@ function addDialog(no,idx){
   if(it.power&&!line.sph)return alert('請填寫度數（0 度請填 0）');if((line.cyl||line.axis)&&!(line.cyl&&line.axis))return alert('散光度數與角度需一併填寫');
   if(idx!=null)st.cart[idx]=line;else st.cart.push(line);saveCart();bg.remove();if(idx!=null)viewCart();else toast('已加入購物車')};
 }
+document.addEventListener('click',async e=>{const b=e.target.closest&&e.target.closest('[data-share]');if(!b)return;e.preventDefault();e.stopPropagation();const url=location.origin+'/g/'+b.dataset.share+'/';const txt='發現一個好團購「'+b.dataset.nm+'」，一起來看看！\n'+url;try{await navigator.clipboard.writeText(txt)}catch(_){const t=document.createElement('textarea');t.value=txt;document.body.appendChild(t);t.select();try{document.execCommand('copy')}catch(__){}t.remove()}toast('已複製分享連結')},true);
 function toast(t){const d=document.createElement('div');d.textContent=t;d.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:9px 18px;border-radius:20px;z-index:99';document.body.appendChild(d);setTimeout(()=>d.remove(),1400)}
 
 // ───── 購物車／下單 ─────
@@ -856,11 +858,11 @@ function pcCard(c){const goal=c.goal||0,pct=goal?Math.round(c.sum/goal*100):0,ok
  const left=over?'已結束':!c.deadline?'進行中':`<span class="cdl" data-dl="${Date.parse(c.deadline+(c.deadline.length<=16?':00+08:00':''))}">${cdTxt(ms)}</span>`;
  const days=ok&&c.reachedAt&&c.startAt?Math.max(1,Math.ceil((Date.parse(c.reachedAt)-Date.parse(c.startAt))/864e5)):0;
  const cv=c.covers&&c.covers.length?`<div class="cv ${c.covers.length<2?'one':''}">${c.covers.slice(0,c.covers.length<2?1:4).map(u=>`<img loading="lazy" src="${esc(u)}" alt="">`).join('')}</div>`:`<div class="cv"><div class="ph">${esc(c.name)}</div></div>`;
- return`<a class="pcd" href="/g/${c.id}/">${cv}<span class="bdg ${st0[1]}">${st0[0]}</span><div class="bd2"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>${esc(c.name)}</span>${res?`<span class="bdg ${res[1]}" style="position:static;flex:none;white-space:nowrap">${res[0]}</span>`:''}</h3>${c.drink?`<div class="sub" style="margin:-6px 0 8px">${kindName(c)}${c.custom?'':'｜'+esc(c.store||'')}</div>`:''}
+ return`<a class="pcd" href="/g/${c.id}/">${cv}<span class="bdg ${st0[1]}">${st0[0]}</span><div class="bd2"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>${esc(c.name)}</span>${res?`<span class="bdg ${res[1]}" style="position:static;flex:none;white-space:nowrap">${res[0]}</span>`:''}</h3><div class="sub" style="margin:-6px 0 8px">${kindName(c)}${c.drink&&!c.custom?'｜'+esc(c.store||''):''}</div>
   ${goal?`<div class="pgb"><div class="bar2"><i style="width:${Math.min(100,pct)}%"></i></div><span class="pct">${pct.toLocaleString('en-US')}%</span></div>`:'<div class="sub">本團不設達標門檻</div>'}
   <div class="ft"><b>${nt(c.sum)}</b><span>${c.count} 人</span><span>${days?'<em>'+days+' 天</em>達標':left}</span></div>
   ${goal?`<div class="sub" style="margin-top:4px">目標 ${nt(goal)}${ok?'　✓ 已達標':'　還差 '+nt(Math.max(0,goal-c.sum))}</div>`:''}
-  ${c.names&&c.names.length?`<div class="who">${c.names.slice(0,6).map(n=>`<span>${esc(n)}</span>`).join('')}${c.nameCount>6?`<span>等 ${c.nameCount} 人</span>`:''}</div>`:'<div class="sub" style="margin-top:10px">還沒有人下單，搶頭香！</div>'}</div></a>`}
+  ${c.names&&c.names.length?`<div class="who">${c.names.slice(0,6).map(n=>`<span>${esc(n)}</span>`).join('')}${c.nameCount>6?`<span>等 ${c.nameCount} 人</span>`:''}</div>`:'<div class="sub" style="margin-top:10px">還沒有人下單，搶頭香！</div>'}</div><button type="button" class="shr" data-share="${esc(c.id)}" data-nm="${esc(c.name)}" title="複製分享連結" aria-label="複製分享連結"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button></a>`}
 function viewPicker(){
  const cs=st.camps||[];const open=cs.filter(c=>!c.ended),end=cs.filter(c=>c.ended);
  const newCard=`<a class="pcd" href="#" id="newcamp" style="display:flex;align-items:center;justify-content:center;min-height:220px;border:2px dashed #159E31;background:#f4fbf6;color:#159E31;text-align:center"><div><div style="font-size:44px;line-height:1">＋</div><h3 style="margin:8px 0 4px;color:#159E31">我要開團</h3><div class="sub">登入後即可開團<br>隱眼團、飲料團或自訂團</div></div></a>`;
