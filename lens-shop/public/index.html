@@ -534,7 +534,7 @@ async function viewAdmin(){
    if(act&&location.pathname.endsWith('/admin')){clearTimeout(window.fillT);window.fillT=setTimeout(()=>{if(document.getElementById('fillst'))fillUI()},8000)}};
   fillUI();
   $('#cls').onclick=async()=>{const closing=!s.closed;if(!confirm(closing?'結單後同事無法再下單或修改（訂單保留，可按「重新開單」恢復）。'+(isDrink()?'系統會寄訂單明細信給開團者。':'')+'確定結單？':'重新開放同事下單？'))return;
-   try{const r=await api('/admin/settings',{method:'PUT',admin:1,json:{closed:closing}});toast(closing?(r.mail==='sent'?'已結單，訂單明細信已寄給開團者':r.mail==='waiting'?'已結單，系統自動填單中，完成後會寄信給開團者':'已結單'):'已重新開單');await fetchCat();viewAdmin()}catch(e){alert(e.message)}};
+   try{const r=await api('/admin/settings',{method:'PUT',admin:1,json:{closed:closing}});toast(closing?(r.mail==='sent'?'已結單，訂單明細信已寄給開團者':r.mail==='waiting'?'已結單，系統自動填單中，完成後會寄信給開團者':'已結單'):'已重新開單');await loadCamps();await fetchCat();viewAdmin()}catch(e){alert(e.message)}};
   const cp=$('#cpy');if(cp)cp.onclick=async()=>{const NL='\n';const act=o.orders.filter(x=>x.status!=='cancelled');const t=act.map(x=>x.name+NL+x.items.map(l=>'  '+l.name+(l.opts?'（'+l.opts+'）':'')+(l.gift?' 備註：'+l.gift:'')+' ×'+l.qty).join(NL)).join(NL+NL)+NL+NL+'— 彙總 —'+NL+o.tally.map(t=>t.name+(t.opts?'（'+t.opts+'）':'')+' ×'+t.qty).join(NL)+NL+'合計 '+o.tally.reduce((n,t)=>n+t.qty,0)+' 杯，NT$ '+o.sum;try{await navigator.clipboard.writeText(t);toast('已複製點餐清單')}catch(e){prompt('請手動複製：',t)}};
   $('#lo').onclick=()=>{if(isAdm){st.admin='';localStorage.removeItem('lensAdmin');viewAdmin()}else go('/')};
   if(lite)document.querySelectorAll('#app > .card').forEach((c,i)=>{if(i>0)c.style.display='none'});

@@ -430,6 +430,8 @@ async function handle(req, env) {
         await setKV(env, kk(cid, 'settings'), next);
         if (next.closed && !cur.closed) next.mail = await closeNotify(env, req, cid, camps);
         if (!next.closed && cur.closed) await setKV(env, fillKey(cid), null);
+        // 結單＝團購狀態自動改為已結束；重新開單則恢復進行中
+        if (next.closed !== !!cur.closed) await setKV(env, 'campaigns', camps.map((c) => (c.id === cid ? { ...c, status: next.closed ? 'ended' : 'open', endedAt: next.closed ? now() : undefined } : c)));
         return json(next);
       }
     }
@@ -451,6 +453,7 @@ async function handle(req, env) {
       if (!camps.some((c) => c.id === m[1])) return err('找不到這個團購', 404);
       const was = (camps.find((c) => c.id === m[1]) || {}).status;
       await setKV(env, 'campaigns', camps.map((c) => (c.id === m[1] ? { ...c, status: st, endedAt: st === 'ended' ? now() : undefined } : c)));
+      if (st === 'open') { const cs0 = await getSettings(env, m[1]); if (cs0.closed) { await setKV(env, kk(m[1], 'settings'), { ...cs0, closed: false }); await setKV(env, fillKey(m[1]), null); } }
       const mail = st === 'ended' && was !== 'ended' ? await closeNotify(env, req, m[1], camps) : 'skip';
       return json({ ok: true, mail });
     }
