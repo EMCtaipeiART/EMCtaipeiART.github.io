@@ -43,7 +43,7 @@ export async function parseUberJoin(url) {
     const hasItem = /"itemDescription"|"imageUrl"/.test(chunk.slice(0, 700));
     const cat = last(secAt, i);
     if (!title || price == null || !hasItem || !cat || SKIP_SEC.test(cat) || +price <= 0) return;
-    const featured = /^(Featured|店長推薦|新品上市|熱銷|人氣|精選)/i.test(cat);
+    const featured = /^(Featured|Free with|店長推薦|新品上市|熱銷|人氣|精選)/i.test(cat);
     const cur = seen.get(id);
     if (cur && !(cur.featured && !featured)) return;
     seen.set(id, { id, name: title.trim(), price: Math.round(+price / 100), cat: featured && cur ? cur.cat : cat, featured, img: (chunk.match(/"imageUrl":"([^"]*)"/) || [])[1] || '', sub: last(subAt, i), sec: last(keyAt, i) });

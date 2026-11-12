@@ -2166,3 +2166,6 @@
 
 ## 2026-11-12 lens-shop：寄件人名稱改為「EMC 團購小幫手」
 - wrangler.jsonc 的 MAIL_FROM 顯示名稱由「EMC 隱眼團購小幫手」改為「EMC 團購小幫手」（信箱不變），使用者指定。
+
+## 2026-11-12 lens-shop：Uber 菜單促銷區塊分類修正
+- ubereats.js：「Free with NT$700 purchase」這類促銷區塊視為精選（featured），品項改歸原本分類，避免分類名稱變成「Free with NT$700 pur」。已開的團購（drink1112）目錄需重新匯入才會更新。
