@@ -585,7 +585,7 @@ function viewPicker(){
  const cs=st.camps||[];const open=cs.filter(c=>!c.ended),end=cs.filter(c=>c.ended);
  const newCard=`<a class="pcd" href="#" id="newcamp" style="display:flex;align-items:center;justify-content:center;min-height:220px;border:2px dashed #159E31;background:#f4fbf6;color:#159E31;text-align:center"><div><div style="font-size:44px;line-height:1">＋</div><h3 style="margin:8px 0 4px;color:#159E31">我要開團</h3><div class="sub">登入後即可開團<br>隱眼團或飲料團</div></div></a>`;
  $('#app').innerHTML=`<div class="sech"><h2>團購</h2><span>共 ${cs.length} 團</span></div>${open.length?`<div class="pgrid">${newCard}${open.map(pcCard).join('')}</div>`:`<div class="pgrid">${newCard}</div><div class="card muted" style="margin-top:14px">目前沒有進行中的團購</div>`}${end.length?`<h3 style="margin-top:28px">已結束的團購</h3><div class="pgrid">${end.map(pcCard).join('')}</div>`:''}`}
-document.addEventListener('click',e=>{const a=e.target.closest('#newcamp');if(!a)return;e.preventDefault();if(!st.admin&&!st.user){try{loginDialog()}catch(_){go('/admin')}return}sessionStorage.newCamp='1';go('/admin')});
+document.addEventListener('click',e=>{const a=e.target.closest('#newcamp');if(!a)return;e.preventDefault();if(!st.admin&&!st.user){try{loginDialog()}catch(_){go('/admin')}return}openNewCampaign()});
 addEventListener('popstate',route);
 function go(p){history.pushState(null,'',p);route()}
 document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[href^="/"]');if(!a||e.defaultPrevented||e.metaKey||e.ctrlKey||e.shiftKey||e.button||a.target==='_blank')return;const h=a.getAttribute('href');if(h.startsWith('/api/'))return;e.preventDefault();go(h)});
