@@ -2176,3 +2176,9 @@
 
 ## 2026-11-12 lens-shop：Mac 不在線時由 GitHub Actions 雲端代填
 - closeNotify：本機心跳不在時，若有 GH_DISPATCH_TOKEN 且為 Uber/你訂飲料團，觸發私有 repo EMCtaipeiART/lens-shop-filler 的 fill.yml（帶訂單編號，排除 kv filledIds 已填者）；成功觸發則狀態 pending(via cloud)，工作流程完成後回報 done/failed 並寄信。觸發失敗則照舊立刻寄信。回報 done 時把當時有效訂單記入 kv <cid>:filledIds。
+
+## 2026-11-12 填單加速（本機工具＋雲端 repo，非 lens-shop 程式）
+- 填單不再由 AI 逐步點瀏覽器：你訂改用 fill-nidin.mjs 直接呼叫 API（約 4 秒）；Uber 用 fill-uber.cjs（無頭瀏覽器訪客加入約 6 秒＋直接呼叫 addItemsToGroupDraftOrderV2 並核對，約 13 秒）。失敗時才退回 Claude(sonnet) 瀏覽器填單。
+- 監看程式輪詢 10 秒→3 秒；Claude 備援改用 sonnet 並精簡指令。
+- 工具放在 ~/.claude/tools/fill-watch/（不在 Git），同一份也放在私有 repo EMCtaipeiART/lens-shop-filler（雲端用，fill.yml 先走 API 快速路徑，失敗才裝 Claude 備援）。若平台改版需要同步更新兩處。
+- 測試時 drink1112a 與 drink1112 各多送了一筆重複的測試訂單（團購小幫手），請團長手動刪除。
