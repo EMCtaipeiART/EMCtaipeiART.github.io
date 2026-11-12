@@ -397,8 +397,8 @@ test('a round whose images reached the database stays sealed even after its uplo
   }
 });
 
-test('the NAS watcher keeps tracking a case while it is 修改中, not only while it is 過稿中', () => {
-  // 有新修改需求時案件會自動改成修改中；設計師在這段期間放進 NAS 的修改圖一樣要被自動追蹤。
+test('the NAS watcher only tracks 過稿中 cases, not 修改中 (designer has not replied yet)', () => {
+  // 修改中＝設計師還沒回信，不能提早抓 NAS 進新的修改輪次；回信後變回過稿中才抓。
   const row = (id, status) => ({ '案件編號': id, '狀態': status, '設計圖資料夾連結': `專案企劃部/執行中/${id}`, '設計負責人': 'Machi', '客戶別': 'DJI', '開始日期': '2026/09/15' });
   const dbData = { tables: { database: { rows: [
     row('26090001', '過稿中'),
@@ -407,7 +407,7 @@ test('the NAS watcher keeps tracking a case while it is 修改中, not only whil
     row('26090004', '已完成'),
     row('26090005', '未開始')
   ] } } };
-  assert.deepEqual(discoverProjects(dbData).map(project => project.caseId), ['26090001', '26090002']);
+  assert.deepEqual(discoverProjects(dbData).map(project => project.caseId), ['26090001']);
 });
 
 test('a design already uploaded by hand is not backed up again by the NAS watcher, even when the extension differs', async () => {
