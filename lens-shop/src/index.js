@@ -472,6 +472,13 @@ async function handle(req, env, ctx) {
       const mail = st === 'ended' && was !== 'ended' ? await closeNotify(env, req, m[1], camps) : 'skip';
       return json({ ok: true, mail });
     }
+    if (path === '/api/admin/drink-images' && method === 'POST') { // 重新抓取商品圖片（依品名對應，不動訂單與目錄）
+      const cat = await getCatalog(env, cid); if (!cat || !cat.drink) return err('這不是飲料團');
+      let items; try { const c = checkLink(cat.link); items = c.platform === 'nidin' ? (await parseNidin(c.url)).items : (await parseUberJoin(c.url)).items; } catch (e) { return err(e.message); }
+      const byName = new Map(items.map((i) => [i.name, i.img])); const pimgs = {}; let n = 0;
+      cat.items.forEach((x, i) => { const u = byName.get(x.name); if (u && /^https:\/\/[^\s]+$/i.test(u)) { pimgs[i + 1] = u; n++; } });
+      await setKV(env, kk(cid, 'pimgs'), pimgs); return json({ ok: true, count: n, total: cat.items.length });
+    }
     if (path === '/api/admin/drink-parse' && method === 'POST') {
       const b = await req.json().catch(() => ({})); let c;
       try { c = checkLink(b.link); } catch (e) { return err(e.message); }

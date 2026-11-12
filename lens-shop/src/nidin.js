@@ -11,10 +11,12 @@ export function nidinIds(url) {
 
 export async function parseNidin(url) {
   const { storeId, code } = nidinIds(url);
-  const [br, mr] = await Promise.all([
+  const [br, mr, pi] = await Promise.all([
     fetch(`${API}/groupBuy/${code}/brief`, { headers: H }).then((r) => r.json()).catch(() => ({})),
     fetch(`${API}/store/${storeId}/onShelfMenu`, { headers: H }).then((r) => r.json()).catch(() => ({})),
+    fetch(`${API}/store/${storeId}/productImages`, { headers: H }).then((r) => r.json()).catch(() => ({})),
   ]);
+  const pimg = (pi && pi.product_list && !Array.isArray(pi.product_list)) ? pi.product_list : {};
   if (br.status !== 200 || !br.group_buy_brief) throw new Error('讀不到這個你訂開團（連結可能已過期或團單已關閉）');
   if (mr.status !== 200 || !mr.menu) throw new Error('讀不到店家菜單');
   const b = br.group_buy_brief, M = mr.menu;
@@ -36,7 +38,7 @@ export async function parseNidin(url) {
     for (const pid of c[cs.product_list] || []) {
       const p = D(prod)[pid]; if (!p || !p[ps.is_enable] || !p[ps.is_visible]) continue;
       const price = Math.round(Number(p[ps.price])); if (!(price >= 0)) continue;
-      const img = ((p[ps.img_list] || [])[0] || [])[prod.img_schema.url] || '';
+      const img = ((pimg[pid] || {}).main_image || {}).url || ((p[ps.img_list] || [])[0] || [])[prod.img_schema.url] || '';
       items.push({ cat: String(c[cs.name]), name: String(p[ps.name]), price, img: /^https:\/\//.test(img) ? img : '', groups: (() => { const al = allowedOf(p); return (p[ps.adjust_list] || []).map((id) => adjOf(id, al)); })().filter(Boolean) });
     }
   }
