@@ -440,10 +440,10 @@ function viewSpec(){
 // 中文輸入法組字中不要重繪（會打斷選字）；組字結束才套用
 function imeInput(el,fn){let c=false;el.addEventListener('compositionstart',()=>{c=true});el.addEventListener('compositionend',e=>{c=false;fn(e)});el.oninput=e=>{if(!c&&!e.isComposing)fn(e)}}
 async function acctAdminUI(){const box=document.getElementById('acbox');if(!box)return;try{const [a,l]=await Promise.all([api('/admin/auth',{admin:1}),api('/admin/accounts',{admin:1})]);
- box.innerHTML=`<p class="muted">到 Google Cloud Console 建立「OAuth 用戶端 ID（網頁應用程式）」，已授權的 JavaScript 來源填 ${esc(location.origin)}，把用戶端 ID 貼在下面（不是機密，可公開）。</p><div class="tools"><input id="gcid" placeholder="xxxx.apps.googleusercontent.com" value="${esc(a.clientId)}" style="flex:1;min-width:260px"><button id="gsv">儲存</button></div>
+ box.innerHTML=`<details style="margin-bottom:8px"><summary class="sub" style="cursor:pointer">Google 登入設定（進階）${a.clientId?'：已設定':'：尚未設定'}</summary><p class="muted">OAuth 用戶端 ID 已設定時請勿更動。</p><div class="tools"><input id="gcid" type="password" autocomplete="off" placeholder="${a.clientId?'已設定（輸入新值才會覆蓋）':'xxxx.apps.googleusercontent.com'}" style="flex:1;min-width:260px"><button id="gsv">儲存</button></div></details>
  <p><label><input type="checkbox" id="gdef" ${a.defaultCreate?'checked':''}> 新登入的帳號預設可以開團</label></p>
  <table class="t"><thead><tr><th>姓名</th><th>Email</th><th>最近登入</th><th>可開團</th></tr></thead><tbody>${l.accounts.map(x=>`<tr><td>${esc(x.name)}</td><td class="sub">${esc(x.email)}</td><td class="sub">${esc((x.last_login||'').slice(0,16).replace('T',' '))}</td><td><input type="checkbox" data-ac="${esc(x.email)}" ${x.can_create?'checked':''}></td></tr>`).join('')||'<tr><td colspan="4" class="muted">還沒有同事登入</td></tr>'}</tbody></table>`;
- document.getElementById('gsv').onclick=async()=>{try{await api('/admin/auth',{method:'PUT',admin:1,json:{clientId:document.getElementById('gcid').value,defaultCreate:document.getElementById('gdef').checked}});toast('已儲存')}catch(e){alert(e.message)}};
+ document.getElementById('gsv').onclick=async()=>{try{await api('/admin/auth',{method:'PUT',admin:1,json:{clientId:document.getElementById('gcid').value.trim()||'__keep__',defaultCreate:document.getElementById('gdef').checked}});toast('已儲存')}catch(e){alert(e.message)}};
  box.querySelectorAll('[data-ac]').forEach(c=>c.onchange=async()=>{try{await api('/admin/accounts/'+encodeURIComponent(c.dataset.ac),{method:'PUT',admin:1,json:{canCreate:c.checked}});toast('已更新')}catch(e){alert(e.message);c.checked=!c.checked}})}catch(e){box.textContent=e.message}}
 async function viewAdmin(){
  if(!st.admin&&!(st.user&&st.user.canCreate)){$('#app').innerHTML=`<h2>管理者登入</h2><div class="card"><div class="tools"><input id="pw" name="admin-pass" type="password" autocomplete="new-password" placeholder="管理者密碼"><button id="lg">登入</button></div></div><div class="card"><h3 style="margin-top:0">同事登入（開團）</h3><p class="muted">用 Google 帳號登入，有開團權限的同事可以建立並管理自己的團購。</p><div id="gbtn2" style="min-height:44px"></div></div>`;googleButton($('#gbtn2'),()=>{renderNav();viewAdmin()});
@@ -455,22 +455,25 @@ async function viewAdmin(){
   const f=(k,l,t='text')=>`<label class="sub">${l}</label><input data-k="${k}" type="${t}" value="${esc(s[k])}" style="width:100%">`;
   $('#app').innerHTML=`<div class="sp"><h2>管理後台${isAdm?'':'（'+esc(st.user.name)+'）'}</h2><button class="sec" id="lo">${isAdm?'登出':'離開管理'}</button></div>
   ${isAdm?'<div class="card" style="margin-top:12px"><h3 style="margin-top:0">帳號與登入設定</h3><div id="acbox"><span class="muted">載入中…</span></div></div>':''}
-  <div class="card"><h3 style="margin-top:0">0. 團購管理</h3><p class="muted">點卡片的「管理」切換要設定的團購；下方的設定、商品圖與訂單都屬於目前管理中的團購。結束後訂單會保留，同事不能再下單或修改。</p>
-  <div class="acg">${cs.map(c=>`<div class="acd ${c.id===st.cid?'on':''}"><span class="atg ${c.drink?'dk':''}">${c.drink?'飲料團':'隱眼團'}</span><span class="ast ${c.ended?'x':''}">${c.ended?'已結束':'進行中'}</span><h4>${esc(c.name)}</h4><div class="sub">${c.drink&&c.store?esc(c.store)+'　':''}代號 ${esc(c.id)}</div><div class="sub">${c.count} 人下單　${nt(c.sum)}${c.goal?'　目標 '+nt(c.goal):''}</div>
-   <div class="acts"><button ${c.id===st.cid?'class="sec" disabled':''} data-mg="${esc(c.id)}">${c.id===st.cid?'管理中':'管理'}</button><button class="sec" data-ce="${esc(c.id)}" data-en="${c.ended?0:1}">${c.ended?'重新開放':'結束'}</button></div></div>`).join('')}
-   <div class="acd add" id="addc"><b>＋ 新增團購</b><div class="sub">隱眼團（上傳 Excel）或飲料團（貼揪團連結）</div></div></div>
-  <div id="newp" style="display:none;margin-top:14px;padding-top:14px;border-top:1px dashed #cfe3d5">
-   <div class="chips" id="ntype"><span class="chip on" data-t="lens">隱眼團</span><span class="chip" data-t="drink">飲料團</span></div>
+  <div class="card"><h3 style="margin-top:0">我要開團</h3><p class="muted">選擇團購類型：隱眼團上傳報價 Excel；飲料團貼上 Uber Eats／你訂揪團連結，系統自動解析店名與菜單。</p>
+  <div class="tools"><button id="addl">＋ 隱眼團</button><button id="addd">＋ 飲料團</button></div>
+  <div id="newp" style="display:none;margin-top:14px;">
+   <div class="chips" id="ntype" style="display:none"><span class="chip on" data-t="lens">隱眼團</span><span class="chip" data-t="drink">飲料團</span></div>
+   <div id="nl-lens" style="margin-top:10px"><label class="sub">報價 Excel（含「報價單／全台獨家活動／期間限定／各品牌度數規格／填寫單1」的 .xlsx）</label><input type="file" id="nxf" accept=".xlsx"></div>
    <div id="nl-drink" style="display:none;margin-top:10px"><label class="sub">Uber Eats 揪團連結（或你訂開團連結）</label><div class="tools"><input id="nlink" placeholder="https://eats.uber.com/group-orders/…/join" style="flex:1;min-width:240px"><button id="nparse">解析</button></div><div class="sub" id="nmsg" style="margin-top:6px"></div></div>
    <div class="form2" style="margin-top:10px"><div><label class="sub">團購名稱（系統自動帶入，可修改）</label><input id="nnm" style="width:100%"></div><div><label class="sub">團購代號（自動產生，可修改；英文小寫／數字／-）</label><input id="nid" style="width:100%"></div></div>
    <div class="acts"><button class="sec" id="ncancel">取消</button><button id="ngo">建立團購</button></div></div></div>
-  <div class="card" style="margin-top:12px"><h3 style="margin-top:0">飲料團：匯入菜單</h3><p class="muted">選擇整理好的飲料菜單 .json（清心福全、樂法等，由 Claude 從 Uber Eats／你訂抓取）。匯入後這個團購就會變成「飲料團」，並取代目前的商品目錄（訂單保留）。${st.cat?.drink?'<br>目前菜單：<b>'+esc(st.cat.store||'')+'</b>，共 '+st.cat.items.length+' 項。':''}</p>
-  ${s.drinkLink&&!st.cat?.drink?'<div class="note" style="margin:8px 0">已收到開團連結，尚未抓取菜單。請告訴 Claude「抓這個連結的菜單」，我會用訪客進去把店家與品項補齊。</div>':''}<div class="tools"><input type="file" id="mf" accept=".json"><input id="mlink" placeholder="店家頁／開團連結（https://…，選填）" value="${esc(st.cat?.link||'')}"><button id="mup">匯入菜單</button></div></div>
-  <div class="card" style="margin-top:12px"><h3 style="margin-top:0">1. 上傳報價 Excel</h3><p class="muted">選擇含「報價單／全台獨家活動／期間限定／各品牌度數規格／填寫單1」的 .xlsx，網站會自動更新價格與內容，並作為匯出的範本。</p>
-  <input type="file" id="xf" accept=".xlsx"> <button id="up">上傳並更新</button> <span id="upm" class="muted"></span></div>
-  <div class="card" style="margin-top:12px"><h3 style="margin-top:0">2. 團購設定</h3><div class="form2">${f('shopName','團購名稱')}${f('goal','達標金額（NT$，開團成功門檻；留空或 0＝不設門檻）','number')}${f('drinkLink','飲料團開團連結（Uber Eats 揪團／你訂開團網址，貼上後存檔）')}${f('deadline','截止日期時間（台北時間）','datetime-local')}${f('bankName','銀行（含代碼）')}${f('bankAccount','匯款帳號')}${f('accountName','戶名')}${f('siteUrl','網站網址（信件連結用，可留空）')}</div>
+  <div class="card"><h3 style="margin-top:0">團購管理</h3><p class="muted">點卡片的「管理」切換團購；下方的設定、商品圖與訂單都屬於目前管理中的團購。結束後訂單會保留，同事不能再下單或修改。</p>
+  <div class="acg">${cs.map(c=>`<div class="acd ${c.id===st.cid?'on':''}"><span class="atg ${c.drink?'dk':''}">${c.drink?'飲料團':'隱眼團'}</span><span class="ast ${c.ended?'x':''}">${c.ended?'已結束':'進行中'}</span><h4>${esc(c.name)}</h4><div class="sub">${c.drink&&c.store?esc(c.store)+'　':''}代號 ${esc(c.id)}</div><div class="sub">${c.count} 人下單　${nt(c.sum)}${c.goal?'　目標 '+nt(c.goal):''}</div>
+   <div class="acts"><button ${c.id===st.cid?'class="sec" disabled':''} data-mg="${esc(c.id)}">${c.id===st.cid?'管理中':'管理'}</button><button class="sec" data-ce="${esc(c.id)}" data-en="${c.ended?0:1}">${c.ended?'重新開放':'結束'}</button></div></div>`).join('')}
+  </div>
+  <div style="margin-top:16px;padding-top:14px;border-top:1px dashed #cfe3d5"><h3 style="margin:0 0 10px">目前管理：${esc(cur.name||st.cid||'')} 設定</h3><div class="form2">${f('shopName','團購名稱')}${f('goal','達標金額（NT$，開團成功門檻；留空或 0＝不設門檻）','number')}${f('drinkLink','飲料團開團連結（Uber Eats 揪團／你訂開團網址，貼上後存檔）')}${f('deadline','截止日期時間（台北時間）','datetime-local')}${f('bankName','銀行（含代碼）')}${f('bankAccount','匯款帳號')}${f('accountName','戶名')}${f('siteUrl','網站網址（信件連結用，可留空）')}</div>
   <label class="sub">信件／頁面附註</label><textarea data-k="notes" rows="2" style="width:100%">${esc(s.notes)}</textarea>
-  <p><label><input type="checkbox" id="closed" ${s.closed?'checked':''}> 手動結單（勾選後同事無法再下單／修改）</label></p><button id="sv">儲存設定</button></div>
+  <p><label><input type="checkbox" id="closed" ${s.closed?'checked':''}> 手動結單（勾選後同事無法再下單／修改）</label></p><button id="sv">儲存設定</button>${st.cat?.drink?'':'<div style="margin-top:12px"><label class="sub">更新報價 Excel（取代目前價格與範本，訂單保留）</label><div><input type="file" id="xf" accept=".xlsx"> <button class="sec" id="up">上傳並更新</button> <span id="upm" class="muted"></span></div></div>'}</div>
+</div>
+
+
+
   <div class="card" style="margin-top:12px"><h3 style="margin-top:0">4. 商品圖片</h3><p class="muted">選品牌後可逐項上傳圖片或貼 https 圖片網址；也能一次套用到整個品牌。圖片會自動縮小。</p><div id="pimgbox"></div></div>
   <div class="card" style="margin-top:12px"><div class="sp"><h3 style="margin:0">3. 訂單（${o.count} 筆有效單，${o.orders.filter(x=>x.status!=='cancelled'&&x.pay).length} 筆已付款單，已付 ${nt(o.orders.filter(x=>x.status!=='cancelled'&&x.pay).reduce((n,x)=>n+x.total,0))}）</h3>${st.cat?.drink?'<button id="cpy">複製點餐清單</button>':'<button id="ex">一鍵下載彙整 Excel</button>'}</div>
   <p class="muted">下載檔 = 原上傳的 Excel，只把訂單填入「填寫單1」（超過會接續填寫單2～4），原本的公式不會被覆蓋。</p>
@@ -485,8 +488,9 @@ async function viewAdmin(){
    const genId=()=>{const base=(np.type==='drink'?'drink':'lens')+md;let x=base,k=0;while(ids.includes(x)||x.startsWith('lim'))x=base+'abcdefghijklmnopqrstuvwxyz'[k++%26]+(k>26?k:'');return x};
    const genName=()=>np.type==='drink'?'飲料團 '+(+md.slice(0,2))+'/'+(+md.slice(2)):'隱形眼鏡團購 '+(+md.slice(0,2))+'/'+(+md.slice(2));
    const fill=()=>{if(!np.touched.id)$('#nid').value=genId();if(!np.touched.nm&&!(np.type==='drink'&&np.menu))$('#nnm').value=genName()};
-   const ui=()=>{$('#nl-drink').style.display=np.type==='drink'?'block':'none';$('#ngo').textContent=np.type==='drink'?'開團':'建立團購';$('#ntype').querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.t===np.type));fill()};
-   $('#addc').onclick=()=>{$('#newp').style.display='block';ui();$('#newp').scrollIntoView({behavior:'smooth',block:'nearest'})};
+   const ui=()=>{$('#nl-drink').style.display=np.type==='drink'?'block':'none';$('#nl-lens').style.display=np.type==='drink'?'none':'block';$('#ngo').textContent=np.type==='drink'?'開團':'建立隱眼團';$('#ntype').querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.t===np.type));fill()};
+   const openNew=t=>{np.type=t;np.menu=null;np.pending=false;$('#nmsg').textContent='';$('#newp').style.display='block';ui();$('#newp').scrollIntoView({behavior:'smooth',block:'nearest'})};
+   $('#addl').onclick=()=>openNew('lens');$('#addd').onclick=()=>openNew('drink');
    $('#ncancel').onclick=()=>{$('#newp').style.display='none'};
    $('#ntype').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{np.type=c.dataset.t;np.menu=null;np.pending=false;$('#nmsg').textContent='';ui()});
    $('#nnm').oninput=()=>np.touched.nm=1;$('#nid').oninput=()=>np.touched.id=1;
@@ -501,15 +505,18 @@ async function viewAdmin(){
      fill()}catch(e){msg.style.color='#b42323';msg.textContent='✘ '+e.message}btn.disabled=false};
    $('#ngo').onclick=async()=>{const id=$('#nid').value.trim().toLowerCase(),name=$('#nnm').value.trim();if(!id||!name)return alert('請填寫名稱與代號');
     if(np.type==='drink'&&!np.menu&&!np.pending)return alert('請先貼上連結並按「解析」');
-    try{await api('/admin/campaigns',{method:'POST',admin:1,json:{id,name,...(np.type==='drink'?{menu:np.menu,link:np.link}:{})}});await loadCamps();toast('已建立團購');go('/g/'+id+'/admin')}catch(e){alert(e.message)}};
+    const xf=np.type==='lens'?$('#nxf').files[0]:null;if(np.type==='lens'&&!xf)return alert('請先選擇報價 Excel（.xlsx）');
+    try{await api('/admin/campaigns',{method:'POST',admin:1,json:{id,name,...(np.type==='drink'?{menu:np.menu,link:np.link}:{})}});
+     if(xf){try{await api('/admin/upload?c='+encodeURIComponent(id),{method:'POST',admin:1,body:xf})}catch(e){alert('團購已建立，但 Excel 上傳失敗：'+e.message+'。請到該團購設定重新上傳。')}}
+     await loadCamps();toast('已建立團購');go('/g/'+id+'/admin')}catch(e){alert(e.message)}};
    ui()}
-  $('#mup').onclick=async()=>{const f=$('#mf').files[0];if(!f)return alert('請先選擇菜單檔（.json）');if(!confirm('匯入菜單會取代這個團購目前的商品目錄（訂單保留）。確定？'))return;
+  if(0)$('#mup').onclick=async()=>{const f=$('#mf').files[0];if(!f)return alert('請先選擇菜單檔（.json）');if(!confirm('匯入菜單會取代這個團購目前的商品目錄（訂單保留）。確定？'))return;
    try{const menu=JSON.parse(await f.text());const d=await api('/admin/drink-menu',{method:'POST',admin:1,json:{menu,link:$('#mlink').value.trim()}});toast('已匯入 '+d.items+' 項');await fetchCat();viewAdmin()}catch(e){alert(e.message)}};
   const cp=$('#cpy');if(cp)cp.onclick=async()=>{const NL='\n';const act=o.orders.filter(x=>x.status!=='cancelled');const t=act.map(x=>x.name+NL+x.items.map(l=>'  '+l.name+(l.opts?'（'+l.opts+'）':'')+(l.gift?' 備註：'+l.gift:'')+' ×'+l.qty).join(NL)).join(NL+NL)+NL+NL+'— 彙總 —'+NL+o.tally.map(t=>t.name+(t.opts?'（'+t.opts+'）':'')+' ×'+t.qty).join(NL)+NL+'合計 '+o.tally.reduce((n,t)=>n+t.qty,0)+' 杯，NT$ '+o.sum;try{await navigator.clipboard.writeText(t);toast('已複製點餐清單')}catch(e){prompt('請手動複製：',t)}};
   $('#lo').onclick=()=>{if(isAdm){st.admin='';localStorage.removeItem('lensAdmin');viewAdmin()}else go('/')};
   if(lite)document.querySelectorAll('#app > .card').forEach((c,i)=>{if(i>0)c.style.display='none'});
   if(isAdm)acctAdminUI();
-  $('#up').onclick=async()=>{const f=$('#xf').files[0];if(!f)return alert('請先選擇檔案');$('#upm').textContent='上傳解析中…';try{const d=await api('/admin/upload',{method:'POST',admin:1,body:f});$('#upm').textContent=`✔ 已更新：${d.items} 項商品、${d.limited} 張限定卡、規格表 ${d.specRows} 列`;st.cat=null;load()}catch(e){$('#upm').textContent='✘ '+e.message}};
+  const upb=$('#up');if(upb)upb.onclick=async()=>{const f=$('#xf').files[0];if(!f)return alert('請先選擇檔案');$('#upm').textContent='上傳解析中…';try{const d=await api('/admin/upload',{method:'POST',admin:1,body:f});$('#upm').textContent=`✔ 已更新：${d.items} 項商品、${d.limited} 張限定卡、規格表 ${d.specRows} 列`;st.cat=null;load()}catch(e){$('#upm').textContent='✘ '+e.message}};
   $('#sv').onclick=async()=>{const b={closed:$('#closed').checked};document.querySelectorAll('[data-k]').forEach(i=>b[i.dataset.k]=i.value);await api('/admin/settings',{method:'PUT',admin:1,json:b});toast('已儲存');load()};
   const exb=$('#ex');if(exb)exb.onclick=async()=>{try{const r=await api('/admin/export',{admin:1,raw:1});const ov=+r.headers.get('x-overflow-rows');const bl=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download='團購訂單彙整_'+new Date(Date.now()+8*36e5).toISOString().slice(0,10)+'.xlsx';a.click();if(ov)alert('注意：有 '+ov+' 列超出填寫單1～4的容量，未寫入。')}catch(e){alert(e.message)}};
   document.querySelectorAll('[data-pi]').forEach(a=>a.onclick=async e=>{e.preventDefault();const r=await api('/admin/payimg/'+a.dataset.pi,{admin:1,raw:1});window.open(URL.createObjectURL(await r.blob()))});

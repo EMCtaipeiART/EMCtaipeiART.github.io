@@ -337,7 +337,7 @@ async function handle(req, env) {
       if (!ok) return err('這個團購不是您開的，沒有權限', 403);
     }
     if (path === '/api/admin/auth' && method === 'GET') { await ensureAccounts(env); const a = await getKV(env, 'auth', { clientId: '', defaultCreate: true }); return json({ clientId: a.clientId || '', defaultCreate: a.defaultCreate !== false }); }
-    if (path === '/api/admin/auth' && method === 'PUT') { const b = await req.json().catch(() => ({})); const a = { clientId: String(b.clientId || '').trim().slice(0, 200), defaultCreate: !!b.defaultCreate }; await setKV(env, 'auth', a); return json(a); }
+    if (path === '/api/admin/auth' && method === 'PUT') { const b = await req.json().catch(() => ({})); const old = await getKV(env, 'auth', { clientId: '' }); const a = { clientId: b.clientId === '__keep__' ? old.clientId || '' : String(b.clientId || '').trim().slice(0, 200), defaultCreate: !!b.defaultCreate }; await setKV(env, 'auth', a); return json(a); }
     if (path === '/api/admin/accounts' && method === 'GET') { await ensureAccounts(env); const rs = await env.DB.prepare('SELECT email,name,can_create,created_at,last_login FROM accounts ORDER BY created_at').all(); return json({ accounts: rs.results.map((a) => ({ ...a, can_create: !!a.can_create })) }); }
     if ((m = path.match(/^\/api\/admin\/accounts\/(.+)$/)) && method === 'PUT') {
       const b = await req.json().catch(() => ({})); const email = decodeURIComponent(m[1]).toLowerCase();
