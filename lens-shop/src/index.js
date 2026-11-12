@@ -112,7 +112,7 @@ async function sendMail(env, to, subject, html, text) {
   } catch (e) { console.log('mail exception', String(e)); return 'failed'; }
 }
 
-// ── 飲料團結單：寄訂單明細信給開團者（含可存成 PDF 的明細頁連結）──
+// ── 餐飲團結單：寄訂單明細信給開團者（含可存成 PDF 的明細頁連結）──
 const sumToken = async (env, cid) => (await hmac(env, 'sum:' + cid)).slice(0, 24);
 async function summaryData(env, cid) {
   const cat = await getCatalog(env, cid); const s = await getSettings(env, cid);
@@ -498,7 +498,7 @@ async function handle(req, env, ctx) {
       return json({ ok: true, nos: r.nos, count: r.items.length });
     }
     if (path === '/api/admin/drink-images' && method === 'POST') { // 重新抓取商品圖片（依品名對應，不動訂單與目錄）
-      const cat = await getCatalog(env, cid); if (!cat || !cat.drink) return err('這不是飲料團');
+      const cat = await getCatalog(env, cid); if (!cat || !cat.drink) return err('這不是餐飲團');
       let items; try { const c = checkLink(cat.link); items = c.platform === 'nidin' ? (await parseNidin(c.url)).items : (await parseUberJoin(c.url)).items; } catch (e) { return err(e.message); }
       const byName = new Map(items.map((i) => [i.name, i.img])); const pimgs = {}; let n = 0;
       cat.items.forEach((x, i) => { const u = byName.get(x.name); if (u && /^https:\/\/[^\s]+$/i.test(u)) { pimgs[i + 1] = u; n++; } });

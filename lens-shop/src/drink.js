@@ -1,4 +1,4 @@
-// 飲料團：把通用格式的菜單（見 tools/drink-normalize.mjs）轉成網站用的目錄，並驗證下單選項
+// 餐飲團：把通用格式的菜單（見 tools/drink-normalize.mjs）轉成網站用的目錄，並驗證下單選項
 export function buildDrinkCatalog(m) {
   const t = (v, n) => String(v ?? '').trim().slice(0, n);
   if (!m || !Array.isArray(m.items) || !m.items.length) throw new Error('菜單沒有任何品項');
