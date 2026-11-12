@@ -1,5 +1,6 @@
 import { buildCatalog } from './catalog.js';
 import { buildDrinkCatalog, pickDrink } from './drink.js';
+import { checkLink, parseUberJoin, fetchGroups } from './ubereats.js';
 import { fillForms } from './xlsx.js';
 import { orderMail, SYSTEM_NOTE } from './mail.js';
 import { D1Files } from './store.js';
@@ -302,8 +303,11 @@ async function handle(req, env) {
       if (!CID_RE.test(id) || id.startsWith('lim') || ['order', 'g', 'api', 'admin', 'campaigns'].includes(id)) return err('代號只能用英文小寫、數字、-（1–20 字），且不可用保留字');
       if (!name) return err('請填寫團購名稱');
       if (camps.some((c) => c.id === id)) return err('這個代號已存在');
+      let built = null;
+      if (b.menu) { try { built = buildDrinkCatalog(b.menu); } catch (e) { return err('菜單格式不正確：' + e.message); } }
       await setKV(env, 'campaigns', [...camps, { id, status: 'open', createdAt: now() }]);
-      await setKV(env, kk(id, 'settings'), { ...DEFAULTS, shopName: name });
+      await setKV(env, kk(id, 'settings'), { ...DEFAULTS, shopName: name, drinkLink: /^https:\/\//.test(b.link || '') ? String(b.link).slice(0, 500) : '' });
+      if (built) { await env.FILES.put(fk(id, 'catalog.json'), JSON.stringify(built.catalog), { httpMetadata: { contentType: 'application/json' } }); await setKV(env, kk(id, 'pimgs'), built.pimgs); }
       return json({ ok: true, id });
     }
     if ((m = path.match(/^\/api\/admin\/campaigns\/([a-z0-9-]{1,20})$/)) && method === 'PUT') {
@@ -311,6 +315,14 @@ async function handle(req, env) {
       if (!camps.some((c) => c.id === m[1])) return err('找不到這個團購', 404);
       await setKV(env, 'campaigns', camps.map((c) => (c.id === m[1] ? { ...c, status: st, endedAt: st === 'ended' ? now() : undefined } : c)));
       return json({ ok: true });
+    }
+    if (path === '/api/admin/drink-parse' && method === 'POST') {
+      const b = await req.json().catch(() => ({})); let c;
+      try { c = checkLink(b.link); } catch (e) { return err(e.message); }
+      if (c.platform === 'nidin') return json({ platform: 'nidin', pending: true, link: c.url });
+      let r; try { r = await parseUberJoin(c.url); } catch (e) { return err(e.message); }
+      if (Array.isArray(b.ids)) { const its = r.items.filter((i) => b.ids.includes(i.id)).slice(0, 30); return json({ groups: await fetchGroups(r.storeUuid, its) }); }
+      return json({ platform: 'ubereats', link: c.url, store: r.store, count: r.items.length, items: r.items.map(({ id, name, price, cat, img }) => ({ id, name, price, cat, img })) });
     }
     if (path === '/api/admin/drink-menu' && method === 'POST') {
       const b = await req.json().catch(() => null); if (!b) return err('資料格式錯誤');
