@@ -200,10 +200,10 @@ function viewShop(){
  const list=items().filter(i=>(st.brand==='全部'||i.brand===st.brand)&&(!q||(i.brand+i.name+i.no).toLowerCase().includes(q)));
  $('#app').innerHTML=`${closedBanner()}
  <section class="top"><div class="hero2"><span class="eyebrow">${isDrink()?'DRINK GROUP BUY':'EMC GROUP BUY'}</span><h1>${esc(st.set?.shopName||'隱形眼鏡團購')}</h1>
-  <p>${isDrink()?esc(st.cat.store||'')+'　挑好飲料、選好甜度冰量，一次下單，截止前都能回來修改。':'公司團購價優惠。挑好商品、填好度數，一次下單，截止前都能回來修改。'}</p>${isDrink()&&st.cat.link?`<p style="margin-top:6px"><a class="btn sec" target="_blank" rel="noopener" href="${esc(st.cat.link)}">前往${st.cat.platform==='ubereats'?' Uber Eats ':st.cat.platform==='nidin'?' 你訂 ':' '}店家頁</a></p>`:''}
+  <p>${isDrink()?esc(st.cat.store||'')+'　'+(st.cat.platform===''?'挑好商品、選好選項，一次下單，截止前都能回來修改。':'挑好飲料、選好甜度冰量，一次下單，截止前都能回來修改。')+'':'公司團購價優惠。挑好商品、填好度數，一次下單，截止前都能回來修改。'}</p>${isDrink()&&st.cat.link?`<p style="margin-top:6px"><a class="btn sec" target="_blank" rel="noopener" href="${esc(st.cat.link)}">前往${st.cat.platform==='ubereats'?' Uber Eats ':st.cat.platform==='nidin'?' 你訂 ':' '}店家頁</a></p>`:''}
     <div class="hcd"><small>${st.set?.closed?'本次團購已結單':'團購截止時間'}</small><div class="dd">${dlFull()}</div><div class="dsub">${st.set?.closed?'':'距離截止還有'}</div><div class="cdn" id="cdn">${cdHtml()}</div></div></div></section>
  ${flowHtml()}
- <div class="sech" id="list"><h2>${isDrink()?'選購飲料':'選購商品'}</h2><span>共 ${items().length} 項</span></div>
+ <div class="sech" id="list"><h2>${isDrink()&&st.cat.platform!==''?'選購飲料':'選購商品'}</h2><span>共 ${items().length} 項</span></div>
  <div class="tools"><input type="search" id="q" placeholder="搜尋品牌、品名、編號…" value="${esc(st.q)}"></div>
  <div class="chips">${brands.map(b=>`<span class="chip ${b===st.brand?'on':''}" data-b="${esc(b)}">${esc(b)}</span>`).join('')}</div>
  <div class="card" style="padding:0">${dkList(list).slice(0,isDrink()?9999:st.shown).map(i=>i.h?`<div class="catH">${esc(i.h)}</div>`:`<div class="item ${isDrink()?'dk':''}">${isDrink()?'':`<span class="no">#${i.no}</span>`}${thumb(i)}
@@ -243,19 +243,20 @@ function setUser(d){st.user={token:d.token||(st.user&&st.user.token),...d.user};
 function logoutUser(){st.user=null;localStorage.removeItem('lensUser');renderNav();route&&route()}
 async function googleButton(el,done){el.innerHTML='<span class="muted">載入 Google 登入…</span>';try{const c=await api('/auth/config');if(!c.clientId){el.innerHTML='<span class="muted">管理者尚未設定 Google 登入</span>';return}await gsiLoad();google.accounts.id.initialize({client_id:c.clientId,callback:async r=>{try{const d=await api('/auth/google',{method:'POST',json:{credential:r.credential}});setUser(d);toast('已登入：'+st.user.name);done&&done()}catch(e){alert(e.message)}}});el.innerHTML='';google.accounts.id.renderButton(el,{theme:'outline',size:'large',text:'signin_with',locale:'zh-TW'})}catch(e){el.innerHTML='<span class="muted">'+esc(e.message)+'</span>'}}
 function openNewCampaign(){const bg=document.createElement('div');bg.className='modalbg';bg.innerHTML=`<div class="modal" style="max-width:780px;width:94vw;max-height:90vh;overflow:auto"><h3 style="margin-top:0">我要開團</h3><p class="muted">選擇團購類型：隱眼團上傳報價 Excel；飲料團貼上 Uber Eats／你訂揪團連結，系統自動解析店名與菜單。</p><div id="newp">
-   <div class="chips" id="ntype"><span class="chip on" data-t="lens">隱眼團</span><span class="chip" data-t="drink">飲料團</span></div>
+   <div class="chips" id="ntype"><span class="chip on" data-t="lens">隱眼團</span><span class="chip" data-t="drink">飲料團</span><span class="chip" data-t="manual">自訂團</span></div>
    <div id="nl-lens" style="margin-top:10px"><label class="sub">報價 Excel（含「報價單／全台獨家活動／期間限定／各品牌度數規格／填寫單1」的 .xlsx）</label><input type="file" id="nxf" accept=".xlsx"></div>
+   <div id="nl-manual" class="muted" style="display:none;margin-top:10px">自訂團：任何形式的團購都可以。建立後到後台「商品管理」自己新增品項、價格、圖片與選項。</div>
    <div id="nl-drink" style="display:none;margin-top:10px"><label class="sub">Uber Eats 揪團連結（或你訂開團連結）</label><div class="tools"><input id="nlink" placeholder="https://eats.uber.com/group-orders/…/join" style="flex:1;min-width:240px"><button id="nparse">解析</button></div><div class="sub" id="nmsg" style="margin-top:6px"></div></div>
    <div class="form2" style="margin-top:10px"><div class="fld"><label class="sub">團購名稱（系統自動帶入，可修改）</label><input id="nnm" style="width:100%"></div><div class="fld"><label class="sub">團購代號（自動產生，可修改；英文小寫／數字／-）</label><input id="nid" style="width:100%"></div></div>
    <div id="nset" style="display:none;margin-top:14px;padding-top:14px;border-top:1px dashed #cfe3d5"><h3 style="margin:0 0 4px">開團設定</h3><div class="form2"><div class="fld"><label class="sub">達標金額（NT$，開團成功門檻；不設門檻填 0）</label><input data-nk="goal" type="number" placeholder="" style="width:100%"></div><div class="fld"><label class="sub">截止時間（從開團起算，或手動填寫）</label><select id="ndl" style="width:100%"><option value="1">1 小時後</option><option value="2">2 小時後</option><option value="3">3 小時後</option><option value="6">6 小時後</option><option value="12">12 小時後</option><option value="24" selected>1 天後</option><option value="48">2 天後</option><option value="72">3 天後</option><option value="120">5 天後</option><option value="168">7 天後</option><option value="manual">手動填寫日期時間…</option></select><input data-nk="deadline" type="datetime-local" style="width:100%;display:none;margin-top:6px"></div><div class="fld"><label class="sub">銀行（含代碼，選填）</label><input data-nk="bankName" type="text" placeholder="" style="width:100%"></div><div class="fld"><label class="sub">匯款帳號（選填）</label><input data-nk="bankAccount" type="text" placeholder="" style="width:100%"></div><div class="fld"><label class="sub">戶名（選填）</label><input data-nk="accountName" type="text" placeholder="" style="width:100%"></div></div><div class="fld"><label class="sub">信件／頁面附註（選填）</label><textarea data-nk="notes" rows="2" style="width:100%"></textarea></div></div>
    <div class="acts"><button class="sec" id="ncancel">取消</button><button id="ngo">建立團購</button></div></div></div>`;document.body.appendChild(bg);
 {const np={type:'drink',menu:null,link:'',touched:{nm:0,id:0},pending:false};const ids=(st.camps||[]).map(c=>c.id);
    const dd=new Date(Date.now()+8*3600e3),md=String(dd.getUTCMonth()+1).padStart(2,'0')+String(dd.getUTCDate()).padStart(2,'0');
-   const genId=()=>{const base=(np.type==='drink'?'drink':'lens')+md;let x=base,k=0;while(ids.includes(x)||x.startsWith('lim'))x=base+'abcdefghijklmnopqrstuvwxyz'[k++%26]+(k>26?k:'');return x};
-   const genName=()=>np.type==='drink'?'飲料團 '+(+md.slice(0,2))+'/'+(+md.slice(2)):'隱形眼鏡團購 '+(+md.slice(0,2))+'/'+(+md.slice(2));
+   const genId=()=>{const base=(np.type==='drink'?'drink':np.type==='manual'?'custom':'lens')+md;let x=base,k=0;while(ids.includes(x)||x.startsWith('lim'))x=base+'abcdefghijklmnopqrstuvwxyz'[k++%26]+(k>26?k:'');return x};
+   const genName=()=>np.type==='manual'?'自訂團 '+(+md.slice(0,2))+'/'+(+md.slice(2)):np.type==='drink'?'飲料團 '+(+md.slice(0,2))+'/'+(+md.slice(2)):'隱形眼鏡團購 '+(+md.slice(0,2))+'/'+(+md.slice(2));
    const fill=()=>{if(!np.touched.id)$('#nid').value=genId();if(!np.touched.nm&&!(np.type==='drink'&&np.menu))$('#nnm').value=genName()};
-   const showSet=()=>{$('#nset').style.display=np.type==='lens'||np.menu?'block':'none'};
-   const ui=()=>{$('#nl-drink').style.display=np.type==='drink'?'block':'none';$('#nl-lens').style.display=np.type==='drink'?'none':'block';$('#ngo').textContent=np.type==='drink'?'開團':'建立隱眼團';$('#ntype').querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.t===np.type));fill();showSet()};
+   const showSet=()=>{$('#nset').style.display=np.type==='lens'||np.type==='manual'||np.menu?'block':'none'};
+   const ui=()=>{$('#nl-drink').style.display=np.type==='drink'?'block':'none';$('#nl-lens').style.display=np.type==='lens'?'block':'none';$('#nl-manual').style.display=np.type==='manual'?'block':'none';$('#ngo').textContent=np.type==='lens'?'建立隱眼團':np.type==='manual'?'建立自訂團':'開團';$('#ntype').querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.t===np.type));fill();showSet()};
    $('#ncancel').onclick=()=>bg.remove();
    $('#ndl').onchange=()=>{document.querySelector('[data-nk=deadline]').style.display=$('#ndl').value==='manual'?'block':'none'};
    $('#ntype').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{np.type=c.dataset.t;np.menu=null;np.pending=false;$('#nmsg').textContent='';ui()});
@@ -275,7 +276,7 @@ function openNewCampaign(){const bg=document.createElement('div');bg.className='
     const sv={};document.querySelectorAll('[data-nk]').forEach(i=>sv[i.dataset.nk]=i.value.trim());
     const miss=[['goal','達標金額'],['deadline','截止時間']].filter(([k])=>sv[k]==='');if(miss.length)return alert('請填寫：'+miss.map(x=>x[1]).join('、'));
     const xf=np.type==='lens'?$('#nxf').files[0]:null;if(np.type==='lens'&&!xf)return alert('請先選擇報價 Excel（.xlsx）');
-    try{await api('/admin/campaigns',{method:'POST',admin:1,json:{id,name,settings:sv,...(np.type==='drink'?{menu:np.menu,link:np.link}:{})}});
+    try{await api('/admin/campaigns',{method:'POST',admin:1,json:{id,name,settings:sv,...(np.type==='drink'?{menu:np.menu,link:np.link}:np.type==='manual'?{manual:true}:{})}});
      if(xf){try{await api('/admin/upload?c='+encodeURIComponent(id),{method:'POST',admin:1,body:xf})}catch(e){alert('團購已建立，但 Excel 上傳失敗：'+e.message+'。請到該團購設定重新上傳。')}}
      bg.remove();await loadCamps();toast('已建立團購');go('/g/'+id+'/admin')}catch(e){alert(e.message)}};
    ui()}
@@ -512,6 +513,7 @@ async function viewAdmin(){
 
 
 
+  ${st.cat&&st.cat.drink&&!st.cat.platform?'<div class="card" style="margin-top:12px"><div class="sp"><h3 style="margin:0">商品管理（自訂團）</h3><button id="padd">＋ 新增商品</button></div><p class="muted">自己新增這個團購要賣的品項、價格、圖片與選項（例如尺寸、口味、加料）。同事下單看到的就是這份清單。</p><div id="pbox"></div></div>':''}
   <div class="card" style="margin-top:12px"><div class="sp"><h3 style="margin:0">訂單（${o.count} 筆有效單，${o.orders.filter(x=>x.status!=='cancelled'&&x.pay).length} 筆已付款單，已付 ${nt(o.orders.filter(x=>x.status!=='cancelled'&&x.pay).reduce((n,x)=>n+x.total,0))}）</h3><div class="tools" style="margin:0"><span id="fillst" class="muted" style="align-self:center"></span><button class="${s.closed?'sec':''}" id="cls">${s.closed?'重新開單':'結單'}</button>${st.cat?.drink?'<button id="cpy">複製點餐清單</button>':'<button id="ex">一鍵下載彙整 Excel</button>'}</div></div>
   <p class="muted">下載檔 = 原上傳的 Excel，只把訂單填入「填寫單1」（超過會接續填寫單2～4），原本的公式不會被覆蓋。</p>
   <table class="t ord"><thead><tr><th>編號</th><th>姓名／Email</th><th>內容</th><th class="num">金額</th><th></th></tr></thead><tbody>${o.orders.map(x=>`<tr style="${x.status==='cancelled'?'opacity:.5':''}"><td>${x.id}${x.status==='cancelled'?'<span class="tag x">取消</span>':''}${x.pay?'<br><span class="paid" style="margin:0">✔ 已付款</span>':''}</td><td>${esc(x.name)}<div class="sub">${esc(x.email)}</div></td>
@@ -533,6 +535,31 @@ async function viewAdmin(){
    bg.querySelector('#ua-x').onclick=()=>bg.remove();
    bg.querySelector('#ua-s').onclick=async()=>{const items=[...bg.querySelectorAll('[data-ui]:checked')].map(i=>+i.dataset.ui),reason=bg.querySelector('#ua-r').value.trim();if(!items.length)return alert('請勾選無法下單的品項');if(!reason)return alert('請填寫原因');
     try{const r=await api('/admin/orders/'+od.id+'/unavailable',{method:'POST',admin:1,json:{items,reason}});bg.remove();toast(r.mail==='sent'?'已寄出通知信（下單者與開團者）':'通知信未寄出（信件服務未啟用）')}catch(e){alert(e.message)}}});
+  const manualUI=()=>{const box=$('#pbox');if(!box)return;const items=(st.cat&&st.cat.items)||[];const T=u=>u?`<img src="${esc(u)}" style="width:44px;height:44px;object-fit:cover;border-radius:8px">`:'<span class="muted">—</span>';
+   box.innerHTML=items.length?`<div style="overflow-x:auto"><table class="t"><thead><tr><th></th><th>分類</th><th>品名</th><th class="num">價格</th><th>選項</th><th></th></tr></thead><tbody>${items.map(x=>`<tr><td>${T((st.pimgs||{})[x.no])}</td><td class="sub">${esc(x.brand)}</td><td><b>${esc(x.name)}</b></td><td class="num">${nt(x.price)}</td><td class="sub">${x.groups.map(g=>esc(g.n)+'：'+g.o.map(o=>esc(o[0])+(o[1]?' +'+o[1]:'')).join('、')).join('<br>')||'—'}</td><td style="white-space:nowrap"><button class="sec" data-pe="${x.no}">編輯</button> <button class="sec" data-pd="${x.no}" style="color:#b42323">刪除</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="muted">還沒有商品，按右上角「＋ 新增商品」開始。</div>';
+   const save=async list=>{const r=await api('/admin/manual-items',{method:'POST',admin:1,json:{items:list}});await fetchCat();manualUI();return r};
+   const toList=()=>items.map(x=>({no:x.no,cat:x.brand,name:x.name,price:x.price,groups:x.groups}));
+   const form=(cur)=>{const bg=document.createElement('div');bg.className='modalbg';const gs=(cur&&cur.groups)||[];
+    const gtxt=g=>g.o.map(o=>o[0]+(o[1]?' +'+o[1]:'')).join('\n');
+    bg.innerHTML=`<div class="modal" style="max-width:640px;width:94vw;max-height:90vh;overflow:auto"><h3 style="margin-top:0">${cur?'編輯商品':'新增商品'}</h3>
+     <div class="form2"><div class="fld"><label class="sub">品名</label><input id="pf-n" maxlength="80" value="${esc(cur?cur.name:'')}"></div><div class="fld"><label class="sub">價格（NT$）</label><input id="pf-p" type="number" min="0" value="${cur?cur.price:''}"></div><div class="fld"><label class="sub">分類（選填，用來分組）</label><input id="pf-c" maxlength="20" list="pf-cl" value="${esc(cur?cur.brand:'')}"><datalist id="pf-cl">${[...new Set(items.map(x=>x.brand))].map(b=>`<option value="${esc(b)}">`).join('')}</datalist></div>
+     <div class="fld"><label class="sub">圖片（選填）</label><input id="pf-f" type="file" accept="image/*"><input id="pf-u" placeholder="或貼上圖片網址 https://…" style="margin-top:6px"></div></div>
+     <h4 style="margin:14px 0 4px">選項群組（選填，例如：尺寸、冰量、加料）</h4><div class="muted" style="margin-bottom:6px">每個群組一個名稱，選項一行一個，加價寫在後面，例如「大杯 +10」。「必選」＝下單時一定要選；「最多選」填數字，空白＝可複選全部。</div>
+     <div id="pf-gs"></div><button class="sec" id="pf-ga" type="button">＋ 新增選項群組</button>
+     <div class="acts" style="margin-top:16px"><button class="sec" id="pf-x">取消</button><button id="pf-s">儲存</button></div></div>`;document.body.appendChild(bg);
+    const gbox=bg.querySelector('#pf-gs');
+    const addG=g=>{const d=document.createElement('div');d.className='card';d.style.cssText='margin:8px 0;padding:10px';d.innerHTML=`<div class="form2"><div class="fld"><label class="sub">群組名稱</label><input data-g="n" maxlength="20" value="${esc(g?g.n:'')}"></div><div class="fld"><label class="sub">必選？最多選幾個</label><div style="display:flex;gap:8px;align-items:center"><label style="white-space:nowrap"><input type="checkbox" data-g="req" style="width:auto" ${g&&g.min>0?'checked':''}> 必選</label><input data-g="max" type="number" min="0" placeholder="最多" value="${g&&g.max&&g.max<g.o.length?g.max:''}"></div></div></div><div class="fld" style="margin-top:6px"><label class="sub">選項（一行一個，可加價）</label><textarea data-g="o" rows="4" style="width:100%">${esc(g?gtxt(g):'')}</textarea></div><button class="sec" type="button" data-g="rm" style="margin-top:6px">移除這個群組</button>`;gbox.appendChild(d);d.querySelector('[data-g=rm]').onclick=()=>d.remove()};
+    gs.forEach(addG);bg.querySelector('#pf-ga').onclick=()=>addG(null);bg.querySelector('#pf-x').onclick=()=>bg.remove();
+    bg.querySelector('#pf-s').onclick=async()=>{const name=bg.querySelector('#pf-n').value.trim(),price=bg.querySelector('#pf-p').value;if(!name||price==='')return alert('請填寫品名與價格');
+     const groups=[...gbox.children].map(d=>{const o=d.querySelector('[data-g=o]').value.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const m=l.match(/^(.*?)\s*[+＋]\s*(\d+)$/);return m?[m[1].trim(),+m[2]]:[l,0]}).filter(x=>x[0]);const req=d.querySelector('[data-g=req]').checked;const mx=parseInt(d.querySelector('[data-g=max]').value,10)||0;return{n:d.querySelector('[data-g=n]').value.trim(),min:req?1:0,max:mx,o}}).filter(g=>g.o.length);
+     const rec={no:cur?cur.no:0,cat:bg.querySelector('#pf-c').value.trim(),name,price:+price,groups};const list=toList();if(cur)list[list.findIndex(x=>x.no===cur.no)]=rec;else list.push(rec);
+     try{const r=await save(list);const no=cur?cur.no:r.nos[r.nos.length-1];const f=bg.querySelector('#pf-f').files[0],u=bg.querySelector('#pf-u').value.trim();
+      if(f){const ct=f.type;await api('/admin/product-image?nos='+no,{method:'POST',admin:1,headers:{'content-type':ct},body:f})}else if(u){await api('/admin/product-image?nos='+no,{method:'POST',admin:1,json:{url:u}})}
+      await fetchCat();manualUI();bg.remove();toast('已儲存商品')}catch(e){alert(e.message)}}};
+   const add=$('#padd');if(add)add.onclick=()=>form(null);
+   box.querySelectorAll('[data-pe]').forEach(b=>b.onclick=()=>form(items.find(x=>x.no===+b.dataset.pe)));
+   box.querySelectorAll('[data-pd]').forEach(b=>b.onclick=async()=>{const x=items.find(i=>i.no===+b.dataset.pd);if(!confirm('刪除商品「'+x.name+'」？已經有人訂的訂單內容不會被改。'))return;try{await save(toList().filter(i=>i.no!==x.no))}catch(e){alert(e.message)}})};
+  manualUI();
   const fillUI=async()=>{const el=$('#fillst');if(!el||!isDrink()||!s.closed)return;let f;try{f=await api('/admin/fill',{admin:1})}catch(e){return}
    const lab={pending:'⏳ 等待自動填單…',filling:'⏳ 自動填單中…',done:'✅ 已自動填入，明細信已寄出',failed:'⚠️ 自動填單失敗，已寄手動下單信',manual:'✉️ 明細信已寄出'}[f.status];if(!lab){el.innerHTML='';return}
    const act=f.status==='pending'||f.status==='filling';el.innerHTML=lab+(act?' <button class="sec" id="fillmail" style="padding:2px 8px">直接寄明細信</button>':'');

@@ -65,3 +65,7 @@
 
 - 本機填單工具在 `~/.claude/tools/fill-watch/`（不在 Git）：`watch.py`、`fill-nidin.mjs`、`fill-uber.cjs`、`ubereats.mjs`、`allow.json`；雲端副本在私有 repo `lens-shop-filler`，兩邊要一起更新。
 - **填單流程（2026-11-12 起）**：結單 → 網站算出尚未填的訂單（kv `<id>:filledIds` 排除已填者）→ 觸發 GitHub 雲端填單（固定程式優先，失敗才用 Claude API 瀏覽器）→ 完成回報 `done` 才寄明細信。本機 `watch.py` 只是備援：雲端回報失敗（網站改標 via=local）、雲端 pending 超過 240 秒沒開始、或 filling 超過 720 秒沒完成時才接手；本機也失敗（3 次）才寄「請手動下單」信。網站沒有 GH_DISPATCH_TOKEN 或觸發失敗時：本機在線就由本機填，都不行就立刻寄明細信。
+
+## 自訂團（2026-11-12）
+- 開團視窗第三個選項「自訂團」：任何形式的團購都可以，建立時目錄為空的飲料格式（`drink:true`、`platform:''`、`items:[]`），不抓連結、不填單、結單時直接寄明細信。
+- 後台「商品管理（自訂團）」卡（`platform` 為空的飲料團才會出現）：新增／編輯／刪除商品（分類、品名、價格、選項群組、圖片上傳或網址）。後端 `POST /api/admin/manual-items`（`buildManualItems`：保留既有商品編號 `no`、新品接續編號，避免已下訂單對不上）；圖片沿用 `POST /api/admin/product-image?nos=<no>`。

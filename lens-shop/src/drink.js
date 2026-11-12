@@ -35,3 +35,25 @@ export function pickDrink(it, l, idx) {
   });
   return { extra, sel: clean, opts: names.join('／') };
 }
+
+// 自訂團：開團者在後台手動維護商品。傳入目前目錄的品項與新的清單，回傳驗證後的品項（保留既有編號，新品項接續編號）
+export function buildManualItems(oldItems, input) {
+  const t = (v, n) => String(v ?? '').trim().slice(0, n);
+  if (!Array.isArray(input)) throw new Error('商品清單格式不正確');
+  if (input.length > 400) throw new Error('品項過多（上限 400）');
+  const have = new Set((oldItems || []).map((x) => x.no)); let next = Math.max(0, ...have) + 1; const used = new Set(); const nos = [];
+  const items = input.map((x, i) => {
+    const price = Number(x.price);
+    if (!t(x.name, 80) || !Number.isFinite(price) || price < 0 || price > 99999) throw new Error(`第 ${i + 1} 項：品名或價格不正確`);
+    let no = Number(x.no); if (!have.has(no) || used.has(no)) no = next++; used.add(no); nos.push(no);
+    const groups = (Array.isArray(x.groups) ? x.groups : []).slice(0, 10).map((g) => {
+      const o = (Array.isArray(g.o) ? g.o : []).slice(0, 60).map((p) => [t(p[0], 40), Math.max(0, Math.round(Number(p[1]) || 0))]).filter((p) => p[0]);
+      if (!o.length) return null;
+      const min = Math.max(0, Math.min(o.length, parseInt(g.min, 10) || 0));
+      let max = parseInt(g.max, 10) || 0; if (max <= 0 || max > o.length) max = o.length; if (max < min) max = min;
+      return { n: t(g.n, 20) || '選項', min, max, o };
+    }).filter(Boolean);
+    return { no, brand: t(x.cat, 20) || '商品', name: t(x.name, 80), price: Math.round(price), range: '', market: null, power: false, toric: false, groups };
+  });
+  return { items, nos };
+}

@@ -1,5 +1,5 @@
 import { buildCatalog } from './catalog.js';
-import { buildDrinkCatalog, pickDrink } from './drink.js';
+import { buildDrinkCatalog, buildManualItems, pickDrink } from './drink.js';
 import { ensureAccounts, signUser, getUser as getUserRaw, verifyGoogle } from './auth.js';
 import { parseNidin } from './nidin.js';
 import { checkLink, parseUberJoin, fetchGroups } from './ubereats.js';
@@ -462,6 +462,7 @@ async function handle(req, env, ctx) {
       if (camps.some((c) => c.id === id)) return err('這個代號已存在');
       let built = null;
       if (b.menu) { try { built = buildDrinkCatalog(b.menu); } catch (e) { return err('菜單格式不正確：' + e.message); } }
+      else if (b.manual) built = { catalog: { drink: true, store: name, platform: '', link: '', items: [], exclusive: [], limited: { title: '', cards: [], note: [] }, specs: null, builtAt: now() }, pimgs: {} };
       await setKV(env, 'campaigns', [...camps, { id, status: 'open', createdAt: now(), ...(usr ? { owner: usr.email } : {}) }]);
       const init = {}; for (const k of ['goal', 'deadline', 'bankName', 'bankAccount', 'accountName', 'notes']) if (b.settings && b.settings[k] != null) init[k] = String(b.settings[k]).slice(0, 2000);
       await setKV(env, kk(id, 'settings'), { ...DEFAULTS, ...init, shopName: name, drinkLink: /^https:\/\//.test(b.link || '') ? String(b.link).slice(0, 500) : '' });
@@ -488,6 +489,13 @@ async function handle(req, env, ctx) {
       for (const t of ['chat', 'chat_presence']) { try { await env.DB.prepare('DELETE FROM ' + t + ' WHERE campaign=?').bind(id).run(); } catch {} }
       await setKV(env, 'campaigns', camps.filter((c) => c.id !== id));
       return json({ ok: true });
+    }
+    if (path === '/api/admin/manual-items' && method === 'POST') { // 自訂團：開團者手動維護商品（品名、價格、選項；圖片另用 product-image）
+      const cat = await getCatalog(env, cid); if (!cat || !cat.drink || cat.platform) return err('只有自訂團可以手動編輯商品');
+      const b = await req.json().catch(() => ({})); let r; try { r = buildManualItems(cat.items, b.items); } catch (e) { return err(e.message); }
+      const keep = new Set(r.nos); const pimgs = await getKV(env, kk(cid, 'pimgs'), {}); for (const n of Object.keys(pimgs)) if (!keep.has(+n)) delete pimgs[n];
+      await env.FILES.put(fk(cid, 'catalog.json'), JSON.stringify({ ...cat, items: r.items }), { httpMetadata: { contentType: 'application/json' } }); await setKV(env, kk(cid, 'pimgs'), pimgs);
+      return json({ ok: true, nos: r.nos, count: r.items.length });
     }
     if (path === '/api/admin/drink-images' && method === 'POST') { // 重新抓取商品圖片（依品名對應，不動訂單與目錄）
       const cat = await getCatalog(env, cid); if (!cat || !cat.drink) return err('這不是飲料團');
