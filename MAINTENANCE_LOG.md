@@ -2301,3 +2301,6 @@
 
 ## 2026-11-12 lens-shop：LINE Pay Money 欄位支援 LINE 加好友連結
 - LINE Pay Money 欄位若貼 line.me／lin.ee 連結，按鈕文字顯示「開啟 LINE 對話（LINE Pay Money 轉帳）」（頁面與確認信）；欄位標籤改為說明可貼加好友連結或填 LINE ID。
+
+## 2026-11-12 lens-shop：LINE 連結自動產生 QR Code
+- 新增 public/qrcode.js（qrcode-generator 2.0.4，MIT）。LINE Pay Money 欄位為 https 連結時，匯款資訊除了按鈕，還會顯示可掃描的 QR Code（電腦上開頁面、用手機掃）。確認信維持按鈕。

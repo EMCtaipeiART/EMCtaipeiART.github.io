@@ -378,11 +378,13 @@ summary{min-height:40px;padding:8px 0;color:var(--bd)}
 .lgp{max-width:400px;margin:40px auto;padding:32px 28px;background:#fff;border:1px solid #e3ebe5;border-radius:20px;box-shadow:0 12px 40px #10261814}
 .pcd{position:relative}.shr{position:absolute;right:14px;bottom:14px;width:34px;height:34px;border-radius:50%;border:1px solid #e3ebe5;background:#fff;display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer;color:#6b7771;box-shadow:0 2px 8px #10261812}.shr svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.shr:hover{color:#159E31;border-color:#159E31;background:#e8f4ec}
 .lpb{display:inline-block;background:#06C755;color:#fff!important;text-decoration:none;font-weight:700;padding:6px 16px;border-radius:99px;font-size:14px;line-height:1.4}.lpb:hover{filter:brightness(.95)}
+.lpq{display:flex;align-items:center;gap:12px;margin-top:10px}.lpq img{width:132px;height:132px;image-rendering:pixelated;border:1px solid #e3ebe5;border-radius:12px;padding:6px;background:#fff}.lpq span{color:#6b7771;font-size:13px}
 </style>
 </head>
 <body>
 <header><div class="bar"><div class="logo"><span class="mk">EMC</span><span id="logo">凱曜團購平台</span></div><div class="dl" id="dl"></div><nav id="nav"></nav></div></header>
 <main id="app"><p class="muted">載入中…</p></main>
+<script src="/qrcode.js"></script>
 <script>
 const $=(s,e=document)=>e.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -644,7 +646,7 @@ function done(d){const o=d.order,mail={sent:'確認信已寄到 '+esc(o.email)+'
  $('#app').innerHTML=`${flowHtml([1,1])}<div class="note ok"><h2 style="margin-top:0">✔ 訂單已送出（編號 ${o.id}）</h2>${mail}</div><div class="card">${orderTable(o)}
  <p>${bankHtml()}</p><p class="muted">匯款完成後，請回到「訂單列表」下方「修改我的訂單」，或用確認信的專屬連結，回報匯款後 5 碼／截圖。截止前也可回來修改訂單。</p><div class="acts"><a class="btn" href="/mine">我的訂單</a><a class="btn sec" href="/">回首頁</a></div></div>`}
 function orderTable(o){return`<table class="t order-detail"><tbody>${o.items.map(l=>`<tr><td>${isDrink()?'':'#'+l.no+' '}${esc(l.brand)} ${esc(l.name)}<div class="sub">${esc(pw(l))}${l.gift?' 贈品：'+esc(l.gift):''}</div></td><td class="num">${nt(l.price)} × ${l.qty}</td><td class="num">${nt(l.price*l.qty)}</td></tr>`).join('')}</tbody></table><div class="total">合計 <b>${nt(o.total)}</b></div>`}
-function bankHtml(){const s=st.set||{};const a=s.bankAccount?`${esc(s.bankName)}　帳號 <b>${esc(s.bankAccount)}</b>　戶名 ${esc(s.accountName)}`:'',l=s.linePay?(/^https:\/\/[^\s]+$/i.test(s.linePay.trim())?`<a class="lpb" href="${esc(s.linePay.trim())}" target="_blank" rel="noopener">${/^https:\/\/(line\.me|lin\.ee)\//i.test(s.linePay.trim())?'開啟 LINE 對話（LINE Pay Money 轉帳）':'LINE Pay Money 付款'}</a>`:`LINE Pay Money <b>${esc(s.linePay)}</b>`):'';return a||l?`<b>匯款資訊</b>：${[a,l].filter(Boolean).join('　｜　')}`:''}
+function bankHtml(){const s=st.set||{};const a=s.bankAccount?`${esc(s.bankName)}　帳號 <b>${esc(s.bankAccount)}</b>　戶名 ${esc(s.accountName)}`:'',l=s.linePay?(/^https:\/\/[^\s]+$/i.test(s.linePay.trim())?`<a class="lpb" href="${esc(s.linePay.trim())}" target="_blank" rel="noopener">${/^https:\/\/(line\.me|lin\.ee)\//i.test(s.linePay.trim())?'開啟 LINE 對話（LINE Pay Money 轉帳）':'LINE Pay Money 付款'}</a>`:`LINE Pay Money <b>${esc(s.linePay)}</b>`):'';let q='';if(l&&/^https:\/\//i.test((s.linePay||'').trim())&&window.qrcode){try{const c=qrcode(0,'M');c.addData(s.linePay.trim());c.make();q=`<div class="lpq"><img alt="LINE QR Code" src="${c.createDataURL(6,2)}"><span>手機可直接掃描 QR Code</span></div>`}catch(e){}}return a||l?`<b>匯款資訊</b>：${[a,l].filter(Boolean).join('　｜　')}${q}`:''}
 
 async function viewOrder(tok){
  $('#app').innerHTML='<p class="muted">載入訂單…</p>';
