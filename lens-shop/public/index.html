@@ -566,7 +566,7 @@ async function route(){
 }
 async function load(){await fetchCat();route()}
 function pcCard(c){const goal=c.goal||0,pct=goal?Math.round(c.sum/goal*100):0,ok=goal&&c.sum>=goal,over=c.ended||c.closed;
- const st0=ok?['開團成功','ok']:over?(goal?['未達標','no']:['已截止','x']):['團購中','go'];
+ const st0=!over?['團購中','go']:ok?['開團成功','ok']:goal?['未達標','no']:['已截止','x'];
  const ms=c.deadline?Date.parse(c.deadline+(c.deadline.length<=16?':00+08:00':''))-Date.now():0;
  const left=over?'已結束':!c.deadline?'進行中':ms<=0?'已截止':ms>=864e5?'<em>'+Math.floor(ms/864e5)+'</em> 天':'<em>'+Math.max(1,Math.floor(ms/36e5))+'</em> 小時';
  const days=ok&&c.reachedAt&&c.startAt?Math.max(1,Math.ceil((Date.parse(c.reachedAt)-Date.parse(c.startAt))/864e5)):0;
