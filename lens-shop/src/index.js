@@ -245,7 +245,7 @@ async function handle(req, env, ctx) {
         const covers = [...new Set(Object.values(pimgs))].filter((u) => typeof u === 'string').slice(0, 4);
         return { id: c.id, name: s.shopName, deadline: s.deadline, ended: isEnded(camps, c.id), closed: closedNow(s, c.id), ready: !!cat,
           goal, sum, count: rs.results.length, names: names.slice(0, 8), nameCount: names.length, reachedAt,
-          startAt: c.createdAt || (rs.results[0] && rs.results[0].created_at) || '', covers,
+          startAt: c.createdAt || (rs.results[0] && rs.results[0].created_at) || '', endedAt: c.endedAt || '', covers,
           drink: !!(cat && cat.drink), store: cat && cat.drink ? cat.store : '', link: cat && cat.drink ? cat.link : '', owned: !!c.owner, _o: c.owner || '' };
       }));
       return list;
