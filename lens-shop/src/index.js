@@ -472,6 +472,18 @@ async function handle(req, env, ctx) {
       const mail = st === 'ended' && was !== 'ended' ? await closeNotify(env, req, m[1], camps) : 'skip';
       return json({ ok: true, mail });
     }
+    if ((m = path.match(/^\/api\/admin\/campaigns\/([a-z0-9-]{1,20})$/)) && method === 'DELETE') { // 永久刪除團購（含訂單、聊天室、設定與檔案）
+      const id = m[1]; if (id === DEFAULT_CID) return err('預設團購不能刪除');
+      if (!camps.some((c) => c.id === id)) return err('找不到這個團購', 404);
+      await env.DB.batch([
+        env.DB.prepare('DELETE FROM orders WHERE campaign=?').bind(id),
+        env.DB.prepare('DELETE FROM kv WHERE k IN (?,?,?,?)').bind(kk(id, 'settings'), kk(id, 'pimgs'), kk(id, 'fill'), kk(id, 'filledIds')),
+        env.DB.prepare('DELETE FROM files WHERE substr(k,1,?)=? OR substr(k,1,?)=?').bind(id.length + 1, id + '/', id.length + 8, 'img/' + id + '_lim'),
+      ]);
+      for (const t of ['chat', 'chat_presence']) { try { await env.DB.prepare('DELETE FROM ' + t + ' WHERE campaign=?').bind(id).run(); } catch {} }
+      await setKV(env, 'campaigns', camps.filter((c) => c.id !== id));
+      return json({ ok: true });
+    }
     if (path === '/api/admin/drink-images' && method === 'POST') { // 重新抓取商品圖片（依品名對應，不動訂單與目錄）
       const cat = await getCatalog(env, cid); if (!cat || !cat.drink) return err('這不是飲料團');
       let items; try { const c = checkLink(cat.link); items = c.platform === 'nidin' ? (await parseNidin(c.url)).items : (await parseUberJoin(c.url)).items; } catch (e) { return err(e.message); }

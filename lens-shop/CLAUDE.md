@@ -24,7 +24,7 @@
 ## 多團購架構（2026-11-09）
 - 團購清單存在 kv `campaigns`（`id`、`status: open|ended`）。預設團購 `lens` **沿用舊 key（不加前綴）**，所以舊資料不需搬遷；其他團購的 kv key 為 `<id>:settings`／`<id>:pimgs`，檔案為 `<id>/template.xlsx`、`<id>/catalog.json`，期間限定圖為 `img/<id>_lim…`。
 - `orders.campaign` 欄位標示訂單屬於哪個團購（預設 `lens`）；API 以 `?c=<id>` 指定團購（沒帶＝`lens`），token 開頭的訂單 API 以訂單自己的團購為準。
-- 結束團購＝`status: ended`（訂單保留、不能下單／修改、可重新開放），**沒有刪除團購的功能**。團購代號限英文小寫／數字／-，不可用 `lim` 開頭或保留字（order、g、api、admin、campaigns）。
+- 結束團購＝`status: ended`（訂單保留、不能下單／修改、可重新開放），後台「團購管理」卡有「刪除」按鈕（2026-11-12，使用者要求）：永久刪除該團的訂單、聊天室、設定、檔案，需輸入代號確認，預設團購 `lens` 不可刪；只想停止下單請用「結束」。團購代號限英文小寫／數字／-，不可用 `lim` 開頭或保留字（order、g、api、admin、campaigns）。
 - 購物車依團購分開存（`lensCart`＝lens，`lensCart_<id>`＝其他）。後台「0. 團購管理」可切換、新增、結束／重新開放。
 - 新環境第一次需對 D1 執行：`ALTER TABLE orders ADD COLUMN campaign TEXT NOT NULL DEFAULT 'lens'`（線上已執行過）。
 
