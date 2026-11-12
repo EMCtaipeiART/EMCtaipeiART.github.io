@@ -2227,3 +2227,6 @@
 
 ## 2026-11-12 lens-shop：首頁團購列表自動更新
 - 在團購列表頁每 15 秒自動重新抓取並重繪（分頁在背景、開著視窗時不更新；切回分頁立即更新）。/api/campaigns 邊緣快取 TTL 由 30 秒降為 10 秒以配合。
+
+## 2026-11-12 lens-shop：CLAUDE.md 新增「用到的外部 API 與金鑰」整理
+- 列出 Brevo、GitHub、FILL_KEY、Claude API、你訂、Uber Eats、Google 登入與本站 API 的用途、金鑰存放位置與注意事項（不含金鑰值）。

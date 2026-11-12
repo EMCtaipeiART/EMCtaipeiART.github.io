@@ -50,3 +50,17 @@
 - **欄位與欄位之間一定要有間隔**：每個欄位用 `<div class="fld">`（標籤在上、輸入框在下，內距 6px）包起來，放進 `.form2` 格線（欄距 16px、列距 18px；手機寬度單欄）。不要把 `<label>` 與 `<input>` 直接當成格線的兩個子元素（會變成左右並排、擠在一起）。
 - 後台設定類表單（團購設定、我要開團）用同一套欄位與樣式，新增欄位照這個寫。
 - 「我要開團」流程：解析（或選好 Excel）後在前台浮動視窗（首頁第一張卡）填：達標金額、截止時間（下拉：1／2／3／6／12 小時、1／2／3／5／7 天，或手動填寫）為必填；銀行、匯款帳號、戶名、附註為選填。
+
+## 用到的外部 API 與金鑰（2026-11-12 整理；金鑰值一律不寫進檔案）
+| 項目 | 用途 | 金鑰存放 | 備註 |
+|---|---|---|---|
+| Brevo 郵件 API | 訂單確認信、結單明細信、商品無法下單通知信 | Cloudflare secret `BREVO_API_KEY` | 沒有金鑰時信件只記 log、不寄 |
+| GitHub API | 結單時觸發私有 repo `EMCtaipeiART/lens-shop-filler` 的 `fill.yml`（雲端代填） | Cloudflare secret `GH_DISPATCH_TOKEN`（fine-grained，僅該 repo 的 Actions 讀寫） | 本機監看程式在線時不觸發 |
+| 本站填單回報 `/api/fill/ping`、`/api/fill/status` | 本機監看程式／雲端工作流程回報填單進度，完成才寄明細信 | Cloudflare secret `FILL_KEY`；本機 `~/.claude/tools/fill-watch/key`；repo `lens-shop-filler` 的 secret `FILL_KEY` | 用 `x-fill-key` 標頭驗證 |
+| Claude API | 只有雲端代填的固定程式失敗時，才退回 AI 操作瀏覽器 | repo `lens-shop-filler` 的 secret `ANTHROPIC_API_KEY` | 平常不會呼叫；本機備援用的是登入的 Claude 帳號，不走這把金鑰 |
+| 你訂公開 API `loctw-service-api.nidin.shop/shopper/v2` | 解析菜單（`onShelfMenu`）、商品圖（`store/<id>/productImages`）、訪客填單（`registerGuest`／`loginWebGuest`／`carts/subItem`／`order/productCouponFlow`） | 不需要 | 非官方文件，介面改版會失效 |
+| Uber Eats 內部介面 `ubereats.com/_p/api` | 解析揪團頁與品項選項（`getMenuItemV1`）、填單（`addItemsToGroupDraftOrderV2`，需先用無頭瀏覽器以訪客加入） | 不需要 | 非官方，會擋純 fetch 的伺服器連線；平台改版時以 AI 瀏覽器備援 |
+| Google Identity／`oauth2.googleapis.com/tokeninfo` | 同事 Google 登入的 ID token 驗證 | OAuth 用戶端 ID 存在 kv `auth`（非機密） | aud 必須等於設定的 clientId |
+| 本站 `/api/*` | 團購列表、商品目錄、訂單、聊天室、後台管理 | 管理密碼 `ADMIN_PASSWORD`（Cloudflare secret）或使用者簽章 token | `/api/campaigns`、`/api/catalog` 有 Cache API 邊緣快取（寫入時清除） |
+
+- 本機填單工具在 `~/.claude/tools/fill-watch/`（不在 Git）：`watch.py`、`fill-nidin.mjs`、`fill-uber.cjs`、`ubereats.mjs`、`allow.json`；雲端副本在私有 repo `lens-shop-filler`，兩邊要一起更新。
