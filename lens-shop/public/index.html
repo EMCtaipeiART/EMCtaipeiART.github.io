@@ -574,10 +574,11 @@ async function route(){
  ({'':viewShop,promo:viewPromo,limited:viewPromo,spec:viewSpec,cart:viewCart,mine:viewMine,admin:viewAdmin,summary:viewSummary}[p.page]||viewShop)();
 }
 async function load(){await fetchCat();route()}
+function cdTxt(ms){if(ms<=0)return'已截止';const d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5),m=Math.floor(ms%36e5/6e4),sc=Math.floor(ms%6e4/1e3),z=n=>String(n).padStart(2,'0');return d>=1?'<em>'+d+'</em> 天 <em>'+h+'</em> 小時':'<em>'+h+':'+z(m)+':'+z(sc)+'</em>'}
 function pcCard(c){const goal=c.goal||0,pct=goal?Math.round(c.sum/goal*100):0,ok=goal&&c.sum>=goal,over=c.ended||c.closed;
  const st0=over?['已結束','x']:['團購中','go'];const res=ok?['開團成功','ok']:(goal&&over)?['未達標','no']:null;
  const ms=c.deadline?Date.parse(c.deadline+(c.deadline.length<=16?':00+08:00':''))-Date.now():0;
- const left=over?'已結束':!c.deadline?'進行中':ms<=0?'已截止':ms>=864e5?'<em>'+Math.floor(ms/864e5)+'</em> 天':'<em>'+Math.max(1,Math.floor(ms/36e5))+'</em> 小時';
+ const left=over?'已結束':!c.deadline?'進行中':`<span class="cdl" data-dl="${Date.parse(c.deadline+(c.deadline.length<=16?':00+08:00':''))}">${cdTxt(ms)}</span>`;
  const days=ok&&c.reachedAt&&c.startAt?Math.max(1,Math.ceil((Date.parse(c.reachedAt)-Date.parse(c.startAt))/864e5)):0;
  const cv=c.covers&&c.covers.length?`<div class="cv ${c.covers.length<2?'one':''}">${c.covers.slice(0,c.covers.length<2?1:4).map(u=>`<img loading="lazy" src="${esc(u)}" alt="">`).join('')}</div>`:`<div class="cv"><div class="ph">${esc(c.name)}</div></div>`;
  return`<a class="pcd" href="/g/${c.id}/">${cv}<span class="bdg ${st0[1]}">${st0[0]}</span><div class="bd2"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>${esc(c.name)}</span>${res?`<span class="bdg ${res[1]}" style="position:static;flex:none;white-space:nowrap">${res[0]}</span>`:''}</h3>${c.drink?`<div class="sub" style="margin:-6px 0 8px">飲料團｜${esc(c.store||'')}</div>`:''}
@@ -594,7 +595,7 @@ addEventListener('popstate',route);
 function go(p){history.pushState(null,'',p);route()}
 document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[href^="/"]');if(!a||e.defaultPrevented||e.metaKey||e.ctrlKey||e.shiftKey||e.button||a.target==='_blank')return;const h=a.getAttribute('href');if(h.startsWith('/api/'))return;e.preventDefault();go(h)});
 if(/^#\//.test(location.hash))history.replaceState(null,'',location.hash.slice(1));
-route();setInterval(()=>{$('#dl').innerHTML=dlText();const c=$('#cdn');if(c){c.innerHTML=cdHtml();const dd=st.set?.deadline;const ms=dd?Date.parse(dd+(dd.length<=16?':00+08:00':''))-Date.now():1e12;c.classList.toggle('urgent',!st.set?.closed&&ms<864e5)}},1000);
+route();setInterval(()=>{document.querySelectorAll('.cdl[data-dl]').forEach(e=>{e.innerHTML=cdTxt(+e.dataset.dl-Date.now())});$('#dl').innerHTML=dlText();const c=$('#cdn');if(c){c.innerHTML=cdHtml();const dd=st.set?.deadline;const ms=dd?Date.parse(dd+(dd.length<=16?':00+08:00':''))-Date.now():1e12;c.classList.toggle('urgent',!st.set?.closed&&ms<864e5)}},1000);
 </script>
 </body>
 </html>
