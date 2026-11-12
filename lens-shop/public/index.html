@@ -383,6 +383,7 @@ summary{min-height:40px;padding:8px 0;color:var(--bd)}
 .pcd .cv:has(>.ph){background:linear-gradient(135deg,#1db843,#0d6b22)}.pcd .cv .ph{color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.18)}
 .pcd .bdg.go{background:#FFB800;color:#4a3200;font-weight:700;border-color:#e0a200}
 .pcd .bdg.go{background:#FFD25A;color:#5a3d00;border-color:#efbd35}
+.pcd .cv:has(>.ph.kc){background:linear-gradient(135deg,#8f78f2,#4a35b5)}.atg.kc{background:#efe9ff;color:#5b3fc4}.acd .ast:not(.x){background:#FFD25A;color:#5a3d00;padding:3px 10px;border-radius:99px;font-weight:700}
 </style>
 </head>
 <body>
@@ -407,14 +408,16 @@ function cartBar(){let b=document.getElementById('cbar');if(!b){b=document.creat
  b.style.display='block';document.body.classList.add('hasbar')}
 // ── 多團購：網址 /g/<團購代號>/<頁面>；/order/<token> 為全域；/ 與 /campaigns 為團購選單 ──
 const cartKey=()=>st.cid==='lens'?'lensCart':'lensCart_'+st.cid;
-const H=p=>'/g/'+st.cid+p;
+const H=p=>'/g/'+(st.cid||newestCid())+p;
 function P(){const h=location.pathname.split('/');if(h[1]==='g')return{cid:h[2]||'lens',page:h[3]||'',arg:h[4]};return{cid:null,page:h[1]||'',arg:h[2]}}
 const saveCart=()=>{localStorage.setItem(cartKey(),JSON.stringify(st.cart));renderNav();cartBar()};
 async function fetchRev(){try{st.rev=await api('/reviews')}catch(e){st.rev={}}}
 async function fetchCat(){try{const d=await api('/catalog');st.cat=d.catalog;st.set=d.settings;st.pimgs=d.pimgs||{}}catch(e){}}
 async function ensureCampaign(cid){if(st.cid===cid&&st.set)return;st.cid=cid;st.cat=null;st.set=null;st.pimgs={};st.rev={};st.revLoaded=0;st.editTok=null;st.brand='全部';st.q='';st.shown=60;
  try{st.cart=JSON.parse(localStorage.getItem(cartKey())||'[]')}catch{st.cart=[]}await fetchCat()}
-async function loadCamps(){try{st.camps=(await api('/campaigns?t='+Date.now())).campaigns}catch(e){st.camps=st.camps||[]}return st.camps}
+const campT=c=>{let v=String(c.startAt||'');if(/^\d{4}-\d\d-\d\d \d/.test(v))v=v.replace(' ','T')+'Z';const t=Date.parse(v);return isNaN(t)?0:t};
+const newestCid=()=>{const c=st.camps||[];return(c.find(x=>!x.ended)||c[0]||{id:'lens'}).id};
+async function loadCamps(){try{st.camps=(await api('/campaigns?t='+Date.now())).campaigns;st.camps.sort((a,b)=>campT(b)-campT(a))}catch(e){st.camps=st.camps||[]}return st.camps}
 async function api(p,o={}){const h={...(o.headers||{})};if(o.admin&&st.admin)h.authorization='Bearer '+st.admin;if(st.user)h['x-user']=st.user.token;if(o.json){h['content-type']='application/json';o.body=JSON.stringify(o.json)}
  if(st.cid&&!/^\/(campaigns|auth\/|admin\/login|admin\/campaigns|admin\/accounts|admin\/auth)/.test(p)&&!/^\/orders\/[0-9a-f]{32}/.test(p))p+=(p.includes('?')?'&':'?')+'c='+encodeURIComponent(st.cid);
  const r=await fetch('/api'+p,{...o,headers:h});if(o.raw&&r.ok)return r;let d={};try{d=await r.json()}catch{}if(!r.ok){if(r.status===401&&st.user&&!o.admin&&/請先登入/.test(d.error||'')){st.user=null;localStorage.removeItem('lensUser')}if(r.status===401&&o.admin){st.admin='';localStorage.removeItem('lensAdmin')}throw new Error(d.error||'連線失敗')}return d}
@@ -753,7 +756,7 @@ async function viewAdmin(){
   <p><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="closed" style="width:auto" ${s.closed?'checked':''}> 手動結單（勾選後同事無法再下單／修改）</label></p><button id="sv">儲存設定</button>${st.cat?.drink?'<button class="sec" id="rimg" style="margin-left:8px">重新抓取商品圖片</button>':''}${st.cat?.drink?'':'<div style="margin-top:12px"><label class="sub">更新報價 Excel（取代目前價格與範本，訂單保留）</label><div><input type="file" id="xf" accept=".xlsx"> <button class="sec" id="up">上傳並更新</button> <span id="upm" class="muted"></span></div></div>'}</div>`;
   $('#app').innerHTML=`<style>#app>.card{margin-top:18px!important}</style><div class="sp"><h2>管理後台${isAdm?'':'（'+esc(st.user.name)+'）'}</h2><button class="sec" id="lo">登出</button></div>
   <div class="card"><h3 style="margin-top:0">團購管理</h3><p class="muted">點卡片切換並顯示該團購的訂單；「管理／設定」開啟設定視窗。結束後訂單會保留，同事不能再下單或修改。</p>
-  <div class="acg">${cs.filter(c=>!c.ended).map(c=>`<div class="acd ${c.id===st.cid?'on':''}" data-cid="${esc(c.id)}" style="cursor:pointer"><span class="atg ${c.drink?'dk':''}">${kindName(c)}</span><span class="ast ${c.ended?'x':''}">${c.ended?'已結束':'進行中'}</span><h4>${esc(c.name)}</h4><div class="sub">${c.drink&&c.store?esc(c.store)+'　':''}代號 ${esc(c.id)}</div><div class="sub">${c.count} 人下單　${nt(c.sum)}${c.goal?'　目標 '+nt(c.goal):''}</div>
+  <div class="acg">${cs.filter(c=>!c.ended).map(c=>`<div class="acd ${c.id===st.cid?'on':''}" data-cid="${esc(c.id)}" style="cursor:pointer"><span class="atg ${c.custom?'kc':c.drink?'dk':''}">${kindName(c)}</span><span class="ast ${c.ended?'x':''}">${c.ended?'已結束':'進行中'}</span><h4>${esc(c.name)}</h4><div class="sub">${c.drink&&c.store?esc(c.store)+'　':''}代號 ${esc(c.id)}</div><div class="sub">${c.count} 人下單　${nt(c.sum)}${c.goal?'　目標 '+nt(c.goal):''}</div>
    <div class="acts"><button data-mg="${esc(c.id)}">${c.id===st.cid?'設定':'管理'}</button><button class="sec" data-ce="${esc(c.id)}" data-en="${c.ended?0:1}">${c.ended?'重新開放':'結束'}</button>${c.id==='lens'?'':`<button class="sec" data-dl="${esc(c.id)}" style="color:#b42323">刪除</button>`}</div></div>`).join('')}
   </div>
   <h3 style="margin:26px 0 8px">歷史團購（已結束）</h3>
@@ -776,7 +779,7 @@ async function viewAdmin(){
   document.querySelectorAll('[data-hv]').forEach(b=>b.onclick=()=>{const id=b.dataset.hv;if(id!==st.cid){sessionStorage.scrollOrd='1';go('/g/'+id+'/admin')}else{const oc=[...document.querySelectorAll('#app > .card')].find(x=>/^訂單/.test((x.querySelector('h3')||{}).textContent||''));if(oc)oc.scrollIntoView({behavior:'smooth',block:'start'})}});
   document.querySelectorAll('[data-mg]').forEach(b=>b.onclick=()=>{if(b.dataset.mg===st.cid)openSet();else{sessionStorage.openSet='1';go('/g/'+b.dataset.mg+'/admin')}});
   document.querySelectorAll('[data-dl]').forEach(b=>b.onclick=async()=>{const id=b.dataset.dl,c=cs.find(x=>x.id===id)||{};if(!confirm('永久刪除「'+(c.name||id)+'」？\n\n會一併刪除這個團購的 '+c.count+' 筆訂單、聊天室、設定與上傳檔案，無法復原。\n（只是不想再讓人下單，請改按「結束」。）'))return;const t=prompt('請輸入團購代號「'+id+'」確認刪除：');if(t!==id)return alert('代號不符，已取消');
-   try{await api('/admin/campaigns/'+encodeURIComponent(id),{method:'DELETE',admin:1});toast('已刪除團購');await loadCamps();if(id===st.cid){st.cid='lens';st.set=null;st.cat=null;st.pimgs={};go('/campaigns')}else viewAdmin()}catch(e){alert(e.message)}});
+   try{await api('/admin/campaigns/'+encodeURIComponent(id),{method:'DELETE',admin:1});toast('已刪除團購');await loadCamps();if(id===st.cid){st.cid=null;st.set=null;st.cat=null;st.pimgs={};go('/campaigns')}else viewAdmin()}catch(e){alert(e.message)}});
   document.querySelectorAll('[data-ce]').forEach(b=>b.onclick=async()=>{const id=b.dataset.ce,ending=b.dataset.en==='1',c=cs.find(x=>x.id===id)||{};if(!confirm(ending?'結束「'+(c.name||id)+'」？結束後同事無法再下單或修改（訂單與資料保留，可隨時重新開放）。':'重新開放「'+(c.name||id)+'」？'))return;try{const rr=await api('/admin/campaigns/'+encodeURIComponent(id),{method:'PUT',admin:1,json:{status:ending?'ended':'open'}});if(rr.mail==='sent')toast('已結束，訂單明細信已寄給開團者');await loadCamps();if(id===st.cid)await fetchCat();viewAdmin()}catch(e){alert(e.message)}});
   if(0)$('#mup').onclick=async()=>{const f=$('#mf').files[0];if(!f)return alert('請先選擇菜單檔（.json）');if(!confirm('匯入菜單會取代這個團購目前的商品目錄（訂單保留）。確定？'))return;
    try{const menu=JSON.parse(await f.text());const d=await api('/admin/drink-menu',{method:'POST',admin:1,json:{menu,link:$('#mlink').value.trim()}});toast('已匯入 '+d.items+' 項');await fetchCat();viewAdmin()}catch(e){alert(e.message)}};
@@ -850,12 +853,12 @@ function pimgUI(){const box=$('#pimgbox');if(!box||!st.cat)return;const brands=[
 async function route(){
  const p=P();window.scrollTo(0,0);
  if(!st.camps){const p0=P();if(p0.cid!==null&&p0.page!=='order')await Promise.all([loadCamps(),ensureCampaign(p0.cid).catch(()=>{})]);else await loadCamps()}
- if(st.camps&&p.cid!==null&&p.page!=='order'&&!st.camps.some(c=>c.id===p.cid)){st.cid='lens';st.set=null;st.cat=null;history.replaceState(null,'','/campaigns');return route()}
+ if(st.camps&&p.cid!==null&&p.page!=='order'&&!st.camps.some(c=>c.id===p.cid)){st.cid=null;st.set=null;st.cat=null;history.replaceState(null,'','/campaigns');return route()}
  if(p.page==='order'&&p.cid===null)return p.arg&&viewOrder(p.arg);
  if(p.cid===null&&p.page==='campaigns'){renderNav();return viewPicker()}
  if(p.cid===null){ // 根目錄與舊網址
   if(location.pathname==='/'){renderNav();return viewPicker()}
-  history.replaceState(null,'','/g/lens/'+p.page+(p.arg?'/'+p.arg:''));return route()}
+  history.replaceState(null,'','/g/'+newestCid()+'/'+p.page+(p.arg?'/'+p.arg:''));return route()}
  await ensureCampaign(p.cid);renderNav();
  ({'':viewShop,promo:viewPromo,limited:viewPromo,spec:viewSpec,cart:viewCart,mine:viewMine,admin:viewAdmin,summary:viewSummary}[p.page]||viewShop)();
 }
@@ -867,7 +870,7 @@ function pcCard(c){const goal=c.goal||0,pct=goal?Math.round(c.sum/goal*100):0,ok
  const ms=c.deadline?Date.parse(c.deadline+(c.deadline.length<=16?':00+08:00':''))-Date.now():0;
  const left=over?'已結束':!c.deadline?'進行中':`<span class="cdl" data-dl="${Date.parse(c.deadline+(c.deadline.length<=16?':00+08:00':''))}">${cdTxt(ms)}</span>`;
  const rms=ok&&c.reachedAt&&c.startAt?Math.max(0,Date.parse(c.reachedAt)-Date.parse(c.startAt)):-1;const days=rms>=864e5?Math.ceil(rms/864e5):0;const dtxt=rms<0?'':rms<36e5?'<em>'+Math.max(1,Math.round(rms/6e4))+' 分鐘</em>':rms<864e5?'<em>'+Math.round(rms/36e5)+' 小時</em>':'<em>'+Math.max(1,days)+' 天</em>';
- const cv=c.covers&&c.covers.length?`<div class="cv ${c.covers.length<2?'one':''}">${c.covers.slice(0,c.covers.length<2?1:4).map(u=>`<img loading="lazy" src="${esc(u)}" alt="">`).join('')}</div>`:`<div class="cv"><div class="ph">${esc(c.name)}</div></div>`;
+ const cv=c.covers&&c.covers.length?`<div class="cv ${c.covers.length<2?'one':''}">${c.covers.slice(0,c.covers.length<2?1:4).map(u=>`<img loading="lazy" src="${esc(u)}" alt="">`).join('')}</div>`:`<div class="cv"><div class="ph ${c.custom?'kc':''}">${esc(c.name)}</div></div>`;
  return`<a class="pcd" href="/g/${c.id}/">${cv}<span class="bdg ${st0[1]}">${st0[0]}</span><div class="bd2"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>${esc(c.name)}</span>${res?`<span class="bdg ${res[1]}" style="position:static;flex:none;white-space:nowrap">${res[0]}</span>`:''}</h3><div class="sub" style="margin:-6px 0 8px">${kindName(c)}${c.drink&&!c.custom?'｜'+esc(c.store||''):''}</div>
   ${goal?`<div class="pgb"><div class="bar2"><i style="width:${Math.min(100,pct)}%"></i></div><span class="pct">${pct.toLocaleString('en-US')}%</span></div>`:'<div class="sub">本團不設達標門檻</div>'}
   <div class="ft"><b>${nt(c.sum)}</b><span>${c.count} 人</span><span>${dtxt?dtxt+'達標':left}</span></div>
