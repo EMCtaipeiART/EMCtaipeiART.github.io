@@ -74,7 +74,7 @@ table.t{border-collapse:collapse;width:100%;font-size:14px}table.t th,table.t td
 .num{text-align:right!important}.total{font-size:20px;text-align:right;margin:14px 0}.total b{color:var(--bd);font-size:24px;font-weight:900}.t td.num,.t td.num b{font-weight:800}
 .note{background:#fff8e6;border:1px solid #f3dca0;border-radius:12px;padding:11px 14px;margin-bottom:14px;font-size:14px}
 .note.ok{background:var(--bs);border-color:#b8e3c3}.note.bad{background:#fdecec;border-color:#f3b9b9}
-.form2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}.form2 input{width:100%}
+.form2{display:grid;grid-template-columns:1fr 1fr;gap:18px 16px;margin:14px 0}.form2 input{width:100%}.fld{display:flex;flex-direction:column;gap:6px;min-width:0}.fld label{margin:0}@media(max-width:620px){.form2{grid-template-columns:1fr}}
 .promo p{margin:0 0 7px}.promo .h{font-weight:700;font-size:16px;margin-top:16px;color:var(--bd)}.promo .big{white-space:pre-line}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
 .pc{background:#fff;border:1px solid var(--l);border-radius:var(--rad);overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--sh);transition:.15s}.pc:hover{transform:translateY(-3px);box-shadow:var(--sh2)}
@@ -458,7 +458,7 @@ async function viewAdmin(){
   if(!isAdm&&!curm&&cs.length&&st.cid!==cs[0].id){return go('/g/'+cs[0].id+'/admin')}
   const lite=!isAdm&&!curm;
   const [s,o]=lite?[{shopName:'',goal:'',drinkLink:'',notes:'',closed:false},{count:0,orders:[],tally:[]}]:await Promise.all([api('/admin/settings',{admin:1}),api('/admin/orders',{admin:1})]);const cur=cs.find(c=>c.id===st.cid)||{};
-  const f=(k,l,t='text')=>`<label class="sub">${l}</label><input data-k="${k}" type="${t}" value="${esc(s[k])}" style="width:100%">`;
+  const f=(k,l,t='text')=>`<div class="fld"><label class="sub">${l}</label><input data-k="${k}" type="${t}" value="${esc(s[k])}" style="width:100%"></div>`;
   $('#app').innerHTML=`<div class="sp"><h2>管理後台${isAdm?'':'（'+esc(st.user.name)+'）'}</h2><button class="sec" id="lo">${isAdm?'登出':'離開管理'}</button></div>
   ${isAdm?'<div class="card" style="margin-top:12px"><h3 style="margin-top:0">帳號與登入設定</h3><div id="acbox"><span class="muted">載入中…</span></div></div>':''}
   <div class="card"><h3 style="margin-top:0">我要開團</h3><p class="muted">選擇團購類型：隱眼團上傳報價 Excel；飲料團貼上 Uber Eats／你訂揪團連結，系統自動解析店名與菜單。</p>
@@ -467,14 +467,15 @@ async function viewAdmin(){
    <div class="chips" id="ntype" style="display:none"><span class="chip on" data-t="lens">隱眼團</span><span class="chip" data-t="drink">飲料團</span></div>
    <div id="nl-lens" style="margin-top:10px"><label class="sub">報價 Excel（含「報價單／全台獨家活動／期間限定／各品牌度數規格／填寫單1」的 .xlsx）</label><input type="file" id="nxf" accept=".xlsx"></div>
    <div id="nl-drink" style="display:none;margin-top:10px"><label class="sub">Uber Eats 揪團連結（或你訂開團連結）</label><div class="tools"><input id="nlink" placeholder="https://eats.uber.com/group-orders/…/join" style="flex:1;min-width:240px"><button id="nparse">解析</button></div><div class="sub" id="nmsg" style="margin-top:6px"></div></div>
-   <div class="form2" style="margin-top:10px"><div><label class="sub">團購名稱（系統自動帶入，可修改）</label><input id="nnm" style="width:100%"></div><div><label class="sub">團購代號（自動產生，可修改；英文小寫／數字／-）</label><input id="nid" style="width:100%"></div></div>
+   <div class="form2" style="margin-top:10px"><div class="fld"><label class="sub">團購名稱（系統自動帶入，可修改）</label><input id="nnm" style="width:100%"></div><div class="fld"><label class="sub">團購代號（自動產生，可修改；英文小寫／數字／-）</label><input id="nid" style="width:100%"></div></div>
+   <div id="nset" style="display:none;margin-top:14px;padding-top:14px;border-top:1px dashed #cfe3d5"><h3 style="margin:0 0 4px">開團設定（必填）</h3><div class="form2"><div class="fld"><label class="sub">達標金額（NT$，開團成功門檻；不設門檻填 0）</label><input data-nk="goal" type="number" placeholder="" style="width:100%"></div><div class="fld"><label class="sub">截止日期時間（台北時間）</label><input data-nk="deadline" type="datetime-local" placeholder="" style="width:100%"></div><div class="fld"><label class="sub">銀行（含代碼）</label><input data-nk="bankName" type="text" placeholder="" style="width:100%"></div><div class="fld"><label class="sub">匯款帳號</label><input data-nk="bankAccount" type="text" placeholder="" style="width:100%"></div><div class="fld"><label class="sub">戶名</label><input data-nk="accountName" type="text" placeholder="" style="width:100%"></div></div><div class="fld"><label class="sub">信件／頁面附註（選填）</label><textarea data-nk="notes" rows="2" style="width:100%"></textarea></div></div>
    <div class="acts"><button class="sec" id="ncancel">取消</button><button id="ngo">建立團購</button></div></div></div>
   <div class="card"><h3 style="margin-top:0">團購管理</h3><p class="muted">點卡片的「管理」切換團購；下方的設定、商品圖與訂單都屬於目前管理中的團購。結束後訂單會保留，同事不能再下單或修改。</p>
   <div class="acg">${cs.map(c=>`<div class="acd ${c.id===st.cid?'on':''}"><span class="atg ${c.drink?'dk':''}">${c.drink?'飲料團':'隱眼團'}</span><span class="ast ${c.ended?'x':''}">${c.ended?'已結束':'進行中'}</span><h4>${esc(c.name)}</h4><div class="sub">${c.drink&&c.store?esc(c.store)+'　':''}代號 ${esc(c.id)}</div><div class="sub">${c.count} 人下單　${nt(c.sum)}${c.goal?'　目標 '+nt(c.goal):''}</div>
    <div class="acts"><button ${c.id===st.cid?'class="sec" disabled':''} data-mg="${esc(c.id)}">${c.id===st.cid?'管理中':'管理'}</button><button class="sec" data-ce="${esc(c.id)}" data-en="${c.ended?0:1}">${c.ended?'重新開放':'結束'}</button></div></div>`).join('')}
   </div>
   <div style="margin-top:16px;padding-top:14px;border-top:1px dashed #cfe3d5"><h3 style="margin:0 0 10px">目前管理：${esc(cur.name||st.cid||'')} 設定</h3><div class="form2">${f('shopName','團購名稱')}${f('goal','達標金額（NT$，開團成功門檻；留空或 0＝不設門檻）','number')}${f('drinkLink','飲料團開團連結（Uber Eats 揪團／你訂開團網址，貼上後存檔）')}${f('deadline','截止日期時間（台北時間）','datetime-local')}${f('bankName','銀行（含代碼）')}${f('bankAccount','匯款帳號')}${f('accountName','戶名')}${f('siteUrl','網站網址（信件連結用，可留空）')}</div>
-  <label class="sub">信件／頁面附註</label><textarea data-k="notes" rows="2" style="width:100%">${esc(s.notes)}</textarea>
+  <div class="fld" style="margin-top:6px"><label class="sub">信件／頁面附註</label><textarea data-k="notes" rows="2" style="width:100%">${esc(s.notes)}</textarea></div>
   <p><label><input type="checkbox" id="closed" ${s.closed?'checked':''}> 手動結單（勾選後同事無法再下單／修改）</label></p><button id="sv">儲存設定</button>${st.cat?.drink?'':'<div style="margin-top:12px"><label class="sub">更新報價 Excel（取代目前價格與範本，訂單保留）</label><div><input type="file" id="xf" accept=".xlsx"> <button class="sec" id="up">上傳並更新</button> <span id="upm" class="muted"></span></div></div>'}</div>
 </div>
 
@@ -494,7 +495,8 @@ async function viewAdmin(){
    const genId=()=>{const base=(np.type==='drink'?'drink':'lens')+md;let x=base,k=0;while(ids.includes(x)||x.startsWith('lim'))x=base+'abcdefghijklmnopqrstuvwxyz'[k++%26]+(k>26?k:'');return x};
    const genName=()=>np.type==='drink'?'飲料團 '+(+md.slice(0,2))+'/'+(+md.slice(2)):'隱形眼鏡團購 '+(+md.slice(0,2))+'/'+(+md.slice(2));
    const fill=()=>{if(!np.touched.id)$('#nid').value=genId();if(!np.touched.nm&&!(np.type==='drink'&&np.menu))$('#nnm').value=genName()};
-   const ui=()=>{$('#nl-drink').style.display=np.type==='drink'?'block':'none';$('#nl-lens').style.display=np.type==='drink'?'none':'block';$('#ngo').textContent=np.type==='drink'?'開團':'建立隱眼團';$('#ntype').querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.t===np.type));fill()};
+   const showSet=()=>{$('#nset').style.display=np.type==='lens'||np.menu?'block':'none'};
+   const ui=()=>{$('#nl-drink').style.display=np.type==='drink'?'block':'none';$('#nl-lens').style.display=np.type==='drink'?'none':'block';$('#ngo').textContent=np.type==='drink'?'開團':'建立隱眼團';$('#ntype').querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.t===np.type));fill();showSet()};
    const openNew=t=>{np.type=t;np.menu=null;np.pending=false;$('#nmsg').textContent='';$('#newp').style.display='block';ui();$('#newp').scrollIntoView({behavior:'smooth',block:'nearest'})};
    $('#addl').onclick=()=>openNew('lens');$('#addd').onclick=()=>openNew('drink');
    $('#ncancel').onclick=()=>{$('#newp').style.display='none'};
@@ -508,11 +510,13 @@ async function viewAdmin(){
       if(!ok.length)throw new Error('讀不到品項選項，請稍後再試或請 Claude 抓取');
       np.menu={store:d.store,platform:'ubereats',link:d.link,items:ok.map(x=>({cat:x.cat,name:x.name,price:x.price,img:x.img,groups:groups[x.id]}))};np.link=d.link;np.platform='ubereats';
       if(!np.touched.nm)$('#nnm').value=d.store;msg.style.color='var(--b)';msg.textContent='✔ 解析成功：'+d.store+'，共 '+ok.length+' 項飲料'+(bad?'（另有 '+bad+' 項讀不到選項，已略過）':'')+'。可修改名稱後按「開團」。'}
-     fill()}catch(e){msg.style.color='#b42323';msg.textContent='✘ '+e.message}btn.disabled=false};
+     fill();showSet()}catch(e){msg.style.color='#b42323';msg.textContent='✘ '+e.message}btn.disabled=false};
    $('#ngo').onclick=async()=>{const id=$('#nid').value.trim().toLowerCase(),name=$('#nnm').value.trim();if(!id||!name)return alert('請填寫名稱與代號');
     if(np.type==='drink'&&!np.menu&&!np.pending)return alert('請先貼上連結並按「解析」');
+    const sv={};document.querySelectorAll('[data-nk]').forEach(i=>sv[i.dataset.nk]=i.value.trim());
+    const miss=[['goal','達標金額'],['deadline','截止日期時間'],['bankName','銀行'],['bankAccount','匯款帳號'],['accountName','戶名']].filter(([k])=>sv[k]==='');if(miss.length)return alert('請填寫：'+miss.map(x=>x[1]).join('、'));
     const xf=np.type==='lens'?$('#nxf').files[0]:null;if(np.type==='lens'&&!xf)return alert('請先選擇報價 Excel（.xlsx）');
-    try{await api('/admin/campaigns',{method:'POST',admin:1,json:{id,name,...(np.type==='drink'?{menu:np.menu,link:np.link}:{})}});
+    try{await api('/admin/campaigns',{method:'POST',admin:1,json:{id,name,settings:sv,...(np.type==='drink'?{menu:np.menu,link:np.link}:{})}});
      if(xf){try{await api('/admin/upload?c='+encodeURIComponent(id),{method:'POST',admin:1,body:xf})}catch(e){alert('團購已建立，但 Excel 上傳失敗：'+e.message+'。請到該團購設定重新上傳。')}}
      await loadCamps();toast('已建立團購');go('/g/'+id+'/admin')}catch(e){alert(e.message)}};
    ui()}

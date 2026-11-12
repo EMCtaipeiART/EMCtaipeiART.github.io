@@ -390,7 +390,8 @@ async function handle(req, env) {
       let built = null;
       if (b.menu) { try { built = buildDrinkCatalog(b.menu); } catch (e) { return err('菜單格式不正確：' + e.message); } }
       await setKV(env, 'campaigns', [...camps, { id, status: 'open', createdAt: now(), ...(usr ? { owner: usr.email } : {}) }]);
-      await setKV(env, kk(id, 'settings'), { ...DEFAULTS, shopName: name, drinkLink: /^https:\/\//.test(b.link || '') ? String(b.link).slice(0, 500) : '' });
+      const init = {}; for (const k of ['goal', 'deadline', 'bankName', 'bankAccount', 'accountName', 'notes']) if (b.settings && b.settings[k] != null) init[k] = String(b.settings[k]).slice(0, 2000);
+      await setKV(env, kk(id, 'settings'), { ...DEFAULTS, ...init, shopName: name, drinkLink: /^https:\/\//.test(b.link || '') ? String(b.link).slice(0, 500) : '' });
       if (built) { await env.FILES.put(fk(id, 'catalog.json'), JSON.stringify(built.catalog), { httpMetadata: { contentType: 'application/json' } }); await setKV(env, kk(id, 'pimgs'), built.pimgs); }
       return json({ ok: true, id });
     }
