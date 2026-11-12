@@ -242,6 +242,42 @@ async function gsiLoad(){if(window.google&&google.accounts&&google.accounts.id)r
 function setUser(d){st.user={token:d.token||(st.user&&st.user.token),...d.user};localStorage.lensUser=JSON.stringify(st.user);st.who={name:st.user.name,email:st.user.email};localStorage.lensWho=JSON.stringify(st.who);localStorage.lensChatName=st.user.name}
 function logoutUser(){st.user=null;localStorage.removeItem('lensUser');renderNav();route&&route()}
 async function googleButton(el,done){el.innerHTML='<span class="muted">載入 Google 登入…</span>';try{const c=await api('/auth/config');if(!c.clientId){el.innerHTML='<span class="muted">管理者尚未設定 Google 登入</span>';return}await gsiLoad();google.accounts.id.initialize({client_id:c.clientId,callback:async r=>{try{const d=await api('/auth/google',{method:'POST',json:{credential:r.credential}});setUser(d);toast('已登入：'+st.user.name);done&&done()}catch(e){alert(e.message)}}});el.innerHTML='';google.accounts.id.renderButton(el,{theme:'outline',size:'large',text:'signin_with',locale:'zh-TW'})}catch(e){el.innerHTML='<span class="muted">'+esc(e.message)+'</span>'}}
+function openNewCampaign(){const bg=document.createElement('div');bg.className='modalbg';bg.innerHTML=`<div class="modal" style="max-width:780px;width:94vw;max-height:90vh;overflow:auto"><h3 style="margin-top:0">我要開團</h3><p class="muted">選擇團購類型：隱眼團上傳報價 Excel；飲料團貼上 Uber Eats／你訂揪團連結，系統自動解析店名與菜單。</p><div id="newp">
+   <div class="chips" id="ntype"><span class="chip on" data-t="lens">隱眼團</span><span class="chip" data-t="drink">飲料團</span></div>
+   <div id="nl-lens" style="margin-top:10px"><label class="sub">報價 Excel（含「報價單／全台獨家活動／期間限定／各品牌度數規格／填寫單1」的 .xlsx）</label><input type="file" id="nxf" accept=".xlsx"></div>
+   <div id="nl-drink" style="display:none;margin-top:10px"><label class="sub">Uber Eats 揪團連結（或你訂開團連結）</label><div class="tools"><input id="nlink" placeholder="https://eats.uber.com/group-orders/…/join" style="flex:1;min-width:240px"><button id="nparse">解析</button></div><div class="sub" id="nmsg" style="margin-top:6px"></div></div>
+   <div class="form2" style="margin-top:10px"><div class="fld"><label class="sub">團購名稱（系統自動帶入，可修改）</label><input id="nnm" style="width:100%"></div><div class="fld"><label class="sub">團購代號（自動產生，可修改；英文小寫／數字／-）</label><input id="nid" style="width:100%"></div></div>
+   <div id="nset" style="display:none;margin-top:14px;padding-top:14px;border-top:1px dashed #cfe3d5"><h3 style="margin:0 0 4px">開團設定（必填）</h3><div class="form2"><div class="fld"><label class="sub">達標金額（NT$，開團成功門檻；不設門檻填 0）</label><input data-nk="goal" type="number" placeholder="" style="width:100%"></div><div class="fld"><label class="sub">截止日期時間（台北時間）</label><input data-nk="deadline" type="datetime-local" placeholder="" style="width:100%"></div><div class="fld"><label class="sub">銀行（含代碼）</label><input data-nk="bankName" type="text" placeholder="" style="width:100%"></div><div class="fld"><label class="sub">匯款帳號</label><input data-nk="bankAccount" type="text" placeholder="" style="width:100%"></div><div class="fld"><label class="sub">戶名</label><input data-nk="accountName" type="text" placeholder="" style="width:100%"></div></div><div class="fld"><label class="sub">信件／頁面附註（選填）</label><textarea data-nk="notes" rows="2" style="width:100%"></textarea></div></div>
+   <div class="acts"><button class="sec" id="ncancel">取消</button><button id="ngo">建立團購</button></div></div></div>`;document.body.appendChild(bg);
+{const np={type:'drink',menu:null,link:'',touched:{nm:0,id:0},pending:false};const ids=(st.camps||[]).map(c=>c.id);
+   const dd=new Date(Date.now()+8*3600e3),md=String(dd.getUTCMonth()+1).padStart(2,'0')+String(dd.getUTCDate()).padStart(2,'0');
+   const genId=()=>{const base=(np.type==='drink'?'drink':'lens')+md;let x=base,k=0;while(ids.includes(x)||x.startsWith('lim'))x=base+'abcdefghijklmnopqrstuvwxyz'[k++%26]+(k>26?k:'');return x};
+   const genName=()=>np.type==='drink'?'飲料團 '+(+md.slice(0,2))+'/'+(+md.slice(2)):'隱形眼鏡團購 '+(+md.slice(0,2))+'/'+(+md.slice(2));
+   const fill=()=>{if(!np.touched.id)$('#nid').value=genId();if(!np.touched.nm&&!(np.type==='drink'&&np.menu))$('#nnm').value=genName()};
+   const showSet=()=>{$('#nset').style.display=np.type==='lens'||np.menu?'block':'none'};
+   const ui=()=>{$('#nl-drink').style.display=np.type==='drink'?'block':'none';$('#nl-lens').style.display=np.type==='drink'?'none':'block';$('#ngo').textContent=np.type==='drink'?'開團':'建立隱眼團';$('#ntype').querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.t===np.type));fill();showSet()};
+   $('#ncancel').onclick=()=>bg.remove();
+   $('#ntype').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{np.type=c.dataset.t;np.menu=null;np.pending=false;$('#nmsg').textContent='';ui()});
+   $('#nnm').oninput=()=>np.touched.nm=1;$('#nid').oninput=()=>np.touched.id=1;
+   $('#nparse').onclick=async()=>{const link=$('#nlink').value.trim(),msg=$('#nmsg'),btn=$('#nparse');if(!link)return alert('請先貼上揪團連結');btn.disabled=true;np.menu=null;np.pending=false;msg.style.color='';
+    try{msg.textContent='解析中…讀取店家與品項';const d=await api('/admin/drink-parse',{method:'POST',admin:1,json:{link}});
+     if(d.menu){np.menu=d.menu;np.link=d.link;np.platform='nidin';if(!np.touched.nm)$('#nnm').value=d.store;msg.style.color='var(--b)';msg.textContent='✔ 解析成功（你訂）：'+d.store+'，共 '+d.menu.items.length+' 項飲料'+(d.open?'':'（注意：這個你訂團單目前不是開放狀態）')+'。可修改名稱後按「開團」。'}
+     else{const groups={};for(let i=0;i<d.items.length;i+=25){msg.textContent='解析中…讀取選項 '+Math.min(i+25,d.items.length)+' / '+d.items.length;const r=await api('/admin/drink-parse',{method:'POST',admin:1,json:{link,ids:d.items.slice(i,i+25).map(x=>x.id)}});Object.assign(groups,r.groups)}
+      const ok=d.items.filter(x=>groups[x.id]),bad=d.items.length-ok.length;
+      if(!ok.length)throw new Error('讀不到品項選項，請稍後再試或請 Claude 抓取');
+      np.menu={store:d.store,platform:'ubereats',link:d.link,items:ok.map(x=>({cat:x.cat,name:x.name,price:x.price,img:x.img,groups:groups[x.id]}))};np.link=d.link;np.platform='ubereats';
+      if(!np.touched.nm)$('#nnm').value=d.store;msg.style.color='var(--b)';msg.textContent='✔ 解析成功：'+d.store+'，共 '+ok.length+' 項飲料'+(bad?'（另有 '+bad+' 項讀不到選項，已略過）':'')+'。可修改名稱後按「開團」。'}
+     fill();showSet()}catch(e){msg.style.color='#b42323';msg.textContent='✘ '+e.message}btn.disabled=false};
+   $('#ngo').onclick=async()=>{const id=$('#nid').value.trim().toLowerCase(),name=$('#nnm').value.trim();if(!id||!name)return alert('請填寫名稱與代號');
+    if(np.type==='drink'&&!np.menu&&!np.pending)return alert('請先貼上連結並按「解析」');
+    const sv={};document.querySelectorAll('[data-nk]').forEach(i=>sv[i.dataset.nk]=i.value.trim());
+    const miss=[['goal','達標金額'],['deadline','截止日期時間'],['bankName','銀行'],['bankAccount','匯款帳號'],['accountName','戶名']].filter(([k])=>sv[k]==='');if(miss.length)return alert('請填寫：'+miss.map(x=>x[1]).join('、'));
+    const xf=np.type==='lens'?$('#nxf').files[0]:null;if(np.type==='lens'&&!xf)return alert('請先選擇報價 Excel（.xlsx）');
+    try{await api('/admin/campaigns',{method:'POST',admin:1,json:{id,name,settings:sv,...(np.type==='drink'?{menu:np.menu,link:np.link}:{})}});
+     if(xf){try{await api('/admin/upload?c='+encodeURIComponent(id),{method:'POST',admin:1,body:xf})}catch(e){alert('團購已建立，但 Excel 上傳失敗：'+e.message+'。請到該團購設定重新上傳。')}}
+     bg.remove();await loadCamps();toast('已建立團購');go('/g/'+id+'/admin')}catch(e){alert(e.message)}};
+   ui()}
+}
 function loginDialog(){const bg=document.createElement('div');bg.className='modalbg';bg.innerHTML='<div class="modal"><h3 style="margin-top:0">同事登入</h3><p class="muted">用 Google 帳號登入（gmail.com、emctaipei.com 都可以）。登入後下單會自動記錄姓名與 Email，聊天室可編輯、刪除自己的訊息。</p><div id="gbtn" style="min-height:44px"></div><div class="acts" style="margin-top:12px"><button class="sec" id="gx">關閉</button></div></div>';document.body.appendChild(bg);bg.querySelector('#gx').onclick=()=>bg.remove();googleButton(bg.querySelector('#gbtn'),()=>{bg.remove();renderNav();route&&route()})}
 function accountDialog(){const u=st.user,bg=document.createElement('div');bg.className='modalbg';bg.innerHTML=`<div class="modal"><h3 style="margin-top:0">我的帳號</h3><label class="sub">Email</label><div style="margin-bottom:8px">${esc(u.email)}</div><label class="sub">顯示姓名（下單與聊天室使用）</label><input id="an" maxlength="30" value="${esc(u.name)}" style="width:100%"><div class="acts" style="margin-top:12px"><button class="sec" id="ax">關閉</button><button class="sec" id="alo">登出</button><button id="asv">儲存</button></div></div>`;document.body.appendChild(bg);
  bg.querySelector('#ax').onclick=()=>bg.remove();bg.querySelector('#alo').onclick=()=>{bg.remove();logoutUser()};
@@ -468,15 +504,6 @@ async function viewAdmin(){
    <div class="acts"><button data-mg="${esc(c.id)}">${c.id===st.cid?'設定':'管理'}</button><button class="sec" data-ce="${esc(c.id)}" data-en="${c.ended?0:1}">${c.ended?'重新開放':'結束'}</button></div></div>`).join('')}
   </div>
 </div>
-  <div class="card"><h3 style="margin-top:0">我要開團</h3><p class="muted">選擇團購類型：隱眼團上傳報價 Excel；飲料團貼上 Uber Eats／你訂揪團連結，系統自動解析店名與菜單。</p>
-  <div class="tools"><button id="addl">＋ 隱眼團</button><button id="addd">＋ 飲料團</button></div>
-  <div id="newp" style="display:none;margin-top:14px;">
-   <div class="chips" id="ntype" style="display:none"><span class="chip on" data-t="lens">隱眼團</span><span class="chip" data-t="drink">飲料團</span></div>
-   <div id="nl-lens" style="margin-top:10px"><label class="sub">報價 Excel（含「報價單／全台獨家活動／期間限定／各品牌度數規格／填寫單1」的 .xlsx）</label><input type="file" id="nxf" accept=".xlsx"></div>
-   <div id="nl-drink" style="display:none;margin-top:10px"><label class="sub">Uber Eats 揪團連結（或你訂開團連結）</label><div class="tools"><input id="nlink" placeholder="https://eats.uber.com/group-orders/…/join" style="flex:1;min-width:240px"><button id="nparse">解析</button></div><div class="sub" id="nmsg" style="margin-top:6px"></div></div>
-   <div class="form2" style="margin-top:10px"><div class="fld"><label class="sub">團購名稱（系統自動帶入，可修改）</label><input id="nnm" style="width:100%"></div><div class="fld"><label class="sub">團購代號（自動產生，可修改；英文小寫／數字／-）</label><input id="nid" style="width:100%"></div></div>
-   <div id="nset" style="display:none;margin-top:14px;padding-top:14px;border-top:1px dashed #cfe3d5"><h3 style="margin:0 0 4px">開團設定（必填）</h3><div class="form2"><div class="fld"><label class="sub">達標金額（NT$，開團成功門檻；不設門檻填 0）</label><input data-nk="goal" type="number" placeholder="" style="width:100%"></div><div class="fld"><label class="sub">截止日期時間（台北時間）</label><input data-nk="deadline" type="datetime-local" placeholder="" style="width:100%"></div><div class="fld"><label class="sub">銀行（含代碼）</label><input data-nk="bankName" type="text" placeholder="" style="width:100%"></div><div class="fld"><label class="sub">匯款帳號</label><input data-nk="bankAccount" type="text" placeholder="" style="width:100%"></div><div class="fld"><label class="sub">戶名</label><input data-nk="accountName" type="text" placeholder="" style="width:100%"></div></div><div class="fld"><label class="sub">信件／頁面附註（選填）</label><textarea data-nk="notes" rows="2" style="width:100%"></textarea></div></div>
-   <div class="acts"><button class="sec" id="ncancel">取消</button><button id="ngo">建立團購</button></div></div></div>
 
 
 
@@ -488,40 +515,9 @@ async function viewAdmin(){
   ${isAdm?'<div class="card" style="margin-top:12px"><h3 style="margin-top:0">帳號與登入設定</h3><div id="acbox"><span class="muted">載入中…</span></div></div>':''}
 `;
   document.querySelectorAll('.acd[data-cid]').forEach(d=>d.onclick=e=>{if(e.target.closest('button'))return;const id=d.dataset.cid;if(id!==st.cid){sessionStorage.scrollOrd='1';go('/g/'+id+'/admin')}else{const oc=[...document.querySelectorAll('#app > .card')].find(x=>/^訂單/.test((x.querySelector('h3')||{}).textContent||''));if(oc)oc.scrollIntoView({behavior:'smooth',block:'start'})}});
-  if(sessionStorage.newCamp){sessionStorage.removeItem('newCamp');setTimeout(()=>{const nc=[...document.querySelectorAll('#app > .card')].find(x=>/^我要開團/.test((x.querySelector('h3')||{}).textContent||''));if(nc){nc.scrollIntoView({behavior:'smooth',block:'start'});nc.style.boxShadow='0 0 0 3px #159E31'}},200)}
   if(sessionStorage.scrollOrd&&!lite){sessionStorage.removeItem('scrollOrd');setTimeout(()=>{const oc=[...document.querySelectorAll('#app > .card')].find(x=>/^訂單/.test((x.querySelector('h3')||{}).textContent||''));if(oc)oc.scrollIntoView({behavior:'smooth',block:'start'})},150)}
   document.querySelectorAll('[data-mg]').forEach(b=>b.onclick=()=>{if(b.dataset.mg===st.cid)openSet();else{sessionStorage.openSet='1';go('/g/'+b.dataset.mg+'/admin')}});
   document.querySelectorAll('[data-ce]').forEach(b=>b.onclick=async()=>{const id=b.dataset.ce,ending=b.dataset.en==='1',c=cs.find(x=>x.id===id)||{};if(!confirm(ending?'結束「'+(c.name||id)+'」？結束後同事無法再下單或修改（訂單與資料保留，可隨時重新開放）。':'重新開放「'+(c.name||id)+'」？'))return;try{const rr=await api('/admin/campaigns/'+encodeURIComponent(id),{method:'PUT',admin:1,json:{status:ending?'ended':'open'}});if(rr.mail==='sent')toast('已結束，訂單明細信已寄給開團者');await loadCamps();if(id===st.cid)await fetchCat();viewAdmin()}catch(e){alert(e.message)}});
-  {const np={type:'lens',menu:null,link:'',touched:{nm:0,id:0},pending:false};const ids=cs.map(c=>c.id);
-   const dd=new Date(Date.now()+8*3600e3),md=String(dd.getUTCMonth()+1).padStart(2,'0')+String(dd.getUTCDate()).padStart(2,'0');
-   const genId=()=>{const base=(np.type==='drink'?'drink':'lens')+md;let x=base,k=0;while(ids.includes(x)||x.startsWith('lim'))x=base+'abcdefghijklmnopqrstuvwxyz'[k++%26]+(k>26?k:'');return x};
-   const genName=()=>np.type==='drink'?'飲料團 '+(+md.slice(0,2))+'/'+(+md.slice(2)):'隱形眼鏡團購 '+(+md.slice(0,2))+'/'+(+md.slice(2));
-   const fill=()=>{if(!np.touched.id)$('#nid').value=genId();if(!np.touched.nm&&!(np.type==='drink'&&np.menu))$('#nnm').value=genName()};
-   const showSet=()=>{$('#nset').style.display=np.type==='lens'||np.menu?'block':'none'};
-   const ui=()=>{$('#nl-drink').style.display=np.type==='drink'?'block':'none';$('#nl-lens').style.display=np.type==='drink'?'none':'block';$('#ngo').textContent=np.type==='drink'?'開團':'建立隱眼團';$('#ntype').querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.t===np.type));fill();showSet()};
-   const openNew=t=>{np.type=t;np.menu=null;np.pending=false;$('#nmsg').textContent='';$('#newp').style.display='block';ui();$('#newp').scrollIntoView({behavior:'smooth',block:'nearest'})};
-   $('#addl').onclick=()=>openNew('lens');$('#addd').onclick=()=>openNew('drink');
-   $('#ncancel').onclick=()=>{$('#newp').style.display='none'};
-   $('#ntype').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{np.type=c.dataset.t;np.menu=null;np.pending=false;$('#nmsg').textContent='';ui()});
-   $('#nnm').oninput=()=>np.touched.nm=1;$('#nid').oninput=()=>np.touched.id=1;
-   $('#nparse').onclick=async()=>{const link=$('#nlink').value.trim(),msg=$('#nmsg'),btn=$('#nparse');if(!link)return alert('請先貼上揪團連結');btn.disabled=true;np.menu=null;np.pending=false;msg.style.color='';
-    try{msg.textContent='解析中…讀取店家與品項';const d=await api('/admin/drink-parse',{method:'POST',admin:1,json:{link}});
-     if(d.menu){np.menu=d.menu;np.link=d.link;np.platform='nidin';if(!np.touched.nm)$('#nnm').value=d.store;msg.style.color='var(--b)';msg.textContent='✔ 解析成功（你訂）：'+d.store+'，共 '+d.menu.items.length+' 項飲料'+(d.open?'':'（注意：這個你訂團單目前不是開放狀態）')+'。可修改名稱後按「開團」。'}
-     else{const groups={};for(let i=0;i<d.items.length;i+=25){msg.textContent='解析中…讀取選項 '+Math.min(i+25,d.items.length)+' / '+d.items.length;const r=await api('/admin/drink-parse',{method:'POST',admin:1,json:{link,ids:d.items.slice(i,i+25).map(x=>x.id)}});Object.assign(groups,r.groups)}
-      const ok=d.items.filter(x=>groups[x.id]),bad=d.items.length-ok.length;
-      if(!ok.length)throw new Error('讀不到品項選項，請稍後再試或請 Claude 抓取');
-      np.menu={store:d.store,platform:'ubereats',link:d.link,items:ok.map(x=>({cat:x.cat,name:x.name,price:x.price,img:x.img,groups:groups[x.id]}))};np.link=d.link;np.platform='ubereats';
-      if(!np.touched.nm)$('#nnm').value=d.store;msg.style.color='var(--b)';msg.textContent='✔ 解析成功：'+d.store+'，共 '+ok.length+' 項飲料'+(bad?'（另有 '+bad+' 項讀不到選項，已略過）':'')+'。可修改名稱後按「開團」。'}
-     fill();showSet()}catch(e){msg.style.color='#b42323';msg.textContent='✘ '+e.message}btn.disabled=false};
-   $('#ngo').onclick=async()=>{const id=$('#nid').value.trim().toLowerCase(),name=$('#nnm').value.trim();if(!id||!name)return alert('請填寫名稱與代號');
-    if(np.type==='drink'&&!np.menu&&!np.pending)return alert('請先貼上連結並按「解析」');
-    const sv={};document.querySelectorAll('[data-nk]').forEach(i=>sv[i.dataset.nk]=i.value.trim());
-    const miss=[['goal','達標金額'],['deadline','截止日期時間'],['bankName','銀行'],['bankAccount','匯款帳號'],['accountName','戶名']].filter(([k])=>sv[k]==='');if(miss.length)return alert('請填寫：'+miss.map(x=>x[1]).join('、'));
-    const xf=np.type==='lens'?$('#nxf').files[0]:null;if(np.type==='lens'&&!xf)return alert('請先選擇報價 Excel（.xlsx）');
-    try{await api('/admin/campaigns',{method:'POST',admin:1,json:{id,name,settings:sv,...(np.type==='drink'?{menu:np.menu,link:np.link}:{})}});
-     if(xf){try{await api('/admin/upload?c='+encodeURIComponent(id),{method:'POST',admin:1,body:xf})}catch(e){alert('團購已建立，但 Excel 上傳失敗：'+e.message+'。請到該團購設定重新上傳。')}}
-     await loadCamps();toast('已建立團購');go('/g/'+id+'/admin')}catch(e){alert(e.message)}};
-   ui()}
   if(0)$('#mup').onclick=async()=>{const f=$('#mf').files[0];if(!f)return alert('請先選擇菜單檔（.json）');if(!confirm('匯入菜單會取代這個團購目前的商品目錄（訂單保留）。確定？'))return;
    try{const menu=JSON.parse(await f.text());const d=await api('/admin/drink-menu',{method:'POST',admin:1,json:{menu,link:$('#mlink').value.trim()}});toast('已匯入 '+d.items+' 項');await fetchCat();viewAdmin()}catch(e){alert(e.message)}};
   document.querySelectorAll('[data-ua]').forEach(b=>b.onclick=()=>{const od=o.orders.find(x=>x.id===b.dataset.ua);if(!od)return;const bg=document.createElement('div');bg.className='modalbg';
@@ -539,7 +535,7 @@ async function viewAdmin(){
    try{const r=await api('/admin/settings',{method:'PUT',admin:1,json:{closed:closing}});toast(closing?(r.mail==='sent'?'已結單，訂單明細信已寄給開團者':r.mail==='waiting'?'已結單，系統自動填單中，完成後會寄信給開團者':'已結單'):'已重新開單');await fetchCat();viewAdmin()}catch(e){alert(e.message)}};
   const cp=$('#cpy');if(cp)cp.onclick=async()=>{const NL='\n';const act=o.orders.filter(x=>x.status!=='cancelled');const t=act.map(x=>x.name+NL+x.items.map(l=>'  '+l.name+(l.opts?'（'+l.opts+'）':'')+(l.gift?' 備註：'+l.gift:'')+' ×'+l.qty).join(NL)).join(NL+NL)+NL+NL+'— 彙總 —'+NL+o.tally.map(t=>t.name+(t.opts?'（'+t.opts+'）':'')+' ×'+t.qty).join(NL)+NL+'合計 '+o.tally.reduce((n,t)=>n+t.qty,0)+' 杯，NT$ '+o.sum;try{await navigator.clipboard.writeText(t);toast('已複製點餐清單')}catch(e){prompt('請手動複製：',t)}};
   $('#lo').onclick=()=>{if(isAdm){st.admin='';localStorage.removeItem('lensAdmin');viewAdmin()}else go('/')};
-  if(lite)document.querySelectorAll('#app > .card').forEach((c,i)=>{if(i>1)c.style.display='none'});
+  if(lite)document.querySelectorAll('#app > .card').forEach((c,i)=>{if(i>0)c.style.display='none'});
   if(isAdm)acctAdminUI();
   const bindSet=()=>{const upb=$('#up');if(upb)upb.onclick=async()=>{const f=$('#xf').files[0];if(!f)return alert('請先選擇檔案');$('#upm').textContent='上傳解析中…';try{const d=await api('/admin/upload',{method:'POST',admin:1,body:f});$('#upm').textContent=`✔ 已更新：${d.items} 項商品、${d.limited} 張限定卡、規格表 ${d.specRows} 列`;st.cat=null;load()}catch(e){$('#upm').textContent='✘ '+e.message}};
   $('#sv').onclick=async()=>{const b={closed:$('#closed').checked};document.querySelectorAll('[data-k]').forEach(i=>b[i.dataset.k]=i.value);const sr=await api('/admin/settings',{method:'PUT',admin:1,json:b});toast(sr.mail==='sent'?'已儲存，訂單明細信已寄給開團者':'已儲存');document.querySelectorAll('.modalbg').forEach(x=>x.remove());load()};};
@@ -587,7 +583,7 @@ function pcCard(c){const goal=c.goal||0,pct=goal?Math.round(c.sum/goal*100):0,ok
   ${c.names&&c.names.length?`<div class="who">${c.names.slice(0,6).map(n=>`<span>${esc(n)}</span>`).join('')}${c.nameCount>6?`<span>等 ${c.nameCount} 人</span>`:''}</div>`:'<div class="sub" style="margin-top:10px">還沒有人下單，搶頭香！</div>'}</div></a>`}
 function viewPicker(){
  const cs=st.camps||[];const open=cs.filter(c=>!c.ended),end=cs.filter(c=>c.ended);
- const newCard=`<a class="pcd" href="/admin" id="newcamp" style="display:flex;align-items:center;justify-content:center;min-height:220px;border:2px dashed #159E31;background:#f4fbf6;color:#159E31;text-align:center"><div><div style="font-size:44px;line-height:1">＋</div><h3 style="margin:8px 0 4px;color:#159E31">我要開團</h3><div class="sub">登入後即可開團<br>隱眼團或飲料團</div></div></a>`;
+ const newCard=`<a class="pcd" href="#" id="newcamp" style="display:flex;align-items:center;justify-content:center;min-height:220px;border:2px dashed #159E31;background:#f4fbf6;color:#159E31;text-align:center"><div><div style="font-size:44px;line-height:1">＋</div><h3 style="margin:8px 0 4px;color:#159E31">我要開團</h3><div class="sub">登入後即可開團<br>隱眼團或飲料團</div></div></a>`;
  $('#app').innerHTML=`<div class="sech"><h2>團購</h2><span>共 ${cs.length} 團</span></div>${open.length?`<div class="pgrid">${newCard}${open.map(pcCard).join('')}</div>`:`<div class="pgrid">${newCard}</div><div class="card muted" style="margin-top:14px">目前沒有進行中的團購</div>`}${end.length?`<h3 style="margin-top:28px">已結束的團購</h3><div class="pgrid">${end.map(pcCard).join('')}</div>`:''}`}
 document.addEventListener('click',e=>{const a=e.target.closest('#newcamp');if(!a)return;e.preventDefault();if(!st.admin&&!st.user){try{loginDialog()}catch(_){go('/admin')}return}sessionStorage.newCamp='1';go('/admin')});
 addEventListener('popstate',route);
