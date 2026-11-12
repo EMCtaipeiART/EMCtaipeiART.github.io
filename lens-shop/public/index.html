@@ -858,11 +858,11 @@ function pcCard(c){const goal=c.goal||0,pct=goal?Math.round(c.sum/goal*100):0,ok
  const st0=over?['已結束','x']:['團購中','go'];const res=ok?['開團成功','ok']:(goal&&over)?['未達標','no']:null;
  const ms=c.deadline?Date.parse(c.deadline+(c.deadline.length<=16?':00+08:00':''))-Date.now():0;
  const left=over?'已結束':!c.deadline?'進行中':`<span class="cdl" data-dl="${Date.parse(c.deadline+(c.deadline.length<=16?':00+08:00':''))}">${cdTxt(ms)}</span>`;
- const days=ok&&c.reachedAt&&c.startAt?Math.max(1,Math.ceil((Date.parse(c.reachedAt)-Date.parse(c.startAt))/864e5)):0;
+ const rms=ok&&c.reachedAt&&c.startAt?Math.max(0,Date.parse(c.reachedAt)-Date.parse(c.startAt)):-1;const days=rms>=864e5?Math.ceil(rms/864e5):0;const dtxt=rms<0?'':rms<36e5?'<em>'+Math.max(1,Math.round(rms/6e4))+' 分鐘</em>':rms<864e5?'<em>'+Math.round(rms/36e5)+' 小時</em>':'<em>'+Math.max(1,days)+' 天</em>';
  const cv=c.covers&&c.covers.length?`<div class="cv ${c.covers.length<2?'one':''}">${c.covers.slice(0,c.covers.length<2?1:4).map(u=>`<img loading="lazy" src="${esc(u)}" alt="">`).join('')}</div>`:`<div class="cv"><div class="ph">${esc(c.name)}</div></div>`;
  return`<a class="pcd" href="/g/${c.id}/">${cv}<span class="bdg ${st0[1]}">${st0[0]}</span><div class="bd2"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>${esc(c.name)}</span>${res?`<span class="bdg ${res[1]}" style="position:static;flex:none;white-space:nowrap">${res[0]}</span>`:''}</h3><div class="sub" style="margin:-6px 0 8px">${kindName(c)}${c.drink&&!c.custom?'｜'+esc(c.store||''):''}</div>
   ${goal?`<div class="pgb"><div class="bar2"><i style="width:${Math.min(100,pct)}%"></i></div><span class="pct">${pct.toLocaleString('en-US')}%</span></div>`:'<div class="sub">本團不設達標門檻</div>'}
-  <div class="ft"><b>${nt(c.sum)}</b><span>${c.count} 人</span><span>${days?'<em>'+days+' 天</em>達標':left}</span></div>
+  <div class="ft"><b>${nt(c.sum)}</b><span>${c.count} 人</span><span>${dtxt?dtxt+'達標':left}</span></div>
   ${goal?`<div class="sub" style="margin-top:4px">目標 ${nt(goal)}${ok?'　✓ 已達標':'　還差 '+nt(Math.max(0,goal-c.sum))}</div>`:''}
   ${c.names&&c.names.length?`<div class="who">${c.names.slice(0,6).map(n=>`<span>${esc(n)}</span>`).join('')}${c.nameCount>6?`<span>等 ${c.nameCount} 人</span>`:''}</div>`:'<div class="sub" style="margin-top:10px">還沒有人下單，搶頭香！</div>'}</div><button type="button" class="shr" data-share="${esc(c.id)}" data-nm="${esc(c.name)}" title="複製分享連結" aria-label="複製分享連結"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button></a>`}
 function viewPicker(){
