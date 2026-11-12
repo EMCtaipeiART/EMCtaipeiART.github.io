@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 11357,
+  "revision": 11358,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-12T03:24:45.149Z",
+  "updatedAt": "2026-11-12T03:24:55.548Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -2229,7 +2229,7 @@
         {"短碼":"A4企劃書","原始網址":"https://drive.google.com/file/d/1iVMjHz783ARnL2kA6906-rkLkQ6qY-FI/view?usp=share_link","名稱":"凱曜午餐探險隊_A4企劃書","專案":"","可見範圍":"僅自己","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"machi.chen@emctaipei.com","建立者":"Machi","建立時間":"2026/11/11 16:20:21","更新時間":"2026/11/11 16:20:21"},
         {"短碼":"p8GJZZ","原始網址":"https://docs.google.com/presentation/d/1_FlSzfkmLIL4gUkL6vAdJCOJz9qt0-S63c5owoMG2OI/edit?slide=id.h186b48c6e7ece266_0_4#slide=id.h186b48c6e7ece266_0_4","名稱":"","專案":"","可見範圍":"同組","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"sasa.cheng@emctaipei.com","建立者":"鄭筱舢","建立時間":"2026/11/11 17:14:19","更新時間":"2026/11/11 17:14:19"},
         {"短碼":"桌貼","原始網址":"https://maplestory.beanfun.com/Main","名稱":"新楓之谷桌貼測試","專案":"新楓之谷","可見範圍":"同組","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"cindy.yu@emctaipei.com","建立者":"余采馨","建立時間":"2026/11/11 19:46:09","更新時間":"2026/11/11 19:46:09"},
-        {"短碼":"261116Drinks","原始網址":"https://get-app.nidin.shop/gb/menu/30209/niDcd4AW7D?openExternalBrowser=1","名稱":"","專案":"","可見範圍":"同組","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"david.liao@emctaipei.com","建立者":"廖秦葦","建立時間":"2026/11/12 11:24:45","更新時間":"2026/11/12 11:24:45"}
+        {"短碼":"261116Drinks","原始網址":"https://get-app.nidin.shop/gb/menu/30209/niDcd4AW7D?openExternalBrowser=1","名稱":"","專案":"","可見範圍":"僅自己","UTM來源":"","UTM媒介":"","UTM活動":"","建立者帳號":"david.liao@emctaipei.com","建立者":"廖秦葦","建立時間":"2026/11/12 11:24:45","更新時間":"2026/11/12 11:24:55"}
       ]
     }
   },
