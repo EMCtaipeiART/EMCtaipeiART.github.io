@@ -2173,3 +2173,6 @@
 ## 2026-11-12 lens-shop：結單後等自動填單完成才寄明細信＋後台顯示填單狀態
 - 本機監看程式每 10 秒向 /api/fill/ping 回報心跳（需新 secret FILL_KEY，只存在 Cloudflare 與本機 ~/.claude/tools/fill-watch/key）。心跳在 5 分鐘內且該團在清單內時，結單只標記 pending、不寄信；填單開始回報 filling，完成回報 done（寄「已自動填入」明細信並附核對摘要），3 次都失敗回報 failed（寄「請手動下單」信）。
 - 心跳不在（Mac 關機等）時照舊結單立刻寄信。後台訂單卡顯示填單狀態，等待中可按「直接寄明細信」。重新開單會清除狀態。
+
+## 2026-11-12 lens-shop：Mac 不在線時由 GitHub Actions 雲端代填
+- closeNotify：本機心跳不在時，若有 GH_DISPATCH_TOKEN 且為 Uber/你訂飲料團，觸發私有 repo EMCtaipeiART/lens-shop-filler 的 fill.yml（帶訂單編號，排除 kv filledIds 已填者）；成功觸發則狀態 pending(via cloud)，工作流程完成後回報 done/failed 並寄信。觸發失敗則照舊立刻寄信。回報 done 時把當時有效訂單記入 kv <cid>:filledIds。

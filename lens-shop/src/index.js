@@ -130,7 +130,22 @@ const fillKey = (cid) => kk(cid, 'fill');
 async function closeNotify(env, req, cid, camps) {
   const w = await getKV(env, 'fillWatch', null); const cat = await getCatalog(env, cid);
   const on = w && Date.now() - w.at < 300000 && (w.cids || []).includes(cid) && cat && cat.drink && ['ubereats', 'nidin'].includes(cat.platform);
-  if (!on) return mailDrinkSummary(env, req, cid, camps);
+  const plat = cat && cat.drink && ['ubereats', 'nidin'].includes(cat.platform);
+  if (!on) {
+    // 本機監看程式不在線：改由 GitHub Actions 雲端代填（只填還沒填過的訂單）
+    if (plat && env.GH_DISPATCH_TOKEN) {
+      const rs = await env.DB.prepare("SELECT id FROM orders WHERE status='active' AND campaign=?").bind(cid).all();
+      const had = new Set(await getKV(env, kk(cid, 'filledIds'), [])); const ids = rs.results.map((r) => r.id).filter((i) => !had.has(i));
+      if (ids.length) {
+        try {
+          const r = await fetch('https://api.github.com/repos/EMCtaipeiART/lens-shop-filler/actions/workflows/fill.yml/dispatches', { method: 'POST', headers: { authorization: 'Bearer ' + env.GH_DISPATCH_TOKEN, accept: 'application/vnd.github+json', 'user-agent': 'lens-shop', 'content-type': 'application/json' }, body: JSON.stringify({ ref: 'main', inputs: { cid, orders: ids.join(','), dry: 'false' } }) });
+          if (r.status === 204) { await setKV(env, fillKey(cid), { status: 'pending', at: Date.now(), mailed: false, via: 'cloud', ids }); return 'waiting'; }
+          console.log('dispatch failed', r.status);
+        } catch (e) { console.log('dispatch exception', String(e)); }
+      }
+    }
+    return mailDrinkSummary(env, req, cid, camps);
+  }
   const d = await summaryData(env, cid); if (!d.orders.length) return 'skip';
   await setKV(env, fillKey(cid), { status: 'pending', at: Date.now(), mailed: false });
   return 'waiting';
@@ -171,6 +186,7 @@ async function handle(req, env) {
     if (!f || !['pending', 'filling'].includes(f.status) || !['filling', 'done', 'failed'].includes(b.status)) return json({ ok: true, ignored: true });
     const note = String(b.note || '').slice(0, 600); const nf = { ...f, status: b.status, note, at: Date.now() };
     if ((b.status === 'done' || b.status === 'failed') && !f.mailed) { nf.mailed = true; nf.mail = await mailDrinkSummary(env, req, cid, camps, { mode: b.status, note }); }
+    if (b.status === 'done') { const rs = await env.DB.prepare("SELECT id FROM orders WHERE status='active' AND campaign=?").bind(cid).all(); await setKV(env, kk(cid, 'filledIds'), [...new Set([...(await getKV(env, kk(cid, 'filledIds'), [])), ...rs.results.map((r) => r.id)])]); }
     await setKV(env, fillKey(cid), nf); return json({ ok: true, status: nf.status, mail: nf.mail });
   }
   // ── 同事帳號（Google 登入）──
