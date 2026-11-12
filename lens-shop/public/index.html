@@ -382,6 +382,7 @@ summary{min-height:40px;padding:8px 0;color:var(--bd)}
 @media(min-width:721px){.lpb{display:none}}@media(max-width:720px){.lpq{display:none}}
 .pcd .cv:has(>.ph){background:linear-gradient(135deg,#1db843,#0d6b22)}.pcd .cv .ph{color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.18)}
 .pcd .bdg.go{background:#FFB800;color:#4a3200;font-weight:700;border-color:#e0a200}
+.pcd .bdg.go{background:#FFD25A;color:#5a3d00;border-color:#efbd35}
 </style>
 </head>
 <body>
@@ -775,7 +776,7 @@ async function viewAdmin(){
   document.querySelectorAll('[data-hv]').forEach(b=>b.onclick=()=>{const id=b.dataset.hv;if(id!==st.cid){sessionStorage.scrollOrd='1';go('/g/'+id+'/admin')}else{const oc=[...document.querySelectorAll('#app > .card')].find(x=>/^訂單/.test((x.querySelector('h3')||{}).textContent||''));if(oc)oc.scrollIntoView({behavior:'smooth',block:'start'})}});
   document.querySelectorAll('[data-mg]').forEach(b=>b.onclick=()=>{if(b.dataset.mg===st.cid)openSet();else{sessionStorage.openSet='1';go('/g/'+b.dataset.mg+'/admin')}});
   document.querySelectorAll('[data-dl]').forEach(b=>b.onclick=async()=>{const id=b.dataset.dl,c=cs.find(x=>x.id===id)||{};if(!confirm('永久刪除「'+(c.name||id)+'」？\n\n會一併刪除這個團購的 '+c.count+' 筆訂單、聊天室、設定與上傳檔案，無法復原。\n（只是不想再讓人下單，請改按「結束」。）'))return;const t=prompt('請輸入團購代號「'+id+'」確認刪除：');if(t!==id)return alert('代號不符，已取消');
-   try{await api('/admin/campaigns/'+encodeURIComponent(id),{method:'DELETE',admin:1});toast('已刪除團購');await loadCamps();if(id===st.cid){go('/campaigns')}else viewAdmin()}catch(e){alert(e.message)}});
+   try{await api('/admin/campaigns/'+encodeURIComponent(id),{method:'DELETE',admin:1});toast('已刪除團購');await loadCamps();if(id===st.cid){st.cid='lens';st.set=null;st.cat=null;st.pimgs={};go('/campaigns')}else viewAdmin()}catch(e){alert(e.message)}});
   document.querySelectorAll('[data-ce]').forEach(b=>b.onclick=async()=>{const id=b.dataset.ce,ending=b.dataset.en==='1',c=cs.find(x=>x.id===id)||{};if(!confirm(ending?'結束「'+(c.name||id)+'」？結束後同事無法再下單或修改（訂單與資料保留，可隨時重新開放）。':'重新開放「'+(c.name||id)+'」？'))return;try{const rr=await api('/admin/campaigns/'+encodeURIComponent(id),{method:'PUT',admin:1,json:{status:ending?'ended':'open'}});if(rr.mail==='sent')toast('已結束，訂單明細信已寄給開團者');await loadCamps();if(id===st.cid)await fetchCat();viewAdmin()}catch(e){alert(e.message)}});
   if(0)$('#mup').onclick=async()=>{const f=$('#mf').files[0];if(!f)return alert('請先選擇菜單檔（.json）');if(!confirm('匯入菜單會取代這個團購目前的商品目錄（訂單保留）。確定？'))return;
    try{const menu=JSON.parse(await f.text());const d=await api('/admin/drink-menu',{method:'POST',admin:1,json:{menu,link:$('#mlink').value.trim()}});toast('已匯入 '+d.items+' 項');await fetchCat();viewAdmin()}catch(e){alert(e.message)}};
@@ -848,7 +849,8 @@ function pimgUI(){const box=$('#pimgbox');if(!box||!st.cat)return;const brands=[
  $('#pb').onchange=draw;draw()}
 async function route(){
  const p=P();window.scrollTo(0,0);
- if(!st.camps){const p0=P();if(p0.cid!==null&&p0.page!=='order')await Promise.all([loadCamps(),ensureCampaign(p0.cid)]);else await loadCamps()}
+ if(!st.camps){const p0=P();if(p0.cid!==null&&p0.page!=='order')await Promise.all([loadCamps(),ensureCampaign(p0.cid).catch(()=>{})]);else await loadCamps()}
+ if(st.camps&&p.cid!==null&&p.page!=='order'&&!st.camps.some(c=>c.id===p.cid)){st.cid='lens';st.set=null;st.cat=null;history.replaceState(null,'','/campaigns');return route()}
  if(p.page==='order'&&p.cid===null)return p.arg&&viewOrder(p.arg);
  if(p.cid===null&&p.page==='campaigns'){renderNav();return viewPicker()}
  if(p.cid===null){ // 根目錄與舊網址
