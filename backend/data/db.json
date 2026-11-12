@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 11398,
+  "revision": 11399,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-12T07:28:07.298Z",
+  "updatedAt": "2026-11-12T07:28:30.682Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -2173,7 +2173,9 @@
         "案件摘要"
       ],
       "primaryKey": "案件編號",
-      "rows": []
+      "rows": [
+        {"案件編號":"26110100","申請人帳號":"andrew.koo@emctaipei.com","申請人":"古晟如","申請時間":"2026-11-12T07:28:30.682Z","案件摘要":"金士頓_2026/12月 Reels「聖誕節​​」中、日文版製作｜Amber｜未開始"}
+      ]
     },
     "短連結": {
       "headers": [
