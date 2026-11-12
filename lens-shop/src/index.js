@@ -8,7 +8,7 @@ const json = (o, status = 200, h = {}) => new Response(JSON.stringify(o), { stat
 const err = (msg, status = 400) => json({ error: msg }, status);
 const now = () => new Date().toISOString();
 const rid = (n = 16) => { const b = crypto.getRandomValues(new Uint8Array(n)); return [...b].map((x) => x.toString(16).padStart(2, '0')).join(''); };
-const DEFAULTS = { shopName: '隱形眼鏡團購', deadline: '', closed: false, bankName: '', bankAccount: '', accountName: '', notes: '', siteUrl: '', goal: '' };
+const DEFAULTS = { shopName: '隱形眼鏡團購', deadline: '', closed: false, bankName: '', bankAccount: '', accountName: '', notes: '', siteUrl: '', goal: '', drinkLink: '' };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 let chatReady = false;
@@ -131,7 +131,8 @@ async function handle(req, env) {
 
   if (path === '/api/catalog' && method === 'GET') {
     const [cat, s, pimgs] = await Promise.all([getCatalog(env, cid), getSettings(env, cid), getKV(env, kk(cid, 'pimgs'), {})]);
-    return json({ catalog: cat, pimgs, settings: { shopName: s.shopName, deadline: s.deadline, closed: closedNow(s), bankName: s.bankName, bankAccount: s.bankAccount, accountName: s.accountName, notes: s.notes, goal: s.goal } },
+    if (cat && cat.drink && /^https:\/\//.test(s.drinkLink || '')) { const h = new URL(s.drinkLink).hostname; cat.link = s.drinkLink; cat.platform = /uber/.test(h) ? 'ubereats' : /nidin/.test(h) ? 'nidin' : cat.platform; }
+    return json({ catalog: cat, pimgs, settings: { shopName: s.shopName, deadline: s.deadline, closed: closedNow(s), bankName: s.bankName, bankAccount: s.bankAccount, accountName: s.accountName, notes: s.notes, goal: s.goal, drinkLink: s.drinkLink } },
       200, { 'cache-control': 'public, max-age=30' });
   }
   if (path.startsWith('/api/img/') && method === 'GET') {

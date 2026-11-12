@@ -2101,3 +2101,8 @@
 - 後端：新增 `src/drink.js`（`buildDrinkCatalog`、`pickDrink`）；`cleanLines` 驗證必選／最多選、加價算進單價並存 `sel`、`opts`；`POST /api/admin/drink-menu` 匯入菜單（同時把 Uber 圖片網址寫入 pimgs）；彙總依「品項＋選項」分列；`/api/campaigns` 帶 drink／store／link；信件與訂單顯示改用 `opts`。
 - 前端：飲料版加入視窗（選項晶片、即時單價）、購物車／訂單依選項計價、飲料團隱藏促銷與規格、選購頁有「前往店家頁」按鈕、後台新增「飲料團：匯入菜單」與「複製點餐清單」（取代 Excel 下載）。
 - 本機用 wrangler dev 驗證兩份菜單匯入、下單、必選檢查、加價；已部署。線上尚未建立任何飲料團（需在後台新增團購後匯入 menus/*.json）。
+
+## 2026-11-12 飲料團：貼開團連結＋Claude 代抓
+- 後台「2. 團購設定」新增「飲料團開團連結」（kv settings.drinkLink）；有連結但還沒菜單時，後台「飲料團：匯入菜單」會提示「已收到連結，請告訴 Claude 抓取」。飲料團的「前往店家頁」按鈕以這個連結為準（依網域判斷 Uber Eats／你訂）。
+- 新增 `tools/drink-push.mjs <代號> "<名稱>" menus/xxx.json [連結]`：用 wrangler 直接把抓好的菜單寫進線上 D1（建立或更新飲料團，不需管理密碼；已存在的團購只換菜單，設定／訂單／聊天保留）。`LOCAL=1` 可先在本機庫試跑。
+- 流程：後台貼連結 → 請 Claude 用訪客進平台抓菜單 → drink-push 寫入 → 結單後 Claude 依「複製點餐清單」逐人填回 Uber／你訂（團主自己結帳）。
