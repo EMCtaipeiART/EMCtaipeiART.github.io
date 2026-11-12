@@ -23,7 +23,7 @@ export function orderMail({ order, settings, link, kind }) {
     <td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:center">${l.qty}</td>
     <td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right">${nt(l.price * l.qty)}</td></tr>`).join('');
   const lpv = String(settings.linePay || '').trim(), lpUrl = /^https:\/\/[^\s]+$/i.test(lpv);
-  const lp = lpv ? (lpUrl ? `<p style="margin:8px 0"><a href="${esc(lpv)}" style="display:inline-block;background:#06C755;color:#fff;text-decoration:none;font-weight:700;padding:9px 20px;border-radius:99px">LINE Pay Money 付款</a></p>` : `<p style="margin:4px 0">LINE Pay Money：<b style="font-size:16px">${esc(lpv)}</b></p>`) : '';
+  const lp = lpv ? (lpUrl ? `<p style="margin:8px 0"><a href="${esc(lpv)}" style="display:inline-block;background:#06C755;color:#fff;text-decoration:none;font-weight:700;padding:9px 20px;border-radius:99px">${/^https:\/\/(line\.me|lin\.ee)\//i.test(lpv) ? '開啟 LINE 對話（LINE Pay Money 轉帳）' : 'LINE Pay Money 付款'}</a></p>` : `<p style="margin:4px 0">LINE Pay Money：<b style="font-size:16px">${esc(lpv)}</b></p>`) : '';
   const bank = (settings.bankAccount
     ? `<p style="margin:4px 0">銀行：${esc(settings.bankName)}<br>帳號：<b style="font-size:16px">${esc(settings.bankAccount)}</b><br>戶名：${esc(settings.accountName)}</p>` : '') + lp || '<p style="margin:4px 0;color:#888">（匯款帳號尚未設定）</p>';
   const html = `<div style="font-family:-apple-system,'Microsoft JhengHei',sans-serif;max-width:640px;margin:auto;color:#222">

@@ -2298,3 +2298,6 @@
 
 ## 2026-11-12 lens-shop：LINE Pay Money 可點開按鈕
 - LINE Pay Money 欄位若填 https 連結，訂單頁顯示綠色「LINE Pay Money 付款」按鈕、確認信也是按鈕；填 ID／電話則維持文字。
+
+## 2026-11-12 lens-shop：LINE Pay Money 欄位支援 LINE 加好友連結
+- LINE Pay Money 欄位若貼 line.me／lin.ee 連結，按鈕文字顯示「開啟 LINE 對話（LINE Pay Money 轉帳）」（頁面與確認信）；欄位標籤改為說明可貼加好友連結或填 LINE ID。
