@@ -86,8 +86,8 @@ header h1 small{display:block;font-size:12px;font-weight:600;color:var(--dim)}
 
 /* ---- 辦公室對決 ---- */
 .wrap{width:min(100%,max(860px,min(1400px,calc((100vh - 120px) * 16 / 9))))}
-#stage{touch-action:none;user-select:none;background:var(--bg)}
-#c3{display:block;width:100%;aspect-ratio:16/9;cursor:crosshair}
+#stage{touch-action:auto;user-select:none;background:var(--bg)}
+#c3{display:block;width:100%;aspect-ratio:16/9;cursor:crosshair;touch-action:none}
 .dhud{position:absolute;left:0;right:0;top:0;display:grid;grid-template-columns:1fr auto 1fr;gap:12px;padding:10px 14px;pointer-events:none;align-items:start}
 .dhud[hidden],.cds[hidden],.banner[hidden]{display:none}
 .dhud .side{display:flex;flex-direction:column;gap:4px}.dhud .side.r{align-items:flex-end}
@@ -166,6 +166,7 @@ header{position:fixed;right:8px;bottom:8px;z-index:6;width:auto;gap:6px;flex-wra
 .sbtns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}.shnote{font-size:12px;color:#bfe0cd}
 .netst{min-height:1.3em;font-weight:800;font-size:14px;color:#eafff2}
 .keys{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center;font-size:12px;color:#9cc5ae}.keys kbd{font:900 11px/1 inherit;color:#241a00;background:#ffd166;border:2px solid #000;border-radius:6px;padding:2px 6px;margin-right:5px}
+@media (pointer:coarse){.keys{display:none}}
 .ov.menu .note{color:#9cc5ae}
 @media (max-width:860px){.vsrow{flex-direction:column;align-items:center}.vsmid{display:none}.card{max-width:540px;width:100%}.por{width:112px;height:112px}}
 
@@ -204,6 +205,7 @@ header{position:fixed;right:8px;bottom:8px;z-index:6;width:auto;gap:6px;flex-wra
   .tb.ult{width:50px;height:50px;right:40px;bottom:164px}
   .tb.lock,.tb.pause{width:34px;height:34px;font-size:10px}
 }
+
 @media (max-width:700px){.dhud .nm{font-size:12px}.dhud .tm{font-size:22px}.cds{display:none}}
 </style>
 </head>
@@ -1250,7 +1252,7 @@ async function setup() {
   const inviteText = code => $('selMe').value + ' 邀請你一起玩「辦公室對決」1 對 1！\n房間碼：' + code + '\n點此直接加入：' + inviteLink(code);
   const copyText = async (t, btn) => { try { await navigator.clipboard.writeText(t); } catch (e) { const x = document.createElement('textarea'); x.value = t; document.body.appendChild(x); x.select(); try { document.execCommand('copy'); } catch (e2) {} x.remove(); } const o = btn.textContent; btn.textContent = '已複製 ✓'; setTimeout(() => { btn.textContent = o; }, 1400); };
   showShare = code => { $('shareBox').hidden = false; $('shCode').textContent = code; $('shLink').value = inviteLink(code); $('cpLink').onclick = () => copyText(inviteLink(code), $('cpLink')); $('cpText').onclick = () => copyText(inviteText(code), $('cpText')); $('shLink').onclick = () => $('shLink').select(); };
-  if (matchMedia('(pointer:coarse)').matches) $('startNote').textContent = '這款需要鍵盤與滑鼠，請用電腦玩。';
+  if (matchMedia('(pointer:coarse)').matches) $('startNote').textContent = '手機版：左下角搖桿移動、右下角按鈕攻擊，畫面空白處拖曳可轉視角。';
   $('netB').onclick = () => { const b = $('netBox'); b.hidden = !b.hidden; online(!b.hidden); if (b.hidden) { netClose(); netUi(false, ''); } else setTimeout(() => b.scrollIntoView({ behavior: 'smooth', block: 'end' }), 50); };
   { const rm = (Q.get('room') || '').toUpperCase(); if (/^[A-Z0-9]{6}$/.test(rm)) { $('netBox').hidden = false; online(true); $('joinIn').value = rm; netSt('受邀加入房間 ' + rm + '：選好角色與裝備，按「加入」'); $('joinB').classList.add('pulse'); } }
   $('qmB').onclick = netQuick; $('mkB').onclick = netMake; $('joinB').onclick = netJoin; $('joinIn').onkeydown = e => { if (e.key === 'Enter') netJoin(); };
