@@ -196,7 +196,7 @@ header{position:fixed;right:8px;bottom:8px;z-index:6;width:auto;gap:6px;flex-wra
       <div class="side r"><div class="nm" id="nmR"></div><div class="lo" id="loR"></div><div class="hp"><i id="hpR"></i></div><div class="ul"><i id="ulR"></i></div></div>
     </div>
     <div class="cds" id="cds" hidden>
-      <span id="cdJ">跳 空白</span><span id="cdA">攻擊 左鍵</span><span id="cdD">衝刺 Shift</span><span id="cdU">大招 R</span><span id="cdL">鎖定 右鍵</span>
+      <span id="cdJ">跳 空白</span><span id="cdA">攻擊 左鍵</span><span id="cdD">衝刺 Shift</span><span id="cdS" hidden>技能 E</span><span id="cdU">大招 R</span><span id="cdL">鎖定 右鍵</span>
     </div>
     <div class="flash" id="flash"></div>
     <div class="hurt" id="hurt"></div>
@@ -621,7 +621,8 @@ const WEAPONS = {
 };
 const PASSIVES = {
   coffee: { n: '咖啡因', d: '移動速度 +10%，衝刺冷卻 -20%' },
-  thick: { n: '厚臉皮', d: '受到的傷害 -10%' },
+  thick: { n: '責任壁壘', act: 1, dur: 10, cd: 15, d: '按 E 開啟屏障：10 秒內受到的傷害 -50%（冷卻 15 秒）' },
+  dodge: { n: '閃身步', act: 1, dur: 5, cd: 10, d: '按 E 啟動 5 秒：期間 Shift 衝刺距離 ×2（冷卻 10 秒）' },
   sip: { n: '下午茶', d: '每次命中回 1 點血（重擊 2 點）' },
   overtime: { n: '加班魂', d: '血量低於 40% 時，傷害 +20%' },
   slack: { n: '摸魚大師', d: '大招充能速度 +35%' }
@@ -651,9 +652,9 @@ function makeFighter(name, tex, isBot, color) {
   const blob = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, opacity: .55, depthWrite: false })); blob.rotation.x = -Math.PI / 2;
   const holder = new THREE.Group(); scene.add(holder); scene.add(blob); holder.add(sprite);
   const ks = CHAR_SCALE[name] || 1; sprite.scale.set(ks, ks, 1);
-  return { name, isBot, tex, sprite, holder, blob, mat, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, face: 0, hp: 100, ult: 0, grounded: true, atkT: 0, atkCD: 0, dashT: 0, dashCD: 0, windT: 0, windMul: 1.7, hitStun: 0, flash: 0, combo: 0, comboT: 0, ultWind: 0, slash: null, rageT: 0, shield: 0, shieldT: 0, rushT: 0, rushHit: false, w: 'tablet', pas: 'coffee', ulk: 'quake', dashDir: [0, 0], moving: 0, phase: 0, inp: { mx: 0, mz: 0, jump: false, atk: false, dash: false, ult: false }, bot: { rt: 0, strafe: 1, strafeT: 0, stuck: 0, lastX: 0, lastZ: 0, nav: null, think: 0 } };
+  return { name, isBot, tex, sprite, holder, blob, mat, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, face: 0, hp: 100, ult: 0, grounded: true, atkT: 0, atkCD: 0, dashT: 0, dashCD: 0, windT: 0, windMul: 1.7, hitStun: 0, flash: 0, combo: 0, comboT: 0, ultWind: 0, slash: null, rageT: 0, shield: 0, shieldT: 0, skT: 0, skCD: 0, rushT: 0, rushHit: false, w: 'tablet', pas: 'coffee', ulk: 'quake', dashDir: [0, 0], moving: 0, phase: 0, inp: { mx: 0, mz: 0, jump: false, atk: false, dash: false, ult: false }, bot: { rt: 0, strafe: 1, strafeT: 0, stuck: 0, lastX: 0, lastZ: 0, nav: null, think: 0 } };
 }
-function place(f, x, z, face) { f.nx = x; f.nz = z; f.x = x; f.z = z; f.y = groundAt(x, z); f.vx = f.vy = f.vz = f.kx = f.kz = 0; f.face = face; f.hp = 100; f.rageT = f.rushT = f.shield = f.shieldT = 0; f.atkT = f.atkCD = f.dashT = f.dashCD = f.windT = f.hitStun = f.flash = f.combo = f.comboT = f.ultWind = 0; f.grounded = true; }
+function place(f, x, z, face) { f.nx = x; f.nz = z; f.x = x; f.z = z; f.y = groundAt(x, z); f.vx = f.vy = f.vz = f.kx = f.kz = 0; f.face = face; f.hp = 100; f.rageT = f.rushT = f.shield = f.shieldT = f.skT = f.skCD = 0; f.atkT = f.atkCD = f.dashT = f.dashCD = f.windT = f.hitStun = f.flash = f.combo = f.comboT = f.ultWind = 0; f.grounded = true; }
 const mkSlash = () => { const m = new THREE.Mesh(new THREE.RingGeometry(.9, 3.2, 24, 1, -Math.PI * .42, Math.PI * .84), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false })); m.rotation.x = -Math.PI / 2; scene.add(m); return m; };
 const slashFx = mkSlash(), slashFx2 = mkSlash();
 const shock = new THREE.Mesh(new THREE.RingGeometry(.6, 1, 40), new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false })); shock.rotation.x = -Math.PI / 2; scene.add(shock);
@@ -663,12 +664,12 @@ let shockT = 0, shockPos = [0, 0, 0];
 const lockPtr = () => { try { const p = cv.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) {} };
 const keys = {}; let yaw = 0, pitch = .5, camDist = 9.5, lockOn = false, lockedOnce = false;
 const camTarget = new THREE.Vector3(), camSmooth = new THREE.Vector3();
-let wantAtk = false, wantUlt = false, wantDash = false, wantJump = false;
+let wantSk = false, wantAtk = false, wantUlt = false, wantDash = false, wantJump = false;
 addEventListener('keydown', e => {
   if (['INPUT', 'SELECT', 'TEXTAREA'].includes((e.target || {}).tagName)) return;
   const k = e.key.toLowerCase(); if (state === 'fight' || state === 'countdown') { if ([' ', 'tab', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault(); }
   if (e.repeat) return; keys[k] = true;
-  if (state === 'fight') { if (k === ' ') wantJump = true; else if (k === 'j') wantAtk = true; else if (k === 'shift') wantDash = true; else if (k === 'r') wantUlt = true; else if (k === 'tab') toggleLock(); else if (k === 'p') pauseNow(); }
+  if (state === 'fight') { if (k === ' ') wantJump = true; else if (k === 'j') wantAtk = true; else if (k === 'shift') wantDash = true; else if (k === 'r') wantUlt = true; else if (k === 'e') wantSk = true; else if (k === 'tab') toggleLock(); else if (k === 'p') pauseNow(); }
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; if (e.key === 'Shift') keys.shift = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; if (state === 'fight') pauseNow(); });
@@ -734,7 +735,7 @@ function updHud() {
   $('hpL').style.width = Math.max(0, ME.hp) + '%'; $('hpR').style.width = Math.max(0, OP.hp) + '%'; $('ulL').style.width = ME.ult + '%'; $('ulR').style.width = OP.ult + '%';
   $('ulL').parentNode.classList.toggle('full', ME.ult >= 100); $('ulR').parentNode.classList.toggle('full', OP.ult >= 100);
   $('tmV').textContent = Math.max(0, Math.ceil(tLeft));
-  $('cdA').classList.toggle('cd', ME.atkCD > 0); $('cdD').classList.toggle('cd', ME.dashCD > 0); $('cdU').classList.toggle('on', ME.ult >= 100); $('cdJ').classList.toggle('cd', !ME.grounded);
+  $('cdA').classList.toggle('cd', ME.atkCD > 0); $('cdD').classList.toggle('cd', ME.dashCD > 0); $('cdU').classList.toggle('on', ME.ult >= 100); { const P = PASSIVES[ME.pas], el = $('cdS'); el.hidden = !(P && P.act); if (P && P.act) { el.textContent = P.n + ' E' + (ME.skT > 0 ? ' ' + Math.ceil(ME.skT) + 's' : ME.skCD > 0 ? ' ' + Math.ceil(ME.skCD) + 's' : ''); el.classList.toggle('cd', ME.skT <= 0 && ME.skCD > 0); el.classList.toggle('on', ME.skT > 0); } } $('cdJ').classList.toggle('cd', !ME.grounded);
 }
 const popLayer = document.createElement('div'); popLayer.className = 'pops'; stage.appendChild(popLayer);
 const _v = new THREE.Vector3();
@@ -748,6 +749,8 @@ function hitFx(att, tgt, d, hi, heavy) {
   { const p = v3(tgt.x, tgt.y + 1.1, tgt.z), c = colOf(att); fxImpact(p, c, heavy ? 2.6 : 1.7); fxSlash(p, c, heavy); if (heavy) { fxPoof(p, c); fxRing(v3(tgt.x, tgt.y + .1, tgt.z), c, .4, 1.8, .4); } }
   pop(String(Math.round(d)) + (hi ? '↑' : ''), tgt.x, tgt.y + 2.3, tgt.z, (heavy ? 'big ' : '') + (hi ? 'hi' : '') + (att === ME ? '' : ' red')); SFX.hit(heavy); shake = heavy ? .35 : .15; hitstop = heavy ? .09 : .045;
 }
+const dashMul = f => (f.pas === 'dodge' && f.skT > 0 ? 2 : 1);
+function skVisual(f) { const th = f.pas === 'thick', c = th ? '#ffc857' : '#c9b8ff'; SFX.beep(); fxRing(v3(f.x, f.y + .1, f.z), c, .4, th ? 2.4 : 2, .45); if (!th) fxPoof(v3(f.x, f.y + 1, f.z), c); pop(PASSIVES[f.pas].n, f.x, f.y + 2.4, f.z, 'hi big'); }
 function absorb(t, d) { if (t.shield > 0 && d > 0) { const sh = Math.min(t.shield, d); t.shield -= sh; d -= sh; fxRing(v3(t.x, t.y + 1, t.z), '#8fd6ff', .5, 1.7, .3); fxImpact(v3(t.x, t.y + 1.1, t.z), '#8fd6ff', 1.6); if (t.shield <= .01) { t.shield = 0; t.shieldT = 0; } } return d; }
 function sipFx(a) { const n = performance.now(); if (!a.healFx || n - a.healFx > 900) { a.healFx = n; fxHeal(v3(a.x, a.y, a.z)); } }
 function damage(att, tgt, base, heavy, kbMul, kind) {
@@ -760,7 +763,7 @@ function damage(att, tgt, base, heavy, kbMul, kind) {
     netSend({ t: 'h', d: +d.toFixed(2), hv: heavy ? 1 : 0, kb: kbMul || 1, k: kind === 'ult' && att.ulk === 'quake' ? 1 : 0, hi: hi ? 1 : 0, ax: +att.x.toFixed(2), az: +att.z.toFixed(2) });
     return true;
   }
-  const hi = att.y - tgt.y >= R.hiDelta; let d = base * dmgMul(att) * (hi ? R.hiBonus : 1); if (att.isBot) d *= [.7, 1, 1.15][lvl]; if (tgt.pas === 'thick') d *= .9; d = absorb(tgt, d);
+  const hi = att.y - tgt.y >= R.hiDelta; let d = base * dmgMul(att) * (hi ? R.hiBonus : 1); if (att.isBot) d *= [.7, 1, 1.15][lvl]; if (tgt.pas === 'thick' && tgt.skT > 0) d *= .5; d = absorb(tgt, d);
   tgt.hp -= d; tgt.flash = .14; tgt.hitStun = heavy ? .3 : .16; tgt.windT = 0; tgt.ultWind = 0; if (kind !== 'ult') gainUlt(att, Math.min(13, d * .9)); gainUlt(tgt, d * .6); if (att.pas === 'sip') { att.hp = Math.min(100, att.hp + (heavy ? 2 : 1)); sipFx(att); }
   const dx = tgt.x - att.x, dz = tgt.z - att.z, l = Math.hypot(dx, dz) || 1, kb = (heavy ? 12 : 6.5) * (kbMul || 1);
   tgt.kx = dx / l * kb; tgt.kz = dz / l * kb; if (heavy) { tgt.vy = 5; tgt.grounded = false; }
@@ -836,7 +839,7 @@ function doUlt(f, o) {
 }
 function stepFighter(f, o, dt) {
   const inp = f.inp, can = f.hitStun <= 0 && f.ultWind <= 0 && state === 'fight';
-  f.rageT = Math.max(0, (f.rageT || 0) - dt); if (f.shieldT > 0) { f.shieldT -= dt; if (f.shieldT <= 0) f.shield = 0; } f.swingT = Math.max(0, (f.swingT || 0) - dt); f.atkCD = Math.max(0, f.atkCD - dt); f.dashCD = Math.max(0, f.dashCD - dt); f.hitStun = Math.max(0, f.hitStun - dt); f.flash = Math.max(0, f.flash - dt); f.comboT -= dt; if (f.comboT <= 0) f.combo = 0;
+  f.rageT = Math.max(0, (f.rageT || 0) - dt); f.skT = Math.max(0, f.skT - dt); f.skCD = Math.max(0, f.skCD - dt); if (f.shieldT > 0) { f.shieldT -= dt; if (f.shieldT <= 0) f.shield = 0; } f.swingT = Math.max(0, (f.swingT || 0) - dt); f.atkCD = Math.max(0, f.atkCD - dt); f.dashCD = Math.max(0, f.dashCD - dt); f.hitStun = Math.max(0, f.hitStun - dt); f.flash = Math.max(0, f.flash - dt); f.comboT -= dt; if (f.comboT <= 0) f.combo = 0;
   // 揮擊前搖
   if (f.windT > 0) { f.windT -= dt; if (f.windT <= 0) doAttack(f, o); }
   if (f.ultWind > 0) { f.ultWind -= dt; if (f.ultWind <= 0) doUlt(f, o); }
@@ -844,14 +847,15 @@ function stepFighter(f, o, dt) {
   if (can) { mx = inp.mx; mz = inp.mz; }
   const runSp = R.run * (f.pas === 'coffee' ? 1.1 : 1), sp = (f.windT > 0 || f.ultWind > 0) ? runSp * .35 : runSp;
   if (f.dashT > 0) { f.dashT -= dt; mx = f.dashDir[0]; mz = f.dashDir[1]; }
-  const tvx = mx * (f.dashT > 0 ? (f.rushT > 0 ? 34 : R.dashSpeed) : sp), tvz = mz * (f.dashT > 0 ? (f.rushT > 0 ? 34 : R.dashSpeed) : sp), a = f.grounded || f.dashT > 0 ? 1 : R.airCtl;
+  const tvx = mx * (f.dashT > 0 ? (f.rushT > 0 ? 34 : R.dashSpeed * dashMul(f)) : sp), tvz = mz * (f.dashT > 0 ? (f.rushT > 0 ? 34 : R.dashSpeed * dashMul(f)) : sp), a = f.grounded || f.dashT > 0 ? 1 : R.airCtl;
   const k = Math.min(1, dt * (f.grounded ? 16 : 6) * a); f.vx += (tvx - f.vx) * (f.dashT > 0 ? 1 : k); f.vz += (tvz - f.vz) * (f.dashT > 0 ? 1 : k);
   // 動作
   if (can && inp.jump && f.grounded) { f.vy = R.jumpV; f.grounded = false; if (net && f === ME) netSend({ t: 'a', k: 'j' }); SFX.jump(); fxDust(v3(f.x, f.y, f.z)); fxRing(v3(f.x, f.y + .05, f.z), colOf(f), .3, 1.1, .3); }
-  if (can && inp.dash && f.dashCD <= 0 && (mx || mz || true)) { let dx = mx, dz = mz; if (!dx && !dz) { dx = Math.sin(f.face); dz = Math.cos(f.face); } const l = Math.hypot(dx, dz) || 1; f.dashDir = [dx / l, dz / l]; f.dashT = R.dashT; f.dashCD = R.dashCD * (f.pas === 'coffee' ? .8 : 1); if (net && f === ME) netSend({ t: 'a', k: 'd', x: +f.dashDir[0].toFixed(2), z: +f.dashDir[1].toFixed(2) }); SFX.dash(); { const a = v3(f.x, f.y + .7, f.z), b = v3(f.x + f.dashDir[0] * 3.6, f.y + .7, f.z + f.dashDir[1] * 3.6); fxTrail(a, b, colOf(f), .35, 1.0); fxDust(v3(f.x, f.y, f.z)); } }
+  if (can && inp.dash && f.dashCD <= 0 && (mx || mz || true)) { let dx = mx, dz = mz; if (!dx && !dz) { dx = Math.sin(f.face); dz = Math.cos(f.face); } const l = Math.hypot(dx, dz) || 1; f.dashDir = [dx / l, dz / l]; f.dashT = R.dashT; f.dashCD = R.dashCD * (f.pas === 'coffee' ? .8 : 1); if (net && f === ME) netSend({ t: 'a', k: 'd', x: +f.dashDir[0].toFixed(2), z: +f.dashDir[1].toFixed(2), l: dashMul(f) }); SFX.dash(); { const a = v3(f.x, f.y + .7, f.z), b = v3(f.x + f.dashDir[0] * 3.6 * dashMul(f), f.y + .7, f.z + f.dashDir[1] * 3.6 * dashMul(f)); fxTrail(a, b, colOf(f), .35, 1.0); fxDust(v3(f.x, f.y, f.z)); } }
+  if (can && inp.sk && f.skCD <= 0 && f.skT <= 0 && (PASSIVES[f.pas] || {}).act) { const P = PASSIVES[f.pas]; f.skT = P.dur; f.skCD = P.cd; skVisual(f); }
   if (can && inp.atk && f.atkCD <= 0 && f.windT <= 0 && f.dashT <= 0) { const W = wOf(f); f.atkCD = W.cd * (f.rageT > 0 ? .8 : 1) * (f.isBot ? [1.5, 1.2, 1][lvl] : 1); f.windT = W.wind * (f.isBot ? (f.windMul || 1.7) : 1); SFX.swing(); if (f === ME) { if (mx || mz) f.face = Math.atan2(mx, mz); else if (lockOn) faceToward(f, o); else f.face = Math.atan2(-Math.sin(yaw), -Math.cos(yaw)); if (W.ranged && !lockOn) { const hd = Math.atan2(o.x - f.x, o.z - f.z), df = Math.atan2(Math.sin(hd - f.face), Math.cos(hd - f.face)); if (Math.abs(df) < .32) f.face = hd; } } else faceToward(f, o); if (net && f === ME) netSend({ t: 'a', k: 'w', f: +f.face.toFixed(3) }); }
   if (can && inp.ult && f.ult >= R.ultNeed && f.grounded) { f.ultWind = (ULTS[f.ulk] || ULTS.quake).wind; if (net && f === ME) netSend({ t: 'a', k: 'uw', u: f.ulk }); }
-  inp.jump = inp.atk = inp.dash = inp.ult = false;
+  inp.jump = inp.atk = inp.dash = inp.ult = inp.sk = false;
   // 朝向
   if (can && f.windT <= 0 && f.ultWind <= 0) { if (f.isBot || lockOn) { if (f.isBot || lockOn) faceToward(f, o); } else if (mx || mz) f.face = Math.atan2(mx, mz); else if (f === ME) f.face = Math.atan2(-Math.sin(yaw), -Math.cos(yaw)); }
   // 水平移動（含擊退），分軸以便貼牆滑行
@@ -897,6 +901,7 @@ function botThink(f, o, dt) {
   // 攻擊
   if (b.rt <= 0 && close && f.hitStun <= 0 && f.atkCD <= 0) { const gap = [2.4, 1.5, .9][lvl]; if (Math.random() < dt / gap) { inp.atk = true; f.windMul = [2.2, 1.7, 1.15][lvl]; b.rt = [.9, .55, .3][lvl]; } }
   // 大招
+  if (f.skCD <= 0 && (PASSIVES[f.pas] || {}).act && d < 7 && Math.random() < [.01, .02, .04][lvl]) inp.sk = true;
   if (f.ult >= 100) { const k = f.ulk, pr = [.01, .02, .04][lvl], ok = k === 'quake' ? d < R.ultR * .85 : k === 'rush' ? d > 3 && d < 8 : k === 'heal' ? f.hp < 60 : k === 'shield' ? (o.windT > 0 || f.hp < 75) && d < 9 : d < 7; if (ok && Math.random() < pr * (k === 'heal' ? 3 : 1)) inp.ult = true; }
   // 閃避：對手揮擊前搖中或剛靠近
   if ((o.windT > 0 || o.ultWind > 0) && d < 4 && lvl >= 1 && f.dashCD <= 0 && Math.random() < (lvl === 2 ? .5 : .15)) { inp.dash = true; const s = Math.random() < .5 ? -1 : 1; f.dashDir = [0, 0]; inp.mx = -dz * s; inp.mz = dx * s; }
@@ -910,14 +915,14 @@ function playerInput(dt) {
   const fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
   let mx = 0, mz = 0; if (keys.w) { mx += fx; mz += fz; } if (keys.s) { mx -= fx; mz -= fz; } if (keys.d) { mx += rx; mz += rz; } if (keys.a) { mx -= rx; mz -= rz; }
   const l = Math.hypot(mx, mz); if (l > 0) { mx /= l; mz /= l; } inp.mx = mx; inp.mz = mz;
-  if (wantJump) inp.jump = true; if (wantAtk) inp.atk = true; if (keys.shift || wantDash) inp.dash = true; if (wantUlt) inp.ult = true;
-  wantJump = wantAtk = wantUlt = wantDash = false; if (keys.shift) keys.shift = false;
+  if (wantJump) inp.jump = true; if (wantAtk) inp.atk = true; if (keys.shift || wantDash) inp.dash = true; if (wantUlt) inp.ult = true; if (wantSk) inp.sk = true;
+  wantJump = wantAtk = wantUlt = wantDash = wantSk = false; if (keys.shift) keys.shift = false;
 }
 function sim(dt) {
   stepProj(dt);
   const ref = !net || net.role === 'host';   // 裁判：單機自己、連線時房主
   if (state === 'fight') { playerInput(dt); if (AI_ON && !net) botThink(OP, ME, dt); tLeft -= dt; if (tLeft <= 0 && ref) { const a = ME.hp, b = OP.hp; endRoundNet(a > b ? 0 : b > a ? 1 : -1); } }
-  else { ME.inp.mx = ME.inp.mz = 0; OP.inp.mx = OP.inp.mz = 0; ME.inp.jump = ME.inp.atk = ME.inp.dash = ME.inp.ult = false; OP.inp.jump = OP.inp.atk = OP.inp.dash = OP.inp.ult = false; wantAtk = wantUlt = wantDash = wantJump = false; }
+  else { ME.inp.mx = ME.inp.mz = 0; OP.inp.mx = OP.inp.mz = 0; ME.inp.jump = ME.inp.atk = ME.inp.dash = ME.inp.ult = false; OP.inp.jump = OP.inp.atk = OP.inp.dash = OP.inp.ult = false; wantAtk = wantUlt = wantDash = wantJump = wantSk = false; }
   if (state === 'countdown') { playerInputCamOnly(dt); }
   stepFighter(ME, OP, dt); if (net) stepRemote(OP, dt); else stepFighter(OP, ME, dt);
   if (state === 'fight' && ref && (ME.hp <= 0 || OP.hp <= 0)) endRoundNet(ME.hp <= 0 && OP.hp <= 0 ? -1 : ME.hp <= 0 ? 1 : 0);
@@ -983,10 +988,10 @@ function render(dt) {
     let sq = 1; if (f.windT > 0 || f.ultWind > 0) sq = .9; f.sprite.position.y = bob; f.sprite.scale.x = (CHAR_SCALE[f.name] || 1) * (f.windT > 0 ? 1.08 : 1) * (f.hitStun > 0 ? .94 : 1);
     f.sprite.rotation.z = f.hitStun > 0 ? Math.sin(performance.now() * .05) * .12 : (f.moving > 1 && f.grounded ? Math.sin(f.phase) * .06 : 0);
     f.mat.color.setHex(f.flash > 0 ? 0xff7a7a : f.hp <= 0 ? 0x888888 : 0xffffff);
-    f.sprite.visible = true; if (f.dashT > 0) f.mat.opacity = .55; else f.mat.opacity = 1; f.mat.transparent = true; if (f.rageT > 0 && f.flash <= 0) f.mat.color.setHex(0xffc58a); if (cineK > 0 && f !== cine.f) f.mat.color.multiplyScalar(1 - .72 * cineK);
+    f.sprite.visible = true; if (f.dashT > 0) f.mat.opacity = .55; else f.mat.opacity = 1; f.mat.transparent = true; if (f.rageT > 0 && f.flash <= 0) f.mat.color.setHex(0xffc58a); if (f.pas === 'dodge' && f.skT > 0 && f.flash <= 0) f.mat.color.setHex(0xc9b8ff); if (cineK > 0 && f !== cine.f) f.mat.color.multiplyScalar(1 - .72 * cineK);
     updGear(f, toCam, bob);
     if (!f.bub) { f.bub = new THREE.Mesh(new THREE.SphereGeometry(1.15, 20, 14), new THREE.MeshBasicMaterial({ color: 0x8fd6ff, transparent: true, opacity: 0, depthWrite: false })); f.bub.position.y = 1.05; f.holder.add(f.bub); }
-    f.bub.visible = f.shield > 0 && f.hp > 0; if (f.bub.visible) f.bub.material.opacity = .2 + Math.sin(performance.now() * .005) * .05 + (f.shield < 12 ? Math.sin(performance.now() * .03) * .06 : 0);
+    const barrier = f.pas === 'thick' && f.skT > 0; f.bub.visible = (f.shield > 0 || barrier) && f.hp > 0; f.bub.material.color.setHex(f.shield > 0 ? 0x8fd6ff : 0xffc857); if (f.bub.visible) f.bub.material.opacity = .2 + Math.sin(performance.now() * .005) * .05 + (f.shield < 12 ? Math.sin(performance.now() * .03) * .06 : 0);
   }
   updSweeps(dt);
   if (shockT > 0) { shockT -= dt; const k = 1 - shockT / .5; shock.position.set(shockPos[0], shockPos[1], shockPos[2]); shock.scale.setScalar(.5 + k * R.ultR); shock.material.opacity = (1 - k) * .8; } else shock.material.opacity = 0;
@@ -1028,7 +1033,7 @@ const myLo = () => ({ w: $('selW').value, p: $('selP').value, u: $('selU').value
 const netSt = t => { $('netSt').textContent = t || ''; };
 function netSend(o) { if (net && net.ws && net.ws.readyState === 1) { try { net.ws.send(JSON.stringify(o)); } catch (e) {} } }
 function netState() {
-  const f = ME; netSend({ t: 's', x: +f.x.toFixed(2), y: +f.y.toFixed(2), z: +f.z.toFixed(2), f: +f.face.toFixed(2), hp: +f.hp.toFixed(1), u: Math.round(f.ult), sh: Math.round(f.shield || 0), m: +f.moving.toFixed(1), g: f.grounded ? 1 : 0, d: f.dashT > 0 ? 1 : 0, h: f.hitStun > 0 ? 1 : 0 });
+  const f = ME; netSend({ t: 's', x: +f.x.toFixed(2), y: +f.y.toFixed(2), z: +f.z.toFixed(2), f: +f.face.toFixed(2), hp: +f.hp.toFixed(1), u: Math.round(f.ult), sh: Math.round(f.shield || 0), sk: f.skT > 0 ? +f.skT.toFixed(1) : 0, m: +f.moving.toFixed(1), g: f.grounded ? 1 : 0, d: f.dashT > 0 ? 1 : 0, h: f.hitStun > 0 ? 1 : 0 });
 }
 function netClose(silent) { const n = net; net = null; netTry++; if (n) clearInterval(n.ping); if (n && n.ws) { n.ws.onclose = n.ws.onmessage = n.ws.onerror = null; try { n.ws.close(1000); } catch (e) {} } if (!silent) netUi(false); }
 function netLeave() { netClose(); }
@@ -1069,7 +1074,7 @@ function netBegin(r) {   // 開一場新比賽（r=1）或下一局
 function tryRematch() { if (net && net.role === 'host' && net.myRm && net.opRm) { netSend({ t: 'rs', r: 1 }); netBegin(1); } }
 function applyHitToMe(m) {
   if (state !== 'fight' || ME.hp <= 0 || ME.dashT > 0) return;
-  const heavy = !!m.hv; let d = m.d; if (ME.pas === 'thick') d *= .9; d = absorb(ME, d); ME.hp -= d; ME.flash = .14; ME.hitStun = heavy ? .3 : .16; ME.windT = 0; ME.ultWind = 0; gainUlt(ME, d * .6);
+  const heavy = !!m.hv; let d = m.d; if (ME.pas === 'thick' && ME.skT > 0) d *= .5; d = absorb(ME, d); ME.hp -= d; ME.flash = .14; ME.hitStun = heavy ? .3 : .16; ME.windT = 0; ME.ultWind = 0; gainUlt(ME, d * .6);
   const dx = ME.x - m.ax, dz = ME.z - m.az, l = Math.hypot(dx, dz) || 1, kb = (heavy ? 12 : 6.5) * (m.kb || 1);
   ME.kx = dx / l * kb; ME.kz = dz / l * kb; if (heavy) { ME.vy = 5; ME.grounded = false; } if (m.k) { ME.vy = 7; ME.grounded = false; }
   hitFx(OP, ME, d, !!m.hi, heavy); stats.taken += d; netState();
@@ -1085,7 +1090,7 @@ function netMsg(m) {
   else if (m.t === 'me' && net.role === 'guest') { matchEnd(); }
   else if (m.t === 'rm') { net.opRm = true; tryRematch(); }
   else if (!ME || !OP) return;
-  else if (m.t === 's') { OP.nx = m.x; OP.ny = m.y; OP.nz = m.z; OP.face = m.f; OP.hp = m.hp; OP.ult = m.u; OP.shield = m.sh || 0; OP.moving = m.m; OP.grounded = !!m.g; if (m.d) OP.dashT = Math.max(OP.dashT, .1); if (m.h && OP.hitStun <= 0) OP.hitStun = .1; }
+  else if (m.t === 's') { OP.nx = m.x; OP.ny = m.y; OP.nz = m.z; OP.face = m.f; OP.hp = m.hp; OP.ult = m.u; OP.shield = m.sh || 0; { const was = OP.skT > 0; OP.skT = m.sk || 0; if (OP.skT > 0 && !was && (PASSIVES[OP.pas] || {}).act) skVisual(OP); } OP.moving = m.m; OP.grounded = !!m.g; if (m.d) OP.dashT = Math.max(OP.dashT, .1); if (m.h && OP.hitStun <= 0) OP.hitStun = .1; }
   else if (m.t === 'h') applyHitToMe(m);
   else if (m.t === 'a') {
     if (m.k === 'w') { OP.face = m.f; OP.windT = wOf(OP).wind; SFX.swing(); }
@@ -1094,12 +1099,12 @@ function netMsg(m) {
     else if (m.k === 'shot') { OP.face = m.f; OP.windT = 0; OP.swingT = .26; SFX.swing(); spawnProj(OP, wOf(OP), !!m.hv, null, m.f); }
     else if (m.k === 'ult') { OP.ultWind = 0; if (typeof m.f === 'number') OP.face = m.f; const u = ULTS[m.u] ? m.u : 'quake'; ultVisual(OP, u); if (u === 'rush') OP.dashT = .26; else if (u === 'rage') OP.rageT = 4; else if (u === 'shield') { OP.shield = 36; OP.shieldT = 5; } }
     else if (m.k === 'j') { fxDust(v3(OP.x, OP.y, OP.z)); fxRing(v3(OP.x, OP.y + .05, OP.z), colOf(OP), .3, 1.1, .3); }
-    else if (m.k === 'd') { OP.dashT = R.dashT; SFX.dash(); const a = v3(OP.x, OP.y + .7, OP.z), b = v3(OP.x + m.x * 3.6, OP.y + .7, OP.z + m.z * 3.6); fxTrail(a, b, colOf(OP), .35, 1.0); fxDust(v3(OP.x, OP.y, OP.z)); }
+    else if (m.k === 'd') { OP.dashT = R.dashT; SFX.dash(); const a = v3(OP.x, OP.y + .7, OP.z), b = v3(OP.x + m.x * 3.6 * (m.l === 2 ? 2 : 1), OP.y + .7, OP.z + m.z * 3.6 * (m.l === 2 ? 2 : 1)); fxTrail(a, b, colOf(OP), .35, 1.0); fxDust(v3(OP.x, OP.y, OP.z)); }
   }
 }
 function stepRemote(f, dt) {   // 對手：位置朝最新封包靠近，其餘計時器只為了畫面效果
   const k = 1 - Math.exp(-dt * 18); f.x += (f.nx - f.x) * k; f.z += (f.nz - f.z) * k; if (f.ny !== undefined) f.y += (f.ny - f.y) * k;
-  f.flash = Math.max(0, f.flash - dt); f.hitStun = Math.max(0, f.hitStun - dt); f.windT = Math.max(0, f.windT - dt); f.ultWind = Math.max(0, f.ultWind - dt); f.dashT = Math.max(0, f.dashT - dt); f.rageT = Math.max(0, f.rageT - dt); if (f.shieldT > 0) { f.shieldT -= dt; if (f.shieldT <= 0) f.shield = 0; } f.swingT = Math.max(0, (f.swingT || 0) - dt);
+  f.flash = Math.max(0, f.flash - dt); f.hitStun = Math.max(0, f.hitStun - dt); f.windT = Math.max(0, f.windT - dt); f.ultWind = Math.max(0, f.ultWind - dt); f.dashT = Math.max(0, f.dashT - dt); f.rageT = Math.max(0, f.rageT - dt); f.skT = Math.max(0, f.skT - dt); if (f.shieldT > 0) { f.shieldT -= dt; if (f.shieldT <= 0) f.shield = 0; } f.swingT = Math.max(0, (f.swingT || 0) - dt);
 }
 function netGone(drop) {   // 對手離線 / 連線中斷
   if (!net) return; const was = net; net = null; netTry++; clearInterval(was.ping); try { was.ws.onclose = null; was.ws.close(1000); } catch (e) {}
@@ -1152,7 +1157,7 @@ async function setup() {
   $('selMe').innerHTML = opts(NAMES.includes(me0) ? me0 : NAMES[0]); $('selOp').innerHTML = opts(op0 && NAMES.includes(op0) && op0 !== me0 ? op0 : rest[Math.floor(Math.random() * rest.length)]); $('selLv').value = store.get('duel:lv') || '1';
   const fillSel = (id, o, cur) => { $(id).innerHTML = Object.keys(o).map(k => '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + o[k].n + '</option>').join(''); };
   fillSel('selW', WEAPONS, store.get('duel:w') || 'tablet'); fillSel('selP', PASSIVES, store.get('duel:p') || 'coffee'); fillSel('selU', ULTS, store.get('duel:u') || 'quake');
-  const IC_P = { coffee: '☕', thick: '🛡️', sip: '🍵', overtime: '🌙', slack: '🐟' }, IC_U = { quake: '💥', rush: '⚡', heal: '💚', shield: '🫧', rage: '🔥' };
+  const IC_P = { coffee: '☕', thick: '🛡️', dodge: '💨', sip: '🍵', overtime: '🌙', slack: '🐟' }, IC_U = { quake: '💥', rush: '⚡', heal: '💚', shield: '🫧', rage: '🔥' };
   const bar = (l, v) => '<span>' + l + '</span><i><u style="width:' + Math.round(Math.max(.06, Math.min(1, v)) * 100) + '%"></u></i>';
   const slotHtml = (sel, kind, ic, name, tag, desc, extra) => '<div class="slot"><div class="ic">' + ic + '</div><div class="tx"><span class="kind">' + kind + '</span><b>' + name + (tag ? '<em>' + tag + '</em>' : '') + '</b><small>' + desc + '</small>' + (extra || '') + '</div><div class="sa"><button class="arr" data-sel="' + sel + '" data-d="-1" type="button">◀</button><button class="arr" data-sel="' + sel + '" data-d="1" type="button">▶</button></div></div>';
   let pvKey = '';
