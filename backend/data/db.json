@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 11587,
+  "revision": 11588,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-13T09:53:23.399Z",
+  "updatedAt": "2026-11-13T09:58:05.313Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1305,7 +1305,7 @@
         {"案件編號":"26110104","修改次數":"0","建立日期":"2026/11/13 16:21:53","修改日期":"2026/11/13 16:21:53","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/13 16:21:53","圖片連結":"[{\"fileName\":\"261111_金士頓_MSI UGC抽獎_JP.png\",\"url\":\"https://lh3.googleusercontent.com/d/1XNbkJmU8ZHNQOreOMxFXs0R9Mc2Cavx1=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/13 16:21:53"},
         {"案件編號":"26110103","修改次數":"0","建立日期":"2026/11/13 16:56:49","修改日期":"2026/11/13 16:56:49","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/13 16:56:49","圖片連結":"[{\"fileName\":\"261106_金士頓_5秒看完金士頓產品介紹_JP.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1VRee3Kdf5tmtkajAjDDMX1hpHJrWZcRE=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/13 16:56:49"},
         {"案件編號":"26110038","修改次數":"0","建立日期":"2026/11/13 17:33:57","修改日期":"2026/11/13 17:33:57","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/13 17:33:57","圖片連結":"[{\"fileName\":\"261113_shopee_1125蝦皮商城日CPAS_AeroClip-2_情境.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/18yloPIflXofPnLNjNL4DUNmA2DoTZbL0=w1600\"},{\"fileName\":\"261113_shopee_1125蝦皮商城日CPAS_AeroClip-2_電商.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1TpvFhZTIgCxSorj4MutFhlRaQynKBhel=w1600\"},{\"fileName\":\"261113_shopee_1125蝦皮商城日CPAS_AeroClip.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1g30ECj3Jo11rWfiXV3JWNknjI963vRSm=w1600\"},{\"fileName\":\"261113_shopee_1125蝦皮商城日CPAS_AeroFit-2-.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1nCq1umfS0YOiJlgcRM931OTq2Qp6hS2D=w1600\"},{\"fileName\":\"261113_shopee_1125蝦皮商城日CPAS_Liberty-5-Pro-Max.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1lB3KGIwTf34UC8aym9YvSoN-VgLy7po-=w1600\"},{\"fileName\":\"261113_shopee_1125蝦皮商城日CPAS_Liberty-5-Pro.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1_cZBF1Z5t4-WKjYxCynaEfRZQpsOqP78=w1600\"},{\"fileName\":\"261113_shopee_1125蝦皮商城日CPAS_Liberty-Buds.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1Moya_UpIj-hq7l22JR4fBcrx8zYz1Kld=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/13 17:33:57"},
-        {"案件編號":"26110038","修改次數":"1","建立日期":"2026/11/13 17:42:59","修改日期":"2026-11-13","修改內容":"AeroClip價格為2,411，在請協助調整，感恩","修改內容連結":"","修改人":"吳冠賢","確認修正日":"","待修改圖片":""},
+        {"案件編號":"26110038","修改次數":"1","建立日期":"2026/11/13 17:42:59","修改日期":"2026-11-13","修改內容":"AeroClip價格為2,411，在請協助調整，感恩","修改內容連結":"","修改人":"吳冠賢","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"261113_shopee_1125蝦皮商城日CPAS_AeroClip.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1ShHySc9iQ7js0HdYd7enqAEbw9QQ86ma=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/13 17:58:05"},
         {"案件編號":"26110108","修改次數":"1","建立日期":"2026/11/13 17:53:23","修改日期":"2026-11-13","修改內容":"拍寫，客戶臨時調整內容，\n並新增 A4 尺寸。\n\n再麻煩哥了！\n（目前好像無法改需求內容，稍後數字+1）","修改內容連結":"","修改人":"李明庭","確認修正日":"","待修改圖片":""}
       ]
     },
