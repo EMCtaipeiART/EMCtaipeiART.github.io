@@ -1885,9 +1885,10 @@ function elevGo(to){
   const url = location.pathname, tag = async () => { try { const r = await fetch(url, {method:'HEAD', cache:'no-store'}); return r.headers.get('etag') || r.headers.get('last-modified') || ''; } catch (e) { return ''; } };
   let base = null, pending = false, lastAct = Date.now(); tag().then(t => { base = t; });
   for (const ev of ['pointerdown', 'keydown', 'wheel', 'touchstart']) addEventListener(ev, () => { lastAct = Date.now(); }, {passive:true, capture:true});
-  const reload = () => { showQuote('', '🔄 有新版本，馬上更新'); setTimeout(() => location.reload(), 2500); };
+  const reload = () => { showQuote('', '🔄 有新版本，馬上更新'); setTimeout(() => { if (expFrame) { pending = true; return; } location.reload(); }, 2500); };
   // 偵測到新版後不立刻刷新（會打斷操作），等使用者閒置 60 秒再重新載入
   setInterval(async () => {
+    if (expFrame) { lastAct = Date.now(); return; }   // 遊戲（內嵌 iframe）開著時，操作不會傳到外層，不能當成閒置而強制重整
     if (pending) { if (Date.now() - lastAct >= 60000) { pending = false; reload(); } return; }
     if (document.hidden && Math.random() < .5) return; const t = await tag();
     if (base && t && t !== base) { base = t; if (Date.now() - lastAct >= 60000) reload(); else pending = true; } else if (!base) base = t;
