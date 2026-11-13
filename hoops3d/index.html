@@ -215,7 +215,7 @@ const RIM_H = wy(GEO.rimY), RIM_R = GEO.rimHalf * K;
   const bottom = new THREE.Mesh(new THREE.CircleGeometry(RIM_R * .88, 20), M(0x4a5568)); bottom.rotation.x = -Math.PI / 2; bottom.position.y = .02; bin.add(bottom);
   const rim = new THREE.Mesh(new THREE.TorusGeometry(RIM_R, .09, 8, 28), M(0xe8913a)); rim.rotation.x = Math.PI / 2; rim.position.y = RIM_H; rim.castShadow = true; bin.add(rim);
   const bh = (GEO.rimY + 20 - GEO.boardTop) * K, board = box(.16, bh, 3.2, 0xffffff, GEO.boardOff * K, wy(GEO.rimY + 20) + bh / 2, 0, bin); board.material = new THREE.MeshLambertMaterial({ color: 0xdfeeff, transparent: true, opacity: .75 }); edge(board);
-  box(.2, .2, 1.2, 0xe8913a, GEO.boardOff * K * .5, RIM_H, 0, bin, false).scale.x = GEO.boardOff * K * 2.2 / .2 * .5; }
+  { const x0 = RIM_R * .98, x1 = GEO.boardOff * K, br = box(Math.max(.1, x1 - x0), .09, .14, 0xe8913a, (x0 + x1) / 2, RIM_H, 0, bin, false); } }
 // 投手（低多邊形）：站在起投點左側
 const thrower = new THREE.Group(); thrower.position.set(wx(GEO.start.x) - .95, 0, 0); thrower.scale.setScalar(.8); scene.add(thrower);
 { const skin = 0xf1c7a0, shirt = 0xf0b429; box(.34, .9, .34, 0x182e54, -.15, .45, 0, thrower); box(.34, .9, .34, 0x182e54, .15, .45, 0, thrower);
