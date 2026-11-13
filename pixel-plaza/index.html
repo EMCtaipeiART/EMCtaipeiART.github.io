@@ -424,6 +424,11 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 #bPeople i{background-image:url(assets/ui/hp-people.png)!important}#bWheel i{background-image:url(assets/ui/hp-role.png)!important}#bDex i{background-image:url(assets/ui/hp-dex.png)!important}
 .hp-top #bDex i{background-size:28px 28px!important}#bClose i{background-image:url(assets/ui/hp-close.png)!important}
 
+/* 右上按鈕平常是正圓，滑鼠移過去（或鍵盤聚焦）才展開文字 */
+.hp-top button.pk-orange,.hp-top button.pk-green,.hp-top button.pk-teal,.hp-top button.pk-red{width:48px!important;min-width:48px!important;padding:0 6px!important;gap:0!important;justify-content:flex-start;transition:width .28s ease,padding .28s ease,transform .14s cubic-bezier(.3,1.6,.5,1),box-shadow .14s,filter .15s}
+.hp-top button.pk-orange span,.hp-top button.pk-green span,.hp-top button.pk-teal span,.hp-top button.pk-red span{max-width:0!important;opacity:0!important;overflow:hidden!important;margin-left:0;transition:max-width .28s ease,opacity .2s ease,margin .28s ease}
+.hp-top button.pk-orange:hover,.hp-top button.pk-green:hover,.hp-top button.pk-teal:hover,.hp-top button.pk-red:hover,.hp-top button.pk-orange:focus-visible,.hp-top button.pk-green:focus-visible,.hp-top button.pk-teal:focus-visible,.hp-top button.pk-red:focus-visible{width:auto!important;padding:0 18px 0 6px!important;gap:9px!important}
+.hp-top button.pk-orange:hover span,.hp-top button.pk-green:hover span,.hp-top button.pk-teal:hover span,.hp-top button.pk-red:hover span,.hp-top button.pk-orange:focus-visible span,.hp-top button.pk-green:focus-visible span,.hp-top button.pk-teal:focus-visible span,.hp-top button.pk-red:focus-visible span{max-width:90px!important;opacity:1!important}
 /* 其餘 HUD（左上人物卡、時鐘、右下說明、搖桿、快速選單按鈕）也換成同一套 3D 糖果風：無黑線、同色系深色當厚度、頂部高光 */
 .hp-card,.hp-clock{border:0!important;background:linear-gradient(180deg,#2fa968 0%,#1a7a47 55%,#12603a 100%)!important;backdrop-filter:none!important;
   box-shadow:inset 0 3px 0 rgba(255,255,255,.35),inset 0 -4px 0 rgba(0,0,0,.14),0 3px 0 #1a7a47,0 6px 0 #0c4a2a,0 11px 14px rgba(0,0,0,.3)!important;margin-bottom:6px}
