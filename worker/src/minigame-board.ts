@@ -33,6 +33,8 @@ export class MinigameBoard extends DurableObject<Env> {
       sql.exec(`CREATE TABLE IF NOT EXISTS scores (id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL UNIQUE, game TEXT NOT NULL, day TEXT NOT NULL,
         device TEXT NOT NULL, score INTEGER NOT NULL, at INTEGER NOT NULL)`);
       sql.exec(`CREATE TABLE IF NOT EXISTS salts (day TEXT PRIMARY KEY, v TEXT NOT NULL)`);
+      sql.exec(`CREATE TABLE IF NOT EXISTS exp_scores (id INTEGER PRIMARY KEY AUTOINCREMENT, nick TEXT NOT NULL, score INTEGER NOT NULL, secs INTEGER NOT NULL, ip_hash TEXT NOT NULL, at INTEGER NOT NULL)`);
+      sql.exec(`CREATE INDEX IF NOT EXISTS idx_exp_scores ON exp_scores(score DESC)`);
       sql.exec(`CREATE TABLE IF NOT EXISTS fridge_stock (slot TEXT PRIMARY KEY, qty INTEGER NOT NULL)`);
       sql.exec(`CREATE TABLE IF NOT EXISTS fridge_meta (k TEXT PRIMARY KEY, v TEXT NOT NULL)`);
       sql.exec(`CREATE TABLE IF NOT EXISTS fridge_events (id INTEGER PRIMARY KEY AUTOINCREMENT, floor INTEGER NOT NULL, nick TEXT NOT NULL, kind TEXT NOT NULL, slot TEXT NOT NULL DEFAULT '', flag TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL)`);
@@ -54,6 +56,23 @@ export class MinigameBoard extends DurableObject<Env> {
     if (!salt) { salt = hex(16); this.sql().exec('INSERT OR IGNORE INTO salts (day, v) VALUES (?, ?)', day, salt); salt = this.one<{ v: string }>('SELECT v FROM salts WHERE day = ?', day)!.v; }
     const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + '|' + ip));
     return [...new Uint8Array(d)].slice(0, 12).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // ───────── 設計部遠征隊排行榜（輕量：不驗證遊戲過程，只做範圍與頻率限制） ─────────
+  private expBoard(): Record<string, unknown> {
+    const rows = this.all<{ nick: string; score: number; secs: number; at: number }>('SELECT nick, MAX(score) AS score, secs, at FROM exp_scores GROUP BY nick ORDER BY score DESC, at ASC LIMIT 20');
+    return { ok: true, rows: rows.map((r, i) => ({ rank: i + 1, nick: r.nick, score: r.score, secs: r.secs, at: r.at })) };
+  }
+  async expGet(): Promise<Reply> { return reply(200, this.expBoard()); }
+  async expSubmit(req: { nick?: unknown; score?: unknown; secs?: unknown; ip?: unknown }): Promise<Reply> {
+    const nick = cleanNick(req.nick) || '玩家', score = Math.floor(Number(req.score)), secs = Math.floor(Number(req.secs));
+    if (!Number.isFinite(score) || !Number.isFinite(secs) || score < 0 || score > 30000 || secs < 40 || secs > 3600) return reply(400, { ok: false, error: 'bad-score' });
+    const now = this.clock(), ip = await this.ipHash(String(req.ip ?? 'unknown'), dayKey(new Date(now)));
+    if (this.one<{ n: number }>('SELECT COUNT(*) AS n FROM exp_scores WHERE ip_hash = ? AND at > ?', ip, now - HOUR)!.n >= 15) return reply(429, { ok: false, error: 'rate-limited' });
+    this.sql().exec('INSERT INTO exp_scores (nick, score, secs, ip_hash, at) VALUES (?, ?, ?, ?, ?)', nick, score, secs, ip, now);
+    this.sql().exec('DELETE FROM exp_scores WHERE at < ?', now - LIMITS.retentionDays * DAY);
+    const rank = this.one<{ n: number }>('SELECT COUNT(*) AS n FROM (SELECT nick, MAX(score) AS sc FROM exp_scores GROUP BY nick) WHERE sc > (SELECT MAX(score) FROM exp_scores WHERE nick = ?)', nick)!.n + 1;
+    return reply(200, { ...this.expBoard(), me: { nick, score, rank } });
   }
 
   // ───────── 開局：發票 ─────────

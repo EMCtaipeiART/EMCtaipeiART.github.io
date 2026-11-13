@@ -54,6 +54,9 @@ h1{margin:0;font-size:26px;line-height:1.15;letter-spacing:.02em}
 @media (max-width:720px){#dFace{width:210px;height:136px;background-size:2520px 210px;bottom:70px;right:2px}}
 @media (prefers-reduced-motion:reduce){#dFace{animation:none}}
 #dialog small{position:absolute;right:12px;top:8px;color:var(--dim);font-size:11px}
+.lb{width:min(100%,560px);text-align:left;font-size:13px;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.lb h3{margin:0 0 6px;font-size:14px;color:var(--gold)} .lb .r{display:flex;gap:8px;padding:2px 0;border-bottom:1px dashed var(--line)} .lb .r i{width:26px;font-style:normal;color:var(--dim)} .lb .r span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .lb .r b{font-variant-numeric:tabular-nums} .lb .me{color:var(--gold)}
+.sub{display:flex;gap:6px;width:min(100%,560px)} .sub input{flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:rgba(0,0,0,.3);color:inherit;font:inherit}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px 14px;width:min(100%,560px);text-align:left;font-size:13px}
 .stats div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed var(--line);padding:2px 0}
 .stats span{color:var(--dim)} .stats b{font-variant-numeric:tabular-nums}
@@ -1326,18 +1329,42 @@ function nextLine() {
   if (dIdx >= INTRO.length) { $('dialog').hidden = true; $('dFace').hidden = true; running = true; return; }
   showLine();
 }
+const BOARD = 'https://machi-design-api.machi-chen.workers.dev/minigames/exp';
+const NICK0 = (() => { try { return new URLSearchParams(location.search).get('nick') || localStorage.getItem('expNick') || ''; } catch (e) { return ''; } })();
+const esc = v => String(v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function calcScore(st, t) { return Math.max(0, Math.round(10000 + st.interrupts * 200 + st.combos * 100 - t * 10 - st.downs * 800 - st.reverts * 300)); }
+function boardHtml(rows, me) { return rows.length ? rows.map(r => '<div class="r' + (me && r.nick === me.nick ? ' me' : '') + '"><i>' + r.rank + '</i><span>' + esc(r.nick) + '</span><b>' + r.score + '</b></div>').join('') : '<div class="r"><span>還沒有人上榜，你是第一個！</span></div>'; }
+function setupBoard(score, secs) {
+  const box = $('lbBox'), sub = $('lbSub'), inp = $('lbNick'), btn = $('lbBtn');
+  const show = (j, me) => { box.innerHTML = '<h3>完成排行（前 20）</h3>' + boardHtml(j.rows || [], me) + (me ? '<div class="r me"><i>你</i><span>' + esc(me.nick) + '　第 ' + me.rank + ' 名</span><b>' + me.score + '</b></div>' : ''); };
+  box.innerHTML = '<h3>完成排行（前 20）</h3><div class="r"><span>載入中…</span></div>';
+  fetch(BOARD, { cache: 'no-store' }).then(r => r.json()).then(j => show(j, null)).catch(() => { box.innerHTML = '<h3>完成排行</h3><div class="r"><span>排行榜暫時連不上</span></div>'; });
+  inp.value = NICK0;
+  btn.addEventListener('click', () => {
+    const nick = inp.value.trim().slice(0, 12); if (!nick) { inp.focus(); return; }
+    try { localStorage.setItem('expNick', nick); } catch (e) {}
+    btn.disabled = true; btn.textContent = '送出中…';
+    fetch(BOARD, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify({ nick, score, secs: Math.round(secs) }) }).then(r => r.json()).then(j => {
+      if (j.ok) { sub.hidden = true; show(j, j.me); } else { btn.disabled = false; btn.textContent = j.error === 'rate-limited' ? '太頻繁，稍後再試' : '送出失敗，再試一次'; }
+    }).catch(() => { btn.disabled = false; btn.textContent = '送出失敗，再試一次'; });
+  });
+}
 function finish(won) {
   running = false;
   const st = S.stats, tot = Object.values(st.dmg).reduce((a, b) => a + b, 0) || 1;
   const m = Math.floor(S.t / 60), s = Math.floor(S.t % 60);
+  const score = won ? calcScore(st, S.t) : 0;
   const rows = Core.ORDER.map(id => `<div><span>${Core.HERO[id].name} 輸出</span><b>${Math.round(st.dmg[id] / tot * 100)}%</b></div>`).join('');
   $('endO').innerHTML = won
     ? `<span class="badge">已確認</span><h2>任務完成</h2><p>新的需求會再來，但現在，先休息一下。</p>
+       <div class="sys">本局分數　${score}</div>
        <div class="stats"><div><span>通關時間</span><b>${m}:${String(s).padStart(2, '0')}</b></div><div><span>打斷回復</span><b>${st.interrupts} 次</b></div><div><span>被回到舊版</span><b>${st.reverts} 次</b></div><div><span>Machi 代扛</span><b>${Math.round(st.absorb)}</b></div><div><span>總治療</span><b>${st.heal}</b></div><div><span>連攜觸發</span><b>${st.combos} 次</b></div><div><span>隊友倒下</span><b>${st.downs} 次</b></div>${rows}</div>
+       <div class="sub" id="lbSub"><input id="lbNick" maxlength="12" placeholder="你的名字"><button class="pk" id="lbBtn" type="button">送出成績</button></div>
+       <div class="lb" id="lbBox"></div>
        <button class="pk big" id="againB" type="button">再打一次</button>`
     : `<h2>需求淹沒了設計部</h2><p>${S.wave === 3 ? '九頭蛇的「今天能出嗎？」要用 Machi 的交付防線擋；「剛剛那版比較好」要留一招攻擊必殺打斷。' : '卡片亮起時就放必殺，Leona 的「重新對齊」能把全隊拉回來。'}</p>
        <button class="pk big" id="againB" type="button">重新挑戰</button>`;
-  $('endO').hidden = false; $('againB').addEventListener('click', begin);
+  $('endO').hidden = false; $('againB').addEventListener('click', begin); if (won) setupBoard(score, S.t);
 }
 $('startB').addEventListener('click', begin);
 $('dialog').addEventListener('click', nextLine);
