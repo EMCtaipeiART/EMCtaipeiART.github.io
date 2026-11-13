@@ -26,6 +26,12 @@ on:
       - 'character-studio/vendor/**'
       # 出氣擂台（元宇宙小遊戲）：只改 vent-arena 時也要自動發布（之前漏了，改完沒上線）。
       - 'vent-arena/**'
+      # 辦公室對決、廢紙投籃、遠征隊、deadline 小遊戲：只改這些資料夾時也要自動發布
+      # （2026-11-13 發現 duel/ 漏掉，改完幾個小時沒上線，靠手動 workflow_dispatch 補發）。
+      - 'duel/**'
+      - 'hoops3d/**'
+      - 'expedition/**'
+      - 'deadline/**'
   repository_dispatch:
     types:
       - database_changed

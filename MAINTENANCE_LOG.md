@@ -2625,3 +2625,9 @@
   - 觸控時不再呼叫 `requestPointerLock()`、畫布的滑鼠點擊攻擊／鎖定邏輯也跳過，改走上面這套，避免兩套輸入互相干擾。
 - 驗證：模擬手機視窗（375×812＋touch）實測開局、搖桿移動（位移 2.73）、攻擊鈕（觸發 atkCD）、跳躍鈕（離地）、拖曳轉視角（畫面確實轉向）、鎖定/暫停鈕（狀態正確切換），無 console 錯誤；桌機視窗確認觸控層維持隱藏、滑鼠流程不受影響。真人手機（iOS/Android 實機瀏覽器）未測。
 - 已知限制：搖桿只有方向沒有類比力度（推一半跟推到底一樣是全速，跟鍵盤輸入一致）；沒有做雙指縮放鏡頭距離（桌機用滾輪）。
+
+## 2026-11-13 修正：duel/ 等小遊戲改了沒自動上線
+- 查「手機版還是沒有搖桿與按鈕」才發現：自動發布流程 `.github/workflows/update-database-archive.yml`（實際上是部署 GitHub Pages 的那個流程，名字是舊的）用白名單 `paths:` 過濾，只有改到清單裡的檔案／資料夾才會在 push 時觸發部署；`duel/` 根本不在清單裡，所以今天改的好幾個 commit（特效、死亡推算、被動技能、觸控介面）都沒有真的上線，線上還停在更早之前的版本。
+- 這個流程也有 `schedule: cron: "17 * * * *"`（每小時補跑一次，理論上不管白名單都會重新發布），但觀察到這幾小時完全沒有排程觸發的紀錄（GitHub 排程本來就不保證準時，加上這段時間密集 push 讓同個 concurrency group 一直取消重排，可能因此被跳過），所以也沒補上。
+- 處理：手動 `gh workflow run update-database-archive.yml` 補發一次；並把 `duel/**`、`hoops3d/**`、`expedition/**`、`deadline/**` 加進 `paths:` 白名單，以後改這些小遊戲 push 到 main 就會直接觸發部署，不用等每小時的排程。
+- 之後如果某個小遊戲改了但線上一直沒變、又不想等，可以直接在 GitHub 網頁的 Actions 分頁手動 Run workflow「Sync history database with current database」。
