@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>設計部遠征隊</title>
+<script>try{var t=localStorage.getItem('gameTheme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
 <style>
 /* 版面：上方標題與控制列 → 倉庫 戰場（canvas）→ 提示列 → 五張必殺卡 → 協作條 → 職業卡。單一深綠主題，沿用凱曜多元宇宙的綠色玻璃面板與厚黑邊。 */
 :root{
@@ -137,16 +138,26 @@ h3{margin:16px 0 0;font-size:17px}
 
 /* 淺色模式：外框／面板改淺綠；戰場本身仍是遊戲畫面（暗色辦公室），HUD 保持深色以維持辨識 */
 @media (prefers-color-scheme:light){
-:root{color-scheme:light;--bg:#eaf5ee;--bg2:#dcefe3;--panel:#d0e8da;--panel2:#c2e0d0;--line:#86bfa0;--ink:#0d2a1c;--dim:#4a7660;--accent:#1c9a52;--accent-d:#17803f;--gold:#b8730b;--danger:#c93a2d;--violet:#6a4ed0}
-body{background-image:radial-gradient(1200px 500px at 50% -10%,#cfeadb 0%,transparent 70%)}
-.overlay{background:rgba(234,245,238,.93)}
-.lb,.sub input{background:rgba(255,255,255,.7)}
-.pk.off,#deliver:disabled{background:linear-gradient(#cfe3d8,#bcd6c7);color:var(--dim)}
-.brand small{color:var(--accent-d)}
-#stage,#party,.card{--ink:#eafff2;--dim:#9cc5ae;--accent:#5fe08a;--gold:#ffd166;--line:#2f6b4f;--bg2:#102a1e;--panel:#163a2a;--panel2:#1d4a36;color:#eafff2}
-#party{background:#0b1d15}
-.overlay{color:#0d2a1c;--ink:#0d2a1c;--dim:#4a7660}
+:root:not([data-theme="dark"]){color-scheme:light;--bg:#eaf5ee;--bg2:#dcefe3;--panel:#d0e8da;--panel2:#c2e0d0;--line:#86bfa0;--ink:#0d2a1c;--dim:#4a7660;--accent:#1c9a52;--accent-d:#17803f;--gold:#b8730b;--danger:#c93a2d;--violet:#6a4ed0}
+:root:not([data-theme="dark"]) body{background-image:radial-gradient(1200px 500px at 50% -10%,#cfeadb 0%,transparent 70%)}
+:root:not([data-theme="dark"]) .overlay{background:rgba(234,245,238,.93)}
+:root:not([data-theme="dark"]) .lb,:root:not([data-theme="dark"]) .sub input{background:rgba(255,255,255,.7)}
+:root:not([data-theme="dark"]) .pk.off,:root:not([data-theme="dark"]) #deliver:disabled{background:linear-gradient(#cfe3d8,#bcd6c7);color:var(--dim)}
+:root:not([data-theme="dark"]) .brand small{color:var(--accent-d)}
+:root:not([data-theme="dark"]) #stage,:root:not([data-theme="dark"]) #party,:root:not([data-theme="dark"]) .card{--ink:#eafff2;--dim:#9cc5ae;--accent:#5fe08a;--gold:#ffd166;--line:#2f6b4f;--bg2:#102a1e;--panel:#163a2a;--panel2:#1d4a36;color:#eafff2}
+:root:not([data-theme="dark"]) #party{background:#0b1d15}
+:root:not([data-theme="dark"]) .overlay{color:#0d2a1c;--ink:#0d2a1c;--dim:#4a7660}
 }
+:root[data-theme="light"]{color-scheme:light;--bg:#eaf5ee;--bg2:#dcefe3;--panel:#d0e8da;--panel2:#c2e0d0;--line:#86bfa0;--ink:#0d2a1c;--dim:#4a7660;--accent:#1c9a52;--accent-d:#17803f;--gold:#b8730b;--danger:#c93a2d;--violet:#6a4ed0}
+:root[data-theme="light"] body{background-image:radial-gradient(1200px 500px at 50% -10%,#cfeadb 0%,transparent 70%)}
+:root[data-theme="light"] .overlay{background:rgba(234,245,238,.93)}
+:root[data-theme="light"] .lb,:root[data-theme="light"] .sub input{background:rgba(255,255,255,.7)}
+:root[data-theme="light"] .pk.off,:root[data-theme="light"] #deliver:disabled{background:linear-gradient(#cfe3d8,#bcd6c7);color:var(--dim)}
+:root[data-theme="light"] .brand small{color:var(--accent-d)}
+:root[data-theme="light"] #stage,:root[data-theme="light"] #party,:root[data-theme="light"] .card{--ink:#eafff2;--dim:#9cc5ae;--accent:#5fe08a;--gold:#ffd166;--line:#2f6b4f;--bg2:#102a1e;--panel:#163a2a;--panel2:#1d4a36;color:#eafff2}
+:root[data-theme="light"] #party{background:#0b1d15}
+:root[data-theme="light"] .overlay{color:#0d2a1c;--ink:#0d2a1c;--dim:#4a7660}
+
 </style>
 </head>
 <body>
@@ -157,6 +168,7 @@ body{background-image:radial-gradient(1200px 500px at 50% -10%,#cfeadb 0%,transp
       <small>凱曜多元宇宙</small>
       <h1>設計部遠征隊</h1>
       <p>第一章《最後一版，真的》試玩原型</p>
+      <button class="pk off" id="themeB" type="button" style="margin-top:6px">模式：自動</button>
     </div>
     <div class="ctrl">
       <span class="pill" id="waveP">倉庫</span>
@@ -569,6 +581,12 @@ if (typeof module !== 'undefined') module.exports = Core;
 <script>
 (() => {
 const $ = id => document.getElementById(id);
+const THEME_KEY = 'gameTheme';
+const getTheme = () => { try { return localStorage.getItem(THEME_KEY) || 'auto'; } catch (e) { return 'auto'; } };
+const isDarkNow = () => { const t = document.documentElement.getAttribute('data-theme'); return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
+const THEME_LABEL = { auto: '模式：自動', light: '模式：淺色', dark: '模式：深色' };
+function setTheme(t, after) { if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t); try { localStorage.setItem(THEME_KEY, t); } catch (e) {} const b = document.getElementById('themeB'); if (b) b.textContent = THEME_LABEL[t]; if (after) after(); }
+
 const CHAR_API = 'https://emc-ai-stage-classifier.machi-chen.workers.dev/api/public/characters';   // 角色工坊發佈的最新人物圖集（和元宇宙同一份）；失敗就用本機 sprites/
 let CL = {};
 const sprUrl = n => CL[n] ? CHAR_API + '/' + encodeURIComponent(n) + '/atlas-hd.png?v=' + CL[n] : 'sprites/' + n + '.webp';
@@ -1372,6 +1390,8 @@ function finish(won) {
   $('endO').hidden = false; $('againB').addEventListener('click', begin); if (won) setupBoard(score, S.t);
 }
 $('startB').addEventListener('click', begin);
+{ const tb = document.getElementById('themeB'); if (tb) { tb.textContent = THEME_LABEL[getTheme()]; tb.onclick = () => { const o = ['auto', 'light', 'dark']; setTheme(o[(o.indexOf(getTheme()) + 1) % 3], window.__themeChanged); }; } }
+
 $('dialog').addEventListener('click', nextLine);
 $('deliver').addEventListener('click', doDeliver);
 $('autoB').addEventListener('click', e => { autoOn = !autoOn; e.currentTarget.textContent = '自動必殺：' + (autoOn ? '開' : '關'); e.currentTarget.classList.toggle('off', !autoOn); });

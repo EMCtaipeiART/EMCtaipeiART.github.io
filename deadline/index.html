@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <title>截稿倒數 2</title>
+<script>try{var t=localStorage.getItem('gameTheme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
 <style>
 :root{--ink:#182e54;--dim:#6f7c92;--bg:#eef3fb;--card:#fff;--line:#c9d2e0;--blue:#3b6fd8;--gold:#f0b429;--red:#d9534f;--green:#2f9e57}
 *{box-sizing:border-box}
@@ -48,17 +49,38 @@ canvas{display:block;width:100%;height:auto;aspect-ratio:720/540;cursor:pointer}
 .lb .me{color:#b9770e;font-weight:800}
 .note{font-size:12px;color:var(--dim);text-align:center}
 @media (prefers-color-scheme:dark){
-:root{color-scheme:dark;--ink:#e6edf8;--dim:#9aa8c0;--bg:#0f1830;--line:#33466b}
-.pk{background:linear-gradient(#27395f,#1b2a4b);border-color:#9fb4dc}.pk.big{background:linear-gradient(#ffd96b,#d9a21e);color:#182e54;border-color:#f6e3a8}
-.chip,.lb .tab{background:#1b2a4b;border-color:#9fb4dc}.lb .tab.on{background:#e6edf8;color:#0f1830}.bar{background:#1b2a4b;border-color:#9fb4dc}
-#stage{border-color:#9fb4dc;background:#0f1830}.ov{background:rgba(15,24,48,.95)}.lb{background:#16223f;border-color:#9fb4dc}
-.ach b{background:#3a3010}.title-up,.lb .me{color:#ffd166}.score,.ov .big3{color:#7fa8ff}
+:root:not([data-theme="light"]){color-scheme:dark;--ink:#e6edf8;--dim:#9aa8c0;--bg:#0f1830;--line:#33466b}
+:root:not([data-theme="light"]) .pk{background:linear-gradient(#27395f,#1b2a4b);border-color:#9fb4dc}
+:root:not([data-theme="light"]) .pk.big{background:linear-gradient(#ffd96b,#d9a21e);color:#182e54;border-color:#f6e3a8}
+:root:not([data-theme="light"]) .chip,:root:not([data-theme="light"]) .lb .tab{background:#1b2a4b;border-color:#9fb4dc}
+:root:not([data-theme="light"]) .lb .tab.on{background:#e6edf8;color:#0f1830}
+:root:not([data-theme="light"]) .bar{background:#1b2a4b;border-color:#9fb4dc}
+:root:not([data-theme="light"]) #stage{border-color:#9fb4dc;background:#0f1830}
+:root:not([data-theme="light"]) .ov{background:rgba(15,24,48,.95)}
+:root:not([data-theme="light"]) .lb{background:#16223f;border-color:#9fb4dc}
+:root:not([data-theme="light"]) .ach b{background:#3a3010}
+:root:not([data-theme="light"]) .title-up,:root:not([data-theme="light"]) .lb .me{color:#ffd166}
+:root:not([data-theme="light"]) .score,:root:not([data-theme="light"]) .ov .big3{color:#7fa8ff}
 }
+:root[data-theme="dark"]{color-scheme:dark;--ink:#e6edf8;--dim:#9aa8c0;--bg:#0f1830;--line:#33466b}
+:root[data-theme="dark"] .pk{background:linear-gradient(#27395f,#1b2a4b);border-color:#9fb4dc}
+:root[data-theme="dark"] .pk.big{background:linear-gradient(#ffd96b,#d9a21e);color:#182e54;border-color:#f6e3a8}
+:root[data-theme="dark"] .chip,:root[data-theme="dark"] .lb .tab{background:#1b2a4b;border-color:#9fb4dc}
+:root[data-theme="dark"] .lb .tab.on{background:#e6edf8;color:#0f1830}
+:root[data-theme="dark"] .bar{background:#1b2a4b;border-color:#9fb4dc}
+:root[data-theme="dark"] #stage{border-color:#9fb4dc;background:#0f1830}
+:root[data-theme="dark"] .ov{background:rgba(15,24,48,.95)}
+:root[data-theme="dark"] .lb{background:#16223f;border-color:#9fb4dc}
+:root[data-theme="dark"] .ach b{background:#3a3010}
+:root[data-theme="dark"] .title-up,:root[data-theme="dark"] .lb .me{color:#ffd166}
+:root[data-theme="dark"] .score,:root[data-theme="dark"] .ov .big3{color:#7fa8ff}
+
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
+    <button class="pk off" id="themeB" type="button">模式：自動</button>
     <h1>截稿倒數 2<small id="sub">90 秒內完成設計挑戰</small></h1>
     <span class="chip" id="rankChip">實習生</span>
     <button class="pk off" id="sndB" type="button">音效：開</button>
@@ -88,6 +110,12 @@ import { createDeck, pointsForCorrect, WRONG_PENALTY, TYPES } from './engine.js'
 import { createRng, hashString } from './rng.js';
 
 const $ = id => document.getElementById(id);
+const THEME_KEY = 'gameTheme';
+const getTheme = () => { try { return localStorage.getItem(THEME_KEY) || 'auto'; } catch (e) { return 'auto'; } };
+const isDarkNow = () => { const t = document.documentElement.getAttribute('data-theme'); return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
+const THEME_LABEL = { auto: '模式：自動', light: '模式：淺色', dark: '模式：深色' };
+function setTheme(t, after) { if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t); try { localStorage.setItem(THEME_KEY, t); } catch (e) {} const b = document.getElementById('themeB'); if (b) b.textContent = THEME_LABEL[t]; if (after) after(); }
+
 const API = 'https://machi-design-api.machi-chen.workers.dev/minigames';
 const GAME = 'deadline2', DURATION = 90, W = 720, H = 540;
 const BOX = { x: 12, y: 92, w: W - 24, h: H - 92 - 12 };
@@ -248,7 +276,7 @@ function loop(now) {
 }
 const mq = matchMedia('(prefers-color-scheme: dark)');
 function render(dt) {
-  const dark = mq.matches; g.imageSmoothingEnabled = false;
+  const dark = isDarkNow(); g.imageSmoothingEnabled = false;
   g.fillStyle = dark ? '#0f1830' : '#eef3fb'; g.fillRect(0, 0, W, H);
   g.strokeStyle = dark ? 'rgba(170,195,240,.07)' : 'rgba(24,46,84,.07)'; g.lineWidth = 1;
   for (let x = 0; x < W; x += 32) { g.beginPath(); g.moveTo(x + .5, 0); g.lineTo(x + .5, H); g.stroke(); }
@@ -276,7 +304,7 @@ function render(dt) {
   // 最後 10 秒：紅色邊緣脈動
   if (phase === 'play' && DURATION - st.clock <= 10) { const a = .12 + .12 * Math.sin(st.clock * 8); g.fillStyle = 'rgba(217,83,79,' + a + ')'; g.fillRect(0, 0, W, 6); g.fillRect(0, H - 6, W, 6); g.fillRect(0, 0, 6, H); g.fillRect(W - 6, 0, 6, H); }
 }
-function drawIdle() { g.fillStyle = mq.matches ? '#25335a' : '#c9d2e0'; for (let i = 0; i < 5; i++) g.fillRect(60 + i * 120, 200 + (i % 2) * 40, 90, 90); }
+function drawIdle() { g.fillStyle = isDarkNow() ? '#25335a' : '#c9d2e0'; for (let i = 0; i < 5; i++) g.fillRect(60 + i * 120, 200 + (i % 2) * 40, 90, 90); }
 
 // ───────── 結算與排行 ─────────
 const esc = v => String(v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -315,6 +343,8 @@ async function showBoard(range, info) {
 }
 
 $('startB').onclick = start;
+{ const tb = document.getElementById('themeB'); if (tb) { tb.textContent = THEME_LABEL[getTheme()]; tb.onclick = () => { const o = ['auto', 'light', 'dark']; setTheme(o[(o.indexOf(getTheme()) + 1) % 3], window.__themeChanged); }; } }
+
 requestAnimationFrame(loop);
 window.__dl = { get st() { return st; }, answer };
 </script>
