@@ -1842,9 +1842,9 @@ function moodParticles(kind, root){   // 心情的環境特效（不跟著旋轉
     const cloud = moodTex('cloud', 64, 40, (x) => { x.fillStyle = '#9fb1c9'; x.beginPath(); x.arc(20, 26, 12, 0, 7); x.arc(34, 18, 15, 0, 7); x.arc(48, 26, 11, 0, 7); x.rect(20, 24, 28, 13); x.fill(); x.fillStyle = 'rgba(255,255,255,.35)'; x.beginPath(); x.arc(30, 14, 7, 3.3, 5.2); x.fill(); });
     const cl = moodSpr(cloud, 0xffffff, 1.5); cl.scale.set(1.6, 1.0, 1); cl.position.set(0, 1.05, -.1); root.add(cl); root.userData.cloud = cl;
   } else if (kind === 'joy') {
-    const ray = moodTex('sunray', 128, 128, (x) => { x.translate(64, 64); for (let i = 0; i < 12; i++) { x.rotate(Math.PI / 6); const g = x.createLinearGradient(0, 22, 0, 62); g.addColorStop(0, 'rgba(255,225,90,.9)'); g.addColorStop(1, 'rgba(255,225,90,0)'); x.fillStyle = g; x.beginPath(); x.moveTo(-6, 22); x.lineTo(0, 62); x.lineTo(6, 22); x.fill(); } });
+    const ray = moodTex('sunray', 128, 128, (x) => { x.translate(64, 64); x.lineCap = 'round'; for (let i = 0; i < 12; i++) { x.rotate(Math.PI / 6); const g = x.createLinearGradient(0, 24, 0, 56); g.addColorStop(0, 'rgba(255,225,90,.55)'); g.addColorStop(1, 'rgba(255,225,90,0)'); x.strokeStyle = g; x.lineWidth = 11; x.beginPath(); x.moveTo(0, 26); x.lineTo(0, 50); x.stroke(); } });
     const halo = moodSpr(ray, 0xffffff, 2.6, true); halo.position.z = -.2; root.add(halo); root.userData.halo = halo;
-    const spark = moodTex('spark', 32, 32, (x) => { x.fillStyle = '#fff6b0'; x.beginPath(); x.moveTo(16, 0); x.lineTo(19, 13); x.lineTo(32, 16); x.lineTo(19, 19); x.lineTo(16, 32); x.lineTo(13, 19); x.lineTo(0, 16); x.lineTo(13, 13); x.fill(); });
+    const spark = moodTex('spark', 32, 32, (x) => { const g = x.createRadialGradient(16, 16, 0, 16, 16, 15); g.addColorStop(0, 'rgba(255,250,200,1)'); g.addColorStop(.5, 'rgba(255,225,110,.7)'); g.addColorStop(1, 'rgba(255,210,80,0)'); x.fillStyle = g; x.fillRect(0, 0, 32, 32); });
     mk(6, () => moodSpr(spark, 0xffffff, .3, true));
   } else {
     const ring = moodTex('heatring', 64, 64, (x) => { x.strokeStyle = 'rgba(255,110,50,.9)'; x.lineWidth = 4; x.beginPath(); x.arc(32, 32, 26, 0, 7); x.stroke(); });
@@ -1875,7 +1875,7 @@ function makeMoodOrb(kind){
     const geo = new THREE.LatheGeometry(pts, 24); geo.translate(0, -.1, 0); g.add(moodOutlined(geo, 0x4fb3ff)); face('sad', .405, -.12, .56); g.add(moodGlow(0x5ab8ff, 1.7));
   } else {   // 快樂＝太陽
     g.add(moodOutlined(new THREE.SphereGeometry(.34, 24, 18), 0xffd23f));
-    for (let i = 0; i < 8; i++) { const ray = moodOutlined(new THREE.ConeGeometry(.1, .3, 6), 0xffa81f), a = i * Math.PI / 4; ray.position.set(Math.cos(a) * .58, Math.sin(a) * .58, 0); ray.rotation.z = a - Math.PI / 2; g.add(ray); }
+    for (let i = 0; i < 8; i++) { const ray = moodOutlined(new THREE.CapsuleGeometry(.075, .14, 4, 10), 0xffa81f), a = i * Math.PI / 4; ray.position.set(Math.cos(a) * .58, Math.sin(a) * .58, 0); ray.rotation.z = a - Math.PI / 2; g.add(ray); }
     face('joy', .35, -.02, .5); g.add(moodGlow(0xffc83a, 2.2));
   }
   const root = new THREE.Group(); root.add(g); root.userData.spin = g; root.userData.flame = g.userData.flame; moodParticles(kind, root);
