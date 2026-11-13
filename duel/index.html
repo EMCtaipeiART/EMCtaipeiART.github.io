@@ -116,7 +116,12 @@ header h1 small{display:block;font-size:12px;font-weight:600;color:var(--dim)}
 html,body{height:100%;overflow:hidden}body{padding:0;display:block}
 .wrap{width:100vw;max-width:none;height:100vh;gap:0}
 #stage{position:fixed;inset:0;border:0;border-radius:0}
-#c3{width:100vw;height:100vh;aspect-ratio:auto}
+#c3{width:100%;height:100%;aspect-ratio:auto}
+/* 手機直式玩對戰時強制轉橫式：整個 body 轉 90 度塞進螢幕，canvas 用 % 不用 vw/vh 才會跟著對；手機物理轉成橫式時這條媒體查詢自動失效，不會疊兩次 */
+@media (pointer:coarse) and (orientation:portrait){
+  html.playing,html.playing body{width:100vh;height:100vw;min-height:0;overflow:hidden}
+  html.playing body{position:fixed;top:0;left:0;transform-origin:top left;transform:rotate(90deg) translateY(-100%)}
+}
 header{position:fixed;right:8px;bottom:8px;z-index:6;width:auto;gap:6px;flex-wrap:nowrap}header h1{display:none}header .pk{font-size:12px;padding:3px 9px;border-width:2px;opacity:.85}
 .wrap>.note{display:none}
 .cds{bottom:10px;padding-right:200px}
@@ -348,14 +353,18 @@ function drawPreview(cv, n) {   // 開始畫面的頭像：用圖集第 0 格（
 const stage = $('stage'), cv = $('c3');
 const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
 let prAuto = 1;
-function applyPR() { const w = innerWidth, h = innerHeight, cap = Math.sqrt(2.3e6 / (w * h)); renderer.setPixelRatio(Math.max(.55, Math.min(devicePixelRatio || 1, 1.5, cap) * prAuto)); }
+function isRot() { return matchMedia('(pointer:coarse)').matches && matchMedia('(orientation:portrait)').matches && document.documentElement.classList.contains('playing'); }
+function rotW() { return isRot() ? innerHeight : innerWidth; }
+function rotH() { return isRot() ? innerWidth : innerHeight; }
+function applyPR() { const w = rotW(), h = rotH(), cap = Math.sqrt(2.3e6 / (w * h)); renderer.setPixelRatio(Math.max(.55, Math.min(devicePixelRatio || 1, 1.5, cap) * prAuto)); }
 applyPR();
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(55, 16 / 9, .1, 200);
 const hemi = new THREE.HemisphereLight(0xf3fbf6, 0x9ab8a8, .85); scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff3df, .6); sun.position.set(-8, 16, 10); scene.add(sun);
-function resize() { const w = Math.max(320, innerWidth), h = Math.max(240, innerHeight); applyPR(); renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
-addEventListener('resize', resize); document.addEventListener('fullscreenchange', () => setTimeout(resize, 50));
+function resize() { const w = Math.max(320, rotW()), h = Math.max(240, rotH()); applyPR(); renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); addEventListener('orientationchange', () => setTimeout(resize, 80)); document.addEventListener('fullscreenchange', () => setTimeout(resize, 50));
+function setPlaying(on) { document.documentElement.classList.toggle('playing', on); setTimeout(resize, 30); }
 
 const ARENA = 20, MARGIN = .45;
 // 地形：box（頂面高度）與 ramp（斜坡，沿 x 或 z 線性變高）
@@ -774,7 +783,7 @@ function startRound() {
   clearProj();
   if (net && net.role === 'guest') { place(ME, 14, 0, -Math.PI / 2); place(OP, -14, 0, Math.PI / 2); yaw = Math.PI / 2; } else { place(ME, -14, 0, Math.PI / 2); place(OP, 14, 0, -Math.PI / 2); yaw = -Math.PI / 2; } pitch = .5; lockOn = false; cdL.classList.remove('on'); tLeft = ROUND_T; wantAtk = wantUlt = wantDash = wantJump = false;
   camSmooth.set(ME.x, ME.y + 1.4, ME.z); state = 'countdown'; banner = 3.2; dots(); setBanner('第 ' + round + ' 局', 0);
-  $('dhud').hidden = false; $('cds').hidden = false; $('tctl').hidden = !TOUCH; updHud();
+  $('dhud').hidden = false; $('cds').hidden = false; $('tctl').hidden = !TOUCH; setPlaying(true); updHud();
 }
 function endRound(winner) {   // winner: 0 我、1 對手、-1 平手
   if (state !== 'fight') return; state = 'roundEnd'; banner = 2.4;
@@ -800,7 +809,7 @@ function matchEnd() {
   if (net) $('menuB').textContent = '離開對戰';
   if (won) SFX.win(); else SFX.lose();
 }
-function toMenu() { if (net) netLeave(); state = 'menu'; $('startO').hidden = false; $('dhud').hidden = true; $('cds').hidden = true; $('tctl').hidden = true; setBanner('', 0); $('pauseO').hidden = true; paused = false; }
+function toMenu() { if (net) netLeave(); state = 'menu'; $('startO').hidden = false; $('dhud').hidden = true; $('cds').hidden = true; $('tctl').hidden = true; setPlaying(false); setBanner('', 0); $('pauseO').hidden = true; paused = false; }
 function showLo() { $('loL').textContent = loText(ME); $('loR').textContent = loText(OP); $('cdA').textContent = '攻擊 左鍵・' + wOf(ME).n; $('cdU').textContent = '大招 R・' + (ULTS[ME.ulk] || ULTS.quake).n; }
 function beginMatch() { if (!net) { OP.isBot = true; setLo(ME, myLo()); setLo(OP, randLo()); } showLo(); wins = [0, 0]; round = 1; stats = { hits: 0, dmg: 0, high: 0, combo: 0, ult: 0, taken: 0 }; $('nmL').textContent = ME.name; $('nmR').textContent = OP.name; startRound(); lockPtr() }
 
