@@ -1864,7 +1864,7 @@ function expEnter(kind){
   if (expBusy) return; expBusy = true; target = null; wantSeat = null; wantElev = false; wheelClose(); fridgeClose();
   expFade.textContent = gm.fade; expFade.classList.add('on');
   setTimeout(() => {
-    expFrame = document.createElement('iframe'); expFrame.id = 'expFrame'; expFrame.title = gm.title; expFrame.allow = 'autoplay'; expFrame.src = gm.url + '?embed=1&t=' + Date.now() + (player && player.name ? '&me=' + encodeURIComponent(player.name) : ''); expFrame.style.display = 'block'; document.body.appendChild(expFrame); expFrame.addEventListener('load', () => { try { expFrame.focus(); expFrame.contentWindow.focus(); } catch (e) {} });
+    expFrame = document.createElement('iframe'); expFrame.id = 'expFrame'; expFrame.title = gm.title; expFrame.allow = 'autoplay; fullscreen'; expFrame.src = gm.url + '?embed=1&t=' + Date.now() + (player && player.name ? '&me=' + encodeURIComponent(player.name) : ''); expFrame.style.display = 'block'; document.body.appendChild(expFrame); expFrame.addEventListener('load', () => { try { expFrame.focus(); expFrame.contentWindow.focus(); } catch (e) {} });
     setTimeout(() => { expFade.textContent = ''; expFade.classList.remove('on'); }, 700);
   }, 1000);
 }
