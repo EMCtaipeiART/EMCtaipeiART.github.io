@@ -553,6 +553,9 @@ if (typeof module !== 'undefined') module.exports = Core;
 <script>
 (() => {
 const $ = id => document.getElementById(id);
+const CHAR_API = 'https://emc-ai-stage-classifier.machi-chen.workers.dev/api/public/characters';   // 角色工坊發佈的最新人物圖集（和元宇宙同一份）；失敗就用本機 sprites/
+let CL = {};
+const sprUrl = n => CL[n] ? CHAR_API + '/' + encodeURIComponent(n) + '/atlas-hd.png?v=' + CL[n] : 'sprites/' + n + '.webp';
 const COL = { machi: '#5b8def', noise: '#ef5b45', anna: '#a77bff', amber: '#f5a93b', leona: '#3fd0b4' };
 const HAIR = { machi: '#3a2a1e', noise: '#1d1d24', anna: '#6b3b2a', amber: '#c9792a', leona: '#4a2f55' };
 const INFO = {
@@ -583,14 +586,14 @@ const party = $('party'), cards = {};
 Core.ORDER.forEach((id, i) => {
   const b = document.createElement('button');
   b.type = 'button'; b.className = 'card'; b.id = 'card-' + id; b.style.setProperty('--c', COL[id]);
-  b.innerHTML = `<kbd>${i + 1}</kbd><i class="face" style="background-image:url(../pixel-plaza/sprites-hd/${Core.HERO[id].name}.webp)"></i><div class="hpb"><u></u></div><div class="spb"><u></u></div><div class="cdb"><u></u></div><div class="lbl">自動中</div>`;
+  b.innerHTML = `<kbd>${i + 1}</kbd><i class="face" data-spr="${Core.HERO[id].name}" style="background-image:url(${sprUrl(Core.HERO[id].name)})"></i><div class="hpb"><u></u></div><div class="spb"><u></u></div><div class="cdb"><u></u></div><div class="lbl">自動中</div>`;
   b.addEventListener('click', () => ult(id));
   party.appendChild(b);
   cards[id] = { el: b, hp: b.querySelector('.hpb u'), en: b.querySelector('.spb u'), cd: b.querySelector('.cdb u'), lbl: b.querySelector('.lbl') };
 });
 const pipEls = {};
 Core.FLAGS.forEach(k => { const s = document.createElement('span'); s.className = 'pip'; s.textContent = PIPS[k]; $('pips').appendChild(s); pipEls[k] = s; });
-$('roster').innerHTML = Core.ORDER.map(id => `<article class="job" style="--c:${COL[id]}"><h4><i class="av lg" style="background-image:url(../pixel-plaza/sprites-hd/${Core.HERO[id].name}.webp);border-color:${COL[id]}"></i>${Core.HERO[id].name}｜${INFO[id].job}</h4><q>${INFO[id].q}</q><dl>${INFO[id].sk.map(s => `<dt>${s[0]}</dt><dd><b>${s[1]}</b>　${s[2]}</dd>`).join('')}</dl></article>`).join('');
+$('roster').innerHTML = Core.ORDER.map(id => `<article class="job" style="--c:${COL[id]}"><h4><i class="av lg" data-spr="${Core.HERO[id].name}" style="background-image:url(${sprUrl(Core.HERO[id].name)});border-color:${COL[id]}"></i>${Core.HERO[id].name}｜${INFO[id].job}</h4><q>${INFO[id].q}</q><dl>${INFO[id].sk.map(s => `<dt>${s[0]}</dt><dd><b>${s[1]}</b>　${s[2]}</dd>`).join('')}</dl></article>`).join('');
 
 // ---------- 狀態 ----------
 let S = null, running = false, paused = false, speed = 1, autoOn = false, acc = 0, last = 0, T = 0;
@@ -619,7 +622,7 @@ function float(u, txt, col, size = 16, up = 0) { const v = rpos(u); v.y = tall(u
 function banner(title, sub, col) { banners.length = 0; banners.push({ title, col, life: 1.1 }); }
 const centroid = list => { const v = new THREE.Vector3(); list.forEach(u => v.add(rpos(u))); return list.length ? v.multiplyScalar(1 / list.length) : v; };
 function showSkill(name, col, id) {
-  const el = $('skillPop'); el.hidden = false; el.style.setProperty('--c', col); el.querySelector('i').style.backgroundImage = `url(../pixel-plaza/sprites-hd/${Core.HERO[id].name}.webp)`; el.querySelector('b').textContent = name;
+  const el = $('skillPop'); el.hidden = false; el.style.setProperty('--c', col); el.querySelector('i').style.backgroundImage = `url(${sprUrl(Core.HERO[id].name)})`; el.querySelector('b').textContent = name;
   el.classList.remove('in'); void el.offsetWidth; el.classList.add('in'); clearTimeout(showSkill.t); showSkill.t = setTimeout(() => { el.hidden = true; }, 1100);
 }
 
@@ -748,9 +751,17 @@ function init3d() {
   P.dead = flat(M(G.plane, '#ff3b2f', { map: TX.glow }), .04); P.dead.scale.set(11, 8, 1); scene.add(P.dead);
   P.k = 0;
 }
+function heroTex(id, cb) {
+  const t = new THREE.TextureLoader().load(sprUrl(Core.HERO[id].name), cb);
+  t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; t.anisotropy = 4; t.repeat.set(1 / 12, 1); t.offset.set(3 / 12, 0); return t;
+}
+function refreshSprites() {
+  document.querySelectorAll('[data-spr]').forEach(el => { el.style.backgroundImage = `url(${sprUrl(el.dataset.spr)})`; });
+  Core.ORDER.forEach(id => { const sp = U[id]; if (!sp || !CL[Core.HERO[id].name]) return; const old = sp.material.map, nt = heroTex(id, () => { nt.offset.copy(old.offset); sp.material.map = nt; sp.material.needsUpdate = true; old.dispose(); }); });
+}
+try { fetch(CHAR_API, { cache: 'no-store' }).then(r => r.json()).then(j => { const c = (j && j.characters) || {}; Core.ORDER.forEach(id => { const n = Core.HERO[id].name; if (c[n]) CL[n] = c[n]; }); refreshSprites(); }).catch(() => {}); } catch (e) {}
 function heroUnit(id) {
-  const t = new THREE.TextureLoader().load('../pixel-plaza/sprites-hd/' + Core.HERO[id].name + '.webp');
-  t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; t.repeat.set(1 / 12, 1); t.offset.set(3 / 12, 0);
+  const t = heroTex(id);
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, alphaTest: .2 }));
   sp.center.set(.5, 6 / 240); sp.scale.set(2.3, 2.3, 1); scene.add(sp); return sp;
 }
@@ -1300,7 +1311,7 @@ function loop(ts) {
 function showLine() {
   const l = INTRO[dIdx]; $('dWho').textContent = l[0]; $('dWho').style.color = l[2]; $('dTxt').textContent = l[1];
   const hero = Core.ORDER.find(id => Core.HERO[id].name === l[0]), f = $('dFace');
-  if (hero && !$('dialog').hidden) { f.style.backgroundImage = `url(../pixel-plaza/sprites-hd/${l[0]}.webp)`; f.hidden = false; f.style.animation = 'none'; void f.offsetWidth; f.style.animation = ''; } else f.hidden = true;
+  if (hero && !$('dialog').hidden) { f.style.backgroundImage = `url(${sprUrl(l[0])})`; f.hidden = false; f.style.animation = 'none'; void f.offsetWidth; f.style.animation = ''; } else f.hidden = true;
 }
 function begin() {
   SFX.unlock(); SFX.click(); SFX.ambient(true); SFX.level(0); SFX.music(false); SFX.music(true);
