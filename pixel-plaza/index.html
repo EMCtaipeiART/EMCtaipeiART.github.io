@@ -1176,6 +1176,21 @@ function build3dObjects(T, place){
   }
   // 投影機：A 朝右（東）牆；倉庫 B、會議室 C 朝左（西）牆；D 朝下（南）投在地板空地
   projectorRig(I(948), I(158), 'E', {room:'A', wallX:I(1046) - .02, wallDir:-1, zc:I(160), w:4.3, h:2.2, title:'設計進度 Q4', kind:'bars'});
+  // 倉庫桌上的黑影＋裂縫提示：吸引大家走進倉庫中央
+  { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 340; const g = cv.getContext('2d');
+    const glow = g.createRadialGradient(128, 180, 10, 128, 180, 150); glow.addColorStop(0, 'rgba(255,60,50,.55)'); glow.addColorStop(1, 'rgba(255,60,50,0)'); g.fillStyle = glow; g.fillRect(0, 0, 256, 340);
+    g.beginPath(); g.moveTo(128, 6); g.lineTo(150, 70); g.lineTo(138, 96); g.lineTo(170, 160); g.lineTo(150, 188); g.lineTo(178, 262); g.lineTo(138, 300); g.lineTo(128, 334); g.lineTo(112, 290); g.lineTo(84, 250); g.lineTo(108, 196); g.lineTo(76, 150); g.lineTo(112, 100); g.lineTo(100, 60); g.closePath();
+    g.fillStyle = '#07050a'; g.fill(); g.lineWidth = 5; g.strokeStyle = '#b4262a'; g.lineJoin = 'miter'; g.stroke();
+    g.lineWidth = 2; g.strokeStyle = 'rgba(255,140,120,.8)'; g.beginPath(); g.moveTo(128, 20); g.lineTo(146, 72); g.lineTo(134, 98); g.stroke();
+    g.fillStyle = '#ffeeee'; g.font = '800 30px "Noto Sans TC","PingFang TC",sans-serif'; g.textAlign = 'center'; g.shadowColor = '#000'; g.shadowBlur = 5;
+    g.fillText('出現一道', 128, 146); g.fillText('裂縫…', 128, 182); g.font = '700 21px "Noto Sans TC","PingFang TC",sans-serif'; g.fillStyle = '#ffc9c4'; g.fillText('好像可以走進去', 128, 226); g.fillText('走近看看', 128, 254);
+    const tx = new THREE.CanvasTexture(cv); tx.minFilter = THREE.LinearFilter;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 3.45), new THREE.MeshBasicMaterial({map:tx, transparent:true, depthWrite:false}));
+    m.position.set(I(188), .95 + 1.7, I(1160)); scene.add(m); billboards.push(m);
+    const pool = new THREE.Mesh(new THREE.CircleGeometry(1, 28), new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:.85, depthWrite:false}));
+    pool.rotation.x = -Math.PI / 2; pool.position.set(I(188), .965, I(1160)); pool.scale.set(1.5, .75, 1); scene.add(pool);
+    const edge = new THREE.Mesh(new THREE.RingGeometry(.98, 1.08, 28), new THREE.MeshBasicMaterial({color:0xc83a30, transparent:true, opacity:.9, depthWrite:false, side:THREE.DoubleSide}));
+    edge.rotation.x = -Math.PI / 2; edge.position.set(I(188), .97, I(1160)); edge.scale.set(1.5, .75, 1); scene.add(edge); }
   projectorRig(I(160), I(1160), 'W', {room:'B', wallX:I(98) + .02, wallDir:1, zc:I(1150), w:4.0, h:2.1, title:'倉庫', kind:'text'});
   projectorRig(I(162), I(1360), 'W', {room:'C', wallX:I(98) + .02, wallDir:1, zc:I(1355), w:4.0, h:2.1, title:'專案會議', kind:'list'});
   for (const [x0, z0, ww, dd] of [[1046, 84, 4, 150], [94, 1072, 4, 156], [94, 1274, 4, 162]]) {   // 投影用白牆

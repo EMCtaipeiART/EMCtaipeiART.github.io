@@ -82,7 +82,9 @@ h3{margin:16px 0 0;font-size:17px}
 .job dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:13px}
 .job dt{color:var(--dim);white-space:nowrap}
 .job dd{margin:0}
-.job dd b{color:var(--ink)}
+.job dd b{color:var(--c,var(--ink));text-shadow:0 0 10px color-mix(in srgb,var(--c,#fff) 40%,transparent)}
+.job{border-left:4px solid var(--c,transparent)}
+.job dt{color:color-mix(in srgb,var(--c,#9ab) 70%,#fff 30%);opacity:.8}
 
 #stage{display:flex;flex-direction:column}
 #topbar{position:absolute;left:0;right:0;top:0;display:flex;align-items:flex-start;gap:0;padding:8px 10px 0;pointer-events:none}
@@ -586,7 +588,7 @@ Core.ORDER.forEach((id, i) => {
 });
 const pipEls = {};
 Core.FLAGS.forEach(k => { const s = document.createElement('span'); s.className = 'pip'; s.textContent = PIPS[k]; $('pips').appendChild(s); pipEls[k] = s; });
-$('roster').innerHTML = Core.ORDER.map(id => `<article class="job"><h4><i class="av lg" style="background-image:url(../pixel-plaza/sprites-hd/${Core.HERO[id].name}.webp);border-color:${COL[id]}"></i>${Core.HERO[id].name}｜${INFO[id].job}</h4><q>${INFO[id].q}</q><dl>${INFO[id].sk.map(s => `<dt>${s[0]}</dt><dd><b>${s[1]}</b>　${s[2]}</dd>`).join('')}</dl></article>`).join('');
+$('roster').innerHTML = Core.ORDER.map(id => `<article class="job" style="--c:${COL[id]}"><h4><i class="av lg" style="background-image:url(../pixel-plaza/sprites-hd/${Core.HERO[id].name}.webp);border-color:${COL[id]}"></i>${Core.HERO[id].name}｜${INFO[id].job}</h4><q>${INFO[id].q}</q><dl>${INFO[id].sk.map(s => `<dt>${s[0]}</dt><dd><b>${s[1]}</b>　${s[2]}</dd>`).join('')}</dl></article>`).join('');
 
 // ---------- 狀態 ----------
 let S = null, running = false, paused = false, speed = 1, autoOn = false, acc = 0, last = 0, T = 0;
