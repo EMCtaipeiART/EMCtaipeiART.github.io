@@ -14,8 +14,8 @@ body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padd
 header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 header h1{margin:0;font-size:20px;letter-spacing:.5px;flex:1;min-width:140px}
 header h1 small{display:block;font-size:12px;font-weight:600;color:var(--dim);letter-spacing:0}
-.pk{font:inherit;font-weight:800;font-size:13px;color:var(--ink);background:linear-gradient(#fff,#e6edf8);border:3px solid var(--ink);border-radius:8px;padding:6px 12px;cursor:pointer;box-shadow:0 3px 0 var(--ink)}
-.pk:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.pk{font:inherit;font-weight:800;font-size:13px;color:var(--ink);background:linear-gradient(#fff,#e6edf8);border:3px solid var(--ink);border-radius:8px;padding:6px 12px;cursor:pointer}
+.pk:active{filter:brightness(.92)}
 .pk.off{opacity:.55}
 .pk.big{font-size:17px;padding:10px 26px;background:linear-gradient(#ffe08a,#f0b429)}
 .pk[hidden]{display:none}
@@ -26,7 +26,7 @@ header h1 small{display:block;font-size:12px;font-weight:600;color:var(--dim);le
 .bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#4caf6a,#f0b429);transition:width .1s linear}
 .bar.hot i{background:linear-gradient(90deg,#d9534f,#ff8a4a)}
 .story{font-size:13px;font-weight:700;color:var(--dim);min-height:20px;text-align:center}
-#stage{position:relative;border:4px solid var(--ink);border-radius:12px;background:var(--bg);overflow:hidden;box-shadow:0 5px 0 var(--ink);touch-action:manipulation}
+#stage{position:relative;border:4px solid var(--ink);border-radius:12px;background:var(--bg);overflow:hidden;touch-action:manipulation}
 canvas{display:block;width:100%;height:auto;aspect-ratio:720/540;cursor:pointer}
 #stage.shake{animation:sh .25s}
 @keyframes sh{20%{transform:translate(-5px,2px)}40%{transform:translate(5px,-2px)}60%{transform:translate(-3px,1px)}80%{transform:translate(3px,0)}}

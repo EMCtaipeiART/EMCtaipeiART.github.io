@@ -26,13 +26,13 @@ h1{margin:0;font-size:26px;line-height:1.15;letter-spacing:.02em}
 .brand p{margin:2px 0 0;color:var(--dim);font-size:13px}
 .ctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .pill{font-family:var(--mono);font-size:12px;color:var(--dim);background:var(--bg2);border:2px solid var(--line);border-radius:999px;padding:4px 10px;font-variant-numeric:tabular-nums}
-.pk{font:inherit;font-weight:700;font-size:13px;color:#06281a;background:linear-gradient(#7ff0a6,var(--accent-d));border:3px solid #000;border-radius:12px;padding:6px 12px;box-shadow:0 4px 0 #06281a;cursor:pointer}
-.pk:active{transform:translateY(3px);box-shadow:0 1px 0 #06281a}
+.pk{font:inherit;font-weight:700;font-size:13px;color:#06281a;background:linear-gradient(#7ff0a6,var(--accent-d));border:3px solid #000;border-radius:12px;padding:6px 12px;cursor:pointer}
+.pk:active{filter:brightness(.92)}
 .pk.off{background:linear-gradient(#2a5a44,#1d4a36);color:var(--dim)}
 .pk.big{font-size:17px;padding:10px 26px}
 .pk:focus-visible,.card:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 
-#stage{position:relative;border:3px solid #000;border-radius:16px;overflow:hidden;background:#0d241a;box-shadow:0 6px 0 #04120c}
+#stage{position:relative;border:3px solid #000;border-radius:16px;overflow:hidden;background:#0d241a}
 #gl{display:block;width:100%;height:auto}
 #cv{position:absolute;left:0;top:0;width:100%;height:auto;pointer-events:none}
 #stage:has(.overlay:not([hidden])){min-height:400px}
@@ -65,7 +65,7 @@ h1{margin:0;font-size:26px;line-height:1.15;letter-spacing:.02em}
 #tip{min-height:42px;background:var(--bg2);border:2px solid var(--line);border-radius:12px;padding:8px 12px;font-size:14px;color:var(--ink)}
 #tip.hot{border-color:var(--gold);color:var(--gold)}
 
-@keyframes pulse{50%{box-shadow:0 4px 0 #04120c,0 0 0 4px rgba(255,209,102,.35)}}
+@keyframes pulse{50%{box-shadow:0 0 0 4px rgba(255,209,102,.35)}}
 @media (prefers-reduced-motion:reduce){.card.ready{animation:none}}
 
 #gauge{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;background:var(--bg2);border:2px solid var(--line);border-radius:12px;padding:8px 12px}
@@ -73,7 +73,7 @@ h1{margin:0;font-size:26px;line-height:1.15;letter-spacing:.02em}
 .pips{display:flex;gap:6px;flex-wrap:wrap;flex:1}
 .pip{font-size:12px;border:2px solid var(--line);border-radius:999px;padding:2px 10px;color:var(--dim)}
 .pip.on{border-color:#000;background:var(--accent);color:#06281a;font-weight:700}
-#deliver:disabled{background:linear-gradient(#2a5a44,#1d4a36);color:var(--dim);box-shadow:0 4px 0 #06281a;cursor:not-allowed}
+#deliver:disabled{background:linear-gradient(#2a5a44,#1d4a36);color:var(--dim);cursor:not-allowed}
 #deliver:not(:disabled){background:linear-gradient(#ffe39a,#f0b429)}
 
 h3{margin:16px 0 0;font-size:17px}
@@ -110,7 +110,7 @@ h3{margin:16px 0 0;font-size:17px}
 #skillPop i{width:38px;height:38px;border-radius:50%;border:3px solid var(--c,#fff);background:#0a1a13 url() no-repeat;background-size:456px 38px;background-position:-10px -2px;box-shadow:0 0 12px var(--c)}
 #skillPop b{font-size:16px;letter-spacing:.06em;color:#fff;text-shadow:0 0 10px var(--c)}
 #party{position:absolute;right:8px;bottom:8px;display:flex;gap:6px;z-index:2}
-.card{flex:none;width:78px;padding:0 0 4px;gap:3px;border:3px solid #000;border-radius:12px;background:linear-gradient(#233a52,#141f2e);box-shadow:0 3px 0 #04120c;overflow:hidden;align-items:stretch}
+.card{flex:none;width:78px;padding:0 0 4px;gap:3px;border:3px solid #000;border-radius:12px;background:linear-gradient(#233a52,#141f2e);overflow:hidden;align-items:stretch}
 .card .face{display:block;height:62px;margin:0;background-color:#0e2a3a;background-repeat:no-repeat;background-size:1872px 156px;background-position:-39px -6px;border-bottom:3px solid var(--c)}
 .card kbd{left:3px;right:auto;top:3px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;padding:0;font-size:11px;font-weight:700;color:#fff;background:var(--c);border:2px solid #000}
 .card .hpb,.card .spb,.card .cdb{height:7px;margin:0 5px;border-radius:3px;background:#05101a;overflow:hidden;border:1px solid #000}
