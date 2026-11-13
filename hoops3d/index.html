@@ -2,7 +2,12 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<style>html,body{touch-action:manipulation;-webkit-text-size-adjust:100%}button,.pk,a,[role=button]{touch-action:manipulation}</style>
+<script>/* 手機防誤放大：禁止雙擊放大與雙指縮放（iOS 會忽略 viewport 設定，要自己擋） */
+(function(){var p=function(e){e.preventDefault()};['gesturestart','gesturechange','gestureend'].forEach(function(n){document.addEventListener(n,p,{passive:false})});
+document.addEventListener('touchmove',function(e){if(e.touches.length>1&&e.cancelable)e.preventDefault()},{passive:false});})();</script>
+
 <meta name="color-scheme" content="light dark">
 <title>廢紙投籃 3D</title>
 <script>try{var t=localStorage.getItem('designRequestThemeV1');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
