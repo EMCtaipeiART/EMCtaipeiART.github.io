@@ -671,10 +671,17 @@ function addFx(dur, v, build) { const g = new THREE.Group(); if (v) g.position.c
 function killFx(f) { scene.remove(f.g); f.g.traverse(o => { if (o.material) o.material.dispose(); }); }
 const rnd = (a, b) => a + Math.random() * (b - a);
 
+// 淺色模式：戰場整體調亮（環境光、平行光、背景與霧都提亮），深色維持原本的暗色辦公室
+function applySceneTheme() {
+  if (!P.amb) return; const light = !isDarkNow(), sc = P.sceneRef;
+  P.ambBase = light ? 1.75 : .95; P.dl.intensity = light ? 1.25 : .75;
+  sc.background.setHex(light ? 0xcfc2b0 : 0x1a1512); sc.fog.color.setHex(light ? 0xd6cab8 : 0x2b221c); sc.fog.near = light ? 24 : 17; sc.fog.far = light ? 80 : 48;
+}
+window.__themeChanged = applySceneTheme;
 function buildWorld() {
   scene.background = new THREE.Color(0x1a1512); scene.fog = new THREE.Fog(0x2b221c, 17, 48);
   P.amb = new THREE.AmbientLight(0xffe0c0, .95); scene.add(P.amb);
-  const dl = new THREE.DirectionalLight(0xffd9b0, .75); dl.position.set(-4, 9, 6); scene.add(dl);
+  const dl = new THREE.DirectionalLight(0xffd9b0, .75); dl.position.set(-4, 9, 6); scene.add(dl); P.dl = dl; P.ambBase = .95; P.sceneRef = scene;
   const lam = (c, e = 0) => new THREE.MeshLambertMaterial({ color: c, emissive: e, flatShading: true });
   const box = (w, h, d, c, x, y, z, ry = 0, rz = 0, rx = 0, e = 0) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), lam(c, e)); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); scene.add(m); return m; };
   const glowAt = (x, y, z, col, s, o) => { const g = SP(TX.glow, col); g.scale.set(s, s, 1); g.position.set(x, y, z); g.material.opacity = o; scene.add(g); return g; };
@@ -769,7 +776,7 @@ function init3d() {
   TX.ret = ctex(128, 128, g => { g.strokeStyle = '#fff'; g.lineWidth = 10; [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(([a, b]) => { g.beginPath(); g.moveTo(64 + a * 54, 64 + b * 22); g.lineTo(64 + a * 54, 64 + b * 54); g.lineTo(64 + a * 22, 64 + b * 54); g.stroke(); }); g.setLineDash([8, 8]); g.lineWidth = 4; g.strokeRect(24, 24, 80, 80); });
   TX.grid = ctex(256, 256, g => { g.strokeStyle = '#fff'; g.lineWidth = 3; g.setLineDash([12, 8]); for (let i = 0; i <= 4; i++) { g.beginPath(); g.moveTo(i * 63 + 2, 0); g.lineTo(i * 63 + 2, 256); g.moveTo(0, i * 63 + 2); g.lineTo(256, i * 63 + 2); g.stroke(); } });
   TX.circle = ctex(256, 256, g => { g.translate(128, 128); g.strokeStyle = '#fff'; g.lineWidth = 5; [120, 100, 58].forEach(r => { g.beginPath(); g.arc(0, 0, r, 0, 7); g.stroke(); }); g.lineWidth = 3; for (let k = 0; k < 2; k++) { g.beginPath(); for (let i = 0; i < 3; i++) { const a = i * 2.094 + k * 1.047; g.lineTo(Math.cos(a) * 100, Math.sin(a) * 100); } g.closePath(); g.stroke(); } for (let i = 0; i < 12; i++) { const a = i * .5236; g.fillStyle = '#fff'; g.fillRect(Math.cos(a) * 110 - 4, Math.sin(a) * 110 - 4, 8, 8); } });
-  buildWorld();
+  buildWorld(); applySceneTheme();
   ['note', 'armor', 'clone', 'hydra'].forEach(k => { const im = new Image(); im.onload = () => { const t = new THREE.Texture(im); t.needsUpdate = true; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; MON[k] = { t, ar: im.width / im.height }; }; im.src = 'monsters/' + k + '.webp'; });
   for (const id of Core.ORDER) {
     const sh = flat(new THREE.Mesh(G.disc, new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .35, depthWrite: false })), .03); sh.scale.set(.62, .4, 1); scene.add(sh); P.shadow[id] = sh;
@@ -1216,7 +1223,7 @@ function sync(dt) {
   if (bossU) { const bp = rpos(bossU); P.revert.position.x = bp.x; P.revert.position.z = bp.z; }
   P.revert.material.opacity = lerp(P.revert.material.opacity, cast && cast.kind === 'revert' ? .9 : 0, dt * 8); P.revert.scale.setScalar(3.4 + Math.sin(T * 8) * .25); P.revert.rotation.z = T * 2;
   P.dead.position.x = -2.5; P.dead.material.opacity = lerp(P.dead.material.opacity, cast && cast.kind === 'deadline' ? (.25 + (1 - cast.t / cast.max) * .5) * (.75 + Math.sin(T * 12) * .25) : 0, dt * 8);
-  P.riftG.material.opacity = .25 + .3 * Math.max(0, Math.sin(T * 5)); const fl = Math.sin(T * 37) * Math.sin(T * 11) > .8 ? .35 : 0; P.amb.intensity = .95 - fl;
+  P.riftG.material.opacity = .25 + .3 * Math.max(0, Math.sin(T * 5)); const fl = Math.sin(T * 37) * Math.sin(T * 11) > .8 ? .35 : 0; P.amb.intensity = P.ambBase - fl;
   P.fires.forEach(f => { const k = .8 + .3 * Math.sin(T * 13 + f.p) + .15 * Math.sin(T * 29 + f.p); f.f1.scale.set(.9 * k, 1.4 * k, 1); f.f2.scale.set(.5 * k, .9 * k, 1); f.gl.material.opacity = .22 + .12 * Math.sin(T * 9 + f.p); });
   P.smoke.forEach(sp => { const u = sp.userData, q = (T * .18 + u.p) % 1; sp.position.set(u.x + q * 1.2 + Math.sin(T + u.p * 9) * .2, 1.2 + q * 4, u.z); sp.scale.setScalar(1 + q * 2.6); sp.material.opacity = .5 * Math.sin(q * Math.PI); });
   P.lamps.forEach((l, i) => { const on = i === 1 ? (Math.sin(T * 23 + l.p) > -.2 ? 1 : .15) : (Math.sin(T * 3 + l.p) > -.85 ? 1 : .3); l.m.material.color.setScalar(.25 + .75 * on); l.g.material.opacity = .3 * on; });
