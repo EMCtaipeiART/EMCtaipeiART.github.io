@@ -471,9 +471,13 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 .qc-s:active,.qc-m:active{transform:scale(.96)!important}
 #stick i,.hp-av{box-shadow:0 2px 6px rgba(0,0,0,.28)!important}
 /* 手機：左上角名牌卡不要被右上角按鈕蓋住（狀態文字太長就用刪節號） */
+/* 介面按鈕（HUD）層級放最前面：名牌、對話泡泡、提示框都不能蓋住按鈕；載入畫面與面板仍在上面 */
+#hud{z-index:11!important}
+#load{z-index:12!important}
 @media (max-width:640px){
   .hp-card{max-width:calc(100vw - 218px)!important;box-sizing:border-box}
-  .hp-top button.pk-orange,.hp-top button.pk-green,.hp-top button.pk-teal,.hp-top button.pk-red{height:42px!important;min-width:42px!important;padding:0!important}   /* 預設正圓（寬＝高），滑過／點到才展開 */
+  .hp-top button.pk-orange,.hp-top button.pk-green,.hp-top button.pk-teal,.hp-top button.pk-red{width:42px!important;height:42px!important;min-width:42px!important;padding:0!important;justify-content:center}
+  .hp-top button.pk-orange:hover,.hp-top button.pk-green:hover,.hp-top button.pk-teal:hover,.hp-top button.pk-red:hover{width:42px!important;padding:0!important}   /* 預設正圓（寬＝高），滑過／點到才展開 */
   .hp-info{min-width:0;overflow:hidden}
   .hp-name,.hp-st{max-width:100%;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
