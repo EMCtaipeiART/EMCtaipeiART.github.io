@@ -669,7 +669,7 @@ const WEAPONS = {
 };
 const PASSIVES = {
   coffee: { n: '咖啡因', d: '移動速度 +10%，衝刺冷卻 -20%' },
-  thick: { n: '責任壁壘', act: 1, dur: 10, cd: 15, d: '按 E 開啟屏障：10 秒內受到的傷害 -50%（冷卻 15 秒）' },
+  thick: { n: '責任壁壘', act: 1, dur: 10, cd: 15, d: '按 E 開啟屏障：10 秒內吸收所有傷害，並原樣反彈給攻擊者（冷卻 15 秒）' },
   dodge: { n: '閃身步', act: 1, dur: 5, cd: 10, d: '按 E 啟動 5 秒：期間 Shift 衝刺距離 ×2（冷卻 10 秒）' },
   sip: { n: '下午茶', d: '每次命中回 1 點血（重擊 2 點）' },
   overtime: { n: '加班魂', d: '血量低於 40% 時，傷害 +20%' },
@@ -834,19 +834,29 @@ function hitFx(att, tgt, d, hi, heavy) {
 }
 const dashMul = f => (f.pas === 'dodge' && f.skT > 0 ? 2 : 1);
 function skVisual(f) { const th = f.pas === 'thick', c = th ? '#ffc857' : '#c9b8ff'; SFX.beep(); fxRing(v3(f.x, f.y + .1, f.z), c, .4, th ? 2.4 : 2, .45); if (!th) fxPoof(v3(f.x, f.y + 1, f.z), c); pop(PASSIVES[f.pas].n, f.x, f.y + 2.4, f.z, 'hi big'); }
+// 責任壁壘：作用期間吸收「所有」傷害（自己不扣血），並把同樣的傷害原樣反彈給攻擊者；反彈傷害不會再被反彈。
+const barrierOn = f => f.pas === 'thick' && f.skT > 0;
+function reflectFx(from, to, d) { const c = '#ffc857'; fxRing(v3(from.x, from.y + 1, from.z), c, .5, 2.2, .35); fxImpact(v3(from.x, from.y + 1.1, from.z), c, 1.8); pop('反彈 ' + Math.round(d), to.x, to.y + 2.4, to.z, 'hi big'); }
+function reflectKnock(to, fromX, fromZ, heavy) { const dx = to.x - fromX, dz = to.z - fromZ, l = Math.hypot(dx, dz) || 1, kb = heavy ? 9 : 6.5; to.kx = dx / l * kb; to.kz = dz / l * kb; }
+function reflectDamage(from, to, d, heavy) {   // 單機：壁壘方 from 把傷害 d 反彈到攻擊者 to 身上
+  reflectFx(from, to, d); if (to.hp <= 0) return;
+  to.hp -= d; to.flash = .14; to.hitStun = heavy ? .3 : .16; to.windT = 0; to.ultWind = 0; reflectKnock(to, from.x, from.z, heavy);
+  hitFx(from, to, d, false, heavy); if (to === ME) stats.taken += d; else if (from === ME) stats.dmg += d;
+}
 function absorb(t, d) { if (t.shield > 0 && d > 0) { const sh = Math.min(t.shield, d); t.shield -= sh; d -= sh; fxRing(v3(t.x, t.y + 1, t.z), '#8fd6ff', .5, 1.7, .3); fxImpact(v3(t.x, t.y + 1.1, t.z), '#8fd6ff', 1.6); if (t.shield <= .01) { t.shield = 0; t.shieldT = 0; } } return d; }
 function sipFx(a) { const n = performance.now(); if (!a.healFx || n - a.healFx > 900) { a.healFx = n; fxHeal(v3(a.x, a.y, a.z)); } }
 function damage(att, tgt, base, heavy, kbMul, kind) {
   if (tgt.dashT > 0 || tgt.hp <= 0) return false;
   if (net && att === ME) {   // 連線：我是攻擊方，傷害由對方（受擊方）自己扣
     const hi = att.y - tgt.y >= R.hiDelta, d = base * dmgMul(att) * (hi ? R.hiBonus : 1);
-    if (kind !== 'ult') gainUlt(att, Math.min(13, d * .9)); if (att.pas === 'sip') { att.hp = Math.min(100, att.hp + (heavy ? 2 : 1)); sipFx(att); } tgt.flash = .14; tgt.hitStun = heavy ? .3 : .16;
-    hitFx(att, tgt, d, hi, heavy);
+    if (kind !== 'ult') gainUlt(att, Math.min(13, d * .9)); if (att.pas === 'sip') { att.hp = Math.min(100, att.hp + (heavy ? 2 : 1)); sipFx(att); } if (barrierOn(tgt)) fxRing(v3(tgt.x, tgt.y + 1, tgt.z), '#ffc857', .5, 2, .3); else { tgt.flash = .14; tgt.hitStun = heavy ? .3 : .16;
+    hitFx(att, tgt, d, hi, heavy); }
     stats.hits++; stats.dmg += d; if (hi) stats.high++; stats.combo = Math.max(stats.combo, att.combo + 1); if (kind === 'ult') stats.ult++;
     netSend({ t: 'h', d: +d.toFixed(2), hv: heavy ? 1 : 0, kb: kbMul || 1, k: kind === 'ult' && att.ulk === 'quake' ? 1 : 0, hi: hi ? 1 : 0, ax: +att.x.toFixed(2), az: +att.z.toFixed(2) });
     return true;
   }
-  const hi = att.y - tgt.y >= R.hiDelta; let d = base * dmgMul(att) * (hi ? R.hiBonus : 1); if (att.isBot) d *= [.7, 1, 1.15][lvl]; if (tgt.pas === 'thick' && tgt.skT > 0) d *= .5; d = absorb(tgt, d);
+  const hi = att.y - tgt.y >= R.hiDelta; let d = base * dmgMul(att) * (hi ? R.hiBonus : 1); if (att.isBot) d *= [.7, 1, 1.15][lvl]; if (barrierOn(tgt)) { reflectDamage(tgt, att, d, heavy); return true; }   // 責任壁壘：吸收全部、原樣反彈
+  d = absorb(tgt, d);
   tgt.hp -= d; tgt.flash = .14; tgt.hitStun = heavy ? .3 : .16; tgt.windT = 0; tgt.ultWind = 0; if (kind !== 'ult') gainUlt(att, Math.min(13, d * .9)); gainUlt(tgt, d * .6); if (att.pas === 'sip') { att.hp = Math.min(100, att.hp + (heavy ? 2 : 1)); sipFx(att); }
   const dx = tgt.x - att.x, dz = tgt.z - att.z, l = Math.hypot(dx, dz) || 1, kb = (heavy ? 12 : 6.5) * (kbMul || 1);
   tgt.kx = dx / l * kb; tgt.kz = dz / l * kb; if (heavy) { tgt.vy = 5; tgt.grounded = false; }
@@ -1157,10 +1167,17 @@ function netBegin(r) {   // 開一場新比賽（r=1）或下一局
 function tryRematch() { if (net && net.role === 'host' && net.myRm && net.opRm) { netSend({ t: 'rs', r: 1 }); netBegin(1); } }
 function applyHitToMe(m) {
   if (state !== 'fight' || ME.hp <= 0 || ME.dashT > 0) return;
-  const heavy = !!m.hv; let d = m.d; if (ME.pas === 'thick' && ME.skT > 0) d *= .5; d = absorb(ME, d); ME.hp -= d; ME.flash = .14; ME.hitStun = heavy ? .3 : .16; ME.windT = 0; ME.ultWind = 0; gainUlt(ME, d * .6);
+  const heavy = !!m.hv; let d = m.d;
+  if (barrierOn(ME)) { reflectFx(ME, OP, d); netSend({ t: 'rf', d: +d.toFixed(2), hv: heavy ? 1 : 0, ax: +ME.x.toFixed(2), az: +ME.z.toFixed(2) }); stats.dmg += d; return; }   // 責任壁壘：自己不扣血，把傷害送回攻擊者
+  d = absorb(ME, d); ME.hp -= d; ME.flash = .14; ME.hitStun = heavy ? .3 : .16; ME.windT = 0; ME.ultWind = 0; gainUlt(ME, d * .6);
   const dx = ME.x - m.ax, dz = ME.z - m.az, l = Math.hypot(dx, dz) || 1, kb = (heavy ? 12 : 6.5) * (m.kb || 1);
   ME.kx = dx / l * kb; ME.kz = dz / l * kb; if (heavy) { ME.vy = 5; ME.grounded = false; } if (m.k) { ME.vy = 7; ME.grounded = false; }
   hitFx(OP, ME, d, !!m.hi, heavy); stats.taken += d; netState();
+}
+function applyReflectToMe(m) {   // 對方的責任壁壘把我打出去的傷害原樣反彈回來
+  if (state !== 'fight' || ME.hp <= 0) return;
+  const d = +m.d || 0, heavy = !!m.hv; ME.hp -= d; ME.flash = .14; ME.hitStun = heavy ? .3 : .16; ME.windT = 0; ME.ultWind = 0; reflectKnock(ME, m.ax, m.az, heavy);
+  hitFx(OP, ME, d, false, heavy); reflectFx(OP, ME, d); stats.taken += d; netState();
 }
 function netMsg(m) {
   if (!net) return;
@@ -1175,6 +1192,7 @@ function netMsg(m) {
   else if (!ME || !OP) return;
   else if (m.t === 's') { const _now = performance.now(), _pdt = OP._st ? (_now - OP._st) / 1000 : 0; if (_pdt > .01 && _pdt < .3) { OP.ovx = (m.x - OP.nx) / _pdt; OP.ovz = (m.z - OP.nz) / _pdt; } else { OP.ovx = OP.ovz = 0; } OP._st = _now; OP.nx = m.x; OP.ny = m.y; OP.nz = m.z; OP.face = m.f; OP.hp = m.hp; OP.ult = m.u; OP.shield = m.sh || 0; { const was = OP.skT > 0; OP.skT = m.sk || 0; if (OP.skT > 0 && !was && (PASSIVES[OP.pas] || {}).act) skVisual(OP); } OP.moving = m.m; OP.grounded = !!m.g; if (m.d) OP.dashT = Math.max(OP.dashT, .1); if (m.h && OP.hitStun <= 0) OP.hitStun = .1; }
   else if (m.t === 'h') applyHitToMe(m);
+  else if (m.t === 'rf') applyReflectToMe(m);
   else if (m.t === 'a') {
     if (m.k === 'w') { OP.face = m.f; OP.windT = wOf(OP).wind; SFX.swing(); }
     else if (m.k === 'uw') { if (ULTS[m.u]) OP.ulk = m.u; OP.ultWind = (ULTS[OP.ulk] || ULTS.quake).wind; }
