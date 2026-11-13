@@ -1330,24 +1330,17 @@ function nextLine() {
   showLine();
 }
 const BOARD = 'https://machi-design-api.machi-chen.workers.dev/minigames/exp';
-const NICK0 = (() => { try { return new URLSearchParams(location.search).get('nick') || localStorage.getItem('expNick') || ''; } catch (e) { return ''; } })();
+const TOKEN0 = () => { try { if (localStorage.getItem('designRequestEditorLoggedOut') === '1') return ''; const h = JSON.parse(localStorage.getItem('pixelViewerHandoff') || 'null'); if (h && h.token && Date.now() - Number(h.at) < 86400000) return h.token; return localStorage.getItem('designRequestEditorToken') || sessionStorage.getItem('designRequestEditorToken') || ''; } catch (e) { return ''; } };
 const esc = v => String(v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 function calcScore(st, t) { return Math.max(0, Math.round(10000 + st.interrupts * 200 + st.combos * 100 - t * 10 - st.downs * 800 - st.reverts * 300)); }
 function boardHtml(rows, me) { return rows.length ? rows.map(r => '<div class="r' + (me && r.nick === me.nick ? ' me' : '') + '"><i>' + r.rank + '</i><span>' + esc(r.nick) + '</span><b>' + r.score + '</b></div>').join('') : '<div class="r"><span>還沒有人上榜，你是第一個！</span></div>'; }
 function setupBoard(score, secs) {
-  const box = $('lbBox'), sub = $('lbSub'), inp = $('lbNick'), btn = $('lbBtn');
-  const show = (j, me) => { box.innerHTML = '<h3>完成排行（前 20）</h3>' + boardHtml(j.rows || [], me) + (me ? '<div class="r me"><i>你</i><span>' + esc(me.nick) + '　第 ' + me.rank + ' 名</span><b>' + me.score + '</b></div>' : ''); };
-  box.innerHTML = '<h3>完成排行（前 20）</h3><div class="r"><span>載入中…</span></div>';
-  fetch(BOARD, { cache: 'no-store' }).then(r => r.json()).then(j => show(j, null)).catch(() => { box.innerHTML = '<h3>完成排行</h3><div class="r"><span>排行榜暫時連不上</span></div>'; });
-  inp.value = NICK0;
-  btn.addEventListener('click', () => {
-    const nick = inp.value.trim().slice(0, 12); if (!nick) { inp.focus(); return; }
-    try { localStorage.setItem('expNick', nick); } catch (e) {}
-    btn.disabled = true; btn.textContent = '送出中…';
-    fetch(BOARD, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify({ nick, score, secs: Math.round(secs) }) }).then(r => r.json()).then(j => {
-      if (j.ok) { sub.hidden = true; show(j, j.me); } else { btn.disabled = false; btn.textContent = j.error === 'rate-limited' ? '太頻繁，稍後再試' : '送出失敗，再試一次'; }
-    }).catch(() => { btn.disabled = false; btn.textContent = '送出失敗，再試一次'; });
-  });
+  const box = $('lbBox');
+  const show = (j, me) => { box.innerHTML = '<h3>完成排行（前 20）</h3>' + boardHtml(j.rows || [], me) + (me ? '<div class="r me"><i>你</i><span>' + esc(me.nick) + (me.nick === '未登入' ? '（登入後才會記在你的名字下）' : '') + '　第 ' + me.rank + ' 名</span><b>' + me.score + '</b></div>' : ''); };
+  box.innerHTML = '<h3>完成排行（前 20）</h3><div class="r"><span>成績送出中…</span></div>';
+  fetch(BOARD, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify({ token: TOKEN0(), score, secs: Math.round(secs) }) }).then(r => r.json()).then(j => {
+    if (j.ok) show(j, j.me); else throw new Error(j.error);
+  }).catch(() => fetch(BOARD, { cache: 'no-store' }).then(r => r.json()).then(j => show(j, null)).catch(() => { box.innerHTML = '<h3>完成排行</h3><div class="r"><span>排行榜暫時連不上</span></div>'; }));
 }
 function finish(won) {
   running = false;
@@ -1359,7 +1352,6 @@ function finish(won) {
     ? `<span class="badge">已確認</span><h2>任務完成</h2><p>新的需求會再來，但現在，先休息一下。</p>
        <div class="sys">本局分數　${score}</div>
        <div class="stats"><div><span>通關時間</span><b>${m}:${String(s).padStart(2, '0')}</b></div><div><span>打斷回復</span><b>${st.interrupts} 次</b></div><div><span>被回到舊版</span><b>${st.reverts} 次</b></div><div><span>Machi 代扛</span><b>${Math.round(st.absorb)}</b></div><div><span>總治療</span><b>${st.heal}</b></div><div><span>連攜觸發</span><b>${st.combos} 次</b></div><div><span>隊友倒下</span><b>${st.downs} 次</b></div>${rows}</div>
-       <div class="sub" id="lbSub"><input id="lbNick" maxlength="12" placeholder="你的名字"><button class="pk" id="lbBtn" type="button">送出成績</button></div>
        <div class="lb" id="lbBox"></div>
        <button class="pk big" id="againB" type="button">再打一次</button>`
     : `<h2>需求淹沒了設計部</h2><p>${S.wave === 3 ? '九頭蛇的「今天能出嗎？」要用 Machi 的交付防線擋；「剛剛那版比較好」要留一招攻擊必殺打斷。' : '卡片亮起時就放必殺，Leona 的「重新對齊」能把全隊拉回來。'}</p>

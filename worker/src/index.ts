@@ -232,7 +232,15 @@ async function handleMinigames(request: Request, env: Env): Promise<Response> {
     try { const v = JSON.parse(raw); if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error('shape'); body = v; }
     catch { return jsonResponse(request, env, { ok: false, error: 'bad-json' }, 400); }
     if (path === '/minigames/fridge') return send(await stub.fridgeAct({ action: body.action, slot: body.slot, nick: body.nick, floor: body.floor }));
-    if (path === '/minigames/exp') return send(await (env.MINIGAME_BOARD.getByName('expedition', { locationHint: 'apac' }) as DurableObjectStub<MinigameBoard>).expSubmit({ nick: body.nick, score: body.score, secs: body.secs, ip: request.headers.get('CF-Connecting-IP') || 'unknown' }));
+    if (path === '/minigames/exp') {
+      // 帶登入 token 就由主站驗證出帳號；驗不到（沒登入／過期）一律記為「未登入」
+      let account = '';
+      if (typeof body.token === 'string' && body.token) {
+        const coord = env.DATABASE_COORDINATOR.getByName('primary', { locationHint: 'apac' }) as DurableObjectStub<DatabaseCoordinator>;
+        account = await coord.minigameViewer(body.token);
+      }
+      return send(await (env.MINIGAME_BOARD.getByName('expedition', { locationHint: 'apac' }) as DurableObjectStub<MinigameBoard>).expSubmit({ nick: account || '未登入', score: body.score, secs: body.secs, ip: request.headers.get('CF-Connecting-IP') || 'unknown' }));
+    }
     if (path === '/minigames/run') {
       // 有帶登入 token：由主站資料庫驗證出帳號本人的名字，排行榜以帳號為準（跨裝置同一人）
       let account = '';

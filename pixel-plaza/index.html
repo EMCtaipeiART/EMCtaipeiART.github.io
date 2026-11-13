@@ -1800,7 +1800,7 @@ function expEnter(){
   if (expBusy) return; expBusy = true; target = null; wantSeat = null; wantElev = false; wheelClose(); fridgeClose();
   expFade.textContent = '倉庫'; expFade.classList.add('on');
   setTimeout(() => {
-    expFrame = document.createElement('iframe'); expFrame.id = 'expFrame'; expFrame.title = '設計部遠征隊'; expFrame.allow = 'autoplay'; expFrame.src = '../expedition/?embed=1&nick=' + encodeURIComponent(meName() || '') + '&t=' + Date.now(); expFrame.style.display = 'block'; document.body.appendChild(expFrame); expFrame.addEventListener('load', () => { try { expFrame.focus(); expFrame.contentWindow.focus(); } catch (e) {} });
+    expFrame = document.createElement('iframe'); expFrame.id = 'expFrame'; expFrame.title = '設計部遠征隊'; expFrame.allow = 'autoplay'; expFrame.src = '../expedition/?embed=1&t=' + Date.now(); expFrame.style.display = 'block'; document.body.appendChild(expFrame); expFrame.addEventListener('load', () => { try { expFrame.focus(); expFrame.contentWindow.focus(); } catch (e) {} });
     setTimeout(() => { expFade.textContent = ''; expFade.classList.remove('on'); }, 700);
   }, 1000);
 }
