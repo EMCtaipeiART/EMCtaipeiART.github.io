@@ -1623,7 +1623,7 @@ function remoteWsPos(m){   // 別人經 WebSocket 傳來的位置：直接併進
     if (ws && ws.readyState <= 1) return;
     try { ws = new WebSocket(url); } catch (e) { return; }
     ws.onopen = () => { retry = 0; pushOpen = true; wsHello(ws); clearInterval(ping); ping = setInterval(() => { try { if (ws.readyState === 1) ws.send('ping'); } catch (e) {} }, 25000); };
-    ws.onmessage = ev => { let m = null; try { m = JSON.parse(ev.data); } catch (e) { return; } if (!m) return; if (m.type === 'pixel') pollNow(); else if (m.t === 'p') remoteWsPos(m); else if (m.t === 'hi') { wsPos.ok = Boolean(m.ok); wsPos.send = m.ok ? o => { try { if (ws.readyState === 1) ws.send(JSON.stringify(o)); } catch (e) {} } : null; } };
+    ws.onmessage = ev => { let m = null; try { m = JSON.parse(ev.data); } catch (e) { return; } if (!m) return; if (m.type === 'pixel') pollNow(); else if (m.t === 'p') remoteWsPos(m); else if (m.t === 'lv') { const c = chars[m.n]; if (c && c !== player) levelUpFx(c); } else if (m.t === 'hi') { wsPos.ok = Boolean(m.ok); wsPos.send = m.ok ? o => { try { if (ws.readyState === 1) ws.send(JSON.stringify(o)); } catch (e) {} } : null; } };
     ws.onclose = () => { pushOpen = false; wsPos.ok = false; wsPos.send = null; clearInterval(ping); setTimeout(connect, Math.min(30000, 1000 * Math.pow(2, retry++))); };
     ws.onerror = () => { try { ws.close(); } catch (e) {} };
   };
@@ -2460,7 +2460,7 @@ function renderCharPage(force){
     <div class="cp-cols${c === player ? ' solo' : ''}">
       ${c === player ? '' : '<section class="cp-panel p1"><header><h3>心情</h3></header><div class="cp-grid mood" id="cpMood"></div></section>'}
       <div class="cp-stack">
-        <button type="button" id="cpLv" class="qc-s" style="margin:0 0 6px">升級特效（測試）</button>${c === player ? '<p class="cp-note" style="margin:0 0 4px">狀態、心情、想說的話：直接點自己的人物就能改。</p>' : `<section class="cp-panel p2"><header><h3>想說的話</h3></header>
+        ${adminHome ? '<button type="button" id="cpLv" class="qc-s" style="margin:0 0 6px">升級特效（測試）</button>' : ''}${c === player ? '<p class="cp-note" style="margin:0 0 4px">狀態、心情、想說的話：直接點自己的人物就能改。</p>' : `<section class="cp-panel p2"><header><h3>想說的話</h3></header>
           <div class="cp-chat"><form class="cp-chat-in" id="cpForm"><img alt="" src="${c.avatar || ''}"><input id="cpMsg" type="text" maxlength="60" placeholder="說點什麼…" autocomplete="off"><button type="submit" class="send" title="送出">➤</button></form>
             <div class="cp-chips"><button type="button" id="cpClr">清除對話</button></div></div>
         </section>`}
@@ -2480,7 +2480,7 @@ function renderCharPage(force){
   </div>`;
   const mm = radial.querySelector('#cpMood'); if (mm) for (const id of Object.keys(MOOD)) { const b = document.createElement('button'); b.type = 'button'; b.className = c.mood === id ? 'on' : ''; b.innerHTML = '<i>' + iconImg(moodSym[id], 44) + '</i>' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[id]; b.onclick = () => setOwnMood(id); mm.appendChild(b); }
   if (mm) { const x = document.createElement('button'); x.type = 'button'; x.className = 'clr'; x.innerHTML = '清除心情'; x.onclick = () => setOwnMood(''); mm.appendChild(x); }
-  { const lv = radial.querySelector('#cpLv'); if (lv) lv.onclick = () => levelUpFx(c); }
+  { const lv = radial.querySelector('#cpLv'); if (lv) lv.onclick = () => { levelUpFx(c); if (c === player && wsPos.send) wsPos.send({t:'lv', lv:1 + Math.floor((stat.found + stat.notes + stat.flush) / 5)}); }; }
   const ta = radial.querySelector('#cpMsg'); if (ta) { ta.value = keepMsg != null ? keepMsg : (c.message || ''); radial.querySelector('#cpForm').onsubmit = e => { e.preventDefault(); setOwnMessage(ta.value.trim()); }; radial.querySelector('#cpClr').onclick = () => { ta.value = ''; setOwnMessage(''); }; }
   radial.querySelector('#cpMusic').value = keepMusic; radial.querySelector('#cpMForm').onsubmit = e => { e.preventDefault(); setOwnMusic(radial.querySelector('#cpMusic').value); };
   const mp = radial.querySelector('#cpMPlay'); if (mp) mp.onclick = () => toggleMusic(c); const mo = radial.querySelector('#cpMOff'); if (mo) mo.onclick = () => stopMusic(); const ms = radial.querySelector('#cpMStop'); if (ms) ms.onclick = clearOwnMusic;
@@ -2523,12 +2523,12 @@ function wheelOpen(c){   // 點自己的人物：在人物旁邊展開小卡（�
   wheel.innerHTML = '<div class="qc"><div class="qc-h">狀態</div><div class="qc-row">' + QC_MAIN.map(chip).join('') + '<button type="button" class="qc-s qc-more" id="qcMore">更多</button></div>'
     + '<div class="qc-row qc-extra" id="qcExtra" hidden>' + more.map(chip).join('') + '</div>'
     + '<div class="qc-h">心情</div><div class="qc-row">' + Object.keys(MOOD).map(id => '<button type="button" class="qc-m' + (c.mood === id ? ' on' : '') + '" data-m="' + id + '" title="' + MOOD_TXT[id] + '">' + iconImg(moodSym[id], 28) + '</button>').join('') + '<button type="button" class="qc-m qc-x" data-m="" title="清除心情">✕</button></div>'
-    + '<div class="qc-row" style="margin-top:6px"><button type="button" class="qc-s" id="qcLv" title="測試：播放升級特效">升級特效（測試）</button></div>'
+    + (adminHome ? '<div class="qc-row" style="margin-top:6px"><button type="button" class="qc-s" id="qcLv" title="測試：播放升級特效（全樓層同步）">升級特效（測試）</button></div>' : '')
     + '<form class="qc-say" id="qcForm"><input id="qcMsg" type="text" maxlength="60" placeholder="說點什麼…" autocomplete="off"><button type="submit" class="send" title="送出">➤</button></form></div>';
   const inp = wheel.querySelector('#qcMsg'); inp.value = c.message || '';
   wheel.querySelectorAll('.qc-s[data-id]').forEach(b => b.onclick = () => { const id = b.dataset.id; wheelClose(); if (id === 'present') setOwnAuto(); else setOwnStatus(id); });
   wheel.querySelectorAll('.qc-m').forEach(b => b.onclick = () => { wheelClose(); setOwnMood(b.dataset.m); });
-  wheel.querySelector('#qcLv').onclick = () => levelUpFx(c);
+  { const lb = wheel.querySelector('#qcLv'); if (lb) lb.onclick = () => { levelUpFx(c); if (wsPos.send) wsPos.send({t:'lv', lv:1 + Math.floor((stat.found + stat.notes + stat.flush) / 5)}); }; }
   wheel.querySelector('#qcMore').onclick = () => { const x = wheel.querySelector('#qcExtra'); x.hidden = !x.hidden; wheel.querySelector('#qcMore').classList.toggle('on', !x.hidden); };
   wheel.querySelector('#qcForm').onsubmit = e => { e.preventDefault(); const t = inp.value.trim(); wheelClose(); setOwnMessage(t); };
   requestAnimationFrame(() => requestAnimationFrame(() => wheel.classList.add('open')));
@@ -2708,12 +2708,14 @@ function floatAt(x, y, z, text){
 }
 // HUD 更新
 const fmtTime = new Intl.DateTimeFormat('zh-TW', {timeZone:'Asia/Taipei', hour:'2-digit', minute:'2-digit', hour12:false, weekday:'short'});
+let lvSeen = null;   // 上一次看到的等級；登入後第一次讀到雲端進度時只記錄，不觸發特效
 function updateHud(){
   const c = player;
   if (!c) { $('pName').textContent = '訪客'; $('pSt').textContent = '👀 參觀中（登入後才能操作人物）'; $('pAv').innerHTML = ''; $('pExp').style.width = '0%'; $('pLv').textContent = ''; $('pClock').textContent = '🕒 ' + fmtTime.format(new Date()).replace(/^(\S+)\s+(\S+)$/, '$2 $1') + '（台北）'; updateTitleNet(); return; }
   const st = STATUS[c.status] || STATUS.present, total = stat.found + stat.notes + stat.flush, lv = 1 + Math.floor(total / 5);
   if ($('pName').textContent !== c.name) { $('pName').textContent = c.name; if (c.avatar) $('pAv').innerHTML = '<img alt="" src="' + c.avatar + '">'; }
   $('pSt').innerHTML = iconImg(symOf[c.status] || 'person', 18) + ' ' + statusLabel(c) + (c.mood ? '　' + iconImg(moodSym[c.mood], 16) : '');
+  if (progCloud !== null) { if (lvSeen == null) lvSeen = lv; else if (lv > lvSeen) { lvSeen = lv; levelUpFx(c); if (wsPos.send) wsPos.send({t:'lv', lv}); } }
   $('pExp').style.width = ((total % 5) / 5 * 100) + '%'; $('pLv').textContent = 'Lv.' + lv + '　圖鑑 ' + (dex.d.length + dex.n.length) + '/' + (DROP_IDS.length + NOTE_IDS.length);
   $('pClock').textContent = '🕒 ' + fmtTime.format(new Date()).replace(/^(\S+)\s+(\S+)$/, '$2 $1') + '（台北）' + (player ? '・' + floorOf(player) + 'F' : ''); updateTitleNet();
 }

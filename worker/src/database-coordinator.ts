@@ -5538,6 +5538,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   }
 
   private pixelWsLast = new WeakMap<WebSocket, number>();
+  private pixelLvLast = new WeakMap<WebSocket, number>();
   /** 前台送來的即時訊息：hello（登入確認，之後這條連線只能代表這位同仁）、p（位置，直接轉發給其他人，不寫資料庫）。ping 由 setWebSocketAutoResponse 處理。 */
   async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
     if (typeof message !== 'string' || message.length > 400) return;
@@ -5548,6 +5549,18 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       let ok = false;
       if (this.pixelOfficeKnownName(name)) { try { ok = sessionMatchesName(await this.sessionFor({ token: text(m.token) } as ApiPayload), name); } catch { ok = false; } }
       try { ws.serializeAttachment(ok ? { name } : {}); ws.send(JSON.stringify({ t: 'hi', ok })); } catch { /* 連線已斷 */ }
+      return;
+    }
+    if (m.t === 'lv') {   // 升級特效：廣播給所有連線（每條連線 3 秒最多一次），只能代表自己
+      let who = '';
+      try { who = text((ws.deserializeAttachment() as { name?: string } | null)?.name); } catch { who = ''; }
+      if (!who) return;
+      const now = Date.now();
+      if (now - (this.pixelLvLast.get(ws) || 0) < 3000) return;
+      this.pixelLvLast.set(ws, now);
+      const lv = Math.max(1, Math.min(999, Math.floor(Number(m.lv)) || 1));
+      const out = JSON.stringify({ t: 'lv', n: who, lv });
+      for (const socket of this.ctx.getWebSockets()) { if (socket === ws) continue; try { socket.send(out); } catch { /* 已失效 */ } }
       return;
     }
     const move = parseMove(m);
