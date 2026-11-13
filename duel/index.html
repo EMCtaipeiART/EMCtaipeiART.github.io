@@ -669,7 +669,7 @@ const WEAPONS = {
 };
 const PASSIVES = {
   coffee: { n: '咖啡因', d: '移動速度 +10%，衝刺冷卻 -20%' },
-  thick: { n: '責任壁壘', act: 1, dur: 5, cd: 15, d: '按 E 開啟屏障：5 秒內吸收所有傷害，結束時一次爆出去（範圍內的對手受到累積傷害，可用閃身躲開；冷卻 15 秒）' },
+  thick: { n: '責任壁壘', act: 1, dur: 5, cd: 15, d: '按 E 開啟屏障：5 秒內吸收所有傷害，結束時一次爆出去（範圍內的對手受到累積傷害，可用閃身躲開；壁壘結束後才開始冷卻 15 秒）' },
   dodge: { n: '閃身步', act: 1, dur: 5, cd: 10, d: '按 E 啟動 5 秒：期間 Shift 衝刺距離 ×2（冷卻 10 秒）' },
   sip: { n: '下午茶', d: '每次命中回 1 點血（重擊 2 點）' },
   overtime: { n: '加班魂', d: '血量低於 40% 時，傷害 +20%' },
@@ -956,7 +956,7 @@ function stepFighter(f, o, dt) {
   // 動作
   if (can && inp.jump && f.grounded) { f.vy = R.jumpV; f.grounded = false; if (net && f === ME) netSend({ t: 'a', k: 'j' }); SFX.jump(); fxDust(v3(f.x, f.y, f.z)); fxRing(v3(f.x, f.y + .05, f.z), colOf(f), .3, 1.1, .3); }
   if (can && inp.dash && f.dashCD <= 0 && (mx || mz || true)) { let dx = mx, dz = mz; if (!dx && !dz) { dx = Math.sin(f.face); dz = Math.cos(f.face); } const l = Math.hypot(dx, dz) || 1; f.dashDir = [dx / l, dz / l]; f.dashT = R.dashT; f.dashCD = R.dashCD * (f.pas === 'coffee' ? .8 : 1); if (net && f === ME) netSend({ t: 'a', k: 'd', x: +f.dashDir[0].toFixed(2), z: +f.dashDir[1].toFixed(2), l: dashMul(f) }); SFX.dash(); { const a = v3(f.x, f.y + .7, f.z), b = v3(f.x + f.dashDir[0] * 3.6 * dashMul(f), f.y + .7, f.z + f.dashDir[1] * 3.6 * dashMul(f)); fxTrail(a, b, colOf(f), .35, 1.0); fxDust(v3(f.x, f.y, f.z)); } }
-  if (can && inp.sk && f.skCD <= 0 && f.skT <= 0 && (PASSIVES[f.pas] || {}).act) { const P = PASSIVES[f.pas]; f.skT = P.dur; f.skCD = P.cd; f.barAbs = 0; skVisual(f); }
+  if (can && inp.sk && f.skCD <= 0 && f.skT <= 0 && (PASSIVES[f.pas] || {}).act) { const P = PASSIVES[f.pas]; f.skT = P.dur; f.skCD = P.cd + (f.pas === 'thick' ? P.dur : 0); f.barAbs = 0;   // 責任壁壘的冷卻從壁壘結束後才開始算（啟動時多加作用期間，結束後剛好剩 cd 秒） skVisual(f); }
   if (can && inp.atk && f.atkCD <= 0 && f.windT <= 0 && f.dashT <= 0) { const W = wOf(f); f.atkCD = W.cd * (f.rageT > 0 ? .8 : 1) * (f.isBot ? [1.5, 1.2, 1][lvl] : 1); f.windT = W.wind * (f.isBot ? (f.windMul || 1.7) : 1); SFX.swing(); if (f === ME) { if (mx || mz) f.face = Math.atan2(mx, mz); else if (lockOn) faceToward(f, o); else f.face = Math.atan2(-Math.sin(yaw), -Math.cos(yaw)); if (W.ranged && !lockOn) { const hd = Math.atan2(o.x - f.x, o.z - f.z), df = Math.atan2(Math.sin(hd - f.face), Math.cos(hd - f.face)); if (Math.abs(df) < .32) f.face = hd; } } else faceToward(f, o); if (net && f === ME) netSend({ t: 'a', k: 'w', f: +f.face.toFixed(3) }); }
   if (can && inp.ult && f.ult >= R.ultNeed && f.grounded) { f.ultWind = (ULTS[f.ulk] || ULTS.quake).wind; if (net && f === ME) netSend({ t: 'a', k: 'uw', u: f.ulk }); }
   inp.jump = inp.atk = inp.dash = inp.ult = inp.sk = false;
