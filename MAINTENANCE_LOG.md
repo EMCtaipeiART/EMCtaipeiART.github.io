@@ -2443,3 +2443,7 @@
 - `pixel-plaza/index.html`：倉庫桌上放一道黑色裂縫黑影（billboard＋桌面黑色漩渦），字樣「出現一道裂縫…好像可以走進去 走近看看」，吸引大家走進倉庫中央進入遠征隊。
 - Noise 人物圖集（`sprites-hd`／`sprites-walk-hd`／`sprites`／`sprites-walk` 的 Noise.png，HD 兩份另有 webp）：側面 90°／270° 兩格的帽子原本浮在頭上、後腦頭髮外露；改用相鄰 60°／300° 格的頭部（帽子戴好）接在原本身體上，頸部接縫 0.5 格高度。
 - `expedition/index.html`：下方職業卡的招式名稱依角色色（Machi 藍、Noise 紅、Anna 紫、Amber 橘、Leona 青綠）著色，卡片左側加同色邊條。
+
+## 2026-11-13 倉庫入口改為魔界黑洞、訪客可點入、對話半身立繪
+- `pixel-plaza/index.html`：倉庫桌上改為縮小的橢圓魔界入口（黑洞＋紫紅旋轉光圈，不超出桌面）與一行字「出現一道裂縫..」；新增看不見的點擊區（`pick.kind==="portal"`，`pickInRange` 不限距離），訪客與登入者都能直接點擊進入遊戲（登入者走進倉庫中央仍會自動進入）。
+- `expedition/index.html`：開場對話的說話角色改為放大的半身立繪。
