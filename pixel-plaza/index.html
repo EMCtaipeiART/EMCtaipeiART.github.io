@@ -423,6 +423,31 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 .hp-top #bPeople i,.hp-top #bWheel i,.hp-top #bDex i,.hp-top #bClose i{background-repeat:no-repeat!important;background-position:center!important;background-size:24px 24px!important;image-rendering:pixelated}
 #bPeople i{background-image:url(assets/ui/hp-people.png)!important}#bWheel i{background-image:url(assets/ui/hp-role.png)!important}#bDex i{background-image:url(assets/ui/hp-dex.png)!important}
 .hp-top #bDex i{background-size:28px 28px!important}#bClose i{background-image:url(assets/ui/hp-close.png)!important}
+
+/* 其餘 HUD（左上人物卡、時鐘、右下說明、搖桿、快速選單按鈕）也換成同一套 3D 糖果風：無黑線、同色系深色當厚度、頂部高光 */
+.hp-card,.hp-clock{border:0!important;background:linear-gradient(180deg,#2fa968 0%,#1a7a47 55%,#12603a 100%)!important;backdrop-filter:none!important;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.35),inset 0 -4px 0 rgba(0,0,0,.14),0 3px 0 #1a7a47,0 6px 0 #0c4a2a,0 11px 14px rgba(0,0,0,.3)!important;margin-bottom:6px}
+.hp-card::after,.hp-clock::after{content:'';position:absolute;left:14px;right:14px;top:4px;height:32%;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.35),rgba(255,255,255,0));pointer-events:none}
+.hp-card{position:absolute}
+.hp-av{background:radial-gradient(circle at 32% 26%,#fff 0 6%,transparent 30%),linear-gradient(135deg,#ffd75e,#ffa61f)!important;box-shadow:0 3px 0 rgba(0,0,0,.2)}
+.hp-st{background:rgba(0,0,0,.2)!important}
+.hp-exp{border:0!important;background:rgba(0,0,0,.3)!important;box-shadow:inset 0 2px 0 rgba(0,0,0,.25)}
+.hp-br button.pk-purple{position:relative;border:0!important;margin-bottom:6px;overflow:visible;
+  background:linear-gradient(180deg,var(--hi),var(--lo))!important;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -5px 0 rgba(0,0,0,.14),0 3px 0 var(--lo),0 6px 0 var(--dk),0 11px 14px rgba(0,0,0,.3)!important;
+  transform-style:preserve-3d;transition:transform .14s cubic-bezier(.3,1.6,.5,1),box-shadow .14s,filter .15s}
+.hp-br button.pk-purple::before{display:none}
+.hp-br button.pk-purple::after{content:'';position:absolute;left:8px;right:8px;top:3px;height:38%;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0));pointer-events:none}
+.hp-br button.pk-purple i{border:0!important;background:radial-gradient(circle at 32% 26%,rgba(255,255,255,.9) 0 8%,transparent 30%),radial-gradient(circle at 50% 125%,rgba(0,0,0,.3) 0 40%,transparent 64%),var(--dk)!important;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2),0 3px 0 rgba(0,0,0,.18)!important}
+.hp-br button.pk-purple:hover,.hp-br button.pk-purple:focus-visible{transform:translateY(-4px) rotateX(10deg) scale(1.04);filter:brightness(1.08);box-shadow:inset 0 3px 0 rgba(255,255,255,.5),inset 0 -5px 0 rgba(0,0,0,.14),0 4px 0 var(--lo),0 9px 0 var(--dk),0 16px 18px rgba(0,0,0,.3)!important}
+.hp-br button.pk-purple:active{transform:translateY(5px) scale(.98);filter:brightness(.97);box-shadow:inset 0 3px 0 rgba(255,255,255,.3),inset 0 -3px 0 rgba(0,0,0,.18),0 1px 0 var(--dk),0 3px 6px rgba(0,0,0,.3)!important}
+.hp-br{perspective:700px}
+#stick{border:0!important;background:radial-gradient(circle at 50% 40%,rgba(255,255,255,.28),rgba(255,255,255,.1))!important;box-shadow:inset 0 4px 10px rgba(0,0,0,.25),0 3px 0 rgba(255,255,255,.3)}
+#stick i{background:radial-gradient(circle at 32% 26%,#fff 0 10%,transparent 34%),linear-gradient(180deg,#58d98e,#2bb468)!important;box-shadow:inset 0 -4px 0 rgba(0,0,0,.18),0 4px 0 #16794a,0 7px 8px rgba(0,0,0,.3)}
+.qc-s,.qc-m{border:0!important;background:linear-gradient(180deg,#fff,#e6f3e8)!important;box-shadow:inset 0 2px 0 #fff,0 3px 0 #a9c9b0,0 5px 6px rgba(0,0,0,.18);transition:transform .12s,box-shadow .12s}
+.qc-s:hover,.qc-m:hover{background:linear-gradient(180deg,#f4fff6,#cdeed3)!important;transform:translateY(-2px)}
+.qc-s.on,.qc-m.on{background:linear-gradient(180deg,#ffe27a,#ffc733)!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.7),0 3px 0 #c8921a,0 5px 6px rgba(0,0,0,.2)}
+.qc-s:active,.qc-m:active{transform:translateY(3px);box-shadow:inset 0 2px 0 #fff,0 0 0 #a9c9b0}
 </style></head><body>
 <script>if(/[?&]embed=1/.test(location.search))document.documentElement.classList.add('embed')</script>
 <div id="title">
@@ -2002,7 +2027,7 @@ let guestDrag = null;
 let rotDrag = null;
 function pickHitAt(e){   // 滑鼠點下去的地方有沒有可點的東西（有就照舊處理，沒有才當成拖曳旋轉視角——Mac 觸控板不好按右鍵拖曳）
   ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
-  return ray.intersectObjects(pickables, true).some(h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.desk && !pk.c.holder.visible); });
+  return ray.intersectObjects(pickables, true).some(h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.desk && !pk.c.holder.visible) && pickInRange(h, pk); });
 }
 renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
 renderer.domElement.addEventListener('pointerdown', e => { if (player && e.button === 2) { rotDrag = {x:e.clientX}; try { renderer.domElement.setPointerCapture(e.pointerId); } catch (err) {} renderer.domElement.style.cursor = 'grabbing'; return; } if (player) { if (e.pointerType === 'mouse' && e.button === 0 && !pickHitAt(e)) { rotDrag = {x:e.clientX}; try { renderer.domElement.setPointerCapture(e.pointerId); } catch (err) {} } onPick(e); return; } guestDrag = {x:e.clientX, y:e.clientY, moved:false}; try { renderer.domElement.setPointerCapture(e.pointerId); } catch (err) {} });
@@ -2025,15 +2050,22 @@ renderer.domElement.addEventListener('pointermove', e => {
 const touchEnd = e => { touches.delete(e.pointerId); if (touches.size < 2) pinch = null; };
 renderer.domElement.addEventListener('pointerup', touchEnd, true); renderer.domElement.addEventListener('pointercancel', touchEnd, true);
 renderer.domElement.addEventListener('wheel', e => { if (player) { e.preventDefault(); camZoom = Math.max(.5, Math.min(1.9, camZoom * (1 + e.deltaY * .0012))); return; } e.preventDefault(); guestAt.z += e.deltaY * .03; guestAt.x += e.deltaX * .03; guestClamp(); }, {passive:false});
+// 可點選範圍：只有自己人物周圍「人物身高的三倍」以內的物件／人物才能點（太遠的點不到，避免人物一直跑去很遠的地方）；點自己的人物不受限，管理者切換人物不受限
+const CLICK_RANGE = 3 * 2.2;
+function pickInRange(h, pk){
+  if (!player || !h.point) return true;
+  if (pk && pk.kind === 'char' && (pk.c === player || adminHome)) return true;
+  return Math.hypot(h.point.x - player.holder.position.x, h.point.z - player.holder.position.z) <= CLICK_RANGE;
+}
 function onPick(e){
   if (!wheel.hidden) { wheelClose(); return; }   // 輪盤開著時，點外面只收合輪盤，人物先不動；下一下才移動
   ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
-  const hits = ray.intersectObjects(pickables, true).filter((h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.desk && !pk.c.holder.visible); })), hit = hits.find(h => ((h.object.userData.pickRoot || h.object).userData.pick || {}).kind === 'char') || hits[0];
+  const hits = ray.intersectObjects(pickables, true).filter((h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.desk && !pk.c.holder.visible) && pickInRange(h, pk); })), hit = hits.find(h => ((h.object.userData.pickRoot || h.object).userData.pick || {}).kind === 'char') || hits[0];
   if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { clickChar = pk.c; clickUntil = performance.now() + 3000; if (pk.c !== player && player && adminHome) select(pk.c.name); if (pk.c === player) wheelOpen(pk.c); else wheelClose(); if (false) { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); else if (pk.kind === 'fridge') fridgeInteract(); else if (pk.kind === 'cat') CATS.find(c => c.id === pk.id).click(); else if (pk.kind === 'catbowl') CATS.find(c => c.id === pk.id).bowlClick(); else if (pk.kind === 'elev') elevInteract(); else if (pk.kind === 'seat') { const st = pk.seat || chairSeats.filter(q => q.kind === 'toilet').sort((a, b) => Math.hypot(a.x - pk.at.x, a.z - pk.at.z) - Math.hypot(b.x - pk.at.x, b.z - pk.at.z))[0]; if (st && player && !st.by && !st.hidden) { wantSeat = st; target = new THREE.Vector3(st.x, 0, st.z); } } return; } }
   radialClose(); wantSeat = null; fridgeWant = false; wantElev = false; wheelClose();
   const p = new THREE.Vector3();
   if (e.pointerType === 'mouse') return;   // 桌面版：點地面不再自動走過去（用 WASD／方向鍵），只有點可點物件（椅子、馬桶、電梯…）才會走；手機（觸控）維持點地面走過去
-  if (ray.ray.intersectPlane(plane, p) && !blocked(p.x, p.z)) target = p;
+  if (ray.ray.intersectPlane(plane, p) && !blocked(p.x, p.z) && (!player || Math.hypot(p.x - player.holder.position.x, p.z - player.holder.position.z) <= CLICK_RANGE)) target = p;
 }
 
 let hoverBusy = false;
@@ -2041,7 +2073,7 @@ renderer.domElement.addEventListener('pointermove', e => {
   if (hoverBusy) return; hoverBusy = true;
   requestAnimationFrame(() => {
     hoverBusy = false; ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
-    const hits = ray.intersectObjects(pickables, true).filter((h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.desk && !pk.c.holder.visible); })), hit = hits.find(h => ((h.object.userData.pickRoot || h.object).userData.pick || {}).kind === 'char') || hits[0], pk = hit && (hit.object.userData.pickRoot || hit.object).userData.pick;
+    const hits = ray.intersectObjects(pickables, true).filter((h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.desk && !pk.c.holder.visible) && pickInRange(h, pk); })), hit = hits.find(h => ((h.object.userData.pickRoot || h.object).userData.pick || {}).kind === 'char') || hits[0], pk = hit && (hit.object.userData.pickRoot || hit.object).userData.pick;
     hoverChar = pk && pk.kind === 'char' ? pk.c : null; renderer.domElement.style.cursor = pk ? 'pointer' : '';
   });
 });
