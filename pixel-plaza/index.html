@@ -432,14 +432,14 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 .hp-av{background:radial-gradient(circle at 32% 26%,#fff 0 6%,transparent 30%),linear-gradient(135deg,#ffd75e,#ffa61f)!important;box-shadow:0 3px 0 rgba(0,0,0,.2)}
 .hp-st{background:rgba(0,0,0,.2)!important}
 .hp-exp{border:0!important;background:rgba(0,0,0,.3)!important;box-shadow:inset 0 2px 0 rgba(0,0,0,.25)}
-.hp-br button.pk-purple{position:relative;border:0!important;margin-bottom:6px;overflow:visible;
+.hp-br button.pk-purple{position:relative;border:0!important;margin-bottom:6px;overflow:hidden;height:48px!important;min-width:48px!important;padding:0 7px!important;border-radius:999px!important;   /* 平常是正圓，滑鼠過去才展開文字 */
   background:linear-gradient(180deg,var(--hi),var(--lo))!important;
   box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -5px 0 rgba(0,0,0,.14),0 3px 0 var(--lo),0 6px 0 var(--dk),0 11px 14px rgba(0,0,0,.3)!important;
   transform-style:preserve-3d;transition:transform .14s cubic-bezier(.3,1.6,.5,1),box-shadow .14s,filter .15s}
 .hp-br button.pk-purple::before{display:none}
 .hp-br button.pk-purple::after{content:'';position:absolute;left:8px;right:8px;top:3px;height:38%;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0));pointer-events:none}
-.hp-br button.pk-purple i{border:0!important;background:radial-gradient(circle at 32% 26%,rgba(255,255,255,.9) 0 8%,transparent 30%),radial-gradient(circle at 50% 125%,rgba(0,0,0,.3) 0 40%,transparent 64%),var(--dk)!important;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2),0 3px 0 rgba(0,0,0,.18)!important}
-.hp-br button.pk-purple:hover,.hp-br button.pk-purple:focus-visible{transform:translateY(-4px) rotateX(10deg) scale(1.04);filter:brightness(1.08);box-shadow:inset 0 3px 0 rgba(255,255,255,.5),inset 0 -5px 0 rgba(0,0,0,.14),0 4px 0 var(--lo),0 9px 0 var(--dk),0 16px 18px rgba(0,0,0,.3)!important}
+.hp-br button.pk-purple i{border:0!important;background:none!important;box-shadow:none!important;width:34px!important;height:34px!important;border-radius:50%!important}   /* 說明圖示本身就是白圓問號，不再墊底圖 */
+.hp-br button.pk-purple:hover,.hp-br button.pk-purple:focus-visible{padding:0 18px 0 7px!important;transform:translateY(-4px) rotateX(10deg) scale(1.04);filter:brightness(1.08);box-shadow:inset 0 3px 0 rgba(255,255,255,.5),inset 0 -5px 0 rgba(0,0,0,.14),0 4px 0 var(--lo),0 9px 0 var(--dk),0 16px 18px rgba(0,0,0,.3)!important}
 .hp-br button.pk-purple:active{transform:translateY(5px) scale(.98);filter:brightness(.97);box-shadow:inset 0 3px 0 rgba(255,255,255,.3),inset 0 -3px 0 rgba(0,0,0,.18),0 1px 0 var(--dk),0 3px 6px rgba(0,0,0,.3)!important}
 .hp-br{perspective:700px}
 #stick{border:0!important;background:radial-gradient(circle at 50% 40%,rgba(255,255,255,.28),rgba(255,255,255,.1))!important;box-shadow:inset 0 4px 10px rgba(0,0,0,.25),0 3px 0 rgba(255,255,255,.3)}
