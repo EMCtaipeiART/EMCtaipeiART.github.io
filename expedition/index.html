@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>設計部遠征隊</title>
 <style>
-/* 版面：上方標題與控制列 → 會議室 A 戰場（canvas）→ 提示列 → 五張必殺卡 → 協作條 → 職業卡。單一深綠主題，沿用凱曜多元宇宙的綠色玻璃面板與厚黑邊。 */
+/* 版面：上方標題與控制列 → 影廳 戰場（canvas）→ 提示列 → 五張必殺卡 → 協作條 → 職業卡。單一深綠主題，沿用凱曜多元宇宙的綠色玻璃面板與厚黑邊。 */
 :root{
   color-scheme:dark;
   --bg:#0b1d15; --bg2:#102a1e; --panel:#163a2a; --panel2:#1d4a36; --line:#2f6b4f;
@@ -137,11 +137,12 @@ h3{margin:16px 0 0;font-size:17px}
       <p>第一章《最後一版，真的》試玩原型</p>
     </div>
     <div class="ctrl">
-      <span class="pill" id="waveP">會議室 A</span>
+      <span class="pill" id="waveP">影廳</span>
       <span class="pill" id="timeP">0:00</span>
       <button class="pk off" id="autoB" type="button">自動必殺：關</button>
       <button class="pk off" id="spdB" type="button">速度 1×</button>
       <button class="pk off" id="pauseB" type="button">暫停</button>
+      <button class="pk" id="exitB" type="button" hidden>離開影廳</button>
     </div>
   </header>
 
@@ -158,7 +159,7 @@ h3{margin:16px 0 0;font-size:17px}
       <span class="sys">17:50，設計部</span>
       <h2>《最後一版，真的》</h2>
       <p>隊伍會自動戰鬥。你只要在對的時機按下方五張卡放必殺，湊滿協作條就能「準時交付」。</p>
-      <button class="pk big" id="startB" type="button">進入會議室 A</button>
+      <button class="pk big" id="startB" type="button">進入影廳</button>
     </div>
     <div class="overlay" id="endO" hidden></div>
   </section>
@@ -554,7 +555,7 @@ const INFO = {
 };
 const PIPS = { protect: '保護', brk: '破防', weak: '弱點擊破', control: '範圍控制', cleanse: '淨化' };
 const INTRO = [
-  ['系統廣播', '偵測到未收斂需求。會議室 A 已轉化為異常區域。', '#ffd166'],
+  ['系統廣播', '偵測到未收斂需求。影廳 已淪為戰場，桌椅翻倒、火光四起。', '#ffd166'],
   ['Machi', '先確認一下，這次到底哪一版才是真的？', COL.machi],
   ['Noise', '檔名已經三個 final 了！', COL.noise],
   ['Anna', '先別吵，還有一個「以這版為準」。', COL.anna],
@@ -625,36 +626,86 @@ function killFx(f) { scene.remove(f.g); f.g.traverse(o => { if (o.material) o.ma
 const rnd = (a, b) => a + Math.random() * (b - a);
 
 function buildWorld() {
-  scene.background = new THREE.Color(0x141b52); scene.fog = new THREE.Fog(0x1a2166, 16, 46);
-  scene.add(new THREE.AmbientLight(0xb8c0ff, .95)); const dl = new THREE.DirectionalLight(0xdfe4ff, .7); dl.position.set(-4, 9, 6); scene.add(dl);
-  // 地面：夜色草地＋中央發光符文圈＋淡淡的站位格
+  scene.background = new THREE.Color(0x1a1512); scene.fog = new THREE.Fog(0x2b221c, 17, 48);
+  P.amb = new THREE.AmbientLight(0xffe0c0, .95); scene.add(P.amb);
+  const dl = new THREE.DirectionalLight(0xffd9b0, .75); dl.position.set(-4, 9, 6); scene.add(dl);
+  const lam = (c, e = 0) => new THREE.MeshLambertMaterial({ color: c, emissive: e, flatShading: true });
+  const box = (w, h, d, c, x, y, z, ry = 0, rz = 0, rx = 0, e = 0) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), lam(c, e)); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); scene.add(m); return m; };
+  const glowAt = (x, y, z, col, s, o) => { const g = SP(TX.glow, col); g.scale.set(s, s, 1); g.position.set(x, y, z); g.material.opacity = o; scene.add(g); return g; };
+  // ---- 地板：深灰地毯方格、污漬、焦痕、裂縫、散落紙張 ----
   const gt = ctex(1024, 512, g => {
-    const r = g.createRadialGradient(512, 256, 30, 512, 256, 520); r.addColorStop(0, '#34479f'); r.addColorStop(.55, '#243279'); r.addColorStop(1, '#141b52'); g.fillStyle = r; g.fillRect(0, 0, 1024, 512);
-    for (let i = 0; i < 160; i++) { g.fillStyle = `rgba(${Math.random() < .5 ? '120,140,255' : '90,60,170'},${rnd(.04, .1)})`; g.beginPath(); g.ellipse(rnd(0, 1024), rnd(0, 512), rnd(20, 90), rnd(8, 30), 0, 0, 7); g.fill(); }
-    g.strokeStyle = 'rgba(150,180,255,.35)'; g.lineWidth = 3; g.setLineDash([14, 10]); g.beginPath(); g.ellipse(512, 256, 330, 150, 0, 0, 7); g.stroke(); g.setLineDash([]); g.lineWidth = 2; g.beginPath(); g.ellipse(512, 256, 250, 112, 0, 0, 7); g.stroke();
+    g.fillStyle = '#4a4540'; g.fillRect(0, 0, 1024, 512);
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 16; x++) { const v = rnd(-9, 9) | 0; g.fillStyle = `rgb(${74 + v},${69 + v},${63 + v})`; g.fillRect(x * 64 + 1, y * 64 + 1, 62, 62); }
+    for (let i = 0; i < 70; i++) { g.fillStyle = `rgba(${Math.random() < .5 ? '20,14,10' : '60,38,22'},${rnd(.12, .3)})`; g.beginPath(); g.ellipse(rnd(0, 1024), rnd(0, 512), rnd(14, 70), rnd(8, 30), rnd(0, 3), 0, 7); g.fill(); }
+    for (let i = 0; i < 7; i++) { g.fillStyle = 'rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(rnd(60, 960), rnd(40, 470), rnd(26, 60), rnd(14, 28), rnd(0, 3), 0, 7); g.fill(); }
+    g.strokeStyle = 'rgba(10,8,6,.7)'; g.lineWidth = 3; for (let k = 0; k < 7; k++) { let x = rnd(0, 1024), y = rnd(0, 512); g.beginPath(); g.moveTo(x, y); for (let i = 0; i < 7; i++) { x += rnd(-40, 40); y += rnd(-24, 24); g.lineTo(x, y); } g.stroke(); }
+    g.strokeStyle = 'rgba(255,205,70,.45)'; g.lineWidth = 5; g.setLineDash([26, 16]); g.beginPath(); g.moveTo(120, 380); g.lineTo(900, 380); g.stroke(); g.setLineDash([]);
+    const v = g.createRadialGradient(512, 256, 160, 512, 256, 560); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.6)'); g.fillStyle = v; g.fillRect(0, 0, 1024, 512);
   });
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(34, 17), new THREE.MeshBasicMaterial({ map: gt, fog: true })); ground.rotation.x = -Math.PI / 2; ground.position.set(0, 0, .6); scene.add(ground);
-  const tiles = ctex(128, 128, g => { g.fillStyle = 'rgba(190,215,255,.16)'; g.fillRect(10, 10, 108, 108); g.strokeStyle = 'rgba(255,220,170,.75)'; g.lineWidth = 4; g.strokeRect(10, 10, 108, 108); });
+  const tiles = ctex(128, 128, g => { g.fillStyle = 'rgba(255,230,170,.1)'; g.fillRect(10, 10, 108, 108); g.strokeStyle = 'rgba(255,215,120,.7)'; g.lineWidth = 4; g.setLineDash([14, 8]); g.strokeRect(10, 10, 108, 108); });
   for (const id of Core.ORDER) { const h = Core.HERO[id].home, m = flat(new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ map: tiles, transparent: true, depthWrite: false, opacity: .9 })), .02); m.position.x = h[0]; m.position.z = h[1]; m.scale.set(1.9, 1.9, 1); scene.add(m); }
-  // 水晶群
-  const cm = [0x7a4fd0, 0x4d6bff, 0xa56bff, 0x4fb8ff];
-  const crystal = (x, z, s) => { const gr = new THREE.Group(); for (let i = 0; i < 4; i++) { const c = new THREE.Mesh(new THREE.ConeGeometry(rnd(.35, .6), rnd(1.6, 3.2) * s, 5), new THREE.MeshLambertMaterial({ color: cm[i % 4], emissive: 0x2a1a70, flatShading: true })); c.position.set(rnd(-.7, .7), c.geometry.parameters.height / 2, rnd(-.5, .5)); c.rotation.set(rnd(-.25, .25), rnd(0, 6), rnd(-.25, .25)); gr.add(c); } const gl = SP(TX.glow, '#8a70ff'); gl.scale.set(3.4 * s, 3.4 * s, 1); gl.position.y = 1; gl.material.opacity = .45; gr.add(gl); gr.position.set(x, 0, z); scene.add(gr); return gr; };
-  [[-9, -4.2, 1.5], [-6, -5.2, 1.1], [-2.5, -5.8, 1.3], [2, -6, 1.6], [6.5, -5.4, 1.2], [10, -4.2, 1.5], [-10.5, 1.5, 1.4], [11, 2, 1.2], [-8, 5.2, 1], [8.5, 5.8, 1.1], [-3.5, 6.4, .8], [3.5, 6.4, .9]].forEach(a => crystal(...a));
-  // 魔法塔＋提燈
-  const tower = (x, z, s) => { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.45, 5.6, 12), new THREE.MeshLambertMaterial({ color: 0x8179c4, emissive: 0x1c1a50 })); b.position.y = 2.8; g.add(b); const ro = new THREE.Mesh(new THREE.ConeGeometry(1.9, 2.4, 12), new THREE.MeshLambertMaterial({ color: 0x2d3392, emissive: 0x10124a })); ro.position.y = 6.8; g.add(ro); const w = SP(TX.glow, '#ffd27a'); w.scale.set(2.2, 2.2, 1); w.position.set(0, 3.8, 1.3); w.material.opacity = .85; g.add(w); g.scale.setScalar(s); g.position.set(x, 0, z); scene.add(g); };
-  tower(-9.2, -4.8, 1.2); tower(9.6, -5.6, 1.3);
-  const lamp = (x, z) => { const p = new THREE.Mesh(new THREE.CylinderGeometry(.06, .08, 2.6, 6), new THREE.MeshLambertMaterial({ color: 0x242a66 })); p.position.set(x, 1.3, z); scene.add(p); const gl = SP(TX.glow, '#ffc86a'); gl.scale.set(1.8, 1.8, 1); gl.position.set(x, 2.7, z); gl.material.opacity = .9; scene.add(gl); };
-  lamp(-4.2, -3.6); lamp(4.8, -3.8); lamp(-7.5, 3.2); lamp(7.8, 3.4);
-  // 需求裂隙：背後的紫色傳送環
-  P.rift = new THREE.Group(); P.rift.position.set(6.2, 3.4, -5.8); scene.add(P.rift);
-  const rr = new THREE.Mesh(new THREE.TorusGeometry(2.6, .1, 10, 60), new THREE.MeshBasicMaterial({ color: 0xb79bff, ...ADD, opacity: .85 })); P.rift.add(rr); P.riftA = rr;
-  const rg = SP(TX.glow, '#8a5cff'); rg.scale.set(8, 8, 1); rg.material.opacity = .5; P.rift.add(rg);
-  const rin = M(G.plane, '#7a4fd0', { opacity: .3 }); rin.scale.set(4.6, 4.6, 1); P.rift.add(rin); P.riftB = rin;
-  // 投影幕與時鐘（懸浮在背景）
-  const mkPanel = (w, h, x, y, z) => { const c = document.createElement('canvas'); c.width = w * 100; c.height = h * 100; const t = new THREE.CanvasTexture(c); const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t, transparent: true, opacity: .92, fog: false })); m.position.set(x, y, z); scene.add(m); return { c, t, key: '' }; };
-  P.screen = mkPanel(4.8, 1.5, -2.8, 2.9, -5.4); P.clock = mkPanel(2, .8, -7, 2.4, -5);
-  // 螢火蟲
-  P.fly = Array.from({ length: 46 }, () => { const s = SP(TX.glow, Math.random() < .5 ? '#d8ff9a' : '#9ab8ff'); s.userData = { x: rnd(-9, 9), y: rnd(.4, 4), z: rnd(-5, 5), p: rnd(0, 6), sp: rnd(.2, .6), s: rnd(.18, .38) }; scene.add(s); return s; });
+  // 散落的紙（平貼地面）
+  for (let i = 0; i < 46; i++) { const m = flat(new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ color: Math.random() < .8 ? 0xe8e2d2 : 0xf3d77a, side: THREE.DoubleSide })), .03 + Math.random() * .01); m.position.set(rnd(-12, 12), m.position.y, rnd(-6, 6.4)); m.rotation.z = rnd(0, 6); m.scale.set(rnd(.3, .55), rnd(.4, .7), 1); scene.add(m); }
+  // ---- 後牆：剝落的牆面、破窗透出橘紅濃煙、彈孔、撕爛的海報與便條 ----
+  const wt = ctex(2048, 512, g => {
+    g.fillStyle = '#8f8678'; g.fillRect(0, 0, 2048, 512);
+    for (let i = 0; i < 140; i++) { g.fillStyle = `rgba(${Math.random() < .5 ? '60,50,40' : '190,180,160'},${rnd(.05, .14)})`; g.fillRect(rnd(0, 2048), rnd(0, 420), rnd(30, 160), rnd(20, 110)); }
+    for (let i = 0; i < 9; i++) { const x = rnd(40, 2000), y = rnd(40, 300), w = rnd(90, 210), h = rnd(70, 150); g.fillStyle = '#6b4033'; g.fillRect(x, y, w, h); g.fillStyle = 'rgba(0,0,0,.35)'; for (let r = 0; r < h; r += 18) g.fillRect(x, y + r, w, 2); for (let c = 0; c < w; c += 40) g.fillRect(x + c, y, 2, h); }
+    const win = (x, w) => { g.fillStyle = '#2a1a14'; g.fillRect(x - 8, 60, w + 16, 250); const gr = g.createLinearGradient(0, 70, 0, 300); gr.addColorStop(0, '#3a2a30'); gr.addColorStop(.6, '#c8602a'); gr.addColorStop(1, '#ffb050'); g.fillStyle = gr; g.fillRect(x, 70, w, 230); for (let i = 0; i < 14; i++) { g.fillStyle = `rgba(30,20,20,${rnd(.4, .8)})`; g.beginPath(); g.ellipse(x + rnd(0, w), rnd(90, 280), rnd(14, 50), rnd(8, 22), 0, 0, 7); g.fill(); } g.strokeStyle = '#1c1210'; g.lineWidth = 8; g.beginPath(); g.moveTo(x + w / 2, 70); g.lineTo(x + w / 2, 300); g.moveTo(x, 185); g.lineTo(x + w, 185); g.stroke(); g.fillStyle = '#d8d2c4'; for (let i = 0; i < 8; i++) { const sx = x + (i % 2 ? w - 4 : 0), sy = 70 + i * 28; g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + (i % 2 ? -rnd(14, 34) : rnd(14, 34)), sy + rnd(10, 28)); g.lineTo(sx, sy + rnd(26, 40)); g.closePath(); g.fill(); } };
+    win(110, 250); win(520, 250); win(1280, 250); win(1700, 250);
+    g.fillStyle = 'rgba(15,10,8,.55)'; for (let i = 0; i < 6; i++) { g.beginPath(); g.ellipse(rnd(0, 2048), rnd(0, 180), rnd(60, 150), rnd(40, 120), 0, 0, 7); g.fill(); }
+    for (let i = 0; i < 26; i++) { const x = rnd(0, 2048), y = rnd(80, 440); g.fillStyle = '#14100e'; g.beginPath(); g.arc(x, y, rnd(3, 6), 0, 7); g.fill(); g.strokeStyle = 'rgba(20,15,12,.7)'; g.lineWidth = 2; for (let k = 0; k < 5; k++) { g.beginPath(); g.moveTo(x, y); g.lineTo(x + rnd(-22, 22), y + rnd(-22, 22)); g.stroke(); } }
+    const note = (x, y, c, t, r) => { g.save(); g.translate(x, y); g.rotate(r); g.fillStyle = c; g.fillRect(0, 0, 92, 82); g.fillStyle = '#2a2a2a'; g.font = '800 22px sans-serif'; g.fillText(t, 8, 36); g.restore(); };
+    note(840, 150, '#ffe066', '再改', -.08); note(950, 190, '#ff9f9f', '急！', .1); note(900, 100, '#a8e6a1', '今天', .04); note(1490, 130, '#ffe066', '最終', .1); note(1580, 180, '#9fd3ff', '版？', -.1);
+    g.fillStyle = '#d8d0b8'; g.fillRect(1020, 90, 120, 170); g.fillStyle = '#3a3026'; g.font = '800 26px sans-serif'; g.fillText('SOS', 1046, 150); g.fillText('加班', 1040, 200);
+    g.fillStyle = '#2a211b'; g.fillRect(0, 440, 2048, 72); g.fillStyle = 'rgba(0,0,0,.4)'; g.fillRect(0, 430, 2048, 12);
+  });
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(40, 10), new THREE.MeshBasicMaterial({ map: wt, fog: true })); wall.position.set(0, 2.7, -7.3); scene.add(wall);
+  // 窗外火光
+  [-14, -8.2, 3.5, 10.4].forEach(x => { glowAt(x + 2.4, 4.0, -7.0, '#ff8a3a', 5.5, .35); });
+  // ---- 道具：倒塌的隔間、辦公桌、破螢幕、翻倒的椅子 ----
+  const part = (x, z, ry, tilt = 0, w = 2.6) => { box(w, 1.7, .14, 0x7d8a96, x, .85, z, ry, tilt); box(w, .16, .18, 0x555f69, x, 1.72, z, ry, tilt); };
+  const monitor = (x, y, z, ry, rz, lit) => { box(.8, .55, .08, 0x1b1c1e, x, y, z, ry, rz); const g = new THREE.Mesh(new THREE.PlaneGeometry(.68, .42), new THREE.MeshBasicMaterial({ color: lit ? 0x66d6ff : 0x0a0a0a })); g.position.set(x + Math.sin(ry) * .05, y, z + Math.cos(ry) * .05); g.rotation.set(0, ry, rz); scene.add(g); if (lit) P.crt.push(g); };
+  P.crt = [];
+  const desk = (x, z, ry, wreck = 0) => { box(2.4, .12, 1.1, 0xa07a50, x, .78 + wreck * .1, z, ry, wreck * .18); box(.12, .74, .9, 0x6a553c, x - Math.cos(ry) * 1.05, .38, z + Math.sin(ry) * 1.05, ry); box(.12, .74, .9, 0x6a553c, x + Math.cos(ry) * 1.05, .38, z - Math.sin(ry) * 1.05, ry); };
+  const chair = (x, z, ry, down) => { const g = new THREE.Group(); const dk = lam(0x222428); const s = new THREE.Mesh(new THREE.BoxGeometry(.7, .12, .7), dk); s.position.y = .55; g.add(s); const b = new THREE.Mesh(new THREE.BoxGeometry(.7, .8, .1), dk); b.position.set(0, 1, -.32); g.add(b); const p = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, .5, 6), lam(0x444)); p.position.y = .27; g.add(p); const f = new THREE.Mesh(new THREE.BoxGeometry(.9, .06, .1), lam(0x444)); f.position.y = .04; g.add(f); const f2 = f.clone(); f2.rotation.y = 1.57; g.add(f2); g.position.set(x, down ? .42 : 0, z); g.rotation.set(down ? 1.4 : 0, ry, down ? .2 : 0); scene.add(g); };
+  const cab = (x, z, ry, tilt = 0) => { box(.9, 1.7, .8, 0x6c7580, x, .85, z, ry, tilt); box(.84, .02, .02, 0x333, x, 1.2, z + .41, ry, tilt); box(.84, .02, .02, 0x333, x, .7, z + .41, ry, tilt); };
+  const crate = (x, z, s, ry) => box(s, s * .8, s, 0xb8905a, x, s * .4, z, ry);
+  // 後排：兩側倒塌隔間與辦公桌
+  desk(-9.6, -5, .1); monitor(-9.8, 1.2, -5.1, .1, 0, true); chair(-8.2, -4.2, .6, true); part(-7.2, -6, 0); part(-5.3, -6.1, .06, .0);
+  part(6.3, -6.2, 0); part(8.4, -6, -.1, .35); desk(10.5, -5.2, -.2, 1); monitor(10.6, 1.25, -5.3, -.2, .3, false); cab(12.4, -4.6, .1, .25);
+  cab(-11.6, -3.4, -.2); cab(-12.2, -2.2, .1, -.4);
+  // 前排與兩側：掀翻的桌子當掩體
+  desk(-11, 1.8, 1.4, 1); box(1.1, .5, .08, 0x22252a, -10.2, .5, 1.9, 1.4, .5); chair(-9.4, 3.8, 2, true);
+  desk(11.3, 1.4, 1.5, 1); crate(10.2, 3.9, .9, .3); crate(10.7, 4.6, .7, .6); crate(11.2, 3.6, .8, 0);
+  desk(-8.4, 6, .2, 1); monitor(-8.5, .95, 6, .2, 0, true); chair(-5.6, 6.3, 3, false);
+  desk(7.8, 6.4, -.15, 1); chair(5.6, 6.6, -1, true); crate(9.8, 6.3, .8, .4);
+  chair(-3.2, 6.8, .4, true); crate(2, 6.9, .9, .2); crate(2.9, 7, .7, .6);
+  // 地上的掉落天花板與管線
+  for (let i = 0; i < 5; i++) { const x = rnd(-9, 9), z = rnd(-5.6, -4); box(1.2, .06, .6, 0xcfc8b4, x, .6 + i * .05, z, rnd(0, 3), .6 + rnd(0, .3), rnd(-.4, .4)); }
+  box(2.2, .1, .5, 0xdcdcd0, 3.4, .12, 3.6, .5, .15); box(1.6, .1, .5, 0xdcdcd0, -4.8, .1, -1.2, 1.9, -.1);
+  { const g = new THREE.Mesh(new THREE.BoxGeometry(2.4, .12, .35), lam(0xeeeeee, 0x1a1a14)); g.position.set(-2.4, .14, 4.5); g.rotation.set(0, .3, .08); scene.add(g); }
+  // 飲水機（翻倒、漏水）
+  { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.BoxGeometry(.7, 1.3, .6), lam(0xdfe6ea)); g.add(b); const t = new THREE.Mesh(new THREE.CylinderGeometry(.3, .3, .5, 10), lam(0x7fb8e0)); t.position.y = .95; g.add(t); g.position.set(-10, .55, 4.8); g.rotation.set(0, .5, 1.45); scene.add(g); }
+  // ---- 火桶與濃煙 ----
+  P.fires = []; P.smoke = [];
+  const barrel = (x, z) => { const b = new THREE.Mesh(new THREE.CylinderGeometry(.5, .45, .95, 10), lam(0x5a2f1c)); b.position.set(x, .48, z); scene.add(b); const f1 = SP(TX.glow, '#ff7a1a'), f2 = SP(TX.glow, '#ffd56a'); [f1, f2].forEach((f, i) => { f.position.set(x, 1.15 + i * .1, z); f.material.opacity = .8; scene.add(f); }); const gl = glowAt(x, .9, z, '#ff7a30', 5.5, .3); P.fires.push({ f1, f2, gl, x, z, p: rnd(0, 6) }); };
+  barrel(-5.6, -4.3); barrel(4.2, -4.6); barrel(12, 5.2); barrel(-12.4, 5.8);
+  for (let i = 0; i < 16; i++) { const s = SP(TX.glow, '#1d1713', { blending: THREE.NormalBlending }); s.userData = { x: [-5.6, 4.2, 12, -12.4][i % 4] + rnd(-.4, .4), z: [-4.3, -4.6, 5.2, 5.8][i % 4], p: i / 16 }; scene.add(s); P.smoke.push(s); }
+  // 中間偏左的小火堆（碎紙）
+  // 懸掛的日光燈（閃爍，一端斷落）
+  P.lamps = []; [[-6, -5.2], [0, -5.4], [6, -5.2]].forEach(([x, z], i) => { const m = new THREE.Mesh(new THREE.BoxGeometry(2.2, .12, .4), new THREE.MeshBasicMaterial({ color: 0xeaf4ff })); m.position.set(x, 4.6 - i % 2 * .3, z); m.rotation.z = i === 1 ? .35 : (i - 1) * .06; scene.add(m); const g = glowAt(x, m.position.y - .2, z, '#cfe4ff', 5, .3); P.lamps.push({ m, g, p: rnd(0, 6) }); });
+  // 警示燈（取代原本的紫色裂隙：紅色閃爍＋底下的牆洞光）
+  P.rift = new THREE.Group(); P.rift.position.set(6.2, 3.6, -7.1); scene.add(P.rift);
+  const rr = M(G.plane, '#ff3b2e', { opacity: .0 }); rr.scale.setScalar(.01); P.rift.add(rr); P.riftA = rr;
+  const rg = SP(TX.glow, '#ff3020'); rg.scale.set(7, 7, 1); rg.material.opacity = .4; P.rift.add(rg); P.riftG = rg;
+  const rin = M(G.plane, '#ff3020', { opacity: 0 }); rin.scale.setScalar(.01); P.rift.add(rin); P.riftB = rin;
+  // 破損的投影幕與停掉的時鐘（貼在後牆）
+  const mkPanel = (w, h, x, y, z) => { const c = document.createElement('canvas'); c.width = w * 100; c.height = h * 100; const t = new THREE.CanvasTexture(c); const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t, transparent: true, opacity: .96, fog: false })); m.position.set(x, y, z); scene.add(m); return { c, t, key: '' }; };
+  P.screen = mkPanel(4.8, 1.5, -2.8, 2.7, -7.2); P.clock = mkPanel(2, .8, -7.6, 2.8, -7.2);
+  // 火星與灰燼
+  P.fly = Array.from({ length: 50 }, () => { const s = SP(TX.glow, Math.random() < .6 ? '#ffb15a' : '#ff7a3a'); s.userData = { x: rnd(-9, 9), y: rnd(.4, 4.4), z: rnd(-5, 5), p: rnd(0, 6), sp: rnd(.2, .6), s: rnd(.1, .2) }; scene.add(s); return s; });
 }
 
 function init3d() {
@@ -842,9 +893,9 @@ function art(e) {
 }
 function panels() {
   const g = Math.floor(T * 6) % 5, name = '最終確認' + ['', '_final', '_final2', '_最新版', '_真的最終版'][S && S.wave === 3 ? g : 0] + '.pdf';
-  if (P.screen.key !== name) { P.screen.key = name; paintTo(P.screen.c, 1, 0, 0, () => { rr(3, 3, 474, 144, 12, 'rgba(233,255,241,.92)', 6); ctx.fillStyle = '#123324'; ctx.font = '800 32px "PingFang TC",sans-serif'; ctx.textAlign = 'center'; ctx.fillText(name, 240, 72); ctx.font = '600 20px "PingFang TC",sans-serif'; ctx.fillStyle = '#4b7a61'; ctx.fillText('會議室 A　投影中', 240, 112); }); P.screen.t.needsUpdate = true; }
+  if (P.screen.key !== name) { P.screen.key = name; paintTo(P.screen.c, 1, 0, 0, () => { rr(3, 3, 474, 144, 6, 'rgba(36,32,28,.96)', 5); ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(380, 3); ctx.lineTo(350, 50); ctx.lineTo(392, 90); ctx.lineTo(360, 147); ctx.moveTo(350, 50); ctx.lineTo(300, 70); ctx.stroke(); ctx.fillStyle = '#ffb454'; ctx.font = '800 32px "PingFang TC",sans-serif'; ctx.textAlign = 'center'; ctx.fillText(name, 240, 72); ctx.font = '600 20px "PingFang TC",sans-serif'; ctx.fillStyle = '#c8814a'; ctx.fillText('影廳　訊號不穩', 240, 112); }); P.screen.t.needsUpdate = true; }
   const ck = '17:5' + (S ? Math.min(9, Math.floor(S.t / 20)) : 0);
-  if (P.clock.key !== ck) { P.clock.key = ck; paintTo(P.clock.c, 1, 0, 0, () => { rr(3, 3, 194, 74, 12, 'rgba(29,74,54,.95)', 6); text(ck, 100, 56, 40, '#ffd166'); }); P.clock.t.needsUpdate = true; }
+  if (P.clock.key !== ck) { P.clock.key = ck; paintTo(P.clock.c, 1, 0, 0, () => { rr(3, 3, 194, 74, 6, 'rgba(30,26,22,.96)', 5); text(ck, 100, 56, 40, '#ff6a4a'); }); P.clock.t.needsUpdate = true; }
 }
 const lerp = (a, b, k) => a + (b - a) * Math.min(1, k);
 function springs(r) {
@@ -888,7 +939,11 @@ function sync(dt) {
   if (bossU) { const bp = rpos(bossU); P.revert.position.x = bp.x; P.revert.position.z = bp.z; }
   P.revert.material.opacity = lerp(P.revert.material.opacity, cast && cast.kind === 'revert' ? .9 : 0, dt * 8); P.revert.scale.setScalar(3.4 + Math.sin(T * 8) * .25); P.revert.rotation.z = T * 2;
   P.dead.position.x = -2.5; P.dead.material.opacity = lerp(P.dead.material.opacity, cast && cast.kind === 'deadline' ? (.25 + (1 - cast.t / cast.max) * .5) * (.75 + Math.sin(T * 12) * .25) : 0, dt * 8);
-  P.riftA.rotation.z = T * .5; P.riftB.rotation.z = -T * .3; P.rift.scale.setScalar(1 + Math.sin(T * 1.6) * .03);
+  P.riftG.material.opacity = .25 + .3 * Math.max(0, Math.sin(T * 5)); const fl = Math.sin(T * 37) * Math.sin(T * 11) > .8 ? .35 : 0; P.amb.intensity = .95 - fl;
+  P.fires.forEach(f => { const k = .8 + .3 * Math.sin(T * 13 + f.p) + .15 * Math.sin(T * 29 + f.p); f.f1.scale.set(.9 * k, 1.4 * k, 1); f.f2.scale.set(.5 * k, .9 * k, 1); f.gl.material.opacity = .22 + .12 * Math.sin(T * 9 + f.p); });
+  P.smoke.forEach(sp => { const u = sp.userData, q = (T * .18 + u.p) % 1; sp.position.set(u.x + q * 1.2 + Math.sin(T + u.p * 9) * .2, 1.2 + q * 4, u.z); sp.scale.setScalar(1 + q * 2.6); sp.material.opacity = .5 * Math.sin(q * Math.PI); });
+  P.lamps.forEach((l, i) => { const on = i === 1 ? (Math.sin(T * 23 + l.p) > -.2 ? 1 : .15) : (Math.sin(T * 3 + l.p) > -.85 ? 1 : .3); l.m.material.color.setScalar(.25 + .75 * on); l.g.material.opacity = .3 * on; });
+  P.crt.forEach((c, i) => { c.material.color.setHex(Math.sin(T * 7 + i) > .3 ? 0x66d6ff : 0x2b7a99); });
   P.fly.forEach(s => { const u = s.userData; s.position.set(u.x + Math.sin(T * u.sp + u.p) * .8, u.y + Math.sin(T * u.sp * 1.7 + u.p) * .4, u.z + Math.cos(T * u.sp + u.p) * .6); s.material.opacity = .35 + .3 * Math.sin(T * 2 + u.p); s.scale.setScalar(u.s); });
   if (!S) return;
   for (const e of S.enemies) {
@@ -1016,7 +1071,7 @@ function showLine() {
 function begin() {
   $('startO').hidden = true; $('endO').hidden = true;
   S = Core.newGame((Date.now() & 0xfffffff) || 1); R = {}; fx = []; banners = []; resetUnits(); acc = 0; running = false;
-  $('waveP').textContent = '會議室 A';
+  $('waveP').textContent = '影廳';
   dIdx = 0; $('dialog').hidden = false; showLine();
 }
 function nextLine() {
@@ -1051,6 +1106,7 @@ addEventListener('keydown', e => {
   if (e.key === ' ' && running) { e.preventDefault(); doDeliver(); }
 });
 window.__game = { get S() { return S; }, Core, ult, doDeliver };
+if (/[?&]embed=1/.test(location.search)) { $('exitB').hidden = false; $('exitB').onclick = () => { try { parent.postMessage({ type: 'expeditionExit' }, location.origin); } catch (e) {} }; }
 try { init3d(); requestAnimationFrame(loop); } catch (err) { $('tip').textContent = '這個瀏覽器無法啟動 3D 繪圖（WebGL），請換一個瀏覽器開啟。'; console.error(err); }
 })();
 </script>

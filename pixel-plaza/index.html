@@ -335,6 +335,11 @@ button{font-family:inherit}
 .hp-top button span,.hp-br button span{color:#fff;position:relative}
 .hp-top button:hover span,.hp-br button:hover span{margin-left:8px}
 html.embed #hud,html.embed #dock,html.embed #proj,html.embed .lbl,html.cinema body>*:not(canvas):not(#cin):not(script):not(style){display:none!important}   /* ?embed=1：嵌在網站設計師面板裡的精簡畫面 */
+#expFade{position:fixed;inset:0;z-index:60;background:#000;opacity:0;pointer-events:none;transition:opacity .9s ease;display:flex;align-items:center;justify-content:center;color:#ffd9a0;font:800 22px 'Noto Sans TC',sans-serif;letter-spacing:.3em}
+#expFade.on{opacity:1;pointer-events:auto}
+#expFrame{position:fixed;inset:0;z-index:55;width:100%;height:100%;border:0;background:#000;display:none}
+#expFade.fast{transition-duration:.5s}
+@media (prefers-reduced-motion:reduce){#expFade{transition:none}}
 #elevFx{position:fixed;inset:0;z-index:50;pointer-events:none;font-family:'Fredoka','Noto Sans TC',sans-serif;color:#fff}
 #elevFx.on,#elevFx.out{pointer-events:auto}
 .ef-grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(var(--cols),1fr);grid-template-rows:repeat(var(--rows),1fr)}
@@ -1767,6 +1772,30 @@ function elevInteract(){
   wantElev = true; target = new THREE.Vector3(sp.x, 0, sp.z);
 }
 let elevArmed = true;
+// ---- 影廳＝遠征隊入口：走進影廳 → 畫面收黑 → 進入《設計部遠征隊》（內嵌 iframe），離開後淡出回到影廳 ----
+const expFade = document.createElement('div'); expFade.id = 'expFade'; document.body.appendChild(expFade);
+let expFrame = null, expBusy = false, expArmed = false;
+const THEATER = {x0:150, x1:262, z0:zN(1110), z1:zN(1210)};   // 影廳內側中央（px，過 zN）
+const inTheater = p => { const x = p.holder.position.x / U, z = p.holder.position.z / U; return floorOf(p) === 5 && x > THEATER.x0 && x < THEATER.x1 && z > THEATER.z0 && z < THEATER.z1; };
+function expEnter(){
+  if (expBusy) return; expBusy = true; target = null; wantSeat = null; wantElev = false; wheelClose(); fridgeClose();
+  expFade.textContent = '影廳'; expFade.classList.add('on');
+  setTimeout(() => {
+    expFrame = document.createElement('iframe'); expFrame.id = 'expFrame'; expFrame.title = '設計部遠征隊'; expFrame.allow = 'autoplay'; expFrame.src = '../expedition/?embed=1&t=' + Date.now(); expFrame.style.display = 'block'; document.body.appendChild(expFrame);
+    setTimeout(() => { expFade.textContent = ''; expFade.classList.remove('on'); }, 700);
+  }, 1000);
+}
+function expLeave(){
+  if (!expFrame) return; expFade.textContent = ''; expFade.classList.add('fast', 'on');
+  setTimeout(() => { expFrame.remove(); expFrame = null; expArmed = false; setTimeout(() => { expFade.classList.remove('on'); expBusy = false; }, 150); setTimeout(() => expFade.classList.remove('fast'), 700); }, 560);
+}
+addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'expeditionExit' && expFrame && e.source === expFrame.contentWindow) expLeave(); });
+function updateTheater(){   // 登入者走進影廳中央才觸發；離開遊戲後要先走出影廳才會再次觸發
+  if (!player || expBusy || elevBusy || AWAY.has(player.status) || player.sitting) return;
+  const inside = inTheater(player);
+  if (!expArmed) { if (!inside) expArmed = true; return; }
+  if (inside) expEnter();
+}
 function updateElev(){   // 人物貼近電梯就直接上下樓；剛到達時要先走開才會再次觸發
   if (!player || AWAY.has(player.status) || player.sitting) return;
   const sp = elevSpot(floorOf(player)), d = Math.hypot(sp.x - player.holder.position.x, sp.z - player.holder.position.z);
@@ -3270,7 +3299,7 @@ function tick(){
       else if (performance.now() - routeStuck.t > 900) { const moved = Math.hypot(player.holder.position.x - routeStuck.x, player.holder.position.z - routeStuck.z); routeStuck = {t:performance.now(), x:player.holder.position.x, z:player.holder.position.z}; if (moved < .15) { routePts = findPath(player.holder.position, target, floorOf(player)); } }
     }
     if (dir.lengthSq() > .01 || target) { player.actAt = Date.now(); if (AWAY.has(player.status)) releaseAway(player); }   // 有操作就解除「用餐／下班…」，不會卡住不能動
-    if (!radial.hidden || !$('sv').hidden || AWAY.has(player.status) || elevBusy) { dir.set(0, 0, 0); target = null; }   // 角色頁面開著時人物不跟著走
+    if (!radial.hidden || !$('sv').hidden || AWAY.has(player.status) || elevBusy || expBusy) { dir.set(0, 0, 0); target = null; }   // 角色頁面開著時人物不跟著走
     if (player.sitting && dir.lengthSq() > 1e-4) standUp(player);
     if (!player.sitting) { unstick(player); moveChar(player, dir, run ? 7 : 2.4, dt); }
     if (wantElev) { const sp = elevSpot(floorOf(player)); if (Math.hypot(sp.x - player.holder.position.x, sp.z - player.holder.position.z) < 1.6) elevGo(floorOf(player) === 5 ? 4 : 5); }
@@ -3291,7 +3320,7 @@ function tick(){
     camera.position.copy(camPos); look.lerp(p, 1 - Math.pow(.001, dt)); camera.lookAt(look.x, 1, look.z);
   } else { const k = 1 - Math.pow(.0005, dt); camPos.lerp(new THREE.Vector3(guestAt.x, 10.9, guestAt.z + 12.2), k); camera.position.copy(camPos); look.lerp(new THREE.Vector3(guestAt.x, 1, guestAt.z), k); camera.lookAt(look); }   // 沒登入：滾輪／左鍵拖曳平移畫面，點電梯換看另一層
   { const cx = player ? player.holder.position : guestAt; sun.target.position.set(cx.x, 0, cx.z); sun.position.set(cx.x - 10, 26, cx.z + 10); }
-  CATS.forEach(c => c.update(dt)); updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay(); updateTags(); placeRadial(); updateFridge(); updateElev(); pushPosition(); trackLast();
+  CATS.forEach(c => c.update(dt)); updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay(); updateTags(); placeRadial(); updateFridge(); updateElev(); updateTheater(); pushPosition(); trackLast();
   renderFrame();
   requestAnimationFrame(tick);
 }

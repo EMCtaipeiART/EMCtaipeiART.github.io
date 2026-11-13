@@ -2423,3 +2423,8 @@
 - 新增 `expedition/index.html`：凱曜多元宇宙延伸小遊戲《設計部遠征隊》第一章「最後一版，真的」（three.js r128 取自 cdnjs，單檔）。網址 https://emc-art.com/expedition/ 。
 - 人物圖直接用 `pixel-plaza/sprites-hd/` 的 12 方向圖；怪物（插單便條、裝甲、意見分身、版本九頭蛇）為 Codex 生成，存在 `expedition/monsters/*.webp`。
 - 目前是獨立頁面、尚未接進站內選單；不碰後端、不寫入任何資料。
+
+## 2026-11-13 影廳＝設計部遠征隊入口、遊戲場景改為戰損辦公室
+- `pixel-plaza/index.html`：新增 `updateTheater()`／`expEnter()`／`expLeave()`。登入者走進五樓影廳中央（`THEATER` 範圍）→ 畫面收黑（`#expFade`，1 秒）→ 以全螢幕 iframe 載入 `../expedition/?embed=1`；遊戲內「離開影廳」按鈕以 postMessage（`expeditionExit`，限同網域、同 iframe）通知，收黑後回到影廳。離開後要先走出影廳才會再次觸發；進場期間人物不動。訪客、休假／用餐等離座狀態、坐著時不會觸發。
+- `expedition/index.html`：場景從水晶洞穴改為戰損辦公室（龜裂地毯與散落紙張、破窗透火光的後牆、倒塌隔間與翻倒辦公桌、閃爍日光燈、火桶與濃煙、火星）；影廳名稱統一；內嵌時多一顆「離開影廳」鈕。
+- 本機測試：`?as=名字` 預覽，用 `window.__pushWS.chars[名字].holder.position` 傳送進影廳驗證收黑流程（只讀、未寫入後端）。

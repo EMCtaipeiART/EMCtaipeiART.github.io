@@ -134,3 +134,6 @@
 - 貓還沒有名字時暫稱「無名小貓」（`CAT.name`）；任何同仁可在貓的面板「幫牠取名字」提名（每人最多 2 個、1～8 字）、投票（每人 1 票，再點一次收回、點別的改投）。投票期從第一次有人打開起 7 天，到期票數最高的名字定案成為貓的名字（同票取較早提名的；到期時完全沒票就再延 3 天）。管理者（名字是 Machi）可移除不當提名、提前結算。
 - 後端：`pixelOfficeCat` 的 op `nameGet`（含訪客可讀）／`namePropose`（arg＝名字）／`nameVote`（arg＝提名 id）／`nameClose`／`nameRemove`（arg＝id）。純邏輯在 `worker/src/cat-naming.ts`（測試 `worker/test/cat-naming.test.ts`），整份狀態存 `pixel_office_settings` 的 `cat:name`，有變動才寫。**要 `cd worker && npx wrangler deploy` 才會生效**；沒部署時面板顯示「取名投票還沒開放」。管理者判斷和 `pixelOfficeUpdate` 一樣不驗證身分（只擋畫面上的操作）。
 - 前端：`catNameLoad`（啟動與每 90 秒讀一次）、`catNameApply`（定案後 `CAT.name` 換成得標名字，並跳一次「投票結果出爐」）、`catNameHtml／catNameBind`（面板區塊）。在輸入框打字時 `keydown` 不再驅動走路。除錯：`__cat.naming()`、`__cat.nameLoad()`；本機沒有後端時可在頁面裡覆寫 `fetch` 模擬 Worker。
+
+## 影廳＝設計部遠征隊入口（2026-11-13）
+- 五樓影廳（ROOMS 的 B）中央走進去會收黑並開啟 `expedition/`（內嵌 iframe，`#expFrame`／`#expFade`），邏輯在 `updateTheater()`。觸發範圍 `THEATER`（px，z 已過 `zN`）。遊戲本身是獨立單檔 `expedition/index.html`，不碰後端；離開用 postMessage `expeditionExit`。
