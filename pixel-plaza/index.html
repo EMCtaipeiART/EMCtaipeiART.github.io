@@ -1800,7 +1800,7 @@ function expEnter(){
   if (expBusy) return; expBusy = true; target = null; wantSeat = null; wantElev = false; wheelClose(); fridgeClose();
   expFade.textContent = '倉庫'; expFade.classList.add('on');
   setTimeout(() => {
-    expFrame = document.createElement('iframe'); expFrame.id = 'expFrame'; expFrame.title = '設計部遠征隊'; expFrame.allow = 'autoplay'; expFrame.src = '../expedition/?embed=1&t=' + Date.now(); expFrame.style.display = 'block'; document.body.appendChild(expFrame);
+    expFrame = document.createElement('iframe'); expFrame.id = 'expFrame'; expFrame.title = '設計部遠征隊'; expFrame.allow = 'autoplay'; expFrame.src = '../expedition/?embed=1&t=' + Date.now(); expFrame.style.display = 'block'; document.body.appendChild(expFrame); expFrame.addEventListener('load', () => { try { expFrame.focus(); expFrame.contentWindow.focus(); } catch (e) {} });
     setTimeout(() => { expFade.textContent = ''; expFade.classList.remove('on'); }, 700);
   }, 1000);
 }
@@ -1808,6 +1808,8 @@ function expLeave(){
   if (!expFrame) return; expFade.textContent = ''; expFade.classList.add('fast', 'on');
   setTimeout(() => { expFrame.remove(); expFrame = null; expArmed = false; setTimeout(() => { expFade.classList.remove('on'); expBusy = false; }, 150); setTimeout(() => expFade.classList.remove('fast'), 700); }, 560);
 }
+// 遊戲開著時，外層收到的按鍵（焦點還在外層時）轉給遊戲，並擋掉外層的走路等操作
+addEventListener('keydown', e => { if (!expFrame) return; e.stopImmediatePropagation(); e.preventDefault(); try { expFrame.contentWindow.postMessage({type:'expKey', key:e.key}, location.origin); } catch (err) {} }, true);
 addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'expeditionExit' && expFrame && e.source === expFrame.contentWindow) expLeave(); });
 function updateTheater(){
   { const ts = performance.now() / 1000; for (const p of (globalThis.__portal || [])) { p.sw.rotation.z = -ts * 1.1; p.rim.material.opacity = .65 + .35 * Math.sin(ts * 3); } }   // 登入者走進倉庫中央才觸發；離開遊戲後要先走出倉庫才會再次觸發
