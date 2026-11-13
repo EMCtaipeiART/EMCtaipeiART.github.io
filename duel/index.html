@@ -345,10 +345,22 @@ const edges = new THREE.LineBasicMaterial({ color: 0x000000 });
 const world = new THREE.Group(); scene.add(world);
 const addBox = (x0, x1, z0, z1, y0, y1, material) => { const g = new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), m = new THREE.Mesh(g, material); m.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); world.add(m); const e = new THREE.LineSegments(new THREE.EdgesGeometry(g), edges); e.position.copy(m.position); world.add(e); return m; };
 function carpet() {
-  const c = document.createElement('canvas'); c.width = c.height = 128; const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(ARENA * 2 / 4, ARENA * 2 / 4); t.anisotropy = 4; return t;
+  const c = document.createElement('canvas'); c.width = c.height = 512; const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set((ARENA * 2 + 4) / 8, (ARENA * 2 + 4) / 8); t.anisotropy = 8; return t;
 }
 const floorTex = carpet();
-function drawFloor() { const dk = isDarkNow(), c = floorTex.image, g = c.getContext('2d'); g.fillStyle = dk ? '#2f5a46' : '#a9cdb8'; g.fillRect(0, 0, 128, 128); g.fillStyle = dk ? '#356650' : '#b6d8c4'; g.fillRect(0, 0, 64, 64); g.fillRect(64, 64, 64, 64); g.strokeStyle = dk ? 'rgba(190,250,215,.22)' : 'rgba(13,42,28,.14)'; g.lineWidth = 3; g.strokeRect(0, 0, 128, 128); floorTex.needsUpdate = true; }
+function drawFloor() {   // 4×4 塊地毯方塊（每塊 2 單位），固定亂數種子，換主題只換顏色
+  const dk = isDarkNow(), c = floorTex.image, g = c.getContext('2d'); let seed = 7; const rd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const base = dk ? [47, 90, 70] : [169, 205, 184];
+  for (let ty = 0; ty < 4; ty++) for (let tx = 0; tx < 4; tx++) {
+    const j = (rd() - .5) * 16 + ((tx + ty) % 2 ? 7 : -3); g.fillStyle = 'rgb(' + base.map(v => Math.max(0, Math.min(255, v + j))).join(',') + ')'; g.fillRect(tx * 128, ty * 128, 128, 128);
+    const gr = g.createLinearGradient(tx * 128, ty * 128, tx * 128 + 128, ty * 128 + 128); gr.addColorStop(0, 'rgba(255,255,255,.07)'); gr.addColorStop(1, 'rgba(0,0,0,.08)'); g.fillStyle = gr; g.fillRect(tx * 128, ty * 128, 128, 128);
+    for (let i = 0; i < 170; i++) { g.fillStyle = rd() < .5 ? 'rgba(255,255,255,.10)' : 'rgba(0,0,0,.10)'; g.fillRect(tx * 128 + rd() * 126, ty * 128 + rd() * 126, 2, 1 + rd() * 2); }
+    g.strokeStyle = dk ? 'rgba(0,0,0,.34)' : 'rgba(13,42,28,.22)'; g.lineWidth = 3; g.strokeRect(tx * 128 + 1.5, ty * 128 + 1.5, 125, 125);
+    g.strokeStyle = dk ? 'rgba(190,250,215,.14)' : 'rgba(255,255,255,.5)'; g.lineWidth = 1.5; g.strokeRect(tx * 128 + 5, ty * 128 + 5, 118, 118);
+    g.fillStyle = dk ? 'rgba(190,250,215,.25)' : 'rgba(13,42,28,.25)'; for (const [ox, oy] of [[9, 9], [119, 9], [9, 119], [119, 119]]) g.fillRect(tx * 128 + ox - 1.5, ty * 128 + oy - 1.5, 3, 3);
+  }
+  floorTex.needsUpdate = true;
+}
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(ARENA * 2 + 4, ARENA * 2 + 4), new THREE.MeshLambertMaterial({ map: floorTex })); floor.rotation.x = -Math.PI / 2; world.add(floor);
 // 牆（四周，高 5）
 const wallH = 5, wallM = mk('wall', 0xe4f0e6);
@@ -442,8 +454,17 @@ function decorate() {
     const jug = new THREE.Mesh(new THREE.CylinderGeometry(.34, .34, .8, 14), lamb(0x8fd6ff, { transparent: true, opacity: .75 })); jug.position.y = 1.5; g.add(jug); }
   { const g = new THREE.Group(); g.position.set(19.2, 0, -12.5); world.add(g); const b = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.0, .9), lamb(0xcfd6dc)); b.position.y = .5; g.add(b); const e1 = new THREE.LineSegments(new THREE.EdgesGeometry(b.geometry), edges); e1.position.y = .5; g.add(e1); const lid = new THREE.Mesh(new THREE.BoxGeometry(1.3, .12, .95), lamb(0x8a97a3)); lid.position.y = 1.05; g.add(lid); }
 }
+function groundDecor() {
+  // 出生點光圈（朝場中央的箭頭）
+  const pad = ctex(256, 256, g => { g.translate(128, 128); g.strokeStyle = '#7ff0c0'; g.lineWidth = 8; g.beginPath(); g.arc(0, 0, 112, 0, 7); g.stroke(); g.lineWidth = 3; g.beginPath(); g.arc(0, 0, 86, 0, 7); g.stroke(); g.fillStyle = 'rgba(127,240,192,.18)'; g.beginPath(); g.arc(0, 0, 84, 0, 7); g.fill(); g.fillStyle = '#d6fff0'; for (let k = 0; k < 3; k++) { g.beginPath(); g.moveTo(-36 + k * 32, -26); g.lineTo(-6 + k * 32, 0); g.lineTo(-36 + k * 32, 26); g.lineTo(-24 + k * 32, 0); g.closePath(); g.fill(); } });
+  for (const [x, ry] of [[-14, 0], [14, Math.PI]]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4), new THREE.MeshBasicMaterial({ map: pad, transparent: true, opacity: .8, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })); m.rotation.x = -Math.PI / 2; m.rotation.z = ry; m.position.set(x, .02, 0); world.add(m); }
+  // 地面接觸陰影：每個實心物件下方一圈柔和暗邊
+  const sh = ctex(64, 64, g => { const r = g.createRadialGradient(32, 32, 10, 32, 32, 32); r.addColorStop(0, 'rgba(0,0,0,.5)'); r.addColorStop(.6, 'rgba(0,0,0,.28)'); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); });
+  const shM = new THREE.MeshBasicMaterial({ map: sh, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 });
+  for (const q of SOL) { if (q.t !== 'b') continue; const m = new THREE.Mesh(new THREE.PlaneGeometry((q.x1 - q.x0) + 1.8, (q.z1 - q.z0) + 1.8), shM); m.rotation.x = -Math.PI / 2; m.position.set((q.x0 + q.x1) / 2, .016, (q.z0 + q.z1) / 2); world.add(m); }
+}
 const decor = {};
-decorate();
+decorate(); groundDecor();
 const shadowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), r = g.createRadialGradient(32, 32, 2, 32, 32, 30); r.addColorStop(0, 'rgba(0,0,0,.8)'); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
 function applyTheme() {
   const dk = isDarkNow(), bg = dk ? 0x1f4a35 : 0xcfeadb; scene.background = new THREE.Color(bg); scene.fog = new THREE.Fog(bg, 40, 90);
@@ -744,11 +765,21 @@ function stepProj(dt) {
   }
 }
 function clearProj() { for (const p of PROJ) { scene.remove(p.sp); p.sp.material.dispose(); } PROJ.length = 0; }
+const sweepGeo = {};
+function sectorGeo(W) {   // 近戰判定扇形（單位半徑 1，朝 +z）：實體＋外緣亮邊
+  if (sweepGeo[W.n]) return sweepGeo[W.n]; const h = W.arc * Math.PI / 360, N = 28;
+  const mk = (r0, r1) => { const pos = [], idx = []; for (let i = 0; i <= N; i++) { const a = -h + 2 * h * i / N; pos.push(Math.sin(a) * r0, 0, Math.cos(a) * r0, Math.sin(a) * r1, 0, Math.cos(a) * r1); if (i < N) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); } } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); return g; };
+  return sweepGeo[W.n] = { body: mk(.12, 1), edge: mk(.88, 1), rim0: mk(.04, .1) };
+}
+const mkSweep = () => { const g = new THREE.Group(), mt = o => new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -3 }); const body = new THREE.Mesh(undefined, mt()), edge = new THREE.Mesh(undefined, mt()); g.add(body, edge); g.userData = { body, edge, t: 0, dur: .24 }; scene.add(g); return g; };
+const sweeps = [mkSweep(), mkSweep()];
 function swingVisual(f, W, heavy) {
-  const A = f.face, fx = Math.sin(A), fz = Math.cos(A), s = f === ME ? slashFx : slashFx2;
-  s.position.set(f.x + fx * .6, f.y + 1.0, f.z + fz * .6); s.rotation.z = A - Math.PI / 2 + Math.PI; s.userData = { t: .18, heavy };
-  s.material.color.setHex(heavy ? 0xffd166 : 0xffffff); s.scale.setScalar((heavy ? 1.2 : 1) * Math.max(.7, (W.range || 3.3) / 3.3));
+  const A = f.face, fx = Math.sin(A), fz = Math.cos(A), sw = sweeps[f === ME ? 0 : 1], u = sw.userData;
+  if (!W.ranged) { const G = sectorGeo(W); u.body.geometry = G.body; u.edge.geometry = G.edge; u.range = W.range; u.heavy = heavy; u.t = u.dur = heavy ? .3 : .22; sw.position.set(f.x, f.y + .1, f.z); sw.rotation.y = A; u.col = heavy ? '#ffd166' : colOf(f); u.body.material.color.set(u.col); u.edge.material.color.set('#ffffff'); }
   fxSlash(v3(f.x + fx * Math.min(2.4, (W.range || 3.3) * .5), f.y + 1.1, f.z + fz * Math.min(2.4, (W.range || 3.3) * .5)), colOf(f), heavy);
+}
+function updSweeps(dt) {
+  for (const sw of sweeps) { const u = sw.userData; if (u.t > 0) { u.t -= dt; const p = 1 - Math.max(0, u.t) / u.dur, r = u.range * (.55 + .45 * Math.min(1, p * 3.2)); sw.scale.set(r, 1, r); u.body.material.opacity = (u.heavy ? .72 : .55) * (1 - p); u.edge.material.opacity = .95 * (1 - p * p); sw.visible = true; } else sw.visible = false; }
 }
 function doAttack(f, o) {
   const W = wOf(f), A = f.face, dx = o.x - f.x, dz = o.z - f.z, dist = Math.hypot(dx, dz);
@@ -891,7 +922,7 @@ function updGear(f, toCam, bob) {
   fan.visible = show; if (!show) return;
   fan.position.set(f.x, f.y + .08, f.z); fan.rotation.y = f.face; if (!d.ranged) fan.scale.setScalar(d.range);
   const c = new THREE.Color(colOf(f)), hot = f.windT > 0; d.fill.material.color.copy(c); d.ln.material.color.copy(c); d.tip.material.color.copy(c);
-  d.fill.material.opacity = hot ? .5 : (f === ME ? .2 : .3); d.ln.material.opacity = hot ? 1 : .6; d.tip.material.opacity = hot ? .95 : .7;
+  d.fill.material.opacity = hot ? .5 : (f === ME ? .24 : .3); d.ln.material.opacity = hot ? 1 : .6; d.tip.material.opacity = hot ? .95 : .7;
 }
 function render(dt) {
   // 鏡頭
@@ -919,7 +950,7 @@ function render(dt) {
     f.sprite.visible = true; if (f.dashT > 0) f.mat.opacity = .55; else f.mat.opacity = 1; f.mat.transparent = true; if (f.rageT > 0 && f.flash <= 0) f.mat.color.setHex(0xffc58a);
     updGear(f, toCam, bob);
   }
-  for (const s of [slashFx, slashFx2]) { if (s.userData && s.userData.t > 0) { s.userData.t -= dt; s.material.opacity = Math.max(0, s.userData.t / .18) * .85; } else s.material.opacity = 0; }
+  updSweeps(dt);
   if (shockT > 0) { shockT -= dt; const k = 1 - shockT / .5; shock.position.set(shockPos[0], shockPos[1], shockPos[2]); shock.scale.setScalar(.5 + k * R.ultR); shock.material.opacity = (1 - k) * .8; } else shock.material.opacity = 0;
   for (let i = FX.length - 1; i >= 0; i--) { const q = FX[i]; q.t += dt; if (q.t >= q.dur) { killFx(q); FX.splice(i, 1); } else q.upd(q.t, q.t / q.dur); }
   if (zoomT > 0) { zoomT -= dt; camera.fov = 55 - Math.sin(Math.min(1, zoomT / .9) * Math.PI) * 9; camera.updateProjectionMatrix(); } else if (camera.fov !== 55) { camera.fov = 55; camera.updateProjectionMatrix(); }
