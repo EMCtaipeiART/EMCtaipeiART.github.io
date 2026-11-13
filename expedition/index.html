@@ -149,6 +149,7 @@ h3{margin:16px 0 0;font-size:17px}
       <button class="pk off" id="spdB" type="button">速度 1×</button>
       <button class="pk off" id="pauseB" type="button">暫停</button>
       <button class="pk off" id="muteB" type="button">音效：開</button>
+      <button class="pk off" id="musicB" type="button">音樂：開</button>
       <button class="pk" id="exitB" type="button" hidden>離開倉庫</button>
     </div>
   </header>
@@ -866,10 +867,11 @@ function fxAlign() { const ps = Core.ORDER.filter(id => Core.hero(S, id).alive).
 
 // ---------- 音效（全部用 WebAudio 即時合成，不需要音檔） ----------
 const SFX = (() => {
-  let ac = null, master = null, muted = false, last = {}, amb = null;
+  let ac = null, master = null, muted = false, last = {}, amb = null, out = null, bus = null, musicOn = true, mus = null, level = 0;
+  try { musicOn = localStorage.getItem('expMusic') !== '0'; } catch (e) {}
   try { muted = localStorage.getItem('expMute') === '1'; } catch (e) {}
   const ctxOk = () => {
-    if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); master = ac.createGain(); master.gain.value = muted ? 0 : .5; master.connect(ac.destination); } catch (e) { return false; } }
+    if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); master = ac.createGain(); master.gain.value = muted ? 0 : .5; master.connect(ac.destination); bus = ac.createGain(); bus.gain.value = musicOn ? .55 : 0; bus.connect(master); } catch (e) { return false; } }
     if (ac.state === 'suspended') ac.resume(); return true;
   };
   const gate = (k, ms) => { const t = performance.now(); if (last[k] && t - last[k] < ms) return false; last[k] = t; return true; };
@@ -877,7 +879,7 @@ const SFX = (() => {
     if (!ctxOk()) return; const t = ac.currentTime + delay, o = ac.createOscillator(), g = ac.createGain();
     o.type = type; o.frequency.setValueAtTime(f0, t); if (f1) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + attack); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
-    o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + .02);
+    o.connect(g); g.connect(out || master); o.start(t); o.stop(t + dur + .02);
   }
   let nbuf = null;
   function noise(dur, vol = .2, f0 = 1200, f1 = null, type = 'bandpass', delay = 0, q = 1) {
@@ -885,7 +887,7 @@ const SFX = (() => {
     const t = ac.currentTime + delay, s = ac.createBufferSource(), fl = ac.createBiquadFilter(), g = ac.createGain();
     s.buffer = nbuf; s.loop = true; fl.type = type; fl.Q.value = q; fl.frequency.setValueAtTime(f0, t); if (f1) fl.frequency.exponentialRampToValueAtTime(Math.max(40, f1), t + dur);
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .008); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
-    s.connect(fl); fl.connect(g); g.connect(master); s.start(t, Math.random()); s.stop(t + dur + .02);
+    s.connect(fl); fl.connect(g); g.connect(out || master); s.start(t, Math.random()); s.stop(t + dur + .02);
   }
   const chord = (fs, dur, type, vol, delay = 0, f1 = 1) => fs.forEach((f, i) => tone(f, dur, type, vol, f * f1, delay + i * .02, .04));
   const S = {
@@ -929,6 +931,30 @@ const SFX = (() => {
     combo() { chord([784, 988, 1175], .5, 'triangle', .08); },
     won() { [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => tone(f, .32, 'triangle', .13, null, i * .13)); chord([523, 659, 784, 1047], 1.4, 'sine', .08, .95); },
     lost() { [392, 330, 262, 196].forEach((f, i) => tone(f, .5, 'sawtooth', .09, f * .94, i * .26)); },
+    get musicOn() { return musicOn; },
+    setMusic(v) { musicOn = v; try { localStorage.setItem('expMusic', v ? '1' : '0'); } catch (e) {} if (bus) bus.gain.setTargetAtTime(v ? .55 : 0, ac.currentTime, .05); },
+    level(n) { level = n; },
+    music(on) {   // 暗色辦公室戰鬥曲：Am–F–C–G 循環；關卡越後面編制越滿（第 3 波加入軍鼓與主旋律）
+      if (!ctxOk()) return;
+      if (!on) { if (mus) { clearInterval(mus.t); mus = null; } return; }
+      if (mus) return; const BPM = 126, st = 60 / BPM / 4, N = (m) => 440 * Math.pow(2, (m - 69) / 12);
+      const ROOTS = [45, 41, 48, 43], CH = [[57, 60, 64], [53, 57, 60], [55, 60, 64], [55, 59, 62]], LEAD = [69, 72, 76, 72, 69, 67, 69, 64, 65, 69, 72, 69, 67, 64, 67, 71];
+      mus = { step: 0, next: ac.currentTime + .1, t: null };
+      mus.t = setInterval(() => {
+        while (mus && mus.next < ac.currentTime + .3) {
+          const i = mus.step, bar = Math.floor(i / 16) % 4, k = i % 16, d = mus.next - ac.currentTime; out = bus;
+          if (k % 2 === 0) tone(N(ROOTS[bar]), st * 1.8, 'sawtooth', .13, null, d, .01);                       // 低音
+          if (k % 4 === 0 || (level >= 2 && k % 4 === 2 && bar % 2)) { tone(130, .16, 'sine', .34, 42, d); }   // 大鼓
+          if ((k === 4 || k === 12) && level >= 1) noise(.12, .13, 1800, 900, 'bandpass', d);                  // 軍鼓
+          if (level >= 2 && (k === 4 || k === 12)) tone(220, .09, 'triangle', .1, 120, d);
+          if (k % 2 === 1) noise(.03, .045, 7000, null, 'highpass', d);                                        // 腳鈸
+          if (level >= 1) tone(N(CH[bar][k % 3] + 12), st * .9, 'square', .035, null, d);                      // 琶音
+          if (k === 0) CH[bar].forEach(m => tone(N(m), st * 15, 'sine', .035, null, d, .3));                    // 襯底和弦
+          if (level >= 2 && k % 2 === 0) { const m = LEAD[(bar * 4 + k / 2) % 16]; tone(N(m), st * 1.6, 'sawtooth', .05, null, d, .01); } // 主旋律
+          out = null; mus.step++; mus.next += st;
+        }
+      }, 60);
+    },
     ambient(on) {   // 低沉的辦公室嗡鳴＋火桶劈啪聲
       if (!ctxOk()) return;
       if (!on) { if (amb) { clearInterval(amb.t); try { amb.g.gain.setTargetAtTime(0, ac.currentTime, .3); amb.os.forEach(o => o.stop(ac.currentTime + 1)); } catch (e) {} amb = null; } return; }
@@ -949,15 +975,15 @@ function sfxEvent(e) {
     case 'shield': SFX.shield(); break;
     case 'die': { const d = find(e.uid); if (d && d.side === 'enemy') SFX.die(); break; }
     case 'cleanse': SFX.cleanse(); break;
-    case 'wave': SFX.wave(); break;
+    case 'wave': SFX.wave(); SFX.level(Math.min(2, e.n - 1)); break;
     case 'boss': SFX.alarm(); break;
     case 'interrupt': SFX.interrupt(); break;
     case 'blast': SFX.blast(); break;
     case 'deliver': SFX.deliver(); break;
     case 'grid': case 'barrage': SFX.grid(); break;
     case 'combo': SFX.combo(); break;
-    case 'won': SFX.ambient(false); setTimeout(() => SFX.won(), 700); break;
-    case 'lost': SFX.ambient(false); setTimeout(() => SFX.lost(), 700); break;
+    case 'won': SFX.ambient(false); SFX.music(false); setTimeout(() => SFX.won(), 700); break;
+    case 'lost': SFX.ambient(false); SFX.music(false); setTimeout(() => SFX.lost(), 700); break;
   }
 }
 function handle(e) {
@@ -984,7 +1010,7 @@ function handle(e) {
   if (e.type === 'cast') {
     const s = find(e.src); if (!s) return;
     if (s.side === 'hero') {
-      fxSig(s.id, rpos(s), !!e.ult); rs(s).hop = .55; rs(s).atkAt = T;
+      fxSig(s.id, rpos(s), !!e.ult); { const rr = rs(s); rr.castAt = T; rr.castUlt = !!e.ult; rr.castHit = false; } rs(s).atkAt = T;
       if (e.ult) { flashA = .3; slowT = .5; zoomT = 1.1; zoomWho = s.uid; showSkill(e.name, COL[s.id], s.id); }
     }
     if (e.ult && s.id === 'amber') fxCircle();
@@ -1077,6 +1103,38 @@ function springs(r) {
   return { sx: .45 * hs + ax, sy: -.38 * hs + ay, kb, tilt: ht < 1 ? -r.hitDir * .32 * Math.exp(-ht * 6) * Math.sin(ht * 22) * r.hitPow : 0 };
 }
 const faceFrame = (fx, fz) => Math.round((((Math.atan2(fx, fz) * 180 / Math.PI) % 360) + 360) % 360 / 30) % 12;
+// ---------- 施放技能的專屬動作（每個角色不同） ----------
+const ease = x => x * x * (3 - 2 * x), cl = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+function castAnim(r, id, h) {
+  const none = { dx: 0, dy: 0, sx: 0, sy: 0, rot: 0, frame: -1, alpha: 1 };
+  if (r.castAt === undefined) return none;
+  const D = r.castUlt ? 1.25 : .8, p = (T - r.castAt) / D; if (p >= 1 || p < 0) return none;
+  const a = { ...none };
+  if (id === 'machi') {   // 蹲低 → 跳起 → 重踏地面（落地擠壓＋震動）
+    if (p < .28) { const q = ease(p / .28); a.sy = -.28 * q; a.sx = .22 * q; }
+    else if (p < .55) { const q = (p - .28) / .27; a.dy = Math.sin(q * Math.PI / 2) * (r.castUlt ? 1.1 : .75); a.sy = .22 * (1 - q) - .08 * q; a.sx = -.1 * q; }
+    else if (p < .66) { const q = (p - .55) / .11; a.dy = (1 - q * q) * (r.castUlt ? 1.1 : .75); a.sy = .15 * q; a.sx = -.08; }
+    else { const q = (p - .66) / .34; a.sy = -.4 * Math.exp(-q * 5) * Math.cos(q * 14); a.sx = .4 * Math.exp(-q * 5) * Math.cos(q * 14); }
+    if (p >= .6 && !r.castHit) { r.castHit = true; shake = Math.max(shake, r.castUlt ? .5 : .25); fxRing(new THREE.Vector3(r.x, 0, r.z), COL.machi, .3, r.castUlt ? 3.2 : 2, .5); }
+  } else if (id === 'noise') {   // 旋身斬：衝向敵人、整個人轉一圈（切換 12 個方向格）
+    const fw = Math.sin(clamp01(p) * Math.PI);
+    a.dx = fw * (r.castUlt ? 1.7 : 1.1); a.sx = .18 * fw; a.sy = -.06 * fw; a.rot = -.2 * fw;
+    if (p > .12 && p < .8) { const q = (p - .12) / .68; a.frame = (Math.floor(q * 12 * (r.castUlt ? 3 : 1.6)) + faceFrame(h.fx, h.fz)) % 12; }
+  } else if (id === 'anna') {   // 殘影瞬移：壓扁消失 → 閃現彈出
+    if (p < .22) { const q = ease(p / .22); a.sx = -.85 * q; a.sy = .15 * q; a.alpha = 1 - .9 * q; }
+    else if (p < .5) { a.sx = -.9; a.alpha = .06 + .05 * Math.sin(p * 80); a.dx = 1.0; }
+    else { const q = (p - .5) / .5; a.sx = .38 * Math.exp(-q * 5) * Math.cos(q * 13); a.sy = -.2 * Math.exp(-q * 5) * Math.cos(q * 13); a.alpha = Math.min(1, .3 + q * 3); a.dx = 1.0 * (1 - ease(Math.min(1, q * 2))); }
+  } else if (id === 'amber') {   // 浮空施法：緩緩升起、懸停轉身、再降落
+    const up = p < .22 ? ease(p / .22) : p > .82 ? 1 - ease((p - .82) / .18) : 1;
+    a.dy = up * (r.castUlt ? 1.5 : 1.1) + Math.sin(T * 7) * .06 * up; a.sy = .1 * up; a.rot = Math.sin(T * 5) * .09 * up;
+    if (p > .22 && p < .82) a.frame = (Math.floor((p - .22) / .6 * 12) + faceFrame(h.fx, h.fz)) % 12;
+  } else {   // leona：面向前方雙手祈禱，輕盈上浮、身體舒展、微微後仰
+    const up = p < .3 ? ease(p / .3) : p > .8 ? 1 - ease((p - .8) / .2) : 1;
+    a.dy = up * .5 + Math.sin(T * 4) * .05 * up; a.sy = .13 * up + .03 * Math.sin(T * 6) * up; a.sx = -.04 * up; a.rot = .12 * up * Math.sin(T * 2 + 1); a.frame = up > .1 ? 0 : -1;
+  }
+  return a;
+}
+const clamp01 = x => Math.max(0, Math.min(1, x));
 function sync(dt) {
   panels();
   for (const k in R) { R[k].lunge = Math.max(0, R[k].lunge - dt); R[k].flash = Math.max(0, R[k].flash - dt); R[k].hop = Math.max(0, R[k].hop - dt); }
@@ -1086,14 +1144,15 @@ function sync(dt) {
     const sp = U[h.uid], r = rs(h), k = Math.min(1, dt * 12);
     r.x += (h.x - r.x) * k; r.z += (h.z - r.z) * k;
     const lx = r.lunge > 0 ? Math.sin(r.lunge / .22 * Math.PI) * .6 : 0;
-    const q = springs(r);
-    const v = new THREE.Vector3(r.x + h.fx / (Math.hypot(h.fx, h.fz) || 1) * lx + q.kb, 0, r.z + h.fz / (Math.hypot(h.fx, h.fz) || 1) * lx);
-    v.y = h.alive ? (h.mvg ? Math.abs(Math.sin(T * 13)) * .12 : Math.abs(Math.sin(T * 3)) * .04) + (r.hop > 0 ? Math.sin(r.hop / .55 * Math.PI) * .8 : 0) : 0;
+    const q = springs(r), ca = castAnim(r, h.id, h), hf = Math.hypot(h.fx, h.fz) || 1;
+    const v = new THREE.Vector3(r.x + h.fx / hf * (lx + ca.dx) + q.kb, 0, r.z + h.fz / hf * (lx + ca.dx));
+    v.y = h.alive ? (h.mvg ? Math.abs(Math.sin(T * 13)) * .12 : Math.abs(Math.sin(T * 3)) * .04) + ca.dy : 0;
     sp.position.copy(v);
     if (h.alive && h.mvg && doDust) fxDust(new THREE.Vector3(r.x, 0, r.z));
-    sp.material.map.offset.x = faceFrame(h.fx, h.fz) / 12;
-    sp.material.rotation = h.alive ? q.tilt : lerp(sp.material.rotation, 1.45, dt * 8);
-    sp.scale.set(2.3 * (1 + q.sx), 2.3 * (1 + q.sy), 1);
+    sp.material.map.offset.x = (ca.frame >= 0 ? ca.frame : faceFrame(h.fx, h.fz)) / 12;
+    if (!sp.userData.tr) { sp.userData.tr = 1; sp.material.transparent = true; sp.material.needsUpdate = true; } sp.material.opacity = h.alive ? ca.alpha : 1;
+    sp.material.rotation = h.alive ? q.tilt + ca.rot : lerp(sp.material.rotation, 1.45, dt * 8);
+    sp.scale.set(2.3 * (1 + q.sx + ca.sx), 2.3 * (1 + q.sy + ca.sy), 1);
     sp.material.color.set(!h.alive ? '#666' : r.flash > 0 ? '#ff9a8c' : h.st.confuse ? '#cdb8ff' : '#fff');
     const sh = P.shadow[h.id]; sh.position.x = r.x; sh.position.z = r.z; sh.scale.setScalar(.62 * (1 - Math.min(.4, v.y * .4)));
     const ring = P.ring[h.id]; ring.position.x = r.x; ring.position.z = r.z; ring.material.opacity = h.alive ? .7 : .15; ring.rotation.z = T * .6;
@@ -1242,7 +1301,7 @@ function showLine() {
   if (hero && !$('dialog').hidden) { f.style.backgroundImage = `url(../pixel-plaza/sprites-hd/${l[0]}.webp)`; f.hidden = false; f.style.animation = 'none'; void f.offsetWidth; f.style.animation = ''; } else f.hidden = true;
 }
 function begin() {
-  SFX.unlock(); SFX.click(); SFX.ambient(true);
+  SFX.unlock(); SFX.click(); SFX.ambient(true); SFX.level(0); SFX.music(false); SFX.music(true);
   $('startO').hidden = true; $('endO').hidden = true;
   S = Core.newGame((Date.now() & 0xfffffff) || 1); R = {}; fx = []; banners = []; resetUnits(); acc = 0; running = false;
   $('waveP').textContent = '倉庫';
@@ -1272,6 +1331,7 @@ $('dialog').addEventListener('click', nextLine);
 $('deliver').addEventListener('click', doDeliver);
 $('autoB').addEventListener('click', e => { autoOn = !autoOn; e.currentTarget.textContent = '自動必殺：' + (autoOn ? '開' : '關'); e.currentTarget.classList.toggle('off', !autoOn); });
 $('spdB').addEventListener('click', e => { speed = speed === 1 ? 2 : 1; e.currentTarget.textContent = '速度 ' + speed + '×'; e.currentTarget.classList.toggle('off', speed === 1); });
+{ const xb = $('musicB'), xs = () => { xb.textContent = SFX.musicOn ? '音樂：開' : '音樂：關'; xb.classList.toggle('off', !SFX.musicOn); }; xs(); xb.addEventListener('click', () => { SFX.unlock(); SFX.setMusic(!SFX.musicOn); xs(); SFX.click(); }); }
 { const mb = $('muteB'), sync = () => { mb.textContent = SFX.muted ? '音效：關' : '音效：開'; mb.classList.toggle('off', !SFX.muted); }; sync(); mb.addEventListener('click', () => { SFX.unlock(); SFX.setMuted(!SFX.muted); sync(); SFX.click(); }); }
 $('pauseB').addEventListener('click', e => { paused = !paused; e.currentTarget.textContent = paused ? '繼續' : '暫停'; e.currentTarget.classList.toggle('off', !paused); });
 function onKey(key, pd) {
