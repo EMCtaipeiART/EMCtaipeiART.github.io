@@ -1108,14 +1108,15 @@ const ease = x => x * x * (3 - 2 * x), cl = (x, a = 0, b = 1) => Math.max(a, Mat
 function castAnim(r, id, h) {
   const none = { dx: 0, dy: 0, sx: 0, sy: 0, rot: 0, frame: -1, alpha: 1 };
   if (r.castAt === undefined) return none;
-  const D = r.castUlt ? 1.25 : .8, p = (T - r.castAt) / D; if (p >= 1 || p < 0) return none;
+  const D = id === 'machi' ? (r.castUlt ? 1.6 : 1.1) : id === 'leona' ? (r.castUlt ? 1.7 : 1.2) : r.castUlt ? 1.25 : .8, p = (T - r.castAt) / D; if (p >= 1 || p < 0) return none;
   const a = { ...none };
-  if (id === 'machi') {   // 蹲低 → 跳起 → 重踏地面（落地擠壓＋震動）
-    if (p < .28) { const q = ease(p / .28); a.sy = -.28 * q; a.sx = .22 * q; }
-    else if (p < .55) { const q = (p - .28) / .27; a.dy = Math.sin(q * Math.PI / 2) * (r.castUlt ? 1.1 : .75); a.sy = .22 * (1 - q) - .08 * q; a.sx = -.1 * q; }
-    else if (p < .66) { const q = (p - .55) / .11; a.dy = (1 - q * q) * (r.castUlt ? 1.1 : .75); a.sy = .15 * q; a.sx = -.08; }
-    else { const q = (p - .66) / .34; a.sy = -.4 * Math.exp(-q * 5) * Math.cos(q * 14); a.sx = .4 * Math.exp(-q * 5) * Math.cos(q * 14); }
-    if (p >= .6 && !r.castHit) { r.castHit = true; shake = Math.max(shake, r.castUlt ? .5 : .25); fxRing(new THREE.Vector3(r.x, 0, r.z), COL.machi, .3, r.castUlt ? 3.2 : 2, .5); }
+  if (id === 'machi') {   // 深蹲蓄力 → 高高跳起 → 全身重壓落地（超大擠壓＋震動＋衝擊環＋塵土）
+    const H = r.castUlt ? 2.1 : 1.5;
+    if (p < .3) { const q = ease(p / .3); a.sy = -.42 * q; a.sx = .34 * q; a.dy = -.1 * q; a.rot = Math.sin(p * 60) * .03 * q; }
+    else if (p < .58) { const q = (p - .3) / .28; a.dy = Math.sin(q * Math.PI / 2) * H; a.sy = .3 * (1 - q) + .1 * q; a.sx = -.16 * q; a.rot = -.1 * q; }
+    else if (p < .68) { const q = (p - .58) / .1; a.dy = (1 - q * q) * H; a.sy = .18 + .12 * q; a.sx = -.14; a.rot = -.1 * (1 - q); }
+    else { const q = (p - .68) / .32, w = Math.exp(-q * 4) * Math.cos(q * 12); a.sy = -.55 * w; a.sx = .55 * w; a.dy = w < 0 ? 0 : 0; }
+    if (p >= .66 && !r.castHit) { r.castHit = true; shake = Math.max(shake, r.castUlt ? .9 : .5); const g0 = new THREE.Vector3(r.x, 0, r.z); fxRing(g0, COL.machi, .3, r.castUlt ? 5 : 3.2, .6); fxRing(g0, '#ffffff', .2, r.castUlt ? 3.4 : 2.2, .4); for (let i = 0; i < 8; i++) fxDust(new THREE.Vector3(r.x + Math.cos(i * .785) * .9, 0, r.z + Math.sin(i * .785) * .9)); }
   } else if (id === 'noise') {   // 旋身斬：衝向敵人、整個人轉一圈（切換 12 個方向格）
     const fw = Math.sin(clamp01(p) * Math.PI);
     a.dx = fw * (r.castUlt ? 1.7 : 1.1); a.sx = .18 * fw; a.sy = -.06 * fw; a.rot = -.2 * fw;
@@ -1128,9 +1129,10 @@ function castAnim(r, id, h) {
     const up = p < .22 ? ease(p / .22) : p > .82 ? 1 - ease((p - .82) / .18) : 1;
     a.dy = up * (r.castUlt ? 1.5 : 1.1) + Math.sin(T * 7) * .06 * up; a.sy = .1 * up; a.rot = Math.sin(T * 5) * .09 * up;
     if (p > .22 && p < .82) a.frame = (Math.floor((p - .22) / .6 * 12) + faceFrame(h.fx, h.fz)) % 12;
-  } else {   // leona：面向前方雙手祈禱，輕盈上浮、身體舒展、微微後仰
-    const up = p < .3 ? ease(p / .3) : p > .8 ? 1 - ease((p - .8) / .2) : 1;
-    a.dy = up * .5 + Math.sin(T * 4) * .05 * up; a.sy = .13 * up + .03 * Math.sin(T * 6) * up; a.sx = -.04 * up; a.rot = .12 * up * Math.sin(T * 2 + 1); a.frame = up > .1 ? 0 : -1;
+  } else {   // leona：旋身上升 → 面向前方雙手祈禱，浮在半空大幅搖曳、身體拉長，最後輕輕落地
+    const H = r.castUlt ? 1.5 : 1.05, up = p < .32 ? ease(p / .32) : p > .82 ? 1 - ease((p - .82) / .18) : 1;
+    a.dy = up * H + Math.sin(T * 5) * .12 * up; a.sy = .26 * up + .05 * Math.sin(T * 7) * up; a.sx = -.1 * up; a.rot = .24 * Math.sin(T * 3.2) * up;
+    if (p < .32) a.frame = (Math.floor(p / .32 * 12) + faceFrame(h.fx, h.fz)) % 12; else if (p < .85) a.frame = 0;
   }
   return a;
 }
