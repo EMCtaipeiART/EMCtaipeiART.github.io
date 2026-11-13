@@ -1799,6 +1799,38 @@ function stationFx(c, dt){
       fires.forEach((f, i) => { const a = t * 1.1 + i * 2.094; f.position.set(Math.cos(a) * 1.1, 1.35 + Math.sin(t * 2.4 + i * 2) * .25, Math.sin(a) * .8); f.material.opacity = 1; }); }
   }
 }
+
+// ---- 心情：頭上旋轉的 3D 圖示（開心＝太陽、生氣＝怒氣爆炸、難過＝淚滴、快樂＝愛心），黑色外框＋緩緩上下浮動；沒有聚光燈、不改變人物亮度 ----
+const MOOD_GEO = {};
+function moodOutlined(geo, color, emissive){
+  const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color, emissive: emissive ?? color, emissiveIntensity: .45})), h = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({color:0x111111, side:THREE.BackSide})); h.scale.setScalar(1.13); m.add(h); return m;
+}
+function makeMoodOrb(kind){
+  const g = new THREE.Group();
+  if (kind === 'joy') {
+    const sh = new THREE.Shape(); sh.moveTo(.25, .25); sh.bezierCurveTo(.25, .25, .2, 0, 0, 0); sh.bezierCurveTo(-.3, 0, -.3, .35, -.3, .35); sh.bezierCurveTo(-.3, .55, -.1, .77, .25, .95); sh.bezierCurveTo(.6, .77, .8, .55, .8, .35); sh.bezierCurveTo(.8, .35, .8, 0, .5, 0); sh.bezierCurveTo(.35, 0, .25, .25, .25, .25);
+    const geo = new THREE.ExtrudeGeometry(sh, {depth:.45, bevelEnabled:true, bevelSize:.05, bevelThickness:.06, bevelSegments:2, curveSegments:14}); geo.translate(-.25, -.45, -.22); geo.scale(.8, .8, .8);
+    g.add(moodOutlined(geo, 0xff4f7b));
+  } else if (kind === 'angry') {
+    const sh = new THREE.Shape(), n = 4; for (let i = 0; i < n * 2; i++) { const a = i * Math.PI / n + Math.PI / 4, r = i % 2 ? .22 : .62; (i ? sh.lineTo : sh.moveTo).call(sh, Math.cos(a) * r, Math.sin(a) * r); } sh.closePath();
+    const geo = new THREE.ExtrudeGeometry(sh, {depth:.4, bevelEnabled:true, bevelSize:.04, bevelThickness:.04, bevelSegments:1}); geo.translate(0, 0, -.2);
+    const a = moodOutlined(geo, 0xe83b3b); g.add(a); const b = moodOutlined(geo, 0xff7a4a); b.scale.setScalar(.55); b.rotation.z = Math.PI / 4; b.position.z = .02; g.add(b);
+  } else if (kind === 'sad') {
+    const pts = []; for (let a = -90; a <= 20; a += 10) { const r = a * Math.PI / 180; pts.push(new THREE.Vector2(Math.max(.001, Math.cos(r) * .36), -.14 + Math.sin(r) * .36)); } pts.push(new THREE.Vector2(.16, .22), new THREE.Vector2(.001, .62));
+    const geo = new THREE.LatheGeometry(pts, 20); geo.translate(0, -.1, 0); g.add(moodOutlined(geo, 0x4fb3ff));
+    const hi = new THREE.Mesh(new THREE.SphereGeometry(.07, 8, 8), new THREE.MeshBasicMaterial({color:0xffffff})); hi.position.set(-.14, -.15, .3); g.add(hi);
+  } else {
+    const core = moodOutlined(new THREE.SphereGeometry(.32, 20, 14), 0xffd23f); g.add(core);
+    for (let i = 0; i < 8; i++) { const ray = moodOutlined(new THREE.ConeGeometry(.1, .3, 6), 0xffa81f), a = i * Math.PI / 4; ray.position.set(Math.cos(a) * .55, Math.sin(a) * .55, 0); ray.rotation.z = a - Math.PI / 2; g.add(ray); }
+  }
+  g.scale.setScalar(.95); g.visible = false; scene.add(g); return g;
+}
+function moodOrb(c){
+  const k = c.mood && ['happy', 'angry', 'sad', 'joy'].includes(c.mood) ? c.mood : '', show = k && c.holder.visible;
+  if (c.moodKind !== k) { if (c.moodOrb) { scene.remove(c.moodOrb); c.moodOrb = null; } c.moodKind = k; if (k) c.moodOrb = makeMoodOrb(k === 'happy' ? 'happy' : k); }
+  const o = c.moodOrb; if (!o) return; o.visible = !!show; if (!show) return;
+  const t = performance.now() / 1000, p = c.holder.position; o.position.set(p.x, 3.05 + Math.sin(t * 2 + p.x) * .08, p.z); o.rotation.y = t * 1.8; if (k === 'angry') o.scale.setScalar(.95 + Math.abs(Math.sin(t * 7)) * .12); else if (k === 'joy') o.scale.setScalar(.95 + Math.abs(Math.sin(t * 4)) * .08);
+}
 const SIT_DROP = .1;
 function sitDown(c){
   if (c.sitting) return false;
@@ -2364,12 +2396,12 @@ function updateTags(){
     let p = null, html = '';
     if (away) { p = new THREE.Vector3(c.home.x, 1.7, c.home.z); html = '<div class="cui-tag">' + esc(c.name + '（' + STATUS[c.status][0] + '）') + '</div>'; }
     else if (c.holder.visible && (c.message || c.mood || m || nStory)) {
-      p = c.holder.position.clone(); p.y += 2.7;
+      p = c.holder.position.clone(); p.y += c.mood ? 3.75 : 2.7;
       const playing = musicPlaying.name === c.name && !musicPlaying.paused;
       // 對話與音樂共用同一個泡泡（寬度固定七個字），音樂列縮小放在對話下方；心情／動態圖示在泡泡上方
       const msg = c.message ? '<div class="cui-msg">' + esc(c.message) + '</div>' : '', mus = m ? '<div class="cui-mus"><button type="button" class="mplay" data-n="' + esc(c.name) + '">' + (playing ? '⏸' : '▶') + '</button>' + (musicPlaying.name === c.name ? '<button type="button" class="mplay mstop" data-n="' + esc(c.name) + '" title="停止播放">■</button>' : '') + '<span class="mt"><i>♪ ' + esc(m.title || '音樂') + '</i></span></div>' : '';
       const bub = msg || mus ? '<div class="cui-bub tail' + (m ? ' hasmus' : '') + '">' + msg + mus + '</div>' : '';
-      const ico = (nStory ? '<button type="button" class="cui-story" data-n="' + esc(c.name) + '" title="查看 ' + esc(c.name) + ' 的動態"><img alt="" src="' + storyIconURL + '">' + (storyUnread(c.name) ? '<b></b>' : '') + '</button>' : '') + (c.mood ? '<img class="cui-mood ' + c.mood + '" alt="" src="' + (ICON[moodSym[c.mood]] || '') + '">' : '');
+      const ico = (nStory ? '<button type="button" class="cui-story" data-n="' + esc(c.name) + '" title="查看 ' + esc(c.name) + ' 的動態"><img alt="" src="' + storyIconURL + '">' + (storyUnread(c.name) ? '<b></b>' : '') + '</button>' : '') + '';   // 心情改成頭上旋轉的 3D 圖示（moodOrb）
       html = '<div class="cui-stack">' + (ico ? '<div class="cui-ico">' + ico + '</div>' : '') + bub + '</div>';
     }
     if (!html || !p) { c.tag.style.display = 'none'; continue; }
@@ -3079,7 +3111,7 @@ function tick(){
     else if (c.remote && c !== player) remoteStep(c, dt);
     else if (c.wander && !c.sitting) wanderSynced(c);
     if (c.sitting) { const sp = sitSpot(c.sitting); if (Math.hypot(sp.x - c.holder.position.x, sp.z - c.holder.position.z) > .6 || (c.moving > 0 && c === player)) releaseSeat(c); }   // 走動中就不是坐著：離開座位的人一律解除入座
-    updateSprite(c, dt); stationFx(c, dt);
+    updateSprite(c, dt); stationFx(c, dt); moodOrb(c);
     if (c.hopAt) { const k = (performance.now() - c.hopAt) / 600; if (k >= 1) { c.hopAt = 0; c.holder.position.y = 0; } else c.holder.position.y = Math.abs(Math.sin(k * Math.PI * 2)) * .6 * (1 - k); }
   }
   if (window.__cinema && window.__cinema.active) window.__cinema.camera(dt);
