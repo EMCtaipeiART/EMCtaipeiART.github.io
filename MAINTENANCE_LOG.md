@@ -2477,3 +2477,6 @@
 - 排行：沿用 /minigames/run、/submit、/board，game=deadline2；伺服器用 deadline/engine.js 重算分數（Worker 與前端同一份題庫）。deadline2 走獨立 Durable Object 名稱 dl2（既有 primary 實例部署後不重啟）。登入帳號記在本人名下。
 - 元宇宙：倉庫東北角新增「截稿倒數 2」街機，點擊進入（expEnter 可指定遊戲）。
 - 舊的 2D 版 deadline 題庫（archive）不動，仍供舊測試使用。
+
+## 2026-11-13 街機縮小
+- 倉庫的截稿倒數街機整體縮為 0.6 倍（含碰撞範圍）。

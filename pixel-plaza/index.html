@@ -1196,19 +1196,19 @@ function build3dObjects(T, place){
     const hit = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.7, 1.5), new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false}));   // 看不見的點擊區：訪客、登入者都能直接點進遊戲
     hit.position.set(I(188), .95 + .85, I(1160)); hit.userData.pick = {kind:'portal'}; scene.add(hit); pickables.push(hit); }
   // 倉庫角落的「截稿倒數 2」街機：點一下進遊戲
-  { const ax = I(262), az = I(1078);
+  { const ax = I(262), az = I(1078), K = .6, arc = new THREE.Group(); arc.scale.set(K, K, K); arc.position.set(ax * (1 - K), 0, az * (1 - K)); scene.add(arc);
     const mk = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.minFilter = THREE.LinearFilter; return t; };
     const body = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2.6, 1.1), new THREE.MeshLambertMaterial({color:0x1d3a6e}));
-    body.position.set(ax, 1.3, az); scene.add(body);
-    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(body.geometry), new THREE.LineBasicMaterial({color:0x000000})); edges.position.copy(body.position); scene.add(edges);
+    body.position.set(ax, 1.3, az); arc.add(body);
+    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(body.geometry), new THREE.LineBasicMaterial({color:0x000000})); edges.position.copy(body.position); arc.add(edges);
     const screenT = mk(256, 192, (g, w, h) => { g.fillStyle = '#eef3fb'; g.fillRect(0, 0, w, h); g.fillStyle = '#182e54'; for (let i = 0; i < 4; i++) g.fillRect(24 + i * 56, 96 + (i % 2) * 20, 40, 40); g.fillStyle = '#d9534f'; g.fillRect(0, 0, w, 10); g.fillStyle = '#182e54'; g.font = '900 34px "Noto Sans TC","PingFang TC",sans-serif'; g.textAlign = 'center'; g.fillText('截稿倒數', w / 2, 62); g.fillStyle = '#3b6fd8'; g.font = '800 22px sans-serif'; g.fillText('90 SEC', w / 2, 88); });
-    const scr = new THREE.Mesh(new THREE.PlaneGeometry(1.2, .9), new THREE.MeshBasicMaterial({map:screenT})); scr.position.set(ax, 1.75, az + .56); scene.add(scr);
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(1.2, .9), new THREE.MeshBasicMaterial({map:screenT})); scr.position.set(ax, 1.75, az + .56); arc.add(scr);
     const mqT = mk(256, 64, (g, w, h) => { g.fillStyle = '#f0b429'; g.fillRect(0, 0, w, h); g.strokeStyle = '#000'; g.lineWidth = 6; g.strokeRect(0, 0, w, h); g.fillStyle = '#182e54'; g.font = '900 34px "Noto Sans TC","PingFang TC",sans-serif'; g.textAlign = 'center'; g.fillText('截稿倒數 2', w / 2, 44); });
-    const mq = new THREE.Mesh(new THREE.PlaneGeometry(1.4, .35), new THREE.MeshBasicMaterial({map:mqT})); mq.position.set(ax, 2.38, az + .56); scene.add(mq);
-    const pad = new THREE.Mesh(new THREE.BoxGeometry(1.3, .12, .5), new THREE.MeshLambertMaterial({color:0x0e1f40})); pad.position.set(ax, .95, az + .75); scene.add(pad);
-    rects.push([ax - I(14), az - I(10), ax + I(14), az + I(14)]);
+    const mq = new THREE.Mesh(new THREE.PlaneGeometry(1.4, .35), new THREE.MeshBasicMaterial({map:mqT})); mq.position.set(ax, 2.38, az + .56); arc.add(mq);
+    const pad = new THREE.Mesh(new THREE.BoxGeometry(1.3, .12, .5), new THREE.MeshLambertMaterial({color:0x0e1f40})); pad.position.set(ax, .95, az + .75); arc.add(pad);
+    rects.push([ax - I(9), az - I(7), ax + I(9), az + I(9)]);
     const hit = new THREE.Mesh(new THREE.BoxGeometry(1.7, 2.7, 1.5), new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false}));
-    hit.position.set(ax, 1.35, az + .2); hit.userData.pick = {kind:'arcade'}; scene.add(hit); pickables.push(hit); }
+    hit.position.set(ax, 1.35, az + .2); hit.userData.pick = {kind:'arcade'}; arc.add(hit); pickables.push(hit); }
   projectorRig(I(160), I(1160), 'W', {room:'B', wallX:I(98) + .02, wallDir:1, zc:I(1150), w:4.0, h:2.1, title:'倉庫', kind:'text'});
   projectorRig(I(162), I(1360), 'W', {room:'C', wallX:I(98) + .02, wallDir:1, zc:I(1355), w:4.0, h:2.1, title:'專案會議', kind:'list'});
   for (const [x0, z0, ww, dd] of [[1046, 84, 4, 150], [94, 1072, 4, 156], [94, 1274, 4, 162]]) {   // 投影用白牆
