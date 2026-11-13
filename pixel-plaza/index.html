@@ -1832,6 +1832,43 @@ function stationOf(c){
   let cell = null, cd = 3; if (seat) for (const k of deskCells) { const d = Math.hypot(k.x - seat.x, k.z - seat.z); if (d < cd) { cd = d; cell = k; } }
   return seat ? (c.station = {seat, cell}) : null;
 }
+
+// ---- 升級特效（測試中）：金色光柱衝上天、地面光環擴散、光點與星星向上飄、「LEVEL UP!」字樣浮起；約 3 秒 ----
+let LV_GLOW = null, LV_STAR = null, LV_TXT = null;
+function lvTextures(){
+  if (LV_GLOW) return;
+  let c = document.createElement('canvas'); c.width = c.height = 128; let g = c.getContext('2d'), r = g.createRadialGradient(64, 64, 2, 64, 64, 62);
+  r.addColorStop(0, 'rgba(255,250,200,1)'); r.addColorStop(.35, 'rgba(255,214,90,.7)'); r.addColorStop(1, 'rgba(255,170,30,0)'); g.fillStyle = r; g.fillRect(0, 0, 128, 128);
+  LV_GLOW = new THREE.CanvasTexture(c); LV_GLOW.colorSpace = THREE.SRGBColorSpace;
+  c = document.createElement('canvas'); c.width = c.height = 64; g = c.getContext('2d'); g.translate(32, 32); g.fillStyle = '#fff6c2'; g.beginPath();
+  for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 - Math.PI / 2, rr = i % 2 ? 7 : 28; g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } g.closePath(); g.fill();
+  LV_STAR = new THREE.CanvasTexture(c); LV_STAR.colorSpace = THREE.SRGBColorSpace;
+  c = document.createElement('canvas'); c.width = 256; c.height = 64; g = c.getContext('2d'); g.font = '900 40px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.lineJoin = 'round'; g.lineWidth = 9; g.strokeStyle = '#c2570a'; g.strokeText('LEVEL UP!', 128, 34); g.fillStyle = '#ffe36b'; g.fillText('LEVEL UP!', 128, 34);
+  LV_TXT = new THREE.CanvasTexture(c); LV_TXT.colorSpace = THREE.SRGBColorSpace;
+}
+function levelUpFx(c){
+  if (!c || !c.holder) return; lvTextures();
+  if (c.lvFx) { scene.remove(c.lvFx.g); c.lvFx = null; }
+  const g = new THREE.Group(), add = {transparent:true, blending:THREE.AdditiveBlending, depthWrite:false};
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(.55, .8, 6, 28, 1, true), new THREE.MeshBasicMaterial({color:0xffd24a, opacity:0, side:THREE.DoubleSide, ...add})); beam.position.y = 3; g.add(beam);
+  const pool = new THREE.Mesh(new THREE.PlaneGeometry(3, 3), new THREE.MeshBasicMaterial({map:LV_GLOW, opacity:0, ...add})); pool.rotation.x = -Math.PI / 2; pool.position.y = .04; g.add(pool);
+  const rings = [0, 1, 2].map(i => { const m = new THREE.Mesh(new THREE.RingGeometry(.9, 1.0, 48), new THREE.MeshBasicMaterial({color:0xffe27a, opacity:0, side:THREE.DoubleSide, ...add})); m.rotation.x = -Math.PI / 2; m.position.y = .06; g.add(m); return m; });
+  const sparks = []; for (let i = 0; i < 26; i++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:i % 3 ? LV_GLOW : LV_STAR, ...add, opacity:0})); const a = Math.random() * 6.283, rad = .3 + Math.random() * .9; sp.userData = {a, rad, v:.9 + Math.random() * 1.6, d:Math.random() * .8, s:.18 + Math.random() * .28}; g.add(sp); sparks.push(sp); }
+  const txt = new THREE.Sprite(new THREE.SpriteMaterial({map:LV_TXT, transparent:true, depthTest:false, opacity:0})); txt.scale.set(2.8, .7, 1); txt.renderOrder = 9; g.add(txt);
+  g.userData = {beam, pool, rings, sparks, txt}; scene.add(g); c.lvFx = {g, t0:performance.now()};
+}
+function levelFx(c){
+  const f = c.lvFx; if (!f) return; const t = (performance.now() - f.t0) / 1000, D = 3.2;
+  if (t > D) { scene.remove(f.g); c.lvFx = null; return; }
+  const {beam, pool, rings, sparks, txt} = f.g.userData, k = t / D, env = Math.min(1, t / .25) * Math.min(1, (D - t) / 1);
+  f.g.position.set(c.holder.position.x, 0, c.holder.position.z);
+  beam.material.opacity = .42 * env; beam.scale.set(1 + Math.sin(t * 9) * .06, 1, 1 + Math.sin(t * 9) * .06); beam.rotation.y = t * 2;
+  pool.material.opacity = .9 * env; pool.scale.setScalar(1 + Math.sin(t * 6) * .08);
+  rings.forEach((m, i) => { const q = ((t - i * .45) / 1.3); if (q < 0 || q > 1) { m.material.opacity = 0; return; } m.scale.setScalar(.6 + q * 2.6); m.material.opacity = .85 * (1 - q); });
+  sparks.forEach(sp => { const u = sp.userData, q = Math.max(0, t - u.d); const y = q * u.v; sp.position.set(Math.cos(u.a + q * 2.2) * u.rad, .1 + y, Math.sin(u.a + q * 2.2) * u.rad); sp.material.opacity = q > 0 && y < 5 ? Math.min(1, q * 4) * Math.max(0, 1 - y / 5) : 0; sp.scale.setScalar(u.s * (1 + Math.sin(t * 12 + u.a) * .25)); });
+  const ty = 2.7 + Math.min(1, t / 1.4) * .8; txt.position.set(0, ty, 0); const pop = t < .35 ? .6 + t / .35 * .5 + Math.sin(t / .35 * Math.PI) * .25 : 1.1; txt.scale.set(2.8 * pop, .7 * pop, 1); txt.material.opacity = Math.min(1, t / .2) * Math.min(1, (D - t) / .6);
+}
 function stationFx(c, dt){
   const away = AWAY_DESK.has(c.status), ot = c.status === 'overtime', stn = stationOf(c), key = (away ? 'a:' : '') + c.status;
   if (stn && c.stnKey !== key) {
@@ -2423,7 +2460,7 @@ function renderCharPage(force){
     <div class="cp-cols${c === player ? ' solo' : ''}">
       ${c === player ? '' : '<section class="cp-panel p1"><header><h3>心情</h3></header><div class="cp-grid mood" id="cpMood"></div></section>'}
       <div class="cp-stack">
-        ${c === player ? '<p class="cp-note" style="margin:0 0 4px">狀態、心情、想說的話：直接點自己的人物就能改。</p>' : `<section class="cp-panel p2"><header><h3>想說的話</h3></header>
+        <button type="button" id="cpLv" class="qc-s" style="margin:0 0 6px">升級特效（測試）</button>${c === player ? '<p class="cp-note" style="margin:0 0 4px">狀態、心情、想說的話：直接點自己的人物就能改。</p>' : `<section class="cp-panel p2"><header><h3>想說的話</h3></header>
           <div class="cp-chat"><form class="cp-chat-in" id="cpForm"><img alt="" src="${c.avatar || ''}"><input id="cpMsg" type="text" maxlength="60" placeholder="說點什麼…" autocomplete="off"><button type="submit" class="send" title="送出">➤</button></form>
             <div class="cp-chips"><button type="button" id="cpClr">清除對話</button></div></div>
         </section>`}
@@ -2443,6 +2480,7 @@ function renderCharPage(force){
   </div>`;
   const mm = radial.querySelector('#cpMood'); if (mm) for (const id of Object.keys(MOOD)) { const b = document.createElement('button'); b.type = 'button'; b.className = c.mood === id ? 'on' : ''; b.innerHTML = '<i>' + iconImg(moodSym[id], 44) + '</i>' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[id]; b.onclick = () => setOwnMood(id); mm.appendChild(b); }
   if (mm) { const x = document.createElement('button'); x.type = 'button'; x.className = 'clr'; x.innerHTML = '清除心情'; x.onclick = () => setOwnMood(''); mm.appendChild(x); }
+  { const lv = radial.querySelector('#cpLv'); if (lv) lv.onclick = () => levelUpFx(c); }
   const ta = radial.querySelector('#cpMsg'); if (ta) { ta.value = keepMsg != null ? keepMsg : (c.message || ''); radial.querySelector('#cpForm').onsubmit = e => { e.preventDefault(); setOwnMessage(ta.value.trim()); }; radial.querySelector('#cpClr').onclick = () => { ta.value = ''; setOwnMessage(''); }; }
   radial.querySelector('#cpMusic').value = keepMusic; radial.querySelector('#cpMForm').onsubmit = e => { e.preventDefault(); setOwnMusic(radial.querySelector('#cpMusic').value); };
   const mp = radial.querySelector('#cpMPlay'); if (mp) mp.onclick = () => toggleMusic(c); const mo = radial.querySelector('#cpMOff'); if (mo) mo.onclick = () => stopMusic(); const ms = radial.querySelector('#cpMStop'); if (ms) ms.onclick = clearOwnMusic;
@@ -2485,10 +2523,12 @@ function wheelOpen(c){   // 點自己的人物：在人物旁邊展開小卡（�
   wheel.innerHTML = '<div class="qc"><div class="qc-h">狀態</div><div class="qc-row">' + QC_MAIN.map(chip).join('') + '<button type="button" class="qc-s qc-more" id="qcMore">更多</button></div>'
     + '<div class="qc-row qc-extra" id="qcExtra" hidden>' + more.map(chip).join('') + '</div>'
     + '<div class="qc-h">心情</div><div class="qc-row">' + Object.keys(MOOD).map(id => '<button type="button" class="qc-m' + (c.mood === id ? ' on' : '') + '" data-m="' + id + '" title="' + MOOD_TXT[id] + '">' + iconImg(moodSym[id], 28) + '</button>').join('') + '<button type="button" class="qc-m qc-x" data-m="" title="清除心情">✕</button></div>'
+    + '<div class="qc-row" style="margin-top:6px"><button type="button" class="qc-s" id="qcLv" title="測試：播放升級特效">升級特效（測試）</button></div>'
     + '<form class="qc-say" id="qcForm"><input id="qcMsg" type="text" maxlength="60" placeholder="說點什麼…" autocomplete="off"><button type="submit" class="send" title="送出">➤</button></form></div>';
   const inp = wheel.querySelector('#qcMsg'); inp.value = c.message || '';
   wheel.querySelectorAll('.qc-s[data-id]').forEach(b => b.onclick = () => { const id = b.dataset.id; wheelClose(); if (id === 'present') setOwnAuto(); else setOwnStatus(id); });
   wheel.querySelectorAll('.qc-m').forEach(b => b.onclick = () => { wheelClose(); setOwnMood(b.dataset.m); });
+  wheel.querySelector('#qcLv').onclick = () => levelUpFx(c);
   wheel.querySelector('#qcMore').onclick = () => { const x = wheel.querySelector('#qcExtra'); x.hidden = !x.hidden; wheel.querySelector('#qcMore').classList.toggle('on', !x.hidden); };
   wheel.querySelector('#qcForm').onsubmit = e => { e.preventDefault(); const t = inp.value.trim(); wheelClose(); setOwnMessage(t); };
   requestAnimationFrame(() => requestAnimationFrame(() => wheel.classList.add('open')));
@@ -3235,7 +3275,7 @@ function tick(){
     else if (c.remote && c !== player) remoteStep(c, dt);
     else if (c.wander && !c.sitting) wanderSynced(c);
     if (c.sitting) { const sp = sitSpot(c.sitting); if (Math.hypot(sp.x - c.holder.position.x, sp.z - c.holder.position.z) > .6 || (c.moving > 0 && c === player)) releaseSeat(c); }   // 走動中就不是坐著：離開座位的人一律解除入座
-    updateSprite(c, dt); stationFx(c, dt); moodOrb(c);
+    updateSprite(c, dt); stationFx(c, dt); moodOrb(c); levelFx(c);
     if (c.hopAt) { const k = (performance.now() - c.hopAt) / 600; if (k >= 1) { c.hopAt = 0; c.holder.position.y = 0; } else c.holder.position.y = Math.abs(Math.sin(k * Math.PI * 2)) * .6 * (1 - k); }
   }
   if (window.__cinema && window.__cinema.active) window.__cinema.camera(dt);
