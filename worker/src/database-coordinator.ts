@@ -3604,7 +3604,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const current = this.requireSession(session);
     if (!hasCapability(database, current, 'database.manage')) throw new Error('只有管理者可以讀取人員名單');
     const hidden = new Set(hiddenPeopleNames(database));
-    const names = [...PIXEL_OFFICE_NAMES, ...(database.tables['設定']?.rows || []).map(row => text(row['名字']))].filter(name => name && !hidden.has(name));
+    const all = [...PIXEL_OFFICE_NAMES, ...(database.tables['設定']?.rows || []).map(row => text(row['名字']))].filter(Boolean);
+    // 隱藏的人（測試帳號，例如「設計測試組」）排在最後但仍列入：角色工坊「設為預設／發佈」會用這份名單驗名字，只有管理者讀得到，管理者要能幫測試帳號切換人物
+    const names = [...all.filter(name => !hidden.has(name)), ...all.filter(name => hidden.has(name))];
     return { ok: true, action: 'characterRoster', names: [...new Set(names)] };
   }
 
