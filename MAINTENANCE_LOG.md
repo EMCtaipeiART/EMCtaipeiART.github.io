@@ -2428,3 +2428,6 @@
 - `pixel-plaza/index.html`：新增 `updateTheater()`／`expEnter()`／`expLeave()`。登入者走進五樓影廳中央（`THEATER` 範圍）→ 畫面收黑（`#expFade`，1 秒）→ 以全螢幕 iframe 載入 `../expedition/?embed=1`；遊戲內「離開影廳」按鈕以 postMessage（`expeditionExit`，限同網域、同 iframe）通知，收黑後回到影廳。離開後要先走出影廳才會再次觸發；進場期間人物不動。訪客、休假／用餐等離座狀態、坐著時不會觸發。
 - `expedition/index.html`：場景從水晶洞穴改為戰損辦公室（龜裂地毯與散落紙張、破窗透火光的後牆、倒塌隔間與翻倒辦公桌、閃爍日光燈、火桶與濃煙、火星）；影廳名稱統一；內嵌時多一顆「離開影廳」鈕。
 - 本機測試：`?as=名字` 預覽，用 `window.__pushWS.chars[名字].holder.position` 傳送進影廳驗證收黑流程（只讀、未寫入後端）。
+
+## 2026-11-13 遊戲場景減少雜物
+- 遠征隊場景：戰鬥區域（地面中央）清空，紙張、碎片、火桶、桌椅移到兩側與後牆，地板污漬與裂縫減少。
