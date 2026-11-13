@@ -1354,7 +1354,7 @@ async function addChar(name, i){
   chars[name] = c;
   if (WALK_NAMES.includes(name) || walkVer[name] || cloudWalks[name]) {
     const staticUrl = (HD ? 'sprites-walk-hd/' + name + '.webp' : 'sprites-walk/' + name + '.png') + (walkVer[name] ? '?v=' + walkVer[name] : '');
-    const cloudUrl = cloudWalks[name] && !(walkVer[name] && walkVer[name] >= (cloudChars[name] || 0)) ? CHAR_API + '/' + encodeURIComponent(name) + '/' + (HD ? 'walk-hd' : 'walk') + '.png?v=' + cloudWalks[name] : '';
+    const cloudUrl = cloudWalks[name] && !(walkVer[name] && cloudWalks[name] < (cloudChars[name] || 0)) ? CHAR_API + '/' + encodeURIComponent(name) + '/' + (HD ? 'walk-hd' : 'walk') + '.png?v=' + cloudWalks[name] : '';
     const useTex = t => { t.repeat.y = .5; c.walkTex = t; };
     walkLoads.push((cloudUrl ? loadTex(cloudUrl).catch(() => loadTex(staticUrl)) : loadTex(staticUrl)).then(useTex).catch(() => {}));   // 雲端的走路影格優先（家裡電腦自動做的），沒有再用專案裡的靜態檔
   }   // 走路影格（2 排：左腳出、右腳出），沒有就退回彈跳搖擺
