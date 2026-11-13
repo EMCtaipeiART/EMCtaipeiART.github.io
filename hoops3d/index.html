@@ -161,11 +161,11 @@ const redraws = [];
 const canvasTex = (w, h, draw, rep) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.anisotropy = 4; redraws.push(() => { const g = c.getContext('2d'); g.clearRect(0, 0, w, h); draw(g, w, h); t.needsUpdate = true; }); if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep[0], rep[1]); } return t; };
 
 // 地板（淡灰格線）
-{ const t = canvasTex(128, 128, (g, w, h) => { g.fillStyle = DARK ? '#2a3146' : '#b4bdcc'; g.fillRect(0, 0, w, h); g.strokeStyle = DARK ? 'rgba(160,185,230,.12)' : 'rgba(24,46,84,.12)'; g.lineWidth = 3; g.strokeRect(0, 0, w, h); }, [30, 14]);
+{ const t = canvasTex(128, 128, (g, w, h) => { g.fillStyle = DARK ? '#465075' : '#b4bdcc'; g.fillRect(0, 0, w, h); g.strokeStyle = DARK ? 'rgba(200,215,250,.22)' : 'rgba(24,46,84,.12)'; g.lineWidth = 3; g.strokeRect(0, 0, w, h); }, [30, 14]);
   const f = new THREE.Mesh(new THREE.PlaneGeometry(60, 28), new THREE.MeshLambertMaterial({ map: t })); f.rotation.x = -Math.PI / 2; f.position.set(10, 0, 4); f.receiveShadow = true; scene.add(f); }
 // 後牆：窗戶＋海報
-{ const t = canvasTex(1024, 256, (g, w, h) => { g.fillStyle = DARK ? '#3a4058' : '#e3dfd3'; g.fillRect(0, 0, w, h); g.fillStyle = DARK ? '#10182c' : '#182e54'; g.fillRect(0, h - 22, w, 22);
-    for (let i = 0; i < 5; i++) { const x = 40 + i * 200; g.fillStyle = '#182e54'; g.fillRect(x - 6, 34, 152, 132); g.fillStyle = DARK ? '#1c2a52' : '#7fa9d2'; g.fillRect(x, 40, 140, 120); g.fillStyle = DARK ? 'rgba(255,230,160,.18)' : 'rgba(255,255,255,.3)'; g.fillRect(x + 8, 48, 40, 100); g.fillStyle = '#182e54'; g.fillRect(x + 68, 40, 4, 120); g.fillRect(x, 96, 140, 4); }
+{ const t = canvasTex(1024, 256, (g, w, h) => { g.fillStyle = DARK ? '#58628a' : '#e3dfd3'; g.fillRect(0, 0, w, h); g.fillStyle = DARK ? '#2c3556' : '#182e54'; g.fillRect(0, h - 22, w, 22);
+    for (let i = 0; i < 5; i++) { const x = 40 + i * 200; g.fillStyle = '#182e54'; g.fillRect(x - 6, 34, 152, 132); g.fillStyle = DARK ? '#3f5a98' : '#7fa9d2'; g.fillRect(x, 40, 140, 120); g.fillStyle = DARK ? 'rgba(255,230,160,.3)' : 'rgba(255,255,255,.3)'; g.fillRect(x + 8, 48, 40, 100); g.fillStyle = '#182e54'; g.fillRect(x + 68, 40, 4, 120); g.fillRect(x, 96, 140, 4); }
     g.fillStyle = '#d9534f'; g.fillRect(868, 60, 70, 90); g.fillStyle = '#fff'; g.font = '800 22px sans-serif'; g.textAlign = 'center'; g.fillText('DEAD', 903, 100); g.fillText('LINE', 903, 126); });
   const w = new THREE.Mesh(new THREE.PlaneGeometry(52, 13), new THREE.MeshLambertMaterial({ map: t })); w.position.set(10, 6.5, -7); scene.add(w); }
 // 背景辦公桌與電腦
@@ -195,9 +195,9 @@ const dots = Array.from({ length: 28 }, () => { const m = new THREE.Mesh(new THR
 const bits = []; function confetti(x, y, n, cols) { for (let i = 0; i < n; i++) { const m = new THREE.Mesh(new THREE.PlaneGeometry(.12, .08), new THREE.MeshBasicMaterial({ color: cols[i % cols.length], side: THREE.DoubleSide })); m.position.set(x, y, 0); scene.add(m); const a = Math.random() * 6.283; bits.push({ m, vx: Math.cos(a) * (2 + Math.random() * 3), vy: 3 + Math.random() * 4, vz: (Math.random() - .5) * 3, t: 0, life: .9 + Math.random() * .5 }); } }
 
 function applyTheme() {
-  DARK = mq.matches; const bg = DARK ? 0x141b30 : 0xcfe0f4; scene.background.setHex(bg); scene.fog.color.setHex(bg);
-  hemi.color.setHex(DARK ? 0x8aa0dc : 0xf2f5fa); hemi.groundColor.setHex(DARK ? 0x1c2238 : 0x9aa7bd); hemi.intensity = DARK ? .8 : .78;
-  sun.color.setHex(DARK ? 0xa9bcff : 0xfff3df); sun.intensity = DARK ? .6 : .55; redraws.forEach(f => f());
+  DARK = mq.matches; const bg = DARK ? 0x2b3658 : 0xcfe0f4; scene.background.setHex(bg); scene.fog.color.setHex(bg);
+  hemi.color.setHex(DARK ? 0xc4d2f5 : 0xf2f5fa); hemi.groundColor.setHex(DARK ? 0x4a5578 : 0x9aa7bd); hemi.intensity = DARK ? 1.0 : .78;
+  sun.color.setHex(DARK ? 0xdbe4ff : 0xfff3df); sun.intensity = DARK ? .85 : .55; redraws.forEach(f => f());
 }
 (mq.addEventListener ? mq.addEventListener('change', applyTheme) : mq.addListener(applyTheme)); applyTheme();
 function resize() { const w = stage.clientWidth, h = Math.round(w * 3 / 5); renderer.setSize(w, h, false); }
