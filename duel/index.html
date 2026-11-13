@@ -169,6 +169,8 @@ header{position:fixed;right:8px;bottom:8px;z-index:6;width:auto;gap:6px;flex-wra
 .ov.menu .note{color:#9cc5ae}
 @media (max-width:860px){.vsrow{flex-direction:column;align-items:center}.vsmid{display:none}.card{max-width:540px;width:100%}.por{width:112px;height:112px}}
 
+.hurt{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,rgba(255,40,40,0) 42%,rgba(255,40,40,.7) 100%)}
+.pop2.miss{font-size:15px;color:#d9e6de;opacity:.85}
 @media (max-width:700px){.dhud .nm{font-size:12px}.dhud .tm{font-size:22px}.cds{display:none}}
 </style>
 </head>
@@ -191,6 +193,7 @@ header{position:fixed;right:8px;bottom:8px;z-index:6;width:auto;gap:6px;flex-wra
       <span id="cdJ">跳 空白</span><span id="cdA">攻擊 左鍵</span><span id="cdD">衝刺 Shift</span><span id="cdU">大招 R</span><span id="cdL">鎖定 右鍵</span>
     </div>
     <div class="flash" id="flash"></div>
+    <div class="hurt" id="hurt"></div>
     <div class="banner" id="banner" hidden></div>
     <div class="ov menu" id="startO">
       <div class="mwrap">
@@ -596,12 +599,12 @@ let slowT = 0, zoomT = 0, flashA = 0;
 // ───────── 裝備：武器／被動／大招 ─────────
 // 武器平衡：每秒傷害都落在 17～21 之間，強項（距離、範圍、攻速、擊退）用「窗口、前搖、傷害」互相換
 const WEAPONS = {
-  mouse: { n: '滑鼠', ic: '🖱️', tag: '快速近戰', dmg: 6, cd: .30, wind: .08, range: 2.8, arc: 56, kb: .75, d: '攻速最快、距離短，靠連擊累積傷害' },
-  tablet: { n: '手繪板', ic: '🎨', tag: '均衡近戰', dmg: 10, cd: .48, wind: .13, range: 3.3, arc: 124, kb: 1, d: '各項平均，範圍寬、好上手' },
-  keyboard: { n: '鍵盤', ic: '⌨️', tag: '寬幅重砸', dmg: 17, cd: .85, wind: .26, range: 3.4, arc: 100, kb: 1.5, d: '揮得慢、前搖長，但傷害大、擊退遠' },
-  ruler: { n: '直尺', ic: '📏', tag: '長距突刺', dmg: 11, cd: .58, wind: .16, range: 4.9, arc: 30, kb: 1, d: '距離最長，但判定很窄，容易被繞開' },
-  phone: { n: '電話機', ic: '☎️', tag: '遠程音波', dmg: 9, cd: .60, wind: .14, ranged: 1, speed: 15, life: .85, r: .9, kb: .9, d: '射出慢速音波，可被閃避；遠距離安全輸出' },
-  stapler: { n: '釘書機', ic: '📎', tag: '遠程連射', dmg: 4.5, cd: .26, wind: .07, ranged: 1, speed: 26, life: .3, r: .55, kb: .4, d: '快速射出小釘子，傷害低、射程中等' }
+  mouse: { n: '滑鼠', ic: '🖱️', tag: '快速近戰', dmg: 6, cd: .30, wind: .12, range: 2.8, arc: 56, kb: .75, d: '攻速最快、距離短，靠連擊累積傷害' },
+  tablet: { n: '手繪板', ic: '🎨', tag: '均衡近戰', dmg: 10, cd: .48, wind: .20, range: 3.3, arc: 124, kb: 1, d: '各項平均，範圍寬、好上手' },
+  keyboard: { n: '鍵盤', ic: '⌨️', tag: '寬幅重砸', dmg: 17, cd: .85, wind: .34, range: 3.4, arc: 100, kb: 1.5, d: '揮得慢、前搖長，但傷害大、擊退遠' },
+  ruler: { n: '直尺', ic: '📏', tag: '長距突刺', dmg: 11, cd: .58, wind: .24, range: 4.9, arc: 30, kb: 1, d: '距離最長，但判定很窄，容易被繞開' },
+  phone: { n: '電話機', ic: '☎️', tag: '遠程音波', dmg: 9, cd: .60, wind: .20, ranged: 1, speed: 15, life: .85, r: .9, kb: .9, d: '射出慢速音波，可被閃避；遠距離安全輸出' },
+  stapler: { n: '釘書機', ic: '📎', tag: '遠程連射', dmg: 4.5, cd: .26, wind: .10, ranged: 1, speed: 26, life: .3, r: .55, kb: .4, d: '快速射出小釘子，傷害低、射程中等' }
 };
 const PASSIVES = {
   coffee: { n: '咖啡因', d: '移動速度 +10%，衝刺冷卻 -20%' },
@@ -725,7 +728,9 @@ function pop(txt, x, y, z, cls) { const e = document.createElement('div'); e.cla
 
 // ───────── 戰鬥模擬 ─────────
 const dist2 = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+let hurtA = 0;
 function hitFx(att, tgt, d, hi, heavy) {
+  if (tgt === ME) hurtA = heavy ? 1 : .75;
   { const p = v3(tgt.x, tgt.y + 1.1, tgt.z), c = colOf(att); fxImpact(p, c, heavy ? 2.6 : 1.7); fxSlash(p, c, heavy); if (heavy) { fxPoof(p, c); fxRing(v3(tgt.x, tgt.y + .1, tgt.z), c, .4, 1.8, .4); } }
   pop(String(Math.round(d)) + (hi ? '↑' : ''), tgt.x, tgt.y + 2.3, tgt.z, (heavy ? 'big ' : '') + (hi ? 'hi' : '') + (att === ME ? '' : ' red')); SFX.hit(heavy); shake = heavy ? .35 : .15; hitstop = heavy ? .09 : .045;
 }
@@ -783,7 +788,7 @@ function updSweeps(dt) {
 }
 function doAttack(f, o) {
   const W = wOf(f), A = f.face, dx = o.x - f.x, dz = o.z - f.z, dist = Math.hypot(dx, dz);
-  const heavy = f.combo >= 2; f.combo = heavy ? 0 : f.combo + 1; f.comboT = .9;
+  const heavy = f.combo >= 2; f.combo = heavy ? 0 : f.combo + 1; f.comboT = .9; f.swingT = .26; f.windT = 0;
   if (W.ranged) {
     if (net && f === ME) netSend({ t: 'a', k: 'shot', hv: heavy ? 1 : 0, f: +A.toFixed(3) });
     spawnProj(f, W, heavy, o, A); return;
@@ -793,7 +798,8 @@ function doAttack(f, o) {
   swingVisual(f, W, heavy);
   if (net && f === ME) netSend({ t: 'a', k: 'atk', hv: heavy ? 1 : 0, f: +A.toFixed(3) });
   { const st = W.range > 4 ? .5 : .9, nx = f.x + fx * st, nz = f.z + fz * st; if (!blockedAt(nx, nz, f.y)) { f.x = nx; f.z = nz; } }   // 揮擊時向前踏一步
-  if (dist <= W.range + MARGIN && dirOk && Math.abs(o.y - f.y) <= 1.9) damage(f, o, heavy ? W.dmg * 1.5 : W.dmg, heavy, W.kb);
+  let hit = false; if (dist <= W.range + MARGIN && dirOk && Math.abs(o.y - f.y) <= 1.9) hit = damage(f, o, heavy ? W.dmg * 1.5 : W.dmg, heavy, W.kb);
+  if (!hit && f === ME) pop('落空', f.x + fx * 1.8, f.y + 1.7, f.z + fz * 1.8, 'miss');
 }
 function ultVisual(f, k) {
   if (k === 'quake') { SFX.ult(); shake = .5; hitstop = .06; fxSig(heroOf(f.name), v3(f.x, f.y, f.z), true); fxRing(v3(f.x, f.y + .1, f.z), colOf(f), .5, R.ultR, .6); flashA = .3; slowT = .45; zoomT = .9; }
@@ -811,7 +817,7 @@ function doUlt(f, o) {
 }
 function stepFighter(f, o, dt) {
   const inp = f.inp, can = f.hitStun <= 0 && f.ultWind <= 0 && state === 'fight';
-  f.rageT = Math.max(0, (f.rageT || 0) - dt); f.atkCD = Math.max(0, f.atkCD - dt); f.dashCD = Math.max(0, f.dashCD - dt); f.hitStun = Math.max(0, f.hitStun - dt); f.flash = Math.max(0, f.flash - dt); f.comboT -= dt; if (f.comboT <= 0) f.combo = 0;
+  f.rageT = Math.max(0, (f.rageT || 0) - dt); f.swingT = Math.max(0, (f.swingT || 0) - dt); f.atkCD = Math.max(0, f.atkCD - dt); f.dashCD = Math.max(0, f.dashCD - dt); f.hitStun = Math.max(0, f.hitStun - dt); f.flash = Math.max(0, f.flash - dt); f.comboT -= dt; if (f.comboT <= 0) f.combo = 0;
   // 揮擊前搖
   if (f.windT > 0) { f.windT -= dt; if (f.windT <= 0) doAttack(f, o); }
   if (f.ultWind > 0) { f.ultWind -= dt; if (f.ultWind <= 0) doUlt(f, o); }
@@ -824,8 +830,8 @@ function stepFighter(f, o, dt) {
   // 動作
   if (can && inp.jump && f.grounded) { f.vy = R.jumpV; f.grounded = false; if (net && f === ME) netSend({ t: 'a', k: 'j' }); SFX.jump(); fxDust(v3(f.x, f.y, f.z)); fxRing(v3(f.x, f.y + .05, f.z), colOf(f), .3, 1.1, .3); }
   if (can && inp.dash && f.dashCD <= 0 && (mx || mz || true)) { let dx = mx, dz = mz; if (!dx && !dz) { dx = Math.sin(f.face); dz = Math.cos(f.face); } const l = Math.hypot(dx, dz) || 1; f.dashDir = [dx / l, dz / l]; f.dashT = R.dashT; f.dashCD = R.dashCD * (f.pas === 'coffee' ? .8 : 1); if (net && f === ME) netSend({ t: 'a', k: 'd', x: +f.dashDir[0].toFixed(2), z: +f.dashDir[1].toFixed(2) }); SFX.dash(); { const a = v3(f.x, f.y + .7, f.z), b = v3(f.x + f.dashDir[0] * 3.6, f.y + .7, f.z + f.dashDir[1] * 3.6); fxTrail(a, b, colOf(f), .35, 1.0); fxDust(v3(f.x, f.y, f.z)); } }
-  if (can && inp.atk && f.atkCD <= 0 && f.windT <= 0 && f.dashT <= 0) { const W = wOf(f); f.atkCD = W.cd * (f.rageT > 0 ? .8 : 1) * (f.isBot ? [1.5, 1.2, 1][lvl] : 1); f.windT = W.wind * (f.isBot ? (f.windMul || 1.7) : 1); SFX.swing(); if (f === ME) { if (mx || mz) f.face = Math.atan2(mx, mz); else if (lockOn) faceToward(f, o); else f.face = Math.atan2(-Math.sin(yaw), -Math.cos(yaw)); if (W.ranged && !lockOn) { const hd = Math.atan2(o.x - f.x, o.z - f.z), df = Math.atan2(Math.sin(hd - f.face), Math.cos(hd - f.face)); if (Math.abs(df) < .32) f.face = hd; } } else faceToward(f, o); }
-  if (can && inp.ult && f.ult >= R.ultNeed && f.grounded) { f.ultWind = (ULTS[f.ulk] || ULTS.quake).wind; }
+  if (can && inp.atk && f.atkCD <= 0 && f.windT <= 0 && f.dashT <= 0) { const W = wOf(f); f.atkCD = W.cd * (f.rageT > 0 ? .8 : 1) * (f.isBot ? [1.5, 1.2, 1][lvl] : 1); f.windT = W.wind * (f.isBot ? (f.windMul || 1.7) : 1); SFX.swing(); if (f === ME) { if (mx || mz) f.face = Math.atan2(mx, mz); else if (lockOn) faceToward(f, o); else f.face = Math.atan2(-Math.sin(yaw), -Math.cos(yaw)); if (W.ranged && !lockOn) { const hd = Math.atan2(o.x - f.x, o.z - f.z), df = Math.atan2(Math.sin(hd - f.face), Math.cos(hd - f.face)); if (Math.abs(df) < .32) f.face = hd; } } else faceToward(f, o); if (net && f === ME) netSend({ t: 'a', k: 'w', f: +f.face.toFixed(3) }); }
+  if (can && inp.ult && f.ult >= R.ultNeed && f.grounded) { f.ultWind = (ULTS[f.ulk] || ULTS.quake).wind; if (net && f === ME) netSend({ t: 'a', k: 'uw', u: f.ulk }); }
   inp.jump = inp.atk = inp.dash = inp.ult = false;
   // 朝向
   if (can && f.windT <= 0 && f.ultWind <= 0) { if (f.isBot || lockOn) { if (f.isBot || lockOn) faceToward(f, o); } else if (mx || mz) f.face = Math.atan2(mx, mz); else if (f === ME) f.face = Math.atan2(-Math.sin(yaw), -Math.cos(yaw)); }
@@ -914,15 +920,23 @@ function ensureGear(f) {
   const tip = new THREE.Mesh(tg, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .7, side: THREE.DoubleSide, depthWrite: false })); tip.userData.keepScale = true; grp.add(tip);
   grp.userData = { fill, ln, tip, ranged: !!W.ranged, range: W.range || 1 }; scene.add(grp); f.fan = grp;
 }
+const alertTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.fillStyle = '#ff3b30'; g.strokeStyle = '#000'; g.lineWidth = 8; g.beginPath(); g.arc(64, 64, 52, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#fff'; g.font = '900 84px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('!', 64, 70); return new THREE.CanvasTexture(c); })();
+const teles = [0, 1].map(() => { const g = new THREE.Group(), fl = new THREE.Mesh(new THREE.CircleGeometry(1, 40), new THREE.MeshBasicMaterial({ color: 0xff3b30, transparent: true, opacity: .25, depthWrite: false, side: THREE.DoubleSide })), rg = new THREE.Mesh(new THREE.RingGeometry(.93, 1, 48), new THREE.MeshBasicMaterial({ color: 0xff3b30, transparent: true, opacity: .9, depthWrite: false, side: THREE.DoubleSide })); fl.rotation.x = rg.rotation.x = -Math.PI / 2; g.add(fl, rg); g.visible = false; g.userData = { fl, rg }; scene.add(g); return g; });
 function updGear(f, toCam, bob) {
   ensureGear(f); const W = wOf(f), on = state === 'countdown' || state === 'fight' || state === 'roundEnd';
-  const rX = Math.cos(toCam), rZ = -Math.sin(toCam), sw = f.windT > 0 ? Math.min(1, f.windT / Math.max(.05, W.wind)) : 0;
-  f.wsp.position.set(rX * .62 + Math.sin(toCam) * .08, .8 + bob + sw * .25, rZ * .62 + Math.cos(toCam) * .08); const k = .7 + sw * .5; f.wsp.scale.set(k, k, 1); f.wsp.material.rotation = -.5 - sw * 1.2 + (f.moving > 1 && f.grounded ? Math.sin(f.phase) * .15 : 0); f.wsp.visible = f.hp > 0;
-  const fan = f.fan, d = fan.userData, show = on && f.hp > 0 && (f === ME || f.windT > 0 || f.ultWind > 0);
+  if (!f.alert) { f.alert = new THREE.Sprite(new THREE.SpriteMaterial({ map: alertTex, transparent: true, depthTest: false })); f.alert.scale.set(.9, .9, 1); f.alert.visible = false; f.holder.add(f.alert); }
+  const rX = Math.cos(toCam), rZ = -Math.sin(toCam), sw = f.windT > 0 ? Math.min(1, f.windT / Math.max(.05, W.wind)) : 0, fx = Math.sin(f.face), fz = Math.cos(f.face);
+  const wind = f.windT > 0 || f.ultWind > 0, p = f.swingT > 0 ? 1 - f.swingT / .26 : 0, sn = Math.sin(p * Math.PI);
+  if (f.swingT > 0) { f.wsp.position.set(rX * .5 + fx * (.2 + 1.1 * sn), .95 + sn * .2, rZ * .5 + fz * (.2 + 1.1 * sn)); const k = 1 + .6 * sn; f.wsp.scale.set(k, k, 1); f.wsp.material.rotation = -1.4 + 2.8 * p; }
+  else { f.wsp.position.set(rX * .62 + Math.sin(toCam) * .08, .8 + bob + sw * .25, rZ * .62 + Math.cos(toCam) * .08); const k = .7 + sw * .5; f.wsp.scale.set(k, k, 1); f.wsp.material.rotation = -.5 - sw * 1.2 + (f.moving > 1 && f.grounded ? Math.sin(f.phase) * .15 : 0); }
+  f.wsp.visible = f.hp > 0;
+  const al = f !== ME && wind && f.hp > 0 && on; f.alert.visible = al; if (al) { const pz = 1 + Math.sin(performance.now() * .03) * .18; f.alert.position.set(0, 2.9, 0); f.alert.scale.set(.95 * pz, .95 * pz, 1); }
+  const tl = teles[f === ME ? 0 : 1], ut = f.ultWind > 0 && f.ulk === 'quake' && on; tl.visible = ut; if (ut) { tl.position.set(f.x, f.y + .1, f.z); tl.scale.setScalar(R.ultR); const col = f === ME ? 0x5fe08a : 0xff3b30; tl.userData.fl.material.color.setHex(col); tl.userData.rg.material.color.setHex(col); }
+  const fan = f.fan, d = fan.userData, show = on && f.hp > 0 && (f === ME || f.windT > 0 || f.swingT > 0);
   fan.visible = show; if (!show) return;
   fan.position.set(f.x, f.y + .08, f.z); fan.rotation.y = f.face; if (!d.ranged) fan.scale.setScalar(d.range);
-  const c = new THREE.Color(colOf(f)), hot = f.windT > 0; d.fill.material.color.copy(c); d.ln.material.color.copy(c); d.tip.material.color.copy(c);
-  d.fill.material.opacity = hot ? .5 : (f === ME ? .24 : .3); d.ln.material.opacity = hot ? 1 : .6; d.tip.material.opacity = hot ? .95 : .7;
+  const hot = f.windT > 0, c = new THREE.Color(f !== ME && hot ? '#ff3b30' : colOf(f)); d.fill.material.color.copy(c); d.ln.material.color.copy(c); d.tip.material.color.copy(c);
+  d.fill.material.opacity = hot ? (f === ME ? .5 : .6) : (f === ME ? .24 : .3); d.ln.material.opacity = hot ? 1 : .6; d.tip.material.opacity = hot ? .95 : .7;
 }
 function render(dt) {
   // 鏡頭
@@ -936,7 +950,7 @@ function render(dt) {
   camera.position.set(cx + sx, cy + sy, cz); camera.lookAt(camSmooth.x, camSmooth.y + .2, camSmooth.z);
   // 角色：貼圖面向（相機相對角）
   for (const f of fighters) {
-    f.holder.position.set(f.x, f.y, f.z); f.blob.position.set(f.x, groundAt(f.x, f.z) + .03, f.z);
+    { const lg = f.swingT > 0 ? Math.sin((1 - f.swingT / .26) * Math.PI) * .35 : 0; f.holder.position.set(f.x + Math.sin(f.face) * lg, f.y, f.z + Math.cos(f.face) * lg); } f.blob.position.set(f.x, groundAt(f.x, f.z) + .03, f.z);
     const sc = Math.max(.4, 1 - (f.y - groundAt(f.x, f.z)) * .08); f.blob.scale.set(sc, sc, 1);
     const toCam = Math.atan2(camera.position.x - f.x, camera.position.z - f.z), rel = Math.atan2(Math.sin(f.face - toCam), Math.cos(f.face - toCam));
     const col = ((Math.round(rel / (Math.PI * 2) * ANGLES) + ANGLES) % ANGLES) / ANGLES; if (f.tex) f.tex.offset.set(col, 0);
@@ -954,6 +968,7 @@ function render(dt) {
   if (shockT > 0) { shockT -= dt; const k = 1 - shockT / .5; shock.position.set(shockPos[0], shockPos[1], shockPos[2]); shock.scale.setScalar(.5 + k * R.ultR); shock.material.opacity = (1 - k) * .8; } else shock.material.opacity = 0;
   for (let i = FX.length - 1; i >= 0; i--) { const q = FX[i]; q.t += dt; if (q.t >= q.dur) { killFx(q); FX.splice(i, 1); } else q.upd(q.t, q.t / q.dur); }
   if (zoomT > 0) { zoomT -= dt; camera.fov = 55 - Math.sin(Math.min(1, zoomT / .9) * Math.PI) * 9; camera.updateProjectionMatrix(); } else if (camera.fov !== 55) { camera.fov = 55; camera.updateProjectionMatrix(); }
+  if (hurtA > 0) { hurtA = Math.max(0, hurtA - dt * 2.2); $('hurt').style.opacity = hurtA; }
   if (flashA > 0) { flashA = Math.max(0, flashA - dt * 1.2); $('flash').style.opacity = flashA; }
   renderer.render(scene, camera);
 }
@@ -1048,16 +1063,18 @@ function netMsg(m) {
   else if (m.t === 's') { OP.nx = m.x; OP.ny = m.y; OP.nz = m.z; OP.face = m.f; OP.hp = m.hp; OP.ult = m.u; OP.moving = m.m; OP.grounded = !!m.g; if (m.d) OP.dashT = Math.max(OP.dashT, .1); if (m.h && OP.hitStun <= 0) OP.hitStun = .1; }
   else if (m.t === 'h') applyHitToMe(m);
   else if (m.t === 'a') {
-    if (m.k === 'atk') { OP.face = m.f; OP.windT = .1; SFX.swing(); swingVisual(OP, wOf(OP), !!m.hv); }
-    else if (m.k === 'shot') { OP.face = m.f; OP.windT = .1; SFX.swing(); spawnProj(OP, wOf(OP), !!m.hv, null, m.f); }
-    else if (m.k === 'ult') { OP.ultWind = .1; if (typeof m.f === 'number') OP.face = m.f; const u = ULTS[m.u] ? m.u : 'quake'; ultVisual(OP, u); if (u === 'rush') OP.dashT = .26; else if (u === 'rage') OP.rageT = 4; }
+    if (m.k === 'w') { OP.face = m.f; OP.windT = wOf(OP).wind; SFX.swing(); }
+    else if (m.k === 'uw') { if (ULTS[m.u]) OP.ulk = m.u; OP.ultWind = (ULTS[OP.ulk] || ULTS.quake).wind; }
+    else if (m.k === 'atk') { OP.face = m.f; OP.windT = 0; OP.swingT = .26; swingVisual(OP, wOf(OP), !!m.hv); }
+    else if (m.k === 'shot') { OP.face = m.f; OP.windT = 0; OP.swingT = .26; SFX.swing(); spawnProj(OP, wOf(OP), !!m.hv, null, m.f); }
+    else if (m.k === 'ult') { OP.ultWind = 0; if (typeof m.f === 'number') OP.face = m.f; const u = ULTS[m.u] ? m.u : 'quake'; ultVisual(OP, u); if (u === 'rush') OP.dashT = .26; else if (u === 'rage') OP.rageT = 4; }
     else if (m.k === 'j') { fxDust(v3(OP.x, OP.y, OP.z)); fxRing(v3(OP.x, OP.y + .05, OP.z), colOf(OP), .3, 1.1, .3); }
     else if (m.k === 'd') { OP.dashT = R.dashT; SFX.dash(); const a = v3(OP.x, OP.y + .7, OP.z), b = v3(OP.x + m.x * 3.6, OP.y + .7, OP.z + m.z * 3.6); fxTrail(a, b, colOf(OP), .35, 1.0); fxDust(v3(OP.x, OP.y, OP.z)); }
   }
 }
 function stepRemote(f, dt) {   // 對手：位置朝最新封包靠近，其餘計時器只為了畫面效果
   const k = 1 - Math.exp(-dt * 18); f.x += (f.nx - f.x) * k; f.z += (f.nz - f.z) * k; if (f.ny !== undefined) f.y += (f.ny - f.y) * k;
-  f.flash = Math.max(0, f.flash - dt); f.hitStun = Math.max(0, f.hitStun - dt); f.windT = Math.max(0, f.windT - dt); f.ultWind = Math.max(0, f.ultWind - dt); f.dashT = Math.max(0, f.dashT - dt); f.rageT = Math.max(0, f.rageT - dt);
+  f.flash = Math.max(0, f.flash - dt); f.hitStun = Math.max(0, f.hitStun - dt); f.windT = Math.max(0, f.windT - dt); f.ultWind = Math.max(0, f.ultWind - dt); f.dashT = Math.max(0, f.dashT - dt); f.rageT = Math.max(0, f.rageT - dt); f.swingT = Math.max(0, (f.swingT || 0) - dt);
 }
 function netGone(drop) {   // 對手離線 / 連線中斷
   if (!net) return; const was = net; net = null; netTry++; clearInterval(was.ping); try { was.ws.onclose = null; was.ws.close(1000); } catch (e) {}
