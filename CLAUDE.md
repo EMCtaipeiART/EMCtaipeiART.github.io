@@ -62,3 +62,12 @@
 - 後端：位置沿用 `pixelOfficeUpdate` 的 floor/fx/fy/fdir 協定；個人進度走 `pixelOfficeProgress`（Worker 要另外 `wrangler deploy`）。後端只放行 emc-art.com／github.io／localhost:8787，**測試寫入用模擬後端，別打真實後端**。本機預覽要加 `?as=名字`（僅 localhost 有效）。
 - 部署：只把 `pixel-plaza/`（不含 `ai-views/`、`*.mjs`）與 `character-studio/vendor/` 放到 `main`；Pages 工作流程的路徑過濾要涵蓋新資料夾。改完同步更新 `UI-SPEC.md`／`MAINTENANCE.md`，並在 `MAINTENANCE_LOG.md` 檔尾記一段。
 - 本機 `EMC-ART-Pixel-Office/` 資料夾只是 2D 時期遺留的未追蹤殘檔（`dist/assets`、`cdn`、`source-history.bundle`），已不屬於 Git，別當成現行版本。
+
+## 小遊戲色彩與手機規範（2026-11-13 使用者定的，之後新做的小遊戲都照這個）
+- 適用：`expedition/`、`deadline/`、`hoops3d/` 以及之後新增的小遊戲頁面。
+- **深淺模式跟網站左側「深色／淺色」按鈕**（localStorage `designRequestThemeV1`；`<head>` 先設 `data-theme`，並監聽 `storage`／`pixelOfficeTheme` 訊息；不要再做各遊戲自己的切換鈕）。
+- **深色＝深綠**（以遠征隊為準）：背景 `#0b1d15`、面板 `#163a2a`／`#1d4a36`、邊 `#2f6b4f`／`#4f9a74`、字 `#eafff2`、次要字 `#9cc5ae`、強調 `#5fe08a`、金色 `#ffd166`。3D 場景背景約 `0x1f4a35`（要亮到線條看得清楚，別用太暗的）。
+- **淺色＝淺綠**：背景 `#eaf5ee`、面板 `#d0e8da`、邊 `#86bfa0`、字 `#0d2a1c`、次要字 `#4a7660`、強調 `#1c9a52`；淺色底上的金色字一律用深琥珀 `#8a5300`（亮金色在淺底看不清楚）。3D 場景背景約 `0xcfeadb`。
+- 按鈕不要厚邊／厚陰影；手機（≤700px）按鈕縮小（字 12px、邊 2px）。同權重的 CSS 規則後面的會蓋前面的，手機規則要放在最後。
+- 手機防誤放大：viewport 加 `maximum-scale=1,user-scalable=no`、`touch-action:manipulation`、擋 `gesturestart`；**不要攔 `touchend`**（會吃掉連點）。
+- 遠征隊的 `expedition/index.html` 是由部署腳本產生，改樣式要連同產生來源一起改，否則下次部署會被蓋掉。
