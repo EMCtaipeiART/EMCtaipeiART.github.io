@@ -134,6 +134,19 @@ h3{margin:16px 0 0;font-size:17px}
 #deliver{position:absolute;left:12px;bottom:12px;z-index:3;font-size:17px;padding:8px 20px;background:linear-gradient(#ffe39a,#f0b429);animation:dpop .9s infinite}
 @keyframes dpop{50%{transform:scale(1.07)}}
 @media (prefers-reduced-motion:reduce){#deliver{animation:none}}
+
+/* 淺色模式：外框／面板改淺綠；戰場本身仍是遊戲畫面（暗色辦公室），HUD 保持深色以維持辨識 */
+@media (prefers-color-scheme:light){
+:root{color-scheme:light;--bg:#eaf5ee;--bg2:#dcefe3;--panel:#d0e8da;--panel2:#c2e0d0;--line:#86bfa0;--ink:#0d2a1c;--dim:#4a7660;--accent:#1c9a52;--accent-d:#17803f;--gold:#b8730b;--danger:#c93a2d;--violet:#6a4ed0}
+body{background-image:radial-gradient(1200px 500px at 50% -10%,#cfeadb 0%,transparent 70%)}
+.overlay{background:rgba(234,245,238,.93)}
+.lb,.sub input{background:rgba(255,255,255,.7)}
+.pk.off,#deliver:disabled{background:linear-gradient(#cfe3d8,#bcd6c7);color:var(--dim)}
+.brand small{color:var(--accent-d)}
+#stage,#party,.card{--ink:#eafff2;--dim:#9cc5ae;--accent:#5fe08a;--gold:#ffd166;--line:#2f6b4f;--bg2:#102a1e;--panel:#163a2a;--panel2:#1d4a36;color:#eafff2}
+#party{background:#0b1d15}
+.overlay{color:#0d2a1c;--ink:#0d2a1c;--dim:#4a7660}
+}
 </style>
 </head>
 <body>

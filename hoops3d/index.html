@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="color-scheme" content="light">
+<meta name="color-scheme" content="light dark">
 <title>廢紙投籃 3D</title>
 <style>
 :root{--ink:#182e54;--dim:#6f7c92;--bg:#eef3fb;--line:#c9d2e0;--blue:#3b6fd8;--gold:#f0b429;--red:#d9534f}
@@ -42,6 +42,13 @@ header h1 small{display:block;font-size:12px;font-weight:600;color:var(--dim)}
 .lb .tab{font-size:12px;border:2px solid var(--ink);border-radius:99px;padding:1px 10px;background:#fff;cursor:pointer;font-weight:800}.lb .tab.on{background:var(--ink);color:#fff}
 .lb .r{display:flex;gap:8px;padding:2px 0;border-bottom:1px dashed var(--line)}.lb .r i{width:26px;font-style:normal;color:var(--dim)}.lb .r span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lb .r b{font-variant-numeric:tabular-nums}.lb .me{color:#b9770e;font-weight:800}
 .note{font-size:12px;color:var(--dim);text-align:center}
+@media (prefers-color-scheme:dark){
+:root{color-scheme:dark;--ink:#e6edf8;--dim:#9aa8c0;--bg:#0f1830;--line:#33466b}
+.pk{background:linear-gradient(#27395f,#1b2a4b);border-color:#9fb4dc}.pk.big{background:linear-gradient(#ffd96b,#d9a21e);color:#182e54;border-color:#f6e3a8}
+.chip,.lb .tab{background:#1b2a4b;border-color:#9fb4dc}.lb .tab.on{background:#e6edf8;color:#0f1830}.bar{background:#1b2a4b;border-color:#9fb4dc}
+#stage{border-color:#9fb4dc;background:#0f1830}.ov{background:rgba(15,24,48,.94)}.lb{background:#16223f;border-color:#9fb4dc}
+.ach b{background:#3a3010}.title-up,.lb .me{color:#ffd166}.score,.ov .big3{color:#7fa8ff}.hint{color:#e6edf8;text-shadow:0 1px 0 #000}.wind{background:rgba(15,24,48,.88)}.power{background:#1b2a4b;border-color:#9fb4dc}.pop{text-shadow:0 2px 0 #000,0 0 6px #000}
+}
 </style>
 </head>
 <body>
@@ -140,23 +147,25 @@ const SFX = (() => {
 const cv = $('c3'), stage = $('stage');
 const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); renderer.shadowMap.enabled = true;
+const mq = matchMedia('(prefers-color-scheme: dark)'); let DARK = mq.matches;
 const scene = new THREE.Scene(); scene.background = new THREE.Color(0xcfe0f4); scene.fog = new THREE.Fog(0xcfe0f4, 40, 80);
 const camera = new THREE.PerspectiveCamera(40, 5 / 3, .1, 200);
 camera.position.set(10, 5.4, 19); camera.lookAt(10, 3.9, 0);
-scene.add(new THREE.HemisphereLight(0xf2f5fa, 0x9aa7bd, .78));
+const hemi = new THREE.HemisphereLight(0xf2f5fa, 0x9aa7bd, .78); scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff3df, .55); sun.position.set(6, 16, 12); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
 Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 12, bottom: -8, near: 1, far: 50 }); scene.add(sun);
 const M = c => new THREE.MeshLambertMaterial({ color: c });
 const box = (w, h, d, col, x, y, z, parent = scene, shadow = true) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), M(col)); m.position.set(x, y, z); m.castShadow = shadow; m.receiveShadow = true; parent.add(m); return m; };
 const edge = m => { const e = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0x182e54 })); m.add(e); return m; };
-const canvasTex = (w, h, draw, rep) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.anisotropy = 4; if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep[0], rep[1]); } return t; };
+const redraws = [];
+const canvasTex = (w, h, draw, rep) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.anisotropy = 4; redraws.push(() => { const g = c.getContext('2d'); g.clearRect(0, 0, w, h); draw(g, w, h); t.needsUpdate = true; }); if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep[0], rep[1]); } return t; };
 
 // 地板（淡灰格線）
-{ const t = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#b4bdcc'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(24,46,84,.12)'; g.lineWidth = 3; g.strokeRect(0, 0, w, h); }, [30, 14]);
+{ const t = canvasTex(128, 128, (g, w, h) => { g.fillStyle = DARK ? '#2a3146' : '#b4bdcc'; g.fillRect(0, 0, w, h); g.strokeStyle = DARK ? 'rgba(160,185,230,.12)' : 'rgba(24,46,84,.12)'; g.lineWidth = 3; g.strokeRect(0, 0, w, h); }, [30, 14]);
   const f = new THREE.Mesh(new THREE.PlaneGeometry(60, 28), new THREE.MeshLambertMaterial({ map: t })); f.rotation.x = -Math.PI / 2; f.position.set(10, 0, 4); f.receiveShadow = true; scene.add(f); }
 // 後牆：窗戶＋海報
-{ const t = canvasTex(1024, 256, (g, w, h) => { g.fillStyle = '#e3dfd3'; g.fillRect(0, 0, w, h); g.fillStyle = '#182e54'; g.fillRect(0, h - 22, w, 22);
-    for (let i = 0; i < 5; i++) { const x = 40 + i * 200; g.fillStyle = '#182e54'; g.fillRect(x - 6, 34, 152, 132); g.fillStyle = '#7fa9d2'; g.fillRect(x, 40, 140, 120); g.fillStyle = 'rgba(255,255,255,.3)'; g.fillRect(x + 8, 48, 40, 100); g.fillStyle = '#182e54'; g.fillRect(x + 68, 40, 4, 120); g.fillRect(x, 96, 140, 4); }
+{ const t = canvasTex(1024, 256, (g, w, h) => { g.fillStyle = DARK ? '#3a4058' : '#e3dfd3'; g.fillRect(0, 0, w, h); g.fillStyle = DARK ? '#10182c' : '#182e54'; g.fillRect(0, h - 22, w, 22);
+    for (let i = 0; i < 5; i++) { const x = 40 + i * 200; g.fillStyle = '#182e54'; g.fillRect(x - 6, 34, 152, 132); g.fillStyle = DARK ? '#1c2a52' : '#7fa9d2'; g.fillRect(x, 40, 140, 120); g.fillStyle = DARK ? 'rgba(255,230,160,.18)' : 'rgba(255,255,255,.3)'; g.fillRect(x + 8, 48, 40, 100); g.fillStyle = '#182e54'; g.fillRect(x + 68, 40, 4, 120); g.fillRect(x, 96, 140, 4); }
     g.fillStyle = '#d9534f'; g.fillRect(868, 60, 70, 90); g.fillStyle = '#fff'; g.font = '800 22px sans-serif'; g.textAlign = 'center'; g.fillText('DEAD', 903, 100); g.fillText('LINE', 903, 126); });
   const w = new THREE.Mesh(new THREE.PlaneGeometry(52, 13), new THREE.MeshLambertMaterial({ map: t })); w.position.set(10, 6.5, -7); scene.add(w); }
 // 背景辦公桌與電腦
@@ -185,6 +194,12 @@ const dots = Array.from({ length: 28 }, () => { const m = new THREE.Mesh(new THR
 // 粒子（紙屑）
 const bits = []; function confetti(x, y, n, cols) { for (let i = 0; i < n; i++) { const m = new THREE.Mesh(new THREE.PlaneGeometry(.12, .08), new THREE.MeshBasicMaterial({ color: cols[i % cols.length], side: THREE.DoubleSide })); m.position.set(x, y, 0); scene.add(m); const a = Math.random() * 6.283; bits.push({ m, vx: Math.cos(a) * (2 + Math.random() * 3), vy: 3 + Math.random() * 4, vz: (Math.random() - .5) * 3, t: 0, life: .9 + Math.random() * .5 }); } }
 
+function applyTheme() {
+  DARK = mq.matches; const bg = DARK ? 0x141b30 : 0xcfe0f4; scene.background.setHex(bg); scene.fog.color.setHex(bg);
+  hemi.color.setHex(DARK ? 0x8aa0dc : 0xf2f5fa); hemi.groundColor.setHex(DARK ? 0x1c2238 : 0x9aa7bd); hemi.intensity = DARK ? .8 : .78;
+  sun.color.setHex(DARK ? 0xa9bcff : 0xfff3df); sun.intensity = DARK ? .6 : .55; redraws.forEach(f => f());
+}
+(mq.addEventListener ? mq.addEventListener('change', applyTheme) : mq.addListener(applyTheme)); applyTheme();
 function resize() { const w = stage.clientWidth, h = Math.round(w * 3 / 5); renderer.setSize(w, h, false); }
 new ResizeObserver(resize).observe(stage); resize();
 

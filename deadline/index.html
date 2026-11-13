@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="color-scheme" content="light">
+<meta name="color-scheme" content="light dark">
 <title>截稿倒數 2</title>
 <style>
 :root{--ink:#182e54;--dim:#6f7c92;--bg:#eef3fb;--card:#fff;--line:#c9d2e0;--blue:#3b6fd8;--gold:#f0b429;--red:#d9534f;--green:#2f9e57}
@@ -47,6 +47,13 @@ canvas{display:block;width:100%;height:auto;aspect-ratio:720/540;cursor:pointer}
 .lb .r{display:flex;gap:8px;padding:2px 0;border-bottom:1px dashed var(--line)}.lb .r i{width:26px;font-style:normal;color:var(--dim)}.lb .r span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lb .r b{font-variant-numeric:tabular-nums}
 .lb .me{color:#b9770e;font-weight:800}
 .note{font-size:12px;color:var(--dim);text-align:center}
+@media (prefers-color-scheme:dark){
+:root{color-scheme:dark;--ink:#e6edf8;--dim:#9aa8c0;--bg:#0f1830;--line:#33466b}
+.pk{background:linear-gradient(#27395f,#1b2a4b);border-color:#9fb4dc}.pk.big{background:linear-gradient(#ffd96b,#d9a21e);color:#182e54;border-color:#f6e3a8}
+.chip,.lb .tab{background:#1b2a4b;border-color:#9fb4dc}.lb .tab.on{background:#e6edf8;color:#0f1830}.bar{background:#1b2a4b;border-color:#9fb4dc}
+#stage{border-color:#9fb4dc;background:#0f1830}.ov{background:rgba(15,24,48,.95)}.lb{background:#16223f;border-color:#9fb4dc}
+.ach b{background:#3a3010}.title-up,.lb .me{color:#ffd166}.score,.ov .big3{color:#7fa8ff}
+}
 </style>
 </head>
 <body>
@@ -239,10 +246,11 @@ let last = performance.now();
 function loop(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now; render(dt); requestAnimationFrame(loop);
 }
+const mq = matchMedia('(prefers-color-scheme: dark)');
 function render(dt) {
-  g.imageSmoothingEnabled = false;
-  g.fillStyle = '#eef3fb'; g.fillRect(0, 0, W, H);
-  g.strokeStyle = 'rgba(24,46,84,.07)'; g.lineWidth = 1;
+  const dark = mq.matches; g.imageSmoothingEnabled = false;
+  g.fillStyle = dark ? '#0f1830' : '#eef3fb'; g.fillRect(0, 0, W, H);
+  g.strokeStyle = dark ? 'rgba(170,195,240,.07)' : 'rgba(24,46,84,.07)'; g.lineWidth = 1;
   for (let x = 0; x < W; x += 32) { g.beginPath(); g.moveTo(x + .5, 0); g.lineTo(x + .5, H); g.stroke(); }
   for (let y = 0; y < H; y += 32) { g.beginPath(); g.moveTo(0, y + .5); g.lineTo(W, y + .5); g.stroke(); }
   if (!st || (phase !== 'play' && phase !== 'count')) { if (phase === 'idle') drawIdle(); return; }
@@ -255,9 +263,9 @@ function render(dt) {
     if (left <= 0) { finish(); return; }
   }
   const it = st.deck.get(st.idx);
-  g.fillStyle = '#182e54'; g.font = '900 20px sans-serif'; g.textAlign = 'center';
+  g.fillStyle = dark ? '#e6edf8' : '#182e54'; g.font = '900 20px sans-serif'; g.textAlign = 'center';
   wrap(it.type.prompt(it.puzzle), W - 40).slice(0, 2).forEach((l, i) => g.fillText(l, W / 2, 34 + i * 26));
-  g.font = '700 13px sans-serif'; g.fillStyle = '#6f7c92'; g.fillText(it.type.title + '　Lv.' + it.level, W / 2, 82);
+  g.font = '700 13px sans-serif'; g.fillStyle = dark ? '#9aa8c0' : '#6f7c92'; g.fillText(it.type.title + '　Lv.' + it.level, W / 2, 82);
   if (phase === 'play') it.type.draw(g, it.puzzle, BOX);
   // 回饋
   if (st.flash) { const age = st.clock - st.flash.t; if (age < .7 && age >= 0) { g.globalAlpha = 1 - age / .7; g.strokeStyle = st.flash.ok ? '#4caf6a' : '#d9534f'; g.lineWidth = 8; g.strokeRect(4, 4, W - 8, H - 8); g.fillStyle = st.flash.ok ? '#0f7f27' : '#c0392b'; g.font = '900 30px sans-serif'; g.fillText(st.flash.text, W / 2, 124 - age * 30); g.globalAlpha = 1; } }
@@ -268,7 +276,7 @@ function render(dt) {
   // 最後 10 秒：紅色邊緣脈動
   if (phase === 'play' && DURATION - st.clock <= 10) { const a = .12 + .12 * Math.sin(st.clock * 8); g.fillStyle = 'rgba(217,83,79,' + a + ')'; g.fillRect(0, 0, W, 6); g.fillRect(0, H - 6, W, 6); g.fillRect(0, 0, 6, H); g.fillRect(W - 6, 0, 6, H); }
 }
-function drawIdle() { g.fillStyle = '#c9d2e0'; for (let i = 0; i < 5; i++) g.fillRect(60 + i * 120, 200 + (i % 2) * 40, 90, 90); }
+function drawIdle() { g.fillStyle = mq.matches ? '#25335a' : '#c9d2e0'; for (let i = 0; i < 5; i++) g.fillRect(60 + i * 120, 200 + (i % 2) * 40, 90, 90); }
 
 // ───────── 結算與排行 ─────────
 const esc = v => String(v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
