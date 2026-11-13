@@ -1847,6 +1847,10 @@ function lvTextures(){
   g.lineJoin = 'round'; g.lineWidth = 9; g.strokeStyle = '#c2570a'; g.strokeText('LEVEL UP!', 128, 34); g.fillStyle = '#ffe36b'; g.fillText('LEVEL UP!', 128, 34);
   LV_TXT = new THREE.CanvasTexture(c); LV_TXT.colorSpace = THREE.SRGBColorSpace;
 }
+function lvBroadcast(lv, say){   // 把升級事件送給其他人；即時通道沒通（沒登入或連線斷了）就提示，測試時才看得出沒同步
+  if (wsPos.send) { wsPos.send({t:'lv', lv}); if (say) showQuote('', '已同步給其他在線的人'); return true; }
+  if (say) showQuote('', '即時通道未連線，只有你自己看得到（請重新整理或重新登入）'); return false;
+}
 function levelUpFx(c){
   if (!c || !c.holder) return; lvTextures();
   if (c.lvFx) { scene.remove(c.lvFx.g); c.lvFx = null; }
@@ -2480,7 +2484,7 @@ function renderCharPage(force){
   </div>`;
   const mm = radial.querySelector('#cpMood'); if (mm) for (const id of Object.keys(MOOD)) { const b = document.createElement('button'); b.type = 'button'; b.className = c.mood === id ? 'on' : ''; b.innerHTML = '<i>' + iconImg(moodSym[id], 44) + '</i>' + ({happy:'喜', angry:'怒', sad:'哀', joy:'樂'})[id]; b.onclick = () => setOwnMood(id); mm.appendChild(b); }
   if (mm) { const x = document.createElement('button'); x.type = 'button'; x.className = 'clr'; x.innerHTML = '清除心情'; x.onclick = () => setOwnMood(''); mm.appendChild(x); }
-  { const lv = radial.querySelector('#cpLv'); if (lv) lv.onclick = () => { levelUpFx(c); if (c === player && wsPos.send) wsPos.send({t:'lv', lv:1 + Math.floor((stat.found + stat.notes + stat.flush) / 5)}); }; }
+  { const lv = radial.querySelector('#cpLv'); if (lv) lv.onclick = () => { levelUpFx(c); if (c === player) lvBroadcast(1 + Math.floor((stat.found + stat.notes + stat.flush) / 5), true); }; }
   const ta = radial.querySelector('#cpMsg'); if (ta) { ta.value = keepMsg != null ? keepMsg : (c.message || ''); radial.querySelector('#cpForm').onsubmit = e => { e.preventDefault(); setOwnMessage(ta.value.trim()); }; radial.querySelector('#cpClr').onclick = () => { ta.value = ''; setOwnMessage(''); }; }
   radial.querySelector('#cpMusic').value = keepMusic; radial.querySelector('#cpMForm').onsubmit = e => { e.preventDefault(); setOwnMusic(radial.querySelector('#cpMusic').value); };
   const mp = radial.querySelector('#cpMPlay'); if (mp) mp.onclick = () => toggleMusic(c); const mo = radial.querySelector('#cpMOff'); if (mo) mo.onclick = () => stopMusic(); const ms = radial.querySelector('#cpMStop'); if (ms) ms.onclick = clearOwnMusic;
@@ -2528,7 +2532,7 @@ function wheelOpen(c){   // 點自己的人物：在人物旁邊展開小卡（�
   const inp = wheel.querySelector('#qcMsg'); inp.value = c.message || '';
   wheel.querySelectorAll('.qc-s[data-id]').forEach(b => b.onclick = () => { const id = b.dataset.id; wheelClose(); if (id === 'present') setOwnAuto(); else setOwnStatus(id); });
   wheel.querySelectorAll('.qc-m').forEach(b => b.onclick = () => { wheelClose(); setOwnMood(b.dataset.m); });
-  { const lb = wheel.querySelector('#qcLv'); if (lb) lb.onclick = () => { levelUpFx(c); if (wsPos.send) wsPos.send({t:'lv', lv:1 + Math.floor((stat.found + stat.notes + stat.flush) / 5)}); }; }
+  { const lb = wheel.querySelector('#qcLv'); if (lb) lb.onclick = () => { levelUpFx(c); lvBroadcast(1 + Math.floor((stat.found + stat.notes + stat.flush) / 5), true); }; }
   wheel.querySelector('#qcMore').onclick = () => { const x = wheel.querySelector('#qcExtra'); x.hidden = !x.hidden; wheel.querySelector('#qcMore').classList.toggle('on', !x.hidden); };
   wheel.querySelector('#qcForm').onsubmit = e => { e.preventDefault(); const t = inp.value.trim(); wheelClose(); setOwnMessage(t); };
   requestAnimationFrame(() => requestAnimationFrame(() => wheel.classList.add('open')));
@@ -2715,7 +2719,7 @@ function updateHud(){
   const st = STATUS[c.status] || STATUS.present, total = stat.found + stat.notes + stat.flush, lv = 1 + Math.floor(total / 5);
   if ($('pName').textContent !== c.name) { $('pName').textContent = c.name; if (c.avatar) $('pAv').innerHTML = '<img alt="" src="' + c.avatar + '">'; }
   $('pSt').innerHTML = iconImg(symOf[c.status] || 'person', 18) + ' ' + statusLabel(c) + (c.mood ? '　' + iconImg(moodSym[c.mood], 16) : '');
-  if (progCloud !== null) { if (lvSeen == null) lvSeen = lv; else if (lv > lvSeen) { lvSeen = lv; levelUpFx(c); if (wsPos.send) wsPos.send({t:'lv', lv}); } }
+  if (progCloud !== null) { if (lvSeen == null) lvSeen = lv; else if (lv > lvSeen) { lvSeen = lv; levelUpFx(c); lvBroadcast(lv); } }
   $('pExp').style.width = ((total % 5) / 5 * 100) + '%'; $('pLv').textContent = 'Lv.' + lv + '　圖鑑 ' + (dex.d.length + dex.n.length) + '/' + (DROP_IDS.length + NOTE_IDS.length);
   $('pClock').textContent = '🕒 ' + fmtTime.format(new Date()).replace(/^(\S+)\s+(\S+)$/, '$2 $1') + '（台北）' + (player ? '・' + floorOf(player) + 'F' : ''); updateTitleNet();
 }

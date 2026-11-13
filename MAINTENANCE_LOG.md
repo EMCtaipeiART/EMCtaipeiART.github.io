@@ -2412,3 +2412,6 @@
 - 前台 `updateHud` 偵測等級上升（登入後第一次讀到雲端進度只記錄 `lvSeen`，不觸發）→ 自己播 `levelUpFx`，並經 WebSocket 送 `{t:'lv', lv}`。
 - Worker `webSocketMessage` 新增 `lv`：只能代表已通過 hello 的自己，每條連線 3 秒最多一次，廣播 `{t:'lv', n, lv}` 給其他連線；收到的人在 `chars[n]` 身上播特效（不分樓層）。需 `wrangler deploy`。
 - 「升級特效（測試）」按鈕只在 `adminHome`（管理者／Machi）顯示，按下同樣全樓層同步（只有操作自己人物時才廣播）。
+
+## 2026-11-13 升級特效：同步診斷提示
+- 新增 `lvBroadcast`：測試鈕按下時，若即時通道（WebSocket hello）沒通，畫面提示「只有你自己看得到」；有送出則提示「已同步給其他在線的人」。
