@@ -1816,34 +1816,79 @@ function angryFlameTex(){   // 水滴型火焰（和加班鬼火同一種做法�
   g.strokeStyle = '#5a0a05'; g.lineWidth = 3; g.lineCap = 'round'; g.beginPath(); g.moveTo(21, 33); g.lineTo(29, 38); g.moveTo(43, 33); g.lineTo(35, 38); g.stroke(); g.fillStyle = '#5a0a05'; g.fillRect(25, 39, 4, 5); g.fillRect(36, 39, 4, 5);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
-function makeMoodOrb(kind){
-  const g = new THREE.Group(), dot = (x, y, z, r, col) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 8), new THREE.MeshBasicMaterial({color:col})); m.position.set(x, y, z); return m; };
-  if (kind === 'happy') {   // 開心＝圓鼓鼓的立體愛心，正反面都有小臉（和鬼火同一種表情）
-    const sh = new THREE.Shape(); sh.moveTo(.25, .25); sh.bezierCurveTo(.25, .25, .2, 0, 0, 0); sh.bezierCurveTo(-.3, 0, -.3, .35, -.3, .35); sh.bezierCurveTo(-.3, .55, -.1, .77, .25, .95); sh.bezierCurveTo(.6, .77, .8, .55, .8, .35); sh.bezierCurveTo(.8, .35, .8, 0, .5, 0); sh.bezierCurveTo(.35, 0, .25, .25, .25, .25);
-    const geo = new THREE.ExtrudeGeometry(sh, {depth:.12, bevelEnabled:true, bevelSize:.2, bevelOffset:-.18, bevelThickness:.3, bevelSegments:12, curveSegments:24}); geo.translate(-.25, -.45, -.06); geo.rotateZ(Math.PI); geo.computeBoundingBox();
-    const heart = moodOutlined(geo, 0xff4f7b); g.add(heart);
-    if (!MOOD_FACE) { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); x.fillStyle = '#4a0f26'; x.fillRect(15, 20, 9, 14); x.fillRect(40, 20, 9, 14); x.fillStyle = '#fff'; x.fillRect(17, 22, 4, 5); x.fillRect(42, 22, 4, 5); x.fillStyle = '#ff9db5'; x.fillRect(8, 38, 8, 5); x.fillRect(48, 38, 8, 5); x.fillStyle = '#4a0f26'; x.fillRect(26, 40, 12, 3); x.fillRect(28, 43, 8, 3); MOOD_FACE = new THREE.CanvasTexture(c); MOOD_FACE.colorSpace = THREE.SRGBColorSpace; MOOD_FACE.magFilter = THREE.NearestFilter; }
-    const zf = geo.boundingBox.max.z + .01;
-    for (const side of [1, -1]) { const face = new THREE.Mesh(new THREE.PlaneGeometry(.78, .78), new THREE.MeshBasicMaterial({map:MOOD_FACE, transparent:true})); face.position.set(0, .02, zf * side); if (side < 0) face.rotation.y = Math.PI; g.add(face); }
-    g.add(moodGlow(0xff6a8f, 1.8));
-  } else if (kind === 'angry') {   // 生氣＝水滴型火焰
-    g.userData.flame = new THREE.Sprite(new THREE.SpriteMaterial({map:(MOOD_FLAME = MOOD_FLAME || angryFlameTex()), transparent:true, depthWrite:false})); g.userData.flame.scale.set(1.5, 1.9, 1); g.add(g.userData.flame);
+const MOOD_TEX = {};
+function moodTex(id, w, h, draw){ if (!MOOD_TEX[id]) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; MOOD_TEX[id] = t; } return MOOD_TEX[id]; }
+function moodFaceTex(kind){   // 各心情的小臉（像素風、和鬼火同一系的簡單表情）
+  return moodTex('face-' + kind, 64, 64, (x) => {
+    const D = (col, ...r) => { x.fillStyle = col; x.fillRect(...r); };
+    if (kind === 'happy') { D('#4a0f26', 15, 20, 9, 14); D('#4a0f26', 40, 20, 9, 14); D('#fff', 17, 22, 4, 5); D('#fff', 42, 22, 4, 5); D('#ff9db5', 8, 38, 8, 5); D('#ff9db5', 48, 38, 8, 5); D('#4a0f26', 26, 40, 12, 3); D('#4a0f26', 28, 43, 8, 3); }
+    else if (kind === 'sad') { D('#0d3a63', 14, 26, 9, 12); D('#0d3a63', 41, 26, 9, 12); D('#fff', 16, 28, 4, 5); D('#fff', 43, 28, 4, 5); D('#0d3a63', 10, 20, 12, 3); D('#0d3a63', 42, 20, 12, 3); D('#0d3a63', 25, 46, 14, 3); D('#0d3a63', 22, 49, 4, 3); D('#0d3a63', 38, 49, 4, 3); D('#bfe6ff', 18, 40, 4, 8); }
+    else { D('#7a3b00', 14, 25, 12, 4); D('#7a3b00', 12, 28, 4, 4); D('#7a3b00', 26, 28, 0, 0); D('#7a3b00', 38, 25, 12, 4); D('#7a3b00', 48, 28, 4, 4); D('#7a3b00', 20, 40, 24, 4); D('#7a3b00', 24, 44, 16, 4); D('#ff8a5c', 8, 38, 8, 5); D('#ff8a5c', 48, 38, 8, 5); }
+  });
+}
+function moodSpr(tex, col, size, additive){
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, color:col ?? 0xffffff, transparent:true, depthWrite:false, blending:additive ? THREE.AdditiveBlending : THREE.NormalBlending})); sp.scale.set(size, size, 1); return sp;
+}
+function moodParticles(kind, root){   // 心情的環境特效（不跟著旋轉）：開心＝愛心泡泡、難過＝下雨、快樂＝陽光光暈、生氣＝灼熱
+  const parts = [], mk = (n, f) => { for (let i = 0; i < n; i++) { const sp = f(i); sp.visible = false; root.add(sp); parts.push({sp, i, n}); } };
+  if (kind === 'happy') {
+    const tex = moodTex('bubble', 64, 64, (x) => { x.fillStyle = 'rgba(255,190,215,.28)'; x.beginPath(); x.arc(32, 32, 28, 0, 7); x.fill(); x.strokeStyle = 'rgba(255,255,255,.9)'; x.lineWidth = 3; x.stroke(); x.fillStyle = 'rgba(255,255,255,.95)'; x.fillRect(16, 14, 8, 4); x.fillRect(14, 18, 4, 6);
+      x.fillStyle = '#ff5c86'; x.beginPath(); x.moveTo(32, 46); x.bezierCurveTo(14, 34, 18, 20, 28, 22); x.bezierCurveTo(31, 23, 32, 26, 32, 27); x.bezierCurveTo(32, 26, 33, 23, 36, 22); x.bezierCurveTo(46, 20, 50, 34, 32, 46); x.fill(); });
+    mk(7, () => moodSpr(tex, 0xffffff, .5));
   } else if (kind === 'sad') {
-    const pts = []; for (let a = -90; a <= 20; a += 10) { const r = a * Math.PI / 180; pts.push(new THREE.Vector2(Math.max(.001, Math.cos(r) * .36), -.14 + Math.sin(r) * .36)); } pts.push(new THREE.Vector2(.16, .22), new THREE.Vector2(.001, .62));
-    const geo = new THREE.LatheGeometry(pts, 20); geo.translate(0, -.1, 0); g.add(moodOutlined(geo, 0x4fb3ff));
-    g.add(dot(-.13, -.16, .3, .06, 0xffffff), dot(-.05, -.02, .33, .03, 0xffffff), moodGlow(0x5ab8ff, 1.6));
-  } else {   // 快樂＝太陽
-    const core = moodOutlined(new THREE.SphereGeometry(.34, 20, 14), 0xffd23f); g.add(core);
-    for (let i = 0; i < 8; i++) { const ray = moodOutlined(new THREE.ConeGeometry(.1, .3, 6), 0xffa81f), a = i * Math.PI / 4; ray.position.set(Math.cos(a) * .58, Math.sin(a) * .58, 0); ray.rotation.z = a - Math.PI / 2; g.add(ray); }
-    g.add(dot(-.1, .1, .3, .05, 0x7a3b00), dot(.1, .1, .3, .05, 0x7a3b00), moodGlow(0xffc83a, 2.2));
+    const tex = moodTex('rain', 16, 48, (x) => { x.fillStyle = 'rgba(120,190,255,.95)'; x.beginPath(); x.moveTo(8, 2); x.bezierCurveTo(14, 18, 15, 30, 8, 44); x.bezierCurveTo(1, 30, 2, 18, 8, 2); x.fill(); x.fillStyle = 'rgba(255,255,255,.8)'; x.fillRect(6, 14, 2, 10); });
+    mk(11, () => { const sp = moodSpr(tex, 0xffffff, .3); sp.scale.set(.14, .42, 1); return sp; });
+    const cloud = moodTex('cloud', 64, 40, (x) => { x.fillStyle = '#9fb1c9'; x.beginPath(); x.arc(20, 26, 12, 0, 7); x.arc(34, 18, 15, 0, 7); x.arc(48, 26, 11, 0, 7); x.rect(20, 24, 28, 13); x.fill(); x.fillStyle = 'rgba(255,255,255,.35)'; x.beginPath(); x.arc(30, 14, 7, 3.3, 5.2); x.fill(); });
+    const cl = moodSpr(cloud, 0xffffff, 1.5); cl.scale.set(1.6, 1.0, 1); cl.position.set(0, 1.05, -.1); root.add(cl); root.userData.cloud = cl;
+  } else if (kind === 'joy') {
+    const ray = moodTex('sunray', 128, 128, (x) => { x.translate(64, 64); for (let i = 0; i < 12; i++) { x.rotate(Math.PI / 6); const g = x.createLinearGradient(0, 22, 0, 62); g.addColorStop(0, 'rgba(255,225,90,.9)'); g.addColorStop(1, 'rgba(255,225,90,0)'); x.fillStyle = g; x.beginPath(); x.moveTo(-6, 22); x.lineTo(0, 62); x.lineTo(6, 22); x.fill(); } });
+    const halo = moodSpr(ray, 0xffffff, 2.6, true); halo.position.z = -.2; root.add(halo); root.userData.halo = halo;
+    const spark = moodTex('spark', 32, 32, (x) => { x.fillStyle = '#fff6b0'; x.beginPath(); x.moveTo(16, 0); x.lineTo(19, 13); x.lineTo(32, 16); x.lineTo(19, 19); x.lineTo(16, 32); x.lineTo(13, 19); x.lineTo(0, 16); x.lineTo(13, 13); x.fill(); });
+    mk(6, () => moodSpr(spark, 0xffffff, .3, true));
+  } else {
+    const ring = moodTex('heatring', 64, 64, (x) => { x.strokeStyle = 'rgba(255,110,50,.9)'; x.lineWidth = 4; x.beginPath(); x.arc(32, 32, 26, 0, 7); x.stroke(); });
+    mk(2, () => moodSpr(ring, 0xffffff, .6, true));
+    const ember = moodTex('ember', 16, 16, (x) => { const g = x.createRadialGradient(8, 8, 0, 8, 8, 8); g.addColorStop(0, 'rgba(255,240,150,1)'); g.addColorStop(.5, 'rgba(255,130,40,.9)'); g.addColorStop(1, 'rgba(255,60,20,0)'); x.fillStyle = g; x.fillRect(0, 0, 16, 16); });
+    mk(8, () => moodSpr(ember, 0xffffff, .2, true));
+    parts.forEach((q, j) => { q.ring = j < 2; });
   }
-  g.userData.base = .5; g.scale.setScalar(.5); g.visible = false; scene.add(g); return g;
+  root.userData.parts = parts;
+}
+function makeMoodOrb(kind){
+  const g = new THREE.Group(), dot = (x, y, z, r, col) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 8), new THREE.MeshBasicMaterial({color:col})); m.position.set(x, y, z); return m; },
+    face = (kind2, zf, y, size) => { for (const side of [1, -1]) { const f = new THREE.Mesh(new THREE.PlaneGeometry(size, size), new THREE.MeshBasicMaterial({map:moodFaceTex(kind2), transparent:true})); f.position.set(0, y, zf * side); if (side < 0) f.rotation.y = Math.PI; g.add(f); } };
+  if (kind === 'happy') {   // 開心＝胖嘟嘟的圓愛心（像氣球一樣鼓），正反面都有小臉
+    const sh = new THREE.Shape(); sh.moveTo(0, -.62); sh.bezierCurveTo(-.2, -.45, -.78, -.12, -.78, .26); sh.bezierCurveTo(-.78, .66, -.28, .78, 0, .45); sh.bezierCurveTo(.28, .78, .78, .66, .78, .26); sh.bezierCurveTo(.78, -.12, .2, -.45, 0, -.62);
+    const geo = new THREE.ExtrudeGeometry(sh, {depth:.16, bevelEnabled:true, bevelSize:.2, bevelOffset:-.2, bevelThickness:.42, bevelSegments:16, curveSegments:32}); geo.translate(0, 0, -.08); geo.computeBoundingBox();
+    g.add(moodOutlined(geo, 0xff4f7b)); face('happy', geo.boundingBox.max.z + .01, .08, .8); g.add(moodGlow(0xff6a8f, 2));
+  } else if (kind === 'angry') {   // 生氣＝水滴型火焰
+    g.userData.flame = new THREE.Sprite(new THREE.SpriteMaterial({map:(MOOD_FLAME = MOOD_FLAME || angryFlameTex()), transparent:true, depthWrite:false})); g.userData.flame.scale.set(1.5, 1.9, 1); g.add(g.userData.flame); g.add(moodGlow(0xff5a1f, 2.4));
+  } else if (kind === 'sad') {
+    const pts = []; for (let a = -90; a <= 20; a += 10) { const r = a * Math.PI / 180; pts.push(new THREE.Vector2(Math.max(.001, Math.cos(r) * .4), -.14 + Math.sin(r) * .4)); } pts.push(new THREE.Vector2(.18, .24), new THREE.Vector2(.001, .66));
+    const geo = new THREE.LatheGeometry(pts, 24); geo.translate(0, -.1, 0); g.add(moodOutlined(geo, 0x4fb3ff)); face('sad', .405, -.12, .56); g.add(moodGlow(0x5ab8ff, 1.7));
+  } else {   // 快樂＝太陽
+    g.add(moodOutlined(new THREE.SphereGeometry(.34, 24, 18), 0xffd23f));
+    for (let i = 0; i < 8; i++) { const ray = moodOutlined(new THREE.ConeGeometry(.1, .3, 6), 0xffa81f), a = i * Math.PI / 4; ray.position.set(Math.cos(a) * .58, Math.sin(a) * .58, 0); ray.rotation.z = a - Math.PI / 2; g.add(ray); }
+    face('joy', .35, -.02, .5); g.add(moodGlow(0xffc83a, 2.2));
+  }
+  const root = new THREE.Group(); root.add(g); root.userData.spin = g; root.userData.flame = g.userData.flame; moodParticles(kind, root);
+  root.scale.setScalar(.5); root.visible = false; scene.add(root); return root;
 }
 function moodOrb(c){
   const k = c.mood && ['happy', 'angry', 'sad', 'joy'].includes(c.mood) ? c.mood : '', show = k && c.holder.visible;
-  if (c.moodKind !== k) { if (c.moodOrb) { scene.remove(c.moodOrb); c.moodOrb = null; } c.moodKind = k; if (k) c.moodOrb = makeMoodOrb(k === 'happy' ? 'happy' : k); }
+  if (c.moodKind !== k) { if (c.moodOrb) { scene.remove(c.moodOrb); c.moodOrb = null; } c.moodKind = k; if (k) c.moodOrb = makeMoodOrb(k); }
   const o = c.moodOrb; if (!o) return; o.visible = !!show; if (!show) return;
-  const t = performance.now() / 1000, p = c.holder.position; o.position.set(p.x, 2.85 + Math.sin(t * 2 + p.x) * .05, p.z); o.rotation.y = t * 1.8; if (k === 'angry') { const fl = o.userData.flame; fl.scale.set(1.5 + Math.sin(t * 9) * .08, 1.9 + Math.sin(t * 7) * .15, 1); o.scale.setScalar(.5); } else if (k === 'happy') o.scale.setScalar(.5 + Math.abs(Math.sin(t * 4)) * .05);
+  const t = performance.now() / 1000, p = c.holder.position, u = o.userData; o.position.set(p.x, 2.85 + Math.sin(t * 2 + p.x) * .05, p.z); u.spin.rotation.y = k === 'angry' ? 0 : t * 1.8; o.scale.setScalar(.5);
+  if (k === 'angry') u.flame.scale.set(1.5 + Math.sin(t * 9) * .08, 1.9 + Math.sin(t * 7) * .15, 1); else if (k === 'happy') o.scale.setScalar(.5 + Math.abs(Math.sin(t * 4)) * .04);
+  const fr = (x) => x - Math.floor(x);
+  for (const q of u.parts) { const sp = q.sp, i = q.i, n = q.n; sp.visible = true;
+    if (k === 'happy') { const v = fr(t * .3 + i / n); sp.position.set(Math.sin(i * 2.4) * .8 + Math.sin(t * 1.5 + i) * .12, -.5 + v * 1.9, .25 * Math.cos(i * 3)); sp.material.opacity = Math.sin(Math.PI * v); const s = .32 + .22 * ((i * 37) % 10) / 10; sp.scale.set(s, s, 1); }
+    else if (k === 'sad') { const v = fr(t * 1.15 + i * .37); sp.position.set(-.75 + (i / (n - 1)) * 1.5 + Math.sin(i * 5) * .08, .85 - v * 1.9, .2 * Math.sin(i * 2)); sp.material.opacity = v < .12 ? v / .12 : v > .8 ? (1 - v) / .2 : 1; }
+    else if (k === 'joy') { const tw = .5 + .5 * Math.sin(t * 4 + i * 1.9), a = i * Math.PI / 3 + t * .8; sp.position.set(Math.cos(a) * .95, Math.sin(a) * .95, .1); sp.material.opacity = tw; sp.scale.setScalar(.14 + tw * .22); }
+    else if (q.ring) { const v = fr(t * .8 + i * .5); sp.position.set(0, .05, -.05); sp.scale.setScalar(.7 + v * 1.7); sp.material.opacity = (1 - v) * .75; }
+    else { const v = fr(t * .7 + i / n), j = i - 2; sp.position.set(Math.sin(i * 2.7) * .5 + Math.sin(t * 5 + i) * .08, -.25 + v * 1.6, .1); sp.material.opacity = Math.sin(Math.PI * v); sp.scale.setScalar(.13 + (1 - v) * .12); } }
+  if (u.halo) { u.halo.material.rotation = t * .6; u.halo.scale.setScalar(2.5 + Math.sin(t * 3) * .25); u.halo.material.opacity = .7 + Math.sin(t * 3) * .2; }
+  if (u.cloud) u.cloud.position.x = Math.sin(t * .8) * .06;
 }
 const SIT_DROP = .1;
 function sitDown(c){
