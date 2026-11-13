@@ -121,13 +121,17 @@ header{position:fixed;right:8px;bottom:8px;z-index:6;width:auto;gap:6px;flex-wra
 .wrap>.note{display:none}
 .cds{bottom:10px;padding-right:200px}
 .flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.netbox{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:6px}.netrow{display:flex;gap:8px;align-items:center;justify-content:center}
+.netbox input{font:inherit;font-weight:900;letter-spacing:.25em;text-transform:uppercase;text-align:center;width:9.5em;color:var(--ink);background:var(--bg);border:2px solid var(--ink);border-radius:8px;padding:5px 6px}
+.netst{min-height:1.4em;font-weight:800;font-size:14px;text-align:center}.netst .code{font-size:30px;letter-spacing:.2em;color:#1c9a52;user-select:all}
+.netbox[hidden],.netbox button[hidden]{display:none}
 @media (max-width:700px){.dhud .nm{font-size:12px}.dhud .tm{font-size:22px}.cds{display:none}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>辦公室對決<small id="sub">高低落差 1 對 1・單機版</small></h1>
+    <h1>辦公室對決<small id="sub">高低落差 1 對 1</small></h1>
     <button class="pk off" id="sndB" type="button">音效：開</button>
     <button class="pk off" id="fsB" type="button">全螢幕</button>
     <button class="pk" id="exitB" type="button" hidden>離開</button>
@@ -154,13 +158,20 @@ header{position:fixed;right:8px;bottom:8px;z-index:6;width:auto;gap:6px;flex-wra
       </div>
       <div class="prev"><canvas id="pvMe" width="120" height="120"></canvas><b>VS</b><canvas id="pvOp" width="120" height="120"></canvas></div>
       <ul class="tips"><li>WASD 移動，滑鼠轉視角（點一下畫面鎖定滑鼠，Esc 解除；方向鍵也能轉）。空白鍵跳，Shift 衝刺閃避。</li><li>左鍵或 J 往前揮擊，連打 3 下第三下最重。R 大招（打人、被打都會充能）。右鍵或 Tab 鎖定對手。</li><li>站在高處打低處多 25% 傷害；掉下去不會受傷，但要重新爬上來。</li></ul>
-      <button class="pk big" id="startB" type="button">開始對決</button>
+      <button class="pk big" id="startB" type="button">開始對決（對電腦）</button>
+      <button class="pk" id="netB" type="button">連線對戰</button>
+      <div class="netbox" id="netBox" hidden>
+        <div class="netrow"><button class="pk big" id="qmB" type="button">快速配對</button><button class="pk" id="mkB" type="button">建立房間</button></div>
+        <div class="netrow"><input id="joinIn" maxlength="6" placeholder="輸入房間碼" autocomplete="off" spellcheck="false"><button class="pk" id="joinB" type="button">加入</button></div>
+        <div class="netst" id="netSt"></div>
+        <button class="pk" id="netCancel" type="button" hidden>取消</button>
+      </div>
       <div class="note" id="startNote"></div>
     </div>
     <div class="ov" id="pauseO" hidden><h2>暫停</h2><p>點一下畫面繼續</p></div>
     <div class="ov" id="endO" hidden></div>
   </div>
-  <div class="note">單機版：對手是電腦。連線 1 對 1 之後再做。</div>
+  <div class="note">對電腦或連線 1 對 1：連線時雙方各自用自己選的角色，先贏 2 局的人獲勝。</div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -443,7 +454,7 @@ function makeFighter(name, tex, isBot, color) {
   const ks = CHAR_SCALE[name] || 1; sprite.scale.set(ks, ks, 1);
   return { name, isBot, tex, sprite, holder, blob, mat, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, face: 0, hp: 100, ult: 0, grounded: true, atkT: 0, atkCD: 0, dashT: 0, dashCD: 0, windT: 0, windMul: 1.7, hitStun: 0, flash: 0, combo: 0, comboT: 0, ultWind: 0, slash: null, dashDir: [0, 0], moving: 0, phase: 0, inp: { mx: 0, mz: 0, jump: false, atk: false, dash: false, ult: false }, bot: { rt: 0, strafe: 1, strafeT: 0, stuck: 0, lastX: 0, lastZ: 0, nav: null, think: 0 } };
 }
-function place(f, x, z, face) { f.x = x; f.z = z; f.y = groundAt(x, z); f.vx = f.vy = f.vz = f.kx = f.kz = 0; f.face = face; f.hp = 100; f.atkT = f.atkCD = f.dashT = f.dashCD = f.windT = f.hitStun = f.flash = f.combo = f.comboT = f.ultWind = 0; f.grounded = true; }
+function place(f, x, z, face) { f.nx = x; f.nz = z; f.x = x; f.z = z; f.y = groundAt(x, z); f.vx = f.vy = f.vz = f.kx = f.kz = 0; f.face = face; f.hp = 100; f.atkT = f.atkCD = f.dashT = f.dashCD = f.windT = f.hitStun = f.flash = f.combo = f.comboT = f.ultWind = 0; f.grounded = true; }
 const mkSlash = () => { const m = new THREE.Mesh(new THREE.RingGeometry(.9, 3.2, 24, 1, -Math.PI * .42, Math.PI * .84), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false })); m.rotation.x = -Math.PI / 2; scene.add(m); return m; };
 const slashFx = mkSlash(), slashFx2 = mkSlash();
 const shock = new THREE.Mesh(new THREE.RingGeometry(.6, 1, 40), new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false })); shock.rotation.x = -Math.PI / 2; scene.add(shock);
@@ -474,7 +485,7 @@ cv.addEventListener('contextmenu', e => e.preventDefault());
 cv.addEventListener('wheel', e => { e.preventDefault(); camDist = Math.max(5.5, Math.min(15, camDist + Math.sign(e.deltaY) * .8)); }, { passive: false });
 document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement === cv) lockedOnce = true; else if (lockedOnce && state === 'fight') pauseNow(); });
 let paused = false;
-function pauseNow() { if (state !== 'fight' || paused) return; paused = true; $('pauseO').hidden = false; for (const k in keys) keys[k] = false; }
+function pauseNow() { if (net) { for (const k in keys) keys[k] = false; return; } if (state !== 'fight' || paused) return; paused = true; $('pauseO').hidden = false; for (const k in keys) keys[k] = false; }
 function resumeNow() { if (!paused) return; paused = false; $('pauseO').hidden = true; last = performance.now(); lockPtr() }
 $('pauseO').addEventListener('mousedown', resumeNow);
 document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'fight') pauseNow(); });
@@ -486,7 +497,7 @@ const cdL = $('cdL');
 function setBanner(txt, ms) { const b = $('banner'); b.textContent = txt; b.hidden = !txt; clearTimeout(setBanner.t); if (ms) setBanner.t = setTimeout(() => { b.hidden = true; }, ms); }
 function dots() { $('rdDots').innerHTML = [0, 1, 2].map(i => { const w = i < wins[0] + wins[1] ? '' : ''; return ''; }).join('') + '<span class="pip' + (wins[0] >= 1 ? ' w' : '') + '"></span><span class="pip' + (wins[0] >= 2 ? ' w' : '') + '"></span><b>' + round + '</b><span class="pip r' + (wins[1] >= 1 ? ' w' : '') + '"></span><span class="pip r' + (wins[1] >= 2 ? ' w' : '') + '"></span>'; }
 function startRound() {
-  place(ME, -14, 0, Math.PI / 2); place(OP, 14, 0, -Math.PI / 2); yaw = -Math.PI / 2; pitch = .5; lockOn = false; cdL.classList.remove('on'); tLeft = ROUND_T; wantAtk = wantUlt = wantDash = wantJump = false;
+  if (net && net.role === 'guest') { place(ME, 14, 0, -Math.PI / 2); place(OP, -14, 0, Math.PI / 2); yaw = Math.PI / 2; } else { place(ME, -14, 0, Math.PI / 2); place(OP, 14, 0, -Math.PI / 2); yaw = -Math.PI / 2; } pitch = .5; lockOn = false; cdL.classList.remove('on'); tLeft = ROUND_T; wantAtk = wantUlt = wantDash = wantJump = false;
   camSmooth.set(ME.x, ME.y + 1.4, ME.z); state = 'countdown'; banner = 3.2; dots(); setBanner('第 ' + round + ' 局', 0);
   $('dhud').hidden = false; $('cds').hidden = false; updHud();
 }
@@ -497,9 +508,11 @@ function endRound(winner) {   // winner: 0 我、1 對手、-1 平手
   if (winner === 0) { SFX.win(); fxBeam(v3(ME.x, ME.y, ME.z), COL[heroOf(ME.name)], true); } else if (winner === 1) { SFX.lose(); fxBeam(v3(OP.x, OP.y, OP.z), COL[heroOf(OP.name)], true); }
 }
 function nextAfterRound() {
-  if (wins[0] >= WINS || wins[1] >= WINS) { matchEnd(); return; }
-  round++; startRound();
+  if (net && net.role !== 'host') return;   // 訪客等房主的指令
+  if (wins[0] >= WINS || wins[1] >= WINS) { if (net) netSend({ t: 'me' }); matchEnd(); return; }
+  round++; if (net) netSend({ t: 'rs', r: round }); startRound();
 }
+function endRoundNet(w) { if (state !== 'fight') return; endRound(w); netSend({ t: 're', w: w < 0 ? -1 : w }); }
 function matchEnd() {
   state = 'matchEnd'; if (document.pointerLockElement) document.exitPointerLock(); setBanner('', 0);
   const won = wins[0] > wins[1], s = stats;
@@ -507,11 +520,12 @@ function matchEnd() {
   $('endO').innerHTML = '<h2>' + (won ? '你贏了' : '輸了…再來一場') + '</h2><p>' + ME.name + ' ' + wins[0] + ' : ' + wins[1] + ' ' + OP.name + '</p>' +
     '<div class="kv"><div><span>命中次數</span><b>' + s.hits + '</b></div><div><span>總傷害</span><b>' + Math.round(s.dmg) + '</b></div><div><span>高處命中</span><b>' + s.high + '</b></div><div><span>最長連擊</span><b>' + s.combo + '</b></div><div><span>大招命中</span><b>' + s.ult + '</b></div><div><span>承受傷害</span><b>' + Math.round(s.taken) + '</b></div></div>' +
     '<button class="pk big" id="againB" type="button">再來一場</button><button class="pk" id="menuB" type="button">換角色／強度</button>';
-  $('againB').onclick = () => { SFX.unlock(); $('endO').hidden = true; beginMatch(); };
-  $('menuB').onclick = () => { $('endO').hidden = true; toMenu(); };
+  $('againB').onclick = () => { SFX.unlock(); if (net) { net.myRm = true; $('againB').disabled = true; $('againB').textContent = '等待對手…'; netSend({ t: 'rm' }); tryRematch(); return; } $('endO').hidden = true; beginMatch(); };
+  $('menuB').onclick = () => { $('endO').hidden = true; if (net) netLeave(); toMenu(); };
+  if (net) $('menuB').textContent = '離開對戰';
   if (won) SFX.win(); else SFX.lose();
 }
-function toMenu() { state = 'menu'; $('startO').hidden = false; $('dhud').hidden = true; $('cds').hidden = true; setBanner('', 0); $('pauseO').hidden = true; paused = false; }
+function toMenu() { if (net) netLeave(); state = 'menu'; $('startO').hidden = false; $('dhud').hidden = true; $('cds').hidden = true; setBanner('', 0); $('pauseO').hidden = true; paused = false; }
 function beginMatch() { wins = [0, 0]; round = 1; stats = { hits: 0, dmg: 0, high: 0, combo: 0, ult: 0, taken: 0 }; $('nmL').textContent = ME.name; $('nmR').textContent = OP.name; startRound(); lockPtr() }
 
 // ───────── HUD ─────────
@@ -527,14 +541,25 @@ function pop(txt, x, y, z, cls) { const e = document.createElement('div'); e.cla
 
 // ───────── 戰鬥模擬 ─────────
 const dist2 = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+function hitFx(att, tgt, d, hi, heavy) {
+  { const p = v3(tgt.x, tgt.y + 1.1, tgt.z), c = colOf(att); fxImpact(p, c, heavy ? 2.6 : 1.7); fxSlash(p, c, heavy); if (heavy) { fxPoof(p, c); fxRing(v3(tgt.x, tgt.y + .1, tgt.z), c, .4, 1.8, .4); } }
+  pop(String(Math.round(d)) + (hi ? '↑' : ''), tgt.x, tgt.y + 2.3, tgt.z, (heavy ? 'big ' : '') + (hi ? 'hi' : '') + (att === ME ? '' : ' red')); SFX.hit(heavy); shake = heavy ? .35 : .15; hitstop = heavy ? .09 : .045;
+}
 function damage(att, tgt, base, heavy, kbMul, kind) {
   if (tgt.dashT > 0 || tgt.hp <= 0) return false;
+  if (net && att === ME) {   // 連線：我是攻擊方，傷害由對方（受擊方）自己扣
+    const hi = att.y - tgt.y >= R.hiDelta, d = base * (hi ? R.hiBonus : 1);
+    att.ult = Math.min(100, att.ult + (kind === 'ult' ? 0 : 9)); tgt.flash = .14; tgt.hitStun = heavy ? .3 : .16;
+    hitFx(att, tgt, d, hi, heavy);
+    stats.hits++; stats.dmg += d; if (hi) stats.high++; stats.combo = Math.max(stats.combo, att.combo + 1); if (kind === 'ult') stats.ult++;
+    netSend({ t: 'h', d: +d.toFixed(2), hv: heavy ? 1 : 0, kb: kbMul || 1, k: kind === 'ult' ? 1 : 0, hi: hi ? 1 : 0, ax: +att.x.toFixed(2), az: +att.z.toFixed(2) });
+    return true;
+  }
   const hi = att.y - tgt.y >= R.hiDelta; let d = base * (hi ? R.hiBonus : 1); if (att.isBot) d *= [.7, 1, 1.15][lvl];
   tgt.hp -= d; tgt.flash = .14; tgt.hitStun = heavy ? .3 : .16; tgt.windT = 0; tgt.ultWind = 0; att.ult = Math.min(100, att.ult + (kind === 'ult' ? 0 : 9)); tgt.ult = Math.min(100, tgt.ult + 7);
   const dx = tgt.x - att.x, dz = tgt.z - att.z, l = Math.hypot(dx, dz) || 1, kb = (heavy ? 12 : 6.5) * (kbMul || 1);
   tgt.kx = dx / l * kb; tgt.kz = dz / l * kb; if (heavy) { tgt.vy = 5; tgt.grounded = false; }
-  { const p = v3(tgt.x, tgt.y + 1.1, tgt.z), c = colOf(att); fxImpact(p, c, heavy ? 2.6 : 1.7); fxSlash(p, c, heavy); if (heavy) { fxPoof(p, c); fxRing(v3(tgt.x, tgt.y + .1, tgt.z), c, .4, 1.8, .4); } }
-  pop(String(Math.round(d)) + (hi ? '↑' : ''), tgt.x, tgt.y + 2.3, tgt.z, (heavy ? 'big ' : '') + (hi ? 'hi' : '') + (att === ME ? '' : ' red')); SFX.hit(heavy); shake = heavy ? .35 : .15; hitstop = heavy ? .09 : .045;
+  hitFx(att, tgt, d, hi, heavy);
   if (att === ME) { stats.hits++; stats.dmg += d; if (hi) stats.high++; stats.combo = Math.max(stats.combo, att.combo + 1); if (kind === 'ult') stats.ult++; } else stats.taken += d;
   return true;
 }
@@ -547,10 +572,12 @@ function doAttack(f, o) {
   const s = f === ME ? slashFx : slashFx2; s.position.set(f.x + fx * .6, f.y + 1.0, f.z + fz * .6); s.rotation.z = A - Math.PI / 2 + Math.PI; s.userData = { t: .18, heavy };
   s.material.color.setHex(heavy ? 0xffd166 : 0xffffff); s.scale.setScalar(heavy ? 1.2 : 1);
   fxSlash(v3(f.x + fx * 1.7, f.y + 1.1, f.z + fz * 1.7), colOf(f), heavy);
+  if (net && f === ME) netSend({ t: 'a', k: 'atk', hv: heavy ? 1 : 0, f: +A.toFixed(3) });
   { const nx = f.x + fx * .9, nz = f.z + fz * .9; if (!blockedAt(nx, nz, f.y)) { f.x = nx; f.z = nz; } }   // 揮擊時向前踏一步
   if (dist <= R.range + MARGIN && dirOk && Math.abs(o.y - f.y) <= 1.9) damage(f, o, heavy ? R.dmg * 1.5 : R.dmg, heavy, 1);
 }
 function doUlt(f, o) {
+  if (net && f === ME) netSend({ t: 'a', k: 'ult' });
   f.ult = 0; shockT = 0; SFX.ult(); shake = .5; hitstop = .06; fxSig(heroOf(f.name), v3(f.x, f.y, f.z), true); fxRing(v3(f.x, f.y + .1, f.z), colOf(f), .5, R.ultR, .6); flashA = .3; slowT = .45; zoomT = .9;
   if (Math.hypot(o.x - f.x, o.z - f.z) <= R.ultR && Math.abs(o.y - f.y) <= 2.6) { const keep = f.ult; damage(f, o, R.ultDmg, true, 1.4, 'ult'); o.vy = 7; o.grounded = false; }
 }
@@ -567,8 +594,8 @@ function stepFighter(f, o, dt) {
   const tvx = mx * (f.dashT > 0 ? R.dashSpeed : sp), tvz = mz * (f.dashT > 0 ? R.dashSpeed : sp), a = f.grounded || f.dashT > 0 ? 1 : R.airCtl;
   const k = Math.min(1, dt * (f.grounded ? 16 : 6) * a); f.vx += (tvx - f.vx) * (f.dashT > 0 ? 1 : k); f.vz += (tvz - f.vz) * (f.dashT > 0 ? 1 : k);
   // 動作
-  if (can && inp.jump && f.grounded) { f.vy = R.jumpV; f.grounded = false; SFX.jump(); fxDust(v3(f.x, f.y, f.z)); fxRing(v3(f.x, f.y + .05, f.z), colOf(f), .3, 1.1, .3); }
-  if (can && inp.dash && f.dashCD <= 0 && (mx || mz || true)) { let dx = mx, dz = mz; if (!dx && !dz) { dx = Math.sin(f.face); dz = Math.cos(f.face); } const l = Math.hypot(dx, dz) || 1; f.dashDir = [dx / l, dz / l]; f.dashT = R.dashT; f.dashCD = R.dashCD; SFX.dash(); { const a = v3(f.x, f.y + .7, f.z), b = v3(f.x + f.dashDir[0] * 3.6, f.y + .7, f.z + f.dashDir[1] * 3.6); fxTrail(a, b, colOf(f), .35, 1.0); fxDust(v3(f.x, f.y, f.z)); } }
+  if (can && inp.jump && f.grounded) { f.vy = R.jumpV; f.grounded = false; if (net && f === ME) netSend({ t: 'a', k: 'j' }); SFX.jump(); fxDust(v3(f.x, f.y, f.z)); fxRing(v3(f.x, f.y + .05, f.z), colOf(f), .3, 1.1, .3); }
+  if (can && inp.dash && f.dashCD <= 0 && (mx || mz || true)) { let dx = mx, dz = mz; if (!dx && !dz) { dx = Math.sin(f.face); dz = Math.cos(f.face); } const l = Math.hypot(dx, dz) || 1; f.dashDir = [dx / l, dz / l]; f.dashT = R.dashT; f.dashCD = R.dashCD; if (net && f === ME) netSend({ t: 'a', k: 'd', x: +f.dashDir[0].toFixed(2), z: +f.dashDir[1].toFixed(2) }); SFX.dash(); { const a = v3(f.x, f.y + .7, f.z), b = v3(f.x + f.dashDir[0] * 3.6, f.y + .7, f.z + f.dashDir[1] * 3.6); fxTrail(a, b, colOf(f), .35, 1.0); fxDust(v3(f.x, f.y, f.z)); } }
   if (can && inp.atk && f.atkCD <= 0 && f.windT <= 0 && f.dashT <= 0) { f.atkCD = R.atkCD * (f.isBot ? [1.5, 1.2, 1][lvl] : 1); f.windT = R.windup * (f.isBot ? (f.windMul || 1.7) : 1); SFX.swing(); if (f === ME) { if (mx || mz) f.face = Math.atan2(mx, mz); else if (lockOn) faceToward(f, o); else f.face = Math.atan2(-Math.sin(yaw), -Math.cos(yaw)); } else faceToward(f, o); }
   if (can && inp.ult && f.ult >= R.ultNeed && f.grounded) { f.ultWind = .32; }
   inp.jump = inp.atk = inp.dash = inp.ult = false;
@@ -632,11 +659,12 @@ function playerInput(dt) {
   wantJump = wantAtk = wantUlt = wantDash = false; if (keys.shift) keys.shift = false;
 }
 function sim(dt) {
-  if (state === 'fight') { playerInput(dt); if (AI_ON) botThink(OP, ME, dt); tLeft -= dt; if (tLeft <= 0) { const a = ME.hp, b = OP.hp; endRound(a > b ? 0 : b > a ? 1 : -1); } }
+  const ref = !net || net.role === 'host';   // 裁判：單機自己、連線時房主
+  if (state === 'fight') { playerInput(dt); if (AI_ON && !net) botThink(OP, ME, dt); tLeft -= dt; if (tLeft <= 0 && ref) { const a = ME.hp, b = OP.hp; endRoundNet(a > b ? 0 : b > a ? 1 : -1); } }
   else { ME.inp.mx = ME.inp.mz = 0; OP.inp.mx = OP.inp.mz = 0; ME.inp.jump = ME.inp.atk = ME.inp.dash = ME.inp.ult = false; OP.inp.jump = OP.inp.atk = OP.inp.dash = OP.inp.ult = false; wantAtk = wantUlt = wantDash = wantJump = false; }
   if (state === 'countdown') { playerInputCamOnly(dt); }
-  stepFighter(ME, OP, dt); stepFighter(OP, ME, dt);
-  if (state === 'fight' && (ME.hp <= 0 || OP.hp <= 0)) endRound(ME.hp <= 0 && OP.hp <= 0 ? -1 : ME.hp <= 0 ? 1 : 0);
+  stepFighter(ME, OP, dt); if (net) stepRemote(OP, dt); else stepFighter(OP, ME, dt);
+  if (state === 'fight' && ref && (ME.hp <= 0 || OP.hp <= 0)) endRoundNet(ME.hp <= 0 && OP.hp <= 0 ? -1 : ME.hp <= 0 ? 1 : 0);
 }
 function playerInputCamOnly(dt) { if (keys.arrowleft) yaw += 2.2 * dt; if (keys.arrowright) yaw -= 2.2 * dt; }
 const _cp = new THREE.Vector3();
@@ -684,9 +712,132 @@ function frame(now) {
       acc += dt; let n = 0; while (acc >= 1 / 60 && n++ < 5) { acc -= 1 / 60; if (ME && OP && state !== 'menu' && state !== 'matchEnd') sim(1 / 60); }
       if (state === 'countdown' || state === 'roundEnd') { banner -= dt; if (state === 'countdown') { const c = Math.ceil(banner - .2); if (c !== tmr && c > 0 && c <= 3) { tmr = c; SFX.beep(); setBanner(String(c), 0); } if (banner <= .2) { state = 'fight'; setBanner('開打！', 700); SFX.go(); tmr = 0; } } else if (banner <= 0) { nextAfterRound(); } }
       if (state === 'fight' || state === 'countdown' || state === 'roundEnd') updHud();
+      if (net && net.ready && ME && OP) { net.acc += dt; if (net.acc >= .05) { net.acc = 0; netState(); } }
     }
   }
   if (ME && OP && state !== 'menu') render(dt); else { camera.position.set(Math.sin(yaw) * 30, 17, Math.cos(yaw) * 30); camera.lookAt(0, 1, 0); renderer.render(scene, camera); }
+}
+
+
+// ───────── 連線對戰（中繼房間；房主當裁判，各自負責自己的位置與血量）─────────
+const WS_BASE = (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && Q.get('ws')) || 'wss://machi-design-api.machi-chen.workers.dev/duel';
+const ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const genCode = () => Array.from({ length: 6 }, () => ALPHA[Math.floor(Math.random() * ALPHA.length)]).join('');
+let net = null, netTry = 0;
+const netSt = t => { $('netSt').textContent = t || ''; };
+function netSend(o) { if (net && net.ws && net.ws.readyState === 1) { try { net.ws.send(JSON.stringify(o)); } catch (e) {} } }
+function netState() {
+  const f = ME; netSend({ t: 's', x: +f.x.toFixed(2), y: +f.y.toFixed(2), z: +f.z.toFixed(2), f: +f.face.toFixed(2), hp: +f.hp.toFixed(1), u: Math.round(f.ult), m: +f.moving.toFixed(1), g: f.grounded ? 1 : 0, d: f.dashT > 0 ? 1 : 0, h: f.hitStun > 0 ? 1 : 0 });
+}
+function netClose(silent) { const n = net; net = null; netTry++; if (n && n.ws) { n.ws.onclose = n.ws.onmessage = n.ws.onerror = null; try { n.ws.close(1000); } catch (e) {} } if (!silent) netUi(false); }
+function netLeave() { netClose(); }
+function netUi(busy, txt) { $('qmB').disabled = $('mkB').disabled = $('joinB').disabled = $('joinIn').disabled = !!busy; $('netCancel').hidden = !busy; if (txt !== undefined) netSt(txt); }
+// 連到房間：回傳 'host'（等人）、'guest'（已配對）或關閉碼
+function netConnect(room, role) {
+  return new Promise(res => {
+    let ws; try { ws = new WebSocket(WS_BASE + '?room=' + room + '&role=' + role); } catch (e) { res({ code: 1006 }); return; }
+    let done = false; const fin = v => { if (!done) { done = true; res(v); } };
+    ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (x) { return; } if (m.t === 'hosted') fin({ ws, state: 'hosted' }); else if (m.t === 'ready') fin({ ws, state: 'ready' }); };
+    ws.onclose = e => fin({ code: e.code || 1006 });
+    ws.onerror = () => {};
+  });
+}
+function netAdopt(ws, room, role) {
+  net = { ws, room, role, ready: false, acc: 0, ldMe: false, ldOp: false, myRm: false, opRm: false, opName: null, tgt: null };
+  ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (x) { return; } netMsg(m); };
+  ws.onclose = () => { if (net && net.ws === ws) netGone(true); };
+  return net;
+}
+function netReady() {   // 雙方到齊：交換角色名字
+  if (!net || net.ready) return; net.ready = true; netUi(true, '對手已加入，載入角色…'); netSend({ t: 'hi', n: $('selMe').value });
+}
+async function netBuild() {
+  if (!net || !net.opName || net.built) return; net.built = true; const a = $('selMe').value, b = net.opName;
+  const [ta, tb, wa, wb] = await Promise.all([loadAtlas(a), loadAtlas(b), loadWalk(a), loadWalk(b)]); if (!net) return;
+  if (ME) { scene.remove(ME.holder, ME.blob, OP.holder, OP.blob); fighters.length = 0; }
+  ME = makeFighter(a, ta, false, 0x3b9f6a); OP = makeFighter(b, tb, false, 0xd9534f); fighters.push(ME, OP); ME.walk = wa; OP.walk = wb;
+  place(ME, net.role === 'host' ? -14 : 14, 0, net.role === 'host' ? Math.PI / 2 : -Math.PI / 2); place(OP, net.role === 'host' ? 14 : -14, 0, net.role === 'host' ? -Math.PI / 2 : Math.PI / 2);
+  net.ldMe = true; netSend({ t: 'ld' }); netTryStart();
+}
+function netTryStart() { if (net && net.role === 'host' && net.ldMe && net.ldOp && !net.started) { net.started = true; netSend({ t: 'rs', r: 1 }); netBegin(1); } }
+function netBegin(r) {   // 開一場新比賽（r=1）或下一局
+  if (r === 1) { wins = [0, 0]; round = 1; stats = { hits: 0, dmg: 0, high: 0, combo: 0, ult: 0, taken: 0 }; $('endO').hidden = true; $('startO').hidden = true; $('nmL').textContent = ME.name; $('nmR').textContent = OP.name; net.myRm = net.opRm = false; SFX.unlock(); }
+  else round = r;
+  paused = false; $('pauseO').hidden = true; startRound(); lockPtr();
+}
+function tryRematch() { if (net && net.role === 'host' && net.myRm && net.opRm) { netSend({ t: 'rs', r: 1 }); netBegin(1); } }
+function applyHitToMe(m) {
+  if (state !== 'fight' || ME.hp <= 0 || ME.dashT > 0) return;
+  const heavy = !!m.hv, d = m.d; ME.hp -= d; ME.flash = .14; ME.hitStun = heavy ? .3 : .16; ME.windT = 0; ME.ultWind = 0; ME.ult = Math.min(100, ME.ult + 7);
+  const dx = ME.x - m.ax, dz = ME.z - m.az, l = Math.hypot(dx, dz) || 1, kb = (heavy ? 12 : 6.5) * (m.kb || 1);
+  ME.kx = dx / l * kb; ME.kz = dz / l * kb; if (heavy) { ME.vy = 5; ME.grounded = false; } if (m.k) { ME.vy = 7; ME.grounded = false; }
+  hitFx(OP, ME, d, !!m.hi, heavy); stats.taken += d; netState();
+}
+function netMsg(m) {
+  if (!net) return;
+  if (m.t === 'ready') netReady();
+  else if (m.t === 'gone') netGone(false);
+  else if (m.t === 'hi') { net.opName = String(m.n || '').slice(0, 24); netBuild(); }
+  else if (m.t === 'ld') { net.ldOp = true; netTryStart(); }
+  else if (m.t === 'rs' && net.role === 'guest' && ME && OP) { netBegin(m.r | 0 || 1); }
+  else if (m.t === 're' && net.role === 'guest' && ME && OP) { if (state === 'countdown') { state = 'fight'; setBanner('', 0); } const w = m.w < 0 ? -1 : (m.w === 1 ? 0 : 1); endRound(w); }
+  else if (m.t === 'me' && net.role === 'guest') { matchEnd(); }
+  else if (m.t === 'rm') { net.opRm = true; tryRematch(); }
+  else if (!ME || !OP) return;
+  else if (m.t === 's') { OP.nx = m.x; OP.ny = m.y; OP.nz = m.z; OP.face = m.f; OP.hp = m.hp; OP.ult = m.u; OP.moving = m.m; OP.grounded = !!m.g; if (m.d) OP.dashT = Math.max(OP.dashT, .1); if (m.h && OP.hitStun <= 0) OP.hitStun = .1; }
+  else if (m.t === 'h') applyHitToMe(m);
+  else if (m.t === 'a') {
+    if (m.k === 'atk') { OP.face = m.f; OP.windT = .1; SFX.swing(); const fx = Math.sin(m.f), fz = Math.cos(m.f); const sl = slashFx2; sl.position.set(OP.x + fx * .6, OP.y + 1.0, OP.z + fz * .6); sl.rotation.z = m.f - Math.PI / 2 + Math.PI; sl.userData = { t: .18, heavy: !!m.hv }; sl.material.color.setHex(m.hv ? 0xffd166 : 0xffffff); sl.scale.setScalar(m.hv ? 1.2 : 1); fxSlash(v3(OP.x + fx * 1.7, OP.y + 1.1, OP.z + fz * 1.7), colOf(OP), !!m.hv); }
+    else if (m.k === 'ult') { OP.ultWind = .1; SFX.ult(); shake = .5; fxSig(heroOf(OP.name), v3(OP.x, OP.y, OP.z), true); fxRing(v3(OP.x, OP.y + .1, OP.z), colOf(OP), .5, R.ultR, .6); flashA = .3; slowT = .45; zoomT = .9; }
+    else if (m.k === 'j') { fxDust(v3(OP.x, OP.y, OP.z)); fxRing(v3(OP.x, OP.y + .05, OP.z), colOf(OP), .3, 1.1, .3); }
+    else if (m.k === 'd') { OP.dashT = R.dashT; SFX.dash(); const a = v3(OP.x, OP.y + .7, OP.z), b = v3(OP.x + m.x * 3.6, OP.y + .7, OP.z + m.z * 3.6); fxTrail(a, b, colOf(OP), .35, 1.0); fxDust(v3(OP.x, OP.y, OP.z)); }
+  }
+}
+function stepRemote(f, dt) {   // 對手：位置朝最新封包靠近，其餘計時器只為了畫面效果
+  const k = 1 - Math.exp(-dt * 18); f.x += (f.nx - f.x) * k; f.z += (f.nz - f.z) * k; if (f.ny !== undefined) f.y += (f.ny - f.y) * k;
+  f.flash = Math.max(0, f.flash - dt); f.hitStun = Math.max(0, f.hitStun - dt); f.windT = Math.max(0, f.windT - dt); f.ultWind = Math.max(0, f.ultWind - dt); f.dashT = Math.max(0, f.dashT - dt);
+}
+function netGone(drop) {   // 對手離線 / 連線中斷
+  if (!net) return; const was = net; net = null; netTry++; try { was.ws.onclose = null; was.ws.close(1000); } catch (e) {}
+  if (state === 'matchEnd' || state === 'menu') { $('endO').hidden = true; toMenu(); netUi(false, was.ready ? '對手已離線' : ''); return; }
+  state = 'matchEnd'; if (document.pointerLockElement) document.exitPointerLock(); setBanner('', 0); $('endO').hidden = false;
+  $('endO').innerHTML = '<h2>' + (drop ? '連線中斷' : '對手離開了') + '</h2><p>' + (drop ? '與對手的連線斷了' : '這場算你贏') + '</p><button class="pk big" id="menuB" type="button">回到選單</button>';
+  $('menuB').onclick = () => { $('endO').hidden = true; toMenu(); netUi(false, ''); };
+}
+async function netQuick() {
+  const my = ++netTry; netUi(true, '配對中…'); SFX.unlock();
+  for (let slot = 1; slot <= 6; slot++) {
+    const room = 'QM' + String(slot).padStart(4, '0');
+    for (let tries = 0; tries < 3; tries++) {
+      if (my !== netTry) return;
+      let r = await netConnect(room, 'guest'); if (my !== netTry) { if (r.ws) r.ws.close(); return; }
+      if (r.state === 'ready') { netAdopt(r.ws, room, 'guest'); netReady(); return; }
+      if (r.code === 4404) {   // 沒人開房 → 我來當房主等人
+        await new Promise(x => setTimeout(x, Math.random() * 250)); if (my !== netTry) return;
+        r = await netConnect(room, 'host'); if (my !== netTry) { if (r.ws) r.ws.close(); return; }
+        if (r.state === 'hosted') { netAdopt(r.ws, room, 'host'); netUi(true, '等待對手加入…（快速配對）'); return; }
+        if (r.code === 4409) continue;   // 被搶先當房主 → 回頭用訪客加入
+      }
+      break;   // 滿了或其他錯誤 → 換下一個房間
+    }
+  }
+  if (my === netTry) netUi(false, '目前連不上或房間都滿了，稍後再試');
+}
+async function netMake() {
+  const my = ++netTry; netUi(true, '建立房間中…'); SFX.unlock();
+  for (let i = 0; i < 4; i++) {
+    const code = genCode(), r = await netConnect(code, 'host'); if (my !== netTry) { if (r.ws) r.ws.close(); return; }
+    if (r.state === 'hosted') { netAdopt(r.ws, code, 'host'); netUi(true, ''); $('netSt').innerHTML = '房間碼：<b class="code">' + code + '</b><br>把房間碼給朋友，等他加入…'; return; }
+    if (r.code !== 4409) break;
+  }
+  if (my === netTry) netUi(false, '建立房間失敗，稍後再試');
+}
+async function netJoin() {
+  const code = $('joinIn').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''); if (code.length !== 6) { netSt('房間碼是 6 個字'); return; }
+  const my = ++netTry; netUi(true, '加入中…'); SFX.unlock();
+  const r = await netConnect(code, 'guest'); if (my !== netTry) { if (r.ws) r.ws.close(); return; }
+  if (r.state === 'ready') { netAdopt(r.ws, code, 'guest'); netReady(); return; }
+  netUi(false, r.code === 4404 ? '找不到這個房間（房主不在）' : r.code === 4409 ? '這個房間已經滿了' : '連線失敗，稍後再試');
 }
 
 // ───────── 開始畫面 ─────────
@@ -697,18 +848,22 @@ async function setup() {
   $('selMe').innerHTML = opts(NAMES.includes(me0) ? me0 : NAMES[0]); $('selOp').innerHTML = opts(op0 && NAMES.includes(op0) && op0 !== me0 ? op0 : rest[Math.floor(Math.random() * rest.length)]); $('selLv').value = store.get('duel:lv') || '1';
   const pv = () => { drawPreview($('pvMe'), $('selMe').value); drawPreview($('pvOp'), $('selOp').value); }; $('selMe').onchange = $('selOp').onchange = pv; pv();
   if (matchMedia('(pointer:coarse)').matches) $('startNote').textContent = '這款需要鍵盤與滑鼠，請用電腦玩。';
+  $('netB').onclick = () => { const b = $('netBox'); b.hidden = !b.hidden; };
+  $('qmB').onclick = netQuick; $('mkB').onclick = netMake; $('joinB').onclick = netJoin; $('joinIn').onkeydown = e => { if (e.key === 'Enter') netJoin(); };
+  $('netCancel').onclick = () => { netClose(); netUi(false, ''); };
   $('startB').onclick = async () => {
+    netClose(true);
     SFX.unlock(); const a = $('selMe').value, b = $('selOp').value; lvl = +$('selLv').value; store.set('duel:me', a); store.set('duel:op', b); store.set('duel:lv', String(lvl));
     $('startB').disabled = true; $('startB').textContent = '載入角色中…';
     const [ta, tb, wa, wb] = await Promise.all([loadAtlas(a), loadAtlas(b), loadWalk(a), loadWalk(b)]);
     if (ME) { scene.remove(ME.holder, ME.blob); scene.remove(OP.holder, OP.blob); fighters.length = 0; }
-    ME = makeFighter(a, ta, false, 0x3b9f6a); OP = makeFighter(b === a ? b : b, tb, true, 0xd9534f); fighters.push(ME, OP); OP.isBot = true; ME.walk = wa; OP.walk = wb;
+    ME = makeFighter(a, ta, false, 0x3b9f6a); OP = makeFighter(b, tb, true, 0xd9534f); fighters.push(ME, OP); OP.isBot = true; ME.walk = wa; OP.walk = wb;
     place(ME, -14, 0, Math.PI / 2); place(OP, 14, 0, -Math.PI / 2);
-    $('startB').disabled = false; $('startB').textContent = '開始對決'; $('startO').hidden = true; beginMatch();
+    $('startB').disabled = false; $('startB').textContent = '開始對決（對電腦）'; $('startO').hidden = true; beginMatch();
   };
 }
 resize(); syncTheme(); applyTheme(); requestAnimationFrame(frame); setup();
-window.__duel = { get me() { return ME; }, get op() { return OP; }, get state() { return state; }, SOL, hAt, groundAt, keys, R, set lvl(v) { lvl = v; }, setBot(v) { AI_ON = v; } };
+window.__duel = { get me() { return ME; }, get op() { return OP; }, get state() { return state; }, get net() { return net; }, get wins() { return wins; }, SOL, hAt, groundAt, keys, R, set lvl(v) { lvl = v; }, setBot(v) { AI_ON = v; } };
 })();
 </script>
 </body>
