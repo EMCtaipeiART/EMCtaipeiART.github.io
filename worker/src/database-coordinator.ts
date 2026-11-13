@@ -5551,12 +5551,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       try { ws.serializeAttachment(ok ? { name } : {}); ws.send(JSON.stringify({ t: 'hi', ok })); } catch { /* 連線已斷 */ }
       return;
     }
-    if (m.t === 'lv') {   // 升級特效：廣播給所有連線（每條連線 3 秒最多一次），只能代表自己
+    if (m.t === 'lv') {   // 升級特效：廣播給所有連線（每條連線 0.4 秒最多一次），只能代表自己
       let who = '';
       try { who = text((ws.deserializeAttachment() as { name?: string } | null)?.name); } catch { who = ''; }
       if (!who) return;
       const now = Date.now();
-      if (now - (this.pixelLvLast.get(ws) || 0) < 3000) return;
+      if (now - (this.pixelLvLast.get(ws) || 0) < 400) return;
       this.pixelLvLast.set(ws, now);
       const lv = Math.max(1, Math.min(999, Math.floor(Number(m.lv)) || 1));
       const out = JSON.stringify({ t: 'lv', n: who, lv });
