@@ -128,6 +128,47 @@ header{position:fixed;right:8px;bottom:8px;z-index:6;width:auto;gap:6px;flex-wra
 .dhud .lo{font-size:12px;font-weight:800;color:#fff;opacity:.92;text-shadow:0 2px 0 #000,0 0 5px #000}
 .lodesc{font-size:13px;line-height:1.5;text-align:left;max-width:560px;margin:2px auto;padding:8px 12px;border:2px solid var(--ink);border-radius:12px;background:rgba(255,255,255,.22)}.lodesc b{color:#1c9a52}
 .pick.gear{margin-top:4px}
+/* ---- 遊戲感開始畫面 ---- */
+.menu [hidden],.hid{display:none!important}
+.ov.menu{justify-content:flex-start;align-items:center;overflow:auto;padding:0;color:#eafff2;text-align:center;background:radial-gradient(ellipse at 50% 28%,rgba(20,70,48,.5),rgba(3,12,9,.93) 78%)}
+.mwrap{width:min(1120px,100%);margin:auto!important;padding:20px 16px 26px;display:flex;flex-direction:column;align-items:center;gap:16px}
+.logo{line-height:1}.logo small{display:block;letter-spacing:.55em;font-size:12px;font-weight:800;color:#5fe08a;margin-bottom:4px}
+.logo h2{margin:0;font-size:clamp(42px,7.5vw,84px);font-weight:900;letter-spacing:.06em;color:#fff;-webkit-text-stroke:4px #000;paint-order:stroke fill;text-shadow:0 6px 0 #000,0 0 30px rgba(95,224,138,.6);transform:skewX(-6deg)}
+.logosub{margin-top:10px;font-weight:800;color:#ffd166;text-shadow:0 2px 0 #000;letter-spacing:.12em}
+.vsrow{display:flex;align-items:stretch;justify-content:center;gap:14px;width:100%}
+.card{flex:1 1 0;max-width:440px;position:relative;border:3px solid #000;border-radius:18px;background:linear-gradient(180deg,#22664a,#143a2b);box-shadow:0 6px 0 #000,inset 0 0 0 2px rgba(255,255,255,.13);padding:20px 12px 12px;display:flex;flex-direction:column;gap:10px}
+.card.op{background:linear-gradient(180deg,#6a2e2e,#3c1c1c)}
+.ctag{position:absolute;top:-14px;left:16px;background:#ffd166;color:#241a00;font-weight:900;font-size:12px;padding:2px 14px;border:3px solid #000;border-radius:8px;letter-spacing:.14em;transform:skewX(-8deg)}.card.op .ctag{left:auto;right:16px;background:#ff9a8a}
+.por{position:relative;align-self:center;width:150px;height:150px;border:3px solid #000;border-radius:16px;background:radial-gradient(circle at 50% 38%,rgba(255,255,255,.3),rgba(0,0,0,.3));overflow:hidden;box-shadow:0 4px 0 #000}.por canvas{width:100%;height:100%;display:block}
+.qm{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:84px;font-weight:900;color:#ff9a8a;-webkit-text-stroke:3px #000;paint-order:stroke fill;animation:qmb 1s infinite alternate}@keyframes qmb{to{transform:scale(1.12)}}
+.pk2{display:flex;align-items:center;justify-content:center;gap:10px}.pk2 b{min-width:7.5em;font-size:22px;font-weight:900;text-shadow:0 2px 0 #000}
+.arr{width:34px;height:34px;border:3px solid #000;border-radius:10px;background:linear-gradient(#ffe08a,#e0a82a);font:900 13px/1 inherit;color:#241a00;cursor:pointer;box-shadow:0 3px 0 #000;padding:0}.arr:active{transform:translateY(2px);box-shadow:0 1px 0 #000}
+.vsmid{display:flex;align-items:center}.vsmid span{font-size:clamp(36px,5.4vw,60px);font-weight:900;font-style:italic;color:#ffd166;-webkit-text-stroke:4px #000;paint-order:stroke fill;text-shadow:0 5px 0 #000}
+.slots{display:flex;flex-direction:column;gap:8px;text-align:left}
+.slot{display:grid;grid-template-columns:46px 1fr auto;align-items:center;gap:8px;border:3px solid #000;border-radius:12px;background:rgba(0,0,0,.34);padding:7px 8px}
+.slot .ic{font-size:32px;text-align:center;filter:drop-shadow(0 2px 0 #000)}
+.slot .kind{display:block;font-size:10px;font-weight:900;color:#5fe08a;letter-spacing:.16em}
+.slot .tx b{display:block;font-size:16px}.slot .tx b em{font-style:normal;font-size:11px;font-weight:800;color:#241a00;background:#ffd166;border-radius:6px;padding:1px 6px;margin-left:6px}
+.slot .tx small{display:block;font-size:12px;color:#bfe0cd;line-height:1.4;margin-top:1px}
+.bars{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:3px 6px;margin-top:5px;font-size:10px;color:#9cc5ae;align-items:center}.bars i{display:block;height:7px;border:2px solid #000;border-radius:5px;background:rgba(0,0,0,.5);overflow:hidden}.bars u{display:block;height:100%;background:linear-gradient(90deg,#5fe08a,#ffd166)}
+.sa{display:flex;gap:4px}.sa .arr{width:28px;height:26px;border-radius:8px;font-size:11px}
+.lvrow{display:flex;gap:6px;justify-content:center}.seg{border:3px solid #000;border-radius:10px;background:rgba(0,0,0,.38);color:#eafff2;font:900 14px/1 inherit;padding:7px 14px;cursor:pointer;box-shadow:0 3px 0 #000}.seg.on{background:linear-gradient(#ffe08a,#e0a82a);color:#241a00}
+.opnote{font-size:12.5px;color:#f1c9c2;font-weight:700}
+.acts{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;align-items:center}.acts .go{font-size:22px;padding:12px 34px}
+.lobby{width:min(640px,100%);border:3px solid #000;border-radius:18px;background:linear-gradient(#1b4a36,#0f2b20);box-shadow:0 6px 0 #000,inset 0 0 0 2px rgba(255,255,255,.1);padding:14px;display:flex;flex-direction:column;gap:10px;align-items:center}
+.lobtitle{font-weight:900;font-size:18px;color:#ffd166;letter-spacing:.2em;text-shadow:0 2px 0 #000}
+.lobgrid{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}.lobgrid .pk.big{min-width:170px}
+.joinrow{display:flex;gap:8px;align-items:center}.joinrow input,.share input{font:inherit;font-weight:900;color:#eafff2;background:rgba(0,0,0,.4);border:3px solid #000;border-radius:10px;padding:7px 10px;text-align:center;outline:none}
+.joinrow input{width:9.5em;letter-spacing:.3em;text-transform:uppercase}.share input{width:100%;font-size:13px;letter-spacing:0}
+.pulse{animation:pls .7s infinite alternate}@keyframes pls{to{transform:scale(1.07);filter:brightness(1.15)}}
+.share{width:100%;display:flex;flex-direction:column;gap:8px;align-items:center;border:3px dashed rgba(255,209,102,.7);border-radius:14px;padding:10px;background:rgba(0,0,0,.25)}
+.sc small{display:block;font-size:11px;letter-spacing:.3em;color:#9cc5ae}.sc b{font-size:clamp(34px,6vw,50px);letter-spacing:.22em;color:#5fe08a;text-shadow:0 3px 0 #000;user-select:all}
+.sbtns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}.shnote{font-size:12px;color:#bfe0cd}
+.netst{min-height:1.3em;font-weight:800;font-size:14px;color:#eafff2}
+.keys{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center;font-size:12px;color:#9cc5ae}.keys kbd{font:900 11px/1 inherit;color:#241a00;background:#ffd166;border:2px solid #000;border-radius:6px;padding:2px 6px;margin-right:5px}
+.ov.menu .note{color:#9cc5ae}
+@media (max-width:860px){.vsrow{flex-direction:column;align-items:center}.vsmid{display:none}.card{max-width:540px;width:100%}.por{width:112px;height:112px}}
+
 @media (max-width:700px){.dhud .nm{font-size:12px}.dhud .tm{font-size:22px}.cds{display:none}}
 </style>
 </head>
@@ -151,31 +192,43 @@ header{position:fixed;right:8px;bottom:8px;z-index:6;width:auto;gap:6px;flex-wra
     </div>
     <div class="flash" id="flash"></div>
     <div class="banner" id="banner" hidden></div>
-    <div class="ov" id="startO">
-      <h2>辦公室對決</h2>
-      <p>桌子、斜坡和資料櫃都是戰場。站得比對手高，打人更痛。先贏 2 局的人獲勝。</p>
-      <div class="pick">
-        <label>我是<select id="selMe"></select></label>
-        <label>對手（電腦）<select id="selOp"></select></label>
-        <label>強度<select id="selLv"><option value="0">簡單</option><option value="1" selected>普通</option><option value="2">困難</option></select></label>
+    <div class="ov menu" id="startO">
+      <div class="mwrap">
+        <div class="logo"><small>EMC DESIGN ARENA</small><h2>辦公室對決</h2><div class="logosub">高低落差 ・ 一對一 ・ 先贏兩局</div></div>
+        <div class="vsrow">
+          <section class="card me">
+            <div class="ctag">PLAYER</div>
+            <div class="por"><canvas id="pvMe" width="240" height="240"></canvas></div>
+            <div class="pk2"><button class="arr" data-sel="selMe" data-d="-1" type="button">◀</button><b id="nmMe"></b><button class="arr" data-sel="selMe" data-d="1" type="button">▶</button></div>
+            <div class="slots" id="slotsMe"></div>
+          </section>
+          <div class="vsmid"><span>VS</span></div>
+          <section class="card op" id="opCard">
+            <div class="ctag" id="opTag">CPU</div>
+            <div class="por"><canvas id="pvOp" width="240" height="240"></canvas><div class="qm" id="opQ">?</div></div>
+            <div class="pk2" id="opPick"><button class="arr" data-sel="selOp" data-d="-1" type="button">◀</button><b id="nmOp"></b><button class="arr" data-sel="selOp" data-d="1" type="button">▶</button></div>
+            <div class="lvrow" id="lvRow"><button class="seg" data-lv="0" type="button">簡單</button><button class="seg" data-lv="1" type="button">普通</button><button class="seg" data-lv="2" type="button">困難</button></div>
+            <div class="opnote" id="opNote">電腦每場隨機帶一套裝備</div>
+          </section>
+        </div>
+        <div class="acts"><button class="pk big go" id="startB" type="button">開始對決（對電腦）</button><button class="pk" id="netB" type="button">連線對戰</button></div>
+        <div class="lobby" id="netBox" hidden>
+          <div class="lobtitle">連線對戰</div>
+          <div class="lobgrid"><button class="pk big" id="qmB" type="button">快速配對</button><button class="pk big alt" id="mkB" type="button">邀請朋友</button></div>
+          <div class="joinrow"><input id="joinIn" maxlength="6" placeholder="輸入房間碼" autocomplete="off" spellcheck="false"><button class="pk" id="joinB" type="button">加入</button></div>
+          <div class="share" id="shareBox" hidden>
+            <div class="sc"><small>房間碼</small><b id="shCode"></b></div>
+            <input id="shLink" readonly>
+            <div class="sbtns"><button class="pk" id="cpLink" type="button">複製連結</button><button class="pk" id="cpText" type="button">複製邀請文字</button></div>
+            <div class="shnote">把連結傳給朋友，他點開、選好角色按「加入」就會進到你的房間。</div>
+          </div>
+          <div class="netst" id="netSt"></div>
+          <button class="pk" id="netCancel" type="button" hidden>取消</button>
+        </div>
+        <div class="keys"><span><kbd>WASD</kbd>移動</span><span><kbd>滑鼠</kbd>視角</span><span><kbd>左鍵／J</kbd>攻擊</span><span><kbd>空白</kbd>跳</span><span><kbd>Shift</kbd>衝刺</span><span><kbd>R</kbd>大招</span><span><kbd>右鍵／Tab</kbd>鎖定</span></div>
+        <div class="note" id="startNote"></div>
       </div>
-      <div class="pick gear">
-        <label>武器<select id="selW"></select></label>
-        <label>被動<select id="selP"></select></label>
-        <label>大招<select id="selU"></select></label>
-      </div>
-      <div class="lodesc" id="loDesc"></div>
-      <div class="prev"><canvas id="pvMe" width="120" height="120"></canvas><b>VS</b><canvas id="pvOp" width="120" height="120"></canvas></div>
-      <ul class="tips"><li>WASD 移動，滑鼠轉視角（點一下畫面鎖定滑鼠，Esc 解除；方向鍵也能轉）。空白鍵跳，Shift 衝刺閃避。</li><li>左鍵或 J 往前揮擊，連打 3 下第三下最重。R 大招（打人、被打都會充能）。右鍵或 Tab 鎖定對手。</li><li>站在高處打低處多 25% 傷害；掉下去不會受傷，但要重新爬上來。</li></ul>
-      <button class="pk big" id="startB" type="button">開始對決（對電腦）</button>
-      <button class="pk" id="netB" type="button">連線對戰</button>
-      <div class="netbox" id="netBox" hidden>
-        <div class="netrow"><button class="pk big" id="qmB" type="button">快速配對</button><button class="pk" id="mkB" type="button">建立房間</button></div>
-        <div class="netrow"><input id="joinIn" maxlength="6" placeholder="輸入房間碼" autocomplete="off" spellcheck="false"><button class="pk" id="joinB" type="button">加入</button></div>
-        <div class="netst" id="netSt"></div>
-        <button class="pk" id="netCancel" type="button" hidden>取消</button>
-      </div>
-      <div class="note" id="startNote"></div>
+      <div class="hid"><select id="selMe"></select><select id="selOp"></select><select id="selLv"><option value="0">簡單</option><option value="1" selected>普通</option><option value="2">困難</option></select><select id="selW"></select><select id="selP"></select><select id="selU"></select></div>
     </div>
     <div class="ov" id="pauseO" hidden><h2>暫停</h2><p>點一下畫面繼續</p></div>
     <div class="ov" id="endO" hidden></div>
@@ -897,7 +950,7 @@ function frame(now) {
 const WS_BASE = (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && Q.get('ws')) || 'wss://machi-design-api.machi-chen.workers.dev/duel';
 const ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const genCode = () => Array.from({ length: 6 }, () => ALPHA[Math.floor(Math.random() * ALPHA.length)]).join('');
-let net = null, netTry = 0;
+let net = null, netTry = 0, showShare = () => {};
 const myLo = () => ({ w: $('selW').value, p: $('selP').value, u: $('selU').value });
 const netSt = t => { $('netSt').textContent = t || ''; };
 function netSend(o) { if (net && net.ws && net.ws.readyState === 1) { try { net.ws.send(JSON.stringify(o)); } catch (e) {} } }
@@ -906,7 +959,7 @@ function netState() {
 }
 function netClose(silent) { const n = net; net = null; netTry++; if (n && n.ws) { n.ws.onclose = n.ws.onmessage = n.ws.onerror = null; try { n.ws.close(1000); } catch (e) {} } if (!silent) netUi(false); }
 function netLeave() { netClose(); }
-function netUi(busy, txt) { $('qmB').disabled = $('mkB').disabled = $('joinB').disabled = $('joinIn').disabled = !!busy; $('netCancel').hidden = !busy; if (txt !== undefined) netSt(txt); }
+function netUi(busy, txt) { if (!busy) $('shareBox').hidden = true; $('qmB').disabled = $('mkB').disabled = $('joinB').disabled = $('joinIn').disabled = !!busy; $('netCancel').hidden = !busy; if (txt !== undefined) netSt(txt); }
 // 連到房間：回傳 'host'（等人）、'guest'（已配對）或關閉碼
 function netConnect(room, role) {
   return new Promise(res => {
@@ -1003,7 +1056,7 @@ async function netMake() {
   const my = ++netTry; netUi(true, '建立房間中…'); SFX.unlock();
   for (let i = 0; i < 4; i++) {
     const code = genCode(), r = await netConnect(code, 'host'); if (my !== netTry) { if (r.ws) r.ws.close(); return; }
-    if (r.state === 'hosted') { netAdopt(r.ws, code, 'host'); netUi(true, ''); $('netSt').innerHTML = '房間碼：<b class="code">' + code + '</b><br>把房間碼給朋友，等他加入…'; return; }
+    if (r.state === 'hosted') { netAdopt(r.ws, code, 'host'); netUi(true, '等待朋友加入…'); showShare(code); return; }
     if (r.code !== 4409) break;
   }
   if (my === netTry) netUi(false, '建立房間失敗，稍後再試');
@@ -1024,13 +1077,29 @@ async function setup() {
   $('selMe').innerHTML = opts(NAMES.includes(me0) ? me0 : NAMES[0]); $('selOp').innerHTML = opts(op0 && NAMES.includes(op0) && op0 !== me0 ? op0 : rest[Math.floor(Math.random() * rest.length)]); $('selLv').value = store.get('duel:lv') || '1';
   const fillSel = (id, o, cur) => { $(id).innerHTML = Object.keys(o).map(k => '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + o[k].n + '</option>').join(''); };
   fillSel('selW', WEAPONS, store.get('duel:w') || 'tablet'); fillSel('selP', PASSIVES, store.get('duel:p') || 'coffee'); fillSel('selU', ULTS, store.get('duel:u') || 'quake');
-  const loDesc = () => { const W = WEAPONS[$('selW').value], P = PASSIVES[$('selP').value], U = ULTS[$('selU').value];
-    const st = W.ranged ? '傷害 ' + W.dmg + '・' + (1 / W.cd).toFixed(1) + ' 發/秒・射程 ' + Math.round(W.speed * W.life) : '傷害 ' + W.dmg + '・' + (1 / W.cd).toFixed(1) + ' 下/秒・距離 ' + W.range + '・範圍 ' + W.arc + '°';
-    $('loDesc').innerHTML = '<div><b>' + W.n + '</b>（' + W.tag + '）' + st + '<br>' + W.d + '</div><div><b>' + P.n + '</b>：' + P.d + '</div><div><b>' + U.n + '</b>：' + U.d + '</div>'; store.set('duel:w', $('selW').value); store.set('duel:p', $('selP').value); store.set('duel:u', $('selU').value); };
-  $('selW').onchange = $('selP').onchange = $('selU').onchange = loDesc; loDesc();
-  const pv = () => { drawPreview($('pvMe'), $('selMe').value); drawPreview($('pvOp'), $('selOp').value); }; $('selMe').onchange = $('selOp').onchange = pv; pv();
+  const IC_P = { coffee: '☕', thick: '🛡️', sip: '🍵', overtime: '🌙', slack: '🐟' }, IC_U = { quake: '💥', rush: '⚡', heal: '💚', rage: '🔥' };
+  const bar = (l, v) => '<span>' + l + '</span><i><u style="width:' + Math.round(Math.max(.06, Math.min(1, v)) * 100) + '%"></u></i>';
+  const slotHtml = (sel, kind, ic, name, tag, desc, extra) => '<div class="slot"><div class="ic">' + ic + '</div><div class="tx"><span class="kind">' + kind + '</span><b>' + name + (tag ? '<em>' + tag + '</em>' : '') + '</b><small>' + desc + '</small>' + (extra || '') + '</div><div class="sa"><button class="arr" data-sel="' + sel + '" data-d="-1" type="button">◀</button><button class="arr" data-sel="' + sel + '" data-d="1" type="button">▶</button></div></div>';
+  let pvKey = '';
+  const menuSync = () => {
+    const W = WEAPONS[$('selW').value], P = PASSIVES[$('selP').value], U = ULTS[$('selU').value];
+    const reach = W.ranged ? W.speed * W.life / 12.75 : W.range / 4.9, wide = W.ranged ? W.r / .9 * .35 : W.arc / 124;
+    $('slotsMe').innerHTML = slotHtml('selW', '武器', W.ic, W.n, W.tag, W.d, '<div class="bars">' + bar('傷害', W.dmg / 17) + bar('攻速', 1 / W.cd / 3.4) + bar('距離', reach) + bar(W.ranged ? '彈幅' : '範圍', wide) + '</div>') + slotHtml('selP', '被動', IC_P[$('selP').value], P.n, '', P.d) + slotHtml('selU', '大招', IC_U[$('selU').value], U.n, '', U.d);
+    $('nmMe').textContent = $('selMe').value; $('nmOp').textContent = $('selOp').value;
+    document.querySelectorAll('.seg').forEach(x => x.classList.toggle('on', x.dataset.lv === $('selLv').value));
+    store.set('duel:w', $('selW').value); store.set('duel:p', $('selP').value); store.set('duel:u', $('selU').value);
+    const k = $('selMe').value + '|' + $('selOp').value; if (k !== pvKey) { pvKey = k; drawPreview($('pvMe'), $('selMe').value); drawPreview($('pvOp'), $('selOp').value); }
+  };
+  $('startO').addEventListener('click', e => { const t = e.target.closest('.arr,.seg'); if (!t) return; if (t.dataset.lv !== undefined) $('selLv').value = t.dataset.lv; else { const sel = $(t.dataset.sel), n = sel.options.length; sel.selectedIndex = (sel.selectedIndex + (+t.dataset.d) + n) % n; } SFX.unlock(); menuSync(); });
+  menuSync();
+  const online = on => { $('opTag').textContent = on ? 'ONLINE' : 'CPU'; $('opPick').hidden = $('lvRow').hidden = on; $('opQ').hidden = !on; $('pvOp').style.visibility = on ? 'hidden' : 'visible'; $('opNote').textContent = on ? '配對成功後會顯示對手的角色與裝備' : '電腦每場隨機帶一套裝備'; $('startB').hidden = on; };
+  const inviteLink = code => location.origin + location.pathname + '?room=' + code;
+  const inviteText = code => $('selMe').value + ' 邀請你一起玩「辦公室對決」1 對 1！\n房間碼：' + code + '\n點此直接加入：' + inviteLink(code);
+  const copyText = async (t, btn) => { try { await navigator.clipboard.writeText(t); } catch (e) { const x = document.createElement('textarea'); x.value = t; document.body.appendChild(x); x.select(); try { document.execCommand('copy'); } catch (e2) {} x.remove(); } const o = btn.textContent; btn.textContent = '已複製 ✓'; setTimeout(() => { btn.textContent = o; }, 1400); };
+  showShare = code => { $('shareBox').hidden = false; $('shCode').textContent = code; $('shLink').value = inviteLink(code); $('cpLink').onclick = () => copyText(inviteLink(code), $('cpLink')); $('cpText').onclick = () => copyText(inviteText(code), $('cpText')); $('shLink').onclick = () => $('shLink').select(); };
   if (matchMedia('(pointer:coarse)').matches) $('startNote').textContent = '這款需要鍵盤與滑鼠，請用電腦玩。';
-  $('netB').onclick = () => { const b = $('netBox'); b.hidden = !b.hidden; };
+  $('netB').onclick = () => { const b = $('netBox'); b.hidden = !b.hidden; online(!b.hidden); if (b.hidden) { netClose(); netUi(false, ''); } else setTimeout(() => b.scrollIntoView({ behavior: 'smooth', block: 'end' }), 50); };
+  { const rm = (Q.get('room') || '').toUpperCase(); if (/^[A-Z0-9]{6}$/.test(rm)) { $('netBox').hidden = false; online(true); $('joinIn').value = rm; netSt('受邀加入房間 ' + rm + '：選好角色與裝備，按「加入」'); $('joinB').classList.add('pulse'); } }
   $('qmB').onclick = netQuick; $('mkB').onclick = netMake; $('joinB').onclick = netJoin; $('joinIn').onkeydown = e => { if (e.key === 'Enter') netJoin(); };
   $('netCancel').onclick = () => { netClose(); netUi(false, ''); };
   $('startB').onclick = async () => {
