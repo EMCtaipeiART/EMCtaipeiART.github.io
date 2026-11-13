@@ -163,6 +163,16 @@ h3{margin:16px 0 0;font-size:17px}
 :root[data-theme="light"] #party{background:#0b1d15}
 :root[data-theme="light"] .overlay{color:#0d2a1c;--ink:#0d2a1c;--dim:#4a7660}
 
+/* 手機：按鈕縮小（原本的手機規則被後面同權重的 #deliver 蓋掉，導致「準時交付」被拉成大方塊）；結果視窗標題不被切掉；淺色結果視窗文字加深 */
+.overlay>:first-child{margin-top:auto}.overlay>:last-child{margin-bottom:auto}.overlay{justify-content:flex-start}
+@media (max-width:700px){
+  .pk{font-size:12px;padding:4px 10px;border-width:2px;border-radius:10px}
+  .pk.big{font-size:15px;padding:7px 18px}
+  #deliver{bottom:auto;top:calc(100vw * .52 - 44px);left:8px;font-size:13px;padding:4px 12px;border-width:2px;border-radius:10px}
+  .sub input{padding:6px 8px}
+}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .overlay{color:#0d2a1c;--ink:#0d2a1c;--dim:#2f5a45;--gold:#8a5300;--accent:#17803f;--accent-d:#17803f;--danger:#b3261e;background:rgba(234,245,238,.97)}}
+:root[data-theme="light"] .overlay{color:#0d2a1c;--ink:#0d2a1c;--dim:#2f5a45;--gold:#8a5300;--accent:#17803f;--accent-d:#17803f;--danger:#b3261e;background:rgba(234,245,238,.97)}
 </style>
 </head>
 <body>
