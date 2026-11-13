@@ -1231,7 +1231,7 @@ function build3dObjects(T, place){
     const hit = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.2, 1.5), new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false}));
     hit.position.set(hx, .6, hz); hit.userData.pick = {kind:'hoopsbin'}; scene.add(hit); pickables.push(hit); }
   // 倉庫的拳擊手套衣架：點手套或衣架進「辦公室對決」（單機 1 對 1，高低落差場地）
-  { const rx = I(235), rz = I(1100), grp = new THREE.Group(); grp.position.set(rx, 0, rz); scene.add(grp);
+  { const rx = I(235), rz = I(1062), grp = new THREE.Group(); grp.position.set(rx, 0, rz); scene.add(grp);
     const part = (w, h, d, color, x, y, z) => { const m = pbox(w, h, d, color, rx + x, y, rz + z); return m; };
     part(.12, 2.0, .12, 0x3b3f47, -1.15, 0, 0); part(.12, 2.0, .12, 0x3b3f47, 1.15, 0, 0);   // 兩根立柱
     part(2.5, .1, .14, 0x3b3f47, 0, 1.9, 0);                                                    // 橫桿

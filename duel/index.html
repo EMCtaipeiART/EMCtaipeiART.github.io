@@ -125,6 +125,9 @@ header{position:fixed;right:8px;bottom:8px;z-index:6;width:auto;gap:6px;flex-wra
 .netbox input{font:inherit;font-weight:900;letter-spacing:.25em;text-transform:uppercase;text-align:center;width:9.5em;color:var(--ink);background:var(--bg);border:2px solid var(--ink);border-radius:8px;padding:5px 6px}
 .netst{min-height:1.4em;font-weight:800;font-size:14px;text-align:center}.netst .code{font-size:30px;letter-spacing:.2em;color:#1c9a52;user-select:all}
 .netbox[hidden],.netbox button[hidden]{display:none}
+.dhud .lo{font-size:12px;font-weight:800;color:#fff;opacity:.92;text-shadow:0 2px 0 #000,0 0 5px #000}
+.lodesc{font-size:13px;line-height:1.5;text-align:left;max-width:560px;margin:2px auto;padding:8px 12px;border:2px solid var(--ink);border-radius:12px;background:rgba(255,255,255,.22)}.lodesc b{color:#1c9a52}
+.pick.gear{margin-top:4px}
 @media (max-width:700px){.dhud .nm{font-size:12px}.dhud .tm{font-size:22px}.cds{display:none}}
 </style>
 </head>
@@ -139,9 +142,9 @@ header{position:fixed;right:8px;bottom:8px;z-index:6;width:auto;gap:6px;flex-wra
   <div id="stage">
     <canvas id="c3"></canvas>
     <div class="dhud" id="dhud" hidden>
-      <div class="side l"><div class="nm" id="nmL"></div><div class="hp"><i id="hpL"></i></div><div class="ul"><i id="ulL"></i></div></div>
+      <div class="side l"><div class="nm" id="nmL"></div><div class="lo" id="loL"></div><div class="hp"><i id="hpL"></i></div><div class="ul"><i id="ulL"></i></div></div>
       <div class="mid"><div class="rd" id="rdDots"></div><div class="tm" id="tmV">90</div></div>
-      <div class="side r"><div class="nm" id="nmR"></div><div class="hp"><i id="hpR"></i></div><div class="ul"><i id="ulR"></i></div></div>
+      <div class="side r"><div class="nm" id="nmR"></div><div class="lo" id="loR"></div><div class="hp"><i id="hpR"></i></div><div class="ul"><i id="ulR"></i></div></div>
     </div>
     <div class="cds" id="cds" hidden>
       <span id="cdJ">跳 空白</span><span id="cdA">攻擊 左鍵</span><span id="cdD">衝刺 Shift</span><span id="cdU">大招 R</span><span id="cdL">鎖定 右鍵</span>
@@ -153,9 +156,15 @@ header{position:fixed;right:8px;bottom:8px;z-index:6;width:auto;gap:6px;flex-wra
       <p>桌子、斜坡和資料櫃都是戰場。站得比對手高，打人更痛。先贏 2 局的人獲勝。</p>
       <div class="pick">
         <label>我是<select id="selMe"></select></label>
-        <label>對手<select id="selOp"></select></label>
+        <label>對手（電腦）<select id="selOp"></select></label>
         <label>強度<select id="selLv"><option value="0">簡單</option><option value="1" selected>普通</option><option value="2">困難</option></select></label>
       </div>
+      <div class="pick gear">
+        <label>武器<select id="selW"></select></label>
+        <label>被動<select id="selP"></select></label>
+        <label>大招<select id="selU"></select></label>
+      </div>
+      <div class="lodesc" id="loDesc"></div>
       <div class="prev"><canvas id="pvMe" width="120" height="120"></canvas><b>VS</b><canvas id="pvOp" width="120" height="120"></canvas></div>
       <ul class="tips"><li>WASD 移動，滑鼠轉視角（點一下畫面鎖定滑鼠，Esc 解除；方向鍵也能轉）。空白鍵跳，Shift 衝刺閃避。</li><li>左鍵或 J 往前揮擊，連打 3 下第三下最重。R 大招（打人、被打都會充能）。右鍵或 Tab 鎖定對手。</li><li>站在高處打低處多 25% 傷害；掉下去不會受傷，但要重新爬上來。</li></ul>
       <button class="pk big" id="startB" type="button">開始對決（對電腦）</button>
@@ -236,12 +245,14 @@ function drawPreview(cv, n) {   // 開始畫面的頭像：用圖集第 0 格（
 // ───────── 場景 ─────────
 const stage = $('stage'), cv = $('c3');
 const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+let prAuto = 1;
+function applyPR() { const w = innerWidth, h = innerHeight, cap = Math.sqrt(2.3e6 / (w * h)); renderer.setPixelRatio(Math.max(.55, Math.min(devicePixelRatio || 1, 1.5, cap) * prAuto)); }
+applyPR();
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(55, 16 / 9, .1, 200);
 const hemi = new THREE.HemisphereLight(0xf3fbf6, 0x9ab8a8, .85); scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff3df, .6); sun.position.set(-8, 16, 10); scene.add(sun);
-function resize() { const w = Math.max(320, innerWidth), h = Math.max(240, innerHeight); renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+function resize() { const w = Math.max(320, innerWidth), h = Math.max(240, innerHeight); applyPR(); renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); document.addEventListener('fullscreenchange', () => setTimeout(resize, 50));
 
 const ARENA = 20, MARGIN = .45;
@@ -313,12 +324,79 @@ for (const s of SOL) {
 // 桌上小道具（純裝飾）：中央高台放螢幕
 { const g = new THREE.BoxGeometry(1.6, 1, .12), m = new THREE.Mesh(g, mk('mon', 0x24323a)); m.position.set(-3, 2.4 + .9, -4.2); world.add(m); const e = new THREE.LineSegments(new THREE.EdgesGeometry(g), edges); e.position.copy(m.position); world.add(e);
   const g2 = new THREE.BoxGeometry(1.6, 1, .12), m2 = new THREE.Mesh(g2, mk('mon', 0x24323a)); m2.position.set(3, 2.4 + .9, 4.2); world.add(m2); const e2 = new THREE.LineSegments(new THREE.EdgesGeometry(g2), edges); e2.position.copy(m2.position); world.add(e2); }
+// ───────── 場景細節（純裝飾，不影響碰撞）─────────
+function decorate() {
+  const lamb = (c, o) => new THREE.MeshLambertMaterial(Object.assign({ color: c }, o || {})), basic = (c, o) => new THREE.MeshBasicMaterial(Object.assign({ color: c }, o || {}));
+  const bx = (x0, x1, z0, z1, y0, y1, m, edge) => { const g = new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), me = new THREE.Mesh(g, m); me.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); world.add(me); if (edge) { const e = new THREE.LineSegments(new THREE.EdgesGeometry(g), edges); e.position.copy(me.position); world.add(e); } return me; };
+  const plane = (w, h, m, x, y, z, ry) => { const p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m); p.position.set(x, y, z); p.rotation.y = ry || 0; world.add(p); return p; };
+  const wallIn = ARENA + .2;
+  // 窗外城市天際線（日夜兩張）
+  const sky = dk => ctex(512, 160, g => { const gr = g.createLinearGradient(0, 0, 0, 160); if (dk) { gr.addColorStop(0, '#0e2a3a'); gr.addColorStop(1, '#2d6a63'); } else { gr.addColorStop(0, '#8fd0ee'); gr.addColorStop(1, '#e8f7ef'); } g.fillStyle = gr; g.fillRect(0, 0, 512, 160);
+    let x = 0; while (x < 512) { const w = 26 + Math.random() * 40, h = 40 + Math.random() * 80; g.fillStyle = dk ? 'rgba(10,28,38,.9)' : 'rgba(110,160,160,.75)'; g.fillRect(x, 160 - h, w, h); g.fillStyle = dk ? 'rgba(255,225,140,.75)' : 'rgba(255,255,255,.55)'; for (let yy = 160 - h + 8; yy < 150; yy += 12) for (let xx = x + 5; xx < x + w - 6; xx += 9) if (Math.random() < .55) g.fillRect(xx, yy, 4, 5); x += w + 4; } });
+  decor.skyDay = sky(false); decor.skyNight = sky(true); decor.skyMat = basic(0xffffff, { map: decor.skyDay });
+  const frameM = lamb(0xf1f5f2), sillM = lamb(0xcfd8d2);
+  const win = (cx, cy, cz, ry, w, h) => {   // 窗：天空面板＋窗框＋十字窗格＋窗台
+    const o = new THREE.Group(); o.position.set(cx, cy, cz); o.rotation.y = ry; world.add(o);
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), decor.skyMat); o.add(p);
+    const t = .14; for (const [pw, ph, px, py] of [[w + t * 2, t, 0, h / 2 + t / 2], [w + t * 2, t, 0, -h / 2 - t / 2], [t, h, -w / 2 - t / 2, 0], [t, h, w / 2 + t / 2, 0], [.08, h, 0, 0], [w, .08, 0, 0]]) { const b = new THREE.Mesh(new THREE.BoxGeometry(pw, ph, .1), frameM); b.position.set(px, py, .03); o.add(b); }
+    const sill = new THREE.Mesh(new THREE.BoxGeometry(w + .5, .1, .4), sillM); sill.position.set(0, -h / 2 - .2, .15); o.add(sill);
+  };
+  for (const cx of [-15, -7.5, 0, 7.5, 15]) { win(cx, 2.9, -wallIn + .02, 0, 4.6, 2.0); win(cx, 2.9, wallIn - .02, Math.PI, 4.6, 2.0); }
+  // 東西牆：橫幅＋時鐘
+  const banner = (txt, sub) => ctex(512, 128, g => { g.fillStyle = '#1b3b2c'; g.fillRect(0, 0, 512, 128); g.fillStyle = '#5fe08a'; g.fillRect(0, 0, 512, 8); g.fillRect(0, 120, 512, 8); g.textAlign = 'center'; g.fillStyle = '#eafff2'; g.font = '900 54px "Noto Sans TC","PingFang TC",sans-serif'; g.fillText(txt, 256, 70); g.fillStyle = '#9cc5ae'; g.font = '700 22px "Noto Sans TC","PingFang TC",sans-serif'; g.fillText(sub, 256, 106); });
+  plane(8, 2, basic(0xffffff, { map: banner('辦公室對決', 'EMC DESIGN ARENA') }), -wallIn + .02, 3.0, 0, Math.PI / 2); plane(8, 2, basic(0xffffff, { map: banner('先贏兩局', '站得高，打人更痛') }), wallIn - .02, 3.0, 0, -Math.PI / 2);
+  const clock = ctex(128, 128, g => { g.fillStyle = '#f6f6f0'; g.beginPath(); g.arc(64, 64, 60, 0, 7); g.fill(); g.lineWidth = 7; g.strokeStyle = '#26323a'; g.stroke(); g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(64, 64); g.lineTo(64, 24); g.moveTo(64, 64); g.lineTo(92, 78); g.stroke(); });
+  plane(1.3, 1.3, basic(0xffffff, { map: clock, transparent: true }), -wallIn + .02, 4.15, -9, Math.PI / 2);
+  // 踢腳板
+  const baseM = mk('base', 0x7fa890); for (const [x0, x1, z0, z1] of [[-ARENA, ARENA, -wallIn, -wallIn + .22], [-ARENA, ARENA, wallIn - .22, wallIn], [-wallIn, -wallIn + .22, -ARENA, ARENA], [wallIn - .22, wallIn, -ARENA, ARENA]]) bx(x0, x1, z0, z1, 0, .45, baseM);
+  // 地毯（中央競技區）＋ 中線標示
+  const rug = ctex(512, 320, g => { g.fillStyle = '#2f6f57'; g.fillRect(0, 0, 512, 320); g.strokeStyle = '#d6f5e2'; g.lineWidth = 6; g.strokeRect(14, 14, 484, 292); g.strokeStyle = '#ffd166'; g.lineWidth = 3; g.setLineDash([14, 10]); g.strokeRect(30, 30, 452, 260); g.setLineDash([]); g.fillStyle = 'rgba(214,245,226,.10)'; for (let i = 0; i < 9; i++) for (let j = 0; j < 6; j++) if ((i + j) % 2 === 0) g.fillRect(40 + i * 48, 40 + j * 45, 48, 45); });
+  const rg = new THREE.Mesh(new THREE.PlaneGeometry(36, 22.5), new THREE.MeshLambertMaterial({ map: rug, transparent: true, opacity: .62, polygonOffset: true, polygonOffsetFactor: -1, depthWrite: false })); rg.rotation.x = -Math.PI / 2; rg.position.y = .012; world.add(rg);
+  // 高台：桌面桌墊、邊飾、銘牌
+  bx(-5.12, 5.12, -5.12, 5.12, 2.28, 2.4, mk('desk', 0xc9a56b), true);
+  const pad = plane(7.2, 7.2, basic(0x1f6b4a), 0, 2.411, 0, 0); pad.rotation.x = -Math.PI / 2; const pad2 = plane(6.6, 6.6, basic(0x2c8a60), 0, 2.413, 0, 0); pad2.rotation.x = -Math.PI / 2;
+  const tag = ctex(256, 64, g => { g.fillStyle = '#d9b24a'; g.fillRect(0, 0, 256, 64); g.strokeStyle = '#6b4a10'; g.lineWidth = 5; g.strokeRect(3, 3, 250, 58); g.fillStyle = '#3a2705'; g.font = '900 34px "Noto Sans TC","PingFang TC",sans-serif'; g.textAlign = 'center'; g.fillText('老闆的位置', 128, 44); });
+  plane(2.4, .6, basic(0xffffff, { map: tag }), 0, 1.5, 5.14, 0); plane(2.4, .6, basic(0xffffff, { map: tag }), 0, 1.5, -5.14, Math.PI);
+  // 工作桌：螢幕、鍵盤、杯子、文件
+  const monM = lamb(0x1b252b), scrM = basic(0x62d6a0), kbM = lamb(0x2d3a42), mugM = lamb(0xffffff), paperM = lamb(0xfafafa);
+  const scr = ctex(64, 40, g => { g.fillStyle = '#143a2b'; g.fillRect(0, 0, 64, 40); g.fillStyle = '#6ee8ac'; for (let i = 0; i < 6; i++) g.fillRect(5, 5 + i * 5.5, 14 + Math.random() * 38, 2.5); });
+  const scrM2 = basic(0xffffff, { map: scr });
+  const desk = (x, z, top, face) => {   // face=+1 螢幕朝 +z，-1 朝 -z
+    const g = new THREE.Group(); g.position.set(x, top, z); g.rotation.y = face > 0 ? 0 : Math.PI; world.add(g);
+    const stand = new THREE.Mesh(new THREE.BoxGeometry(.12, .3, .1), monM); stand.position.set(0, .15, -.1); g.add(stand);
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.1, .68, .08), monM); body.position.set(0, .64, -.1); g.add(body);
+    const sc = new THREE.Mesh(new THREE.PlaneGeometry(1.0, .58), scrM2); sc.position.set(0, .64, -.055); g.add(sc);
+    const kb = new THREE.Mesh(new THREE.BoxGeometry(.7, .04, .24), kbM); kb.position.set(0, .02, .22); g.add(kb);
+    const mug = new THREE.Mesh(new THREE.CylinderGeometry(.09, .08, .16, 10), mugM); mug.position.set(.62, .08, .2); g.add(mug);
+  };
+  for (const x of [-12.5, -9, -5.6]) { desk(x, -10.35, .8, 1); desk(x, 10.35, .8, -1); }
+  for (const x of [5.6, 9, 12.5]) { desk(x, 10.35, .8, -1); desk(x, -10.35, .8, 1); }
+  // 會議桌：筆電與文件
+  for (const [x, z, fc] of [[15.5, 16.2, -1], [-15.5, 16.2, -1], [15.5, -16.2, 1], [-15.5, -16.2, 1]]) { desk(x, z, 1.2, fc); bx(x - 1.6, x - .9, z - .3, z + .3, 1.2, 1.23, paperM); bx(x + .9, x + 1.5, z - .2, z + .35, 1.2, 1.22, lamb(0xf6d98a)); }
+  // 資料櫃：抽屜縫、把手
+  const slitM = basic(0x28323f), handM = basic(0xe6edf2);
+  for (const s of SOL.filter(q => q.kind === 'cab')) { const lx = (s.x1 - s.x0) > (s.z1 - s.z0), len = lx ? s.x1 - s.x0 : s.z1 - s.z0, cx = (s.x0 + s.x1) / 2, cz = (s.z0 + s.z1) / 2, off = ((lx ? s.z1 - s.z0 : s.x1 - s.x0) / 2) + .01;
+    for (const sd of [-1, 1]) for (const y of [.6, 1.4, 2.2, 3.0]) { if (y > s.top - .1) continue; const m1 = new THREE.Mesh(new THREE.PlaneGeometry(len * .92, .05), slitM), m2 = new THREE.Mesh(new THREE.PlaneGeometry(.5, .08), handM);
+      if (lx) { m1.position.set(cx, y, cz + sd * off); m2.position.set(cx, y - .4, cz + sd * (off + .005)); if (sd < 0) { m1.rotation.y = m2.rotation.y = Math.PI; } } else { m1.position.set(cx + sd * off, y, cz); m2.position.set(cx + sd * (off + .005), y - .4, cz); m1.rotation.y = m2.rotation.y = sd > 0 ? Math.PI / 2 : -Math.PI / 2; }
+      world.add(m1); world.add(m2); } }
+  // 柱子：警示帶
+  for (const s of SOL.filter(q => q.kind === 'pillar')) bx(s.x0 - .04, s.x1 + .04, s.z0 - .04, s.z1 + .04, 0, .5, lamb(0xf2b134), true);
+  // 角落盆栽、飲水機、影印機
+  const plant = (x, z, sc) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.scale.setScalar(sc); world.add(g); const pot = new THREE.Mesh(new THREE.CylinderGeometry(.5, .38, .7, 12), lamb(0xc4693f)); pot.position.y = .35; g.add(pot); const e = new THREE.LineSegments(new THREE.EdgesGeometry(pot.geometry), edges); e.position.y = .35; g.add(e);
+    for (let i = 0; i < 6; i++) { const lf = new THREE.Mesh(new THREE.SphereGeometry(.42 - i * .03, 10, 8), lamb(i % 2 ? 0x3d9c5a : 0x2f8a4c, { flatShading: true })); lf.position.set(Math.sin(i * 1.9) * .32, .95 + i * .22, Math.cos(i * 1.9) * .32); g.add(lf); } };
+  for (const [x, z] of [[-19, -19], [19, -19], [-19, 19], [19, 19], [-19.2, 11], [19.2, -11]]) plant(x, z, 1);
+  { const g = new THREE.Group(); g.position.set(-19.3, 0, -12.5); world.add(g); const b = new THREE.Mesh(new THREE.BoxGeometry(.9, 1.1, .9), lamb(0xdfe7ea)); b.position.y = .55; g.add(b); const e1 = new THREE.LineSegments(new THREE.EdgesGeometry(b.geometry), edges); e1.position.y = .55; g.add(e1);
+    const jug = new THREE.Mesh(new THREE.CylinderGeometry(.34, .34, .8, 14), lamb(0x8fd6ff, { transparent: true, opacity: .75 })); jug.position.y = 1.5; g.add(jug); }
+  { const g = new THREE.Group(); g.position.set(19.2, 0, -12.5); world.add(g); const b = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.0, .9), lamb(0xcfd6dc)); b.position.y = .5; g.add(b); const e1 = new THREE.LineSegments(new THREE.EdgesGeometry(b.geometry), edges); e1.position.y = .5; g.add(e1); const lid = new THREE.Mesh(new THREE.BoxGeometry(1.3, .12, .95), lamb(0x8a97a3)); lid.position.y = 1.05; g.add(lid); }
+}
+const decor = {};
+decorate();
 const shadowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), r = g.createRadialGradient(32, 32, 2, 32, 32, 30); r.addColorStop(0, 'rgba(0,0,0,.8)'); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
 function applyTheme() {
   const dk = isDarkNow(), bg = dk ? 0x1f4a35 : 0xcfeadb; scene.background = new THREE.Color(bg); scene.fog = new THREE.Fog(bg, 40, 90);
   hemi.color.setHex(dk ? 0xd2f5df : 0xf3fbf6); hemi.groundColor.setHex(dk ? 0x3f6a52 : 0x9ab8a8); hemi.intensity = dk ? 1.0 : .85; sun.color.setHex(dk ? 0xe4ffe9 : 0xfff3df); sun.intensity = dk ? .8 : .6;
-  const P = dk ? { wall: 0x3f6e57, desk: 0x8a6c3c, step: 0x7c5c32, desk2: 0x9a8a62, table: 0xb9b5a8, cab: 0x56667a, pillar: 0x6f7c92, ramp: 0x6a7a90, mon: 0x10181c } : { wall: 0xe4f0e6, desk: 0xc9a56b, step: 0xb98d52, desk2: 0xdcc9a0, table: 0xf0eadd, cab: 0x8c98ad, pillar: 0xb9c2cf, ramp: 0xb9c2cf, mon: 0x24323a };
-  for (const k in P) (mats[k] || []).forEach(m => m.color.setHex(P[k])); drawFloor(); ADD.blending = dk ? THREE.AdditiveBlending : THREE.NormalBlending;
+  const P = dk ? { wall: 0x3f6e57, desk: 0x8a6c3c, step: 0x7c5c32, desk2: 0x9a8a62, table: 0xb9b5a8, cab: 0x56667a, pillar: 0x6f7c92, ramp: 0x6a7a90, mon: 0x10181c, base: 0x2e5a47 } : { wall: 0xe4f0e6, desk: 0xc9a56b, step: 0xb98d52, desk2: 0xdcc9a0, table: 0xf0eadd, cab: 0x8c98ad, pillar: 0xb9c2cf, ramp: 0xb9c2cf, mon: 0x24323a, base: 0x7fa890 };
+  for (const k in P) (mats[k] || []).forEach(m => m.color.setHex(P[k])); drawFloor(); ADD.blending = dk ? THREE.AdditiveBlending : THREE.NormalBlending; if (decor.skyMat) { decor.skyMat.map = dk ? decor.skyNight : decor.skyDay; decor.skyMat.needsUpdate = true; }
 }
 
 // ───────── 特效（移植自遠征隊）─────────
@@ -441,6 +519,36 @@ const colOf = f => COL[heroOf(f.name)];
 const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
 let slowT = 0, zoomT = 0, flashA = 0;
 
+// ───────── 裝備：武器／被動／大招 ─────────
+// 武器平衡：每秒傷害都落在 17～21 之間，強項（距離、範圍、攻速、擊退）用「窗口、前搖、傷害」互相換
+const WEAPONS = {
+  mouse: { n: '滑鼠', ic: '🖱️', tag: '快速近戰', dmg: 6, cd: .30, wind: .08, range: 2.8, arc: 56, kb: .75, d: '攻速最快、距離短，靠連擊累積傷害' },
+  tablet: { n: '手繪板', ic: '🎨', tag: '均衡近戰', dmg: 10, cd: .48, wind: .13, range: 3.3, arc: 124, kb: 1, d: '各項平均，範圍寬、好上手' },
+  keyboard: { n: '鍵盤', ic: '⌨️', tag: '寬幅重砸', dmg: 17, cd: .85, wind: .26, range: 3.4, arc: 100, kb: 1.5, d: '揮得慢、前搖長，但傷害大、擊退遠' },
+  ruler: { n: '直尺', ic: '📏', tag: '長距突刺', dmg: 11, cd: .58, wind: .16, range: 4.9, arc: 30, kb: 1, d: '距離最長，但判定很窄，容易被繞開' },
+  phone: { n: '電話機', ic: '☎️', tag: '遠程音波', dmg: 9, cd: .60, wind: .14, ranged: 1, speed: 15, life: .85, r: .9, kb: .9, d: '射出慢速音波，可被閃避；遠距離安全輸出' },
+  stapler: { n: '釘書機', ic: '📎', tag: '遠程連射', dmg: 4.5, cd: .26, wind: .07, ranged: 1, speed: 26, life: .3, r: .55, kb: .4, d: '快速射出小釘子，傷害低、射程中等' }
+};
+const PASSIVES = {
+  coffee: { n: '咖啡因', d: '移動速度 +10%，衝刺冷卻 -20%' },
+  thick: { n: '厚臉皮', d: '受到的傷害 -10%' },
+  sip: { n: '下午茶', d: '每次命中回 1 點血（重擊 2 點）' },
+  overtime: { n: '加班魂', d: '血量低於 40% 時，傷害 +20%' },
+  slack: { n: '摸魚大師', d: '大招充能速度 +35%' }
+};
+const ULTS = {
+  quake: { n: '角色絕技', wind: .32, d: '範圍震波：26 傷害並擊飛，附角色專屬特效' },
+  rush: { n: '加班衝刺', wind: .22, d: '向前猛衝（衝刺中無敵），撞到對手 22 傷害' },
+  heal: { n: '茶歇回復', wind: .40, d: '立刻回復 26 點血（被打斷就浪費）' },
+  rage: { n: '截稿狂暴', wind: .30, d: '4 秒內攻速 +25%、傷害 +10%' }
+};
+const wOf = f => WEAPONS[f.w] || WEAPONS.tablet;
+const dmgMul = f => (f.rageT > 0 ? 1.1 : 1) * (f.pas === 'overtime' && f.hp < 40 ? 1.2 : 1);
+const gainUlt = (f, v) => { f.ult = Math.min(100, f.ult + v * (f.pas === 'slack' ? 1.35 : 1)); };
+const randLo = () => { const k = o => Object.keys(o)[Math.floor(Math.random() * Object.keys(o).length)]; return { w: k(WEAPONS), p: k(PASSIVES), u: k(ULTS) }; };
+const setLo = (f, lo) => { f.w = lo.w; f.pas = lo.p; f.ulk = lo.u; };
+const loText = f => (WEAPONS[f.w] || WEAPONS.tablet).n + '・' + (PASSIVES[f.pas] || PASSIVES.coffee).n + '・' + (ULTS[f.ulk] || ULTS.quake).n;
+
 // ───────── 戰鬥角色 ─────────
 const R = { gravity: 26, jumpV: 9.4, run: 7, airCtl: .55, dashSpeed: 17, dashT: .22, dashCD: 1.3, atkCD: .48, windup: .13, range: 3.3, halfAng: 62 * Math.PI / 180, dmg: 10, hiBonus: 1.25, hiDelta: .8, ultNeed: 100, ultDmg: 26, ultR: 5.5 };
 const fighters = [];
@@ -452,9 +560,9 @@ function makeFighter(name, tex, isBot, color) {
   const blob = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, opacity: .55, depthWrite: false })); blob.rotation.x = -Math.PI / 2;
   const holder = new THREE.Group(); scene.add(holder); scene.add(blob); holder.add(sprite);
   const ks = CHAR_SCALE[name] || 1; sprite.scale.set(ks, ks, 1);
-  return { name, isBot, tex, sprite, holder, blob, mat, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, face: 0, hp: 100, ult: 0, grounded: true, atkT: 0, atkCD: 0, dashT: 0, dashCD: 0, windT: 0, windMul: 1.7, hitStun: 0, flash: 0, combo: 0, comboT: 0, ultWind: 0, slash: null, dashDir: [0, 0], moving: 0, phase: 0, inp: { mx: 0, mz: 0, jump: false, atk: false, dash: false, ult: false }, bot: { rt: 0, strafe: 1, strafeT: 0, stuck: 0, lastX: 0, lastZ: 0, nav: null, think: 0 } };
+  return { name, isBot, tex, sprite, holder, blob, mat, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, face: 0, hp: 100, ult: 0, grounded: true, atkT: 0, atkCD: 0, dashT: 0, dashCD: 0, windT: 0, windMul: 1.7, hitStun: 0, flash: 0, combo: 0, comboT: 0, ultWind: 0, slash: null, rageT: 0, rushT: 0, rushHit: false, w: 'tablet', pas: 'coffee', ulk: 'quake', dashDir: [0, 0], moving: 0, phase: 0, inp: { mx: 0, mz: 0, jump: false, atk: false, dash: false, ult: false }, bot: { rt: 0, strafe: 1, strafeT: 0, stuck: 0, lastX: 0, lastZ: 0, nav: null, think: 0 } };
 }
-function place(f, x, z, face) { f.nx = x; f.nz = z; f.x = x; f.z = z; f.y = groundAt(x, z); f.vx = f.vy = f.vz = f.kx = f.kz = 0; f.face = face; f.hp = 100; f.atkT = f.atkCD = f.dashT = f.dashCD = f.windT = f.hitStun = f.flash = f.combo = f.comboT = f.ultWind = 0; f.grounded = true; }
+function place(f, x, z, face) { f.nx = x; f.nz = z; f.x = x; f.z = z; f.y = groundAt(x, z); f.vx = f.vy = f.vz = f.kx = f.kz = 0; f.face = face; f.hp = 100; f.rageT = f.rushT = 0; f.atkT = f.atkCD = f.dashT = f.dashCD = f.windT = f.hitStun = f.flash = f.combo = f.comboT = f.ultWind = 0; f.grounded = true; }
 const mkSlash = () => { const m = new THREE.Mesh(new THREE.RingGeometry(.9, 3.2, 24, 1, -Math.PI * .42, Math.PI * .84), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false })); m.rotation.x = -Math.PI / 2; scene.add(m); return m; };
 const slashFx = mkSlash(), slashFx2 = mkSlash();
 const shock = new THREE.Mesh(new THREE.RingGeometry(.6, 1, 40), new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false })); shock.rotation.x = -Math.PI / 2; scene.add(shock);
@@ -497,6 +605,7 @@ const cdL = $('cdL');
 function setBanner(txt, ms) { const b = $('banner'); b.textContent = txt; b.hidden = !txt; clearTimeout(setBanner.t); if (ms) setBanner.t = setTimeout(() => { b.hidden = true; }, ms); }
 function dots() { $('rdDots').innerHTML = [0, 1, 2].map(i => { const w = i < wins[0] + wins[1] ? '' : ''; return ''; }).join('') + '<span class="pip' + (wins[0] >= 1 ? ' w' : '') + '"></span><span class="pip' + (wins[0] >= 2 ? ' w' : '') + '"></span><b>' + round + '</b><span class="pip r' + (wins[1] >= 1 ? ' w' : '') + '"></span><span class="pip r' + (wins[1] >= 2 ? ' w' : '') + '"></span>'; }
 function startRound() {
+  clearProj();
   if (net && net.role === 'guest') { place(ME, 14, 0, -Math.PI / 2); place(OP, -14, 0, Math.PI / 2); yaw = Math.PI / 2; } else { place(ME, -14, 0, Math.PI / 2); place(OP, 14, 0, -Math.PI / 2); yaw = -Math.PI / 2; } pitch = .5; lockOn = false; cdL.classList.remove('on'); tLeft = ROUND_T; wantAtk = wantUlt = wantDash = wantJump = false;
   camSmooth.set(ME.x, ME.y + 1.4, ME.z); state = 'countdown'; banner = 3.2; dots(); setBanner('第 ' + round + ' 局', 0);
   $('dhud').hidden = false; $('cds').hidden = false; updHud();
@@ -526,7 +635,8 @@ function matchEnd() {
   if (won) SFX.win(); else SFX.lose();
 }
 function toMenu() { if (net) netLeave(); state = 'menu'; $('startO').hidden = false; $('dhud').hidden = true; $('cds').hidden = true; setBanner('', 0); $('pauseO').hidden = true; paused = false; }
-function beginMatch() { wins = [0, 0]; round = 1; stats = { hits: 0, dmg: 0, high: 0, combo: 0, ult: 0, taken: 0 }; $('nmL').textContent = ME.name; $('nmR').textContent = OP.name; startRound(); lockPtr() }
+function showLo() { $('loL').textContent = loText(ME); $('loR').textContent = loText(OP); $('cdA').textContent = '攻擊 左鍵・' + wOf(ME).n; $('cdU').textContent = '大招 R・' + (ULTS[ME.ulk] || ULTS.quake).n; }
+function beginMatch() { if (!net) { OP.isBot = true; setLo(ME, myLo()); setLo(OP, randLo()); } showLo(); wins = [0, 0]; round = 1; stats = { hits: 0, dmg: 0, high: 0, combo: 0, ult: 0, taken: 0 }; $('nmL').textContent = ME.name; $('nmR').textContent = OP.name; startRound(); lockPtr() }
 
 // ───────── HUD ─────────
 function updHud() {
@@ -548,15 +658,15 @@ function hitFx(att, tgt, d, hi, heavy) {
 function damage(att, tgt, base, heavy, kbMul, kind) {
   if (tgt.dashT > 0 || tgt.hp <= 0) return false;
   if (net && att === ME) {   // 連線：我是攻擊方，傷害由對方（受擊方）自己扣
-    const hi = att.y - tgt.y >= R.hiDelta, d = base * (hi ? R.hiBonus : 1);
-    att.ult = Math.min(100, att.ult + (kind === 'ult' ? 0 : 9)); tgt.flash = .14; tgt.hitStun = heavy ? .3 : .16;
+    const hi = att.y - tgt.y >= R.hiDelta, d = base * dmgMul(att) * (hi ? R.hiBonus : 1);
+    if (kind !== 'ult') gainUlt(att, Math.min(13, d * .9)); if (att.pas === 'sip') att.hp = Math.min(100, att.hp + (heavy ? 2 : 1)); tgt.flash = .14; tgt.hitStun = heavy ? .3 : .16;
     hitFx(att, tgt, d, hi, heavy);
     stats.hits++; stats.dmg += d; if (hi) stats.high++; stats.combo = Math.max(stats.combo, att.combo + 1); if (kind === 'ult') stats.ult++;
-    netSend({ t: 'h', d: +d.toFixed(2), hv: heavy ? 1 : 0, kb: kbMul || 1, k: kind === 'ult' ? 1 : 0, hi: hi ? 1 : 0, ax: +att.x.toFixed(2), az: +att.z.toFixed(2) });
+    netSend({ t: 'h', d: +d.toFixed(2), hv: heavy ? 1 : 0, kb: kbMul || 1, k: kind === 'ult' && att.ulk === 'quake' ? 1 : 0, hi: hi ? 1 : 0, ax: +att.x.toFixed(2), az: +att.z.toFixed(2) });
     return true;
   }
-  const hi = att.y - tgt.y >= R.hiDelta; let d = base * (hi ? R.hiBonus : 1); if (att.isBot) d *= [.7, 1, 1.15][lvl];
-  tgt.hp -= d; tgt.flash = .14; tgt.hitStun = heavy ? .3 : .16; tgt.windT = 0; tgt.ultWind = 0; att.ult = Math.min(100, att.ult + (kind === 'ult' ? 0 : 9)); tgt.ult = Math.min(100, tgt.ult + 7);
+  const hi = att.y - tgt.y >= R.hiDelta; let d = base * dmgMul(att) * (hi ? R.hiBonus : 1); if (att.isBot) d *= [.7, 1, 1.15][lvl]; if (tgt.pas === 'thick') d *= .9;
+  tgt.hp -= d; tgt.flash = .14; tgt.hitStun = heavy ? .3 : .16; tgt.windT = 0; tgt.ultWind = 0; if (kind !== 'ult') gainUlt(att, Math.min(13, d * .9)); gainUlt(tgt, d * .6); if (att.pas === 'sip') att.hp = Math.min(100, att.hp + (heavy ? 2 : 1));
   const dx = tgt.x - att.x, dz = tgt.z - att.z, l = Math.hypot(dx, dz) || 1, kb = (heavy ? 12 : 6.5) * (kbMul || 1);
   tgt.kx = dx / l * kb; tgt.kz = dz / l * kb; if (heavy) { tgt.vy = 5; tgt.grounded = false; }
   hitFx(att, tgt, d, hi, heavy);
@@ -564,43 +674,77 @@ function damage(att, tgt, base, heavy, kbMul, kind) {
   return true;
 }
 function faceToward(f, o) { f.face = Math.atan2(o.x - f.x, o.z - f.z); }
+const PROJ = [];
+const projTex = {};
+function iconTexture(ic) { if (projTex[ic]) return projTex[ic]; const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.font = '92px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(ic, 64, 70); const t = new THREE.CanvasTexture(c); t.minFilter = THREE.LinearFilter; return projTex[ic] = t; }
+function spawnProj(f, W, heavy, tgt, A) {   // tgt 為 null 時只是畫面（對手那邊的投射物，傷害由對方自己判定）
+  const fx = Math.sin(A), fz = Math.cos(A), sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: iconTexture(W.ic), transparent: true, depthWrite: false }));
+  const sc = (heavy ? 1.35 : 1) * (W.r > .8 ? 1.0 : .55); sp.scale.set(sc, sc, 1); const p = { f, W, heavy, tgt, x: f.x + fx * .9, y: f.y + 1.1, z: f.z + fz * .9, vx: fx * W.speed, vz: fz * W.speed, life: W.life, sp, spin: Math.random() * 6 };
+  sp.position.set(p.x, p.y, p.z); scene.add(sp); PROJ.push(p); fxRing(v3(p.x, f.y + .1, p.z), colOf(f), .2, .9, .25);
+}
+function stepProj(dt) {
+  for (let i = PROJ.length - 1; i >= 0; i--) {
+    const p = PROJ[i]; p.life -= dt; p.x += p.vx * dt; p.z += p.vz * dt; p.spin += dt * 14; p.sp.position.set(p.x, p.y, p.z); p.sp.material.rotation = p.spin;
+    let dead = p.life <= 0 || Math.abs(p.x) > ARENA || Math.abs(p.z) > ARENA || hAt(p.x, p.z) > p.y - .15;
+    if (!dead && p.tgt && p.tgt.hp > 0 && Math.hypot(p.tgt.x - p.x, p.tgt.z - p.z) < p.W.r + .55 && p.y > p.tgt.y - .2 && p.y < p.tgt.y + 2.3) { if (damage(p.f, p.tgt, p.W.dmg * (p.heavy ? 1.5 : 1), p.heavy, p.W.kb)) { fxImpact(v3(p.x, p.y, p.z), colOf(p.f), 1.2); dead = true; } }
+    if (dead) { scene.remove(p.sp); p.sp.material.dispose(); PROJ.splice(i, 1); }
+  }
+}
+function clearProj() { for (const p of PROJ) { scene.remove(p.sp); p.sp.material.dispose(); } PROJ.length = 0; }
+function swingVisual(f, W, heavy) {
+  const A = f.face, fx = Math.sin(A), fz = Math.cos(A), s = f === ME ? slashFx : slashFx2;
+  s.position.set(f.x + fx * .6, f.y + 1.0, f.z + fz * .6); s.rotation.z = A - Math.PI / 2 + Math.PI; s.userData = { t: .18, heavy };
+  s.material.color.setHex(heavy ? 0xffd166 : 0xffffff); s.scale.setScalar((heavy ? 1.2 : 1) * Math.max(.7, (W.range || 3.3) / 3.3));
+  fxSlash(v3(f.x + fx * Math.min(2.4, (W.range || 3.3) * .5), f.y + 1.1, f.z + fz * Math.min(2.4, (W.range || 3.3) * .5)), colOf(f), heavy);
+}
 function doAttack(f, o) {
-  const A = f.face, dx = o.x - f.x, dz = o.z - f.z, dist = Math.hypot(dx, dz);
-  const dirOk = Math.abs(Math.atan2(Math.sin(Math.atan2(dx, dz) - A), Math.cos(Math.atan2(dx, dz) - A))) <= R.halfAng;
+  const W = wOf(f), A = f.face, dx = o.x - f.x, dz = o.z - f.z, dist = Math.hypot(dx, dz);
   const heavy = f.combo >= 2; f.combo = heavy ? 0 : f.combo + 1; f.comboT = .9;
+  if (W.ranged) {
+    if (net && f === ME) netSend({ t: 'a', k: 'shot', hv: heavy ? 1 : 0, f: +A.toFixed(3) });
+    spawnProj(f, W, heavy, o, A); return;
+  }
+  const dirOk = Math.abs(Math.atan2(Math.sin(Math.atan2(dx, dz) - A), Math.cos(Math.atan2(dx, dz) - A))) <= W.arc * Math.PI / 360;
   const fx = Math.sin(A), fz = Math.cos(A);
-  const s = f === ME ? slashFx : slashFx2; s.position.set(f.x + fx * .6, f.y + 1.0, f.z + fz * .6); s.rotation.z = A - Math.PI / 2 + Math.PI; s.userData = { t: .18, heavy };
-  s.material.color.setHex(heavy ? 0xffd166 : 0xffffff); s.scale.setScalar(heavy ? 1.2 : 1);
-  fxSlash(v3(f.x + fx * 1.7, f.y + 1.1, f.z + fz * 1.7), colOf(f), heavy);
+  swingVisual(f, W, heavy);
   if (net && f === ME) netSend({ t: 'a', k: 'atk', hv: heavy ? 1 : 0, f: +A.toFixed(3) });
-  { const nx = f.x + fx * .9, nz = f.z + fz * .9; if (!blockedAt(nx, nz, f.y)) { f.x = nx; f.z = nz; } }   // 揮擊時向前踏一步
-  if (dist <= R.range + MARGIN && dirOk && Math.abs(o.y - f.y) <= 1.9) damage(f, o, heavy ? R.dmg * 1.5 : R.dmg, heavy, 1);
+  { const st = W.range > 4 ? .5 : .9, nx = f.x + fx * st, nz = f.z + fz * st; if (!blockedAt(nx, nz, f.y)) { f.x = nx; f.z = nz; } }   // 揮擊時向前踏一步
+  if (dist <= W.range + MARGIN && dirOk && Math.abs(o.y - f.y) <= 1.9) damage(f, o, heavy ? W.dmg * 1.5 : W.dmg, heavy, W.kb);
+}
+function ultVisual(f, k) {
+  if (k === 'quake') { SFX.ult(); shake = .5; hitstop = .06; fxSig(heroOf(f.name), v3(f.x, f.y, f.z), true); fxRing(v3(f.x, f.y + .1, f.z), colOf(f), .5, R.ultR, .6); flashA = .3; slowT = .45; zoomT = .9; }
+  else if (k === 'rush') { SFX.ult(); shake = .25; const a = v3(f.x, f.y + .7, f.z), b = v3(f.x + Math.sin(f.face) * 9, f.y + .7, f.z + Math.cos(f.face) * 9); fxTrail(a, b, colOf(f), .5, 1.5); fxRing(v3(f.x, f.y + .1, f.z), colOf(f), .4, 2.2, .35); }
+  else if (k === 'heal') { SFX.win(); fxBeam(v3(f.x, f.y, f.z), '#7ff0a6', false); fxRing(v3(f.x, f.y + .1, f.z), '#7ff0a6', .4, 2.6, .6); pop('+26', f.x, f.y + 2.4, f.z, 'hi big'); }
+  else if (k === 'rage') { SFX.ult(); fxPoof(v3(f.x, f.y + 1, f.z), '#ffb347'); fxRing(v3(f.x, f.y + .1, f.z), '#ffb347', .4, 3, .5); fxRing(v3(f.x, f.y + .1, f.z), '#ff6a2a', .3, 2, .4); flashA = Math.max(flashA, .12); }
 }
 function doUlt(f, o) {
-  if (net && f === ME) netSend({ t: 'a', k: 'ult' });
-  f.ult = 0; shockT = 0; SFX.ult(); shake = .5; hitstop = .06; fxSig(heroOf(f.name), v3(f.x, f.y, f.z), true); fxRing(v3(f.x, f.y + .1, f.z), colOf(f), .5, R.ultR, .6); flashA = .3; slowT = .45; zoomT = .9;
-  if (Math.hypot(o.x - f.x, o.z - f.z) <= R.ultR && Math.abs(o.y - f.y) <= 2.6) { const keep = f.ult; damage(f, o, R.ultDmg, true, 1.4, 'ult'); o.vy = 7; o.grounded = false; }
+  const k = f.ulk || 'quake'; if (net && f === ME) netSend({ t: 'a', k: 'ult', u: k, f: +f.face.toFixed(3) });
+  f.ult = 0; shockT = 0; ultVisual(f, k);
+  if (k === 'quake') { if (Math.hypot(o.x - f.x, o.z - f.z) <= R.ultR && Math.abs(o.y - f.y) <= 2.6) { damage(f, o, R.ultDmg, true, 1.4, 'ult'); o.vy = 7; o.grounded = false; } }
+  else if (k === 'rush') { f.dashDir = [Math.sin(f.face), Math.cos(f.face)]; f.dashT = .26; f.rushT = .26; f.rushHit = false; }
+  else if (k === 'heal') { f.hp = Math.min(100, f.hp + 26); }
+  else if (k === 'rage') { f.rageT = 4; }
 }
 function stepFighter(f, o, dt) {
   const inp = f.inp, can = f.hitStun <= 0 && f.ultWind <= 0 && state === 'fight';
-  f.atkCD = Math.max(0, f.atkCD - dt); f.dashCD = Math.max(0, f.dashCD - dt); f.hitStun = Math.max(0, f.hitStun - dt); f.flash = Math.max(0, f.flash - dt); f.comboT -= dt; if (f.comboT <= 0) f.combo = 0;
+  f.rageT = Math.max(0, (f.rageT || 0) - dt); f.atkCD = Math.max(0, f.atkCD - dt); f.dashCD = Math.max(0, f.dashCD - dt); f.hitStun = Math.max(0, f.hitStun - dt); f.flash = Math.max(0, f.flash - dt); f.comboT -= dt; if (f.comboT <= 0) f.combo = 0;
   // 揮擊前搖
   if (f.windT > 0) { f.windT -= dt; if (f.windT <= 0) doAttack(f, o); }
   if (f.ultWind > 0) { f.ultWind -= dt; if (f.ultWind <= 0) doUlt(f, o); }
   let mx = 0, mz = 0;
   if (can) { mx = inp.mx; mz = inp.mz; }
-  const sp = (f.windT > 0 || f.ultWind > 0) ? R.run * .35 : R.run;
+  const runSp = R.run * (f.pas === 'coffee' ? 1.1 : 1), sp = (f.windT > 0 || f.ultWind > 0) ? runSp * .35 : runSp;
   if (f.dashT > 0) { f.dashT -= dt; mx = f.dashDir[0]; mz = f.dashDir[1]; }
-  const tvx = mx * (f.dashT > 0 ? R.dashSpeed : sp), tvz = mz * (f.dashT > 0 ? R.dashSpeed : sp), a = f.grounded || f.dashT > 0 ? 1 : R.airCtl;
+  const tvx = mx * (f.dashT > 0 ? (f.rushT > 0 ? 34 : R.dashSpeed) : sp), tvz = mz * (f.dashT > 0 ? (f.rushT > 0 ? 34 : R.dashSpeed) : sp), a = f.grounded || f.dashT > 0 ? 1 : R.airCtl;
   const k = Math.min(1, dt * (f.grounded ? 16 : 6) * a); f.vx += (tvx - f.vx) * (f.dashT > 0 ? 1 : k); f.vz += (tvz - f.vz) * (f.dashT > 0 ? 1 : k);
   // 動作
   if (can && inp.jump && f.grounded) { f.vy = R.jumpV; f.grounded = false; if (net && f === ME) netSend({ t: 'a', k: 'j' }); SFX.jump(); fxDust(v3(f.x, f.y, f.z)); fxRing(v3(f.x, f.y + .05, f.z), colOf(f), .3, 1.1, .3); }
-  if (can && inp.dash && f.dashCD <= 0 && (mx || mz || true)) { let dx = mx, dz = mz; if (!dx && !dz) { dx = Math.sin(f.face); dz = Math.cos(f.face); } const l = Math.hypot(dx, dz) || 1; f.dashDir = [dx / l, dz / l]; f.dashT = R.dashT; f.dashCD = R.dashCD; if (net && f === ME) netSend({ t: 'a', k: 'd', x: +f.dashDir[0].toFixed(2), z: +f.dashDir[1].toFixed(2) }); SFX.dash(); { const a = v3(f.x, f.y + .7, f.z), b = v3(f.x + f.dashDir[0] * 3.6, f.y + .7, f.z + f.dashDir[1] * 3.6); fxTrail(a, b, colOf(f), .35, 1.0); fxDust(v3(f.x, f.y, f.z)); } }
-  if (can && inp.atk && f.atkCD <= 0 && f.windT <= 0 && f.dashT <= 0) { f.atkCD = R.atkCD * (f.isBot ? [1.5, 1.2, 1][lvl] : 1); f.windT = R.windup * (f.isBot ? (f.windMul || 1.7) : 1); SFX.swing(); if (f === ME) { if (mx || mz) f.face = Math.atan2(mx, mz); else if (lockOn) faceToward(f, o); else f.face = Math.atan2(-Math.sin(yaw), -Math.cos(yaw)); } else faceToward(f, o); }
-  if (can && inp.ult && f.ult >= R.ultNeed && f.grounded) { f.ultWind = .32; }
+  if (can && inp.dash && f.dashCD <= 0 && (mx || mz || true)) { let dx = mx, dz = mz; if (!dx && !dz) { dx = Math.sin(f.face); dz = Math.cos(f.face); } const l = Math.hypot(dx, dz) || 1; f.dashDir = [dx / l, dz / l]; f.dashT = R.dashT; f.dashCD = R.dashCD * (f.pas === 'coffee' ? .8 : 1); if (net && f === ME) netSend({ t: 'a', k: 'd', x: +f.dashDir[0].toFixed(2), z: +f.dashDir[1].toFixed(2) }); SFX.dash(); { const a = v3(f.x, f.y + .7, f.z), b = v3(f.x + f.dashDir[0] * 3.6, f.y + .7, f.z + f.dashDir[1] * 3.6); fxTrail(a, b, colOf(f), .35, 1.0); fxDust(v3(f.x, f.y, f.z)); } }
+  if (can && inp.atk && f.atkCD <= 0 && f.windT <= 0 && f.dashT <= 0) { const W = wOf(f); f.atkCD = W.cd * (f.rageT > 0 ? .8 : 1) * (f.isBot ? [1.5, 1.2, 1][lvl] : 1); f.windT = W.wind * (f.isBot ? (f.windMul || 1.7) : 1); SFX.swing(); if (f === ME) { if (mx || mz) f.face = Math.atan2(mx, mz); else if (lockOn) faceToward(f, o); else f.face = Math.atan2(-Math.sin(yaw), -Math.cos(yaw)); if (W.ranged && !lockOn) { const hd = Math.atan2(o.x - f.x, o.z - f.z), df = Math.atan2(Math.sin(hd - f.face), Math.cos(hd - f.face)); if (Math.abs(df) < .32) f.face = hd; } } else faceToward(f, o); }
+  if (can && inp.ult && f.ult >= R.ultNeed && f.grounded) { f.ultWind = (ULTS[f.ulk] || ULTS.quake).wind; }
   inp.jump = inp.atk = inp.dash = inp.ult = false;
   // 朝向
-  if (can && f.windT <= 0 && f.ultWind <= 0) { if (f.isBot || lockOn) { if (f.isBot || lockOn) faceToward(f, o); } else if (mx || mz) f.face = Math.atan2(mx, mz); }
+  if (can && f.windT <= 0 && f.ultWind <= 0) { if (f.isBot || lockOn) { if (f.isBot || lockOn) faceToward(f, o); } else if (mx || mz) f.face = Math.atan2(mx, mz); else if (f === ME) f.face = Math.atan2(-Math.sin(yaw), -Math.cos(yaw)); }
   // 水平移動（含擊退），分軸以便貼牆滑行
   let ex = (f.vx + f.kx) * dt, ez = (f.vz + f.kz) * dt; f.kx *= Math.max(0, 1 - dt * 9); f.kz *= Math.max(0, 1 - dt * 9);
   const nx = f.x + ex, nz = f.z + ez;
@@ -614,6 +758,7 @@ function stepFighter(f, o, dt) {
   if (f.grounded && g < f.y - .02 && f.vy <= 0 && f.y - g > .15) f.grounded = false;
   if (f.grounded) { f.y = g; f.vy = 0; }
   else { f.vy -= R.gravity * dt; f.y += f.vy * dt; if (f.y <= g && f.vy <= 0) { if (f.vy < -9) { SFX.land(); fxRing(v3(f.x, f.y + .05, f.z), colOf(f), .3, 1.4, .35); fxDust(v3(f.x, f.y, f.z)); } f.y = g; f.vy = 0; f.grounded = true; } }
+  if (f.rushT > 0) { f.rushT -= dt; if (!f.rushHit && Math.hypot(o.x - f.x, o.z - f.z) < 1.7 && Math.abs(o.y - f.y) < 1.9) { f.rushHit = true; damage(f, o, 22, true, 1.3, 'ult'); f.dashT = Math.min(f.dashT, .04); } }
   f.moving = Math.hypot(f.vx, f.vz);
 }
 
@@ -627,10 +772,11 @@ function botThink(f, o, dt) {
   // 對手在高台而我在地面：先走到斜坡
   if (dy > 1.2) { if (f.y < 1.0 && Math.hypot(f.x - RAMP_FOOT[0], f.z - RAMP_FOOT[1]) > 1.4 && f.x < -4.5) { tx = RAMP_FOOT[0]; tz = RAMP_FOOT[1]; } else if (f.x < -4.5 && f.y < 2.2) { tx = RAMP_TOP[0]; tz = RAMP_TOP[1]; } else if (f.y < 1.0) { tx = RAMP_FOOT[0]; tz = RAMP_FOOT[1]; } }
   let dx = tx - f.x, dz = tz - f.z, l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
-  const close = d < R.range * .85;
+  const W = wOf(f); let close = d < Math.min(W.range || 3.3, 4) * .85; if (W.ranged) close = d < 9 && d > 2;
   let mx = dx, mz = dz;
   if (tx === o.x && close) { mx = -dz * b.strafe * .8 + dx * (d < 1.6 ? -.4 : .1); mz = dx * b.strafe * .8 + dz * (d < 1.6 ? -.4 : .1); }
   else if (tx === o.x && d < 5 && lvl >= 1 && Math.random() < .02) { mx = -dz * b.strafe; mz = dx * b.strafe; }
+  if (W.ranged && tx === o.x) { const kk = d < 4.5 ? -1 : (d > 7.5 ? 1 : 0); mx = dx * kk - dz * b.strafe * .7; mz = dz * kk + dx * b.strafe * .7; }
   const sp = Math.hypot(mx, mz) || 1; inp.mx = mx / sp * P[2] / 1.6 * 1.0; inp.mz = mz / sp * P[2] / 1.6;
   if (P[2] < 1.6) { const s2 = Math.min(1, P[2] + .15); inp.mx = mx / sp * s2; inp.mz = mz / sp * s2; } else { inp.mx = mx / sp; inp.mz = mz / sp; }
   // 卡住就跳／側移
@@ -642,7 +788,7 @@ function botThink(f, o, dt) {
   // 攻擊
   if (b.rt <= 0 && close && f.hitStun <= 0 && f.atkCD <= 0) { const gap = [2.4, 1.5, .9][lvl]; if (Math.random() < dt / gap) { inp.atk = true; f.windMul = [2.2, 1.7, 1.15][lvl]; b.rt = [.9, .55, .3][lvl]; } }
   // 大招
-  if (f.ult >= 100 && d < R.ultR * .85 && Math.random() < [.01, .02, .04][lvl]) inp.ult = true;
+  if (f.ult >= 100) { const k = f.ulk, pr = [.01, .02, .04][lvl], ok = k === 'quake' ? d < R.ultR * .85 : k === 'rush' ? d > 3 && d < 8 : k === 'heal' ? f.hp < 60 : d < 7; if (ok && Math.random() < pr * (k === 'heal' ? 3 : 1)) inp.ult = true; }
   // 閃避：對手揮擊前搖中或剛靠近
   if ((o.windT > 0 || o.ultWind > 0) && d < 4 && lvl >= 1 && f.dashCD <= 0 && Math.random() < (lvl === 2 ? .5 : .15)) { inp.dash = true; const s = Math.random() < .5 ? -1 : 1; f.dashDir = [0, 0]; inp.mx = -dz * s; inp.mz = dx * s; }
 }
@@ -659,6 +805,7 @@ function playerInput(dt) {
   wantJump = wantAtk = wantUlt = wantDash = false; if (keys.shift) keys.shift = false;
 }
 function sim(dt) {
+  stepProj(dt);
   const ref = !net || net.role === 'host';   // 裁判：單機自己、連線時房主
   if (state === 'fight') { playerInput(dt); if (AI_ON && !net) botThink(OP, ME, dt); tLeft -= dt; if (tLeft <= 0 && ref) { const a = ME.hp, b = OP.hp; endRoundNet(a > b ? 0 : b > a ? 1 : -1); } }
   else { ME.inp.mx = ME.inp.mz = 0; OP.inp.mx = OP.inp.mz = 0; ME.inp.jump = ME.inp.atk = ME.inp.dash = ME.inp.ult = false; OP.inp.jump = OP.inp.atk = OP.inp.dash = OP.inp.ult = false; wantAtk = wantUlt = wantDash = wantJump = false; }
@@ -668,9 +815,34 @@ function sim(dt) {
 }
 function playerInputCamOnly(dt) { if (keys.arrowleft) yaw += 2.2 * dt; if (keys.arrowright) yaw -= 2.2 * dt; }
 const _cp = new THREE.Vector3();
+function ensureGear(f) {
+  const key = f.w + '|' + f.name; if (f.gearKey === key) return; f.gearKey = key; const W = wOf(f);
+  if (f.wsp) { f.holder.remove(f.wsp); f.wsp.material.dispose(); } if (f.fan) { scene.remove(f.fan); f.fan.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
+  f.wsp = new THREE.Sprite(new THREE.SpriteMaterial({ map: iconTexture(W.ic), transparent: true })); f.wsp.scale.set(.75, .75, 1); f.holder.add(f.wsp);
+  const grp = new THREE.Group(), pos = [], idx = [], pts = [];
+  if (W.ranged) { const hw = W.r * .8, L = W.speed * W.life; pts.push([-hw, .6], [hw, .6], [hw, L], [-hw, L]); }
+  else { const h = W.arc * Math.PI / 360; pts.push([0, 0]); for (let i = 0; i <= 28; i++) { const a = -h + (2 * h) * i / 28; pts.push([Math.sin(a), Math.cos(a)]); } }
+  pts.forEach(p => pos.push(p[0], 0, p[1])); if (W.ranged) idx.push(0, 1, 2, 0, 2, 3); else for (let i = 1; i < pts.length - 1; i++) idx.push(0, i, i + 1);
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx);
+  const fill = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .14, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 })); grp.add(fill);
+  const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); const ln = new THREE.LineLoop(lg, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: .55 })); grp.add(ln);
+  const sc = W.ranged ? 1 : W.range, tipZ = W.ranged ? W.speed * W.life : 1, tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute([-.45 / sc, 0, tipZ - .05 / sc, .45 / sc, 0, tipZ - .05 / sc, 0, 0, tipZ + .6 / sc], 3)); tg.setIndex([0, 1, 2]);
+  const tip = new THREE.Mesh(tg, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .7, side: THREE.DoubleSide, depthWrite: false })); tip.userData.keepScale = true; grp.add(tip);
+  grp.userData = { fill, ln, tip, ranged: !!W.ranged, range: W.range || 1 }; scene.add(grp); f.fan = grp;
+}
+function updGear(f, toCam, bob) {
+  ensureGear(f); const W = wOf(f), on = state === 'countdown' || state === 'fight' || state === 'roundEnd';
+  const rX = Math.cos(toCam), rZ = -Math.sin(toCam), sw = f.windT > 0 ? Math.min(1, f.windT / Math.max(.05, W.wind)) : 0;
+  f.wsp.position.set(rX * .62 + Math.sin(toCam) * .08, .8 + bob + sw * .25, rZ * .62 + Math.cos(toCam) * .08); const k = .7 + sw * .5; f.wsp.scale.set(k, k, 1); f.wsp.material.rotation = -.5 - sw * 1.2 + (f.moving > 1 && f.grounded ? Math.sin(f.phase) * .15 : 0); f.wsp.visible = f.hp > 0;
+  const fan = f.fan, d = fan.userData, show = on && f.hp > 0 && (f === ME || f.windT > 0 || f.ultWind > 0);
+  fan.visible = show; if (!show) return;
+  fan.position.set(f.x, f.y + .08, f.z); fan.rotation.y = f.face; if (!d.ranged) fan.scale.setScalar(d.range);
+  const c = new THREE.Color(colOf(f)), hot = f.windT > 0; d.fill.material.color.copy(c); d.ln.material.color.copy(c); d.tip.material.color.copy(c);
+  d.fill.material.opacity = hot ? .5 : (f === ME ? .2 : .3); d.ln.material.opacity = hot ? 1 : .6; d.tip.material.opacity = hot ? .95 : .7;
+}
 function render(dt) {
   // 鏡頭
-  const tx = ME.x, ty = ME.y + 1.5, tz = ME.z; camSmooth.x += (tx - camSmooth.x) * Math.min(1, dt * 14); camSmooth.z += (tz - camSmooth.z) * Math.min(1, dt * 14); camSmooth.y += (ty - camSmooth.y) * Math.min(1, dt * 7);
+  const tx = ME.x, ty = ME.y + 1.5, tz = ME.z; camSmooth.x += (tx - camSmooth.x) * Math.min(1, dt * 26); camSmooth.z += (tz - camSmooth.z) * Math.min(1, dt * 26); camSmooth.y += (ty - camSmooth.y) * Math.min(1, dt * 10);
   const cp = Math.cos(pitch); let cd = camDist;
   for (let k = 1; k <= 14; k++) { const t = k / 14 * camDist, px = camSmooth.x + Math.sin(yaw) * cp * t, pz = camSmooth.z + Math.cos(yaw) * cp * t, py = camSmooth.y + Math.sin(pitch) * t + .3; if (hAt(px, pz) + .35 > py) { cd = Math.max(1.8, (k - 1) / 14 * camDist); break; } }
   camCd += (cd - camCd) * Math.min(1, dt * (cd < camCd ? 25 : 6)); cd = camCd;
@@ -691,7 +863,8 @@ function render(dt) {
     let sq = 1; if (f.windT > 0 || f.ultWind > 0) sq = .9; f.sprite.position.y = bob; f.sprite.scale.x = (CHAR_SCALE[f.name] || 1) * (f.windT > 0 ? 1.08 : 1) * (f.hitStun > 0 ? .94 : 1);
     f.sprite.rotation.z = f.hitStun > 0 ? Math.sin(performance.now() * .05) * .12 : (f.moving > 1 && f.grounded ? Math.sin(f.phase) * .06 : 0);
     f.mat.color.setHex(f.flash > 0 ? 0xff7a7a : f.hp <= 0 ? 0x888888 : 0xffffff);
-    f.sprite.visible = true; if (f.dashT > 0) f.mat.opacity = .55; else f.mat.opacity = 1; f.mat.transparent = true;
+    f.sprite.visible = true; if (f.dashT > 0) f.mat.opacity = .55; else f.mat.opacity = 1; f.mat.transparent = true; if (f.rageT > 0 && f.flash <= 0) f.mat.color.setHex(0xffc58a);
+    updGear(f, toCam, bob);
   }
   for (const s of [slashFx, slashFx2]) { if (s.userData && s.userData.t > 0) { s.userData.t -= dt; s.material.opacity = Math.max(0, s.userData.t / .18) * .85; } else s.material.opacity = 0; }
   if (shockT > 0) { shockT -= dt; const k = 1 - shockT / .5; shock.position.set(shockPos[0], shockPos[1], shockPos[2]); shock.scale.setScalar(.5 + k * R.ultR); shock.material.opacity = (1 - k) * .8; } else shock.material.opacity = 0;
@@ -700,10 +873,11 @@ function render(dt) {
   if (flashA > 0) { flashA = Math.max(0, flashA - dt * 1.2); $('flash').style.opacity = flashA; }
   renderer.render(scene, camera);
 }
-let tmr = 0, camCd = 9.5;
+let tmr = 0, camCd = 9.5; const perf = { t: 0, n: 0 };
 function frame(now) {
   requestAnimationFrame(frame);
-  let dt = Math.min(.05, (now - last) / 1000); last = now;
+  const raw = (now - last) / 1000; let dt = Math.min(.05, raw); last = now;
+  if (state === 'fight' || state === 'countdown') { perf.t += raw; perf.n++; if (perf.t > 1.5) { const avg = perf.t / perf.n; perf.t = perf.n = 0; if (avg > .026 && prAuto > .6) { prAuto = Math.max(.6, prAuto * .85); resize(); } } }
   if (!paused && state !== 'menu' && state !== 'matchEnd' || state === 'menu' || state === 'matchEnd') {
     if (state === 'menu') yaw += dt * .2;
     if (!paused) {
@@ -724,6 +898,7 @@ const WS_BASE = (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && Q.get('
 const ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const genCode = () => Array.from({ length: 6 }, () => ALPHA[Math.floor(Math.random() * ALPHA.length)]).join('');
 let net = null, netTry = 0;
+const myLo = () => ({ w: $('selW').value, p: $('selP').value, u: $('selU').value });
 const netSt = t => { $('netSt').textContent = t || ''; };
 function netSend(o) { if (net && net.ws && net.ws.readyState === 1) { try { net.ws.send(JSON.stringify(o)); } catch (e) {} } }
 function netState() {
@@ -749,26 +924,26 @@ function netAdopt(ws, room, role) {
   return net;
 }
 function netReady() {   // 雙方到齊：交換角色名字
-  if (!net || net.ready) return; net.ready = true; netUi(true, '對手已加入，載入角色…'); netSend({ t: 'hi', n: $('selMe').value });
+  if (!net || net.ready) return; net.ready = true; netUi(true, '對手已加入，載入角色…'); netSend({ t: 'hi', n: $('selMe').value, lo: myLo() });
 }
 async function netBuild() {
   if (!net || !net.opName || net.built) return; net.built = true; const a = $('selMe').value, b = net.opName;
   const [ta, tb, wa, wb] = await Promise.all([loadAtlas(a), loadAtlas(b), loadWalk(a), loadWalk(b)]); if (!net) return;
   if (ME) { scene.remove(ME.holder, ME.blob, OP.holder, OP.blob); fighters.length = 0; }
-  ME = makeFighter(a, ta, false, 0x3b9f6a); OP = makeFighter(b, tb, false, 0xd9534f); fighters.push(ME, OP); ME.walk = wa; OP.walk = wb;
+  ME = makeFighter(a, ta, false, 0x3b9f6a); OP = makeFighter(b, tb, false, 0xd9534f); fighters.push(ME, OP); ME.walk = wa; OP.walk = wb; setLo(ME, myLo()); setLo(OP, net.opLo || randLo());
   place(ME, net.role === 'host' ? -14 : 14, 0, net.role === 'host' ? Math.PI / 2 : -Math.PI / 2); place(OP, net.role === 'host' ? 14 : -14, 0, net.role === 'host' ? -Math.PI / 2 : Math.PI / 2);
   net.ldMe = true; netSend({ t: 'ld' }); netTryStart();
 }
 function netTryStart() { if (net && net.role === 'host' && net.ldMe && net.ldOp && !net.started) { net.started = true; netSend({ t: 'rs', r: 1 }); netBegin(1); } }
 function netBegin(r) {   // 開一場新比賽（r=1）或下一局
-  if (r === 1) { wins = [0, 0]; round = 1; stats = { hits: 0, dmg: 0, high: 0, combo: 0, ult: 0, taken: 0 }; $('endO').hidden = true; $('startO').hidden = true; $('nmL').textContent = ME.name; $('nmR').textContent = OP.name; net.myRm = net.opRm = false; SFX.unlock(); }
+  if (r === 1) { showLo(); wins = [0, 0]; round = 1; stats = { hits: 0, dmg: 0, high: 0, combo: 0, ult: 0, taken: 0 }; $('endO').hidden = true; $('startO').hidden = true; $('nmL').textContent = ME.name; $('nmR').textContent = OP.name; net.myRm = net.opRm = false; SFX.unlock(); }
   else round = r;
   paused = false; $('pauseO').hidden = true; startRound(); lockPtr();
 }
 function tryRematch() { if (net && net.role === 'host' && net.myRm && net.opRm) { netSend({ t: 'rs', r: 1 }); netBegin(1); } }
 function applyHitToMe(m) {
   if (state !== 'fight' || ME.hp <= 0 || ME.dashT > 0) return;
-  const heavy = !!m.hv, d = m.d; ME.hp -= d; ME.flash = .14; ME.hitStun = heavy ? .3 : .16; ME.windT = 0; ME.ultWind = 0; ME.ult = Math.min(100, ME.ult + 7);
+  const heavy = !!m.hv; let d = m.d; if (ME.pas === 'thick') d *= .9; ME.hp -= d; ME.flash = .14; ME.hitStun = heavy ? .3 : .16; ME.windT = 0; ME.ultWind = 0; gainUlt(ME, d * .6);
   const dx = ME.x - m.ax, dz = ME.z - m.az, l = Math.hypot(dx, dz) || 1, kb = (heavy ? 12 : 6.5) * (m.kb || 1);
   ME.kx = dx / l * kb; ME.kz = dz / l * kb; if (heavy) { ME.vy = 5; ME.grounded = false; } if (m.k) { ME.vy = 7; ME.grounded = false; }
   hitFx(OP, ME, d, !!m.hi, heavy); stats.taken += d; netState();
@@ -777,7 +952,7 @@ function netMsg(m) {
   if (!net) return;
   if (m.t === 'ready') netReady();
   else if (m.t === 'gone') netGone(false);
-  else if (m.t === 'hi') { net.opName = String(m.n || '').slice(0, 24); netBuild(); }
+  else if (m.t === 'hi') { net.opName = String(m.n || '').slice(0, 24); const lo = m.lo || {}; net.opLo = { w: WEAPONS[lo.w] ? lo.w : 'tablet', p: PASSIVES[lo.p] ? lo.p : 'coffee', u: ULTS[lo.u] ? lo.u : 'quake' }; netBuild(); }
   else if (m.t === 'ld') { net.ldOp = true; netTryStart(); }
   else if (m.t === 'rs' && net.role === 'guest' && ME && OP) { netBegin(m.r | 0 || 1); }
   else if (m.t === 're' && net.role === 'guest' && ME && OP) { if (state === 'countdown') { state = 'fight'; setBanner('', 0); } const w = m.w < 0 ? -1 : (m.w === 1 ? 0 : 1); endRound(w); }
@@ -787,15 +962,16 @@ function netMsg(m) {
   else if (m.t === 's') { OP.nx = m.x; OP.ny = m.y; OP.nz = m.z; OP.face = m.f; OP.hp = m.hp; OP.ult = m.u; OP.moving = m.m; OP.grounded = !!m.g; if (m.d) OP.dashT = Math.max(OP.dashT, .1); if (m.h && OP.hitStun <= 0) OP.hitStun = .1; }
   else if (m.t === 'h') applyHitToMe(m);
   else if (m.t === 'a') {
-    if (m.k === 'atk') { OP.face = m.f; OP.windT = .1; SFX.swing(); const fx = Math.sin(m.f), fz = Math.cos(m.f); const sl = slashFx2; sl.position.set(OP.x + fx * .6, OP.y + 1.0, OP.z + fz * .6); sl.rotation.z = m.f - Math.PI / 2 + Math.PI; sl.userData = { t: .18, heavy: !!m.hv }; sl.material.color.setHex(m.hv ? 0xffd166 : 0xffffff); sl.scale.setScalar(m.hv ? 1.2 : 1); fxSlash(v3(OP.x + fx * 1.7, OP.y + 1.1, OP.z + fz * 1.7), colOf(OP), !!m.hv); }
-    else if (m.k === 'ult') { OP.ultWind = .1; SFX.ult(); shake = .5; fxSig(heroOf(OP.name), v3(OP.x, OP.y, OP.z), true); fxRing(v3(OP.x, OP.y + .1, OP.z), colOf(OP), .5, R.ultR, .6); flashA = .3; slowT = .45; zoomT = .9; }
+    if (m.k === 'atk') { OP.face = m.f; OP.windT = .1; SFX.swing(); swingVisual(OP, wOf(OP), !!m.hv); }
+    else if (m.k === 'shot') { OP.face = m.f; OP.windT = .1; SFX.swing(); spawnProj(OP, wOf(OP), !!m.hv, null, m.f); }
+    else if (m.k === 'ult') { OP.ultWind = .1; if (typeof m.f === 'number') OP.face = m.f; const u = ULTS[m.u] ? m.u : 'quake'; ultVisual(OP, u); if (u === 'rush') OP.dashT = .26; else if (u === 'rage') OP.rageT = 4; }
     else if (m.k === 'j') { fxDust(v3(OP.x, OP.y, OP.z)); fxRing(v3(OP.x, OP.y + .05, OP.z), colOf(OP), .3, 1.1, .3); }
     else if (m.k === 'd') { OP.dashT = R.dashT; SFX.dash(); const a = v3(OP.x, OP.y + .7, OP.z), b = v3(OP.x + m.x * 3.6, OP.y + .7, OP.z + m.z * 3.6); fxTrail(a, b, colOf(OP), .35, 1.0); fxDust(v3(OP.x, OP.y, OP.z)); }
   }
 }
 function stepRemote(f, dt) {   // 對手：位置朝最新封包靠近，其餘計時器只為了畫面效果
   const k = 1 - Math.exp(-dt * 18); f.x += (f.nx - f.x) * k; f.z += (f.nz - f.z) * k; if (f.ny !== undefined) f.y += (f.ny - f.y) * k;
-  f.flash = Math.max(0, f.flash - dt); f.hitStun = Math.max(0, f.hitStun - dt); f.windT = Math.max(0, f.windT - dt); f.ultWind = Math.max(0, f.ultWind - dt); f.dashT = Math.max(0, f.dashT - dt);
+  f.flash = Math.max(0, f.flash - dt); f.hitStun = Math.max(0, f.hitStun - dt); f.windT = Math.max(0, f.windT - dt); f.ultWind = Math.max(0, f.ultWind - dt); f.dashT = Math.max(0, f.dashT - dt); f.rageT = Math.max(0, f.rageT - dt);
 }
 function netGone(drop) {   // 對手離線 / 連線中斷
   if (!net) return; const was = net; net = null; netTry++; try { was.ws.onclose = null; was.ws.close(1000); } catch (e) {}
@@ -846,6 +1022,12 @@ async function setup() {
   const me0 = Q.get('me') || Q.get('as') || store.get('duel:me') || 'Machi', opts = n => NAMES.map(x => '<option value="' + x + '"' + (x === n ? ' selected' : '') + '>' + x + '</option>').join('');
   const op0 = store.get('duel:op'); const rest = NAMES.filter(n => n !== me0);
   $('selMe').innerHTML = opts(NAMES.includes(me0) ? me0 : NAMES[0]); $('selOp').innerHTML = opts(op0 && NAMES.includes(op0) && op0 !== me0 ? op0 : rest[Math.floor(Math.random() * rest.length)]); $('selLv').value = store.get('duel:lv') || '1';
+  const fillSel = (id, o, cur) => { $(id).innerHTML = Object.keys(o).map(k => '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + o[k].n + '</option>').join(''); };
+  fillSel('selW', WEAPONS, store.get('duel:w') || 'tablet'); fillSel('selP', PASSIVES, store.get('duel:p') || 'coffee'); fillSel('selU', ULTS, store.get('duel:u') || 'quake');
+  const loDesc = () => { const W = WEAPONS[$('selW').value], P = PASSIVES[$('selP').value], U = ULTS[$('selU').value];
+    const st = W.ranged ? '傷害 ' + W.dmg + '・' + (1 / W.cd).toFixed(1) + ' 發/秒・射程 ' + Math.round(W.speed * W.life) : '傷害 ' + W.dmg + '・' + (1 / W.cd).toFixed(1) + ' 下/秒・距離 ' + W.range + '・範圍 ' + W.arc + '°';
+    $('loDesc').innerHTML = '<div><b>' + W.n + '</b>（' + W.tag + '）' + st + '<br>' + W.d + '</div><div><b>' + P.n + '</b>：' + P.d + '</div><div><b>' + U.n + '</b>：' + U.d + '</div>'; store.set('duel:w', $('selW').value); store.set('duel:p', $('selP').value); store.set('duel:u', $('selU').value); };
+  $('selW').onchange = $('selP').onchange = $('selU').onchange = loDesc; loDesc();
   const pv = () => { drawPreview($('pvMe'), $('selMe').value); drawPreview($('pvOp'), $('selOp').value); }; $('selMe').onchange = $('selOp').onchange = pv; pv();
   if (matchMedia('(pointer:coarse)').matches) $('startNote').textContent = '這款需要鍵盤與滑鼠，請用電腦玩。';
   $('netB').onclick = () => { const b = $('netBox'); b.hidden = !b.hidden; };
