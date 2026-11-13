@@ -654,7 +654,7 @@ function makeFighter(name, tex, isBot, color) {
   const ks = CHAR_SCALE[name] || 1; sprite.scale.set(ks, ks, 1);
   return { name, isBot, tex, sprite, holder, blob, mat, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, face: 0, hp: 100, ult: 0, grounded: true, atkT: 0, atkCD: 0, dashT: 0, dashCD: 0, windT: 0, windMul: 1.7, hitStun: 0, flash: 0, combo: 0, comboT: 0, ultWind: 0, slash: null, rageT: 0, shield: 0, shieldT: 0, skT: 0, skCD: 0, rushT: 0, rushHit: false, w: 'tablet', pas: 'coffee', ulk: 'quake', dashDir: [0, 0], moving: 0, phase: 0, inp: { mx: 0, mz: 0, jump: false, atk: false, dash: false, ult: false }, bot: { rt: 0, strafe: 1, strafeT: 0, stuck: 0, lastX: 0, lastZ: 0, nav: null, think: 0 } };
 }
-function place(f, x, z, face) { f.nx = x; f.nz = z; f.x = x; f.z = z; f.y = groundAt(x, z); f.vx = f.vy = f.vz = f.kx = f.kz = 0; f.face = face; f.hp = 100; f.rageT = f.rushT = f.shield = f.shieldT = f.skT = f.skCD = 0; f.atkT = f.atkCD = f.dashT = f.dashCD = f.windT = f.hitStun = f.flash = f.combo = f.comboT = f.ultWind = 0; f.grounded = true; }
+function place(f, x, z, face) { f.nx = x; f.nz = z; f.x = x; f.z = z; f.y = groundAt(x, z); f.vx = f.vy = f.vz = f.kx = f.kz = 0; f.face = face; f.hp = 100; f.rageT = f.rushT = f.shield = f.shieldT = f.skT = f.skCD = 0; f.atkT = f.atkCD = f.dashT = f.dashCD = f.windT = f.hitStun = f.flash = f.combo = f.comboT = f.ultWind = 0; f.grounded = true; f.ovx = f.ovz = 0; f._st = 0; }
 const mkSlash = () => { const m = new THREE.Mesh(new THREE.RingGeometry(.9, 3.2, 24, 1, -Math.PI * .42, Math.PI * .84), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false })); m.rotation.x = -Math.PI / 2; scene.add(m); return m; };
 const slashFx = mkSlash(), slashFx2 = mkSlash();
 const shock = new THREE.Mesh(new THREE.RingGeometry(.6, 1, 40), new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false })); shock.rotation.x = -Math.PI / 2; scene.add(shock);
@@ -1090,7 +1090,7 @@ function netMsg(m) {
   else if (m.t === 'me' && net.role === 'guest') { matchEnd(); }
   else if (m.t === 'rm') { net.opRm = true; tryRematch(); }
   else if (!ME || !OP) return;
-  else if (m.t === 's') { OP.nx = m.x; OP.ny = m.y; OP.nz = m.z; OP.face = m.f; OP.hp = m.hp; OP.ult = m.u; OP.shield = m.sh || 0; { const was = OP.skT > 0; OP.skT = m.sk || 0; if (OP.skT > 0 && !was && (PASSIVES[OP.pas] || {}).act) skVisual(OP); } OP.moving = m.m; OP.grounded = !!m.g; if (m.d) OP.dashT = Math.max(OP.dashT, .1); if (m.h && OP.hitStun <= 0) OP.hitStun = .1; }
+  else if (m.t === 's') { const _now = performance.now(), _pdt = OP._st ? (_now - OP._st) / 1000 : 0; if (_pdt > .01 && _pdt < .3) { OP.ovx = (m.x - OP.nx) / _pdt; OP.ovz = (m.z - OP.nz) / _pdt; } else { OP.ovx = OP.ovz = 0; } OP._st = _now; OP.nx = m.x; OP.ny = m.y; OP.nz = m.z; OP.face = m.f; OP.hp = m.hp; OP.ult = m.u; OP.shield = m.sh || 0; { const was = OP.skT > 0; OP.skT = m.sk || 0; if (OP.skT > 0 && !was && (PASSIVES[OP.pas] || {}).act) skVisual(OP); } OP.moving = m.m; OP.grounded = !!m.g; if (m.d) OP.dashT = Math.max(OP.dashT, .1); if (m.h && OP.hitStun <= 0) OP.hitStun = .1; }
   else if (m.t === 'h') applyHitToMe(m);
   else if (m.t === 'a') {
     if (m.k === 'w') { OP.face = m.f; OP.windT = wOf(OP).wind; SFX.swing(); }
@@ -1102,8 +1102,9 @@ function netMsg(m) {
     else if (m.k === 'd') { OP.dashT = R.dashT; SFX.dash(); const a = v3(OP.x, OP.y + .7, OP.z), b = v3(OP.x + m.x * 3.6 * (m.l === 2 ? 2 : 1), OP.y + .7, OP.z + m.z * 3.6 * (m.l === 2 ? 2 : 1)); fxTrail(a, b, colOf(OP), .35, 1.0); fxDust(v3(OP.x, OP.y, OP.z)); }
   }
 }
-function stepRemote(f, dt) {   // 對手：位置朝最新封包靠近，其餘計時器只為了畫面效果
-  const k = 1 - Math.exp(-dt * 18); f.x += (f.nx - f.x) * k; f.z += (f.nz - f.z) * k; if (f.ny !== undefined) f.y += (f.ny - f.y) * k;
+function stepRemote(f, dt) {   // 對手：死亡推算＋平滑靠近，填補封包間隔，降低延遲／卡頓感
+  const age = f._st ? Math.min(.12, (performance.now() - f._st) / 1000) : 0, ex = f.nx + (f.ovx || 0) * age, ez = f.nz + (f.ovz || 0) * age;
+  const k = 1 - Math.exp(-dt * 22); f.x += (ex - f.x) * k; f.z += (ez - f.z) * k; if (f.ny !== undefined) f.y += (f.ny - f.y) * k;
   f.flash = Math.max(0, f.flash - dt); f.hitStun = Math.max(0, f.hitStun - dt); f.windT = Math.max(0, f.windT - dt); f.ultWind = Math.max(0, f.ultWind - dt); f.dashT = Math.max(0, f.dashT - dt); f.rageT = Math.max(0, f.rageT - dt); f.skT = Math.max(0, f.skT - dt); if (f.shieldT > 0) { f.shieldT -= dt; if (f.shieldT <= 0) f.shield = 0; } f.swingT = Math.max(0, (f.swingT || 0) - dt);
 }
 function netGone(drop) {   // 對手離線 / 連線中斷
