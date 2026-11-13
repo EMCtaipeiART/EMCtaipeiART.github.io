@@ -1,0 +1,1058 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>設計部遠征隊</title>
+<style>
+/* 版面：上方標題與控制列 → 會議室 A 戰場（canvas）→ 提示列 → 五張必殺卡 → 協作條 → 職業卡。單一深綠主題，沿用凱曜多元宇宙的綠色玻璃面板與厚黑邊。 */
+:root{
+  color-scheme:dark;
+  --bg:#0b1d15; --bg2:#102a1e; --panel:#163a2a; --panel2:#1d4a36; --line:#2f6b4f;
+  --ink:#eafff2; --dim:#9cc5ae; --accent:#5fe08a; --accent-d:#2fa862; --gold:#ffd166; --danger:#ff6b5e; --violet:#b79bff;
+  --c-machi:#5b8def; --c-noise:#ef5b45; --c-anna:#a77bff; --c-amber:#f5a93b; --c-leona:#3fd0b4;
+  --font:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:auto}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.5;
+  background-image:radial-gradient(1200px 500px at 50% -10%,#17402d 0%,transparent 70%)}
+.wrap{max-width:1040px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:12px}
+header{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end;justify-content:space-between}
+.brand small{color:var(--accent);letter-spacing:.14em;font-size:12px}
+h1{margin:0;font-size:26px;line-height:1.15;letter-spacing:.02em}
+.brand p{margin:2px 0 0;color:var(--dim);font-size:13px}
+.ctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill{font-family:var(--mono);font-size:12px;color:var(--dim);background:var(--bg2);border:2px solid var(--line);border-radius:999px;padding:4px 10px;font-variant-numeric:tabular-nums}
+.pk{font:inherit;font-weight:700;font-size:13px;color:#06281a;background:linear-gradient(#7ff0a6,var(--accent-d));border:3px solid #000;border-radius:12px;padding:6px 12px;box-shadow:0 4px 0 #06281a;cursor:pointer}
+.pk:active{transform:translateY(3px);box-shadow:0 1px 0 #06281a}
+.pk.off{background:linear-gradient(#2a5a44,#1d4a36);color:var(--dim)}
+.pk.big{font-size:17px;padding:10px 26px}
+.pk:focus-visible,.card:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+#stage{position:relative;border:3px solid #000;border-radius:16px;overflow:hidden;background:#0d241a;box-shadow:0 6px 0 #04120c}
+#gl{display:block;width:100%;height:auto}
+#cv{position:absolute;left:0;top:0;width:100%;height:auto;pointer-events:none}
+#stage:has(.overlay:not([hidden])){min-height:400px}
+.overlay{overflow:auto}
+#alert{position:absolute;left:50%;top:58px;transform:translateX(-50%);width:min(88%,460px);background:rgba(20,8,8,.88);border:3px solid #000;border-radius:12px;padding:3px 10px 5px;text-align:center}
+#alert b{display:block;font-size:13px}
+#alert i{display:block;height:8px;border-radius:4px;background:#3a1512;margin-top:5px;overflow:hidden}
+#alert i u{display:block;height:100%;background:var(--danger)}
+#alert.revert i u{background:var(--violet)}
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;text-align:center;background:rgba(6,22,15,.86)}
+.overlay h2{margin:0;font-size:clamp(20px,4.6vw,32px)}
+.overlay p{margin:0;color:var(--dim);max-width:46ch}
+.overlay .sys{font-family:var(--mono);color:var(--gold);font-size:13px}
+#dialog{position:absolute;left:12px;right:12px;bottom:12px;background:rgba(10,32,22,.94);border:3px solid #000;border-radius:14px;padding:10px 14px;cursor:pointer;text-align:left}
+#dialog b{font-size:13px;letter-spacing:.06em}
+#dialog p{margin:2px 0 0;font-size:clamp(14px,2.6vw,18px)}
+#dialog small{position:absolute;right:12px;top:8px;color:var(--dim);font-size:11px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px 14px;width:min(100%,560px);text-align:left;font-size:13px}
+.stats div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed var(--line);padding:2px 0}
+.stats span{color:var(--dim)} .stats b{font-variant-numeric:tabular-nums}
+.badge{display:inline-block;border:3px solid var(--accent);color:var(--accent);font-weight:800;border-radius:8px;padding:2px 12px;transform:rotate(-4deg);letter-spacing:.2em}
+
+#tip{min-height:42px;background:var(--bg2);border:2px solid var(--line);border-radius:12px;padding:8px 12px;font-size:14px;color:var(--ink)}
+#tip.hot{border-color:var(--gold);color:var(--gold)}
+
+@keyframes pulse{50%{box-shadow:0 4px 0 #04120c,0 0 0 4px rgba(255,209,102,.35)}}
+@media (prefers-reduced-motion:reduce){.card.ready{animation:none}}
+
+#gauge{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;background:var(--bg2);border:2px solid var(--line);border-radius:12px;padding:8px 12px}
+#gauge .lbl{font-size:13px;color:var(--dim)}
+.pips{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+.pip{font-size:12px;border:2px solid var(--line);border-radius:999px;padding:2px 10px;color:var(--dim)}
+.pip.on{border-color:#000;background:var(--accent);color:#06281a;font-weight:700}
+#deliver:disabled{background:linear-gradient(#2a5a44,#1d4a36);color:var(--dim);box-shadow:0 4px 0 #06281a;cursor:not-allowed}
+#deliver:not(:disabled){background:linear-gradient(#ffe39a,#f0b429)}
+
+h3{margin:16px 0 0;font-size:17px}
+.sub{margin:0;color:var(--dim);font-size:13px}
+#roster{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}
+.job{background:var(--panel);border:3px solid #000;border-radius:14px;padding:12px 14px;min-width:0}
+.job h4{margin:0;font-size:16px;display:flex;gap:8px;align-items:center}
+.job q{display:block;color:var(--dim);font-size:13px;margin:2px 0 8px;quotes:"「" "」"}
+.job dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:13px}
+.job dt{color:var(--dim);white-space:nowrap}
+.job dd{margin:0}
+.job dd b{color:var(--ink)}
+
+#stage{display:flex;flex-direction:column}
+#topbar{position:absolute;left:0;right:0;top:0;display:flex;align-items:flex-start;gap:0;padding:8px 10px 0;pointer-events:none}
+#topbar .side{position:relative;flex:1;height:16px;margin-top:10px;border:3px solid #000;background:rgba(6,14,28,.82);overflow:hidden;transform:skewX(-14deg)}
+#topbar .foe{transform:skewX(14deg)}
+#topbar u,#topbar i{position:absolute;top:0;bottom:0;display:block}
+#topbar .ally u{right:0;background:linear-gradient(#59e6ff,#0a8fd6);transition:width .15s}
+#topbar .ally i{right:0;background:#fff;transition:width .9s .25s}
+#topbar .foe u{left:0;background:linear-gradient(#ff7b6b,#d02a2a);transition:width .15s}
+#topbar .foe i{left:0;background:#fff;transition:width .9s .25s}
+#topbar .side span{position:absolute;top:-2px;font:700 11px/16px var(--mono);color:#fff;text-shadow:0 1px 2px #000;font-variant-numeric:tabular-nums;transform:skewX(14deg)}
+#topbar .foe span{transform:skewX(-14deg)}
+#topbar .ally span{left:8px} #topbar .foe span{right:8px}
+#topbar .mid{flex:none;width:76px;display:flex;flex-direction:column;align-items:center;margin:0 -4px;z-index:1}
+#topbar .mid em{font:800 15px/1 var(--font);font-style:normal;color:#ffd7d0;width:44px;height:44px;display:grid;place-items:center;background:radial-gradient(circle,#c0302a,#6a1414);border:3px solid #000;clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%)}
+#topbar .mid b{font:800 14px/1.1 var(--mono);color:#fff;text-shadow:0 1px 3px #000;margin-top:-2px;background:rgba(0,0,0,.55);border-radius:6px;padding:0 6px;font-variant-numeric:tabular-nums}
+#skillPop{position:absolute;left:0;top:58px;display:flex;align-items:center;gap:10px;padding:4px 26px 4px 6px;background:linear-gradient(90deg,rgba(0,0,0,.85),rgba(0,0,0,.6));border:3px solid #000;border-left:0;border-radius:0 30px 30px 0;pointer-events:none}
+#skillPop.in{animation:skin .35s ease-out}
+@keyframes skin{from{transform:translateX(-110%)}}
+#skillPop i{width:38px;height:38px;border-radius:50%;border:3px solid var(--c,#fff);background:#0a1a13 url() no-repeat;background-size:456px 38px;background-position:-10px -2px;box-shadow:0 0 12px var(--c)}
+#skillPop b{font-size:16px;letter-spacing:.06em;color:#fff;text-shadow:0 0 10px var(--c)}
+#party{position:absolute;right:8px;bottom:8px;display:flex;gap:6px;z-index:2}
+.card{flex:none;width:78px;padding:0 0 4px;gap:3px;border:3px solid #000;border-radius:12px;background:linear-gradient(#233a52,#141f2e);box-shadow:0 3px 0 #04120c;overflow:hidden;align-items:stretch}
+.card .face{display:block;height:62px;margin:0;background-color:#0e2a3a;background-repeat:no-repeat;background-size:1872px 156px;background-position:-39px -6px;border-bottom:3px solid var(--c)}
+.card kbd{left:3px;right:auto;top:3px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;padding:0;font-size:11px;font-weight:700;color:#fff;background:var(--c);border:2px solid #000}
+.card .hpb,.card .spb,.card .cdb{height:7px;margin:0 5px;border-radius:3px;background:#05101a;overflow:hidden;border:1px solid #000}
+.card .hpb u{display:block;height:100%;background:linear-gradient(#59e6ff,#0a8fd6)}
+.card .spb u{display:block;height:100%;background:linear-gradient(#ffe39a,#f0b429)}
+.card .cdb{height:4px;border:0;background:#0a1620} .card .cdb u{display:block;height:100%;background:#9aa8ff}
+.card .lbl{font-size:11px;font-weight:700;text-align:center;color:#9fd4ff;line-height:1.2}
+.card.ready{border-color:var(--gold);background:linear-gradient(#5a4a1a,#2a2208)} .card.ready .lbl{color:var(--gold)}
+.card.dead .face{filter:grayscale(1)} .card.conf .lbl{color:var(--violet)}
+@media (max-width:700px){
+  #party{position:static;justify-content:center;padding:8px 6px 8px;background:#0b1d15;gap:5px}
+  .card{width:calc(20% - 4px);min-width:0}
+  .card .face{height:58px;background-position:-48px -6px}
+  #topbar .mid{width:60px} #topbar .mid em{width:36px;height:36px;font-size:12px}
+  #skillPop b{font-size:15px} #skillPop i{width:36px;height:36px;background-size:432px 36px;background-position:-9px -2px}
+  #stage{border-radius:14px}
+  #deliver{bottom:auto;top:calc(100vw * .52 - 56px);left:8px;font-size:14px;padding:6px 14px}
+}
+
+#stage:not(.live) #party,#stage:not(.live) #topbar{display:none}
+#deliver{position:absolute;left:12px;bottom:12px;z-index:3;font-size:17px;padding:8px 20px;background:linear-gradient(#ffe39a,#f0b429);animation:dpop .9s infinite}
+@keyframes dpop{50%{transform:scale(1.07)}}
+@media (prefers-reduced-motion:reduce){#deliver{animation:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <small>凱曜多元宇宙</small>
+      <h1>設計部遠征隊</h1>
+      <p>第一章《最後一版，真的》試玩原型</p>
+    </div>
+    <div class="ctrl">
+      <span class="pill" id="waveP">會議室 A</span>
+      <span class="pill" id="timeP">0:00</span>
+      <button class="pk off" id="autoB" type="button">自動必殺：關</button>
+      <button class="pk off" id="spdB" type="button">速度 1×</button>
+      <button class="pk off" id="pauseB" type="button">暫停</button>
+    </div>
+  </header>
+
+  <section id="stage">
+    <canvas id="gl" width="960" height="500"></canvas>
+    <canvas id="cv" width="960" height="500"></canvas>
+    <div id="topbar"><div class="side ally"><i id="allyL"></i><u id="allyB"></u><span id="allyT"></span></div><div class="mid"><em>VS</em><b id="timeT">0:00</b></div><div class="side foe"><i id="foeL"></i><u id="foeB"></u><span id="foeT"></span></div></div>
+    <div id="skillPop" hidden><i></i><b></b></div>
+    <button class="pk big" id="deliver" type="button" hidden>準時交付</button>
+    <section id="party"></section>
+    <div id="alert" hidden><b id="alertT"></b><i><u id="alertB"></u></i></div>
+    <div id="dialog" hidden><small>點一下繼續</small><b id="dWho"></b><p id="dTxt"></p></div>
+    <div class="overlay" id="startO">
+      <span class="sys">17:50，設計部</span>
+      <h2>《最後一版，真的》</h2>
+      <p>隊伍會自動戰鬥。你只要在對的時機按下方五張卡放必殺，湊滿協作條就能「準時交付」。</p>
+      <button class="pk big" id="startB" type="button">進入會議室 A</button>
+    </div>
+    <div class="overlay" id="endO" hidden></div>
+  </section>
+
+  <div id="tip">三波敵人：插單便條、意見分身、版本九頭蛇。全程約兩分半。</div>
+  <section id="gauge">
+    <span class="lbl">團隊協作條</span>
+    <div class="pips" id="pips"></div>
+    
+  </section>
+
+  <h3>五大職業</h3>
+  <p class="sub">主動技會自動施放，必殺由你決定時機。鍵盤 1～5 放必殺，空白鍵準時交付。</p>
+  <section id="roster"></section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// 戰鬥核心：固定時間步進＋隨機種子，與畫面完全分開（企劃 7.1）
+const Core = (() => {
+  const DT = 0.1;
+  const mk = seed => { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
+
+  const ORDER = ['machi', 'noise', 'anna', 'amber', 'leona'];
+  const HERO = {
+    machi: { name: 'Machi', hp: 1900, atk: 42, def: .35, spd: 1.5, cdMax: 12, gain: 10, ult: '交付防線', act: '統一窗口', range: 1.5, mv: 3.2, lane: .6, home: [-1, .6] },
+    noise: { name: 'Noise', hp: 1150, atk: 80, def: .18, spd: 1.1, cdMax: 9, gain: 10, ult: '最後一版了！', act: '直接重做', range: 3.4, mv: 3.6, lane: .4, home: [-2.8, .4] },
+    anna: { name: 'Anna', hp: 800, atk: 50, def: .08, spd: .6, cdMax: 8, gain: 6, ult: '一刀定稿', act: '直達源頭', range: 5.8, mv: 4.6, lane: 2.9, home: [-4.2, 2.9] },
+    amber: { name: 'Amber', hp: 760, atk: 62, def: .05, spd: 1.5, cdMax: 10, gain: 11, ult: '全案展開', act: '視覺重構', range: 9, mv: 2.6, lane: 2.3, home: [-6.4, 2.3] },
+    leona: { name: 'Leona', hp: 860, atk: 30, def: .08, spd: 1.4, cdMax: 7, gain: 13, ult: '重新對齊', act: '資訊整理', range: 6.8, mv: 2.6, lane: 1, home: [-5.4, 1] },
+  };
+  const EN = {
+    note: { name: '插單便條', hp: 520, atk: 30, def: 0, spd: 1.9, row: 'front', range: 1.5, mv: 3.1, rad: .45 },
+    armor: { name: '舊版裝甲', hp: 2600, atk: 70, def: 0, armor: .75, spd: 2.2, row: 'front', range: 1.7, mv: 1.7, rad: .75 },
+    clone: { name: '意見分身', hp: 3200, atk: 40, def: .1, spd: 2.1, row: 'back', range: 4.6, mv: 1.3, rad: .65 },
+    hydra: { name: '版本九頭蛇', hp: 95000, atk: 150, def: .1, spd: 1.7, row: 'back', boss: true, range: 40, mv: 0, rad: 2 },
+  };
+  const BLAST = 820, ENRAGE_AT = 200;
+  const SEQ = ['minor', 'revert', 'confuse', 'deadline'];
+  const FLAGS = ['protect', 'brk', 'weak', 'control', 'cleanse'];
+
+  const ev = (S, e) => S.events.push(e);
+  const alive = a => a.filter(u => u.alive);
+  const hero = (S, id) => S.heroes.find(h => h.id === id);
+  const unit = o => Object.assign({ alive: true, shield: 0, shieldT: 0, st: {}, timer: 0, x: 0, z: 0, fx: 1, fz: 0, mvg: false, tgt: null, rad: .5 }, o);
+const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+function go(u, tx, tz, stop, k = 1) { const dx = tx - u.x, dz = tz - u.z, d = Math.hypot(dx, dz); if (d > 1e-6) { u.fx = dx / d; u.fz = dz / d; } if (d > stop && u.mv > 0) { const st = Math.min(u.mv * k * DT, d - stop); u.x += dx / d * st; u.z += dz / d * st; u.mvg = true; } }
+
+  function newGame(seed) {
+    const S = {
+      t: 0, seed, rand: mk(seed), wave: 0, eTot: 1, phase: 'between', betweenT: 1.2, waveT: 0,
+      heroes: [], enemies: [], events: [], queue: [], n: 0, boss: null,
+      gauge: { protect: false, brk: false, weak: false, control: false, cleanse: false },
+      stats: { dmg: {}, heal: 0, absorb: 0, interrupts: 0, reverts: 0, combos: 0, delivered: 0, downs: 0 },
+    };
+    for (const id of ORDER) {
+      const d = HERO[id];
+      S.heroes.push(unit({ uid: id, id, side: 'hero', name: d.name, hp: d.hp, max: d.hp, atk: d.atk, def: d.def, spd: d.spd, x: d.home[0], z: d.home[1], range: d.range, mv: d.mv, lane: d.lane, home: d.home, rad: .5, energy: 0, cd: d.cdMax * .5, cdMax: d.cdMax, timer: d.spd * S.rand(), rage: 0, stacks: 0, pas: 4, barrage: 0, barrageT: 0 }));
+      S.stats.dmg[id] = 0;
+    }
+    return S;
+  }
+
+  const spawnX = (k, s) => k === 'note' ? 7.6 + (s % 2) * .8 : k === 'armor' ? 7 : k === 'clone' ? 7.2 : 4.7;
+const spawnZ = (k, s) => k === 'note' ? -2 + (s >> 1) * .75 : k === 'armor' ? -1.6 + s * 1.2 : k === 'clone' ? -.8 : -.5;
+function spawn(S, kind) {
+    const d = EN[kind];
+    let slot = 0;
+    const used = alive(S.enemies).filter(e => e.kind === kind).map(e => e.slot);
+    while (used.includes(slot)) slot++;
+    if (kind === 'note' && slot > 7) return null;
+    const e = unit({ uid: 'e' + (++S.n), kind, side: 'enemy', name: d.name, hp: d.hp, max: d.hp, atk: d.atk, def: d.def, armor: d.armor || 0, spd: d.spd, row: d.row, range: d.range, mv: d.mv, rad: d.rad, x: spawnX(kind, slot), z: spawnZ(kind, slot), fx: -1, fz: 0, boss: !!d.boss, slot, timer: d.spd * (.4 + S.rand() * .6), sum: 3 });
+    S.enemies.push(e);
+    ev(S, { type: 'spawn', uid: e.uid });
+    return e;
+  }
+
+  function startWave(S) {
+    S.wave++; S.phase = 'fight'; S.waveT = 0; S.queue = [];
+    S.eTot = [12 * EN.note.hp, 2 * EN.armor.hp + EN.clone.hp + 2 * EN.note.hp, EN.hydra.hp][S.wave - 1] || 1;
+    S.enemies = S.enemies.filter(e => e.alive);
+    if (S.wave === 1) { for (let i = 0; i < 4; i++) spawn(S, 'note'); S.queue.push({ t: 7, kind: 'note', n: 4 }, { t: 15, kind: 'note', n: 4 }); }
+    if (S.wave === 2) { spawn(S, 'armor'); spawn(S, 'armor'); spawn(S, 'clone'); spawn(S, 'note'); spawn(S, 'note'); }
+    if (S.wave === 3) { const b = spawn(S, 'hydra'); S.boss = { uid: b.uid, skillT: 7, seq: 0, cast: null, enraged: false }; }
+    ev(S, { type: 'wave', n: S.wave });
+  }
+
+  function kill(S, u) {
+    u.alive = false; u.hp = 0; u.st = {}; u.shield = 0;
+    if (u.side === 'hero') S.stats.downs++;
+    ev(S, { type: 'die', uid: u.uid });
+  }
+
+  // 套用防禦、護盾後實際扣血
+  function land(S, src, dst, a, opt) {
+    if (!opt.true) {
+      let d = dst.def;
+      if (dst.armor && !dst.st.broken) d = dst.armor;
+      if (dst.st.guard) d = Math.min(.8, d + .3);
+      a *= 1 - d;
+    }
+    a = Math.round(a);
+    let sh = 0;
+    if (dst.shield > 0) { sh = Math.min(dst.shield, a); dst.shield -= sh; }
+    const real = a - sh;
+    dst.hp -= real;
+    if (src && src.side === 'hero') S.stats.dmg[src.id] += a;
+    if (dst.side === 'hero') {
+      dst.energy = Math.min(100, dst.energy + (dst.st.confuse ? 0 : (dst.id === 'machi' ? 4 : 2)));
+      if (dst.id === 'noise') dst.rage = Math.min(10, dst.rage + 1);
+    }
+    ev(S, { type: 'hit', src: src ? src.uid : null, dst: dst.uid, amt: a, shield: sh, crit: !!opt.wasCrit, ult: !!opt.ult });
+    if (dst.hp <= 0) kill(S, dst);
+    return a;
+  }
+
+  function hurt(S, src, dst, raw, opt = {}) {
+    if (!dst || !dst.alive) return 0;
+    let a = raw * (.92 + S.rand() * .16);
+    if (opt.crit && S.rand() < opt.crit) { opt.wasCrit = true; a *= dst.st.mark ? 2.2 : 1.6; }
+    if (src && src.id === 'noise') a *= 1 + .04 * src.rage;
+    if (dst.st.broken) a *= 1.4;
+    if (opt.ult && dst.boss && S.boss && S.boss.cast && S.boss.cast.kind === 'revert') {
+      S.boss.cast = null; S.stats.interrupts++;
+      ev(S, { type: 'interrupt', by: src.uid });
+    }
+    if (dst.side === 'hero' && dst.id !== 'machi' && !opt.true) {
+      const m = hero(S, 'machi');
+      let share = 0;
+      if (m.alive) { if (m.st.cover) share = .4; else if (dst.hp / dst.max < .35) share = .3; }
+      if (share) { const part = a * share; a -= part; S.stats.absorb += land(S, src, m, part, { redirected: true }); }
+    }
+    return land(S, src, dst, a, opt);
+  }
+
+  function heal(S, dst, amt) {
+    if (!dst.alive) return;
+    const v = Math.round(Math.min(dst.max - dst.hp, amt));
+    dst.hp += v; S.stats.heal += v;
+    ev(S, { type: 'heal', dst: dst.uid, amt: v });
+  }
+  function shield(S, dst, amt, dur) {
+    if (!dst.alive) return;
+    dst.shield += amt; dst.shieldT = Math.max(dst.shieldT, dur);
+    ev(S, { type: 'shield', dst: dst.uid, amt });
+  }
+  function combo(S, name, line) { S.stats.combos++; ev(S, { type: 'combo', name, line }); }
+  function flag(S, k) { if (!S.gauge[k]) { S.gauge[k] = true; ev(S, { type: 'flag', k }); } }
+  const gaugeReady = S => FLAGS.every(k => S.gauge[k]);
+
+  function front(S) {
+    const en = alive(S.enemies); if (!en.length) return null;
+    const f = en.filter(e => e.row === 'front').sort((a, b) => (a.kind === b.kind ? a.slot - b.slot : a.kind === 'armor' ? -1 : 1));
+    return f[0] || en[0];
+  }
+  function back(S) {
+    const en = alive(S.enemies); if (!en.length) return null;
+    return en.find(e => e.kind === 'clone') || en.find(e => e.st.mark) || en.find(e => e.boss) || en[0];
+  }
+  const anyEnemy = S => { const en = alive(S.enemies); return en.length ? en[Math.floor(S.rand() * en.length)] : null; };
+  const lowest = S => alive(S.heroes).sort((a, b) => a.hp / a.max - b.hp / b.max)[0];
+
+  function nearest(S, u) { return alive(S.enemies).sort((a, b) => dist(u, a) - dist(u, b))[0] || null; }
+  function aim(S, h) {
+    if (h.id === 'machi') { const f = alive(S.enemies).filter(e => e.row === 'front'); return f.length ? f.sort((a, b) => dist(h, a) - dist(h, b))[0] : nearest(S, h); }
+    if (h.id === 'noise') return front(S);
+    if (h.id === 'anna') return alive(S.enemies).find(e => e.st.mark) || back(S);
+    return nearest(S, h);
+  }
+  function basic(S, h, t) {
+    if (!t) return;
+    ev(S, { type: 'basic', src: h.uid, dst: t.uid });
+    hurt(S, h, t, h.atk, { crit: h.id === 'anna' ? .3 : .08 });
+    if (!h.st.confuse) h.energy = Math.min(100, h.energy + HERO[h.id].gain);
+    if (h.id === 'amber') h.stacks = Math.min(4, h.stacks + 1);
+  }
+
+  function stand(h, t) { const stop = h.range * .85 + t.rad + h.rad; let lz = h.lane; const dz = lz - t.z; if (Math.abs(dz) >= stop * .92) lz = t.z + Math.sign(dz || 1) * stop * .92; return [t.x - Math.sqrt(Math.max(.01, stop * stop - (lz - t.z) ** 2)), lz]; }
+  function dashTo(S, h, t) { h._ox = h.x; h._oz = h.z; const p = stand(h, t); h.x = p[0]; h.z = p[1]; h.fx = t.x - h.x; h.fz = t.z - h.z; }
+  function active(S, h) {
+    const en = alive(S.enemies);
+    ev(S, { type: 'cast', src: h.uid, name: HERO[h.id].act });
+    if (h.id === 'machi') { en.forEach(e => e.st.taunt = 5); h.st.guard = 5; }
+    if (h.id === 'noise') {
+      const t = front(S); if (!t) return;
+      h.fx = t.x - h.x; h.fz = t.z - h.z;
+      hurt(S, h, t, 170, {});
+      if (t.alive) {
+        t.st.broken = 6;
+        if (t.st.taunt) { t.st.broken = 9; combo(S, '你扛我輸出', '前面我頂住，你把它解決。'); }
+      }
+      flag(S, 'brk');
+    }
+    if (h.id === 'anna') { const t = back(S); if (t) { dashTo(S, h, t); ev(S, { type: 'dash', src: h.uid, dst: t.uid, fx: h._ox, fz: h._oz }); hurt(S, h, t, 210, { crit: .5 }); } }
+    if (h.id === 'amber') {
+      const m = h.stacks >= 4 ? 1.6 : 1; h.stacks = 0;
+      ev(S, { type: 'grid', big: m > 1 });
+      en.forEach(e => { hurt(S, h, e, 105 * m, {}); if (e.alive) e.st.slow = 4; });
+      if (en.length >= 2 || en.some(e => e.boss)) flag(S, 'control');
+    }
+    if (h.id === 'leona') {
+      const hs = alive(S.heroes);
+      const t = hs.find(x => x.st.confuse) || hs.find(x => x.st.delay && x.hp / x.max < .8) || lowest(S);
+      heal(S, t, 250);
+      const k = t.st.confuse ? 'confuse' : t.st.delay ? 'delay' : null;
+      if (k) { delete t.st[k]; flag(S, 'cleanse'); ev(S, { type: 'cleanse', dst: t.uid }); }
+      const m = hero(S, 'machi');
+      if (m.alive && m.st.cover) { hs.forEach(x => shield(S, x, 160, 5)); m.st.cover += 2; combo(S, '這次一起扛', '不要全部自己吞。'); }
+    }
+  }
+
+  function castUlt(S, id) {
+    const h = hero(S, id);
+    if (S.phase !== 'fight' || !h || !h.alive || h.energy < 100) return false;
+    h.energy = 0;
+    ev(S, { type: 'cast', src: h.uid, name: HERO[id].ult, ult: true });
+    if (id === 'machi') { alive(S.heroes).forEach(x => shield(S, x, 480, 6)); h.st.cover = 6; flag(S, 'protect'); }
+    if (id === 'noise') { h.st.frenzy = 6; hurt(S, h, front(S) || anyEnemy(S), 260, { ult: true }); const b = alive(S.enemies).find(e => e.boss); if (b && S.boss.cast) hurt(S, h, b, 120, { ult: true }); }
+    if (id === 'anna') {
+      const marked = alive(S.enemies).filter(e => e.st.mark).sort((a, b) => b.hp - a.hp)[0];
+      const t = marked || back(S);
+      if (t) {
+        let base = 850;
+        if (t.st.mark) { base *= 1.5; flag(S, 'weak'); }
+        if (t.st.slow) { base *= 1.4; combo(S, '重點已標好', '我幫你框好了。'); }
+        dashTo(S, h, t); ev(S, { type: 'dash', src: h.uid, dst: t.uid, ult: true, fx: h._ox, fz: h._oz });
+        hurt(S, h, t, base, { ult: true });
+        if (!t.alive) h.energy = 50;
+      }
+    }
+    if (id === 'amber') { h.barrage = 5; h.barrageT = 0; flag(S, 'control'); }
+    if (id === 'leona') {
+      let cleared = false;
+      alive(S.heroes).forEach(x => {
+        heal(S, x, x.max * .35);
+        if (x.st.confuse || x.st.delay) cleared = true;
+        delete x.st.confuse; delete x.st.delay; x.st.immune = 6;
+      });
+      if (cleared) flag(S, 'cleanse');
+      ev(S, { type: 'align' });
+    }
+    return true;
+  }
+
+  function deliver(S) {
+    if (S.phase !== 'fight' || !gaugeReady(S)) return false;
+    FLAGS.forEach(k => S.gauge[k] = false);
+    S.stats.delivered++;
+    ev(S, { type: 'deliver' });
+    alive(S.enemies).forEach(e => {
+      const fin = e.boss && e.hp / e.max <= .25;
+      hurt(S, null, e, fin ? e.hp + e.shield + 1 : 2600, { true: true });
+    });
+    alive(S.heroes).forEach(h => heal(S, h, h.max * .25));
+    return true;
+  }
+
+  function bossStep(S, e) {
+    const B = S.boss;
+    if (!B.enraged && S.waveT > ENRAGE_AT) { B.enraged = true; e.atk *= 2; ev(S, { type: 'boss', kind: 'enrage', name: '加班到天亮' }); }
+    if (B.cast) {
+      B.cast.t -= DT;
+      if (B.cast.t <= 0) {
+        const k = B.cast.kind; B.cast = null;
+        if (k === 'revert') { S.stats.reverts++; const v = Math.round(e.max * .1); e.hp = Math.min(e.max, e.hp + v); ev(S, { type: 'heal', dst: e.uid, amt: v }); ev(S, { type: 'boss', kind: 'reverted', name: '回到舊版了…' }); }
+        if (k === 'deadline') { ev(S, { type: 'blast' }); alive(S.heroes).forEach(h => hurt(S, e, h, BLAST * (B.enraged ? 1.3 : 1), {})); }
+      }
+      return;
+    }
+    B.skillT -= DT;
+    if (B.skillT > 0) return;
+    B.skillT = 8;
+    const k = SEQ[B.seq++ % 4];
+    if (k === 'minor') { ev(S, { type: 'boss', kind: k, name: '再小改一下' }); for (let i = 0; i < 3; i++) spawn(S, 'note'); const n = hero(S, 'noise'); if (n.alive) n.rage = Math.min(10, n.rage + 3); }
+    if (k === 'revert') { ev(S, { type: 'boss', kind: k, name: '剛剛那版比較好' }); B.cast = { kind: k, t: 4, max: 4 }; }
+    if (k === 'confuse') { ev(S, { type: 'boss', kind: k, name: '意見還沒整合' }); alive(S.heroes).forEach(h => { if (h.id !== 'leona' && !h.st.immune) h.st.confuse = 10; }); }
+    if (k === 'deadline') { ev(S, { type: 'boss', kind: k, name: '今天能出嗎？' }); B.cast = { kind: k, t: 5, max: 5 }; }
+  }
+
+  function step(S) {
+    if (S.phase === 'won' || S.phase === 'lost') return;
+    S.t += DT;
+    if (S.phase === 'between') { S.betweenT -= DT; S.heroes.forEach(h => { h.mvg = false; if (h.alive) go(h, h.home[0], h.home[1], .05, 1.4); }); if (S.betweenT <= 0) startWave(S); return; }
+    S.waveT += DT;
+    for (const q of S.queue) if (!q.done && S.waveT >= q.t) { q.done = true; for (let i = 0; i < q.n; i++) spawn(S, q.kind); }
+
+    for (const u of S.heroes.concat(S.enemies)) {
+      if (!u.alive) continue;
+      for (const k in u.st) { u.st[k] -= DT; if (u.st[k] <= 0) { delete u.st[k]; if (k === 'frenzy') u.rage = 0; } }
+      if (u.shield > 0) { u.shieldT -= DT; if (u.shieldT <= 0) u.shield = 0; }
+    }
+
+    for (const u of S.heroes.concat(S.enemies)) u.mvg = false;
+    for (const h of S.heroes) {
+      if (!h.alive) continue;
+      const en = alive(S.enemies).length;
+      const conf = !!h.st.confuse;
+      if (!conf) { h.energy = Math.min(100, h.energy + 1.5 * DT); h.cd -= DT; }
+      h.pas -= DT;
+      if (h.pas <= 0) {
+        if (h.id === 'anna') { h.pas = 6; const t = back(S); if (t) { t.st.mark = 8; ev(S, { type: 'mark', dst: t.uid }); } }
+        else if (h.id === 'leona') { h.pas = 7; const t = lowest(S); if (t && t.hp / t.max < .9) shield(S, t, 130, 6); }
+        else h.pas = 99;
+      }
+      if (h.barrage > 0) { h.barrageT -= DT; if (h.barrageT <= 0) { h.barrage--; h.barrageT = .4; ev(S, { type: 'barrage' }); alive(S.enemies).forEach(e => hurt(S, h, e, 135, { ult: true })); } }
+      if (!en) continue;
+      const t = aim(S, h), d = t ? dist(h, t) - t.rad - h.rad : 0;
+      if (t) { if (d > h.range * .98) { const p = stand(h, t); go(h, p[0], p[1], .05, h.st.delay ? .75 : 1); } else { go(h, h.x, h.lane, .05, .5); h.fx = t.x - h.x; h.fz = t.z - h.z; } }
+      const inR = t && d <= h.range * 1.05;
+      h.timer = Math.max(0, h.timer - DT * (conf ? .6 : 1) * (h.st.delay ? .75 : 1));
+      if (h.timer <= 0 && inR) { h.timer = h.st.frenzy ? .35 : h.spd; basic(S, h, t); }
+      const can = h.id === 'noise' ? inR : h.id === 'amber' ? t && d <= 9.5 : true;
+      if (h.cd <= 0 && can) { h.cd = h.cdMax; active(S, h); }
+    }
+
+    for (const e of S.enemies) {
+      if (!e.alive) continue;
+      if (e.boss) bossStep(S, e);
+      if (!e.alive) continue;
+      if (e.kind === 'clone') { e.sum -= DT; if (e.sum <= 0) { e.sum = 5; if (alive(S.enemies).filter(x => x.kind === 'note').length < 6) { ev(S, { type: 'cast', src: e.uid, name: '再補一點意見' }); spawn(S, 'note'); } } }
+      const hs = alive(S.heroes); if (!hs.length) break;
+      const m = hero(S, 'machi');
+      let t = e.tgt && hs.find(h => h.uid === e.tgt);
+      if (e.range < 2.5 && m.alive) t = m;
+      else if (e.st.taunt && m.alive) t = m;
+      else if (!t) { const w = hs.map(h => h.id === 'machi' ? 3 : h.id === 'noise' ? 2 : 1); let r = S.rand() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < hs.length; i++) { r -= w[i]; if (r <= 0) { t = hs[i]; break; } } t = t || hs[0]; }
+      e.tgt = t.uid;
+      const dd = dist(e, t) - t.rad - e.rad;
+      if (dd > e.range) {
+        if (e.range < 2.5) { const D = e.range * .7 + t.rad + e.rad, dx = Math.sqrt(Math.max(.04, D * D - .81)); go(e, t.x + dx, t.z - .9, .05, e.st.slow ? .6 : 1); }
+        else go(e, t.x, t.z, e.range * .8 + t.rad + e.rad, e.st.slow ? .6 : 1);
+      } else { e.fx = t.x - e.x; e.fz = t.z - e.z; }
+      e.timer = Math.max(0, e.timer - DT * (e.st.slow ? .7 : 1));
+      if (e.timer > 0 || dd > e.range * 1.1) continue;
+      e.timer = e.spd;
+      ev(S, { type: 'basic', src: e.uid, dst: t.uid });
+      hurt(S, e, t, e.atk, {});
+      if (e.kind === 'note' && t.alive && !t.st.immune && S.rand() < .22) { t.st.delay = 6; ev(S, { type: 'debuff', dst: t.uid, name: '拖延' }); }
+    }
+
+    const us = alive(S.heroes).concat(alive(S.enemies));
+    for (let i = 0; i < us.length; i++) for (let j = i + 1; j < us.length; j++) {
+      const a = us[i], b = us[j], need = a.rad + b.rad; let dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz);
+      if (d >= need) continue; if (d < 1e-4) { dx = (i % 2 ? 1 : -1) * .01; dz = .01; d = .014; }
+      const p = (need - d) * .5 / d, wa = a.mv ? 1 : 0, wb = b.mv ? 1 : 0, w = wa + wb || 1;
+      a.x -= dx * p * 2 * wa / w; a.z -= dz * p * 2 * wa / w; b.x += dx * p * 2 * wb / w; b.z += dz * p * 2 * wb / w;
+    }
+    const mA = hero(S, 'machi').alive, bs = S.enemies.find(e => e.boss && e.alive);
+    for (const u of us) { u.z = u.side === 'hero' ? Math.max(.2, Math.min(3.1, u.z)) : Math.max(-2.7, Math.min(mA ? .2 : 3, u.z)); u.x = Math.max(-6.8, Math.min(9, u.x)); if (bs && u.side === 'hero') u.x = Math.min(u.x, bs.x - (u.range * .85 + bs.rad + u.rad) * .85); }
+    if (!alive(S.heroes).length) { S.phase = 'lost'; ev(S, { type: 'lost' }); return; }
+    if (!alive(S.enemies).length && S.queue.every(q => q.done)) {
+      if (S.wave >= 3) { S.phase = 'won'; ev(S, { type: 'won' }); return; }
+      S.phase = 'between'; S.betweenT = 3.5;
+      S.heroes.forEach(h => { if (!h.alive) { h.alive = true; h.hp = h.max * .4; h.timer = h.spd; } else h.hp = Math.min(h.max, h.hp + h.max * .3); h.st = {}; h.barrage = 0; });
+      ev(S, { type: 'clear', n: S.wave });
+    }
+  }
+
+  // 自動必殺策略（也是平衡測試用的「會玩的玩家」）
+  function auto(S) {
+    const out = []; if (S.phase !== 'fight') return out;
+    const B = S.boss, en = alive(S.enemies), hs = alive(S.heroes), bossWave = S.wave === 3;
+    const ready = id => { const h = hero(S, id); return h.alive && h.energy >= 100; };
+    if (ready('machi')) {
+      if (B && B.cast && B.cast.kind === 'deadline') { if (B.cast.t <= 1.2) out.push('machi'); }
+      else if (!bossWave && hs.some(h => h.hp / h.max < .45)) out.push('machi');
+    }
+    const R = ['anna', 'noise', 'amber'].filter(ready);
+    if (B && B.cast && B.cast.kind === 'revert') { if (R.length) out.push(R[0]); }
+    else if (!bossWave) R.forEach(id => { if (en.length) out.push(id); });
+    else if (R.length >= 2) out.push(R[0]);
+    if (ready('leona') && (hs.filter(h => h.st.confuse).length >= 2 || hs.reduce((a, h) => a + h.hp / h.max, 0) / hs.length < .55)) out.push('leona');
+    if (gaugeReady(S)) { const b = en.find(e => e.boss); if (b && b.hp / b.max <= .25) out.push('deliver'); }
+    return out;
+  }
+
+  return { DT, dist, ORDER, HERO, EN, FLAGS, newGame, step, castUlt, deliver, gaugeReady, auto, alive, hero };
+})();
+if (typeof module !== 'undefined') module.exports = Core;
+
+</script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const COL = { machi: '#5b8def', noise: '#ef5b45', anna: '#a77bff', amber: '#f5a93b', leona: '#3fd0b4' };
+const HAIR = { machi: '#3a2a1e', noise: '#1d1d24', anna: '#6b3b2a', amber: '#c9792a', leona: '#4a2f55' };
+const INFO = {
+  machi: { job: '坦克・責任壁壘', q: '先別慌，這波我扛。', role: '承傷、保護', sk: [['普攻', '需求回推', '單體攻擊'], ['被動', '這件我負責', '隊友血量低於 35% 時代扛 30% 傷害'], ['主動', '統一窗口', '嘲諷全場 5 秒，自身減傷提高'], ['必殺', '交付防線', '全隊護盾 6 秒，並代扛 40% 傷害']] },
+  noise: { job: '戰士・改稿狂刃', q: '要改可以，一次講清楚！', role: '破防、持續輸出', sk: [['普攻', '改稿連斬', '前排連擊'], ['被動', '越改越火', '受擊或 Boss 改稿時累積怒氣，每層 +4% 傷害'], ['主動', '直接重做', '傷害並破防 6 秒，擊破舊版裝甲'], ['必殺', '最後一版了！', '6 秒高速連斬，可打斷讀條']] },
+  anna: { job: '刺客・破綻獵手', q: '問題在這裡，其他先不用動。', role: '後排突襲、收尾', sk: [['普攻', '精準裁切', '高攻速單體'], ['被動', '一眼看穿', '每 6 秒標記弱點，對弱點暴擊加倍'], ['主動', '直達源頭', '越過前排，優先打召喚者'], ['必殺', '一刀定稿', '對弱點目標高額傷害，擊倒返還一半能量，可打斷讀條']] },
+  amber: { job: '法師・靈感編織者', q: '給我一點空間，我把整個畫面處理掉。', role: '範圍輸出、控場', sk: [['普攻', '色票飛彈', '遠距攻擊'], ['被動', '靈感疊層', '普攻疊 4 層後強化下一次主動技'], ['主動', '視覺重構', '全體傷害並緩速 4 秒'], ['必殺', '全案展開', '五段全體攻擊，可打斷讀條']] },
+  leona: { job: '補師・秩序療癒者', q: '先整理一下，我們一個一個來。', role: '治療、淨化', sk: [['普攻', '重點標記', '輕量攻擊，能量累積較快'], ['被動', '有人接住', '每 7 秒給血量最低的隊友小護盾；自身不受混亂影響'], ['主動', '資訊整理', '治療一人並解除一項負面狀態'], ['必殺', '重新對齊', '全隊回血 35%、清除混亂與拖延，6 秒內免疫']] },
+};
+const PIPS = { protect: '保護', brk: '破防', weak: '弱點擊破', control: '範圍控制', cleanse: '淨化' };
+const INTRO = [
+  ['系統廣播', '偵測到未收斂需求。會議室 A 已轉化為異常區域。', '#ffd166'],
+  ['Machi', '先確認一下，這次到底哪一版才是真的？', COL.machi],
+  ['Noise', '檔名已經三個 final 了！', COL.noise],
+  ['Anna', '先別吵，還有一個「以這版為準」。', COL.anna],
+  ['Amber', '它們開始自己長出新尺寸了。', COL.amber],
+  ['Leona', '我把收到的意見排好了。先處理會一直生東西的那個。', COL.leona],
+];
+const WAVE_TIP = {
+  1: '第一波｜插單便條：Machi 會嘲諷吸住攻擊，Amber 的範圍技負責清場。卡片亮起就能放必殺。',
+  2: '第二波｜意見分身躲在後排一直生便條：Noise 破開舊版裝甲，Anna 的「一刀定稿」直取分身。',
+  3: '第三波｜版本九頭蛇：注意畫面上方的讀條，把對應的必殺留給它。',
+};
+const FINALE = { noise: '這次真的最後一版！', anna: '核心找到了。', amber: '畫面我收。', leona: '資訊已對齊。', machi: '好，交付。' };
+
+// ---------- DOM ----------
+const party = $('party'), cards = {};
+Core.ORDER.forEach((id, i) => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'card'; b.id = 'card-' + id; b.style.setProperty('--c', COL[id]);
+  b.innerHTML = `<kbd>${i + 1}</kbd><i class="face" style="background-image:url(../pixel-plaza/sprites-hd/${Core.HERO[id].name}.webp)"></i><div class="hpb"><u></u></div><div class="spb"><u></u></div><div class="cdb"><u></u></div><div class="lbl">自動中</div>`;
+  b.addEventListener('click', () => ult(id));
+  party.appendChild(b);
+  cards[id] = { el: b, hp: b.querySelector('.hpb u'), en: b.querySelector('.spb u'), cd: b.querySelector('.cdb u'), lbl: b.querySelector('.lbl') };
+});
+const pipEls = {};
+Core.FLAGS.forEach(k => { const s = document.createElement('span'); s.className = 'pip'; s.textContent = PIPS[k]; $('pips').appendChild(s); pipEls[k] = s; });
+$('roster').innerHTML = Core.ORDER.map(id => `<article class="job"><h4><i class="av lg" style="background-image:url(../pixel-plaza/sprites-hd/${Core.HERO[id].name}.webp);border-color:${COL[id]}"></i>${Core.HERO[id].name}｜${INFO[id].job}</h4><q>${INFO[id].q}</q><dl>${INFO[id].sk.map(s => `<dt>${s[0]}</dt><dd><b>${s[1]}</b>　${s[2]}</dd>`).join('')}</dl></article>`).join('');
+
+// ---------- 狀態 ----------
+let S = null, running = false, paused = false, speed = 1, autoOn = false, acc = 0, last = 0, T = 0;
+let fx = [], banners = [], R = {}, shake = 0, flashA = 0, dIdx = -1, slowT = 0, zoomT = 0, zoomWho = null, dustT = 0;
+const cv = $('cv'), ui = cv.getContext('2d'); let ctx = ui;
+const W = 960, H = 500;
+let renderer = null, scene = null, camera = null;
+const CAM = { x: -1, z: .3, k: 1, fov: 34 };
+function fit() { const d = Math.min(2, window.devicePixelRatio || 1); cv.width = W * d; cv.height = H * d; ui.setTransform(d, 0, 0, d, 0, 0); if (renderer) { renderer.setPixelRatio(d); renderer.setSize(W, H, false); } }
+addEventListener('resize', fit);
+
+// 單位座標由戰鬥核心給（世界單位，x 向右、z 朝向鏡頭）；畫面位置再平滑追過去
+const MH = { note: 1.8, armor: 2.9, clone: 3.1, hydra: 5.6 };
+const tall = u => u.side === 'hero' ? 2.3 : MH[u.kind];
+function rs(u) {
+  let r = R[u.uid];
+  if (!r) r = R[u.uid] = { lunge: 0, flash: 0, born: T, hop: 0, x: u.x, z: u.z, dust: 0, hitAt: -9, hitDir: 1, hitPow: 1, atkAt: -9 };
+  return r;
+}
+const rpos = u => { const r = R[u.uid]; return new THREE.Vector3(r ? r.x : u.x, 0, r ? r.z : u.z); };
+const mid = u => { const v = rpos(u); v.y = u.boss ? 2.4 : tall(u) * .5; return v; };
+const _v = new THREE.Vector3();
+function scr(v, up = 0) { _v.set(v.x, v.y + up, v.z).project(camera); return [(_v.x + 1) / 2 * W, (1 - _v.y) / 2 * H]; }
+const find = uid => S.heroes.find(h => h.uid === uid) || S.enemies.find(e => e.uid === uid);
+function float(u, txt, col, size = 16, up = 0) { const v = rpos(u); v.y = tall(u) * .85 + up; v.x += Math.random() * .6 - .3; fx.push({ v, txt, col, size, life: 1, max: 1 }); }
+function banner(title, sub, col) { banners.length = 0; banners.push({ title, col, life: 1.1 }); }
+const centroid = list => { const v = new THREE.Vector3(); list.forEach(u => v.add(rpos(u))); return list.length ? v.multiplyScalar(1 / list.length) : v; };
+function showSkill(name, col, id) {
+  const el = $('skillPop'); el.hidden = false; el.style.setProperty('--c', col); el.querySelector('i').style.backgroundImage = `url(../pixel-plaza/sprites-hd/${Core.HERO[id].name}.webp)`; el.querySelector('b').textContent = name;
+  el.classList.remove('in'); void el.offsetWidth; el.classList.add('in'); clearTimeout(showSkill.t); showSkill.t = setTimeout(() => { el.hidden = true; }, 1100);
+}
+
+// ---------- 3D 場景與特效（做法比照元宇宙的升級光柱：加色混合的光柱、地面光環、上飄光點） ----------
+const ADD = { transparent: true, blending: THREE.AdditiveBlending, depthWrite: false };
+const G = {}, TX = {}, FX = [], U = {}, P = { ring: {}, bub: {}, shadow: {} }, MON = {}, FLY = [];
+function ctex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d')); return new THREE.CanvasTexture(c); }
+function M(geo, color, o = {}) { return new THREE.Mesh(geo, new THREE.MeshBasicMaterial(Object.assign({ color, opacity: 0, side: THREE.DoubleSide }, ADD, o))); }
+function SP(map, color, o = {}) { return new THREE.Sprite(new THREE.SpriteMaterial(Object.assign({ map, color, opacity: 0 }, ADD, o))); }
+function flat(m, y = .05) { m.rotation.x = -Math.PI / 2; m.position.y = y; return m; }
+function addFx(dur, v, build) { const g = new THREE.Group(); if (v) g.position.copy(v); const upd = build(g); scene.add(g); FX.push({ g, t: 0, dur, upd }); upd(0, 0); }
+function killFx(f) { scene.remove(f.g); f.g.traverse(o => { if (o.material) o.material.dispose(); }); }
+const rnd = (a, b) => a + Math.random() * (b - a);
+
+function buildWorld() {
+  scene.background = new THREE.Color(0x141b52); scene.fog = new THREE.Fog(0x1a2166, 16, 46);
+  scene.add(new THREE.AmbientLight(0xb8c0ff, .95)); const dl = new THREE.DirectionalLight(0xdfe4ff, .7); dl.position.set(-4, 9, 6); scene.add(dl);
+  // 地面：夜色草地＋中央發光符文圈＋淡淡的站位格
+  const gt = ctex(1024, 512, g => {
+    const r = g.createRadialGradient(512, 256, 30, 512, 256, 520); r.addColorStop(0, '#34479f'); r.addColorStop(.55, '#243279'); r.addColorStop(1, '#141b52'); g.fillStyle = r; g.fillRect(0, 0, 1024, 512);
+    for (let i = 0; i < 160; i++) { g.fillStyle = `rgba(${Math.random() < .5 ? '120,140,255' : '90,60,170'},${rnd(.04, .1)})`; g.beginPath(); g.ellipse(rnd(0, 1024), rnd(0, 512), rnd(20, 90), rnd(8, 30), 0, 0, 7); g.fill(); }
+    g.strokeStyle = 'rgba(150,180,255,.35)'; g.lineWidth = 3; g.setLineDash([14, 10]); g.beginPath(); g.ellipse(512, 256, 330, 150, 0, 0, 7); g.stroke(); g.setLineDash([]); g.lineWidth = 2; g.beginPath(); g.ellipse(512, 256, 250, 112, 0, 0, 7); g.stroke();
+  });
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(34, 17), new THREE.MeshBasicMaterial({ map: gt, fog: true })); ground.rotation.x = -Math.PI / 2; ground.position.set(0, 0, .6); scene.add(ground);
+  const tiles = ctex(128, 128, g => { g.fillStyle = 'rgba(190,215,255,.16)'; g.fillRect(10, 10, 108, 108); g.strokeStyle = 'rgba(255,220,170,.75)'; g.lineWidth = 4; g.strokeRect(10, 10, 108, 108); });
+  for (const id of Core.ORDER) { const h = Core.HERO[id].home, m = flat(new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ map: tiles, transparent: true, depthWrite: false, opacity: .9 })), .02); m.position.x = h[0]; m.position.z = h[1]; m.scale.set(1.9, 1.9, 1); scene.add(m); }
+  // 水晶群
+  const cm = [0x7a4fd0, 0x4d6bff, 0xa56bff, 0x4fb8ff];
+  const crystal = (x, z, s) => { const gr = new THREE.Group(); for (let i = 0; i < 4; i++) { const c = new THREE.Mesh(new THREE.ConeGeometry(rnd(.35, .6), rnd(1.6, 3.2) * s, 5), new THREE.MeshLambertMaterial({ color: cm[i % 4], emissive: 0x2a1a70, flatShading: true })); c.position.set(rnd(-.7, .7), c.geometry.parameters.height / 2, rnd(-.5, .5)); c.rotation.set(rnd(-.25, .25), rnd(0, 6), rnd(-.25, .25)); gr.add(c); } const gl = SP(TX.glow, '#8a70ff'); gl.scale.set(3.4 * s, 3.4 * s, 1); gl.position.y = 1; gl.material.opacity = .45; gr.add(gl); gr.position.set(x, 0, z); scene.add(gr); return gr; };
+  [[-9, -4.2, 1.5], [-6, -5.2, 1.1], [-2.5, -5.8, 1.3], [2, -6, 1.6], [6.5, -5.4, 1.2], [10, -4.2, 1.5], [-10.5, 1.5, 1.4], [11, 2, 1.2], [-8, 5.2, 1], [8.5, 5.8, 1.1], [-3.5, 6.4, .8], [3.5, 6.4, .9]].forEach(a => crystal(...a));
+  // 魔法塔＋提燈
+  const tower = (x, z, s) => { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.45, 5.6, 12), new THREE.MeshLambertMaterial({ color: 0x8179c4, emissive: 0x1c1a50 })); b.position.y = 2.8; g.add(b); const ro = new THREE.Mesh(new THREE.ConeGeometry(1.9, 2.4, 12), new THREE.MeshLambertMaterial({ color: 0x2d3392, emissive: 0x10124a })); ro.position.y = 6.8; g.add(ro); const w = SP(TX.glow, '#ffd27a'); w.scale.set(2.2, 2.2, 1); w.position.set(0, 3.8, 1.3); w.material.opacity = .85; g.add(w); g.scale.setScalar(s); g.position.set(x, 0, z); scene.add(g); };
+  tower(-9.2, -4.8, 1.2); tower(9.6, -5.6, 1.3);
+  const lamp = (x, z) => { const p = new THREE.Mesh(new THREE.CylinderGeometry(.06, .08, 2.6, 6), new THREE.MeshLambertMaterial({ color: 0x242a66 })); p.position.set(x, 1.3, z); scene.add(p); const gl = SP(TX.glow, '#ffc86a'); gl.scale.set(1.8, 1.8, 1); gl.position.set(x, 2.7, z); gl.material.opacity = .9; scene.add(gl); };
+  lamp(-4.2, -3.6); lamp(4.8, -3.8); lamp(-7.5, 3.2); lamp(7.8, 3.4);
+  // 需求裂隙：背後的紫色傳送環
+  P.rift = new THREE.Group(); P.rift.position.set(6.2, 3.4, -5.8); scene.add(P.rift);
+  const rr = new THREE.Mesh(new THREE.TorusGeometry(2.6, .1, 10, 60), new THREE.MeshBasicMaterial({ color: 0xb79bff, ...ADD, opacity: .85 })); P.rift.add(rr); P.riftA = rr;
+  const rg = SP(TX.glow, '#8a5cff'); rg.scale.set(8, 8, 1); rg.material.opacity = .5; P.rift.add(rg);
+  const rin = M(G.plane, '#7a4fd0', { opacity: .3 }); rin.scale.set(4.6, 4.6, 1); P.rift.add(rin); P.riftB = rin;
+  // 投影幕與時鐘（懸浮在背景）
+  const mkPanel = (w, h, x, y, z) => { const c = document.createElement('canvas'); c.width = w * 100; c.height = h * 100; const t = new THREE.CanvasTexture(c); const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t, transparent: true, opacity: .92, fog: false })); m.position.set(x, y, z); scene.add(m); return { c, t, key: '' }; };
+  P.screen = mkPanel(4.8, 1.5, -2.8, 2.9, -5.4); P.clock = mkPanel(2, .8, -7, 2.4, -5);
+  // 螢火蟲
+  P.fly = Array.from({ length: 46 }, () => { const s = SP(TX.glow, Math.random() < .5 ? '#d8ff9a' : '#9ab8ff'); s.userData = { x: rnd(-9, 9), y: rnd(.4, 4), z: rnd(-5, 5), p: rnd(0, 6), sp: rnd(.2, .6), s: rnd(.18, .38) }; scene.add(s); return s; });
+}
+
+function init3d() {
+  renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: true });
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(36, W / H, .1, 100);
+  fit();
+  G.cyl = new THREE.CylinderGeometry(1, 1.3, 1, 28, 1, true); G.cyl.translate(0, .5, 0);
+  G.ring = new THREE.RingGeometry(.88, 1, 56); G.plane = new THREE.PlaneGeometry(1, 1); G.sph = new THREE.SphereGeometry(1, 28, 18); G.disc = new THREE.CircleGeometry(1, 40);
+  TX.glow = ctex(128, 128, g => { const r = g.createRadialGradient(64, 64, 2, 64, 64, 62); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(.35, 'rgba(255,255,255,.55)'); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(0, 0, 128, 128); });
+  TX.star = ctex(64, 64, g => { g.translate(32, 32); g.fillStyle = '#fff'; g.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 - Math.PI / 2, r = i % 2 ? 7 : 28; g.lineTo(Math.cos(a) * r, Math.sin(a) * r); } g.closePath(); g.fill(); });
+  TX.hex = ctex(128, 160, g => { g.translate(64, 80); g.beginPath(); [[0, -72], [52, -44], [52, 30], [0, 72], [-52, 30], [-52, -44]].forEach(p => g.lineTo(p[0], p[1])); g.closePath(); g.fillStyle = 'rgba(255,255,255,.28)'; g.fill(); g.lineWidth = 9; g.strokeStyle = '#fff'; g.lineJoin = 'round'; g.stroke(); g.beginPath(); g.moveTo(-24, 0); g.lineTo(-6, 20); g.lineTo(28, -22); g.lineWidth = 12; g.lineCap = 'round'; g.stroke(); });
+  TX.slash = ctex(128, 128, g => { g.translate(64, 64); g.beginPath(); g.arc(0, 30, 62, Math.PI * 1.15, Math.PI * 1.85); g.arc(0, 52, 70, Math.PI * 1.78, Math.PI * 1.22, true); g.closePath(); g.fillStyle = '#fff'; g.fill(); });
+  TX.plus = ctex(64, 64, g => { g.fillStyle = '#fff'; g.fillRect(24, 6, 16, 52); g.fillRect(6, 24, 52, 16); });
+  TX.ret = ctex(128, 128, g => { g.strokeStyle = '#fff'; g.lineWidth = 10; [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(([a, b]) => { g.beginPath(); g.moveTo(64 + a * 54, 64 + b * 22); g.lineTo(64 + a * 54, 64 + b * 54); g.lineTo(64 + a * 22, 64 + b * 54); g.stroke(); }); g.setLineDash([8, 8]); g.lineWidth = 4; g.strokeRect(24, 24, 80, 80); });
+  TX.grid = ctex(256, 256, g => { g.strokeStyle = '#fff'; g.lineWidth = 3; g.setLineDash([12, 8]); for (let i = 0; i <= 4; i++) { g.beginPath(); g.moveTo(i * 63 + 2, 0); g.lineTo(i * 63 + 2, 256); g.moveTo(0, i * 63 + 2); g.lineTo(256, i * 63 + 2); g.stroke(); } });
+  TX.circle = ctex(256, 256, g => { g.translate(128, 128); g.strokeStyle = '#fff'; g.lineWidth = 5; [120, 100, 58].forEach(r => { g.beginPath(); g.arc(0, 0, r, 0, 7); g.stroke(); }); g.lineWidth = 3; for (let k = 0; k < 2; k++) { g.beginPath(); for (let i = 0; i < 3; i++) { const a = i * 2.094 + k * 1.047; g.lineTo(Math.cos(a) * 100, Math.sin(a) * 100); } g.closePath(); g.stroke(); } for (let i = 0; i < 12; i++) { const a = i * .5236; g.fillStyle = '#fff'; g.fillRect(Math.cos(a) * 110 - 4, Math.sin(a) * 110 - 4, 8, 8); } });
+  buildWorld();
+  ['note', 'armor', 'clone', 'hydra'].forEach(k => { const im = new Image(); im.onload = () => { const t = new THREE.Texture(im); t.needsUpdate = true; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; MON[k] = { t, ar: im.width / im.height }; }; im.src = 'monsters/' + k + '.webp'; });
+  for (const id of Core.ORDER) {
+    const sh = flat(new THREE.Mesh(G.disc, new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .35, depthWrite: false })), .03); sh.scale.set(.62, .4, 1); scene.add(sh); P.shadow[id] = sh;
+    const r = flat(M(G.ring, COL[id], { opacity: .7 }), .04); r.scale.setScalar(.78); scene.add(r); P.ring[id] = r;
+    const b = M(G.sph, '#7fd0ff', { side: THREE.FrontSide }); b.scale.set(1.05, 1.35, 1.05); scene.add(b); P.bub[id] = b;
+    U[id] = heroUnit(id);
+  }
+  P.orbit = new THREE.Group(); scene.add(P.orbit);
+  P.plates = [0, 1, 2, 3, 4].map(() => { const m = M(G.plane, COL.machi, { map: TX.hex }); m.scale.set(.8, 1, 1); P.orbit.add(m); return m; });
+  P.oring = flat(M(G.ring, COL.machi), .07); P.orbit.add(P.oring);
+  P.aura = SP(TX.glow, COL.noise); P.aura.position.y = 1.1; P.aura.scale.setScalar(3.4); scene.add(P.aura);
+  P.revert = flat(M(G.ring, '#b79bff'), .08); scene.add(P.revert);
+  P.dead = flat(M(G.plane, '#ff3b2f', { map: TX.glow }), .04); P.dead.scale.set(11, 8, 1); scene.add(P.dead);
+  P.k = 0;
+}
+function heroUnit(id) {
+  const t = new THREE.TextureLoader().load('../pixel-plaza/sprites-hd/' + Core.HERO[id].name + '.webp');
+  t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; t.repeat.set(1 / 12, 1); t.offset.set(3 / 12, 0);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, alphaTest: .2 }));
+  sp.center.set(.5, 6 / 240); sp.scale.set(2.3, 2.3, 1); scene.add(sp); return sp;
+}
+const SPEC = { note: { w: 70, h: 70, ox: 35, oy: 35, foot: 66, f: .026 }, armor: { w: 100, h: 112, ox: 50, oy: 58, foot: 106, f: .027 }, clone: { w: 100, h: 110, ox: 50, oy: 52, foot: 100, f: .027 }, hydra: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 } };
+function enemyUnit(e) {
+  const s = SPEC[e.kind], c = document.createElement('canvas'); c.width = s.w * 2; c.height = s.h * 2;
+  const t = new THREE.CanvasTexture(c); t.generateMipmaps = false; t.minFilter = THREE.LinearFilter;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, alphaTest: .15 }));
+  sp.center.set(s.ox / s.w, 1 - s.foot / s.h);
+  const ret = SP(TX.ret, COL.anna, { depthTest: false }); scene.add(ret);
+  const sh = flat(new THREE.Mesh(G.disc, new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .35, depthWrite: false })), .03); scene.add(sh);
+  sp.userData = { c, t, s, key: null, ret, sh, img: false }; scene.add(sp); return sp;
+}
+function paintTo(c, sc, ox, oy, fn) { const g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height); g.setTransform(sc, 0, 0, sc, ox * sc, oy * sc); const o = ctx; ctx = g; fn(); ctx = o; }
+function dropUnit(uid) { const sp = U[uid]; if (!sp) return; scene.remove(sp); scene.remove(sp.userData.ret); scene.remove(sp.userData.sh); sp.userData.ret.material.dispose(); sp.userData.t.dispose(); sp.material.dispose(); delete U[uid]; delete R[uid]; }
+function resetUnits() { for (const k in U) if (!Core.HERO[k]) dropUnit(k); for (const k in R) if (!Core.HERO[k]) delete R[k]; FX.forEach(killFx); FX.length = 0; slowT = 0; zoomT = 0; }
+
+function fxBeam(v, col, big) {
+  const D = big ? 2.3 : 1.1;
+  addFx(D, v, g => {
+    const r = big ? .66 : .4, h = big ? 7.5 : 4.2;
+    const beam = M(G.cyl, col); g.add(beam);
+    const core = M(G.cyl, '#ffffff'); core.scale.set(r * .4, h, r * .4); g.add(core);
+    const pool = flat(M(G.plane, col, { map: TX.glow })); pool.scale.setScalar(big ? 3.8 : 2.3); g.add(pool);
+    const rings = Array.from({ length: big ? 3 : 1 }, () => { const m = flat(M(G.ring, col), .06); g.add(m); return m; });
+    const sparks = Array.from({ length: big ? 24 : 8 }, (_, i) => { const s = SP(i % 3 ? TX.glow : TX.star, col); s.userData = { a: Math.random() * 6.283, rad: .3 + Math.random() * .8, v: 1 + Math.random() * 1.8, d: Math.random() * D * .4, s: .16 + Math.random() * .26 }; g.add(s); return s; });
+    return t => {
+      const env = Math.min(1, t / .15) * Math.min(1, (D - t) / (D * .45)), w = 1 + Math.sin(t * 10) * .07;
+      beam.material.opacity = .42 * env; beam.scale.set(r * w, h, r * w); beam.rotation.y = t * 2; core.material.opacity = .3 * env;
+      pool.material.opacity = .9 * env;
+      rings.forEach((m, i) => { const q = (t - i * .35) / (D * .5); if (q < 0 || q > 1) { m.material.opacity = 0; return; } m.scale.setScalar(.5 + q * (big ? 3 : 1.8)); m.material.opacity = .9 * (1 - q); });
+      sparks.forEach(s => { const u = s.userData, q = Math.max(0, t - u.d), y = q * u.v * 1.6; s.position.set(Math.cos(u.a + q * 2.4) * u.rad, .1 + y, Math.sin(u.a + q * 2.4) * u.rad); s.material.opacity = q > 0 ? Math.min(1, q * 5) * Math.max(0, 1 - y / (h * .7)) * env : 0; s.scale.setScalar(u.s); });
+    };
+  });
+}
+function fxRing(v, col, r0, r1, dur) { addFx(dur, v, g => { const m = flat(M(G.ring, col), .07); g.add(m); return (t, q) => { m.scale.setScalar(r0 + (r1 - r0) * q); m.material.opacity = 1 - q; }; }); }
+function fxImpact(v, col, size) { addFx(.28, v, g => { const s = SP(TX.glow, col, { depthTest: false }); g.add(s); return (t, q) => { s.scale.setScalar(size * (.4 + q)); s.material.opacity = .9 * (1 - q); }; }); }
+function fxSlash(v, col, big) { addFx(.3, v, g => { const s = SP(TX.slash, col, { depthTest: false, rotation: Math.random() * 6.283 }); g.add(s); const z = big ? 2.6 : 1.5; return (t, q) => { s.scale.setScalar(z * (.6 + q * .6)); s.material.opacity = 1 - q * q; }; }); }
+function fxBolt(a, b, col, size = .8) { const dur = Math.max(.16, Math.min(.6, a.distanceTo(b) / 15)); addFx(dur, null, g => { const dots = [0, 1, 2, 3, 4].map(i => { const s = SP(TX.glow, col); s.scale.setScalar(size * (1 - i * .15)); g.add(s); return s; }); return (t, q) => dots.forEach((s, i) => { const k = Math.max(0, Math.min(1, q * 1.15 - i * .05)); s.position.lerpVectors(a, b, k); s.material.opacity = k > 0 && k < 1 ? 1 - i * .18 : 0; }); }); }
+function fxTrail(a, b, col, dur, size = .9) { addFx(dur, null, g => { const n = 12, dots = Array.from({ length: n }, (_, i) => { const s = SP(TX.glow, col); s.position.lerpVectors(a, b, i / (n - 1)); g.add(s); return s; }); return (t, q) => dots.forEach((s, i) => { const k = Math.max(0, Math.min(1, q * 3 - i / n)); s.material.opacity = k * (1 - q); s.scale.setScalar(size * (1 - q * .5)); }); }); }
+function fxHeal(v) { addFx(1, v, g => { const ps = Array.from({ length: 6 }, () => { const s = SP(TX.plus, '#7ff0a6'); s.userData = { x: Math.random() * 1.2 - .6, z: Math.random() * .8 - .4, d: Math.random() * .3, s: .22 + Math.random() * .16 }; g.add(s); return s; }); const r = flat(M(G.ring, COL.leona), .07); g.add(r); return (t, q) => { ps.forEach(s => { const u = s.userData, k = Math.max(0, t - u.d); s.position.set(u.x, .3 + k * 2.4, u.z); s.scale.setScalar(u.s); s.material.opacity = k > 0 ? Math.max(0, 1 - k / .7) : 0; }); r.scale.setScalar(.4 + q * 1.1); r.material.opacity = 1 - q; }; }); }
+function foeC() { const en = Core.alive(S.enemies); return en.length ? centroid(en) : new THREE.Vector3(4, 0, .4); }
+function fxGrid(big) { addFx(.9, foeC(), g => { const m = flat(M(G.plane, COL.amber, { map: TX.grid }), .06); g.add(m); return (t, q) => { const k = 1.25 - q * .25; m.scale.set(7 * k, 6.6 * k, 1); m.material.opacity = Math.sin(q * Math.PI) * (big ? 1 : .7); }; }); }
+function fxCircle() { addFx(2.6, foeC(), g => { const m = flat(M(G.plane, COL.amber, { map: TX.circle }), .08); m.scale.set(8, 8, 1); g.add(m); return (t, q) => { m.rotation.z = t * .9; m.material.opacity = Math.min(1, t * 3) * Math.min(1, (2.6 - t) * 2); }; }); }
+function fxPoof(v, col) { addFx(.45, v, g => { const ds = Array.from({ length: 8 }, (_, i) => { const s = SP(TX.glow, col); s.userData = { a: i * .785, r: .6 + Math.random() * .8 }; g.add(s); return s; }); return (t, q) => ds.forEach(s => { const u = s.userData; s.position.set(Math.cos(u.a) * u.r * q, Math.sin(u.a) * u.r * q * .8, 0); s.scale.setScalar(.7 * (1 - q * .5)); s.material.opacity = 1 - q; }); }); }
+function fxDust(v) { addFx(.4, v, g => { const s = SP(TX.glow, '#9fb2ff'); g.add(s); return (t, q) => { s.position.y = .1 + q * .35; s.scale.setScalar(.35 + q * .5); s.material.opacity = .45 * (1 - q); }; }); }
+function fxAlign() { const ps = Core.ORDER.filter(id => Core.hero(S, id).alive).map(id => { const v = rpos(Core.hero(S, id)); v.y = .15; return v; }); ps.forEach((p, i) => { fxTrail(p, ps[(i + 1) % ps.length], COL.leona, 1.3, .6); fxRing(p, COL.leona, .4, 1.6, .9); }); }
+
+function handle(e) {
+  if (e.type === 'hit') {
+    const d = find(e.dst); if (!d) return; const s = e.src && find(e.src);
+    { const r = rs(d); r.flash = .18; r.hitAt = T; r.hitDir = s ? (Math.sign(d.x - s.x) || 1) : 1; r.hitPow = (d.boss ? .22 : 1) * Math.max(.55, Math.min(1.5, .55 + 4 * e.amt / d.max)); }
+    if (e.amt > 0 && (d.side === 'hero' || e.crit || e.ult || e.amt >= 150)) float(d, (e.crit ? '暴擊 ' : '') + e.amt, d.side === 'hero' ? (e.shield >= e.amt ? '#8fd6ff' : '#ff8a7a') : (e.crit ? '#ffd166' : '#fff'), e.crit || e.amt > 600 ? 20 : 14);
+    const col = s && s.side === 'hero' ? COL[s.id] : (e.src ? '#ff6b5e' : '#ffd166');
+    fxImpact(mid(d), col, e.crit || e.ult ? 2.1 : 1);
+    if (s && (s.id === 'noise' || s.id === 'anna')) fxSlash(mid(d), col, e.ult || e.crit);
+    if (d.side === 'hero' && e.amt > 300) shake = .25;
+  }
+  if (e.type === 'heal') { const d = find(e.dst); if (d && e.amt > 0) { float(d, '+' + e.amt, '#7ff0a6', 16, .3); if (d.side === 'hero') fxHeal(rpos(d)); } }
+  if (e.type === 'shield') { const d = find(e.dst); if (d) fxRing(rpos(d), '#8fd6ff', .4, 1.5, .5); }
+  if (e.type === 'basic') {
+    const s = find(e.src), d = find(e.dst); if (!s || !d) return;
+    const ranged = ['amber', 'leona'].includes(s.id) || s.kind === 'clone' || s.boss;
+    if (ranged) { const a = mid(s); if (s.side === 'hero') a.y = 1.5; fxBolt(a, mid(d), s.side === 'hero' ? COL[s.id] : '#d08cff', s.boss ? 1.4 : .9); }
+    else rs(s).lunge = .22;
+    rs(s).atkAt = T;
+  }
+  if (e.type === 'dash') { const s = find(e.src), d = find(e.dst); if (s && d) { const a = new THREE.Vector3(e.fx, 1, e.fz), r = rs(s); r.x = s.x; r.z = s.z; fxTrail(a, mid(s), COL.anna, e.ult ? .7 : .4, e.ult ? 1.4 : .8); } }
+  if (e.type === 'cast') {
+    const s = find(e.src); if (!s) return;
+    if (s.side === 'hero') {
+      fxBeam(rpos(s), COL[s.id], !!e.ult); rs(s).hop = .55; rs(s).atkAt = T;
+      if (e.ult) { flashA = .3; slowT = .5; zoomT = 1.1; zoomWho = s.uid; showSkill(e.name, COL[s.id], s.id); }
+    }
+    if (e.ult && s.id === 'amber') fxCircle();
+    if (e.ult && s.id === 'machi') Core.ORDER.forEach(id => fxRing(rpos(Core.hero(S, id)), COL.machi, .3, 1.8, .8));
+  }
+  if (e.type === 'grid') fxGrid(e.big);
+  if (e.type === 'barrage') { shake = .12; Core.alive(S.enemies).forEach(x => fxBeam(rpos(x), COL.amber, false)); }
+  if (e.type === 'align') fxAlign();
+  if (e.type === 'combo') banner('連攜｜' + e.name, '', '#ffd166');
+  if (e.type === 'boss') { banner('九頭蛇｜' + e.name, '', '#ff6b5e'); if (e.kind === 'confuse') Core.alive(S.heroes).forEach(h => { if (h.st.confuse) fxImpact(mid(h), '#b79bff', 2.4); }); }
+  if (e.type === 'interrupt') { banner('打斷成功', '', '#7ff0a6'); const b = S.enemies.find(x => x.boss); if (b) fxRing(rpos(b), '#ffffff', 1, 4.5, .6); }
+  if (e.type === 'blast') { shake = .5; flashA = .6; const b = S.enemies.find(x => x.boss); if (b) fxRing(rpos(b), '#ff3b2f', 1, 16, .7); Core.alive(S.heroes).forEach(h => fxImpact(mid(h), '#ff3b2f', 3.2)); }
+  if (e.type === 'debuff') { const d = find(e.dst); if (d) float(d, e.name, '#c7c7c7', 13, .4); }
+  if (e.type === 'cleanse') { const d = find(e.dst); if (d) { float(d, '已整理', '#3fd0b4', 14, .4); fxRing(rpos(d), COL.leona, .3, 1.6, .6); } }
+  if (e.type === 'die') { const d = find(e.uid); if (d && d.side === 'enemy') fxPoof(mid(d), d.kind === 'note' ? '#ffe27a' : '#b48cff'); }
+  if (e.type === 'wave') { banner(`第 ${e.n} 波｜${['', '插單小怪', '意見分身', '版本九頭蛇'][e.n]}`, '', '#5fe08a'); $('waveP').textContent = `第 ${e.n}／3 波`; }
+  if (e.type === 'clear') banner('清場', '', '#5fe08a');
+  if (e.type === 'deliver') {
+    banner('五人連攜｜準時交付', '', '#ffd166'); flashA = .8; shake = .4; slowT = .6;
+    Core.ORDER.forEach(id => { const h = Core.hero(S, id); if (!h.alive) return; fxBeam(rpos(h), COL[id], true); const v = rpos(h); v.y = 3; fx.push({ v, txt: '「' + FINALE[id] + '」', col: COL[id], size: 13, life: 1.6, max: 1.6 }); });
+    S.enemies.forEach(x => { if (x.alive || x.boss) fxBeam(rpos(x), '#ffd166', true); });
+    fxRing(foeC(), '#ffd166', 1, 14, 1);
+  }
+  if (e.type === 'won' || e.type === 'lost') setTimeout(() => finish(e.type === 'won'), 1600);
+}
+
+function ult(id) { if (running && !paused && S && Core.castUlt(S, id)) drain(); }
+function doDeliver() { if (running && !paused && S && Core.deliver(S)) drain(); }
+function drain() { for (const e of S.events) handle(e); S.events.length = 0; }
+
+// ---------- 繪圖 ----------
+function rr(x, y, w, h, r, fill, lw = 3) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (lw) { ctx.lineWidth = lw; ctx.strokeStyle = '#000'; ctx.stroke(); } }
+function circ(x, y, r, fill, lw = 3) { ctx.beginPath(); ctx.arc(x, y, r, 0, 7); if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (lw) { ctx.lineWidth = lw; ctx.strokeStyle = '#000'; ctx.stroke(); } }
+function text(t, x, y, size, col, align = 'center', weight = 700) { ctx.font = `${weight} ${size}px "PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif`; ctx.textAlign = align; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.lineJoin = 'round'; ctx.strokeText(t, x, y); ctx.fillStyle = col; ctx.fillText(t, x, y); }
+function hpbar(x, y, w, u, col) {
+  rr(x - w / 2, y, w, 7, 3, '#0a1a13', 2);
+  ctx.fillStyle = col; ctx.fillRect(x - w / 2 + 1, y + 1, Math.max(0, (w - 2) * u.hp / u.max), 5);
+  if (u.shield > 0) { ctx.fillStyle = '#8fd6ff'; ctx.fillRect(x - w / 2 + 1, y - 3, Math.min(w - 2, (w - 2) * u.shield / u.max * 2), 3); }
+}
+function tags(u, x, y) {
+  const m = { taunt: ['嘲諷', '#5b8def'], broken: ['破防', '#ef5b45'], mark: ['弱點', '#a77bff'], slow: ['緩速', '#f5a93b'], confuse: ['混亂', '#b79bff'], delay: ['拖延', '#aaa'], cover: ['防線', '#8fd6ff'], frenzy: ['狂刃', '#ef5b45'], immune: ['對齊', '#3fd0b4'], guard: ['窗口', '#5b8def'] };
+  const list = Object.keys(u.st).filter(k => ['taunt', 'broken', 'mark', 'confuse', 'delay'].includes(k)); if (!list.length) return;
+  ctx.font = '700 11px "PingFang TC",sans-serif'; ctx.textAlign = 'center';
+  const sx = x - list.length * 15 + 15;
+  list.forEach((k, i) => { rr(sx + i * 30 - 14, y - 11, 28, 15, 5, m[k][1], 1.5); ctx.fillStyle = '#000'; ctx.fillText(m[k][0], sx + i * 30, y); });
+}
+function art(e) {
+  if (e.kind === 'note') {
+    rr(-26, -26, 52, 52, 4, e.slot % 3 === 0 ? '#ff9e8a' : '#ffe27a');
+    ctx.fillStyle = '#000'; ctx.fillRect(-12, -2, 6, 8); ctx.fillRect(6, -2, 6, 8);
+    ctx.beginPath(); ctx.moveTo(-16, -8); ctx.lineTo(-4, -4); ctx.moveTo(16, -8); ctx.lineTo(4, -4); ctx.lineWidth = 3; ctx.stroke();
+    ctx.font = '800 11px "PingFang TC",sans-serif'; ctx.textAlign = 'center'; ctx.fillText(['急件', '小改一下', '插單', '再一版'][e.slot % 4], 0, -13);
+  }
+  if (e.kind === 'armor') {
+    const br = !!e.st.broken;
+    rr(-40, -52, 80, 96, 8, br ? '#6d7780' : '#b9c4cc'); rr(-40, -52, 80, 20, 8, '#5d6a75');
+    ctx.fillStyle = '#fff'; ctx.font = '700 11px ui-monospace,monospace'; ctx.textAlign = 'center'; ctx.fillText('舊版_v' + (e.slot + 1), 0, -38);
+    ctx.fillStyle = '#000'; ctx.fillRect(-18, -12, 8, 10); ctx.fillRect(10, -12, 8, 10); ctx.fillRect(-12, 12, 24, 5);
+  }
+  if (e.kind === 'clone') {
+    ctx.beginPath(); ctx.roundRect(-44, -46, 88, 70, 22); ctx.fillStyle = '#b48cff'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-20, 22); ctx.lineTo(-34, 44); ctx.lineTo(-2, 24); ctx.fillStyle = '#b48cff'; ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#000'; ctx.fillRect(-22, -22, 8, 12); ctx.fillRect(12, -22, 8, 12);
+  }
+  if (e.boss) {
+    const heads = [['final', -150, -110], ['final2', -170, -30], ['最新版', -165, 55], ['真的最終版', -70, -165], ['以這版為準', 40, -175]];
+    heads.forEach(([lb, hx, hy], i) => {
+      const wob = Math.sin(T * 2 + i * 1.7) * 8;
+      ctx.beginPath(); ctx.moveTo(0, -10); ctx.quadraticCurveTo(hx * .5, hy * .5 - 30 + wob, hx, hy + wob);
+      ctx.lineWidth = 16; ctx.strokeStyle = '#000'; ctx.stroke(); ctx.lineWidth = 10; ctx.strokeStyle = '#7a4fd0'; ctx.stroke();
+      rr(hx - 52, hy - 18 + wob, 104, 36, 8, '#f4f1ff'); rr(hx - 52, hy - 18 + wob, 104, 11, 5, '#7a4fd0', 2);
+      ctx.fillStyle = '#1a1030'; ctx.font = '800 12px "PingFang TC",sans-serif'; ctx.textAlign = 'center'; ctx.fillText(lb, hx, hy + 11 + wob);
+    });
+    rr(-80, -60, 160, 170, 16, '#5a3aa8'); rr(-64, -44, 128, 96, 8, '#efeaff'); rr(-64, -44, 128, 16, 6, '#7a4fd0', 2);
+    ctx.fillStyle = '#000'; ctx.fillRect(-34, -14, 14, 20); ctx.fillRect(20, -14, 14, 20);
+  }
+}
+function panels() {
+  const g = Math.floor(T * 6) % 5, name = '最終確認' + ['', '_final', '_final2', '_最新版', '_真的最終版'][S && S.wave === 3 ? g : 0] + '.pdf';
+  if (P.screen.key !== name) { P.screen.key = name; paintTo(P.screen.c, 1, 0, 0, () => { rr(3, 3, 474, 144, 12, 'rgba(233,255,241,.92)', 6); ctx.fillStyle = '#123324'; ctx.font = '800 32px "PingFang TC",sans-serif'; ctx.textAlign = 'center'; ctx.fillText(name, 240, 72); ctx.font = '600 20px "PingFang TC",sans-serif'; ctx.fillStyle = '#4b7a61'; ctx.fillText('會議室 A　投影中', 240, 112); }); P.screen.t.needsUpdate = true; }
+  const ck = '17:5' + (S ? Math.min(9, Math.floor(S.t / 20)) : 0);
+  if (P.clock.key !== ck) { P.clock.key = ck; paintTo(P.clock.c, 1, 0, 0, () => { rr(3, 3, 194, 74, 12, 'rgba(29,74,54,.95)', 6); text(ck, 100, 56, 40, '#ffd166'); }); P.clock.t.needsUpdate = true; }
+}
+const lerp = (a, b, k) => a + (b - a) * Math.min(1, k);
+function springs(r) {
+  const ht = T - r.hitAt, hs = ht < 1.1 ? Math.exp(-ht * 7) * Math.cos(ht * 26) * r.hitPow : 0;
+  const kb = ht < .6 ? Math.exp(-ht * 9) * r.hitPow * .5 * r.hitDir : 0;
+  const at = T - r.atkAt; let ax = 0, ay = 0;
+  if (at < .1) { const q = at / .1; ax = .14 * q; ay = -.18 * q; } else if (at < .38) { const q = (at - .1) / .28, w = Math.sin(q * Math.PI); ax = .14 * (1 - q) - .12 * w; ay = -.18 * (1 - q) + .2 * w; }
+  return { sx: .45 * hs + ax, sy: -.38 * hs + ay, kb, tilt: ht < 1 ? -r.hitDir * .32 * Math.exp(-ht * 6) * Math.sin(ht * 22) * r.hitPow : 0 };
+}
+const faceFrame = (fx, fz) => Math.round((((Math.atan2(fx, fz) * 180 / Math.PI) % 360) + 360) % 360 / 30) % 12;
+function sync(dt) {
+  panels();
+  for (const k in R) { R[k].lunge = Math.max(0, R[k].lunge - dt); R[k].flash = Math.max(0, R[k].flash - dt); R[k].hop = Math.max(0, R[k].hop - dt); }
+  const heroes = S ? S.heroes : Core.ORDER.map(id => ({ id, uid: id, side: 'hero', alive: true, shield: 0, st: {}, x: Core.HERO[id].home[0], z: Core.HERO[id].home[1], fx: 1, fz: .25, mvg: false }));
+  dustT -= dt; const doDust = dustT <= 0; if (doDust) dustT = .13;
+  for (const h of heroes) {
+    const sp = U[h.uid], r = rs(h), k = Math.min(1, dt * 12);
+    r.x += (h.x - r.x) * k; r.z += (h.z - r.z) * k;
+    const lx = r.lunge > 0 ? Math.sin(r.lunge / .22 * Math.PI) * .6 : 0;
+    const q = springs(r);
+    const v = new THREE.Vector3(r.x + h.fx / (Math.hypot(h.fx, h.fz) || 1) * lx + q.kb, 0, r.z + h.fz / (Math.hypot(h.fx, h.fz) || 1) * lx);
+    v.y = h.alive ? (h.mvg ? Math.abs(Math.sin(T * 13)) * .12 : Math.abs(Math.sin(T * 3)) * .04) + (r.hop > 0 ? Math.sin(r.hop / .55 * Math.PI) * .8 : 0) : 0;
+    sp.position.copy(v);
+    if (h.alive && h.mvg && doDust) fxDust(new THREE.Vector3(r.x, 0, r.z));
+    sp.material.map.offset.x = faceFrame(h.fx, h.fz) / 12;
+    sp.material.rotation = h.alive ? q.tilt : lerp(sp.material.rotation, 1.45, dt * 8);
+    sp.scale.set(2.3 * (1 + q.sx), 2.3 * (1 + q.sy), 1);
+    sp.material.color.set(!h.alive ? '#666' : r.flash > 0 ? '#ff9a8c' : h.st.confuse ? '#cdb8ff' : '#fff');
+    const sh = P.shadow[h.id]; sh.position.x = r.x; sh.position.z = r.z; sh.scale.setScalar(.62 * (1 - Math.min(.4, v.y * .4)));
+    const ring = P.ring[h.id]; ring.position.x = r.x; ring.position.z = r.z; ring.material.opacity = h.alive ? .7 : .15; ring.rotation.z = T * .6;
+    const b = P.bub[h.id]; b.position.set(r.x, 1.1, r.z); b.material.opacity = lerp(b.material.opacity, h.alive && h.shield > 0 ? .2 + Math.sin(T * 5) * .04 : 0, dt * 8);
+  }
+  const m = heroes[0], mr = R.machi, on = m.alive && (m.st.guard || m.st.cover);
+  P.orbit.position.set(mr.x, 0, mr.z);
+  P.k = lerp(P.k, on ? 1 : 0, dt * 6);
+  const rad = m.st.cover ? 1.5 : 1.15;
+  P.plates.forEach((p, i) => { const a = T * 2.2 + i * 1.2566; p.position.set(Math.cos(a) * rad, 1.15 + Math.sin(T * 3 + i) * .12, Math.sin(a) * rad); p.rotation.y = Math.PI / 2 - a; p.material.opacity = .95 * P.k; });
+  P.oring.scale.setScalar(rad * 1.12); P.oring.rotation.z = -T * 1.5; P.oring.material.opacity = .8 * P.k;
+  const nz = heroes[1], nr = R.noise; P.aura.position.set(nr.x, 1.1, nr.z); P.aura.material.opacity = lerp(P.aura.material.opacity, nz.alive && nz.st.frenzy ? .55 + Math.sin(T * 14) * .15 : 0, dt * 8);
+  const cast = S && S.boss && S.boss.cast, bossU = S && S.enemies.find(e => e.boss && e.alive);
+  if (bossU) { const bp = rpos(bossU); P.revert.position.x = bp.x; P.revert.position.z = bp.z; }
+  P.revert.material.opacity = lerp(P.revert.material.opacity, cast && cast.kind === 'revert' ? .9 : 0, dt * 8); P.revert.scale.setScalar(3.4 + Math.sin(T * 8) * .25); P.revert.rotation.z = T * 2;
+  P.dead.position.x = -2.5; P.dead.material.opacity = lerp(P.dead.material.opacity, cast && cast.kind === 'deadline' ? (.25 + (1 - cast.t / cast.max) * .5) * (.75 + Math.sin(T * 12) * .25) : 0, dt * 8);
+  P.riftA.rotation.z = T * .5; P.riftB.rotation.z = -T * .3; P.rift.scale.setScalar(1 + Math.sin(T * 1.6) * .03);
+  P.fly.forEach(s => { const u = s.userData; s.position.set(u.x + Math.sin(T * u.sp + u.p) * .8, u.y + Math.sin(T * u.sp * 1.7 + u.p) * .4, u.z + Math.cos(T * u.sp + u.p) * .6); s.material.opacity = .35 + .3 * Math.sin(T * 2 + u.p); s.scale.setScalar(u.s); });
+  if (!S) return;
+  for (const e of S.enemies) {
+    if (!e.alive) { dropUnit(e.uid); continue; }
+    const sp = U[e.uid] || (U[e.uid] = enemyUnit(e)), d = sp.userData, r = rs(e), k = Math.min(1, dt * 10);
+    r.x += (e.x - r.x) * k; r.z += (e.z - r.z) * k;
+    const mon = MON[e.kind];
+    if (mon && !d.img) { d.img = true; sp.material.map = mon.t; sp.material.needsUpdate = true; sp.center.set(.5, .03); }
+    if (!d.img) { const key = e.boss ? T : e.kind === 'armor' ? !!e.st.broken : 0; if (d.key !== key) { d.key = key; paintTo(d.c, 2, d.s.ox, d.s.oy, () => art(e)); d.t.needsUpdate = true; } }
+    const age = Math.min(1, (T - r.born) / .3);
+    const lx = r.lunge > 0 ? Math.sin(r.lunge / .22 * Math.PI) * .55 : 0, fl = Math.hypot(e.fx, e.fz) || 1;
+    const q = springs(r);
+    const v = new THREE.Vector3(r.x + e.fx / fl * lx + q.kb, 0, r.z + e.fz / fl * lx);
+    if (e.kind === 'clone') v.y = .5 + Math.sin(T * 2) * .14;
+    else if (e.kind === 'note') { v.y = (e.mvg ? Math.abs(Math.sin(T * 11 + e.slot)) * .22 : Math.abs(Math.sin(T * 4 + e.slot)) * .08); sp.material.rotation = Math.sin(T * (e.mvg ? 11 : 4) + e.slot) * .1 + q.tilt; }
+    else if (e.kind === 'armor') { v.y = e.mvg ? Math.abs(Math.sin(T * 6)) * .1 : 0; sp.material.rotation = q.tilt; }
+    else if (e.boss) { v.y = Math.sin(T * 1.5) * .08; sp.material.rotation = q.tilt; }
+    if (e.kind === 'clone') sp.material.rotation = q.tilt;
+    sp.position.copy(v);
+    if (d.img) sp.scale.set(MH[e.kind] * mon.ar * age * (1 + q.sx), MH[e.kind] * age * (1 + q.sy), 1); else sp.scale.set(d.s.w * d.s.f * age * (1 + q.sx), d.s.h * d.s.f * age * (1 + q.sy), 1);
+    sp.material.color.set(r.flash > 0 ? '#ffb0a6' : e.st.broken ? '#ffb89a' : '#fff');
+    d.sh.position.x = r.x; d.sh.position.z = r.z; d.sh.scale.set(e.rad * 1.2, e.rad * .8, 1);
+    if (e.mvg && doDust && e.kind !== 'clone') fxDust(new THREE.Vector3(r.x, 0, r.z));
+    d.ret.position.copy(mid(e)); d.ret.scale.setScalar((e.boss ? 2.6 : 1.9) * (1 + Math.sin(T * 6) * .08)); d.ret.material.rotation = T * .8; d.ret.material.opacity = lerp(d.ret.material.opacity, e.st.mark ? .95 : 0, dt * 10);
+  }
+  for (const k in U) if (!Core.HERO[k] && !S.enemies.some(e => e.uid === k && e.alive)) dropUnit(k);
+}
+function cameraStep(dt) {
+  let fxx = -1, fzz = .3, kk = 1, fov = 34;
+  if (S) {
+    const hs = Core.alive(S.heroes), en = Core.alive(S.enemies);
+    if (hs.length) { const hc = centroid(hs), ec = en.length ? centroid(en) : null; fxx = ec ? hc.x * .55 + ec.x * .45 : hc.x + 1.2; fzz = ec ? hc.z * .5 + ec.z * .5 : hc.z; }
+    if (zoomT > 0 && zoomWho) { const w = find(zoomWho); if (w) { const p = rpos(w), q = Math.sin(Math.min(1, zoomT / 1.1) * Math.PI); fxx = lerp(fxx, p.x + 1.6, q * .5); fzz = lerp(fzz, p.z, q * .5); kk = 1 - .14 * q; fov = 34 - 3 * q; } zoomT -= dt; }
+  }
+  fxx = Math.max(-2.6, Math.min(3, fxx)); fzz = Math.max(-1.2, Math.min(1.6, fzz));
+  CAM.x = lerp(CAM.x, fxx, dt * 2.2); CAM.z = lerp(CAM.z, fzz, dt * 2.2); CAM.k = lerp(CAM.k, kk, dt * 5); CAM.fov = lerp(CAM.fov, fov, dt * 5);
+  camera.fov = CAM.fov; camera.updateProjectionMatrix();
+  camera.position.set(CAM.x + Math.sin(T * .3) * .25, 10.2 * CAM.k + .3, CAM.z + 19.8 * CAM.k);
+  if (shake > 0) { shake -= dt; camera.position.x += (Math.random() - .5) * .25; camera.position.y += (Math.random() - .5) * .2; }
+  camera.lookAt(CAM.x + .4, .5, CAM.z + .9);
+}
+function draw(dt) {
+  T += dt;
+  sync(dt);
+  for (let i = FX.length - 1; i >= 0; i--) { const f = FX[i]; f.t += dt; if (f.t >= f.dur) { killFx(f); FX.splice(i, 1); } else f.upd(f.t, f.t / f.dur); }
+  cameraStep(dt);
+  renderer.render(scene, camera);
+
+  ctx = ui; ui.clearRect(0, 0, W, H);
+  if (S) {
+    for (const h of S.heroes) {
+      const v = rpos(h), [x, y] = scr(v, 2.5), [nx, ny] = scr(v, -.12);
+      if (h.alive) { hpbar(x, y, 58, h, '#5fe08a'); tags(h, x, y - 8); }
+    }
+    for (const e of S.enemies) {
+      if (!e.alive) continue;
+      if (e.boss) { const [x, y] = scr(rpos(e), -.1); tags(e, x, y + 16); continue; }
+      const [x, y] = scr(rpos(e), tall(e) + (e.kind === 'clone' ? .5 : 0));
+      hpbar(x, y, e.kind === 'note' ? 44 : 70, e, '#ff6b5e'); tags(e, x, y - 8);
+    }
+  }
+  for (const f of fx) {
+    f.life -= dt; const a = Math.max(0, f.life / f.max), [x, y] = scr(f.v);
+    ui.globalAlpha = Math.min(1, a * 2); text(f.txt, x, y - (1 - a) * 34, f.size, f.col); ui.globalAlpha = 1;
+  }
+  fx = fx.filter(f => f.life > 0);
+  if (flashA > 0) { ui.fillStyle = `rgba(255,255,255,${flashA * .5})`; ui.fillRect(0, 0, W, H); flashA -= dt * 1.6; }
+  banners.forEach(b => {
+    b.life -= dt; const a = Math.min(1, b.life * 4, (1.1 - b.life) * 10), y = 90, w = Math.min(W - 40, 40 + b.title.length * 17);
+    ui.globalAlpha = Math.max(0, a); ctx.beginPath(); ctx.roundRect(W / 2 - w / 2, y - 16, w, 32, 16); ctx.fillStyle = 'rgba(0,0,0,.62)'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = b.col; ctx.stroke();
+    text(b.title, W / 2, y + 6, 16, b.col, 'center', 800); ui.globalAlpha = 1;
+  });
+  banners = banners.filter(b => b.life > 0);
+}
+
+// ---------- HUD ----------
+function hud() {
+  if (!S) return;
+  for (const id of Core.ORDER) {
+    const h = Core.hero(S, id), c = cards[id];
+    c.hp.style.width = (h.hp / h.max * 100) + '%'; c.en.style.width = h.energy + '%'; c.cd.style.width = Math.max(0, Math.min(100, (1 - h.cd / h.cdMax) * 100)) + '%';
+    const ready = h.alive && h.energy >= 100 && S.phase === 'fight';
+    c.el.classList.toggle('ready', ready); c.el.classList.toggle('dead', !h.alive); c.el.classList.toggle('conf', !!h.st.confuse);
+    c.lbl.textContent = !h.alive ? '倒下' : h.st.confuse ? '混亂' : ready ? '點擊必殺' : '自動中';
+    c.el.setAttribute('aria-label', `${h.name} 必殺 ${Core.HERO[id].ult}${ready ? '，可施放' : ''}`);
+  }
+  { const hs = S.heroes.reduce((a, h) => a + h.hp, 0), hm = S.heroes.reduce((a, h) => a + h.max, 0), es = Core.alive(S.enemies).reduce((a, e) => a + e.hp, 0), ep = Math.min(100, es / S.eTot * 100), hp = hs / hm * 100;
+    $('allyB').style.width = $('allyL').style.width = hp + '%'; $('foeB').style.width = $('foeL').style.width = ep + '%';
+    $('allyT').textContent = Math.round(hs); $('foeT').textContent = Math.round(es); }
+  Core.FLAGS.forEach(k => pipEls[k].classList.toggle('on', S.gauge[k]));
+  const gr = Core.gaugeReady(S) && S.phase === 'fight';
+  $('deliver').hidden = !gr; $('stage').classList.toggle('live', running);
+  const m = Math.floor(S.t / 60), s = Math.floor(S.t % 60); $('timeP').textContent = $('timeT').textContent = m + ':' + String(s).padStart(2, '0');
+  const B = S.boss, cast = B && B.cast, al = $('alert');
+  al.hidden = !cast;
+  if (cast) { al.className = cast.kind; $('alertT').textContent = (cast.kind === 'revert' ? '剛剛那版比較好　' : '今天能出嗎？　') + cast.t.toFixed(1); $('alertB').style.width = (cast.t / cast.max * 100) + '%'; }
+  let tip = WAVE_TIP[S.wave] || '投影機自己亮了起來…', hot = false;
+  const boss = S.enemies.find(e => e.boss && e.alive);
+  const conf = S.heroes.filter(h => h.alive && h.st.confuse).length;
+  if (S.phase === 'between' && S.wave) tip = '清場完成，隊伍回復中。必殺能量會保留到下一波。';
+  if (cast && cast.kind === 'revert') { tip = '九頭蛇想回到舊版！現在放 Noise、Anna 或 Amber 的必殺打斷它。'; hot = true; }
+  else if (cast && cast.kind === 'deadline') { tip = '「今天能出嗎？」倒數中，讓 Machi 開「交付防線」保護全隊。'; hot = true; }
+  else if (conf >= 2) { tip = '全隊混亂，能量與技能停擺。Leona 的「重新對齊」可以一次清掉。'; hot = true; }
+  else if (gr) { tip = boss ? (boss.hp / boss.max <= .25 ? '九頭蛇剩不到 25%，按「準時交付」直接定稿！' : '協作條已滿。九頭蛇血量低於 25% 時交付可以直接終結，也可以現在先打一發。') : '協作條已滿，可以按「準時交付」清場，或留給九頭蛇。'; hot = true; }
+  $('tip').textContent = tip; $('tip').classList.toggle('hot', hot);
+}
+
+// ---------- 流程 ----------
+function loop(ts) {
+  const dt = Math.min(.1, (ts - last) / 1000 || 0); last = ts;
+  if (running && !paused && S) {
+    acc += dt * speed * (slowT > 0 ? .35 : 1); if (slowT > 0) slowT -= dt;
+    while (acc >= Core.DT) {
+      acc -= Core.DT;
+      if (autoOn) Core.auto(S).forEach(a => a === 'deliver' ? Core.deliver(S) : Core.castUlt(S, a));
+      Core.step(S); drain();
+    }
+  }
+  draw(paused ? 0 : dt * (running ? speed : 1) * (slowT > 0 ? .5 : 1)); hud();
+  requestAnimationFrame(loop);
+}
+function showLine() {
+  const l = INTRO[dIdx]; $('dWho').textContent = l[0]; $('dWho').style.color = l[2]; $('dTxt').textContent = l[1];
+}
+function begin() {
+  $('startO').hidden = true; $('endO').hidden = true;
+  S = Core.newGame((Date.now() & 0xfffffff) || 1); R = {}; fx = []; banners = []; resetUnits(); acc = 0; running = false;
+  $('waveP').textContent = '會議室 A';
+  dIdx = 0; $('dialog').hidden = false; showLine();
+}
+function nextLine() {
+  dIdx++;
+  if (dIdx >= INTRO.length) { $('dialog').hidden = true; running = true; return; }
+  showLine();
+}
+function finish(won) {
+  running = false;
+  const st = S.stats, tot = Object.values(st.dmg).reduce((a, b) => a + b, 0) || 1;
+  const m = Math.floor(S.t / 60), s = Math.floor(S.t % 60);
+  const rows = Core.ORDER.map(id => `<div><span>${Core.HERO[id].name} 輸出</span><b>${Math.round(st.dmg[id] / tot * 100)}%</b></div>`).join('');
+  $('endO').innerHTML = won
+    ? `<span class="badge">已確認</span><h2>任務完成</h2><p>新的需求會再來，但現在，先休息一下。</p>
+       <div class="stats"><div><span>通關時間</span><b>${m}:${String(s).padStart(2, '0')}</b></div><div><span>打斷回復</span><b>${st.interrupts} 次</b></div><div><span>被回到舊版</span><b>${st.reverts} 次</b></div><div><span>Machi 代扛</span><b>${Math.round(st.absorb)}</b></div><div><span>總治療</span><b>${st.heal}</b></div><div><span>連攜觸發</span><b>${st.combos} 次</b></div><div><span>隊友倒下</span><b>${st.downs} 次</b></div>${rows}</div>
+       <button class="pk big" id="againB" type="button">再打一次</button>`
+    : `<h2>需求淹沒了設計部</h2><p>${S.wave === 3 ? '九頭蛇的「今天能出嗎？」要用 Machi 的交付防線擋；「剛剛那版比較好」要留一招攻擊必殺打斷。' : '卡片亮起時就放必殺，Leona 的「重新對齊」能把全隊拉回來。'}</p>
+       <button class="pk big" id="againB" type="button">重新挑戰</button>`;
+  $('endO').hidden = false; $('againB').addEventListener('click', begin);
+}
+$('startB').addEventListener('click', begin);
+$('dialog').addEventListener('click', nextLine);
+$('deliver').addEventListener('click', doDeliver);
+$('autoB').addEventListener('click', e => { autoOn = !autoOn; e.currentTarget.textContent = '自動必殺：' + (autoOn ? '開' : '關'); e.currentTarget.classList.toggle('off', !autoOn); });
+$('spdB').addEventListener('click', e => { speed = speed === 1 ? 2 : 1; e.currentTarget.textContent = '速度 ' + speed + '×'; e.currentTarget.classList.toggle('off', speed === 1); });
+$('pauseB').addEventListener('click', e => { paused = !paused; e.currentTarget.textContent = paused ? '繼續' : '暫停'; e.currentTarget.classList.toggle('off', !paused); });
+addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('input,textarea')) return;
+  if (!$('dialog').hidden && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); nextLine(); return; }
+  const i = '12345'.indexOf(e.key);
+  if (i >= 0 && e.key.length === 1) ult(Core.ORDER[i]);
+  if (e.key === ' ' && running) { e.preventDefault(); doDeliver(); }
+});
+window.__game = { get S() { return S; }, Core, ult, doDeliver };
+try { init3d(); requestAnimationFrame(loop); } catch (err) { $('tip').textContent = '這個瀏覽器無法啟動 3D 繪圖（WebGL），請換一個瀏覽器開啟。'; console.error(err); }
+})();
+</script>
+</body>
+</html>
