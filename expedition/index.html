@@ -777,6 +777,72 @@ function fxBeam(v, col, big) {
     };
   });
 }
+// 每個角色自己的施放特效（不再共用同一道光柱）
+function fxSig(id, v, big) {
+  const col = COL[id], k = big ? 1.5 : 1, D = big ? 1.9 : 1.1;
+  addFx(D, v, g => {
+    const ev = (t, a = .15) => Math.min(1, t / a);
+    if (id === 'machi') {   // 藍色護盾半球＋六角片環繞
+      const dome = new THREE.Mesh(G.sph, new THREE.MeshBasicMaterial({ color: col, wireframe: true, ...ADD, opacity: 0 })), fill = M(G.sph, col, { opacity: 0 });
+      g.add(dome); g.add(fill); dome.position.y = fill.position.y = .8;
+      const r = flat(M(G.ring, col), .06); g.add(r);
+      const hx = Array.from({ length: 6 }, (_, i) => { const s = SP(TX.hex, '#cfe4ff', { depthTest: false }); s.userData = { a: i * 1.047 }; g.add(s); return s; });
+      return (t, q) => {
+        const e = ev(t, .2) * (1 - q * q), sc = (1 + Math.min(1, t / .3) * 1.3) * k;
+        dome.scale.setScalar(sc); fill.scale.setScalar(sc); dome.rotation.y = t * 1.2; dome.material.opacity = .75 * e; fill.material.opacity = .16 * e;
+        r.scale.setScalar(sc * 1.05); r.material.opacity = .9 * e;
+        hx.forEach(s => { const a = s.userData.a + t * 1.8; s.position.set(Math.cos(a) * sc * .95, .8 + Math.sin(t * 3 + a) * .3, Math.sin(a) * sc * .95); s.scale.set(.5, .62, 1); s.material.opacity = e; });
+      };
+    }
+    if (id === 'noise') {   // 紅橘火焰衝起＋交叉斬
+      const fl = Array.from({ length: big ? 26 : 14 }, (_, i) => { const s = SP(TX.glow, i % 2 ? '#ff6a2a' : '#ffb347'); s.userData = { a: Math.random() * 6.283, rad: .2 + Math.random() * .7, d: Math.random() * .3, s: .5 + Math.random() * .5 }; g.add(s); return s; });
+      const sl = [-.7, .7].map(rot => { const s = SP(TX.slash, '#ff8a5a', { depthTest: false, rotation: rot }); s.position.y = 1; g.add(s); return s; });
+      const r = flat(M(G.ring, col), .06); g.add(r);
+      return (t, q) => {
+        const e = ev(t) * (1 - q * .7);
+        fl.forEach(s => { const u = s.userData, p = Math.max(0, t - u.d), y = p * 2.6 * k; s.position.set(Math.cos(u.a) * u.rad * (1 - p * .4), .2 + y, Math.sin(u.a) * u.rad * (1 - p * .4)); s.scale.set(u.s * (1 - p * .5), u.s * 2.2 * k, 1); s.material.opacity = p > 0 ? Math.max(0, 1 - p / .8) * e : 0; });
+        sl.forEach((s, i) => { const p = Math.max(0, Math.min(1, (t - .05 - i * .1) / .18)); s.scale.set(2.8 * k * p, 2.8 * k * p, 1); s.material.opacity = p > 0 ? Math.max(0, 1 - (t - .2 - i * .1) / .4) : 0; });
+        r.scale.setScalar(.4 + q * 2.4 * k); r.material.opacity = (1 - q) * .9;
+      };
+    }
+    if (id === 'anna') {   // 紫色暗影內縮→爆出尖刺
+      const core = SP(TX.glow, '#12081f', { blending: THREE.NormalBlending, depthTest: false }); core.position.y = 1; g.add(core);
+      const r = flat(M(G.ring, col), .06); g.add(r);
+      const sh = Array.from({ length: big ? 16 : 10 }, (_, i) => { const s = SP(TX.star, '#d4b8ff', { depthTest: false }); s.userData = { a: i / (big ? 16 : 10) * 6.283, l: .8 + Math.random() * .8 }; g.add(s); return s; });
+      const sl = [-.8, .8].map(rot => { const s = SP(TX.slash, '#cfa8ff', { depthTest: false, rotation: rot }); s.position.y = 1; g.add(s); return s; });
+      return (t, q) => {
+        const p1 = Math.min(1, t / (D * .3)), p2 = Math.max(0, (t - D * .3) / (D * .7));
+        core.scale.setScalar(p1 < 1 ? (2.6 - p1 * 1.6) * k : Math.max(.01, 1 - p2 * 3) * k); core.material.opacity = p1 < 1 ? .85 * p1 : Math.max(0, .85 - p2 * 3);
+        r.scale.setScalar(p1 < 1 ? (2.6 - p1 * 2.2) * k : .4 + p2 * 3 * k); r.material.opacity = p1 < 1 ? p1 : Math.max(0, 1 - p2 * 1.6);
+        sh.forEach(s => { const u = s.userData; if (p1 < 1) { s.material.opacity = 0; return; } s.position.set(Math.cos(u.a) * (.3 + p2 * 2.4 * k), 1 + Math.sin(u.a * 3) * .3, Math.sin(u.a) * (.3 + p2 * 2.4 * k)); s.scale.set(.18, u.l * (1 - p2 * .5) * k, 1); s.material.opacity = Math.max(0, 1 - p2 * 1.3); });
+        sl.forEach((s, i) => { const p = Math.max(0, Math.min(1, (t - D * .3 - i * .05) / .12)); s.scale.set(2.4 * k * p, 2.4 * k * p, 1); s.material.opacity = p > 0 ? Math.max(0, 1 - (t - D * .3) / .45) : 0; });
+      };
+    }
+    if (id === 'amber') {   // 金色魔法陣＋星光螺旋上升＋流星
+      const c = flat(M(G.plane, col, { map: TX.circle }), .06); g.add(c);
+      const st = Array.from({ length: big ? 14 : 8 }, (_, i) => { const s = SP(TX.star, i % 2 ? '#ffe9a8' : col, { depthTest: false }); s.userData = { a: i * 0.9, d: i * .05 }; g.add(s); return s; });
+      const me = big ? Array.from({ length: 7 }, () => { const s = SP(TX.star, '#fff1c2', { depthTest: false }); s.userData = { x: Math.random() * 2 - 1, z: Math.random() * 2 - 1, d: .1 + Math.random() * .5 }; g.add(s); return s; }) : [];
+      return (t, q) => {
+        const e = ev(t, .2) * (1 - q * q);
+        c.scale.setScalar((1.6 + t * .5) * k); c.rotation.z = t * 1.6; c.material.opacity = .95 * e;
+        st.forEach(s => { const u = s.userData, p = Math.max(0, t - u.d), a = u.a + p * 5; s.position.set(Math.cos(a) * (.9 - p * .3) * k, .2 + p * 2.6, Math.sin(a) * (.9 - p * .3) * k); s.scale.setScalar(.36 * (1 - q * .4)); s.material.opacity = p > 0 ? Math.max(0, 1 - p / (D * .9)) : 0; });
+        me.forEach(s => { const u = s.userData, p = Math.max(0, Math.min(1, (t - u.d) / .35)); s.position.set(u.x * 2.2 + (1 - p) * -2, 6 * (1 - p), u.z * 2.2); s.scale.set(.3, .3 + (1 - p) * .9, 1); s.material.opacity = p > 0 && p < 1 ? 1 : 0; });
+      };
+    }
+    // leona：柔和的青綠光柱＋十字上飄＋光環
+    const pil = M(G.cyl, '#bfffe9'); g.add(pil);
+    const pl = Array.from({ length: big ? 14 : 8 }, () => { const s = SP(TX.plus, '#7ff0a6', { depthTest: false }); s.userData = { a: Math.random() * 6.283, rad: .3 + Math.random() * .9, d: Math.random() * .5, s: .2 + Math.random() * .2 }; g.add(s); return s; });
+    const halo = flat(M(G.ring, '#e6fff5'), 2.3); g.add(halo);
+    const r = flat(M(G.ring, col), .06); g.add(r);
+    return (t, q) => {
+      const e = ev(t, .25) * (1 - q * q);
+      pil.scale.set(1.15 * k, 4.2, 1.15 * k); pil.material.opacity = .2 * e;
+      pl.forEach(s => { const u = s.userData, p = Math.max(0, t - u.d); s.position.set(Math.cos(u.a) * u.rad, .2 + p * 1.7, Math.sin(u.a) * u.rad); s.scale.setScalar(u.s * k); s.material.opacity = p > 0 ? Math.max(0, 1 - p / 1.0) * e : 0; });
+      halo.scale.setScalar((.7 + Math.sin(t * 6) * .06) * k); halo.material.opacity = .85 * e; halo.position.y = 2.2 + t * .3;
+      r.scale.setScalar(.6 + q * 2.6 * k); r.material.opacity = (1 - q) * .8;
+    };
+  });
+}
 function fxRing(v, col, r0, r1, dur) { addFx(dur, v, g => { const m = flat(M(G.ring, col), .07); g.add(m); return (t, q) => { m.scale.setScalar(r0 + (r1 - r0) * q); m.material.opacity = 1 - q; }; }); }
 function fxImpact(v, col, size) { addFx(.28, v, g => { const s = SP(TX.glow, col, { depthTest: false }); g.add(s); return (t, q) => { s.scale.setScalar(size * (.4 + q)); s.material.opacity = .9 * (1 - q); }; }); }
 function fxSlash(v, col, big) { addFx(.3, v, g => { const s = SP(TX.slash, col, { depthTest: false, rotation: Math.random() * 6.283 }); g.add(s); const z = big ? 2.6 : 1.5; return (t, q) => { s.scale.setScalar(z * (.6 + q * .6)); s.material.opacity = 1 - q * q; }; }); }
@@ -813,7 +879,7 @@ function handle(e) {
   if (e.type === 'cast') {
     const s = find(e.src); if (!s) return;
     if (s.side === 'hero') {
-      fxBeam(rpos(s), COL[s.id], !!e.ult); rs(s).hop = .55; rs(s).atkAt = T;
+      fxSig(s.id, rpos(s), !!e.ult); rs(s).hop = .55; rs(s).atkAt = T;
       if (e.ult) { flashA = .3; slowT = .5; zoomT = 1.1; zoomWho = s.uid; showSkill(e.name, COL[s.id], s.id); }
     }
     if (e.ult && s.id === 'amber') fxCircle();
