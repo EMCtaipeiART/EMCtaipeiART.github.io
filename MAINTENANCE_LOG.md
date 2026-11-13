@@ -2605,3 +2605,7 @@
 - 責任壁壘（`thick`，原厚臉皮；存檔鍵不變）：啟動 10 秒受傷 -50%（在 `damage`／`applyHitToMe`），冷卻 15 秒，金色泡泡。
 - 連線：`s` 狀態帶 `sk`，對手啟動時本地播特效；衝刺訊息帶 `l`（2＝加長）讓軌跡一致。
 - 驗證：本機單人實測閃身步 4.57→9.03、壁壘 HUD/泡泡；減傷 50% 與連線同步未實測。
+## 2026-11-13 角色頁新增多個元宇宙入口
+- 角色工坊（獨立 repo `emc-ai-stage-classifier`，本機在 `~/Documents/outfit-src/`，已用 `deploy-cloudflare.mjs` 部署）：功能介紹區「PUBLISH」卡片加「進入多元宇宙 →」；角色製作單管理每列（已上線且預設中）加「在元宇宙看」；完成畫面（已上線）加「去辦公室看看 →」。三處都送 `postMessage({type:'emcOpenUniverse', name?})` 給外層。
+- 主站 `site.js` 接收（驗 `OUTFIT_ORIGIN`）後呼叫 `openUniverse()`。`name` 目前只是帶著，進去後鏡頭還不會對準那個人（元宇宙尚無對應網址參數）。
+- 提醒：CLAUDE.md 說角色工坊不在本機，其實有一份在 `~/Documents/outfit-src/emc-ai-stage-classifier/`。
