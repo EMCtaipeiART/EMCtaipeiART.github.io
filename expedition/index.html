@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>設計部遠征隊</title>
 <style>
-/* 版面：上方標題與控制列 → 影廳 戰場（canvas）→ 提示列 → 五張必殺卡 → 協作條 → 職業卡。單一深綠主題，沿用凱曜多元宇宙的綠色玻璃面板與厚黑邊。 */
+/* 版面：上方標題與控制列 → 倉庫 戰場（canvas）→ 提示列 → 五張必殺卡 → 協作條 → 職業卡。單一深綠主題，沿用凱曜多元宇宙的綠色玻璃面板與厚黑邊。 */
 :root{
   color-scheme:dark;
   --bg:#0b1d15; --bg2:#102a1e; --panel:#163a2a; --panel2:#1d4a36; --line:#2f6b4f;
@@ -49,6 +49,10 @@ h1{margin:0;font-size:26px;line-height:1.15;letter-spacing:.02em}
 #dialog{position:absolute;left:12px;right:12px;bottom:12px;background:rgba(10,32,22,.94);border:3px solid #000;border-radius:14px;padding:10px 14px;cursor:pointer;text-align:left}
 #dialog b{font-size:13px;letter-spacing:.06em}
 #dialog p{margin:2px 0 0;font-size:clamp(14px,2.6vw,18px)}
+#dFace{position:absolute;right:16px;bottom:78px;width:150px;height:150px;background-repeat:no-repeat;background-size:1800px 150px;background-position:0 0;filter:drop-shadow(0 0 0 #000) drop-shadow(0 4px 6px rgba(0,0,0,.6));pointer-events:none;transform-origin:50% 100%;animation:dface .28s ease-out}
+@keyframes dface{from{opacity:0;transform:translateX(24px) scale(.92)}to{opacity:1;transform:none}}
+@media (max-width:720px){#dFace{width:104px;height:104px;background-size:1248px 104px;bottom:70px;right:8px}}
+@media (prefers-reduced-motion:reduce){#dFace{animation:none}}
 #dialog small{position:absolute;right:12px;top:8px;color:var(--dim);font-size:11px}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px 14px;width:min(100%,560px);text-align:left;font-size:13px}
 .stats div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed var(--line);padding:2px 0}
@@ -137,12 +141,12 @@ h3{margin:16px 0 0;font-size:17px}
       <p>第一章《最後一版，真的》試玩原型</p>
     </div>
     <div class="ctrl">
-      <span class="pill" id="waveP">影廳</span>
+      <span class="pill" id="waveP">倉庫</span>
       <span class="pill" id="timeP">0:00</span>
       <button class="pk off" id="autoB" type="button">自動必殺：關</button>
       <button class="pk off" id="spdB" type="button">速度 1×</button>
       <button class="pk off" id="pauseB" type="button">暫停</button>
-      <button class="pk" id="exitB" type="button" hidden>離開影廳</button>
+      <button class="pk" id="exitB" type="button" hidden>離開倉庫</button>
     </div>
   </header>
 
@@ -154,12 +158,13 @@ h3{margin:16px 0 0;font-size:17px}
     <button class="pk big" id="deliver" type="button" hidden>準時交付</button>
     <section id="party"></section>
     <div id="alert" hidden><b id="alertT"></b><i><u id="alertB"></u></i></div>
+    <div id="dFace" hidden></div>
     <div id="dialog" hidden><small>點一下繼續</small><b id="dWho"></b><p id="dTxt"></p></div>
     <div class="overlay" id="startO">
       <span class="sys">17:50，設計部</span>
       <h2>《最後一版，真的》</h2>
       <p>隊伍會自動戰鬥。你只要在對的時機按下方五張卡放必殺，湊滿協作條就能「準時交付」。</p>
-      <button class="pk big" id="startB" type="button">進入影廳</button>
+      <button class="pk big" id="startB" type="button">進入倉庫</button>
     </div>
     <div class="overlay" id="endO" hidden></div>
   </section>
@@ -555,7 +560,7 @@ const INFO = {
 };
 const PIPS = { protect: '保護', brk: '破防', weak: '弱點擊破', control: '範圍控制', cleanse: '淨化' };
 const INTRO = [
-  ['系統廣播', '偵測到未收斂需求。影廳 已淪為戰場，桌椅翻倒、火光四起。', '#ffd166'],
+  ['系統廣播', '偵測到未收斂需求。倉庫 已淪為戰場，桌椅翻倒、火光四起。', '#ffd166'],
   ['Machi', '先確認一下，這次到底哪一版才是真的？', COL.machi],
   ['Noise', '檔名已經三個 final 了！', COL.noise],
   ['Anna', '先別吵，還有一個「以這版為準」。', COL.anna],
@@ -959,7 +964,7 @@ function art(e) {
 }
 function panels() {
   const g = Math.floor(T * 6) % 5, name = '最終確認' + ['', '_final', '_final2', '_最新版', '_真的最終版'][S && S.wave === 3 ? g : 0] + '.pdf';
-  if (P.screen.key !== name) { P.screen.key = name; paintTo(P.screen.c, 1, 0, 0, () => { rr(3, 3, 474, 144, 6, 'rgba(36,32,28,.96)', 5); ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(380, 3); ctx.lineTo(350, 50); ctx.lineTo(392, 90); ctx.lineTo(360, 147); ctx.moveTo(350, 50); ctx.lineTo(300, 70); ctx.stroke(); ctx.fillStyle = '#ffb454'; ctx.font = '800 32px "PingFang TC",sans-serif'; ctx.textAlign = 'center'; ctx.fillText(name, 240, 72); ctx.font = '600 20px "PingFang TC",sans-serif'; ctx.fillStyle = '#c8814a'; ctx.fillText('影廳　訊號不穩', 240, 112); }); P.screen.t.needsUpdate = true; }
+  if (P.screen.key !== name) { P.screen.key = name; paintTo(P.screen.c, 1, 0, 0, () => { rr(3, 3, 474, 144, 6, 'rgba(36,32,28,.96)', 5); ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(380, 3); ctx.lineTo(350, 50); ctx.lineTo(392, 90); ctx.lineTo(360, 147); ctx.moveTo(350, 50); ctx.lineTo(300, 70); ctx.stroke(); ctx.fillStyle = '#ffb454'; ctx.font = '800 32px "PingFang TC",sans-serif'; ctx.textAlign = 'center'; ctx.fillText(name, 240, 72); ctx.font = '600 20px "PingFang TC",sans-serif'; ctx.fillStyle = '#c8814a'; ctx.fillText('倉庫　訊號不穩', 240, 112); }); P.screen.t.needsUpdate = true; }
   const ck = '17:5' + (S ? Math.min(9, Math.floor(S.t / 20)) : 0);
   if (P.clock.key !== ck) { P.clock.key = ck; paintTo(P.clock.c, 1, 0, 0, () => { rr(3, 3, 194, 74, 6, 'rgba(30,26,22,.96)', 5); text(ck, 100, 56, 40, '#ff6a4a'); }); P.clock.t.needsUpdate = true; }
 }
@@ -1133,16 +1138,18 @@ function loop(ts) {
 }
 function showLine() {
   const l = INTRO[dIdx]; $('dWho').textContent = l[0]; $('dWho').style.color = l[2]; $('dTxt').textContent = l[1];
+  const hero = Core.ORDER.find(id => Core.HERO[id].name === l[0]), f = $('dFace');
+  if (hero && !$('dialog').hidden) { f.style.backgroundImage = `url(../pixel-plaza/sprites-hd/${l[0]}.webp)`; f.hidden = false; f.style.animation = 'none'; void f.offsetWidth; f.style.animation = ''; } else f.hidden = true;
 }
 function begin() {
   $('startO').hidden = true; $('endO').hidden = true;
   S = Core.newGame((Date.now() & 0xfffffff) || 1); R = {}; fx = []; banners = []; resetUnits(); acc = 0; running = false;
-  $('waveP').textContent = '影廳';
+  $('waveP').textContent = '倉庫';
   dIdx = 0; $('dialog').hidden = false; showLine();
 }
 function nextLine() {
   dIdx++;
-  if (dIdx >= INTRO.length) { $('dialog').hidden = true; running = true; return; }
+  if (dIdx >= INTRO.length) { $('dialog').hidden = true; $('dFace').hidden = true; running = true; return; }
   showLine();
 }
 function finish(won) {

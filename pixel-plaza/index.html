@@ -588,7 +588,7 @@ const WALLS = [
   [610,1045,210,12],[872,1045,210,12],[610,1045,12,417],[1070,1045,12,417],[610,1450,472,12]
 ];
 WALLS.forEach(w => { w[1] = zN(w[1]); });
-const LABELS_RAW = [['男廁',370,44],['女廁',526,44],['會議室 A',863,110],['影廳',215,1062],['會議室 C',186,1432],['茶水間',368,1226],['冰箱',510,1208],['會議室 D',845,1285],['電梯',201,262]];
+const LABELS_RAW = [['男廁',370,44],['女廁',526,44],['會議室 A',863,110],['倉庫',215,1062],['會議室 C',186,1432],['茶水間',368,1226],['冰箱',510,1208],['會議室 D',845,1285],['電梯',201,262]];
 const LABELS = LABELS_RAW.map(l => [l[0], l[1], zN(l[2])]);
 // ===== 四樓：版面取自 2D 版 floor4.js（座標 ×0.5，套用五樓同一套家具尺寸），整層放在五樓右邊 FX4 px 處 =====
 const FX4 = 3600, F4_Z1 = 1700, F4_X0 = -100, F4_X1 = 1430, F4_Z0 = -100;   // 四樓離五樓很遠（視野內看不到五樓）；四邊各留 70 px 走廊
@@ -1174,9 +1174,9 @@ function build3dObjects(T, place){
     rects.push([I(cx - w / 2), I(cy - d / 2), I(cx + w / 2), I(cy + d / 2)]);
     for (const x of xs) { chair3d(I(x), I(yn), 'S'); chair3d(I(x), I(ys), 'N'); }
   }
-  // 投影機：A 朝右（東）牆；影廳 B、會議室 C 朝左（西）牆；D 朝下（南）投在地板空地
+  // 投影機：A 朝右（東）牆；倉庫 B、會議室 C 朝左（西）牆；D 朝下（南）投在地板空地
   projectorRig(I(948), I(158), 'E', {room:'A', wallX:I(1046) - .02, wallDir:-1, zc:I(160), w:4.3, h:2.2, title:'設計進度 Q4', kind:'bars'});
-  projectorRig(I(160), I(1160), 'W', {room:'B', wallX:I(98) + .02, wallDir:1, zc:I(1150), w:4.0, h:2.1, title:'影廳', kind:'text'});
+  projectorRig(I(160), I(1160), 'W', {room:'B', wallX:I(98) + .02, wallDir:1, zc:I(1150), w:4.0, h:2.1, title:'倉庫', kind:'text'});
   projectorRig(I(162), I(1360), 'W', {room:'C', wallX:I(98) + .02, wallDir:1, zc:I(1355), w:4.0, h:2.1, title:'專案會議', kind:'list'});
   for (const [x0, z0, ww, dd] of [[1046, 84, 4, 150], [94, 1072, 4, 156], [94, 1274, 4, 162]]) {   // 投影用白牆
     pbox(I(ww), 2.3, I(dd), 0xf6f7f9, I(x0 + ww / 2), 0, I(z0 + dd / 2));
@@ -1772,14 +1772,14 @@ function elevInteract(){
   wantElev = true; target = new THREE.Vector3(sp.x, 0, sp.z);
 }
 let elevArmed = true;
-// ---- 影廳＝遠征隊入口：走進影廳 → 畫面收黑 → 進入《設計部遠征隊》（內嵌 iframe），離開後淡出回到影廳 ----
+// ---- 倉庫＝遠征隊入口：走進倉庫 → 畫面收黑 → 進入《設計部遠征隊》（內嵌 iframe），離開後淡出回到倉庫 ----
 const expFade = document.createElement('div'); expFade.id = 'expFade'; document.body.appendChild(expFade);
 let expFrame = null, expBusy = false, expArmed = false;
-const THEATER = {x0:150, x1:262, z0:zN(1110), z1:zN(1210)};   // 影廳內側中央（px，過 zN）
+const THEATER = {x0:150, x1:262, z0:zN(1110), z1:zN(1210)};   // 倉庫內側中央（px，過 zN）
 const inTheater = p => { const x = p.holder.position.x / U, z = p.holder.position.z / U; return floorOf(p) === 5 && x > THEATER.x0 && x < THEATER.x1 && z > THEATER.z0 && z < THEATER.z1; };
 function expEnter(){
   if (expBusy) return; expBusy = true; target = null; wantSeat = null; wantElev = false; wheelClose(); fridgeClose();
-  expFade.textContent = '影廳'; expFade.classList.add('on');
+  expFade.textContent = '倉庫'; expFade.classList.add('on');
   setTimeout(() => {
     expFrame = document.createElement('iframe'); expFrame.id = 'expFrame'; expFrame.title = '設計部遠征隊'; expFrame.allow = 'autoplay'; expFrame.src = '../expedition/?embed=1&t=' + Date.now(); expFrame.style.display = 'block'; document.body.appendChild(expFrame);
     setTimeout(() => { expFade.textContent = ''; expFade.classList.remove('on'); }, 700);
@@ -1790,7 +1790,7 @@ function expLeave(){
   setTimeout(() => { expFrame.remove(); expFrame = null; expArmed = false; setTimeout(() => { expFade.classList.remove('on'); expBusy = false; }, 150); setTimeout(() => expFade.classList.remove('fast'), 700); }, 560);
 }
 addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'expeditionExit' && expFrame && e.source === expFrame.contentWindow) expLeave(); });
-function updateTheater(){   // 登入者走進影廳中央才觸發；離開遊戲後要先走出影廳才會再次觸發
+function updateTheater(){   // 登入者走進倉庫中央才觸發；離開遊戲後要先走出倉庫才會再次觸發
   if (!player || expBusy || elevBusy || AWAY.has(player.status) || player.sitting) return;
   const inside = inTheater(player);
   if (!expArmed) { if (!inside) expArmed = true; return; }
@@ -2249,7 +2249,7 @@ function renderFrame(){
   for (const o of hidden) o.visible = true;
   renderer.autoClear = false; renderer.render(compScene, compCam); renderer.autoClear = true;
 }
-const ROOMS = [...[['A', 660, 48, 1062, 270, '會議室 A'], ['B', 82, 1045, 290, 1250, '影廳'], ['C', 82, 1250, 290, 1460, '會議室 C'], ['D', 610, 1045, 1082, 1462, '會議室 D']].map(r => [r[0], r[1], zN(r[2]), r[3], zN(r[4]), r[5]]),
+const ROOMS = [...[['A', 660, 48, 1062, 270, '會議室 A'], ['B', 82, 1045, 290, 1250, '倉庫'], ['C', 82, 1250, 290, 1460, '會議室 C'], ['D', 610, 1045, 1082, 1462, '會議室 D']].map(r => [r[0], r[1], zN(r[2]), r[3], zN(r[4]), r[5]]),
   ...[['H', F4.H, '會議室 H'], ['F', F4.F, '會議室 F'], ['G', F4.G, '會議室 G']].map(([k, r, n]) => [k, r.x + 12 + FX4, r.y + 12, r.x + r.w - 12 + FX4, r.y + r.h - 12, n])];
 const projBox = document.getElementById('proj'), projCv = projBox.querySelector('canvas'), projCtx = projCv.getContext('2d'), projTitle = projBox.querySelector('span');
 let projRoom = null;
