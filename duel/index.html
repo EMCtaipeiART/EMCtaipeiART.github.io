@@ -177,6 +177,33 @@ header{position:fixed;right:8px;bottom:8px;z-index:6;width:auto;gap:6px;flex-wra
 .cine .ctx{position:absolute;left:0;right:0;top:64%;text-align:center;opacity:0;transform:translateX(-12%) skewX(-8deg);transition:opacity .15s,transform .25s}.cine.on .ctx{opacity:1;transform:skewX(-8deg)}
 .cine .ctx small{display:block;font-weight:900;font-size:clamp(14px,2vw,22px);letter-spacing:.3em;color:#ffd166;text-shadow:0 2px 0 #000}
 .cine .ctx b{display:block;font-weight:900;font-size:clamp(34px,7vw,84px);color:#fff;-webkit-text-stroke:3px #000;paint-order:stroke fill;text-shadow:0 5px 0 #000,0 0 30px rgba(255,255,255,.6);letter-spacing:.08em}
+
+.tctl{position:fixed;inset:0;z-index:5;pointer-events:none}
+.tctl[hidden]{display:none}
+.jstick{position:absolute;left:22px;bottom:50px;width:116px;height:116px;border-radius:50%;background:rgba(255,255,255,.16);border:3px solid rgba(0,0,0,.55);pointer-events:auto;touch-action:none}
+.jstick i{position:absolute;left:33px;top:33px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.62);border:2px solid rgba(0,0,0,.5);pointer-events:none}
+.tb{position:absolute;border-radius:50%;border:3px solid #000;font:900 12px/1 inherit;color:#fff;background:rgba(18,40,32,.74);box-shadow:0 3px 0 #000;pointer-events:auto;touch-action:none;display:flex;align-items:center;justify-content:center;padding:0}
+.tb:active{transform:translateY(2px);box-shadow:0 1px 0 #000}
+.tb.atk{width:76px;height:76px;right:16px;bottom:48px;background:linear-gradient(#ff8a7a,#d9534f);font-size:15px}
+.tb.jump{width:54px;height:54px;right:98px;bottom:42px}
+.tb.dash{width:54px;height:54px;right:14px;bottom:130px;background:linear-gradient(#8fd6ff,#3f8fd0)}
+.tb.sk{width:48px;height:48px;right:94px;bottom:132px;background:linear-gradient(#c9b8ff,#7a5fd0)}
+.tb.ult{width:60px;height:60px;right:50px;bottom:196px;background:linear-gradient(#ffe08a,#e0a82a);color:#241a00}
+.tb.ult.on{animation:ulp .6s infinite alternate}
+.tb.sk.cd{opacity:.45}.tb.sk.on{background:linear-gradient(#ffe08a,#e0a82a);color:#241a00}
+.tb.lock{width:40px;height:40px;right:14px;top:68px;font-size:11px}
+.tb.lock.on{background:#ffd166;color:#0d2a1c}
+.tb.pause{width:40px;height:40px;right:60px;top:68px;font-size:11px}
+@media (max-width:520px){
+  .jstick{width:98px;height:98px;left:14px;bottom:40px}
+  .jstick i{width:42px;height:42px;left:28px;top:28px}
+  .tb.atk{width:64px;height:64px;right:10px;bottom:38px}
+  .tb.jump{width:46px;height:46px;right:80px;bottom:34px}
+  .tb.dash{width:46px;height:46px;right:8px;bottom:108px}
+  .tb.sk{width:42px;height:42px;right:76px;bottom:110px}
+  .tb.ult{width:50px;height:50px;right:40px;bottom:164px}
+  .tb.lock,.tb.pause{width:34px;height:34px;font-size:10px}
+}
 @media (max-width:700px){.dhud .nm{font-size:12px}.dhud .tm{font-size:22px}.cds{display:none}}
 </style>
 </head>
@@ -197,6 +224,16 @@ header{position:fixed;right:8px;bottom:8px;z-index:6;width:auto;gap:6px;flex-wra
     </div>
     <div class="cds" id="cds" hidden>
       <span id="cdJ">跳 空白</span><span id="cdA">攻擊 左鍵</span><span id="cdD">衝刺 Shift</span><span id="cdS" hidden>技能 E</span><span id="cdU">大招 R</span><span id="cdL">鎖定 右鍵</span>
+    </div>
+    <div class="tctl" id="tctl" hidden>
+      <div class="jstick" id="jstick"><i id="jknob"></i></div>
+      <button class="tb lock" id="tbL" type="button">鎖定</button>
+      <button class="tb pause" id="tbP" type="button">暫停</button>
+      <button class="tb sk" id="tbE" type="button" hidden>E</button>
+      <button class="tb dash" id="tbD" type="button">衝刺</button>
+      <button class="tb jump" id="tbJ" type="button">跳</button>
+      <button class="tb ult" id="tbU" type="button">大招</button>
+      <button class="tb atk" id="tbA" type="button">攻擊</button>
     </div>
     <div class="flash" id="flash"></div>
     <div class="hurt" id="hurt"></div>
@@ -663,6 +700,7 @@ let shockT = 0, shockPos = [0, 0, 0];
 // ───────── 輸入與鏡頭 ─────────
 const lockPtr = () => { try { const p = cv.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) {} };
 const keys = {}; let yaw = 0, pitch = .5, camDist = 9.5, lockOn = false, lockedOnce = false;
+const TOUCH = matchMedia('(pointer: coarse)').matches; const joy = { x: 0, y: 0 };
 const camTarget = new THREE.Vector3(), camSmooth = new THREE.Vector3();
 let wantSk = false, wantAtk = false, wantUlt = false, wantDash = false, wantJump = false;
 addEventListener('keydown', e => {
@@ -673,20 +711,54 @@ addEventListener('keydown', e => {
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; if (e.key === 'Shift') keys.shift = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; if (state === 'fight') pauseNow(); });
-function toggleLock() { lockOn = !lockOn; SFX.beep(); cdL.classList.toggle('on', lockOn); }
+function toggleLock() { lockOn = !lockOn; SFX.beep(); cdL.classList.toggle('on', lockOn); $('tbL').classList.toggle('on', lockOn); }
 addEventListener('mousemove', e => { if (document.pointerLockElement === cv && (state === 'fight' || state === 'countdown')) { if (!lockOn) yaw -= e.movementX * .0026; pitch = Math.max(.05, Math.min(1.25, pitch + e.movementY * .0022)); } });
 cv.addEventListener('mousedown', e => {
   if (state !== 'fight' && state !== 'countdown' && state !== 'roundEnd') return;
   if (paused) { resumeNow(); return; }
+  if (TOUCH) return;
   if (document.pointerLockElement !== cv) { lockPtr(); return; }
   if (e.button === 0) wantAtk = true; else if (e.button === 2) toggleLock();
 });
+// 手機：單指在畫面上拖動＝轉視角（取代滑鼠指標鎖定）
+let camDrag = null;
+cv.addEventListener('pointerdown', e => {
+  if (e.pointerType !== 'touch') return;
+  if (state === 'fight' || state === 'countdown' || state === 'roundEnd') {
+    if (paused) { resumeNow(); return; }
+    camDrag = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+  }
+});
+cv.addEventListener('pointermove', e => {
+  if (!camDrag || e.pointerId !== camDrag.id) return;
+  const dx = e.clientX - camDrag.x, dy = e.clientY - camDrag.y; camDrag.x = e.clientX; camDrag.y = e.clientY;
+  if (state === 'fight' || state === 'countdown') { if (!lockOn) yaw -= dx * .0046; pitch = Math.max(.05, Math.min(1.25, pitch + dy * .004)); }
+});
+const camDragEnd = e => { if (camDrag && e.pointerId === camDrag.id) camDrag = null; };
+cv.addEventListener('pointerup', camDragEnd); cv.addEventListener('pointercancel', camDragEnd);
+// 手機搖桿：左下角虛擬搖桿控制移動
+const jstick = $('jstick'), jknob = $('jknob');
+function jMove(e) { const r = jstick.getBoundingClientRect(); let dx = (e.clientX - r.left - r.width / 2) / (r.width * .42), dy = (e.clientY - r.top - r.height / 2) / (r.height * .42); const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; } joy.x = dx; joy.y = dy; jknob.style.transform = 'translate(' + (dx * r.width * .3) + 'px,' + (dy * r.height * .3) + 'px)'; }
+jstick.addEventListener('pointerdown', e => { e.preventDefault(); try { jstick.setPointerCapture(e.pointerId); } catch (err) {} jMove(e); }, { passive: false });
+jstick.addEventListener('pointermove', e => { if (e.buttons) jMove(e); });
+const jEnd = () => { joy.x = joy.y = 0; jknob.style.transform = ''; };
+jstick.addEventListener('pointerup', jEnd); jstick.addEventListener('pointercancel', jEnd);
+// 手機按鈕：攻擊／跳／衝刺／大招／技能／鎖定／暫停
+function tapBtn(id, fn) { const el = $(id); el.addEventListener('pointerdown', e => { e.preventDefault(); fn(); }, { passive: false }); el.addEventListener('contextmenu', e => e.preventDefault()); }
+tapBtn('tbA', () => { if (state === 'fight') wantAtk = true; });
+tapBtn('tbJ', () => { if (state === 'fight') wantJump = true; });
+tapBtn('tbD', () => { if (state === 'fight') wantDash = true; });
+tapBtn('tbU', () => { if (state === 'fight') wantUlt = true; });
+tapBtn('tbE', () => { if (state === 'fight') wantSk = true; });
+tapBtn('tbL', () => { if (state === 'fight') toggleLock(); });
+tapBtn('tbP', () => { if (paused) resumeNow(); else if (state === 'fight') pauseNow(); });
 cv.addEventListener('contextmenu', e => e.preventDefault());
 cv.addEventListener('wheel', e => { e.preventDefault(); camDist = Math.max(5.5, Math.min(15, camDist + Math.sign(e.deltaY) * .8)); }, { passive: false });
 document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement === cv) lockedOnce = true; else if (lockedOnce && state === 'fight') pauseNow(); });
 let paused = false;
 function pauseNow() { if (net) { for (const k in keys) keys[k] = false; return; } if (state !== 'fight' || paused) return; paused = true; $('pauseO').hidden = false; for (const k in keys) keys[k] = false; }
-function resumeNow() { if (!paused) return; paused = false; $('pauseO').hidden = true; last = performance.now(); lockPtr() }
+function resumeNow() { if (!paused) return; paused = false; $('pauseO').hidden = true; last = performance.now(); if (!TOUCH) lockPtr(); }
 $('pauseO').addEventListener('mousedown', resumeNow);
 document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'fight') pauseNow(); });
 
@@ -700,7 +772,7 @@ function startRound() {
   clearProj();
   if (net && net.role === 'guest') { place(ME, 14, 0, -Math.PI / 2); place(OP, -14, 0, Math.PI / 2); yaw = Math.PI / 2; } else { place(ME, -14, 0, Math.PI / 2); place(OP, 14, 0, -Math.PI / 2); yaw = -Math.PI / 2; } pitch = .5; lockOn = false; cdL.classList.remove('on'); tLeft = ROUND_T; wantAtk = wantUlt = wantDash = wantJump = false;
   camSmooth.set(ME.x, ME.y + 1.4, ME.z); state = 'countdown'; banner = 3.2; dots(); setBanner('第 ' + round + ' 局', 0);
-  $('dhud').hidden = false; $('cds').hidden = false; updHud();
+  $('dhud').hidden = false; $('cds').hidden = false; $('tctl').hidden = !TOUCH; updHud();
 }
 function endRound(winner) {   // winner: 0 我、1 對手、-1 平手
   if (state !== 'fight') return; state = 'roundEnd'; banner = 2.4;
@@ -726,7 +798,7 @@ function matchEnd() {
   if (net) $('menuB').textContent = '離開對戰';
   if (won) SFX.win(); else SFX.lose();
 }
-function toMenu() { if (net) netLeave(); state = 'menu'; $('startO').hidden = false; $('dhud').hidden = true; $('cds').hidden = true; setBanner('', 0); $('pauseO').hidden = true; paused = false; }
+function toMenu() { if (net) netLeave(); state = 'menu'; $('startO').hidden = false; $('dhud').hidden = true; $('cds').hidden = true; $('tctl').hidden = true; setBanner('', 0); $('pauseO').hidden = true; paused = false; }
 function showLo() { $('loL').textContent = loText(ME); $('loR').textContent = loText(OP); $('cdA').textContent = '攻擊 左鍵・' + wOf(ME).n; $('cdU').textContent = '大招 R・' + (ULTS[ME.ulk] || ULTS.quake).n; }
 function beginMatch() { if (!net) { OP.isBot = true; setLo(ME, myLo()); setLo(OP, randLo()); } showLo(); wins = [0, 0]; round = 1; stats = { hits: 0, dmg: 0, high: 0, combo: 0, ult: 0, taken: 0 }; $('nmL').textContent = ME.name; $('nmR').textContent = OP.name; startRound(); lockPtr() }
 
@@ -735,7 +807,7 @@ function updHud() {
   $('hpL').style.width = Math.max(0, ME.hp) + '%'; $('hpR').style.width = Math.max(0, OP.hp) + '%'; $('ulL').style.width = ME.ult + '%'; $('ulR').style.width = OP.ult + '%';
   $('ulL').parentNode.classList.toggle('full', ME.ult >= 100); $('ulR').parentNode.classList.toggle('full', OP.ult >= 100);
   $('tmV').textContent = Math.max(0, Math.ceil(tLeft));
-  $('cdA').classList.toggle('cd', ME.atkCD > 0); $('cdD').classList.toggle('cd', ME.dashCD > 0); $('cdU').classList.toggle('on', ME.ult >= 100); { const P = PASSIVES[ME.pas], el = $('cdS'); el.hidden = !(P && P.act); if (P && P.act) { el.textContent = P.n + ' E' + (ME.skT > 0 ? ' ' + Math.ceil(ME.skT) + 's' : ME.skCD > 0 ? ' ' + Math.ceil(ME.skCD) + 's' : ''); el.classList.toggle('cd', ME.skT <= 0 && ME.skCD > 0); el.classList.toggle('on', ME.skT > 0); } } $('cdJ').classList.toggle('cd', !ME.grounded);
+  $('cdA').classList.toggle('cd', ME.atkCD > 0); $('cdD').classList.toggle('cd', ME.dashCD > 0); $('cdU').classList.toggle('on', ME.ult >= 100); $('tbU').classList.toggle('on', ME.ult >= 100); { const P = PASSIVES[ME.pas], el = $('cdS'); el.hidden = !(P && P.act); if (P && P.act) { el.textContent = P.n + ' E' + (ME.skT > 0 ? ' ' + Math.ceil(ME.skT) + 's' : ME.skCD > 0 ? ' ' + Math.ceil(ME.skCD) + 's' : ''); el.classList.toggle('cd', ME.skT <= 0 && ME.skCD > 0); el.classList.toggle('on', ME.skT > 0); const tb = $('tbE'); tb.hidden = !(P && P.act); if (P && P.act) { tb.classList.toggle('cd', ME.skT <= 0 && ME.skCD > 0); tb.classList.toggle('on', ME.skT > 0); } } } $('cdJ').classList.toggle('cd', !ME.grounded);
 }
 const popLayer = document.createElement('div'); popLayer.className = 'pops'; stage.appendChild(popLayer);
 const _v = new THREE.Vector3();
@@ -913,7 +985,7 @@ function playerInput(dt) {
   if (keys.arrowleft) yaw += 2.2 * dt; if (keys.arrowright) yaw -= 2.2 * dt; if (keys.arrowup) pitch = Math.max(.05, pitch - 1.4 * dt); if (keys.arrowdown) pitch = Math.min(1.25, pitch + 1.4 * dt);
   if (lockOn && OP.hp > 0) { const want = Math.atan2(-(OP.x - ME.x), -(OP.z - ME.z)); let df = Math.atan2(Math.sin(want - yaw), Math.cos(want - yaw)); yaw += df * Math.min(1, dt * 8); }
   const fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
-  let mx = 0, mz = 0; if (keys.w) { mx += fx; mz += fz; } if (keys.s) { mx -= fx; mz -= fz; } if (keys.d) { mx += rx; mz += rz; } if (keys.a) { mx -= rx; mz -= rz; }
+  let mx = 0, mz = 0; if (keys.w) { mx += fx; mz += fz; } if (keys.s) { mx -= fx; mz -= fz; } if (keys.d) { mx += rx; mz += rz; } if (keys.a) { mx -= rx; mz -= rz; } if (joy.x || joy.y) { mx += rx * joy.x - fx * joy.y; mz += rz * joy.x - fz * joy.y; }
   const l = Math.hypot(mx, mz); if (l > 0) { mx /= l; mz /= l; } inp.mx = mx; inp.mz = mz;
   if (wantJump) inp.jump = true; if (wantAtk) inp.atk = true; if (keys.shift || wantDash) inp.dash = true; if (wantUlt) inp.ult = true; if (wantSk) inp.sk = true;
   wantJump = wantAtk = wantUlt = wantDash = wantSk = false; if (keys.shift) keys.shift = false;
@@ -1069,7 +1141,7 @@ function netTryStart() { if (net && net.role === 'host' && net.ldMe && net.ldOp 
 function netBegin(r) {   // 開一場新比賽（r=1）或下一局
   if (r === 1) { showLo(); wins = [0, 0]; round = 1; stats = { hits: 0, dmg: 0, high: 0, combo: 0, ult: 0, taken: 0 }; $('endO').hidden = true; $('startO').hidden = true; $('nmL').textContent = ME.name; $('nmR').textContent = OP.name; net.myRm = net.opRm = false; SFX.unlock(); }
   else round = r;
-  paused = false; $('pauseO').hidden = true; startRound(); lockPtr();
+  paused = false; $('pauseO').hidden = true; startRound(); if (!TOUCH) lockPtr();
 }
 function tryRematch() { if (net && net.role === 'host' && net.myRm && net.opRm) { netSend({ t: 'rs', r: 1 }); netBegin(1); } }
 function applyHitToMe(m) {
