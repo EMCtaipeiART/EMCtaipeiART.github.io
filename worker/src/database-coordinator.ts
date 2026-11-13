@@ -3315,7 +3315,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const { database } = await this.snapshot();
       const isMonitor = hasCapability(database, current, 'database.manage') || this.coinDesignerName(database, current) === 'Machi';
       if (!isMonitor) throw new Error('只有管理者與 Machi 可以更新別人的頭像快照');
-      if (!this.pixelOfficeKnownName(target)) throw new Error('找不到這位同仁');
+      // 企劃／專案／呈鈺顧問同仁用角色工坊發佈角色後，不一定已排進元宇宙座位清單（pixel_office_staff）；設定表有這個人就算認得（朱祖翎：已發佈、已在畫面，但管理者更新頭像被擋）
+      const listed = (database.tables['設定']?.rows || []).some(item => (text(item['名字']) === target || text(item['顯示名']) === target) && /^(企劃部|專案部|呈鈺顧問)$/.test(normalizeDepartmentName(item['部門'])));
+      if (!this.pixelOfficeKnownName(target) && !listed) throw new Error('找不到這位同仁');
       name = target;
     }
     if (!name) throw new Error('只有設計師或已入座的同仁本人可以更新自己的頭像快照');

@@ -5430,6 +5430,16 @@ describe('平台幣', () => {
     expect(await api({ action: 'pixelOfficeAvatarSnapshot', target: 'Anna', lookKey: 'c:84d5152c-abc3-4bee-808e-dadd48519311||h:95bbe5f3-ffc5-4f9d-864d-a327e38028ba@20261015092029|c4', png }, admin)).toMatchObject({ ok: true, saved: true });   // 自訂頭像的造型代碼含 @
     expect(await api({ action: 'pixelOfficeAvatarSnapshot', target: 'Anna', lookKey: 'k-anna-2', png }, leona)).toMatchObject({ ok: false });   // 一般人不能代別人更新
     expect(await api({ action: 'pixelOfficeAvatarSnapshot', target: '路人甲', lookKey: 'k-x', png }, admin)).toMatchObject({ ok: false });   // 不認識的名字
+    {   // 設定表有、但還沒排進元宇宙座位清單的企劃同仁：管理者也能更新她的頭像快照
+      const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+      await runInDurableObject(stub, async (_instance, state) => {
+        const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+        const database = JSON.parse(stored.json) as DatabaseSnapshot;
+        database.tables['設定'].rows.push({ '部門': '企劃部', '組別': '', '名字': '朱祖翎', '顯示名': '朱祖翎', '帳號': 'livia.chu@emctaipei.com' });
+        state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+      });
+    }
+    expect(await api({ action: 'pixelOfficeAvatarSnapshot', target: '朱祖翎', lookKey: 'k-livia-1', png }, admin)).toMatchObject({ ok: true, saved: true });
   });
 
   it('lets the monitor (admin or Machi) punish someone: stuck at the seat, no moving or changing clothes, with a reason and a day count', async () => {
