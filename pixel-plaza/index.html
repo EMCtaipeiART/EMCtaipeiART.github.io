@@ -459,6 +459,17 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 .qc-s:hover,.qc-m:hover{background:linear-gradient(180deg,#f4fff6,#cdeed3)!important;transform:translateY(-2px)}
 .qc-s.on,.qc-m.on{background:linear-gradient(180deg,#ffe27a,#ffc733)!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.7),0 3px 0 #c8921a,0 5px 6px rgba(0,0,0,.2)}
 .qc-s:active,.qc-m:active{transform:translateY(3px);box-shadow:inset 0 2px 0 #fff,0 0 0 #a9c9b0}
+/* 按鈕去厚度（2026-11-13）：拿掉底部深色厚邊與疊層實心陰影，只留柔和的模糊陰影；按下改為縮小而不是下沉 */
+.hp-top button.pk-orange,.hp-top button.pk-green,.hp-top button.pk-teal,.hp-top button.pk-red,.hp-br button.pk-purple{border-bottom:0!important;margin-bottom:0!important;box-shadow:0 3px 8px rgba(0,0,0,.22)!important}
+.hp-top button.pk-orange:hover,.hp-top button.pk-orange:focus-visible,.hp-top button.pk-green:hover,.hp-top button.pk-green:focus-visible,.hp-top button.pk-teal:hover,.hp-top button.pk-teal:focus-visible,.hp-top button.pk-red:hover,.hp-top button.pk-red:focus-visible,.hp-br button.pk-purple:hover,.hp-br button.pk-purple:focus-visible{transform:scale(1.05)!important;box-shadow:0 4px 10px rgba(0,0,0,.26)!important}
+.hp-top button.pk-orange:active,.hp-top button.pk-green:active,.hp-top button.pk-teal:active,.hp-top button.pk-red:active,.hp-br button.pk-purple:active{transform:scale(.97)!important;box-shadow:0 1px 4px rgba(0,0,0,.25)!important}
+.hp-top button.pk-orange i,.hp-top button.pk-green i,.hp-top button.pk-teal i,.hp-top button.pk-red i,.hp-br button.pk-purple i{box-shadow:none!important}
+.hp-card,.hp-clock{margin-bottom:0!important;box-shadow:0 3px 8px rgba(0,0,0,.22)!important}
+.cp-btns .cp-go,.btn-red,.cat-act button,.cp-chat-in .send,.sv-bar .send,.qc-say .send{border-bottom:0!important;box-shadow:0 3px 8px rgba(0,0,0,.2)!important}
+.cat-act button:active,.cp-btns .cp-go:active,.btn-red:active{transform:scale(.97)!important;border-bottom-width:0!important;box-shadow:0 1px 4px rgba(0,0,0,.25)!important}
+.qc-s,.qc-m,.qc-s.on,.qc-m.on{box-shadow:0 2px 5px rgba(0,0,0,.18)!important}
+.qc-s:active,.qc-m:active{transform:scale(.96)!important}
+#stick i,.hp-av{box-shadow:0 2px 6px rgba(0,0,0,.28)!important}
 </style></head><body>
 <script>if(/[?&]embed=1/.test(location.search))document.documentElement.classList.add('embed')</script>
 <div id="title">
