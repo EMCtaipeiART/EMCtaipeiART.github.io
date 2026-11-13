@@ -10,7 +10,7 @@
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;-webkit-tap-highlight-color:transparent}
 body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:12px 16px 28px}
-.wrap{width:min(100%,1180px);display:flex;flex-direction:column;gap:10px}
+.wrap{width:min(100%,max(860px,min(1560px,calc((100vh - 170px) * 5 / 3))));display:flex;flex-direction:column;gap:10px}
 header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 header h1{margin:0;font-size:20px;flex:1;min-width:140px}
 header h1 small{display:block;font-size:12px;font-weight:600;color:var(--dim)}
@@ -140,11 +140,11 @@ const SFX = (() => {
 const cv = $('c3'), stage = $('stage');
 const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); renderer.shadowMap.enabled = true;
-const scene = new THREE.Scene(); scene.background = new THREE.Color(0xb9c9df); scene.fog = new THREE.Fog(0xb9c9df, 40, 80);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0xcfe0f4); scene.fog = new THREE.Fog(0xcfe0f4, 40, 80);
 const camera = new THREE.PerspectiveCamera(40, 5 / 3, .1, 200);
-camera.position.set(10, 5.6, 20.5); camera.lookAt(10, 3.9, 0);
-scene.add(new THREE.HemisphereLight(0xdfe8f5, 0x8d9bb3, .5));
-const sun = new THREE.DirectionalLight(0xfff4e0, .42); sun.position.set(6, 16, 12); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
+camera.position.set(10, 5.4, 19); camera.lookAt(10, 3.9, 0);
+scene.add(new THREE.HemisphereLight(0xffffff, 0xb4c0d6, .85));
+const sun = new THREE.DirectionalLight(0xfff6e6, .6); sun.position.set(6, 16, 12); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
 Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 12, bottom: -8, near: 1, far: 50 }); scene.add(sun);
 const M = c => new THREE.MeshLambertMaterial({ color: c });
 const box = (w, h, d, col, x, y, z, parent = scene, shadow = true) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), M(col)); m.position.set(x, y, z); m.castShadow = shadow; m.receiveShadow = true; parent.add(m); return m; };
@@ -152,11 +152,11 @@ const edge = m => { const e = new THREE.LineSegments(new THREE.EdgesGeometry(m.g
 const canvasTex = (w, h, draw, rep) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.anisotropy = 4; if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep[0], rep[1]); } return t; };
 
 // 地板（淡灰格線）
-{ const t = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#c9d1de'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(24,46,84,.12)'; g.lineWidth = 3; g.strokeRect(0, 0, w, h); }, [30, 14]);
+{ const t = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#dfe4ec'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(24,46,84,.12)'; g.lineWidth = 3; g.strokeRect(0, 0, w, h); }, [30, 14]);
   const f = new THREE.Mesh(new THREE.PlaneGeometry(60, 28), new THREE.MeshLambertMaterial({ map: t })); f.rotation.x = -Math.PI / 2; f.position.set(10, 0, 4); f.receiveShadow = true; scene.add(f); }
 // 後牆：窗戶＋海報
-{ const t = canvasTex(1024, 256, (g, w, h) => { g.fillStyle = '#d9d4c6'; g.fillRect(0, 0, w, h); g.fillStyle = '#182e54'; g.fillRect(0, h - 22, w, 22);
-    for (let i = 0; i < 5; i++) { const x = 40 + i * 200; g.fillStyle = '#182e54'; g.fillRect(x - 6, 34, 152, 132); g.fillStyle = '#86b4dc'; g.fillRect(x, 40, 140, 120); g.fillStyle = 'rgba(255,255,255,.3)'; g.fillRect(x + 8, 48, 40, 100); g.fillStyle = '#182e54'; g.fillRect(x + 68, 40, 4, 120); g.fillRect(x, 96, 140, 4); }
+{ const t = canvasTex(1024, 256, (g, w, h) => { g.fillStyle = '#ece8dc'; g.fillRect(0, 0, w, h); g.fillStyle = '#182e54'; g.fillRect(0, h - 22, w, 22);
+    for (let i = 0; i < 5; i++) { const x = 40 + i * 200; g.fillStyle = '#182e54'; g.fillRect(x - 6, 34, 152, 132); g.fillStyle = '#a8d0f2'; g.fillRect(x, 40, 140, 120); g.fillStyle = 'rgba(255,255,255,.3)'; g.fillRect(x + 8, 48, 40, 100); g.fillStyle = '#182e54'; g.fillRect(x + 68, 40, 4, 120); g.fillRect(x, 96, 140, 4); }
     g.fillStyle = '#d9534f'; g.fillRect(868, 60, 70, 90); g.fillStyle = '#fff'; g.font = '800 22px sans-serif'; g.textAlign = 'center'; g.fillText('DEAD', 903, 100); g.fillText('LINE', 903, 126); });
   const w = new THREE.Mesh(new THREE.PlaneGeometry(52, 13), new THREE.MeshLambertMaterial({ map: t })); w.position.set(10, 6.5, -7); scene.add(w); }
 // 背景辦公桌與電腦
