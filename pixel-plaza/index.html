@@ -473,6 +473,7 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 /* 手機：左上角名牌卡不要被右上角按鈕蓋住（狀態文字太長就用刪節號） */
 @media (max-width:640px){
   .hp-card{max-width:calc(100vw - 218px)!important;box-sizing:border-box}
+  .hp-top button.pk-orange,.hp-top button.pk-green,.hp-top button.pk-teal,.hp-top button.pk-red{height:42px!important;min-width:42px!important;padding:0!important}   /* 預設正圓（寬＝高），滑過／點到才展開 */
   .hp-info{min-width:0;overflow:hidden}
   .hp-name,.hp-st{max-width:100%;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
