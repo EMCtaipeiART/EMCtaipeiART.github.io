@@ -1195,6 +1195,20 @@ function build3dObjects(T, place){
     m.position.set(I(188), .95 + .8, I(1160)); scene.add(m); billboards.push(m);
     const hit = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.7, 1.5), new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false}));   // 看不見的點擊區：訪客、登入者都能直接點進遊戲
     hit.position.set(I(188), .95 + .85, I(1160)); hit.userData.pick = {kind:'portal'}; scene.add(hit); pickables.push(hit); }
+  // 倉庫角落的「截稿倒數 2」街機：點一下進遊戲
+  { const ax = I(262), az = I(1078);
+    const mk = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.minFilter = THREE.LinearFilter; return t; };
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2.6, 1.1), new THREE.MeshLambertMaterial({color:0x1d3a6e}));
+    body.position.set(ax, 1.3, az); scene.add(body);
+    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(body.geometry), new THREE.LineBasicMaterial({color:0x000000})); edges.position.copy(body.position); scene.add(edges);
+    const screenT = mk(256, 192, (g, w, h) => { g.fillStyle = '#eef3fb'; g.fillRect(0, 0, w, h); g.fillStyle = '#182e54'; for (let i = 0; i < 4; i++) g.fillRect(24 + i * 56, 96 + (i % 2) * 20, 40, 40); g.fillStyle = '#d9534f'; g.fillRect(0, 0, w, 10); g.fillStyle = '#182e54'; g.font = '900 34px "Noto Sans TC","PingFang TC",sans-serif'; g.textAlign = 'center'; g.fillText('截稿倒數', w / 2, 62); g.fillStyle = '#3b6fd8'; g.font = '800 22px sans-serif'; g.fillText('90 SEC', w / 2, 88); });
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(1.2, .9), new THREE.MeshBasicMaterial({map:screenT})); scr.position.set(ax, 1.75, az + .56); scene.add(scr);
+    const mqT = mk(256, 64, (g, w, h) => { g.fillStyle = '#f0b429'; g.fillRect(0, 0, w, h); g.strokeStyle = '#000'; g.lineWidth = 6; g.strokeRect(0, 0, w, h); g.fillStyle = '#182e54'; g.font = '900 34px "Noto Sans TC","PingFang TC",sans-serif'; g.textAlign = 'center'; g.fillText('截稿倒數 2', w / 2, 44); });
+    const mq = new THREE.Mesh(new THREE.PlaneGeometry(1.4, .35), new THREE.MeshBasicMaterial({map:mqT})); mq.position.set(ax, 2.38, az + .56); scene.add(mq);
+    const pad = new THREE.Mesh(new THREE.BoxGeometry(1.3, .12, .5), new THREE.MeshLambertMaterial({color:0x0e1f40})); pad.position.set(ax, .95, az + .75); scene.add(pad);
+    rects.push([ax - I(14), az - I(10), ax + I(14), az + I(14)]);
+    const hit = new THREE.Mesh(new THREE.BoxGeometry(1.7, 2.7, 1.5), new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false}));
+    hit.position.set(ax, 1.35, az + .2); hit.userData.pick = {kind:'arcade'}; scene.add(hit); pickables.push(hit); }
   projectorRig(I(160), I(1160), 'W', {room:'B', wallX:I(98) + .02, wallDir:1, zc:I(1150), w:4.0, h:2.1, title:'倉庫', kind:'text'});
   projectorRig(I(162), I(1360), 'W', {room:'C', wallX:I(98) + .02, wallDir:1, zc:I(1355), w:4.0, h:2.1, title:'專案會議', kind:'list'});
   for (const [x0, z0, ww, dd] of [[1046, 84, 4, 150], [94, 1072, 4, 156], [94, 1274, 4, 162]]) {   // 投影用白牆
@@ -1796,11 +1810,13 @@ const expFade = document.createElement('div'); expFade.id = 'expFade'; document.
 let expFrame = null, expBusy = false, expArmed = false;
 const THEATER = {x0:150, x1:262, z0:zN(1110), z1:zN(1210)};   // 倉庫內側中央（px，過 zN）
 const inTheater = p => { const x = p.holder.position.x / U, z = p.holder.position.z / U; return floorOf(p) === 5 && x > THEATER.x0 && x < THEATER.x1 && z > THEATER.z0 && z < THEATER.z1; };
-function expEnter(){
+const EXP_GAMES = {exp:{title:'設計部遠征隊', fade:'倉庫', url:'../expedition/'}, deadline:{title:'截稿倒數 2', fade:'截稿倒數', url:'../deadline/'}};
+function expEnter(kind){
+  const gm = EXP_GAMES[kind] || EXP_GAMES.exp;
   if (expBusy) return; expBusy = true; target = null; wantSeat = null; wantElev = false; wheelClose(); fridgeClose();
-  expFade.textContent = '倉庫'; expFade.classList.add('on');
+  expFade.textContent = gm.fade; expFade.classList.add('on');
   setTimeout(() => {
-    expFrame = document.createElement('iframe'); expFrame.id = 'expFrame'; expFrame.title = '設計部遠征隊'; expFrame.allow = 'autoplay'; expFrame.src = '../expedition/?embed=1&t=' + Date.now(); expFrame.style.display = 'block'; document.body.appendChild(expFrame); expFrame.addEventListener('load', () => { try { expFrame.focus(); expFrame.contentWindow.focus(); } catch (e) {} });
+    expFrame = document.createElement('iframe'); expFrame.id = 'expFrame'; expFrame.title = gm.title; expFrame.allow = 'autoplay'; expFrame.src = gm.url + '?embed=1&t=' + Date.now(); expFrame.style.display = 'block'; document.body.appendChild(expFrame); expFrame.addEventListener('load', () => { try { expFrame.focus(); expFrame.contentWindow.focus(); } catch (e) {} });
     setTimeout(() => { expFade.textContent = ''; expFade.classList.remove('on'); }, 700);
   }, 1000);
 }
@@ -2151,7 +2167,7 @@ renderer.domElement.addEventListener('wheel', e => { if (player) { e.preventDefa
 // 可點選範圍：只有自己人物周圍「人物身高的三倍」以內的物件／人物才能點（太遠的點不到，避免人物一直跑去很遠的地方）；點自己的人物不受限，管理者切換人物不受限
 const CLICK_RANGE = 3 * 2.2;
 function pickInRange(h, pk){
-  if (!player || !h.point || (pk && pk.kind === 'portal')) return true;
+  if (!player || !h.point || (pk && (pk.kind === 'portal' || pk.kind === 'arcade'))) return true;
   if (pk && pk.kind === 'char' && (pk.c === player || adminHome)) return true;
   return Math.hypot(h.point.x - player.holder.position.x, h.point.z - player.holder.position.z) <= CLICK_RANGE;
 }
@@ -2159,7 +2175,7 @@ function onPick(e){
   if (!wheel.hidden) { wheelClose(); return; }   // 輪盤開著時，點外面只收合輪盤，人物先不動；下一下才移動
   ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
   const hits = ray.intersectObjects(pickables, true).filter((h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.desk && !pk.c.holder.visible) && pickInRange(h, pk); })), hit = hits.find(h => ((h.object.userData.pickRoot || h.object).userData.pick || {}).kind === 'char') || hits[0];
-  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { clickChar = pk.c; clickUntil = performance.now() + 3000; if (pk.c !== player && player && adminHome) select(pk.c.name); if (pk.c === player) wheelOpen(pk.c); else wheelClose(); if (false) { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); else if (pk.kind === 'fridge') fridgeInteract(); else if (pk.kind === 'cat') CATS.find(c => c.id === pk.id).click(); else if (pk.kind === 'catbowl') CATS.find(c => c.id === pk.id).bowlClick(); else if (pk.kind === 'portal') expEnter(); else if (pk.kind === 'elev') elevInteract(); else if (pk.kind === 'seat') { const st = pk.seat || chairSeats.filter(q => q.kind === 'toilet').sort((a, b) => Math.hypot(a.x - pk.at.x, a.z - pk.at.z) - Math.hypot(b.x - pk.at.x, b.z - pk.at.z))[0]; if (st && player && !st.by && !st.hidden) { wantSeat = st; target = new THREE.Vector3(st.x, 0, st.z); } } return; } }
+  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { clickChar = pk.c; clickUntil = performance.now() + 3000; if (pk.c !== player && player && adminHome) select(pk.c.name); if (pk.c === player) wheelOpen(pk.c); else wheelClose(); if (false) { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); else if (pk.kind === 'fridge') fridgeInteract(); else if (pk.kind === 'cat') CATS.find(c => c.id === pk.id).click(); else if (pk.kind === 'catbowl') CATS.find(c => c.id === pk.id).bowlClick(); else if (pk.kind === 'portal') expEnter(); else if (pk.kind === 'arcade') expEnter('deadline'); else if (pk.kind === 'elev') elevInteract(); else if (pk.kind === 'seat') { const st = pk.seat || chairSeats.filter(q => q.kind === 'toilet').sort((a, b) => Math.hypot(a.x - pk.at.x, a.z - pk.at.z) - Math.hypot(b.x - pk.at.x, b.z - pk.at.z))[0]; if (st && player && !st.by && !st.hidden) { wantSeat = st; target = new THREE.Vector3(st.x, 0, st.z); } } return; } }
   radialClose(); wantSeat = null; fridgeWant = false; wantElev = false; wheelClose();
   const p = new THREE.Vector3();
   if (e.pointerType === 'mouse') return;   // 桌面版：點地面不再自動走過去（用 WASD／方向鍵），只有點可點物件（椅子、馬桶、電梯…）才會走；手機（觸控）維持點地面走過去

@@ -2,14 +2,17 @@
 // 規則與前端是同一份程式碼（單一來源）：題組、物理、計分都直接引用遊戲模組。
 import { createRng, hashString } from '../../archive/EMC-ART-Pixel-Office-2D/dist/minigames/core/rng.js';
 import { createDeck, pointsForCorrect, WRONG_PENALTY } from '../../archive/EMC-ART-Pixel-Office-2D/dist/minigames/games/deadline-challenges.js';
+import { createRng as createRng2, hashString as hashString2 } from '../../deadline/rng.js';
+import { createDeck as createDeck2, pointsForCorrect as pointsForCorrect2, WRONG_PENALTY as WRONG2 } from '../../deadline/engine.js';
 import { createBall, stepBall, pointsFor, binXAt, makeWindSchedule, windAt, MAX_PULL, POWER_K } from '../../archive/EMC-ART-Pixel-Office-2D/dist/minigames/games/hoops-sim.js';
 
-export type GameId = 'deadline' | 'hoops' | 'treasure';
+export type GameId = 'deadline' | 'deadline2' | 'hoops' | 'treasure';
 export interface GameSpec { duration: number; level: 'full' | 'basic' }
 /** 倒數 3 秒不算遊戲時間；伺服器以此推算「最少要花多少真實時間」。 */
 export const COUNTDOWN_SECS = 3;
 export const GAMES: Record<GameId, GameSpec> = {
   deadline: { duration: 90, level: 'full' },
+  deadline2: { duration: 90, level: 'full' },
   hoops: { duration: 60, level: 'full' },
   treasure: { duration: 120, level: 'basic' }
 };
@@ -44,6 +47,30 @@ function verifyDeadline(day: string, log: any): Verdict {
   // 機器人式的等間隔作答：十五題以上、間隔幾乎完全一樣
   if (gaps.length >= 15 && Math.max(...gaps) - Math.min(...gaps) < 0.02) return bad('robotic');
   return { ok: true, score, endT: GAMES.deadline.duration, detail: { answers: answers.length, correct } };
+}
+
+// ───────── 截稿倒數 2（新版題庫，完整重算；題組日期種子用 deadline2）─────────
+function verifyDeadline2(day: string, log: any): Verdict {
+  const answers = log?.answers;
+  if (!Array.isArray(answers)) return bad('bad-log');
+  if (answers.length > 300) return bad('too-many');
+  const deck = createDeck2(createRng2(hashString2('deadline2:deck@' + day)));
+  let score = 0, combo = 0, correct = 0, prev = 0;
+  const gaps: number[] = [];
+  for (let k = 0; k < answers.length; k++) {
+    const a = answers[k];
+    if (!a || a.i !== k || !Number.isInteger(a.a) || !isNum(a.t)) return bad('bad-answer');
+    if (a.t > GAMES.deadline2.duration + 0.5 || a.t < 0) return bad('bad-time');
+    if (a.t - prev < (k === 0 ? DEADLINE_MIN_FIRST : DEADLINE_MIN_GAP)) return bad('too-fast');
+    if (k > 0) gaps.push(a.t - prev);
+    prev = a.t;
+    const item = deck.get(k);
+    if (!item.type.regions(item.puzzle, BOX).some((r: { id: number }) => r.id === a.a)) return bad('bad-choice');
+    if (item.type.isCorrect(item.puzzle, a.a)) { combo++; correct++; score += pointsForCorrect2(combo, item.level); }
+    else { combo = 0; score = Math.max(0, score - WRONG2); }
+  }
+  if (gaps.length >= 15 && Math.max(...gaps) - Math.min(...gaps) < 0.02) return bad('robotic');
+  return { ok: true, score, endT: GAMES.deadline2.duration, detail: { answers: answers.length, correct } };
 }
 
 // ───────── 廢紙投籃（逐球重放物理）─────────
@@ -96,6 +123,7 @@ function verifyTreasure(_day: string, log: any): Verdict {
 
 export function verifyRun(game: GameId, day: string, log: unknown): Verdict {
   if (game === 'deadline') return verifyDeadline(day, log);
+  if (game === 'deadline2') return verifyDeadline2(day, log);
   if (game === 'hoops') return verifyHoops(day, log);
   if (game === 'treasure') return verifyTreasure(day, log);
   return bad('unknown-game');

@@ -208,13 +208,14 @@ async function handleSiteHost(request: Request, env: Env): Promise<Response> {
 const MINIGAME_MAX_BODY = 16 * 1024;
 async function handleMinigames(request: Request, env: Env): Promise<Response> {
   const path = new URL(request.url).pathname;
-  const stub = env.MINIGAME_BOARD.getByName('primary', { locationHint: 'apac' }) as DurableObjectStub<MinigameBoard>;
+  const stubOf = (g: unknown) => env.MINIGAME_BOARD.getByName(g === 'deadline2' ? 'dl2' : 'primary', { locationHint: 'apac' }) as DurableObjectStub<MinigameBoard>;   // 新題庫用獨立實例（既有 primary 部署後不會重啟）
+  const stub = stubOf('');
   const send = (r: { status: number; body: Record<string, unknown> }) => jsonResponse(request, env, r.body, r.status);
   try {
     if (path === '/minigames/board') {
       if (request.method !== 'GET') return jsonResponse(request, env, { ok: false, error: 'method' }, 405);
       const q = new URL(request.url).searchParams;
-      return send(await stub.board({ game: q.get('game'), range: q.get('range') }));
+      return send(await stubOf(q.get('game')).board({ game: q.get('game'), range: q.get('range') }));
     }
     if (path === '/minigames/exp' && request.method === 'GET') return send(await (env.MINIGAME_BOARD.getByName('expedition', { locationHint: 'apac' }) as DurableObjectStub<MinigameBoard>).expGet());
     if (path === '/minigames/top3') {
@@ -248,9 +249,9 @@ async function handleMinigames(request: Request, env: Env): Promise<Response> {
         const coord = env.DATABASE_COORDINATOR.getByName('primary', { locationHint: 'apac' }) as DurableObjectStub<DatabaseCoordinator>;
         account = await coord.minigameViewer(body.token);
       }
-      return send(await stub.startRun({ game: body.game, device: body.device, nick: body.nick, account, ip: request.headers.get('CF-Connecting-IP') || 'unknown' }));
+      return send(await stubOf(body.game).startRun({ game: body.game, device: body.device, nick: body.nick, account, ip: request.headers.get('CF-Connecting-IP') || 'unknown' }));
     }
-    return send(await stub.submit({ runId: body.runId, device: body.device, log: body.log }));
+    return send(await stubOf(body.game).submit({ runId: body.runId, device: body.device, log: body.log }));
   } catch (error) {
     console.error(JSON.stringify({ event: 'minigames-error', message: error instanceof Error ? error.message : String(error) }));
     return jsonResponse(request, env, { ok: false, error: 'server-error' }, 500);
