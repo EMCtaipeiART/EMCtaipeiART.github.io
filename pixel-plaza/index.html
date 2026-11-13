@@ -1628,7 +1628,7 @@ function remoteWsPos(m){   // 別人經 WebSocket 傳來的位置：直接併進
     ws.onerror = () => { try { ws.close(); } catch (e) {} };
   };
   connect(); document.addEventListener('visibilitychange', () => { if (!document.hidden && (!ws || ws.readyState > 1)) connect(); });
-  window.__pushWS = {pos:remoteWsPos, wsPos, get open(){ return pushOpen; }, trigger:() => pollNow()};
+  window.__pushWS = {pos:remoteWsPos, wsPos, chars, levelUpFx, get open(){ return pushOpen; }, trigger:() => pollNow()};
 })();
 function settleChars(){   // loading 頁收尾：把大家的狀態與位置一次定位（遠端人物直接站到回報位置、該坐的坐下），進站後不再有人走動、回朔
   for (const c of Object.values(chars)) {
