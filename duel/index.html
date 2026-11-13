@@ -958,21 +958,23 @@ function render(dt) {
   renderer.render(scene, camera);
 }
 let tmr = 0, camCd = 9.5; const perf = { t: 0, n: 0 };
-function frame(now) {
-  requestAnimationFrame(frame);
-  const raw = (now - last) / 1000; let dt = Math.min(.05, raw); last = now;
+function frame(now) { requestAnimationFrame(frame); stepFrame(now); }
+setInterval(() => { if (document.hidden && net) stepFrame(performance.now()); }, 200);
+function stepFrame(now) {
+  const raw = (now - last) / 1000; let dt = Math.min(document.hidden ? .4 : .05, raw); last = now;
   if (state === 'fight' || state === 'countdown') { perf.t += raw; perf.n++; if (perf.t > 1.5) { const avg = perf.t / perf.n; perf.t = perf.n = 0; if (avg > .026 && prAuto > .6) { prAuto = Math.max(.6, prAuto * .85); resize(); } } }
   if (!paused && state !== 'menu' && state !== 'matchEnd' || state === 'menu' || state === 'matchEnd') {
     if (state === 'menu') yaw += dt * .2;
     if (!paused) {
       if (slowT > 0) { slowT -= dt; dt *= .4; }
       if (hitstop > 0) { hitstop -= dt; dt *= .12; }
-      acc += dt; let n = 0; while (acc >= 1 / 60 && n++ < 5) { acc -= 1 / 60; if (ME && OP && state !== 'menu' && state !== 'matchEnd') sim(1 / 60); }
+      acc += dt; let n = 0; while (acc >= 1 / 60 && n++ < (document.hidden ? 30 : 5)) { acc -= 1 / 60; if (ME && OP && state !== 'menu' && state !== 'matchEnd') sim(1 / 60); }
       if (state === 'countdown' || state === 'roundEnd') { banner -= dt; if (state === 'countdown') { const c = Math.ceil(banner - .2); if (c !== tmr && c > 0 && c <= 3) { tmr = c; SFX.beep(); setBanner(String(c), 0); } if (banner <= .2) { state = 'fight'; setBanner('開打！', 700); SFX.go(); tmr = 0; } } else if (banner <= 0) { nextAfterRound(); } }
       if (state === 'fight' || state === 'countdown' || state === 'roundEnd') updHud();
       if (net && net.ready && ME && OP) { net.acc += dt; if (net.acc >= .05) { net.acc = 0; netState(); } }
     }
   }
+  if (document.hidden) return;
   if (ME && OP && state !== 'menu') render(dt); else { camera.position.set(Math.sin(yaw) * 30, 17, Math.cos(yaw) * 30); camera.lookAt(0, 1, 0); renderer.render(scene, camera); }
 }
 
@@ -988,7 +990,7 @@ function netSend(o) { if (net && net.ws && net.ws.readyState === 1) { try { net.
 function netState() {
   const f = ME; netSend({ t: 's', x: +f.x.toFixed(2), y: +f.y.toFixed(2), z: +f.z.toFixed(2), f: +f.face.toFixed(2), hp: +f.hp.toFixed(1), u: Math.round(f.ult), m: +f.moving.toFixed(1), g: f.grounded ? 1 : 0, d: f.dashT > 0 ? 1 : 0, h: f.hitStun > 0 ? 1 : 0 });
 }
-function netClose(silent) { const n = net; net = null; netTry++; if (n && n.ws) { n.ws.onclose = n.ws.onmessage = n.ws.onerror = null; try { n.ws.close(1000); } catch (e) {} } if (!silent) netUi(false); }
+function netClose(silent) { const n = net; net = null; netTry++; if (n) clearInterval(n.ping); if (n && n.ws) { n.ws.onclose = n.ws.onmessage = n.ws.onerror = null; try { n.ws.close(1000); } catch (e) {} } if (!silent) netUi(false); }
 function netLeave() { netClose(); }
 function netUi(busy, txt) { if (!busy) $('shareBox').hidden = true; $('qmB').disabled = $('mkB').disabled = $('joinB').disabled = $('joinIn').disabled = !!busy; $('netCancel').hidden = !busy; if (txt !== undefined) netSt(txt); }
 // 連到房間：回傳 'host'（等人）、'guest'（已配對）或關閉碼
@@ -1002,7 +1004,7 @@ function netConnect(room, role) {
   });
 }
 function netAdopt(ws, room, role) {
-  net = { ws, room, role, ready: false, acc: 0, ldMe: false, ldOp: false, myRm: false, opRm: false, opName: null, tgt: null };
+  net = { ping: setInterval(() => netSend({ t: 'p' }), 15000), ws, room, role, ready: false, acc: 0, ldMe: false, ldOp: false, myRm: false, opRm: false, opName: null, tgt: null };
   ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (x) { return; } netMsg(m); };
   ws.onclose = () => { if (net && net.ws === ws) netGone(true); };
   return net;
@@ -1058,8 +1060,8 @@ function stepRemote(f, dt) {   // 對手：位置朝最新封包靠近，其餘�
   f.flash = Math.max(0, f.flash - dt); f.hitStun = Math.max(0, f.hitStun - dt); f.windT = Math.max(0, f.windT - dt); f.ultWind = Math.max(0, f.ultWind - dt); f.dashT = Math.max(0, f.dashT - dt); f.rageT = Math.max(0, f.rageT - dt);
 }
 function netGone(drop) {   // 對手離線 / 連線中斷
-  if (!net) return; const was = net; net = null; netTry++; try { was.ws.onclose = null; was.ws.close(1000); } catch (e) {}
-  if (state === 'matchEnd' || state === 'menu') { $('endO').hidden = true; toMenu(); netUi(false, was.ready ? '對手已離線' : ''); return; }
+  if (!net) return; const was = net; net = null; netTry++; clearInterval(was.ping); try { was.ws.onclose = null; was.ws.close(1000); } catch (e) {}
+  if (state === 'matchEnd' || state === 'menu') { $('endO').hidden = true; toMenu(); netUi(false, was.ready ? '對手已離線' : '房間連線中斷（可能閒置太久），請重新建立或再按一次快速配對'); return; }
   state = 'matchEnd'; if (document.pointerLockElement) document.exitPointerLock(); setBanner('', 0); $('endO').hidden = false;
   $('endO').innerHTML = '<h2>' + (drop ? '連線中斷' : '對手離開了') + '</h2><p>' + (drop ? '與對手的連線斷了' : '這場算你贏') + '</p><button class="pk big" id="menuB" type="button">回到選單</button>';
   $('menuB').onclick = () => { $('endO').hidden = true; toMenu(); netUi(false, ''); };
