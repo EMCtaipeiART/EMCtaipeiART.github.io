@@ -470,6 +470,12 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 .qc-s,.qc-m,.qc-s.on,.qc-m.on{box-shadow:0 2px 5px rgba(0,0,0,.18)!important}
 .qc-s:active,.qc-m:active{transform:scale(.96)!important}
 #stick i,.hp-av{box-shadow:0 2px 6px rgba(0,0,0,.28)!important}
+/* 手機：左上角名牌卡不要被右上角按鈕蓋住（狀態文字太長就用刪節號） */
+@media (max-width:640px){
+  .hp-card{max-width:calc(100vw - 218px)!important;box-sizing:border-box}
+  .hp-info{min-width:0;overflow:hidden}
+  .hp-name,.hp-st{max-width:100%;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
 </style></head><body>
 <script>if(/[?&]embed=1/.test(location.search))document.documentElement.classList.add('embed')</script>
 <div id="title">
