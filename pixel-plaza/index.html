@@ -1818,12 +1818,13 @@ function angryFlameTex(){   // 水滴型火焰（和加班鬼火同一種做法�
 }
 const MOOD_TEX = {};
 function moodTex(id, w, h, draw){ if (!MOOD_TEX[id]) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; MOOD_TEX[id] = t; } return MOOD_TEX[id]; }
-function moodFaceTex(kind){   // 各心情的小臉（像素風、和鬼火同一系的簡單表情）
+function moodFaceTex(kind){   // 只有眼睛與眉毛：眼睛是鬼火那種深色直條，眉毛表現心情
   return moodTex('face-' + kind, 64, 64, (x) => {
-    const D = (col, ...r) => { x.fillStyle = col; x.fillRect(...r); };
-    if (kind === 'happy') { D('#4a0f26', 15, 20, 9, 14); D('#4a0f26', 40, 20, 9, 14); D('#fff', 17, 22, 4, 5); D('#fff', 42, 22, 4, 5); D('#ff9db5', 8, 38, 8, 5); D('#ff9db5', 48, 38, 8, 5); D('#4a0f26', 26, 40, 12, 3); D('#4a0f26', 28, 43, 8, 3); }
-    else if (kind === 'sad') { D('#0d3a63', 14, 26, 9, 12); D('#0d3a63', 41, 26, 9, 12); D('#fff', 16, 28, 4, 5); D('#fff', 43, 28, 4, 5); D('#0d3a63', 10, 20, 12, 3); D('#0d3a63', 42, 20, 12, 3); D('#0d3a63', 25, 46, 14, 3); D('#0d3a63', 22, 49, 4, 3); D('#0d3a63', 38, 49, 4, 3); D('#bfe6ff', 18, 40, 4, 8); }
-    else { D('#7a3b00', 14, 25, 12, 4); D('#7a3b00', 12, 28, 4, 4); D('#7a3b00', 26, 28, 0, 0); D('#7a3b00', 38, 25, 12, 4); D('#7a3b00', 48, 28, 4, 4); D('#7a3b00', 20, 40, 24, 4); D('#7a3b00', 24, 44, 16, 4); D('#ff8a5c', 8, 38, 8, 5); D('#ff8a5c', 48, 38, 8, 5); }
+    const col = {happy:'#4a0f26', sad:'#0d3a63', joy:'#7a3b00'}[kind] || '#2a0a55', brow = (x1, y1, cx, cy, x2, y2) => { x.beginPath(); x.moveTo(x1, y1); x.quadraticCurveTo(cx, cy, x2, y2); x.stroke(); };
+    x.fillStyle = col; x.fillRect(20, 30, 6, 10); x.fillRect(38, 30, 6, 10);
+    x.strokeStyle = col; x.lineWidth = 3; x.lineCap = 'round';
+    if (kind === 'sad') { brow(15, 25, 20, 20, 28, 18); brow(49, 25, 44, 20, 36, 18); }
+    else { brow(16, 24, 23, 17, 30, 24); brow(34, 24, 41, 17, 48, 24); }
   });
 }
 function moodSpr(tex, col, size, additive){
