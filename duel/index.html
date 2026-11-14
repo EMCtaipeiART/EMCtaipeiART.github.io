@@ -717,19 +717,44 @@ function carveRig(img) {
     for (const kk of [bk, (bk + 1) % N, (bk + N - 1) % N]) { const u0 = Math.round(cx + (x * cs[kk] + z * sn[kk]) * ppu), v0 = Math.round(gy - y * ppu); for (let r = 0; r < 6; r++) for (let oy = -r; oy <= r; oy++) for (let ox = -r; ox <= r; ox++) { if (Math.max(Math.abs(ox), Math.abs(oy)) !== r) continue; const u = u0 + ox, v = v0 + oy; if (A(kk, u, v) > 200) { const p = (v * img.width + kk * cw + u) * 4; return [all[p] / 255, all[p + 1] / 255, all[p + 2] / 255]; } } }
     return [.25, .25, .25];
   };
-  const HIP = .44, NECK = 1.06, ARMX = .27, partOf = (x, y) => y >= NECK ? 'head' : y < HIP ? (x > 0 ? 'legL' : 'legR') : (Math.abs(x) > ARMX && y < NECK - .06) ? (x > 0 ? 'armL' : 'armR') : 'torso', parts = { torso: [], head: [], armL: [], armR: [], legL: [], legR: [] };
-  const FACES = [[1, 0, 0, .92], [-1, 0, 0, .92], [0, 1, 0, 1.0], [0, -1, 0, .8], [0, 0, 1, .97], [0, 0, -1, .88]];
-  for (let iy = 0; iy < NY; iy++) for (let iz = 0; iz < NZ; iz++) for (let ix = 0; ix < NX; ix++) {
-    if (!occ[(iy * NZ + iz) * NX + ix]) continue; const x = X0 + (ix + .5) * S, y = (iy + .5) * S, z = Z0 + (iz + .5) * S;
-    const part = partOf(x, y);
-    for (const [fx, fy, fz, sh] of FACES) {
-      if (at(ix + fx, iy + fy, iz + fz) && partOf(x + fx * S, y + fy * S) === part) continue;
-      let dx = fx, dz = fz; if (fy) { const l = Math.hypot(x, z) || 1; dx = x / l; dz = z / l; }
-      const cc = colAt(x, y, z, dx, dz), h = S / 2, P = parts[part];
-      const q = fx ? (fx > 0 ? [[h, -h, -h], [h, h, -h], [h, h, h], [h, -h, h]] : [[-h, -h, h], [-h, h, h], [-h, h, -h], [-h, -h, -h]]) : fy ? (fy > 0 ? [[-h, h, -h], [-h, h, h], [h, h, h], [h, h, -h]] : [[-h, -h, h], [-h, -h, -h], [h, -h, -h], [h, -h, h]]) : (fz > 0 ? [[-h, -h, h], [h, -h, h], [h, h, h], [-h, h, h]] : [[h, -h, -h], [-h, -h, -h], [-h, h, -h], [h, h, -h]]);
-      for (const i of [0, 1, 2, 0, 2, 3]) P.push(x + q[i][0], y + q[i][1], z + q[i][2], cc[0] * sh, cc[1] * sh, cc[2] * sh);
+  const HIP = .44, NECK = 1.06, ARMX = .27, partOf = (x, y) => y >= NECK ? 'head' : y < HIP ? (x > 0 ? 'legL' : 'legR') : (Math.abs(x) > ARMX && y < NECK - .06) ? (x > 0 ? 'armL' : 'armR') : 'torso';
+  // 逐頂點取色：把各視角依「面向程度」加權混合（視角之間平滑過渡）
+  const colV = (x, y, z, nx, nz) => {
+    let l = Math.hypot(nx, nz); if (l < .35) { const r = Math.hypot(x, z) || 1; nx = x / r; nz = z / r; l = 1; } nx /= l; nz /= l;
+    let R = 0, G = 0, B = 0, W = 0;
+    for (let k = 0; k < N; k++) {
+      const d = -sn[k] * nx + cs[k] * nz; if (d <= .05) continue; const w = Math.pow(d, 6), u0 = Math.round(cx + (x * cs[k] + z * sn[k]) * ppu), v0 = Math.round(gy - y * ppu); let hit = false;
+      for (let r = 0; r < 5 && !hit; r++) for (let oy = -r; oy <= r && !hit; oy++) for (let ox = -r; ox <= r; ox++) { if (Math.max(Math.abs(ox), Math.abs(oy)) !== r) continue; const u = u0 + ox, v = v0 + oy; if (A(k, u, v) > 200) { const p = (v * img.width + k * cw + u) * 4; R += all[p] * w; G += all[p + 1] * w; B += all[p + 2] * w; W += w; hit = true; break; } }
     }
-  }
+    return W > 0 ? [R / W / 255, G / W / 255, B / W / 255] : [.25, .25, .25];
+  };
+  const buildPart = pn => {
+    let a0 = NX, a1 = -1, b0 = NY, b1 = -1, c0 = NZ, c1 = -1;
+    for (let iy = 0; iy < NY; iy++) for (let iz = 0; iz < NZ; iz++) for (let ix = 0; ix < NX; ix++) { if (!occ[(iy * NZ + iz) * NX + ix]) continue; if (partOf(X0 + (ix + .5) * S, (iy + .5) * S) !== pn) continue; if (ix < a0) a0 = ix; if (ix > a1) a1 = ix; if (iy < b0) b0 = iy; if (iy > b1) b1 = iy; if (iz < c0) c0 = iz; if (iz > c1) c1 = iz; }
+    if (a1 < 0) return null;
+    const P = 4, nx = a1 - a0 + 1 + 2 * P, ny = b1 - b0 + 1 + 2 * P, nz = c1 - c0 + 1 + 2 * P, id = (i, j, k) => (j * nz + k) * nx + i; let F = new Float32Array(nx * ny * nz);
+    for (let iy = b0; iy <= b1; iy++) for (let iz = c0; iz <= c1; iz++) for (let ix = a0; ix <= a1; ix++) if (occ[(iy * NZ + iz) * NX + ix] && partOf(X0 + (ix + .5) * S, (iy + .5) * S) === pn) F[id(ix - a0 + P, iy - b0 + P, iz - c0 + P)] = 1;
+    for (let pass = 0; pass < 3; pass++) for (let ax = 0; ax < 3; ax++) { const G = new Float32Array(F.length), st = ax === 0 ? 1 : ax === 1 ? nx * nz : nx; for (let j = 1; j < ny - 1; j++) for (let k = 1; k < nz - 1; k++) for (let i = 1; i < nx - 1; i++) { const p = id(i, j, k); G[p] = (F[p - st] + F[p] + F[p + st]) / 3; } F = G; }
+    const vid = new Int32Array(nx * ny * nz).fill(-1), pos = [], col = [], idx = [], ISO = .5;
+    const wx = i => X0 + (i - P + a0 + .5) * S, wy = j => (j - P + b0 + .5) * S, wz = k => Z0 + (k - P + c0 + .5) * S;
+    const CO = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]], ED = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]];
+    for (let j = 0; j < ny - 1; j++) for (let k = 0; k < nz - 1; k++) for (let i = 0; i < nx - 1; i++) {
+      const f = CO.map(([a, b, c]) => F[id(i + a, j + b, k + c)]); let inn = 0; for (const v of f) if (v > ISO) inn++; if (inn === 0 || inn === 8) continue;
+      let sx = 0, sy = 0, sz = 0, n = 0; for (const [p, q] of ED) { const fp = f[p], fq = f[q]; if ((fp > ISO) === (fq > ISO)) continue; const t = (ISO - fp) / (fq - fp), A1 = CO[p], B1 = CO[q]; sx += A1[0] + (B1[0] - A1[0]) * t; sy += A1[1] + (B1[1] - A1[1]) * t; sz += A1[2] + (B1[2] - A1[2]) * t; n++; }
+      const x = wx(i) + sx / n * S, y = wy(j) + sy / n * S, z = wz(k) + sz / n * S;
+      let gx = 0, gz = 0; for (let m = 0; m < 8; m++) { gx += (CO[m][0] ? 1 : -1) * f[m]; gz += (CO[m][2] ? 1 : -1) * f[m]; }
+      const c = colV(x, y, z, -gx, -gz); vid[id(i, j, k)] = pos.length / 3; pos.push(x, y, z); col.push(c[0], c[1], c[2]);
+    }
+    const quad = (a, b, c, d, flip) => { if (a < 0 || b < 0 || c < 0 || d < 0) return; if (flip) idx.push(a, c, b, a, d, c); else idx.push(a, b, c, a, c, d); };
+    for (let j = 1; j < ny - 1; j++) for (let k = 1; k < nz - 1; k++) for (let i = 1; i < nx - 1; i++) {
+      const f0 = F[id(i, j, k)] > ISO;
+      if ((F[id(i + 1, j, k)] > ISO) !== f0) quad(vid[id(i, j - 1, k - 1)], vid[id(i, j, k - 1)], vid[id(i, j, k)], vid[id(i, j - 1, k)], f0);
+      if ((F[id(i, j + 1, k)] > ISO) !== f0) quad(vid[id(i - 1, j, k - 1)], vid[id(i - 1, j, k)], vid[id(i, j, k)], vid[id(i, j, k - 1)], f0);
+      if ((F[id(i, j, k + 1)] > ISO) !== f0) quad(vid[id(i - 1, j - 1, k)], vid[id(i, j - 1, k)], vid[id(i, j, k)], vid[id(i - 1, j, k)], f0);
+    }
+    return { pos: new Float32Array(pos), col: new Float32Array(col), idx: new Uint32Array(idx) };
+  };
+  const parts = {}; for (const pn of ['torso', 'head', 'armL', 'armR', 'legL', 'legR']) parts[pn] = buildPart(pn);
   return { parts, HIP, NECK, SH: [.33, .94] };
 }
 function makeRig(name) {
@@ -741,7 +766,7 @@ function makeRig(name) {
   const rig = { root, hips, torso, head, armL, armR, legL, legR, mat, HIP, t: 0 };
   rigData(name, D => {
     const piv = { torso: [0, HIP, 0], head: [0, 1.06, 0], armL: [.33, .94, 0], armR: [-.33, .94, 0], legL: [.12, HIP, 0], legR: [-.12, HIP, 0] };
-    for (const k of Object.keys(D.parts)) { const a = D.parts[k], n = a.length / 6, pos = new Float32Array(n * 3), col = new Float32Array(n * 3); for (let i = 0; i < n; i++) { pos[i * 3] = a[i * 6] - piv[k][0]; pos[i * 3 + 1] = a[i * 6 + 1] - piv[k][1]; pos[i * 3 + 2] = a[i * 6 + 2] - piv[k][2]; col[i * 3] = a[i * 6 + 3]; col[i * 3 + 1] = a[i * 6 + 4]; col[i * 3 + 2] = a[i * 6 + 5]; } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); rig[k].add(new THREE.Mesh(g, mat)); }
+    for (const k of Object.keys(D.parts)) { const P = D.parts[k]; if (!P) continue; const pos = new Float32Array(P.pos.length); for (let i = 0; i < pos.length; i += 3) { pos[i] = P.pos[i] - piv[k][0]; pos[i + 1] = P.pos[i + 1] - piv[k][1]; pos[i + 2] = P.pos[i + 2] - piv[k][2]; } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(P.col, 3)); g.setIndex(new THREE.BufferAttribute(P.idx, 1)); rig[k].add(new THREE.Mesh(g, mat)); }
   });
   return rig;
 }
