@@ -140,6 +140,13 @@ table.rk tr.me td{background:var(--yel);color:#2a0f00}
 const $ = id => document.getElementById(id), Q = new URLSearchParams(location.search);
 const ANGLES = 12, LOCAL_NAMES = ['Machi', 'Anna', 'Leona', 'Amber', 'Noise', '余采馨', '吳冠賢', '廖秦葦', '李明庭', '王藍庭', '鄭筱舢', '黎子瑄'];
 const CHAR_SCALE = { Leona: 1.1, 廖秦葦: 1.18 };
+const CHAR_API = 'https://emc-ai-stage-classifier.machi-chen.workers.dev/api/public/characters';   // 與元宇宙／辦公室對決同一份「最新角色」
+let cloud = {}, cloudWalks = {}, cloudDone = false;
+const cloudReady = (async () => { try { const r = await fetch(CHAR_API, { signal: AbortSignal.timeout(5000) }); if (r.ok) { const j = await r.json(); cloud = j.characters || {}; cloudWalks = j.walks || {}; } } catch (e) {} cloudDone = true; })();
+const atlasSrc = (n, walk) => { const v = walk ? cloudWalks[n] : cloud[n]; return v ? CHAR_API + '/' + encodeURIComponent(n) + '/' + (walk ? 'walk-hd.png' : 'atlas-hd.png') + '?v=' + v : null; };
+const localSrc = (n, walk) => '../pixel-plaza/' + (walk ? 'sprites-walk-hd/' : 'sprites-hd/') + n + '.webp';
+function loadImg(n, walk, cb, fail) { const im = new Image(); im.crossOrigin = 'anonymous'; let local = false; im.onload = () => cb(im); im.onerror = () => { if (!local) { local = true; im.removeAttribute('crossorigin'); im.src = localSrc(n, walk); } else if (fail) fail(); }; im.src = atlasSrc(n, walk) || localSrc(n, walk); }
+function texFromAtlas(n, walk, rx, ry, fail) { const t = new THREE.Texture(); t.magFilter = t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; t.repeat.set(rx, ry); loadImg(n, walk, im => { t.image = im; t.needsUpdate = true; }, fail); return t; }
 const CFG = { diff: 1, laps: 3, who: 'Machi' };
 try { Object.assign(CFG, JSON.parse(localStorage.getItem('kartCfgV1') || '{}')); } catch (e) {}
 if (!LOCAL_NAMES.includes(CFG.who)) CFG.who = 'Machi';
@@ -306,7 +313,7 @@ const BUILD = {
 
 // ───────── 車（辦公椅）＋角色半身像 ─────────
 const texCache = {};
-function loadTex(name) { if (texCache[name]) return texCache[name]; const t = new THREE.TextureLoader().load('../pixel-plaza/sprites-hd/' + name + '.webp'); t.magFilter = t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; t.repeat.set(1 / ANGLES, .74); t.offset.y = .26; return texCache[name] = t; }
+function loadTex(name) { if (texCache[name]) return texCache[name]; const t = texFromAtlas(name, false, 1 / ANGLES, .74); t.offset.y = .26; return texCache[name] = t; }
 const shadowTex = canvasTex(64, 64, g => { const r = g.createRadialGradient(32, 32, 2, 32, 32, 30); r.addColorStop(0, 'rgba(0,0,0,.6)'); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); });
 const nameTexOf = (txt, col) => canvasTex(256, 64, (g, w, h) => { g.font = '900 34px "Noto Sans TC",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 8; g.strokeStyle = '#2a0f4a'; g.strokeText(txt, w / 2, h / 2); g.fillStyle = col; g.fillText(txt, w / 2, h / 2); });
 const sparkTex = canvasTex(32, 32, g => { const r = g.createRadialGradient(16, 16, 1, 16, 16, 15); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(.4, 'rgba(255,255,255,.6)'); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(0, 0, 32, 32); });
@@ -462,7 +469,7 @@ function setupRace() {
   raceT = 0; finT = 0; camShake = 0; camH = me.h; $('banner').classList.remove('on');
 }
 function updRanks() { const s = [...karts].sort((a, b) => (b.fin ? 1e9 - b.tFin : b.prog) - (a.fin ? 1e9 - a.tFin : a.prog)); s.forEach((k, i) => k.rank = i + 1); }
-function startRace() { unlock(); $('menu').hidden = true; $('endO').hidden = true; setupRace(); document.documentElement.classList.add('playing'); resize(); for (const id of ['pos', 'lapb', 'mini', 'spd', 'itembox', 'sys']) $(id).hidden = false; $('stick').hidden = !touch; $('drift').hidden = $('brake').hidden = !touch; state = 'countdown'; stT = 3.9; gasEarly = 99; paused = false; updRanks(); }
+function startRace() { if (!cloudDone) { cloudReady.then(startRace); return; } unlock(); $('menu').hidden = true; $('endO').hidden = true; setupRace(); document.documentElement.classList.add('playing'); resize(); for (const id of ['pos', 'lapb', 'mini', 'spd', 'itembox', 'sys']) $(id).hidden = false; $('stick').hidden = !touch; $('drift').hidden = $('brake').hidden = !touch; state = 'countdown'; stT = 3.9; gasEarly = 99; paused = false; updRanks(); }
 function finishKart(k) { if (k.fin) return; k.fin = true; k.tFin = raceT; if (k === me) { SFX.fin(); banner('FINISH!', '第 ' + k.rank + ' 名', 2400); finT = 3.5; state = 'finishing'; } }
 function fmt(t) { const m = Math.floor(t / 60), s = t - m * 60; return m + ':' + s.toFixed(2).padStart(5, '0'); }
 function endRace() {
@@ -567,7 +574,7 @@ function frame(now) { requestAnimationFrame(frame); const dt = Math.min(.05, (no
 function pills(id, opts, get, set) { const box = $(id); box.innerHTML = ''; opts.forEach(([label, val]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pill' + (get() === val ? ' on' : ''); b.textContent = label; b.onclick = () => { set(val); saveCfg(); pills(id, opts, get, set); }; box.appendChild(b); }); }
 pills('gDiff', [['輕鬆', 0], ['標準', 1], ['競速', 2]], () => CFG.diff, v => CFG.diff = v);
 pills('gLaps', [['2 圈', 2], ['3 圈', 3], ['5 圈', 5]], () => CFG.laps, v => CFG.laps = v);
-function drawHead() { const c = $('pv'), g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); $('pvN').textContent = CFG.who; const im = new Image(); im.onload = () => { const cw = im.naturalWidth / ANGLES, ch = im.naturalHeight, sw = cw * .8, sh = ch * .56; g.clearRect(0, 0, c.width, c.height); g.drawImage(im, (cw - sw) / 2, ch * .06, sw, sh, 0, 0, c.width, c.height); }; im.src = '../pixel-plaza/sprites-hd/' + CFG.who + '.webp'; }
+function drawHead() { const c = $('pv'), g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); $('pvN').textContent = CFG.who; loadImg(CFG.who, false, im => { const cw = im.naturalWidth / ANGLES, ch = im.naturalHeight, size = ch * .6, sx = (cw - size) / 2, sy = ch * .05; g.clearRect(0, 0, c.width, c.height); g.drawImage(im, sx, sy, size, size, 0, 0, c.width, c.height); }); }
 const stepWho = d => { const i = LOCAL_NAMES.indexOf(CFG.who); CFG.who = LOCAL_NAMES[(i + d + LOCAL_NAMES.length) % LOCAL_NAMES.length]; saveCfg(); drawHead(); };
 $('prev').onclick = () => stepWho(-1); $('next').onclick = () => stepWho(1); $('startB').onclick = startRace; drawHead();
 if (embed) { $('exitB').hidden = false; $('exitB2').hidden = false; $('exitB').onclick = $('exitB2').onclick = leave; }

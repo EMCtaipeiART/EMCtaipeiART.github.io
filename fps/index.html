@@ -282,6 +282,13 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
 const $ = id => document.getElementById(id), Q = new URLSearchParams(location.search);
 const ANGLES = 12, LOCAL_NAMES = ['Machi', 'Anna', 'Leona', 'Amber', 'Noise', '余采馨', '吳冠賢', '廖秦葦', '李明庭', '王藍庭', '鄭筱舢', '黎子瑄'];
 const CHAR_SCALE = { Leona: 1.1, 廖秦葦: 1.18 };
+const CHAR_API = 'https://emc-ai-stage-classifier.machi-chen.workers.dev/api/public/characters';   // 與元宇宙／辦公室對決同一份「最新角色」
+let cloud = {}, cloudWalks = {}, cloudDone = false;
+const cloudReady = (async () => { try { const r = await fetch(CHAR_API, { signal: AbortSignal.timeout(5000) }); if (r.ok) { const j = await r.json(); cloud = j.characters || {}; cloudWalks = j.walks || {}; } } catch (e) {} cloudDone = true; })();
+const atlasSrc = (n, walk) => { const v = walk ? cloudWalks[n] : cloud[n]; return v ? CHAR_API + '/' + encodeURIComponent(n) + '/' + (walk ? 'walk-hd.png' : 'atlas-hd.png') + '?v=' + v : null; };
+const localSrc = (n, walk) => '../pixel-plaza/' + (walk ? 'sprites-walk-hd/' : 'sprites-hd/') + n + '.webp';
+function loadImg(n, walk, cb, fail) { const im = new Image(); im.crossOrigin = 'anonymous'; let local = false; im.onload = () => cb(im); im.onerror = () => { if (!local) { local = true; im.removeAttribute('crossorigin'); im.src = localSrc(n, walk); } else if (fail) fail(); }; im.src = atlasSrc(n, walk) || localSrc(n, walk); }
+function texFromAtlas(n, walk, rx, ry, fail) { const t = new THREE.Texture(); t.magFilter = t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; t.repeat.set(rx, ry); loadImg(n, walk, im => { t.image = im; t.needsUpdate = true; }, fail); return t; }
 const CFG = { diff: 1, hero: 'noise' };
 try { Object.assign(CFG, JSON.parse(localStorage.getItem('fpsCfgV2') || '{}')); } catch (e) {}
 if (!['machi', 'noise', 'anna', 'amber', 'leona'].includes(CFG.hero)) CFG.hero = 'noise';
@@ -473,9 +480,9 @@ const HERO_BY = Object.fromEntries(HEROES.map(h => [h.id, h]));
 // ───────── 角色（12 角度公告板＋跑步圖集） ─────────
 const texCache = {};
 const walkCache = {};
-function loadWalk(name) { if (name in walkCache) return walkCache[name]; const t = new THREE.TextureLoader().load('../pixel-plaza/sprites-walk-hd/' + name + '.webp', undefined, undefined, () => { walkCache[name] = null; }); t.magFilter = t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; t.repeat.set(1 / ANGLES, .5); return walkCache[name] = t; }
-function uniqTex(name, walk) { const t = new THREE.TextureLoader().load('../pixel-plaza/' + (walk ? 'sprites-walk-hd/' : 'sprites-hd/') + name + '.webp'); t.magFilter = t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; t.repeat.set(1 / ANGLES, walk ? .5 : 1); return t; }   // 每個角色各自一份貼圖，避免同英雄（兩隊都有）共用同一份 offset 而朝向互相蓋掉
-function loadTex(name) { if (texCache[name]) return texCache[name]; const t = new THREE.TextureLoader().load('../pixel-plaza/sprites-hd/' + name + '.webp'); t.magFilter = t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; t.repeat.set(1 / ANGLES, 1); return texCache[name] = t; }
+function loadWalk(name) { if (name in walkCache) return walkCache[name]; return walkCache[name] = texFromAtlas(name, true, 1 / ANGLES, .5, () => { walkCache[name] = null; }); }
+function uniqTex(name, walk) { return texFromAtlas(name, walk, 1 / ANGLES, walk ? .5 : 1); }
+function loadTex(name) { if (texCache[name]) return texCache[name]; return texCache[name] = texFromAtlas(name, false, 1 / ANGLES, 1); }
 const barTex = canvasTex(64, 8, g => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 8); });
 const shadowTex = canvasTex(64, 64, g => { const r = g.createRadialGradient(32, 32, 2, 32, 32, 30); r.addColorStop(0, 'rgba(0,0,0,.55)'); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); });
 function nameTexOf(txt, col) { return canvasTex(256, 64, (g, w, h) => { g.font = '700 30px "Noto Sans TC",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 7; g.strokeStyle = '#000'; g.strokeText(txt, w / 2, h / 2); g.fillStyle = col; g.fillText(txt, w / 2, h / 2); }); }
@@ -880,7 +887,7 @@ function endMatch() { if (state === 'over') return; state = 'over'; try { docume
   const o = $('menu'); o.hidden = false; o.firstElementChild.innerHTML = '<div class="logo"><small>' + (win === 0 ? 'VICTORY' : win === 1 ? 'DEFEAT' : 'DRAW') + '</small>' + (win === 0 ? '勝利' : win === 1 ? '敗北' : '平手') + '</div><div class="mono" style="text-align:center;font-size:38px;margin:8px 0">' + Math.floor(prog[0]) + '% : ' + Math.floor(prog[1]) + '%</div><table style="width:100%;border-collapse:collapse;font-size:14px"><tr style="color:#8a97a6;font-size:10px;letter-spacing:.2em;text-align:left"><th style="text-align:left;padding:4px 8px">英雄</th><th style="text-align:left">擊殺</th><th style="text-align:left">死亡</th><th style="text-align:left">傷害</th><th style="text-align:left">治療</th></tr>' + rows + '</table><button class="go" id="againB" type="button">再戰一場</button>';
   for (const id of ['xh', 'obj', 'hp', 'wp', 'sk', 'allies', 'stick', 'fire', 'jump', 'aim', 'skE', 'skS', 'skR']) $(id).hidden = true; $('scope').classList.remove('on');
   $('againB').onclick = () => { location.reload(); }; }
-function startMatch() { unlock(); $('menu').hidden = true; setupMatch(); document.documentElement.classList.add('playing'); resize(); for (const id of ['xh', 'obj', 'hp', 'wp', 'sk', 'allies']) $(id).hidden = false; if (touch) for (const id of ['stick', 'fire', 'jump', 'aim', 'skE', 'skS', 'skR']) $(id).hidden = false; $('exitB2').hidden = false;
+function startMatch() { if (!cloudDone) { cloudReady.then(startMatch); return; } unlock(); $('menu').hidden = true; setupMatch(); document.documentElement.classList.add('playing'); resize(); for (const id of ['xh', 'obj', 'hp', 'wp', 'sk', 'allies']) $(id).hidden = false; if (touch) for (const id of ['stick', 'fire', 'jump', 'aim', 'skE', 'skS', 'skR']) $(id).hidden = false; $('exitB2').hidden = false;
   state = 'count'; stT = 3.6; paused = false; if (!touch) { lockFail = false; askLock(); $('lock').hidden = false; } }
 const lerp = (a, b, t) => a + (b - a) * t;
 let last = performance.now();
@@ -931,7 +938,7 @@ pills('gDiff', [['簡單', 0], ['普通', 1], ['困難', 2]], () => CFG.diff, v 
 const portCache = {};
 function drawPort(c, name) {   // 取方形頭像區（不拉伸變形）
   const draw = im => { const g = c.getContext('2d'), cw = im.naturalWidth / ANGLES, ch = im.naturalHeight, size = ch * .6, sx = (cw - size) / 2, sy = ch * .05; g.clearRect(0, 0, c.width, c.height); g.imageSmoothingEnabled = true; g.drawImage(im, sx, sy, size, size, 0, 0, c.width, c.height); };
-  if (portCache[name]) { draw(portCache[name]); return; } const im = new Image(); im.onload = () => { portCache[name] = im; draw(im); }; im.src = '../pixel-plaza/sprites-hd/' + name + '.webp';
+  if (portCache[name]) { draw(portCache[name]); return; } loadImg(name, false, im => { portCache[name] = im; draw(im); });
 }
 function drawHeroes() {
   const h = HERO_BY[CFG.hero], W = WEAPONS[h.w], fire = Math.min(1, W.dmg * W.pellets * W.rate / 115), bar = (n, v, col) => '<div class="sb2"><span>' + n + '</span><i><u style="width:' + Math.round(clamp(v, .05, 1) * 100) + '%;background:' + col + '"></u></i></div>';

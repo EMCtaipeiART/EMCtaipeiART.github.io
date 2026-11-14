@@ -138,6 +138,13 @@ const $ = id => document.getElementById(id), Q = new URLSearchParams(location.se
 const FL = 20, FW = 12, GW = 5.2, GD = 3.2, PR = .9, BR = 1.5;          // 球場半長／半寬／球門半寬／球門深／人半徑／球半徑
 const ANGLES = 12, LOCAL_NAMES = ['Machi', 'Anna', 'Leona', 'Amber', 'Noise', '余采馨', '吳冠賢', '廖秦葦', '李明庭', '王藍庭', '鄭筱舢', '黎子瑄'];
 const CHAR_SCALE = { Leona: 1.1, 廖秦葦: 1.18 };
+const CHAR_API = 'https://emc-ai-stage-classifier.machi-chen.workers.dev/api/public/characters';   // 與元宇宙／辦公室對決同一份「最新角色」
+let cloud = {}, cloudWalks = {}, cloudDone = false;
+const cloudReady = (async () => { try { const r = await fetch(CHAR_API, { signal: AbortSignal.timeout(5000) }); if (r.ok) { const j = await r.json(); cloud = j.characters || {}; cloudWalks = j.walks || {}; } } catch (e) {} cloudDone = true; })();
+const atlasSrc = (n, walk) => { const v = walk ? cloudWalks[n] : cloud[n]; return v ? CHAR_API + '/' + encodeURIComponent(n) + '/' + (walk ? 'walk-hd.png' : 'atlas-hd.png') + '?v=' + v : null; };
+const localSrc = (n, walk) => '../pixel-plaza/' + (walk ? 'sprites-walk-hd/' : 'sprites-hd/') + n + '.webp';
+function loadImg(n, walk, cb, fail) { const im = new Image(); im.crossOrigin = 'anonymous'; let local = false; im.onload = () => cb(im); im.onerror = () => { if (!local) { local = true; im.removeAttribute('crossorigin'); im.src = localSrc(n, walk); } else if (fail) fail(); }; im.src = atlasSrc(n, walk) || localSrc(n, walk); }
+function texFromAtlas(n, walk, rx, ry, fail) { const t = new THREE.Texture(); t.magFilter = t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; t.repeat.set(rx, ry); loadImg(n, walk, im => { t.image = im; t.needsUpdate = true; }, fail); return t; }
 const CFG = { mode: 2, diff: 1, time: 180, who: 'Machi' };
 try { Object.assign(CFG, JSON.parse(localStorage.getItem('soccerCfgV1') || '{}')); } catch (e) {}
 if (!LOCAL_NAMES.includes(CFG.who)) CFG.who = 'Machi';
@@ -225,10 +232,10 @@ const ball = { x: 0, z: 0, vx: 0, vz: 0, r: BR, m: 1.7, ax: 0, az: 0, lastTouch:
 // ───────── 角色（12 角度圖集的公告板，與辦公室對決同一份素材） ─────────
 const texCache = {};
 const walkCache = {};
-function loadWalk(name) { if (name in walkCache) return walkCache[name]; const t = new THREE.TextureLoader().load('../pixel-plaza/sprites-walk-hd/' + name + '.webp', undefined, undefined, () => { walkCache[name] = null; }); t.magFilter = t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; t.repeat.set(1 / ANGLES, .5); return walkCache[name] = t; }
+function loadWalk(name) { if (name in walkCache) return walkCache[name]; return walkCache[name] = texFromAtlas(name, true, 1 / ANGLES, .5, () => { walkCache[name] = null; }); }
 function loadTex(name) {
   if (texCache[name]) return texCache[name];
-  const t = new THREE.TextureLoader().load('../pixel-plaza/sprites-hd/' + name + '.webp'); t.magFilter = t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; t.repeat.set(1 / ANGLES, 1);
+  const t = texFromAtlas(name, false, 1 / ANGLES, 1);
   return texCache[name] = t;
 }
 const ringGeo = new THREE.RingGeometry(.95, 1.25, 28);
@@ -436,6 +443,7 @@ function endMatch() {
   $('againB').onclick = () => { $('endO').hidden = true; startMatch(); }; $('menuB').onclick = () => { $('endO').hidden = true; $('menu').hidden = false; state = 'menu'; };
 }
 function startMatch() {
+  if (!cloudDone) { cloudReady.then(startMatch); return; }
   unlock(); $('menu').hidden = true; setupMatch(); document.documentElement.classList.add('playing'); resize();
   $('sb').hidden = $('abs').hidden = $('sys').hidden = $('chg').hidden = false; $('stick').hidden = !touch;
   state = 'countdown'; stT = 3.2; paused = false;
@@ -502,7 +510,7 @@ pills('gDiff', [['簡單', 0], ['普通', 1], ['困難', 2]], () => CFG.diff, v 
 pills('gTime', [['2 分鐘', 120], ['3 分鐘', 180], ['5 分鐘', 300]], () => CFG.time, v => CFG.time = v);
 function drawHead() {
   const c = $('pv'), g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); $('pvN').textContent = CFG.who;
-  const im = new Image(); im.onload = () => { const cw = im.naturalWidth / ANGLES, ch = im.naturalHeight, sw = cw * .8, sh = ch * .56; g.clearRect(0, 0, c.width, c.height); g.drawImage(im, (cw - sw) / 2, ch * .06, sw, sh, 0, 0, c.width, c.height); }; im.src = '../pixel-plaza/sprites-hd/' + CFG.who + '.webp';
+  loadImg(CFG.who, false, im => { const cw = im.naturalWidth / ANGLES, ch = im.naturalHeight, size = ch * .6, sx = (cw - size) / 2, sy = ch * .05; g.clearRect(0, 0, c.width, c.height); g.drawImage(im, sx, sy, size, size, 0, 0, c.width, c.height); });
 }
 const stepWho = d => { const i = LOCAL_NAMES.indexOf(CFG.who); CFG.who = LOCAL_NAMES[(i + d + LOCAL_NAMES.length) % LOCAL_NAMES.length]; saveCfg(); drawHead(); };
 $('prev').onclick = () => stepWho(-1); $('next').onclick = () => stepWho(1); $('startB').onclick = startMatch; drawHead();
