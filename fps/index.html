@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>辦公室槍戰</title>
+<style>html,body{touch-action:manipulation;-webkit-text-size-adjust:100%}button,a,[role=button]{touch-action:manipulation}</style>
+<script>/* 手機防誤放大 */
+(function(){var p=function(e){e.preventDefault()};['gesturestart','gesturechange','gestureend'].forEach(function(n){document.addEventListener(n,p,{passive:false})});
+document.addEventListener('touchmove',function(e){if(e.touches.length>1&&e.cancelable)e.preventDefault()},{passive:false});})();</script>
+<script>try{var t=localStorage.getItem('designRequestThemeV1');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+<style>
+/* ====== 戰術靶場風：碳黑底、琥珀＋冰白細線 HUD、等寬數字（刻意不同於對決的綠紅卡通、足球賽的藍、賽車的紫橘） ====== */
+:root{--ink:#e8edf2;--dim:#8a97a6;--bg:#0f1318;--panel:rgba(18,23,29,.86);--line:#3a4654;--amb:#ffb000;--ice:#bfe9ff;--red:#ff4b3e;--ok:#5ef0a4}
+:root:not([data-theme=dark]){--ink:#1b2430;--dim:#5b6878;--bg:#e8edf2;--panel:rgba(255,255,255,.9);--line:#aab6c4;--amb:#d98a00;--ice:#1c7ab0;--red:#d93a2e;--ok:#14a068}
+:root[data-theme=dark]{--ink:#e8edf2;--dim:#8a97a6;--bg:#0f1318;--panel:rgba(18,23,29,.86);--line:#3a4654;--amb:#ffb000;--ice:#bfe9ff;--red:#ff4b3e;--ok:#5ef0a4}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--ink:#e8edf2;--dim:#8a97a6;--bg:#0f1318;--panel:rgba(18,23,29,.86);--line:#3a4654;--amb:#ffb000;--ice:#bfe9ff;--red:#ff4b3e;--ok:#5ef0a4}}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#0f1318;color:var(--ink);font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;-webkit-tap-highlight-color:transparent;overflow:hidden;user-select:none;-webkit-user-select:none}
+#stage{position:fixed;inset:0}
+canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+@media (pointer:coarse) and (orientation:portrait){
+  html.playing,html.playing body{width:100vh;height:100vw}
+  html.playing body{position:fixed;top:0;left:0;transform-origin:top left;transform:rotate(90deg) translateY(-100%)}
+}
+[hidden]{display:none!important}
+.mono{font-family:"JetBrains Mono","SF Mono",Consolas,"Courier New",monospace;font-weight:700;font-variant-numeric:tabular-nums}
+.hud{position:absolute;pointer-events:none;z-index:5;color:#fff;text-shadow:0 0 6px rgba(0,0,0,.9),0 1px 0 rgba(0,0,0,.9)}
+/* 準心 */
+#xh{left:50%;top:50%;width:0;height:0}
+#xh i{position:absolute;background:#fff;box-shadow:0 0 3px #000}
+#xh .t{left:-1px;top:calc(-14px - var(--sp,0px));width:2px;height:9px}#xh .b{left:-1px;top:calc(5px + var(--sp,0px));width:2px;height:9px}
+#xh .l{top:-1px;left:calc(-14px - var(--sp,0px));height:2px;width:9px}#xh .r{top:-1px;left:calc(5px + var(--sp,0px));height:2px;width:9px}
+#xh.hit i{background:var(--red)}
+#hm{left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;opacity:0;transition:opacity .08s}
+#hm.on{opacity:1}#hm::before,#hm::after{content:'';position:absolute;left:12px;top:-2px;width:2px;height:30px;background:var(--red);box-shadow:0 0 4px #000}#hm::before{transform:rotate(45deg)}#hm::after{transform:rotate(-45deg)}
+#hm.hs::before,#hm.hs::after{background:var(--amb)}
+#scope{position:absolute;inset:0;z-index:4;pointer-events:none;background:radial-gradient(circle at 50% 50%,transparent 0,transparent 26%,rgba(0,0,0,.92) 27%);opacity:0;transition:opacity .1s}
+#scope.on{opacity:1}#scope::before,#scope::after{content:'';position:absolute;background:#000}#scope::before{left:0;right:0;top:50%;height:2px}#scope::after{top:0;bottom:0;left:50%;width:2px}
+/* 狀態列 */
+#hp{left:18px;bottom:18px;min-width:230px}
+#hp .n{font-size:44px;line-height:1;color:#fff}#hp .n small{font-size:14px;color:var(--amb);margin-left:6px;letter-spacing:.2em}
+#hp .bar{height:6px;margin-top:6px;background:rgba(255,255,255,.18);border-left:3px solid var(--amb)}#hp .bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,var(--ice),#fff);transition:width .12s}
+#hp.low .n{color:var(--red);animation:blink .5s infinite alternate}@keyframes blink{to{opacity:.45}}
+#wp{right:18px;bottom:18px;text-align:right;min-width:210px}
+#wp .nm{font-size:20px;font-weight:900;letter-spacing:.06em}#wp .am{font-size:32px;color:var(--amb);line-height:1}#wp .am small{font-size:12px;color:var(--dim);margin-left:6px;letter-spacing:.2em}
+#wl{display:flex;gap:4px;justify-content:flex-end;margin-top:6px}
+#wl span{display:inline-flex;align-items:center;justify-content:center;width:34px;height:28px;border:1px solid var(--line);background:rgba(10,14,18,.7);font-size:15px;position:relative}
+#wl span b{position:absolute;left:2px;top:0;font:700 8px/1 system-ui;color:var(--dim)}
+#wl span.on{border-color:var(--amb);background:rgba(255,176,0,.22);box-shadow:0 0 8px rgba(255,176,0,.5)}
+#sk{left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:10px}
+.sc{position:relative;width:58px;height:58px;border:2px solid var(--line);background:rgba(10,14,18,.78);display:flex;flex-direction:column;align-items:center;justify-content:center;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+.sc .ic{font-size:22px;line-height:1}.sc kbd{position:absolute;top:2px;left:5px;font:700 9px/1 system-ui;color:var(--amb)}.sc .nm{font-size:9px;font-weight:700;margin-top:2px;color:var(--dim)}
+.sc .sw{position:absolute;inset:0;background:conic-gradient(rgba(0,0,0,.72) calc(var(--p,0)*360deg),transparent 0)}
+.sc .ct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 18px/1 system-ui;color:#fff;font-style:normal}
+.sc.ready{border-color:var(--ok);box-shadow:0 0 10px rgba(94,240,164,.5)}.sc.on{border-color:var(--amb);box-shadow:0 0 12px rgba(255,176,0,.7);animation:blink .4s infinite alternate}
+.sc.ult.ready{border-color:var(--amb);box-shadow:0 0 14px rgba(255,176,0,.8);animation:blink .6s infinite alternate}
+/* 比分／擊殺 */
+#top{left:50%;top:10px;transform:translateX(-50%);display:flex;align-items:stretch;border:1px solid var(--line);background:rgba(10,14,18,.78);clip-path:polygon(12px 0,calc(100% - 12px) 0,100% 100%,0 100%)}
+#top div{padding:6px 18px;text-align:center;min-width:88px}#top small{display:block;font-size:9px;letter-spacing:.25em;color:var(--dim)}#top b{font-size:26px;line-height:1}
+#top .a b{color:var(--ice)}#top .b b{color:var(--red)}#top .c{border-left:1px solid var(--line);border-right:1px solid var(--line)}#top .c b{font-size:18px;color:#fff}
+#feed{right:14px;top:56px;text-align:right;font-size:13px;line-height:1.7;max-width:300px}
+#feed div{background:rgba(10,14,18,.7);border-right:3px solid var(--amb);padding:1px 8px;margin-bottom:2px;animation:fin .2s}@keyframes fin{from{transform:translateX(30px);opacity:0}}
+#feed .me{border-right-color:var(--ok)}#feed .die{border-right-color:var(--red)}
+#dmg{inset:0;background:radial-gradient(circle at 50% 50%,transparent 45%,rgba(255,40,30,.55));opacity:0;transition:opacity .25s}
+#dmg.on{opacity:1;transition:none}
+#sh{inset:0;background:radial-gradient(circle at 50% 50%,transparent 30%,rgba(80,170,255,.45));opacity:0;transition:opacity .2s}#sh.on{opacity:1}
+#dir{left:50%;top:50%;width:0;height:0}#dir i{position:absolute;left:-60px;top:-120px;width:120px;height:90px;transform-origin:60px 120px;background:radial-gradient(ellipse at 50% 100%,rgba(255,60,40,.7),transparent 70%);opacity:0}
+#banner{position:absolute;left:0;right:0;top:26%;text-align:center;z-index:6;pointer-events:none;opacity:0;transition:opacity .15s}#banner.on{opacity:1}
+#banner b{display:inline-block;font-size:clamp(34px,7vw,80px);font-weight:900;letter-spacing:.3em;color:#fff;text-shadow:0 0 12px var(--amb),0 3px 0 #000}#banner small{display:block;font-size:clamp(13px,2.2vw,22px);letter-spacing:.35em;color:var(--amb);margin-top:6px;text-shadow:0 0 8px #000}
+#lock{position:absolute;inset:0;z-index:15;display:flex;align-items:center;justify-content:center;background:rgba(5,8,12,.55);color:#fff;font-weight:900;letter-spacing:.3em;font-size:22px;cursor:pointer}
+#sb{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:12;background:var(--panel);border:1px solid var(--line);padding:14px 18px;min-width:min(520px,92vw)}
+#sb table{width:100%;border-collapse:collapse;font-size:14px}#sb td,#sb th{padding:4px 8px;text-align:left;border-bottom:1px solid var(--line)}#sb th{font-size:10px;color:var(--dim);letter-spacing:.2em}#sb tr.a td:first-child{border-left:3px solid var(--ice)}#sb tr.b td:first-child{border-left:3px solid var(--red)}#sb tr.me{background:rgba(255,176,0,.16)}
+/* 手機 */
+#stick{position:absolute;left:calc(18px + env(safe-area-inset-left,0px));bottom:calc(26px + env(safe-area-inset-bottom,0px));width:120px;height:120px;border-radius:50%;background:radial-gradient(circle at 50% 40%,rgba(255,255,255,.22),rgba(255,255,255,.08));box-shadow:inset 0 4px 10px rgba(0,0,0,.3),0 2px 0 rgba(255,255,255,.2);display:none;z-index:6;touch-action:none}
+#stick i{position:absolute;left:38px;top:38px;width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 32% 26%,#fff 0 10%,transparent 34%),linear-gradient(180deg,#ffd066,#ffb000);box-shadow:inset 0 -4px 0 rgba(0,0,0,.18),0 4px 0 #8a5c00;pointer-events:none}
+#stick::before{content:'';position:absolute;inset:-24px}
+#lookpad{position:absolute;right:0;top:0;bottom:0;width:55%;z-index:3;touch-action:none;display:none}
+.tbtn{position:absolute;display:none;z-index:7;border:2px solid var(--line);background:rgba(10,14,18,.7);color:#fff;font:700 12px/1 system-ui;align-items:center;justify-content:center;flex-direction:column;touch-action:none;border-radius:50%}
+.tbtn .ic{font-size:22px}.tbtn span{font-size:10px;margin-top:2px}
+.tbtn.on{background:rgba(255,176,0,.5);border-color:var(--amb)}
+@media (pointer:coarse){
+  #stick,#lookpad{display:block}.tbtn{display:flex}
+  #fire{right:calc(26px + env(safe-area-inset-right,0px));bottom:calc(60px + env(safe-area-inset-bottom,0px));width:84px;height:84px;border-color:var(--red);background:rgba(255,75,62,.35)}
+  #jump{right:calc(126px + env(safe-area-inset-right,0px));bottom:calc(36px + env(safe-area-inset-bottom,0px));width:56px;height:56px}
+  #aim{right:calc(26px + env(safe-area-inset-right,0px));bottom:calc(158px + env(safe-area-inset-bottom,0px));width:52px;height:52px}
+  #swap{right:calc(96px + env(safe-area-inset-right,0px));bottom:calc(112px + env(safe-area-inset-bottom,0px));width:52px;height:52px}
+  #skE{right:calc(166px + env(safe-area-inset-right,0px));bottom:calc(104px + env(safe-area-inset-bottom,0px));width:52px;height:52px}
+  #skR{right:calc(166px + env(safe-area-inset-right,0px));bottom:calc(166px + env(safe-area-inset-bottom,0px));width:52px;height:52px}
+  #sk{display:none}#hp{left:auto;right:auto;bottom:auto;top:46px;left:16px;min-width:0}#hp .n{font-size:28px}#wp{display:none}#feed{top:50px;font-size:11px;max-width:200px}
+}
+/* 選單 */
+.ov{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:14px;overflow:auto;background:linear-gradient(rgba(8,11,15,.8),rgba(8,11,15,.94)),repeating-linear-gradient(0deg,rgba(255,255,255,.03) 0 1px,transparent 1px 4px),#0f1318;color:#e8edf2}
+.card{width:min(760px,100%);background:rgba(18,23,29,.95);border:1px solid #3a4654;padding:20px;text-align:left;clip-path:polygon(18px 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%,0 18px)}
+.logo{font-size:clamp(30px,5.5vw,48px);font-weight:900;letter-spacing:.2em;line-height:1;color:#fff;text-align:center}
+.logo small{display:block;font-size:11px;letter-spacing:.6em;color:#ffb000;margin-bottom:8px}
+.row{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+.lab{font-size:11px;font-weight:700;color:#8a97a6;min-width:62px;letter-spacing:.15em}
+.pill{font:700 14px/1 inherit;color:#e8edf2;background:rgba(255,255,255,.05);border:1px solid #3a4654;padding:9px 14px;cursor:pointer}
+.pill.on{background:#ffb000;border-color:#ffb000;color:#1a1200}
+.pick{display:flex;align-items:center;gap:10px}
+.pick canvas{width:72px;height:72px;border:2px solid #ffb000;background:#10151b}
+.pick b{font-size:18px;min-width:5em}
+.arr{font:900 16px/1 inherit;width:34px;height:34px;border:1px solid #ffb000;background:transparent;color:#ffb000;cursor:pointer}
+.go{display:block;margin:18px auto 0;font:900 20px/1 inherit;letter-spacing:.3em;color:#1a1200;background:#ffb000;border:0;padding:14px 46px;cursor:pointer;clip-path:polygon(12px 0,100% 0,calc(100% - 12px) 100%,0 100%)}
+.go:active{transform:translateY(2px)}
+.help{margin-top:14px;font-size:12.5px;line-height:1.75;color:#8a97a6;border-top:1px solid #3a4654;padding-top:10px}.help b{color:#e8edf2}
+.sub{font-size:12px;color:#8a97a6;margin-top:4px}
+@media (max-width:700px){.card{padding:12px}.help{display:none}.row{margin-top:7px}.pick canvas{width:52px;height:52px}.go{margin-top:12px;padding:11px 30px;font-size:16px}.logo{font-size:26px}.pill{padding:7px 10px;font-size:12px}.lab{min-width:44px}}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c3"></canvas>
+  <div id="scope"></div>
+  <div class="hud" id="xh" hidden><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i></div>
+  <div class="hud" id="hm"></div>
+  <div class="hud" id="dmg"></div><div class="hud" id="sh"></div><div class="hud" id="dir"><i></i></div>
+  <div class="hud" id="top" hidden><div class="a"><small id="nA">我方</small><b class="mono" id="sA">0</b></div><div class="c"><small id="goalT">目標 15</small><b class="mono" id="tm">5:00</b></div><div class="b"><small id="nB">敵方</small><b class="mono" id="sB">0</b></div></div>
+  <div class="hud" id="feed"></div>
+  <div class="hud" id="hp" hidden><div class="n mono"><span id="hpN">100</span><small>HP</small></div><div class="bar"><i id="hpB"></i></div></div>
+  <div class="hud" id="wp" hidden><div class="nm" id="wpN">訂書機</div><div class="am mono">∞<small>彈藥無限</small></div><div id="wl"></div></div>
+  <div class="hud" id="sk" hidden>
+    <div class="sc" id="scE"><kbd>E</kbd><b class="ic">💨</b><span class="nm">小招</span><i class="sw"></i><em class="ct"></em></div>
+    <div class="sc ult" id="scR"><kbd>R</kbd><b class="ic">💥</b><span class="nm">大招</span><i class="sw"></i><em class="ct"></em></div>
+  </div>
+  <div id="banner"><b id="bnT"></b><small id="bnS"></small></div>
+  <div id="lock" hidden>點擊畫面　開始瞄準</div>
+  <div id="sb" hidden></div>
+  <div id="lookpad"></div>
+  <div id="stick" hidden><i></i></div>
+  <button class="tbtn" id="fire" type="button" hidden><b class="ic">🔫</b><span>射擊</span></button>
+  <button class="tbtn" id="jump" type="button" hidden><b class="ic">⤒</b><span>跳</span></button>
+  <button class="tbtn" id="aim" type="button" hidden><b class="ic">◎</b><span>瞄準</span></button>
+  <button class="tbtn" id="swap" type="button" hidden><b class="ic">🔁</b><span>換槍</span></button>
+  <button class="tbtn" id="skE" type="button" hidden><b class="ic">💨</b><span>小招</span></button>
+  <button class="tbtn" id="skR" type="button" hidden><b class="ic">💥</b><span>大招</span></button>
+  <button class="pb" id="exitB2" type="button" hidden style="position:absolute;right:10px;top:10px;z-index:9;font:700 12px/1 inherit;color:#fff;background:rgba(10,14,18,.7);border:1px solid #3a4654;padding:7px 10px">離開</button>
+
+  <div class="ov" id="menu">
+    <div class="card">
+      <div class="logo"><small>OFFICE  FIREFIGHT  RANGE</small>辦公室槍戰</div>
+      <div class="row"><span class="lab">角色</span><div class="pick"><button class="arr" id="prev" type="button">◀</button><canvas id="pv" width="120" height="120"></canvas><b id="pvN"></b><button class="arr" id="next" type="button">▶</button></div></div>
+      <div class="row"><span class="lab">模式</span><span id="gMode"></span></div>
+      <div class="row"><span class="lab">難度</span><span id="gDiff"></span></div>
+      <div class="row"><span class="lab">目標擊殺</span><span id="gGoal"></span></div>
+      <div class="row"><span class="lab">小招</span><span id="gSk"></span></div>
+      <div class="sub" id="skD"></div>
+      <div class="row"><span class="lab">大招</span><span id="gUlt"></span></div>
+      <div class="sub" id="ultD"></div>
+      <button class="go" id="startB" type="button">部署</button>
+      <div class="row" style="justify-content:center"><button class="pill" id="exitB" type="button" hidden>離開遊戲</button></div>
+      <div class="help"><b>電腦：</b>WASD 移動　Shift 疾跑　空白 跳　滑鼠 瞄準／左鍵射擊　右鍵 瞄準鏡（狙擊更準）　1–5 或滾輪 換槍　<b>E</b> 小招　<b>R</b> 大招　Tab 戰績　Esc 暫停<br>
+      <b>手機：</b>左下搖桿移動，右半邊畫面滑動轉視角，右下 射擊／跳／瞄準／換槍／小招／大招。<br>
+      <b>武器（全部彈藥無限）：</b>📌訂書機（連發）　⌨️鍵盤（霰彈）　🖱️滑鼠（精準單發）　📏直尺（狙擊，爆頭一擊）　☎️電話（火箭，範圍爆炸）。咖啡杯可補血。</div>
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id), Q = new URLSearchParams(location.search);
+const ANGLES = 12, LOCAL_NAMES = ['Machi', 'Anna', 'Leona', 'Amber', 'Noise', '余采馨', '吳冠賢', '廖秦葦', '李明庭', '王藍庭', '鄭筱舢', '黎子瑄'];
+const CHAR_SCALE = { Leona: 1.1, 廖秦葦: 1.18 };
+const CFG = { mode: 2, diff: 1, goal: 15, who: 'Machi', sk: 'dash', ult: 'quake' };
+try { Object.assign(CFG, JSON.parse(localStorage.getItem('fpsCfgV1') || '{}')); } catch (e) {}
+if (!LOCAL_NAMES.includes(CFG.who)) CFG.who = 'Machi';
+const saveCfg = () => { try { localStorage.setItem('fpsCfgV1', JSON.stringify(CFG)); } catch (e) {} };
+const rand = (a, b) => a + Math.random() * (b - a), clamp = (v, a, b) => Math.max(a, Math.min(b, v)), wrapA = a => Math.atan2(Math.sin(a), Math.cos(a));
+const touch = matchMedia('(pointer:coarse)').matches, embed = /[?&]embed=1/.test(location.search);
+try { const mm = Q.get('me'); if (mm && LOCAL_NAMES.includes(mm)) CFG.who = mm; } catch (e) {}
+const leave = () => { try { if (document.pointerLockElement) document.exitPointerLock(); parent.postMessage({ type: 'expeditionExit' }, location.origin); } catch (e) {} };
+
+// ───────── 音效 ─────────
+let AC = null;
+const unlock = () => { try { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch (e) {} };
+function tone(f, d, type = 'sine', vol = .1, f2 = 0, delay = 0) { if (!AC) return; const t = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain(); o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + d); o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + d + .02); }
+let noiseBuf = null;
+function noise(d, vol, f0 = 3000, f1 = 300) { if (!AC) return; if (!noiseBuf) { noiseBuf = AC.createBuffer(1, AC.sampleRate * .5, AC.sampleRate); const a = noiseBuf.getChannelData(0); for (let i = 0; i < a.length; i++) a[i] = Math.random() * 2 - 1; } const s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain(), t = AC.currentTime; s.buffer = noiseBuf; f.type = 'lowpass'; f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + d); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + d); s.connect(f); f.connect(g); g.connect(AC.destination); s.start(t); s.stop(t + d + .02); }
+const SFX = { shot: (k) => { if (k === 'shotgun') { noise(.22, .35, 2500, 200); tone(90, .2, 'square', .08, 40); } else if (k === 'sniper') { noise(.4, .4, 4000, 150); tone(70, .35, 'sawtooth', .1, 30); } else if (k === 'rocket') { noise(.35, .3, 1500, 120); tone(120, .3, 'sawtooth', .1, 50); } else { noise(.07, .18, 4000, 600); tone(300, .05, 'square', .04, 120); } }, hit: () => tone(1500, .05, 'square', .06), head: () => { tone(2000, .08, 'square', .08); tone(1400, .1, 'square', .05, 0, .05); }, kill: () => { tone(900, .1, 'triangle', .1); tone(1300, .18, 'triangle', .1, 0, .08); }, hurt: () => { tone(160, .15, 'sawtooth', .1, 70); }, boom: () => { noise(.6, .5, 1200, 60); tone(70, .5, 'sawtooth', .15, 25); }, skill: () => tone(500, .25, 'triangle', .1, 1000), pick: () => { tone(700, .08, 'triangle', .1); tone(1000, .1, 'triangle', .1, 0, .07); }, beep: () => tone(800, .1, 'square', .06), die: () => tone(220, .5, 'sawtooth', .12, 50) };
+
+// ───────── 場景與地圖 ─────────
+const cv = $('c3'), renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(75, 16 / 9, .05, 140); camera.rotation.order = 'YXZ'; scene.add(camera);
+const isRot = () => touch && matchMedia('(orientation:portrait)').matches && document.documentElement.classList.contains('playing');
+const rotW = () => isRot() ? innerHeight : innerWidth, rotH = () => isRot() ? innerWidth : innerHeight;
+function resize() { const w = Math.max(320, rotW()), h = Math.max(240, rotH()); renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); try { matchMedia('(orientation:portrait)').addEventListener('change', () => setTimeout(resize, 60)); } catch (e) {}
+scene.background = new THREE.Color(0x2a3340); scene.fog = new THREE.Fog(0x2a3340, 45, 120);
+scene.add(new THREE.HemisphereLight(0xeaf2ff, 0x8a93a3, .8), new THREE.AmbientLight(0xffffff, .85));
+{ const d = new THREE.DirectionalLight(0xfff2dc, .45); d.position.set(10, 30, 8); scene.add(d); }
+const mk = (g, m) => new THREE.Mesh(g, m), lam = (c, o = {}) => new THREE.MeshLambertMaterial(Object.assign({ color: c }, o));
+function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t; }
+const HALF = 30, WALLH = 4;
+const BOXES = [];   // {x0,x1,z0,z1,h}
+const batch = {};
+function addBox(key, color, x0, z0, x1, z1, h, y0 = 0, collide = true, tex) {
+  const w = x1 - x0, d = z1 - z0, g = new THREE.BoxGeometry(w, h - y0, d); g.translate((x0 + x1) / 2, (h + y0) / 2, (z0 + z1) / 2);
+  (batch[key] || (batch[key] = { color, tex, gs: [] })).gs.push(g); if (collide) BOXES.push({ x0, x1, z0, z1, h, y0 });
+}
+function flush() {
+  for (const k in batch) { const { color, tex, gs } = batch[k]; let nv = 0, ni = 0; for (const g of gs) { nv += g.attributes.position.count; ni += g.index.count; } const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), uv = new Float32Array(nv * 2), idx = new Uint32Array(ni); let vo = 0, io = 0; for (const g of gs) { pos.set(g.attributes.position.array, vo * 3); nor.set(g.attributes.normal.array, vo * 3); uv.set(g.attributes.uv.array, vo * 2); for (let i = 0; i < g.index.count; i++) idx[io++] = g.index.array[i] + vo; vo += g.attributes.position.count; g.dispose(); } const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); geo.setIndex(new THREE.BufferAttribute(idx, 1)); scene.add(mk(geo, lam(color, tex ? { map: tex } : {}))); }
+}
+const carpet = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#4b5668'; g.fillRect(0, 0, w, h); g.fillStyle = '#434d5e'; g.fillRect(0, 0, w / 2, h / 2); g.fillRect(w / 2, h / 2, w / 2, h / 2); for (let i = 0; i < 400; i++) { g.fillStyle = 'rgba(255,255,255,.05)'; g.fillRect(Math.random() * w, Math.random() * h, 2, 2); } g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 2; g.strokeRect(1, 1, w - 2, h - 2); }); carpet.wrapS = carpet.wrapT = THREE.RepeatWrapping; carpet.repeat.set(30, 30);
+const floor = mk(new THREE.PlaneGeometry(HALF * 2, HALF * 2), new THREE.MeshLambertMaterial({ map: carpet })); floor.rotation.x = -Math.PI / 2; scene.add(floor);
+const ceilTex = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#c9d0db'; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.fillRect(14, 22, 100, 84); g.strokeStyle = '#9aa3b5'; g.lineWidth = 4; g.strokeRect(14, 22, 100, 84); g.strokeStyle = '#b4bccb'; g.lineWidth = 3; g.strokeRect(0, 0, w, h); }); ceilTex.wrapS = ceilTex.wrapT = THREE.RepeatWrapping; ceilTex.repeat.set(15, 15);
+const ceil = mk(new THREE.PlaneGeometry(HALF * 2, HALF * 2), new THREE.MeshBasicMaterial({ map: ceilTex })); ceil.rotation.x = Math.PI / 2; ceil.position.y = WALLH; scene.add(ceil);
+// 外牆
+addBox('wall', 0xdfe4ec, -HALF - 1, -HALF - 1, HALF + 1, -HALF, WALLH); addBox('wall', 0xdfe4ec, -HALF - 1, HALF, HALF + 1, HALF + 1, WALLH); addBox('wall', 0xdfe4ec, -HALF - 1, -HALF, -HALF, HALF, WALLH); addBox('wall', 0xdfe4ec, HALF, -HALF, HALF + 1, HALF, WALLH);
+// 柱子
+for (const [x, z] of [[-10, -10], [10, -10], [-10, 10], [10, 10], [0, 0]]) addBox('pillar', 0xf2f2f2, x - .7, z - .7, x + .7, z + .7, WALLH);
+// 四個角落會議室（牆＋門口）
+function room(cx, cz, sx, sz) {   // sx/sz = 朝場中央的方向 (+1/-1)
+  const x0 = cx, x1 = cx + sx * 11, z0 = cz, z1 = cz + sz * 11, lo = (a, b) => [Math.min(a, b), Math.max(a, b)];
+  const [ax0, ax1] = lo(x0, x1), [az0, az1] = lo(z0, z1);
+  // 面向場中央的兩面牆各留 3.2 公尺門
+  const ex = sx > 0 ? ax1 : ax0, ez = sz > 0 ? az1 : az0, t = .3;
+  addBox('rw', 0xcfd6e2, ex - t / 2, az0, ex + t / 2, az0 + 3.4, WALLH); addBox('rw', 0xcfd6e2, ex - t / 2, az0 + 6.6, ex + t / 2, az1, WALLH);
+  addBox('rw', 0xcfd6e2, ax0, ez - t / 2, ax0 + 3.4, ez + t / 2, WALLH); addBox('rw', 0xcfd6e2, ax0 + 6.6, ez - t / 2, ax1, ez + t / 2, WALLH);
+  // 會議桌（低矮掩體）
+  const mx = (ax0 + ax1) / 2, mz = (az0 + az1) / 2; addBox('table', 0xb98a50, mx - 2.2, mz - 1.2, mx + 2.2, mz + 1.2, .9);
+}
+room(-HALF, -HALF, 1, 1); room(HALF, -HALF, -1, 1); room(-HALF, HALF, 1, -1); room(HALF, HALF, -1, -1);
+// 中央隔間格（高 1.6 的隔板：站著擋身體，跳起來才看得到）
+for (const z of [-14, -5, 5, 14]) for (const x of [-18, -8, 8, 18]) { if (Math.abs(x) < 6 && Math.abs(z) < 6) continue; addBox('part', 0x8fa2c9, x - 2.6, z - .1, x + 2.6, z + .1, 1.7); addBox('part', 0x8fa2c9, x - 2.6, z - .1, x - 2.4, z + 2.4, 1.7); }
+// 辦公桌（矮掩體，可跳上去）
+for (const [x, z, w, d] of [[-20, 0, 1.4, 6], [20, 0, 1.4, 6], [0, -20, 6, 1.4], [0, 20, 6, 1.4], [-4, -10, 3, 1.2], [4, 10, 3, 1.2], [-14, 22, 4, 1.2], [14, -22, 4, 1.2]]) addBox('desk', 0xd9b98a, x - w / 2, z - d / 2, x + w / 2, z + d / 2, .95);
+// 檔案櫃（沿牆）
+for (const [x, z, w, d] of [[-12, -29, 6, 1.1], [12, 29, 6, 1.1], [29, -8, 1.1, 6], [-29, 8, 1.1, 6], [-24, 14, 1.1, 4], [24, -14, 1.1, 4]]) addBox('cab', 0xaab3c2, x - w / 2, z - d / 2, x + w / 2, z + d / 2, 2.3);
+// 沙發／茶水間（矮）
+addBox('sofa', 0x9a6bff, -3, 24, 3, 26, .7); addBox('sofa', 0x9a6bff, -3, -26, 3, -24, .7); addBox('bar', 0x4a4f63, 24, 3, 26, 9, 1.1); addBox('bar', 0x4a4f63, -26, -9, -24, -3, 1.1);
+flush();
+// 牆上的標語（純裝飾）
+for (const [txt, x, z, ry] of [['保持安靜 · 專心槍戰', 0, -HALF + .02, 0], ['KPI 衝刺', 0, HALF - .02, Math.PI], ['會議室使用中', -HALF + .02, 0, Math.PI / 2], ['今天要交稿', HALF - .02, 0, -Math.PI / 2]]) {
+  const t = canvasTex(512, 96, (c, w, h) => { c.fillStyle = '#1c2430'; c.fillRect(0, 0, w, h); c.fillStyle = '#ffb000'; c.font = '700 44px "Noto Sans TC",sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(txt, w / 2, h / 2 + 3); c.strokeStyle = '#ffb000'; c.lineWidth = 4; c.strokeRect(3, 3, w - 6, h - 6); });
+  const p = mk(new THREE.PlaneGeometry(8, 1.5), new THREE.MeshBasicMaterial({ map: t })); p.position.set(x, 2.8, z); p.rotation.y = ry; scene.add(p);
+}
+// 導航格（bots 用）：1 公尺一格，高度 > .5 的物件視為阻擋
+const GN = HALF * 2, grid = new Uint8Array(GN * GN);
+for (const b of BOXES) if (b.h > .5) { const pad = .45; for (let gx = Math.floor(b.x0 - pad + HALF); gx <= Math.floor(b.x1 + pad + HALF); gx++) for (let gz = Math.floor(b.z0 - pad + HALF); gz <= Math.floor(b.z1 + pad + HALF); gz++) if (gx >= 0 && gz >= 0 && gx < GN && gz < GN) grid[gz * GN + gx] = 1; }
+const cellOf = v => clamp(Math.floor(v + HALF), 0, GN - 1);
+function astar(sx, sz, tx, tz) {
+  const s = cellOf(sz) * GN + cellOf(sx), t = cellOf(tz) * GN + cellOf(tx); if (s === t) return [];
+  let tt = t; if (grid[tt]) { let bd = 1e9; for (let r = 1; r < 6 && grid[tt]; r++) for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) { const x = (t % GN) + dx, z = Math.floor(t / GN) + dz; if (x < 0 || z < 0 || x >= GN || z >= GN) continue; if (!grid[z * GN + x] && dx * dx + dz * dz < bd) { bd = dx * dx + dz * dz; tt = z * GN + x; } } }
+  const open = [s], came = new Map([[s, -1]]), g = new Map([[s, 0]]), f = new Map([[s, 0]]), closed = new Set(); let guard = 0;
+  while (open.length && guard++ < 3000) {
+    let bi = 0; for (let i = 1; i < open.length; i++) if (f.get(open[i]) < f.get(open[bi])) bi = i; const cur = open.splice(bi, 1)[0]; if (cur === tt) break; closed.add(cur);
+    const cx = cur % GN, cz = Math.floor(cur / GN);
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { if (!dx && !dz) continue; const x = cx + dx, z = cz + dz; if (x < 0 || z < 0 || x >= GN || z >= GN) continue; const n = z * GN + x; if (grid[n] || closed.has(n)) continue; if (dx && dz && (grid[cz * GN + x] || grid[z * GN + cx])) continue; const ng = g.get(cur) + (dx && dz ? 1.41 : 1); if (!g.has(n) || ng < g.get(n)) { g.set(n, ng); f.set(n, ng + Math.hypot((tt % GN) - x, Math.floor(tt / GN) - z)); came.set(n, cur); if (!open.includes(n)) open.push(n); } }
+  }
+  if (!came.has(tt)) return []; const path = []; for (let c = tt; c !== -1 && c !== s; c = came.get(c)) path.push([c % GN - HALF + .5, Math.floor(c / GN) - HALF + .5]); return path.reverse();
+}
+
+// ───────── 碰撞與射線 ─────────
+const PR = .38;   // 人物半徑
+function groundAt(x, z, feet) { let g = 0; for (const b of BOXES) if (x > b.x0 - PR * .5 && x < b.x1 + PR * .5 && z > b.z0 - PR * .5 && z < b.z1 + PR * .5 && b.h <= feet + .55 && b.h > g) g = b.h; return g; }
+function blocked(x, z, feet) { for (const b of BOXES) if (b.h > feet + .55 && x > b.x0 - PR && x < b.x1 + PR && z > b.z0 - PR && z < b.z1 + PR) return true; return false; }
+function pushOut(o) { let best = null, bd = 1e9; for (let r = 0; r < 8 && !best; r++) for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) { const gx = cellOf(o.x) + dx, gz = cellOf(o.z) + dz; if (gx < 0 || gz < 0 || gx >= GN || gz >= GN || grid[gz * GN + gx]) continue; const cx = gx - HALF + .5, cz = gz - HALF + .5, d = Math.hypot(cx - o.x, cz - o.z); if (d < bd) { bd = d; best = [cx, cz]; } } if (best) { o.x = best[0]; o.z = best[1]; } }
+function moveXZ(o, dx, dz) { const f = o.y; if (!blocked(o.x + dx, o.z, f)) o.x += dx; if (!blocked(o.x, o.z + dz, f)) o.z += dz; o.x = clamp(o.x, -HALF + PR, HALF - PR); o.z = clamp(o.z, -HALF + PR, HALF - PR); }
+function rayBox(ox, oy, oz, dx, dy, dz, b, maxT) {   // slab
+  let t0 = 0, t1 = maxT; for (const [o, d, lo, hi] of [[ox, dx, b.x0, b.x1], [oy, dy, b.y0 || 0, b.h], [oz, dz, b.z0, b.z1]]) { if (Math.abs(d) < 1e-8) { if (o < lo || o > hi) return -1; } else { let a = (lo - o) / d, c = (hi - o) / d; if (a > c) { const t = a; a = c; c = t; } t0 = Math.max(t0, a); t1 = Math.min(t1, c); if (t0 > t1) return -1; } } return t0;
+}
+function rayWorld(ox, oy, oz, dx, dy, dz, maxT) { let best = maxT; for (const b of BOXES) { const t = rayBox(ox, oy, oz, dx, dy, dz, b, best); if (t >= 0 && t < best) best = t; } if (dy < 0) { const t = -oy / dy; if (t > 0 && t < best) best = t; } if (dy > 0) { const t = (WALLH - oy) / dy; if (t > 0 && t < best) best = t; } return best; }
+function los(a, b, ay = 1.5, by = 1.4) { const dx = b.x - a.x, dy = by - ay, dz = b.z - a.z, d = Math.hypot(dx, dy, dz); return rayWorld(a.x, ay, a.z, dx / d, dy / d, dz / d, d) >= d - .1; }
+function rayCyl(ox, oy, oz, dx, dy, dz, c, maxT) {   // 垂直圓柱：半徑 .45、高 1.8
+  const px = ox - c.x, pz = oz - c.z, a = dx * dx + dz * dz; if (a < 1e-8) return -1; const b = 2 * (px * dx + pz * dz), cc = px * px + pz * pz - .2, disc = b * b - 4 * a * cc; if (disc < 0) return -1; const t = (-b - Math.sqrt(disc)) / (2 * a); if (t < 0 || t > maxT) return -1; const y = oy + dy * t; if (y < c.y || y > c.y + 1.8) return -1; return t;
+}
+
+// ───────── 武器 ─────────
+const WEAPONS = [
+  { id: 'stapler', n: '訂書機', ic: '📌', kind: 'auto', rate: 11, dmg: 9, spread: .018, pellets: 1, range: 90, kick: .012, col: 0xffd24a, view: [0xe8307a, 1.0] },
+  { id: 'keyboard', n: '鍵盤', ic: '⌨️', kind: 'shotgun', rate: 1.1, dmg: 8, spread: .07, pellets: 9, range: 30, kick: .05, col: 0xffffff, view: [0x2b2d3a, 1.0] },
+  { id: 'mouse', n: '滑鼠', ic: '🖱️', kind: 'semi', rate: 5.5, dmg: 21, spread: .005, pellets: 1, range: 110, kick: .02, col: 0xbfe9ff, view: [0xe6e9ef, .8] },
+  { id: 'ruler', n: '直尺', ic: '📏', kind: 'sniper', rate: 1.1, dmg: 70, spread: .045, pellets: 1, range: 200, kick: .05, col: 0xffb000, view: [0xf2c14e, 1.2], zoom: 26 },
+  { id: 'phone', n: '電話', ic: '☎️', kind: 'rocket', rate: .75, dmg: 75, spread: .006, pellets: 1, range: 60, kick: .06, col: 0xff6a3d, view: [0xe8456b, 1.0], splash: 4.6, speed: 30 }
+];
+const SKILLS = { dash: { n: '閃身步', ic: '💨', cd: 5, d: '向前方急衝一小段，閃避火線' }, shield: { n: '責任壁壘', ic: '🛡️', cd: 14, dur: 3, d: '3 秒內完全免傷' }, coffee: { n: '咖啡因', ic: '☕', cd: 14, dur: 5, d: '5 秒內移速 +45%、射速 +20%' } };
+const ULTS = { quake: { n: '角色絕技', ic: '💥', d: '範圍震波：半徑 9 公尺內敵人受 55 傷害' }, rage: { n: '截稿狂暴', ic: '🔥', dur: 5, d: '5 秒內射速 ×1.6、傷害 ×1.35' }, heal: { n: '茶歇回復', ic: '💚', d: '立即回復 60 點血並免疫減速' } };
+
+// ───────── 角色（12 角度公告板） ─────────
+const texCache = {};
+const walkCache = {};
+function loadWalk(name) { if (name in walkCache) return walkCache[name]; const t = new THREE.TextureLoader().load('../pixel-plaza/sprites-walk-hd/' + name + '.webp', undefined, undefined, () => { walkCache[name] = null; }); t.magFilter = t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; t.repeat.set(1 / ANGLES, .5); return walkCache[name] = t; }
+function loadTex(name) { if (texCache[name]) return texCache[name]; const t = new THREE.TextureLoader().load('../pixel-plaza/sprites-hd/' + name + '.webp'); t.magFilter = t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; t.repeat.set(1 / ANGLES, 1); return texCache[name] = t; }
+const barTex = canvasTex(64, 8, g => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 8); });
+const shadowTex = canvasTex(64, 64, g => { const r = g.createRadialGradient(32, 32, 2, 32, 32, 30); r.addColorStop(0, 'rgba(0,0,0,.55)'); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); });
+function nameTexOf(txt, col) { return canvasTex(256, 64, (g, w, h) => { g.font = '700 30px "Noto Sans TC",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 7; g.strokeStyle = '#000'; g.strokeText(txt, w / 2, h / 2); g.fillStyle = col; g.fillText(txt, w / 2, h / 2); }); }
+let actors = [], me = null;
+function makeActor(name, team, isMe) {
+  const o = { name, team, isMe, x: 0, y: 0, z: 0, vx: 0, vz: 0, vy: 0, yaw: 0, pitch: 0, hp: 100, dead: false, respT: 0, inv: 0, wi: 0, fireT: 0, kills: 0, deaths: 0, ult: 0, skCD: 0, skT: 0, buff: 0, rage: 0, shield: 0, fl: 0, lastHurt: 0, ground: true, bot: null, path: [], pathT: 0, tgt: null, sprT: 0, anim: 0 };
+  if (!isMe) {
+    const ks = CHAR_SCALE[name] || 1, spr = mk(new THREE.PlaneGeometry(2 * ks, 2 * ks), new THREE.MeshBasicMaterial({ map: loadTex(name), transparent: true, alphaTest: .5, side: THREE.DoubleSide })); spr.geometry.translate(0, 1 * ks - .02, 0); spr.rotation.order = 'YXZ';
+    const ring = mk(new THREE.RingGeometry(.5, .7, 24), new THREE.MeshBasicMaterial({ color: team ? 0xff4b3e : 0x5ec8ff, side: THREE.DoubleSide, transparent: true, opacity: .9 })); ring.rotation.x = -Math.PI / 2;
+    const nm = new THREE.Sprite(new THREE.SpriteMaterial({ map: nameTexOf(name, team ? '#ffb4ad' : '#bfe9ff'), transparent: true, depthTest: false })); nm.scale.set(1.9, .48, 1); nm.position.y = 2.45 * ks;
+    const hpb = new THREE.Sprite(new THREE.SpriteMaterial({ map: barTex, color: 0x5ef0a4, transparent: true, depthTest: false })); hpb.scale.set(1.1, .09, 1); hpb.position.y = 2.2 * ks;
+    const sh = mk(new THREE.PlaneGeometry(1.4, 1.4), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false })); sh.rotation.x = -Math.PI / 2;
+    const g = new THREE.Group(); g.add(spr, nm, hpb); scene.add(g, ring, sh); Object.assign(o, { g, spr, ring, nm, hpb, sh, ks, stand: spr.material.map, walk: loadWalk(name), wph: 0 });
+  }
+  return o;
+}
+function clearActors() { for (const a of actors) { if (a.g) scene.remove(a.g, a.ring, a.sh); } actors = []; for (const p of PROJ) scene.remove(p.m); PROJ.length = 0; for (const f of FX) scene.remove(f.s); FX.length = 0; }
+
+// ───────── 狀態 ─────────
+let state = 'menu', paused = false, tLeft = 300, score = [0, 0], goal = 15, stT = 0, yaw = 0, pitch = 0, locked = false, zoom = false, shake = 0, recoil = 0, bobT = 0, hitT = 0;
+const keys = {}, joy = { x: 0, y: 0 }, hold = { fire: false };
+const PROJ = [], FX = [];
+function spawnPoint(team) { const pts = team === 0 ? [[-26, -10], [-26, 0], [-26, 10], [-22, 20], [-22, -20]] : [[26, -10], [26, 0], [26, 10], [22, 20], [22, -20]]; let best = null, bd = -1; for (let i = 0; i < 6; i++) { const p = pts[Math.floor(Math.random() * pts.length)]; let md = 1e9; for (const a of actors) if (!a.dead && a.team !== team) md = Math.min(md, Math.hypot(a.x - p[0], a.z - p[1])); if (md > bd) { bd = md; best = p; } } return best; }
+function respawn(a) { const p = spawnPoint(a.team); a.x = p[0]; a.z = p[1]; a.y = 0; a.vx = a.vz = a.vy = 0; a.hp = 100; a.dead = false; a.inv = 2; a.yaw = a.team === 0 ? -Math.PI / 2 : Math.PI / 2; a.pitch = 0; a.path = []; a.tgt = null; a.wi = a.isMe ? a.wi : Math.floor(Math.random() * WEAPONS.length); a.fireT = .3; if (a.isMe) { yaw = a.yaw; pitch = 0; } }
+function pickNames(n) { return LOCAL_NAMES.filter(x => x !== CFG.who).sort(() => Math.random() - .5).slice(0, n); }
+function setupMatch() {
+  clearActors(); const n = CFG.mode, others = pickNames(n * 2 - 1); let oi = 0;
+  for (let t = 0; t < 2; t++) for (let i = 0; i < n; i++) { const isMe = t === 0 && i === 0, a = makeActor(isMe ? CFG.who : others[oi++], t, isMe); a.bot = isMe ? null : { react: 0, strafe: 1, strafeT: 0, burst: 0, think: 0, skillT: rand(2, 6), seen: 0 }; actors.push(a); }
+  me = actors[0]; me.wi = 2; for (const a of actors) respawn(a);
+  score = [0, 0]; goal = CFG.goal; tLeft = 360; $('goalT').textContent = '目標 ' + goal; $('nA').textContent = n > 1 ? '我方' : CFG.who; $('nB').textContent = n > 1 ? '敵方' : actors[n].name; $('feed').innerHTML = ''; updScore();
+  ult = { ...ULTS[CFG.ult] }; buildWL(); setViewmodel();
+}
+let ult = null;
+const updScore = () => { $('sA').textContent = score[0]; $('sB').textContent = score[1]; };
+function banner(t, s, dur) { $('bnT').textContent = t; $('bnS').textContent = s || ''; $('banner').classList.add('on'); clearTimeout(banner.t); if (dur) banner.t = setTimeout(() => $('banner').classList.remove('on'), dur); }
+function feed(t, cls) { const d = document.createElement('div'); d.textContent = t; if (cls) d.className = cls; $('feed').appendChild(d); setTimeout(() => d.remove(), 5000); while ($('feed').children.length > 5) $('feed').firstChild.remove(); }
+
+// ───────── 第一人稱手持模型 ─────────
+const vm = new THREE.Group(); camera.add(vm); vm.position.set(.26, -.24, -.5); vm.scale.setScalar(.78);
+const vmParts = [], flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: canvasTex(64, 64, g => { const r = g.createRadialGradient(32, 32, 2, 32, 32, 30); r.addColorStop(0, 'rgba(255,255,220,1)'); r.addColorStop(.4, 'rgba(255,190,60,.7)'); r.addColorStop(1, 'rgba(255,120,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); }), transparent: true, depthTest: false, blending: THREE.AdditiveBlending }));
+flash.scale.set(.35, .35, 1); flash.visible = false; vm.add(flash);
+const skinM = lam(0xf0c49a);
+function setViewmodel() {
+  for (const p of vmParts) vm.remove(p); vmParts.length = 0; const w = WEAPONS[me ? me.wi : 0], c = w.view[0], add = (g, col, x, y, z, rx = 0) => { const m = mk(g, lam(col)); m.position.set(x, y, z); m.rotation.x = rx; vm.add(m); vmParts.push(m); m.renderOrder = 10; m.material.depthTest = false; return m; };
+  add(new THREE.BoxGeometry(.07, .1, .09), 0xf0c49a, .0, -.02, .22);   // 手
+  if (w.id === 'stapler') { add(new THREE.BoxGeometry(.09, .08, .42), c, 0, .02, -.02); add(new THREE.BoxGeometry(.07, .04, .3), 0x2b2d3a, 0, .07, -.05); add(new THREE.BoxGeometry(.05, .13, .06), 0x2b2d3a, 0, -.07, .08); flash.position.set(0, .03, -.3); }
+  else if (w.id === 'keyboard') { add(new THREE.BoxGeometry(.2, .035, .5), c, 0, 0, -.05); for (let i = 0; i < 6; i++) add(new THREE.BoxGeometry(.18, .02, .04), 0xf2f2f2, 0, .03, -.25 + i * .08); flash.position.set(0, .03, -.38); }
+  else if (w.id === 'mouse') { add(new THREE.BoxGeometry(.1, .06, .17), c, 0, 0, -.06); add(new THREE.BoxGeometry(.015, .02, .06), 0x2b2d3a, 0, .04, -.1); add(new THREE.BoxGeometry(.03, .03, .22), 0x9aa3b5, 0, .02, -.25); flash.position.set(0, .03, -.38); }
+  else if (w.id === 'ruler') { add(new THREE.BoxGeometry(.045, .035, .9), c, 0, .03, -.25); for (let i = 0; i < 12; i++) add(new THREE.BoxGeometry(.047, .036, .006), 0x5a4210, 0, .031, -.65 + i * .07); add(new THREE.BoxGeometry(.06, .06, .12), 0x2b2d3a, 0, .06, .02); flash.position.set(0, .03, -.72); }
+  else { add(new THREE.BoxGeometry(.13, .12, .34), c, 0, 0, -.04); add(new THREE.CylinderGeometry(.04, .04, .22, 8), 0x2b2d3a, 0, .02, -.3, Math.PI / 2); add(new THREE.BoxGeometry(.05, .1, .06), 0xffffff, 0, .08, -.04); flash.position.set(0, .02, -.45); }
+}
+// ───────── 戰鬥 ─────────
+function dmgTo(t, d, src, head, wname) {
+  if (t.dead || t.inv > 0) return; if (t.shield > 0) { if (t.isMe) { $('sh').classList.add('on'); setTimeout(() => $('sh').classList.remove('on'), 120); } return; }
+  t.hp -= d; t.fl = .12; t.lastHurt = performance.now(); if (src && src !== t) src.ult = Math.min(100, src.ult + d * .22);
+  if (t.isMe) { SFX.hurt(); $('dmg').classList.add('on'); setTimeout(() => $('dmg').classList.remove('on'), 60); shake = Math.min(1, shake + d / 50); if (src) { const a = Math.atan2(src.x - t.x, src.z - t.z); dirHit(a); } }
+  if (src && src.isMe && src !== t) { hitMark(head); }
+  if (t.hp <= 0) kill(t, src, wname);
+}
+function dirHit(a) { const rel = wrapA(a - (-yaw) - Math.PI) , el = $('dir').firstElementChild; el.style.transform = 'rotate(' + (wrapA(Math.atan2(Math.sin(a), Math.cos(a)) + yaw + Math.PI) * 180 / Math.PI) + 'deg)'; el.style.opacity = 1; clearTimeout(dirHit.t); dirHit.t = setTimeout(() => { el.style.opacity = 0; }, 700); void rel; }
+function hitMark(head) { const el = $('hm'); el.classList.add('on'); el.classList.toggle('hs', !!head); clearTimeout(hitMark.t); hitMark.t = setTimeout(() => el.classList.remove('on'), 120); head ? SFX.head() : SFX.hit(); }
+function kill(t, src, wname) {
+  t.dead = true; t.respT = 3; t.deaths++; t.vx = t.vz = 0; if (t.g) t.g.visible = true;
+  if (src && src !== t) { src.kills++; src.ult = Math.min(100, src.ult + 18); score[src.team]++; updScore(); }
+  else if (!src || src === t) { score[t.team ? 0 : 1]++; updScore(); }
+  const ic = wname || '💥'; feed((src ? src.name : '自爆') + ' ' + ic + ' ' + t.name, src && src.isMe ? 'me' : t.isMe ? 'die' : '');
+  if (t.isMe) { SFX.die(); banner('陣亡', (src ? '被 ' + src.name + ' 擊倒' : '') , 2800); zoom = false; } else if (src && src.isMe) { SFX.kill(); }
+  if (score[0] >= goal || score[1] >= goal) endMatch();
+}
+function aimDir(a, spread) { const cp = Math.cos(a.pitch), sx = Math.sin(a.yaw) * cp, sz = Math.cos(a.yaw) * cp, sy = Math.sin(a.pitch); let dx = -sx, dy = sy, dz = -sz; if (spread) { dx += (Math.random() - .5) * spread * 2; dy += (Math.random() - .5) * spread * 2; dz += (Math.random() - .5) * spread * 2; } const l = Math.hypot(dx, dy, dz); return [dx / l, dy / l, dz / l]; }
+function fire(a) {
+  const w = WEAPONS[a.wi]; let rate = w.rate * (a.buff > 0 ? 1.2 : 1) * (a.rage > 0 ? 1.6 : 1); a.fireT = 1 / rate; const dm = (a.rage > 0 ? 1.35 : 1);
+  const eye = [a.x, a.y + 1.55, a.z];
+  const baseSpread = a.isMe ? (w.spread * (w.kind === 'sniper' && zoom ? 0 : 1) * (Math.hypot(a.vx, a.vz) > 2 ? 1.6 : 1) * (a.ground ? 1 : 2.2)) : w.spread + (a.bot ? [.07, .04, .018][CFG.diff] : 0);
+  if (a.isMe) { SFX.shot(w.kind); recoil = Math.min(1, recoil + w.kick * 8); pitch += w.kick * (w.kind === 'sniper' ? 1 : .5) * (.7 + Math.random() * .6); flash.visible = true; setTimeout(() => flash.visible = false, 45); } else if (Math.hypot(a.x - me.x, a.z - me.z) < 40) SFX.shot(w.kind);
+  if (w.kind === 'rocket') { const [dx, dy, dz] = aimDir(a, baseSpread); const m = mk(new THREE.SphereGeometry(.16, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff8a3d })); m.position.set(eye[0] + dx * .8, eye[1] - .1 + dy * .8, eye[2] + dz * .8); scene.add(m); PROJ.push({ m, x: m.position.x, y: m.position.y, z: m.position.z, vx: dx * w.speed, vy: dy * w.speed, vz: dz * w.speed, owner: a, w, life: 3, dm }); return; }
+  for (let p = 0; p < w.pellets; p++) {
+    const [dx, dy, dz] = aimDir(a, baseSpread); let bestT = rayWorld(eye[0], eye[1], eye[2], dx, dy, dz, w.range), who = null, head = false;
+    for (const t of actors) { if (t === a || t.dead || (t.team === a.team)) continue; const tt = rayCyl(eye[0], eye[1], eye[2], dx, dy, dz, t, bestT); if (tt >= 0 && tt < bestT) { bestT = tt; who = t; head = eye[1] + dy * tt > t.y + 1.45; } }
+    const ex = eye[0] + dx * bestT, ey = eye[1] + dy * bestT, ez = eye[2] + dz * bestT;
+    if (a.isMe || Math.hypot(a.x - me.x, a.z - me.z) < 35) tracer(a, eye, [ex, ey, ez], w.col);
+    if (who) { const fall = w.kind === 'shotgun' ? clamp(1.1 - bestT / 40, .25, 1) : 1; let d = w.dmg * dm * fall * (head ? 1.7 : 1); dmgTo(who, d, a, head, w.ic); }
+    else if (a.isMe) impact(ex, ey, ez);
+  }
+}
+const tracerM = new THREE.MeshBasicMaterial({ color: 0xffd24a, transparent: true, opacity: .8, blending: THREE.AdditiveBlending, depthWrite: false });
+function tracer(a, from, to, col) {
+  const s = a.isMe ? [from[0] + (-Math.sin(yaw)) * .0, from[1], from[2]] : from, g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(s[0] - (a.isMe ? Math.sin(a.yaw + Math.PI / 2) * -.2 : 0), s[1] - (a.isMe ? .2 : .1), s[2] - (a.isMe ? Math.cos(a.yaw + Math.PI / 2) * -.2 : 0)), new THREE.Vector3(to[0], to[1], to[2])]);
+  const l = new THREE.Line(g, new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: .9 })); scene.add(l); FX.push({ s: l, t: 0, d: .08, line: true });
+}
+const sparkTex = canvasTex(32, 32, g => { const r = g.createRadialGradient(16, 16, 1, 16, 16, 15); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(.5, 'rgba(255,255,255,.5)'); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(0, 0, 32, 32); });
+function impact(x, y, z) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTex, color: 0xffe9a0, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); s.position.set(x, y, z); s.scale.set(.3, .3, 1); scene.add(s); FX.push({ s, t: 0, d: .18 }); }
+function explode(x, y, z, owner, w, dm) {
+  SFX.boom(); const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTex, color: 0xff8a3d, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); s.position.set(x, y, z); s.scale.set(w.splash * 1.6, w.splash * 1.6, 1); scene.add(s); FX.push({ s, t: 0, d: .4, grow: 1 }); shake = Math.min(1, shake + Math.max(0, .8 - Math.hypot(me.x - x, me.z - z) / 12));
+  for (const t of actors) { if (t.dead) continue; const d = Math.hypot(t.x - x, (t.y + .9) - y, t.z - z); if (d < w.splash) { const k = 1 - d / w.splash; let dmg = w.dmg * dm * (.3 + .7 * k); if (t.team === owner.team && t !== owner) continue; if (t === owner) dmg *= .35; dmgTo(t, dmg, owner, false, w.ic); if (t === me) { const a = Math.atan2(t.x - x, t.z - z); t.vx += Math.sin(a) * 8 * k; t.vz += Math.cos(a) * 8 * k; } } }
+}
+function stepProj(dt) {
+  for (let i = PROJ.length - 1; i >= 0; i--) { const p = PROJ[i]; p.life -= dt; const nx = p.x + p.vx * dt, ny = p.y + p.vy * dt, nz = p.z + p.vz * dt; let hit = p.life <= 0 || ny < .05 || ny > WALLH;
+    const d = Math.hypot(nx - p.x, ny - p.y, nz - p.z) + 1e-6; const t = rayWorld(p.x, p.y, p.z, (nx - p.x) / d, (ny - p.y) / d, (nz - p.z) / d, d); if (t < d) hit = true;
+    for (const a of actors) if (!a.dead && a !== p.owner && a.team !== p.owner.team && Math.hypot(a.x - nx, a.z - nz) < .6 && ny > a.y && ny < a.y + 1.9) hit = true;
+    p.x = nx; p.y = ny; p.z = nz; p.m.position.set(nx, ny, nz); if (hit) { explode(nx, ny, nz, p.owner, p.w, p.dm); scene.remove(p.m); PROJ.splice(i, 1); } }
+}
+// ───────── 技能 ─────────
+function useSkill(a) {
+  const S = SKILLS[CFG.sk]; if (state !== 'play' || a.dead || a.skCD > 0 || a.skT > 0) return; a.skCD = S.cd; if (a.isMe) SFX.skill();
+  if (CFG.sk === 'dash') { const f = a.isMe ? (keys.KeyW || joy.y < -.3 || (!keys.KeyS && !keys.KeyA && !keys.KeyD)) : true; let dx = -Math.sin(a.yaw), dz = -Math.cos(a.yaw); const mx = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + joy.x, mz = (keys.KeyS ? 1 : 0) - (keys.KeyW ? 1 : 0) + joy.y; if (a.isMe && (mx || mz)) { const l = Math.hypot(mx, mz); const fx = -Math.sin(a.yaw), fz = -Math.cos(a.yaw), rx = -fz, rz = fx; dx = (fx * -mz + rx * mx) / l; dz = (fz * -mz + rz * mx) / l; } void f; a.vx = dx * 20; a.vz = dz * 20; a.dashT = .22; }
+  else if (CFG.sk === 'shield') { a.shield = S.dur; a.skT = 0; } else if (CFG.sk === 'coffee') { a.buff = S.dur; }
+}
+function useUlt(a) {
+  if (state !== 'play' || a.dead || a.ult < 100) return; a.ult = 0; if (a.isMe) { SFX.skill(); banner(ult.n, '', 900); }
+  const u = a.isMe ? CFG.ult : a.botUlt || 'quake';
+  if (u === 'quake') { SFX.boom(); const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTex, color: 0xffb000, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); s.position.set(a.x, a.y + .3, a.z); s.scale.set(18, 18, 1); scene.add(s); FX.push({ s, t: 0, d: .5 }); for (const t of actors) if (!t.dead && t.team !== a.team && Math.hypot(t.x - a.x, t.z - a.z) < 9) dmgTo(t, 55, a, false, '💥'); shake = Math.min(1, shake + .6); }
+  else if (u === 'rage') a.rage = ULTS.rage.dur; else if (u === 'heal') { a.hp = Math.min(100, a.hp + 60); }
+}
+// ───────── 電腦 ─────────
+function botThink(a, dt) {
+  const B = a.bot, D = [.7, 1, 1.25][CFG.diff]; B.think -= dt; B.strafeT -= dt; B.skillT -= dt;
+  if (B.think <= 0) {
+    B.think = .25;
+    let best = null, bd = 1e9; for (const t of actors) { if (t.team === a.team || t.dead) continue; const d = Math.hypot(t.x - a.x, t.z - a.z); if (d < bd && d < 45 && los(a, t, 1.55, t.y + 1.3)) { bd = d; best = t; } }
+    if (best) { if (a.tgt !== best) { B.react = [.55, .32, .18][CFG.diff]; } a.tgt = best; B.seen = 2; } else { B.seen -= .25; if (B.seen <= 0) a.tgt = null; }
+    // 找路：有目標就靠近到合適距離，沒有就巡邏到隨機點／補血
+    if (!a.tgt || bd > 14) { let goalP = a.tgt ? [a.tgt.x, a.tgt.z] : B.patrol; if (!goalP || Math.hypot(goalP[0] - a.x, goalP[1] - a.z) < 2.5) { B.patrol = [rand(-26, 26), rand(-26, 26)]; goalP = B.patrol; if (a.hp < 50) { const c = PICKS.filter(p => p.t <= 0).sort((p, q) => Math.hypot(p.x - a.x, p.z - a.z) - Math.hypot(q.x - a.x, q.z - a.z))[0]; if (c) { B.patrol = [c.x, c.z]; goalP = B.patrol; } } } a.path = astar(a.x, a.z, goalP[0], goalP[1]); }
+    else a.path = [];
+    if (a.hp < 40 && a.skCD <= 0 && CFG.sk === 'dash') B.skillT = Math.min(B.skillT, .1);
+  }
+  if (a.ult >= 100 && a.tgt) { a.botUlt = ['quake', 'rage', 'heal'][Math.floor(Math.random() * 3)]; if (a.botUlt === 'quake' && Math.hypot(a.tgt.x - a.x, a.tgt.z - a.z) > 8) a.botUlt = 'rage'; useUlt(a); }
+  if (B.skillT <= 0) { B.skillT = rand(4, 9); if (a.skCD <= 0 && (a.tgt || a.hp < 50)) useSkill(a); }
+  // 移動
+  let mx = 0, mz = 0;
+  if (a.tgt) { const t = a.tgt, dx = t.x - a.x, dz = t.z - a.z, d = Math.hypot(dx, dz), want = Math.atan2(-dx, -dz), diff = wrapA(want - a.yaw); a.yaw += clamp(diff, -dt * 5 * D, dt * 5 * D); const dy = (t.y + 1.3) - (a.y + 1.55); a.pitch += clamp(Math.atan2(dy, d) - a.pitch, -dt * 3, dt * 3);
+    if (B.strafeT <= 0) { B.strafe = Math.random() < .5 ? -1 : 1; B.strafeT = rand(.6, 1.6); }
+    const fx = -Math.sin(a.yaw), fz = -Math.cos(a.yaw), rx = -fz, rz = fx, adv = d > 12 ? 1 : d < 5 ? -.6 : .1; mx = fx * adv + rx * B.strafe * .8; mz = fz * adv + rz * B.strafe * .8;
+    B.react -= dt; if (B.react <= 0 && Math.abs(diff) < (.12 + .05 / D) && a.fireT <= 0 && los(a, t, 1.55, t.y + 1.3)) { B.burst -= dt; fire(a); } }
+  else if (a.path.length) { const n = a.path[0], dx = n[0] - a.x, dz = n[1] - a.z, d = Math.hypot(dx, dz); if (d < .6) a.path.shift(); else { mx = dx / d; mz = dz / d; const want = Math.atan2(-dx, -dz); a.yaw += clamp(wrapA(want - a.yaw), -dt * 6, dt * 6); a.pitch *= .9; } }
+  const l = Math.hypot(mx, mz) || 1, sp = 5.2 * D * (a.buff > 0 ? 1.45 : 1); if (a.dashT > 0) { a.dashT -= dt; } else { a.vx += ((mx / l) * (l > .01 ? sp : 0) - a.vx) * Math.min(1, dt * 8); a.vz += ((mz / l) * (l > .01 ? sp : 0) - a.vz) * Math.min(1, dt * 8); }
+  if (a.ground && Math.hypot(a.vx, a.vz) < .5 && a.path.length && Math.random() < .02) { a.vy = 6; a.ground = false; }
+}
+const PICKS = [{ x: 0, z: 24, t: 0 }, { x: 0, z: -24, t: 0 }, { x: 18, z: 0, t: 0 }, { x: -18, z: 0, t: 0 }, { x: 14, z: 14, t: 0 }, { x: -14, z: -14, t: 0 }];
+const pickMeshes = PICKS.map(p => { const g = new THREE.Group(), cup = mk(new THREE.CylinderGeometry(.22, .17, .32, 10), lam(0xffffff)); cup.position.y = .45; const cof = mk(new THREE.CylinderGeometry(.2, .2, .04, 10), lam(0x6b3a1a)); cof.position.y = .6; const base = mk(new THREE.CylinderGeometry(.35, .35, .08, 12), new THREE.MeshBasicMaterial({ color: 0x5ef0a4, transparent: true, opacity: .6 })); base.position.y = .05; g.add(cup, cof, base); g.position.set(p.x, 0, p.z); scene.add(g); return g; });
+
+// ───────── 輸入 ─────────
+addEventListener('keydown', e => { if (e.repeat) return; keys[e.code] = true; unlock(); if (['Space', 'ArrowUp', 'ArrowDown', 'Tab'].includes(e.code)) e.preventDefault();
+  if (state !== 'play') return;
+  if (e.code === 'KeyE') useSkill(me); if (e.code === 'KeyR') useUlt(me); if (/^Digit[1-5]$/.test(e.code)) swapTo(+e.code.slice(5) - 1); if (e.code === 'Tab') showSB(true); if (e.code === 'KeyQ') swapTo((me.wi + 1) % WEAPONS.length); });
+addEventListener('keyup', e => { keys[e.code] = false; if (e.code === 'Tab') showSB(false); });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; hold.fire = false; });
+cv.addEventListener('mousedown', e => { unlock(); if (state === 'play' && !locked && !touch) { cv.requestPointerLock && cv.requestPointerLock(); return; } if (e.button === 0) hold.fire = true; if (e.button === 2) setZoom(true); });
+addEventListener('mouseup', e => { if (e.button === 0) hold.fire = false; if (e.button === 2) setZoom(false); });
+cv.addEventListener('contextmenu', e => e.preventDefault());
+addEventListener('wheel', e => { if (state !== 'play') return; swapTo((me.wi + (e.deltaY > 0 ? 1 : -1) + WEAPONS.length) % WEAPONS.length); }, { passive: true });
+document.addEventListener('pointerlockchange', () => { locked = document.pointerLockElement === cv; $('lock').hidden = locked || touch || state !== 'play'; if (!locked && state === 'play') paused = true; else paused = false; });
+addEventListener('mousemove', e => { if (!locked || state !== 'play') return; yaw -= e.movementX * .0022 * (zoom ? .4 : 1); pitch = clamp(pitch - e.movementY * .0022 * (zoom ? .4 : 1), -1.45, 1.45); });
+$('lock').onclick = () => { unlock(); cv.requestPointerLock && cv.requestPointerLock(); };
+function setZoom(v) { if (state !== 'play' || !me || me.dead) { zoom = false; } else zoom = v; }
+function swapTo(i) { if (!me || me.dead || i === me.wi) return; me.wi = i; me.fireT = .15; setViewmodel(); buildWL(); zoom = false; }
+const stick = $('stick'), knob = stick.firstElementChild;
+function joyMove(e) { const r = stick.getBoundingClientRect(), rad = Math.min(r.width, r.height); let sx = e.clientX - r.left - r.width / 2, sy = e.clientY - r.top - r.height / 2; if (isRot()) { const t = sx; sx = sy; sy = -t; } const k = rad / 110; let dx = sx / (45 * k), dy = sy / (45 * k); const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; } joy.x = dx; joy.y = dy; knob.style.transform = 'translate(' + dx * 32 * k + 'px,' + dy * 32 * k + 'px)'; }
+stick.addEventListener('pointerdown', e => { e.preventDefault(); unlock(); try { stick.setPointerCapture(e.pointerId); } catch (x) {} joyMove(e); });
+stick.addEventListener('pointermove', e => { if (e.buttons || e.pressure) joyMove(e); });
+const joyEnd = () => { joy.x = joy.y = 0; knob.style.transform = ''; }; stick.addEventListener('pointerup', joyEnd); stick.addEventListener('pointercancel', joyEnd);
+// 右半邊畫面：滑動轉視角
+let lookId = null, lx = 0, ly = 0; const lp = $('lookpad');
+lp.addEventListener('pointerdown', e => { e.preventDefault(); unlock(); lookId = e.pointerId; lx = e.clientX; ly = e.clientY; try { lp.setPointerCapture(e.pointerId); } catch (x) {} });
+lp.addEventListener('pointermove', e => { if (e.pointerId !== lookId) return; let dx = e.clientX - lx, dy = e.clientY - ly; lx = e.clientX; ly = e.clientY; if (isRot()) { const t = dx; dx = dy; dy = -t; } const s = (zoom ? .4 : 1) * .0055; yaw -= dx * s; pitch = clamp(pitch - dy * s, -1.45, 1.45); });
+const lend = e => { if (e.pointerId === lookId) lookId = null; }; lp.addEventListener('pointerup', lend); lp.addEventListener('pointercancel', lend);
+function bindBtn(id, down, up) { const el = $(id); el.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); unlock(); try { el.setPointerCapture(e.pointerId); } catch (x) {} down(); el.classList.add('on'); }); const u = () => { up && up(); el.classList.remove('on'); }; el.addEventListener('pointerup', u); el.addEventListener('pointercancel', u); el.addEventListener('contextmenu', e => e.preventDefault()); }
+bindBtn('fire', () => { hold.fire = true; }, () => { hold.fire = false; });
+bindBtn('jump', () => { keys.Space = true; setTimeout(() => keys.Space = false, 120); }, null);
+bindBtn('aim', () => setZoom(!zoom), null); bindBtn('swap', () => swapTo((me.wi + 1) % WEAPONS.length), null); bindBtn('skE', () => useSkill(me), null); bindBtn('skR', () => useUlt(me), null);
+function showSB(on) { const el = $('sb'); if (!on) { el.hidden = true; return; } const rows = [...actors].sort((a, b) => b.kills - a.kills).map(a => '<tr class="' + (a.team ? 'b' : 'a') + (a.isMe ? ' me' : '') + '"><td>' + a.name + '</td><td>' + a.kills + '</td><td>' + a.deaths + '</td></tr>').join(''); el.innerHTML = '<table><tr><th>玩家</th><th>擊殺</th><th>死亡</th></tr>' + rows + '</table>'; el.hidden = false; }
+function buildWL() { $('wl').innerHTML = WEAPONS.map((w, i) => '<span class="' + (me && i === me.wi ? 'on' : '') + '"><b>' + (i + 1) + '</b>' + w.ic + '</span>').join(''); $('wpN').textContent = me ? WEAPONS[me.wi].n : ''; }
+
+// ───────── 主迴圈 ─────────
+function stepActor(a, dt) {
+  if (a.dead) { a.respT -= dt; if (a.respT <= 0 && state === 'play') { respawn(a); if (a.isMe) { setViewmodel(); $('banner').classList.remove('on'); } } return; }
+  a.inv = Math.max(0, a.inv - dt); a.fireT = Math.max(0, a.fireT - dt); a.skCD = Math.max(0, a.skCD - dt); a.buff = Math.max(0, a.buff - dt); a.rage = Math.max(0, a.rage - dt); a.shield = Math.max(0, a.shield - dt); a.fl = Math.max(0, a.fl - dt);
+  if (state === 'play') a.ult = Math.min(100, a.ult + dt * 1.2);
+  if (a.isMe) {
+    const mx = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + joy.x, mz = (keys.KeyS ? 1 : 0) - (keys.KeyW ? 1 : 0) + joy.y, l = Math.hypot(mx, mz), sp = (keys.ShiftLeft || keys.ShiftRight ? 7.8 : 5.6) * (a.buff > 0 ? 1.45 : 1) * (zoom ? .6 : 1), fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = -fz, rz = fx;
+    if (a.dashT > 0) a.dashT -= dt; else { const k = l > 1 ? 1 / l : 1, tx = (fx * -mz + rx * mx) * k * sp, tz = (fz * -mz + rz * mx) * k * sp, ac = a.ground ? 14 : 3; a.vx += (tx - a.vx) * Math.min(1, dt * ac); a.vz += (tz - a.vz) * Math.min(1, dt * ac); }
+    a.yaw = yaw; a.pitch = pitch; if (keys.Space && a.ground) { a.vy = 6.6; a.ground = false; }
+    if (hold.fire && a.fireT <= 0 && state === 'play' && (WEAPONS[a.wi].kind === 'auto' || !a.held)) { fire(a); if (WEAPONS[a.wi].kind !== 'auto') a.held = true; } if (!hold.fire) a.held = false;
+  } else if (state === 'play') botThink(a, dt);
+  // 物理
+  a.vy -= 20 * dt; const f = a.y; a.y += a.vy * dt; const g = groundAt(a.x, a.z, f + .1); if (a.y <= g) { a.y = g; a.vy = 0; a.ground = true; } else a.ground = false;
+  moveXZ(a, a.vx * dt, a.vz * dt);
+  if (blocked(a.x, a.z, a.y)) pushOut(a);
+  if (a.bot && state === 'play') { a.stkT = (a.stkT || 0) + dt; if (a.stkT > 1.2) { const d = Math.hypot(a.x - (a.sx || 0), a.z - (a.sz || 0)); if (d < .6 && (a.path.length || a.tgt)) { a.bot.patrol = [rand(-26, 26), rand(-26, 26)]; a.path = astar(a.x, a.z, a.bot.patrol[0], a.bot.patrol[1]); a.tgt = null; a.bot.seen = 0; if (a.ground) { a.vy = 6; a.ground = false; } } a.stkT = 0; a.sx = a.x; a.sz = a.z; } }
+  // 撿補血
+  for (let i = 0; i < PICKS.length; i++) { const p = PICKS[i]; if (p.t <= 0 && a.hp < 100 && Math.hypot(a.x - p.x, a.z - p.z) < 1.1) { p.t = 15; a.hp = Math.min(100, a.hp + 50); if (a.isMe) SFX.pick(); } }
+}
+function sim(dt) {
+  if (state === 'menu' || state === 'over') return;
+  if (state === 'count') { stT -= dt; const c = Math.ceil(stT); if (stT > 0) banner(String(c), '準備交火', 0); else { state = 'play'; banner('開戰', '', 700); SFX.beep(); } for (const a of actors) { a.vx = a.vz = 0; } return; }
+  tLeft -= dt; if (tLeft <= 0) { endMatch(); return; }
+  for (const a of actors) stepActor(a, dt);
+  stepProj(dt); for (let i = 0; i < PICKS.length; i++) { const p = PICKS[i]; if (p.t > 0) p.t -= dt; pickMeshes[i].visible = p.t <= 0; }
+}
+function endMatch() { if (state === 'over') return; state = 'over'; try { document.exitPointerLock(); } catch (e) {} document.documentElement.classList.remove('playing'); const win = score[0] > score[1] ? 0 : score[1] > score[0] ? 1 : -1; $('banner').classList.remove('on');
+  const rows = [...actors].sort((a, b) => b.kills - a.kills).map(a => '<tr class="' + (a.team ? 'b' : 'a') + (a.isMe ? ' me' : '') + '"><td>' + a.name + '</td><td>' + a.kills + '</td><td>' + a.deaths + '</td></tr>').join('');
+  const o = $('menu'); o.hidden = false; o.firstElementChild.innerHTML = '<div class="logo"><small>' + (win === 0 ? 'MISSION COMPLETE' : win === 1 ? 'MISSION FAILED' : 'DRAW') + '</small>' + (win === 0 ? '勝利' : win === 1 ? '敗北' : '平手') + '</div><div class="mono" style="text-align:center;font-size:44px;margin:8px 0">' + score[0] + ' : ' + score[1] + '</div><div id="sb2"><table style="width:100%;border-collapse:collapse;font-size:14px"><tr><th style="text-align:left;color:#8a97a6;font-size:10px;letter-spacing:.2em">玩家</th><th style="text-align:left;color:#8a97a6;font-size:10px">擊殺</th><th style="text-align:left;color:#8a97a6;font-size:10px">死亡</th></tr>' + rows.replace(/<td>/g, '<td style="padding:4px 8px;border-bottom:1px solid #3a4654">') + '</table></div><button class="go" id="againB" type="button">再戰一場</button><div class="row" style="justify-content:center"><button class="pill" id="backB" type="button">回選單</button></div>';
+  for (const id of ['xh', 'top', 'hp', 'wp', 'sk', 'stick', 'fire', 'jump', 'aim', 'swap', 'skE', 'skR']) $(id).hidden = true; $('scope').classList.remove('on');
+  $('againB').onclick = () => { location.reload(); }; $('backB').onclick = () => location.reload(); }
+function startMatch() { unlock(); $('menu').hidden = true; setupMatch(); document.documentElement.classList.add('playing'); resize(); for (const id of ['xh', 'top', 'hp', 'wp', 'sk']) $(id).hidden = false; if (touch) for (const id of ['stick', 'fire', 'jump', 'aim', 'swap', 'skE', 'skR']) $(id).hidden = false; $('xh').hidden = false; $('exitB2').hidden = !embed;
+  state = 'count'; stT = 3.6; paused = false; if (!touch) { cv.requestPointerLock && cv.requestPointerLock(); $('lock').hidden = false; } }
+const lerp = (a, b, t) => a + (b - a) * t;
+let last = performance.now();
+function render(dt) {
+  if (!me) { camera.position.set(0, 20, 0); camera.lookAt(0, 0, 0); renderer.render(scene, camera); return; }
+  // 鏡頭
+  bobT += dt * Math.hypot(me.vx, me.vz) * 1.4; const bob = me.ground && !me.dead ? Math.sin(bobT) * .035 * Math.min(1, Math.hypot(me.vx, me.vz) / 5) : 0; shake = Math.max(0, shake - dt * 2.2); recoil = Math.max(0, recoil - dt * 6);
+  if (me.dead) { camera.position.set(me.x, .45 + me.y, me.z); camera.rotation.z = lerp(camera.rotation.z, .7, dt * 3); } else { camera.position.set(me.x + (Math.random() - .5) * shake * .1, me.y + 1.6 + bob, me.z + (Math.random() - .5) * shake * .1); camera.rotation.z = lerp(camera.rotation.z, 0, dt * 8); }
+  camera.rotation.y = yaw; camera.rotation.x = pitch;
+  const w = WEAPONS[me.wi], zf = zoom && w.zoom ? w.zoom : (zoom ? 55 : 75); camera.fov += (zf - camera.fov) * Math.min(1, dt * 14); camera.updateProjectionMatrix(); $('scope').classList.toggle('on', zoom && !!w.zoom && !me.dead); vm.visible = !(zoom && w.zoom) && !me.dead;
+  vm.position.set(.28 - (zoom ? .28 : 0), -.26 + Math.sin(bobT * 2) * .006 + (zoom ? .05 : 0), -.5 + recoil * .12); vm.rotation.x = recoil * .12;
+  // 演員
+  for (const a of actors) { if (a.isMe) continue; a.g.visible = a.ring.visible = a.sh.visible = true;
+    a.g.position.set(a.x, a.y, a.z); a.ring.position.set(a.x, a.y + .04, a.z); a.sh.position.set(a.x, a.y + .03, a.z);
+    const toCam = Math.atan2(camera.position.x - a.x, camera.position.z - a.z), face = a.yaw + Math.PI, rel = wrapA(face - toCam), col = ((Math.round(rel / (Math.PI * 2) * ANGLES) + ANGLES) % ANGLES) / ANGLES; a.spr.rotation.set(0, toCam, 0);
+    const moving = Math.hypot(a.vx, a.vz) > 1; a.wph += dt * (moving && !a.dead ? 12 : 0); { const st = Math.floor(a.wph) % 4, useWalk = moving && !a.dead && st % 2 === 1 && a.walk && a.walk.image, mp = useWalk ? a.walk : a.stand; if (useWalk) mp.offset.set(col, st === 1 ? .5 : 0); else mp.offset.x = col; if (a.spr.material.map !== mp) { a.spr.material.map = mp; a.spr.material.needsUpdate = true; } } a.anim += dt * (moving ? 12 : 3); a.spr.position.y = moving ? Math.abs(Math.sin(a.anim)) * .08 : 0;
+    if (a.dead) { a.spr.rotation.z = lerp(a.spr.rotation.z, 1.5, dt * 6); a.nm.visible = a.hpb.visible = false; a.spr.material.opacity = 1; } else { a.spr.rotation.z = 0; a.nm.visible = true; a.hpb.visible = true; a.hpb.scale.x = Math.max(.01, 1.1 * a.hp / 100); a.hpb.material.color.setHex(a.hp > 50 ? 0x5ef0a4 : a.hp > 25 ? 0xffb000 : 0xff4b3e); }
+    a.spr.material.color.setHex(a.fl > 0 ? 0xff9a9a : a.shield > 0 ? 0x9ad0ff : 1 * 0xffffff); a.sh.visible = !a.dead; a.ring.visible = !a.dead; }
+  for (let i = FX.length - 1; i >= 0; i--) { const f = FX[i]; f.t += dt; const k = f.t / f.d; if (f.line) f.s.material.opacity = 1 - k; else { f.s.material.opacity = 1 - k; if (f.grow) f.s.scale.setScalar(f.s.scale.x * (1 + dt * 2)); } if (f.t >= f.d) { scene.remove(f.s); FX.splice(i, 1); } }
+  // HUD
+  if (state === 'play' || state === 'count') {
+    $('hpN').textContent = Math.max(0, Math.ceil(me.hp)); $('hpB').style.width = Math.max(0, me.hp) + '%'; $('hp').classList.toggle('low', me.hp < 30 && !me.dead);
+    const t = Math.max(0, Math.ceil(tLeft)); $('tm').textContent = Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
+    const S = SKILLS[CFG.sk], cd = (id, o) => { const el = $(id); if (!el) return; el.classList.remove('ready', 'cd', 'on'); el.classList.add(o.s); el.style.setProperty('--p', o.p || 0); const ct = el.querySelector('.ct'); if (ct) ct.textContent = o.c || ''; };
+    const eOn = me.shield > 0 || me.buff > 0, e = eOn ? { s: 'on', p: 0 } : me.skCD > 0 ? { s: 'cd', p: me.skCD / S.cd, c: Math.ceil(me.skCD) } : { s: 'ready' }; cd('scE', e); cd('skE', e);
+    const u = me.rage > 0 ? { s: 'on' } : me.ult >= 100 ? { s: 'ready' } : { s: 'cd', p: 1 - me.ult / 100, c: Math.floor(me.ult) + '%' }; cd('scR', u); cd('skR', u);
+    $('scE').querySelector('.ic').textContent = S.ic; $('scE').querySelector('.nm').textContent = S.n; $('scR').querySelector('.ic').textContent = ult.ic; $('scR').querySelector('.nm').textContent = ult.n;
+    $('xh').style.setProperty('--sp', (Math.hypot(me.vx, me.vz) * 1.2 + (me.ground ? 0 : 8) + recoil * 30 + w.spread * 200) + 'px'); $('xh').style.display = zoom && w.zoom ? 'none' : '';
+    $('sh').classList.toggle('on', me.shield > 0);
+  }
+  renderer.render(scene, camera);
+}
+function frame(now) { requestAnimationFrame(frame); const dt = Math.min(.05, (now - last) / 1000); last = now; if (!paused) sim(dt); render(paused ? 0 : dt); }
+
+// ───────── 選單 ─────────
+function pills(id, opts, get, set) { const box = $(id); box.innerHTML = ''; opts.forEach(([label, val]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pill' + (get() === val ? ' on' : ''); b.textContent = label; b.onclick = () => { set(val); saveCfg(); pills(id, opts, get, set); desc(); }; box.appendChild(b); }); }
+function desc() { $('skD').textContent = SKILLS[CFG.sk].d + '（冷卻 ' + SKILLS[CFG.sk].cd + ' 秒）'; $('ultD').textContent = ULTS[CFG.ult].d + '（靠時間、命中與擊殺充能）'; }
+pills('gMode', [['1 對 1', 1], ['2 對 2', 2], ['3 對 3', 3]], () => CFG.mode, v => CFG.mode = v);
+pills('gDiff', [['簡單', 0], ['普通', 1], ['困難', 2]], () => CFG.diff, v => CFG.diff = v);
+pills('gGoal', [['10', 10], ['15', 15], ['25', 25]], () => CFG.goal, v => CFG.goal = v);
+pills('gSk', Object.keys(SKILLS).map(k => [SKILLS[k].ic + SKILLS[k].n, k]), () => CFG.sk, v => CFG.sk = v);
+pills('gUlt', Object.keys(ULTS).map(k => [ULTS[k].ic + ULTS[k].n, k]), () => CFG.ult, v => CFG.ult = v); desc();
+function drawHead() { const c = $('pv'), g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); $('pvN').textContent = CFG.who; const im = new Image(); im.onload = () => { const cw = im.naturalWidth / ANGLES, ch = im.naturalHeight, sw = cw * .8, sh = ch * .56; g.clearRect(0, 0, c.width, c.height); g.drawImage(im, (cw - sw) / 2, ch * .06, sw, sh, 0, 0, c.width, c.height); }; im.src = '../pixel-plaza/sprites-hd/' + CFG.who + '.webp'; }
+const stepWho = d => { const i = LOCAL_NAMES.indexOf(CFG.who); CFG.who = LOCAL_NAMES[(i + d + LOCAL_NAMES.length) % LOCAL_NAMES.length]; saveCfg(); drawHead(); };
+$('prev').onclick = () => stepWho(-1); $('next').onclick = () => stepWho(1); $('startB').onclick = startMatch; drawHead();
+if (embed) { $('exitB').hidden = false; $('exitB').onclick = leave; $('exitB2').onclick = leave; }
+resize(); requestAnimationFrame(frame);
+if (Q.get('debug') === '1') window.FPS = { sim, get actors() { return actors; }, get me() { return me; }, get state() { return state; }, set state(v) { state = v; }, get score() { return score; }, CFG, startMatch, fire, astar, los, BOXES, get yaw() { return yaw; }, set yaw(v) { yaw = v; }, set pitch(v) { pitch = v; }, useUlt, useSkill, keys, hold };
+})();
+</script>
+</body>
+</html>

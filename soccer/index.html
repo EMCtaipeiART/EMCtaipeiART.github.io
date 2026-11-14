@@ -224,6 +224,8 @@ const ball = { x: 0, z: 0, vx: 0, vz: 0, r: BR, m: 1.7, ax: 0, az: 0, lastTouch:
 
 // ───────── 角色（12 角度圖集的公告板，與辦公室對決同一份素材） ─────────
 const texCache = {};
+const walkCache = {};
+function loadWalk(name) { if (name in walkCache) return walkCache[name]; const t = new THREE.TextureLoader().load('../pixel-plaza/sprites-walk-hd/' + name + '.webp', undefined, undefined, () => { walkCache[name] = null; }); t.magFilter = t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; t.repeat.set(1 / ANGLES, .5); return walkCache[name] = t; }
 function loadTex(name) {
   if (texCache[name]) return texCache[name];
   const t = new THREE.TextureLoader().load('../pixel-plaza/sprites-hd/' + name + '.webp'); t.magFilter = t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; t.repeat.set(1 / ANGLES, 1);
@@ -241,7 +243,7 @@ function makePlayer(name, team, isMe, role) {
   const holder = new THREE.Group(); holder.add(sp, nameS); scene.add(holder, ring);
   let arrow = null; if (isMe) { arrow = new THREE.Sprite(new THREE.SpriteMaterial({ map: arrowTex, transparent: true, depthTest: false })); arrow.scale.set(.9, .9, 1); holder.add(arrow); }
   const shadow = mkShadow(2.4);
-  return { name, team, isMe, role, holder, sp, ring, arrow, shadow, ks, x: 0, z: 0, vx: 0, vz: 0, face: team ? -Math.PI / 2 : Math.PI / 2, stun: 0, dashT: 0, dashCD: 0, diveT: 0, diveCD: 0, lie: 0, chg: 0, pushCD: 0, lunge: 0, dx: 0, dz: 0, hold: false, wasHold: false, wantDash: false, wantDive: false, mx: 0, mz: 0, think: 0, bot: { aim: 0, tgt: null, dashDelay: 0 }, stats: { goals: 0, saves: 0, bumps: 0 }, anim: 0 };
+  return { name, team, isMe, role, holder, sp, ring, arrow, shadow, ks, stand: sp.material.map, walk: loadWalk(name), wph: 0, x: 0, z: 0, vx: 0, vz: 0, face: team ? -Math.PI / 2 : Math.PI / 2, stun: 0, dashT: 0, dashCD: 0, diveT: 0, diveCD: 0, lie: 0, chg: 0, pushCD: 0, lunge: 0, dx: 0, dz: 0, hold: false, wasHold: false, wantDash: false, wantDive: false, mx: 0, mz: 0, think: 0, bot: { aim: 0, tgt: null, dashDelay: 0 }, stats: { goals: 0, saves: 0, bumps: 0 }, anim: 0 };
 }
 
 // ───────── 狀態 ─────────
@@ -469,8 +471,8 @@ function render(dt) {
   for (const p of players) {
     p.holder.position.set(p.x, 0, p.z);
     const toCam = Math.atan2(camera.position.x - p.x, camera.position.z - p.z), rel = Math.atan2(Math.sin(p.face - toCam), Math.cos(p.face - toCam)), col = ((Math.round(rel / (Math.PI * 2) * ANGLES) + ANGLES) % ANGLES) / ANGLES;
-    p.sp.material.map.offset.x = col; p.sp.rotation.set(0, toCam, 0);
-    const moving = Math.hypot(p.vx, p.vz) > 1.2; p.anim += dt * (moving ? 14 : 3);
+    p.sp.rotation.set(0, toCam, 0);
+    const moving = Math.hypot(p.vx, p.vz) > 1.2; p.wph += dt * (moving && p.lie <= 0 && p.diveT <= 0 ? (Math.hypot(p.vx, p.vz) > 9 ? 16 : 12) : 0); { const st = Math.floor(p.wph) % 4, useWalk = moving && p.lie <= 0 && p.diveT <= 0 && st % 2 === 1 && p.walk && p.walk.image, mp = useWalk ? p.walk : p.stand; if (useWalk) mp.offset.set(col, st === 1 ? .5 : 0); else mp.offset.x = col; if (p.sp.material.map !== mp) { p.sp.material.map = mp; p.sp.material.needsUpdate = true; } } p.anim += dt * (moving ? 14 : 3);
     const bob = moving && p.lie <= 0 ? Math.abs(Math.sin(p.anim)) * .13 : Math.sin(p.anim) * .02;
     if (p.diveT > 0 || p.lie > 0) { const k = p.diveT > 0 ? 1 : Math.min(1, p.lie / .3); const side = Math.sin(p.face - toCam) >= 0 ? -1 : 1; p.sp.rotation.z = side * 1.35 * k; p.sp.position.y = .35 * k; }
     else { p.sp.rotation.z = p.stun > 0 ? Math.sin(performance.now() * .05) * .15 : (moving ? Math.sin(p.anim) * .05 : 0); p.sp.position.y = bob; }
