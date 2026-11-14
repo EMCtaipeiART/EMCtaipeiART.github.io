@@ -692,15 +692,63 @@ const loText = f => (WEAPONS[f.w] || WEAPONS.tablet).n + '・' + (PASSIVES[f.pas
 // ───────── 戰鬥角色 ─────────
 const R = { gravity: 26, jumpV: 9.4, run: 7, airCtl: .55, dashSpeed: 17, dashT: .22, dashCD: 1.3, atkCD: .48, windup: .13, range: 3.3, halfAng: 62 * Math.PI / 180, dmg: 10, hiBonus: 1.25, hiDelta: .8, ultNeed: 100, ultDmg: 26, ultR: 5.5 };
 const fighters = [];
+// ───────── 簡易 3D 骨架角色（用三視圖貼皮；網址加 ?rig=1 才啟用）─────────
+const RIG_ON = Q.get('rig') === '1', SKINS = { Machi: ['skins/Machi-front.png', 'skins/Machi-side.png', 'skins/Machi-back.png'] };
+const skinCache = {};
+function loadSkin(name) { if (skinCache[name]) return skinCache[name]; const S = skinCache[name] = { imgs: [], ready: false, cbs: [] }; let n = 0; SKINS[name].forEach((u, i) => { const im = new Image(); im.onload = () => { if (++n === 3) { S.ready = true; S.cbs.forEach(c => c()); } }; im.src = u; S.imgs[i] = im; }); return S; }
+function cropTex(img, x0, y0, x1, y1, flip, fill) { const w = Math.max(2, Math.round((x1 - x0) * img.width)), h = Math.max(2, Math.round((y1 - y0) * img.height)), c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); if (flip) { g.translate(w, 0); g.scale(-1, 1); } g.drawImage(img, x0 * img.width, y0 * img.height, (x1 - x0) * img.width, (y1 - y0) * img.height, 0, 0, w, h); { const im = g.getImageData(0, 0, w, h), d = im.data, bg = i => { const r = d[i], gg = d[i + 1], b = d[i + 2], mx = Math.max(r, gg, b), mn = Math.min(r, gg, b); return mn > 170 && mx - mn < 34; }, seen = new Uint8Array(w * h), st = []; const push = (x, y) => { if (x < 0 || y < 0 || x >= w || y >= h) return; const k = y * w + x; if (seen[k] || !bg(k * 4)) return; seen[k] = 1; st.push(k); }; for (let x = 0; x < w; x++) { push(x, 0); push(x, h - 1); } for (let y = 0; y < h; y++) { push(0, y); push(w - 1, y); } while (st.length) { const k = st.pop(), x = k % w, y = (k - x) / w; push(x + 1, y); push(x - 1, y); push(x, y + 1); push(x, y - 1); } const fr = (fill >> 16) & 255, fg = (fill >> 8) & 255, fb = fill & 255; for (let k = 0; k < w * h; k++) if (seen[k]) { d[k * 4] = fr; d[k * 4 + 1] = fg; d[k * 4 + 2] = fb; d[k * 4 + 3] = 255; } g.putImageData(im, 0, 0); } const t = new THREE.CanvasTexture(c); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace; return t; }
+function pixCol(img, x, y) { const c = document.createElement('canvas'); c.width = c.height = 1; const g = c.getContext('2d'); g.drawImage(img, Math.floor(x * img.width), Math.floor(y * img.height), 3, 3, 0, 0, 1, 1); const d = g.getImageData(0, 0, 1, 1).data; return (d[0] << 16) | (d[1] << 8) | d[2]; }
+function makeRig(name) {
+  const mk = c => new THREE.MeshBasicMaterial({ color: c }), mats = [], M = c => { const m = mk(c); m.userData.base = c; mats.push(m); return m; };
+  const root = new THREE.Group(), box = (w, h, d, mt, y) => { const g = new THREE.BoxGeometry(w, h, d); if (y) g.translate(0, y, 0); return new THREE.Mesh(g, mt); };
+  const hips = new THREE.Group(); hips.position.y = .62; root.add(hips);
+  const torso = new THREE.Group(); hips.add(torso);
+  const tM = [M(0x222222), M(0x222222), M(0x222222), M(0x222222), M(0x222222), M(0x222222)]; const tb = box(.62, .56, .36, tM, .28); torso.add(tb);
+  const head = new THREE.Group(); head.position.y = .56; torso.add(head);
+  const hM = [0, 1, 2, 3, 4, 5].map(() => M(0xdcb08a)); const hb = box(.84, .8, .8, hM, .4); head.add(hb);
+  const lim = (x, y, w, h, c) => { const p = new THREE.Group(); p.position.set(x, y, 0); const m = M(c); p.add(box(w, h, w, m, -h / 2)); return { p, m }; };
+  const armL = lim(.42, .5, .2, .5, 0x222222), armR = lim(-.42, .5, .2, .5, 0x222222); torso.add(armL.p, armR.p);
+  const legL = lim(.17, 0, .26, .62, 0x222222), legR = lim(-.17, 0, .26, .62, 0x222222); hips.add(legL.p, legR.p);
+  const rig = { root, hips, torso, head, armL: armL.p, armR: armR.p, legL: legL.p, legR: legR.p, mats, t: 0 };
+  const S = loadSkin(name), apply = () => {
+    const [F, Sd, B] = S.imgs, skin = pixCol(F, .5, .46), cloth = pixCol(F, .5, .66), pants = cloth, hair = pixCol(F, .5, .17);
+    const hx0 = .2, hx1 = .8, hy0 = .1, hy1 = .53; // 頭部在圖中的範圍
+    const fT = cropTex(F, hx0, hy0, hx1, hy1, false, hair), bT = cropTex(B, hx0, hy0, hx1, hy1, true, hair), sT = cropTex(Sd, .15, hy0, .85, hy1, false, hair), sT2 = cropTex(Sd, .15, hy0, .85, hy1, true, hair);
+    hM[4].map = fT; hM[5].map = bT; hM[0].map = sT; hM[1].map = sT2; hM[2].color.setHex(hair); hM[2].userData.base = hair; hM[3].color.setHex(skin); hM[3].userData.base = skin;
+    for (const m of [hM[4], hM[5], hM[0], hM[1]]) { m.color.setHex(0xffffff); m.userData.base = 0xffffff; }
+    const tf = cropTex(F, .28, .55, .72, .75, false, cloth), tbk = cropTex(B, .28, .55, .72, .75, true, cloth); tM[4].map = tf; tM[5].map = tbk; for (const i of [4, 5]) { tM[i].color.setHex(0xffffff); tM[i].userData.base = 0xffffff; }
+    for (const i of [0, 1, 2, 3]) { tM[i].color.setHex(cloth); tM[i].userData.base = cloth; }
+    for (const l of [armL, armR]) { l.m.color.setHex(cloth); l.m.userData.base = cloth; } for (const l of [legL, legR]) { l.m.color.setHex(pants); l.m.userData.base = pants; }
+    for (const m of mats) m.needsUpdate = true;
+  };
+  if (S.ready) apply(); else S.cbs.push(apply);
+  rig.root.scale.setScalar(1.02);
+  return rig;
+}
+function updRig(f, dt) {
+  const r = f.rig, mv = f.grounded && f.moving > 1, run = f.moving > 3; r.t += dt * (mv ? (run ? 11 : 7) : 2);
+  const s = Math.sin(r.t), amp = mv ? (run ? .95 : .6) : 0, air = !f.grounded;
+  let aL = s * amp, aR = -s * amp, lL = -s * amp, lR = s * amp, lean = mv ? (run ? .16 : .06) : 0, bob = mv ? Math.abs(Math.cos(r.t)) * .05 : Math.sin(r.t) * .012, tw = 0, hd = 0, tilt = 0;
+  if (air) { lL = .5; lR = -.35; aL = -2.4; aR = -2.2; lean = .1; bob = 0; }
+  if (f.dashT > 0) { lean = .55; aL = aR = .9; lL = -.9; lR = .9; }
+  const W = (typeof wOf === 'function' ? wOf(f) : null);
+  if (f.windT > 0 || f.ultWind > 0) { const sw = f.windT > 0 && W ? Math.min(1, f.windT / Math.max(.05, W.wind)) : 1; aR = -2.6 * sw; tw = .35 * sw; lean = -.1; }
+  if (f.swingT > 0) { const p = 1 - f.swingT / .26; aR = -2.6 + 3.4 * p; tw = .35 - .9 * p; lean = .25 * Math.sin(p * Math.PI); }
+  if (f.hitStun > 0) { lean = -.35; aL = -1.2; aR = 1.1; hd = -.25; tilt = Math.sin(performance.now() * .05) * .08; }
+  r.hips.position.y = .62 + bob; r.torso.rotation.set(lean, tw, tilt); r.head.rotation.x = hd - lean * .5; r.head.rotation.y = -tw * .6;
+  r.armL.rotation.x = aL; r.armR.rotation.x = aR; r.armL.rotation.z = air ? -.35 : -.08; r.armR.rotation.z = air ? .35 : .08; r.legL.rotation.x = lL; r.legR.rotation.x = lR;
+  r.root.rotation.set(f.hp <= 0 ? -Math.PI / 2 : 0, f.face, 0, 'YXZ'); r.root.position.y = f.hp <= 0 ? .3 : 0;
+  const c = f.mat.color, o = f.mat.opacity; for (const m of r.mats) { m.color.setHex(m.userData.base).multiply(c); m.transparent = o < 1; m.opacity = o; }
+}
 function makeFighter(name, tex, isBot, color) {
   const geo = new THREE.PlaneGeometry(2.04, 2.04); geo.translate(0, 1.02 - .03, 0);
   const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: .5, side: THREE.DoubleSide });
   if (!tex) { mat.map = null; mat.color.setHex(color); }
   const sprite = new THREE.Mesh(geo, mat); sprite.rotation.order = 'YXZ';
   const blob = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, opacity: .55, depthWrite: false })); blob.rotation.x = -Math.PI / 2;
-  const holder = new THREE.Group(); scene.add(holder); scene.add(blob); holder.add(sprite);
+  const holder = new THREE.Group(); scene.add(holder); scene.add(blob); holder.add(sprite); let rig = null; if (RIG_ON && SKINS[name]) { rig = makeRig(name); holder.add(rig.root); sprite.visible = false; }
   const ks = CHAR_SCALE[name] || 1; sprite.scale.set(ks, ks, 1);
-  return { name, isBot, tex, sprite, holder, blob, mat, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, face: 0, hp: 100, ult: 0, grounded: true, atkT: 0, atkCD: 0, dashT: 0, dashCD: 0, windT: 0, windMul: 1.7, hitStun: 0, flash: 0, combo: 0, comboT: 0, ultWind: 0, slash: null, rageT: 0, shield: 0, shieldT: 0, skT: 0, skCD: 0, rushT: 0, rushHit: false, w: 'tablet', pas: 'coffee', ulk: 'quake', dashDir: [0, 0], moving: 0, phase: 0, inp: { mx: 0, mz: 0, jump: false, atk: false, dash: false, ult: false }, bot: { rt: 0, strafe: 1, strafeT: 0, stuck: 0, lastX: 0, lastZ: 0, nav: null, think: 0 } };
+  return { name, isBot, tex, rig, sprite, holder, blob, mat, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, face: 0, hp: 100, ult: 0, grounded: true, atkT: 0, atkCD: 0, dashT: 0, dashCD: 0, windT: 0, windMul: 1.7, hitStun: 0, flash: 0, combo: 0, comboT: 0, ultWind: 0, slash: null, rageT: 0, shield: 0, shieldT: 0, skT: 0, skCD: 0, rushT: 0, rushHit: false, w: 'tablet', pas: 'coffee', ulk: 'quake', dashDir: [0, 0], moving: 0, phase: 0, inp: { mx: 0, mz: 0, jump: false, atk: false, dash: false, ult: false }, bot: { rt: 0, strafe: 1, strafeT: 0, stuck: 0, lastX: 0, lastZ: 0, nav: null, think: 0 } };
 }
 function place(f, x, z, face) { f.nx = x; f.nz = z; f.x = x; f.z = z; f.y = groundAt(x, z); f.vx = f.vy = f.vz = f.kx = f.kz = 0; f.face = face; f.hp = 100; f.rageT = f.rushT = f.shield = f.shieldT = f.skT = f.skCD = 0; f.atkT = f.atkCD = f.dashT = f.dashCD = f.windT = f.hitStun = f.flash = f.combo = f.comboT = f.ultWind = 0; f.grounded = true; f.ovx = f.ovz = 0; f._st = 0; }
 const mkSlash = () => { const m = new THREE.Mesh(new THREE.RingGeometry(.9, 3.2, 24, 1, -Math.PI * .42, Math.PI * .84), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false })); m.rotation.x = -Math.PI / 2; scene.add(m); return m; };
@@ -1094,6 +1142,7 @@ function render(dt) {
     f.sprite.rotation.z = f.hitStun > 0 ? Math.sin(performance.now() * .05) * .12 : (f.moving > 1 && f.grounded ? Math.sin(f.phase) * .06 : 0);
     f.mat.color.setHex(f.flash > 0 ? 0xff7a7a : f.hp <= 0 ? 0x888888 : 0xffffff);
     f.sprite.visible = true; if (f.dashT > 0) f.mat.opacity = .55; else f.mat.opacity = 1; f.mat.transparent = true; if (f.rageT > 0 && f.flash <= 0) f.mat.color.setHex(0xffc58a); if (f.pas === 'dodge' && f.skT > 0 && f.flash <= 0) f.mat.color.setHex(0xc9b8ff); if (cineK > 0 && f !== cine.f) f.mat.color.multiplyScalar(1 - .72 * cineK);
+    if (f.rig) { f.sprite.visible = false; updRig(f, dt); }
     updGear(f, toCam, bob);
     if (!f.bub) { f.bub = new THREE.Mesh(new THREE.SphereGeometry(1.15, 20, 14), new THREE.MeshBasicMaterial({ color: 0x8fd6ff, transparent: true, opacity: 0, depthWrite: false })); f.bub.position.y = 1.05; f.holder.add(f.bub); }
     const barrier = f.pas === 'thick' && f.skT > 0; f.bub.visible = (f.shield > 0 || barrier) && f.hp > 0; f.bub.material.color.setHex(f.shield > 0 ? 0x8fd6ff : 0xffc857); if (f.bub.visible) f.bub.material.opacity = .2 + Math.sin(performance.now() * .005) * .05 + (f.shield < 12 ? Math.sin(performance.now() * .03) * .06 : 0);
