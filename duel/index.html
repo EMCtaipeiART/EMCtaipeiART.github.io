@@ -704,15 +704,15 @@ function makeRig(name) {
   const hips = new THREE.Group(); hips.position.y = .62; root.add(hips);
   const torso = new THREE.Group(); hips.add(torso);
   const tM = [M(0x222222), M(0x222222), M(0x222222), M(0x222222), M(0x222222), M(0x222222)]; const tb = box(.62, .56, .36, tM, .28); torso.add(tb);
-  const head = new THREE.Group(); head.position.y = .56; torso.add(head);
-  const hM = [0, 1, 2, 3, 4, 5].map(() => M(0xdcb08a)); const hb = box(.84, .8, .8, hM, .4); head.add(hb);
+  const head = new THREE.Group(); head.position.y = .55; torso.add(head);
+  const hM = [0, 1, 2, 3, 4, 5].map(() => M(0xdcb08a)); const hb = box(.78, .72, .74, hM, .36); head.add(hb);
   const lim = (x, y, w, h, c) => { const p = new THREE.Group(); p.position.set(x, y, 0); const m = M(c); p.add(box(w, h, w, m, -h / 2)); return { p, m }; };
   const armL = lim(.42, .5, .2, .5, 0x222222), armR = lim(-.42, .5, .2, .5, 0x222222); torso.add(armL.p, armR.p);
   const legL = lim(.17, 0, .26, .62, 0x222222), legR = lim(-.17, 0, .26, .62, 0x222222); hips.add(legL.p, legR.p);
   const rig = { root, hips, torso, head, armL: armL.p, armR: armR.p, legL: legL.p, legR: legR.p, mats, t: 0 };
   const S = loadSkin(name), apply = () => {
     const [F, Sd, B] = S.imgs, skin = pixCol(F, .5, .46), cloth = pixCol(F, .5, .66), pants = cloth, hair = pixCol(F, .5, .17);
-    const hx0 = .2, hx1 = .8, hy0 = .1, hy1 = .53; // 頭部在圖中的範圍
+    const hx0 = .25, hx1 = .75, hy0 = .13, hy1 = .53; // 頭部在圖中的範圍
     const fT = cropTex(F, hx0, hy0, hx1, hy1, false, hair), bT = cropTex(B, hx0, hy0, hx1, hy1, true, hair), sT = cropTex(Sd, .15, hy0, .85, hy1, false, hair), sT2 = cropTex(Sd, .15, hy0, .85, hy1, true, hair);
     hM[4].map = fT; hM[5].map = bT; hM[0].map = sT; hM[1].map = sT2; hM[2].color.setHex(hair); hM[2].userData.base = hair; hM[3].color.setHex(skin); hM[3].userData.base = skin;
     for (const m of [hM[4], hM[5], hM[0], hM[1]]) { m.color.setHex(0xffffff); m.userData.base = 0xffffff; }
