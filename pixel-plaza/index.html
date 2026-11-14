@@ -1214,7 +1214,7 @@ function build3dObjects(T, place){
     g.font = '800 30px "Noto Sans TC","PingFang TC",sans-serif'; g.textAlign = 'center'; g.lineWidth = 6; g.strokeStyle = '#1a0630'; g.lineJoin = 'round'; g.strokeText('出現一道裂縫..', 128, 44); g.fillStyle = '#ffe9fb'; g.fillText('出現一道裂縫..', 128, 44);
     const tx = new THREE.CanvasTexture(cv); tx.minFilter = THREE.LinearFilter;
     const m = new THREE.Mesh(new THREE.PlaneGeometry(1.9, .47), new THREE.MeshBasicMaterial({map:tx, transparent:true, depthWrite:false}));
-    m.position.set(I(188), .95 + .8, I(1160)); scene.add(m); billboards.push(m);
+    /* 入口說明文字已移除 */
     const hit = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.0, 1.4), new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false}));   // 看不見的點擊區：訪客、登入者都能直接點進遊戲（高度壓低，才不會擋到後面的手套架）
     hit.position.set(I(188), 1.4, I(1160)); hit.userData.pick = {kind:'portal'}; scene.add(hit); pickables.push(hit); }
   // 倉庫西牆的白板：寫著「截稿倒數 2」，點一下進遊戲（取代原本的投影機）
@@ -1260,7 +1260,7 @@ function build3dObjects(T, place){
     const cvs = document.createElement('canvas'); cvs.width = 256; cvs.height = 64; const cg = cvs.getContext('2d');
     cg.font = '800 34px "Noto Sans TC","PingFang TC",sans-serif'; cg.textAlign = 'center'; cg.lineWidth = 7; cg.strokeStyle = '#1b1b1b'; cg.lineJoin = 'round'; cg.strokeText('辦公室對決', 128, 46); cg.fillStyle = '#ffe9a8'; cg.fillText('辦公室對決', 128, 46);
     const tx = new THREE.CanvasTexture(cvs); tx.minFilter = THREE.LinearFilter;
-    const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.9, .47), new THREE.MeshBasicMaterial({map:tx, transparent:true, depthWrite:false})); sign.position.set(rx, 2.5, rz); scene.add(sign); billboards.push(sign);
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.9, .47), new THREE.MeshBasicMaterial({map:tx, transparent:true, depthWrite:false})); sign.position.set(rx, 2.5, rz); /* 入口說明文字已移除 */
     rects.push([rx - I(14), rz - I(10), rx + I(14), rz + I(10)]);
     const hit = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2.2, 1.0), new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false}));
     hit.position.set(rx, 1.1, rz + .1); hit.userData.pick = {kind:'duelrack'}; scene.add(hit); pickables.push(hit); }
@@ -1275,7 +1275,7 @@ function build3dObjects(T, place){
     const cvs = document.createElement('canvas'); cvs.width = 256; cvs.height = 64; const cg = cvs.getContext('2d');
     cg.font = '800 34px "Noto Sans TC","PingFang TC",sans-serif'; cg.textAlign = 'center'; cg.lineWidth = 7; cg.strokeStyle = '#1b1b1b'; cg.lineJoin = 'round'; cg.strokeText('辦公室賽車', 128, 46); cg.fillStyle = '#ffd23f'; cg.fillText('辦公室賽車', 128, 46);
     const tx = new THREE.CanvasTexture(cvs); tx.minFilter = THREE.LinearFilter;
-    const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.9, .47), new THREE.MeshBasicMaterial({map:tx, transparent:true, depthWrite:false})); sign.position.set(cx, 1.55, cz); sign.scale.setScalar(.8); scene.add(sign); billboards.push(sign);
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.9, .47), new THREE.MeshBasicMaterial({map:tx, transparent:true, depthWrite:false})); sign.position.set(cx, 1.55, cz); sign.scale.setScalar(.8); /* 入口說明文字已移除 */
     rects.push([cx - I(11), cz - I(11), cx + I(11), cz + I(11)]);
     const hit = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.3, 1.1), new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false}));
     hit.position.set(cx, .65, cz); hit.userData.pick = {kind:'kartchair'}; scene.add(hit); pickables.push(hit); }
@@ -1291,7 +1291,7 @@ function build3dObjects(T, place){
     const cvs = document.createElement('canvas'); cvs.width = 256; cvs.height = 64; const cg = cvs.getContext('2d');
     cg.font = '800 34px "Noto Sans TC","PingFang TC",sans-serif'; cg.textAlign = 'center'; cg.lineWidth = 7; cg.strokeStyle = '#1b1b1b'; cg.lineJoin = 'round'; cg.strokeText('辦公室槍戰', 128, 46); cg.fillStyle = '#ffb000'; cg.fillText('辦公室槍戰', 128, 46);
     const tx = new THREE.CanvasTexture(cvs); tx.minFilter = THREE.LinearFilter;
-    const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.9, .47), new THREE.MeshBasicMaterial({map:tx, transparent:true, depthWrite:false})); sign.position.set(fx, 2.4, fz); scene.add(sign); billboards.push(sign);
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.9, .47), new THREE.MeshBasicMaterial({map:tx, transparent:true, depthWrite:false})); sign.position.set(fx, 2.4, fz); /* 入口說明文字已移除 */
     rects.push([fx - I(40), fz - I(10), fx + I(40), fz + I(14)]);
     const hit = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.2, 1.2), new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false}));
     hit.position.set(fx + .3, 1.1, fz); hit.userData.pick = {kind:'fpstarget'}; scene.add(hit); pickables.push(hit); }
@@ -1306,7 +1306,7 @@ function build3dObjects(T, place){
     const cvs = document.createElement('canvas'); cvs.width = 256; cvs.height = 64; const cg = cvs.getContext('2d');
     cg.font = '800 34px "Noto Sans TC","PingFang TC",sans-serif'; cg.textAlign = 'center'; cg.lineWidth = 7; cg.strokeStyle = '#1b1b1b'; cg.lineJoin = 'round'; cg.strokeText('大顆足球賽', 128, 46); cg.fillStyle = '#ffd9a8'; cg.fillText('大顆足球賽', 128, 46);
     const tx = new THREE.CanvasTexture(cvs); tx.minFilter = THREE.LinearFilter;
-    const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.9, .47), new THREE.MeshBasicMaterial({map:tx, transparent:true, depthWrite:false})); sign.position.set(sx, 1.85, sz); scene.add(sign); billboards.push(sign);
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.9, .47), new THREE.MeshBasicMaterial({map:tx, transparent:true, depthWrite:false})); sign.position.set(sx, 1.85, sz); /* 入口說明文字已移除 */
     rects.push([sx - I(34), sz - I(24), sx + I(34), sz + I(16)]);
     const hit = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.8, 2.2), new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false}));
     hit.position.set(sx, .9, sz - .3); hit.userData.pick = {kind:'soccerball'}; scene.add(hit); pickables.push(hit); }
