@@ -560,7 +560,7 @@ function initFx() {
   TX.grid = ctex(256, 256, g => { g.strokeStyle = '#fff'; g.lineWidth = 3; g.setLineDash([12, 8]); for (let i = 0; i <= 4; i++) { g.beginPath(); g.moveTo(i * 63 + 2, 0); g.lineTo(i * 63 + 2, 256); g.moveTo(0, i * 63 + 2); g.lineTo(256, i * 63 + 2); g.stroke(); } });
   TX.circle = ctex(256, 256, g => { g.translate(128, 128); g.strokeStyle = '#fff'; g.lineWidth = 5; [120, 100, 58].forEach(r => { g.beginPath(); g.arc(0, 0, r, 0, 7); g.stroke(); }); g.lineWidth = 3; for (let k = 0; k < 2; k++) { g.beginPath(); for (let i = 0; i < 3; i++) { const a = i * 2.094 + k * 1.047; g.lineTo(Math.cos(a) * 100, Math.sin(a) * 100); } g.closePath(); g.stroke(); } for (let i = 0; i < 12; i++) { const a = i * .5236; g.fillStyle = '#fff'; g.fillRect(Math.cos(a) * 110 - 4, Math.sin(a) * 110 - 4, 8, 8); } });
 }
-function fxBeam(v, col, big) {
+function fxBeam(v, col, big, follow) {
   const D = big ? 2.3 : 1.1;
   addFx(D, v, g => {
     const r = big ? .66 : .4, h = big ? 7.5 : 4.2;
@@ -570,6 +570,7 @@ function fxBeam(v, col, big) {
     const rings = Array.from({ length: big ? 3 : 1 }, () => { const m = flat(M(G.ring, col), .06); g.add(m); return m; });
     const sparks = Array.from({ length: big ? 24 : 8 }, (_, i) => { const s = SP(i % 3 ? TX.glow : TX.star, col); s.userData = { a: Math.random() * 6.283, rad: .3 + Math.random() * .8, v: 1 + Math.random() * 1.8, d: Math.random() * D * .4, s: .16 + Math.random() * .26 }; g.add(s); return s; });
     return t => {
+      if (follow) g.position.set(follow.x, follow.y, follow.z);
       const env = Math.min(1, t / .15) * Math.min(1, (D - t) / (D * .45)), w = 1 + Math.sin(t * 10) * .07;
       beam.material.opacity = .42 * env; beam.scale.set(r * w, h, r * w); beam.rotation.y = t * 2; core.material.opacity = .3 * env;
       pool.material.opacity = .9 * env;
@@ -901,7 +902,7 @@ function endRound(winner) {   // winner: 0 我、1 對手、-1 平手
   if (state !== 'fight') return; state = 'roundEnd'; banner = 2.4;
   if (winner >= 0) wins[winner]++; dots();
   setBanner(winner < 0 ? '平手' : (winner === 0 ? ME.name + ' 贏下這局' : OP.name + ' 贏下這局'), 0);
-  if (winner === 0) { SFX.win(); fxBeam(v3(ME.x, ME.y, ME.z), COL[heroOf(ME.name)], true); } else if (winner === 1) { SFX.lose(); fxBeam(v3(OP.x, OP.y, OP.z), COL[heroOf(OP.name)], true); }
+  if (winner === 0) { SFX.win(); fxBeam(v3(ME.x, ME.y, ME.z), COL[heroOf(ME.name)], true, ME); } else if (winner === 1) { SFX.lose(); fxBeam(v3(OP.x, OP.y, OP.z), COL[heroOf(OP.name)], true, OP); }
 }
 function nextAfterRound() {
   if (net && net.role !== 'host') return;   // 訪客等房主的指令
@@ -1052,7 +1053,7 @@ function ultVisual(f, k) {
   startCine(f, k);
   if (k === 'quake') { SFX.ult(); shake = .5; hitstop = .06; fxSig(heroOf(f.name), v3(f.x, f.y, f.z), true); fxRing(v3(f.x, f.y + .1, f.z), colOf(f), .5, R.ultR, .6); flashA = .3; }
   else if (k === 'rush') { SFX.ult(); shake = .25; const a = v3(f.x, f.y + .7, f.z), b = v3(f.x + Math.sin(f.face) * 9, f.y + .7, f.z + Math.cos(f.face) * 9); fxTrail(a, b, colOf(f), .5, 1.5); fxRing(v3(f.x, f.y + .1, f.z), colOf(f), .4, 2.2, .35); }
-  else if (k === 'heal') { SFX.win(); fxHeal(v3(f.x, f.y, f.z)); fxBeam(v3(f.x, f.y, f.z), '#7ff0a6', false); fxRing(v3(f.x, f.y + .1, f.z), '#7ff0a6', .4, 2.6, .6); pop('+26', f.x, f.y + 2.4, f.z, 'hi big'); }
+  else if (k === 'heal') { SFX.win(); fxHeal(v3(f.x, f.y, f.z)); fxBeam(v3(f.x, f.y, f.z), '#7ff0a6', false, f); fxRing(v3(f.x, f.y + .1, f.z), '#7ff0a6', .4, 2.6, .6); pop('+26', f.x, f.y + 2.4, f.z, 'hi big'); }
   else if (k === 'shield') { SFX.ult(); fxSig('machi', v3(f.x, f.y, f.z), false); fxRing(v3(f.x, f.y + .1, f.z), '#8fd6ff', .4, 2.4, .5); pop('防護罩', f.x, f.y + 2.4, f.z, 'hi big'); }
   else if (k === 'rage') { SFX.ult(); fxPoof(v3(f.x, f.y + 1, f.z), '#ffb347'); fxRing(v3(f.x, f.y + .1, f.z), '#ffb347', .4, 3, .5); fxRing(v3(f.x, f.y + .1, f.z), '#ff6a2a', .3, 2, .4); flashA = Math.max(flashA, .12); }
 }
