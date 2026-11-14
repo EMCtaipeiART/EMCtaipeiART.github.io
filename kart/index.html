@@ -199,11 +199,11 @@ function locate(x, z, hint) {
 }
 // 路面
 const roadTex = canvasTex(256, 256, (g, w, h) => {
-  g.fillStyle = '#34394d'; g.fillRect(0, 0, w, h); for (let i = 0; i < 300; i++) { g.fillStyle = 'rgba(255,255,255,' + rand(.01, .05) + ')'; g.fillRect(rand(0, w), rand(0, h), rand(2, 10), rand(1, 3)); }
-  g.fillStyle = '#ffd23f'; for (let k = 0; k < 2; k++) g.fillRect(w / 2 - 4, k * 128 + 16, 8, 64);
-  g.fillStyle = '#fff'; g.fillRect(10, 0, 8, h); g.fillRect(w - 18, 0, 8, h);
+  g.fillStyle = '#7c8aa6'; g.fillRect(0, 0, w, h); for (let i = 0; i < 700; i++) { g.fillStyle = 'rgba(' + (Math.random() < .5 ? '255,255,255' : '30,40,70') + ',' + rand(.03, .09) + ')'; g.fillRect(rand(0, w), rand(0, h), rand(2, 9), rand(1, 4)); }
+  g.fillStyle = 'rgba(60,40,20,.18)'; for (let i = 0; i < 5; i++) { g.beginPath(); g.ellipse(rand(30, w - 30), rand(20, h - 20), rand(8, 22), rand(6, 14), rand(0, 3), 0, 7); g.fill(); }
+  g.fillStyle = 'rgba(0,0,0,.1)'; g.fillRect(0, 0, 14, h); g.fillRect(w - 14, 0, 14, h);
 }); roadTex.wrapS = roadTex.wrapT = THREE.RepeatWrapping;
-const curbTex = canvasTex(64, 64, (g, w, h) => { g.fillStyle = '#ff7a1a'; g.fillRect(0, 0, w, h / 2); g.fillStyle = '#fff'; g.fillRect(0, h / 2, w, h / 2); }); curbTex.wrapS = curbTex.wrapT = THREE.RepeatWrapping;
+const curbTex = canvasTex(64, 64, (g, w, h) => { g.fillStyle = '#ffd23f'; g.fillRect(0, 0, w, h); g.fillStyle = '#222'; for (let k = -1; k < 4; k++) { g.beginPath(); g.moveTo(k * 24, 0); g.lineTo(k * 24 + 12, 0); g.lineTo(k * 24 + 12 + 64, 64); g.lineTo(k * 24 + 64, 64); g.closePath(); g.fill(); } }); curbTex.wrapS = curbTex.wrapT = THREE.RepeatWrapping;
 function ribbon(off0, off1, y, tex, rep, mat) {
   const N = TR.N, pos = [], uv = [], idx = [];
   for (let i = 0; i <= N; i++) { const k = i % N; for (const [o, u] of [[off0, 0], [off1, 1]]) { pos.push(TR.px[k] + TR.nx[k] * o, y, TR.pz[k] + TR.nz[k] * o); uv.push(u, i * DS / rep); } if (i < N) { const a = i * 2; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); } }
@@ -213,25 +213,45 @@ function ribbon(off0, off1, y, tex, rep, mat) {
 const floorTex = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#5b6b86'; g.fillRect(0, 0, w, h); g.fillStyle = '#53627c'; g.fillRect(0, 0, w / 2, h / 2); g.fillRect(w / 2, h / 2, w / 2, h / 2); for (let k = 0; k < 500; k++) { g.fillStyle = 'rgba(' + (Math.random() < .5 ? '255,255,255' : '0,0,0') + ',.06)'; g.fillRect(rand(0, w), rand(0, h), 2, 2); } g.strokeStyle = 'rgba(0,0,0,.2)'; g.lineWidth = 2; g.strokeRect(1, 1, w - 2, h - 2); }); floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping; floorTex.repeat.set(160, 160);
 const floor = mk(new THREE.PlaneGeometry(700, 700), new THREE.MeshLambertMaterial({ map: floorTex })); floor.rotation.x = -Math.PI / 2; floor.position.set(24, -.05, 86); scene.add(floor);
 ribbon(-HW, HW, .02, roadTex, 16);
-ribbon(-HW - 1.4, -HW, .03, curbTex, 3); ribbon(HW, HW + 1.4, .03, curbTex, 3);
-// 護欄（辦公室隔板）
-const wallTex = canvasTex(128, 64, (g, w, h) => { g.fillStyle = '#f4f1ea'; g.fillRect(0, 0, w, h); g.fillStyle = '#5b6cff'; g.fillRect(0, h - 14, w, 14); g.strokeStyle = '#c9c4b8'; g.lineWidth = 3; g.strokeRect(2, 2, w - 4, h - 4); }); wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
-for (const s of [-1, 1]) {
-  const N = TR.N, pos = [], uv = [], idx = [], o = s * (HW + 1.4 + WALL * .5);
-  for (let i = 0; i <= N; i++) { const k = i % N; for (const [y, v] of [[0, 0], [1.3, 1]]) { pos.push(TR.px[k] + TR.nx[k] * o, y, TR.pz[k] + TR.nz[k] * o); uv.push(i * DS / 4, v); } if (i < N) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); } }
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
-  scene.add(mk(g, new THREE.MeshLambertMaterial({ map: wallTex, side: THREE.DoubleSide })));
+ribbon(-HW - .1, -HW + .5, .03, curbTex, 1.2); ribbon(HW - .5, HW + .1, .03, curbTex, 1.2);
+// ── 通道兩側：用辦公室家具圍出來（不是賽道護欄），地上散落文件、便利貼、紙杯 ──
+const BATCH = {};
+function addG(key, mat, g, x, y, z, ry, rx) { const m = new THREE.Matrix4(); if (rx) m.makeRotationX(rx); const m2 = new THREE.Matrix4().makeRotationY(ry || 0); m2.multiply(m); m2.setPosition(x, y, z); g.applyMatrix4(m2); (BATCH[key] || (BATCH[key] = { mat, gs: [] })).gs.push(g); }
+const bx = (key, mat, w, h, d, x, y, z, ry) => addG(key, mat, new THREE.BoxGeometry(w, h, d), x, y, z, ry);
+const flatP = (key, mat, w, h, x, z, ry, y) => addG(key, mat, new THREE.PlaneGeometry(w, h), x, y || .05, z, ry, -Math.PI / 2);
+const cylB = (key, mat, r0, r1, h, x, y, z) => addG(key, mat, new THREE.CylinderGeometry(r0, r1, h, 10), x, y, z, 0);
+function flushBatch() {
+  for (const key in BATCH) {
+    const { mat, gs } = BATCH[key]; let nv = 0, ni = 0; for (const g of gs) { nv += g.attributes.position.count; ni += g.index ? g.index.count : g.attributes.position.count; }
+    const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), uv = new Float32Array(nv * 2), idx = new Uint32Array(ni); let vo = 0, io = 0;
+    for (const g of gs) { const c = g.attributes.position.count; pos.set(g.attributes.position.array, vo * 3); nor.set(g.attributes.normal.array, vo * 3); uv.set(g.attributes.uv.array, vo * 2); if (g.index) { for (let i = 0; i < g.index.count; i++) idx[io++] = g.index.array[i] + vo; } else for (let i = 0; i < c; i++) idx[io++] = vo + i; vo += c; g.dispose(); }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); geo.setIndex(new THREE.BufferAttribute(idx, 1)); scene.add(mk(geo, mat));
+  }
 }
+{ let sd = 5; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  const partM = lam(0x8fa2c9), woodM = lam(0xd9b98a), cabM = lam(0xaab3c2), cardM = lam(0xc99a62), cardM2 = lam(0xb5844a), potM = lam(0xc47a4a), leafM = lam(0x2fb35a), deskTop = lam(0xe9d3a8), mugM = lam(0xffffff), paperW = new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide }), paperY = new THREE.MeshLambertMaterial({ color: 0xfff1a8, side: THREE.DoubleSide }), noteP = new THREE.MeshLambertMaterial({ color: 0xff8fb8, side: THREE.DoubleSide }), noteG = new THREE.MeshLambertMaterial({ color: 0x9be3a0, side: THREE.DoubleSide }), cableM = new THREE.MeshLambertMaterial({ color: 0x15151c, side: THREE.DoubleSide });
+  for (let i = 0; i < TR.N; i += 2) for (const s of [-1, 1]) {
+    const o = s * (HW + 2.1 + r() * .6), x = TR.px[i] + TR.nx[i] * o, z = TR.pz[i] + TR.nz[i] * o, ry = Math.atan2(TR.tx[i], TR.tz[i]) + (r() - .5) * .18, t = r();
+    if (t < .27) { bx('part', partM, 4.2, 1.75, .16, x, .88, z, ry); if (r() < .5) bx('wood', woodM, 1.4, .1, .8, x + TR.nx[i] * -s * .6, 1.1, z + TR.nz[i] * -s * .6, ry); }
+    else if (t < .47) { bx('wood', woodM, 3.6, 1.1, 1.4, x, .55, z, ry); bx('desk', deskTop, 3.7, .1, 1.5, x, 1.12, z, ry); }
+    else if (t < .62) { bx('cab', cabM, 1.7, 2.5, 1.1, x, 1.25, z, ry); bx('cab', cabM, 1.7, 2.5, 1.1, x + TR.tx[i] * 1.75, 1.25, z + TR.tz[i] * 1.75, ry); }
+    else if (t < .8) { bx('card', cardM, 1.5, 1.1, 1.3, x, .55, z, ry); bx('card2', cardM2, 1.3, 1.0, 1.2, x + TR.tx[i] * 1.4, .5, z + TR.tz[i] * 1.4, ry + .2); if (r() < .6) bx('card2', cardM2, 1.1, .9, 1.0, x + TR.tx[i] * .6, 1.5, z + TR.tz[i] * .6, ry + .5); }
+    else if (t < .9) { bx('pot', potM, 1.1, 1.0, 1.1, x, .5, z, ry); bx('leaf', leafM, 1.6, 1.7, 1.6, x, 1.9, z, ry + .8); }
+    // 地上雜物
+    if (r() < .55) { const ox = (r() - .5) * (HW * 2 - 1), px2 = TR.px[i] + TR.nx[i] * ox, pz2 = TR.pz[i] + TR.nz[i] * ox, q = r(); if (q < .55) flatP(q < .3 ? 'pw' : 'py', q < .3 ? paperW : paperY, .62, .86, px2, pz2, r() * 6.28, .05 + r() * .01); else if (q < .8) flatP(q < .68 ? 'np' : 'ng', q < .68 ? noteP : noteG, .45, .45, px2, pz2, r() * 6.28, .06); else if (q < .9) { cylB('mug', mugM, .22, .17, .4, px2, .2, pz2); } else flatP('cable', cableM, .12, 2.6 + r() * 2, px2, pz2, r() * 6.28, .055); }
+  }
+  flushBatch(); }
+
 // 起終點拱門＋格子線
 { const k = 0, cx = TR.px[k], cz = TR.pz[k], ang = Math.atan2(TR.tx[k], TR.tz[k]);
   const g = new THREE.Group(); g.position.set(cx, 0, cz); g.rotation.y = ang; scene.add(g);
   const chk = canvasTex(256, 64, (c, w, h) => { for (let i = 0; i < 16; i++) for (let j = 0; j < 4; j++) { c.fillStyle = (i + j) % 2 ? '#111' : '#fff'; c.fillRect(i * 16, j * 16, 16, 16); } });
   const line = mk(new THREE.PlaneGeometry(HW * 2, 2.2), new THREE.MeshBasicMaterial({ map: chk })); line.rotation.x = -Math.PI / 2; line.position.y = .05; g.add(line);
   for (const s of [-1, 1]) { const p = mk(new THREE.CylinderGeometry(.35, .35, 7, 10), lam(0xffd23f)); p.position.set(s * (HW + 1.2), 3.5, 0); g.add(p); }
-  const bt = canvasTex(512, 96, (c, w, h) => { c.fillStyle = '#2a0f4a'; c.fillRect(0, 0, w, h); c.fillStyle = '#ffd23f'; c.font = '900 italic 64px "Noto Sans TC",sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('START ★ FINISH', w / 2, h / 2 + 4); c.strokeStyle = '#ff7a1a'; c.lineWidth = 8; c.strokeRect(4, 4, w - 8, h - 8); });
+  const bt = canvasTex(512, 96, (c, w, h) => { c.fillStyle = '#2a0f4a'; c.fillRect(0, 0, w, h); c.fillStyle = '#ffd23f'; c.font = '900 italic 52px "Noto Sans TC",sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('上班打卡 ★ 下班衝線', w / 2, h / 2 + 4); c.strokeStyle = '#ff7a1a'; c.lineWidth = 8; c.strokeRect(4, 4, w - 8, h - 8); });
   const ban = mk(new THREE.PlaneGeometry(HW * 2 + 3, 2.6), new THREE.MeshBasicMaterial({ map: bt, side: THREE.DoubleSide })); ban.position.set(0, 7, 0); ban.rotation.y = Math.PI; g.add(ban); }
 // 加速板與道具箱
-const padTex = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#ff7a1a'; g.fillRect(0, 0, w, h); g.fillStyle = '#ffd23f'; for (let k = 0; k < 3; k++) { g.beginPath(); g.moveTo(w / 2, 14 + k * 36); g.lineTo(w - 14, 42 + k * 36); g.lineTo(w - 14, 62 + k * 36); g.lineTo(w / 2, 34 + k * 36); g.lineTo(14, 62 + k * 36); g.lineTo(14, 42 + k * 36); g.closePath(); g.fill(); } });
+const padTex = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#ffe14d'; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(0, h - 14, w, 14); g.fillStyle = '#e8307a'; for (let k = 0; k < 3; k++) { g.beginPath(); g.moveTo(w / 2, 14 + k * 36); g.lineTo(w - 14, 42 + k * 36); g.lineTo(w - 14, 62 + k * 36); g.lineTo(w / 2, 34 + k * 36); g.lineTo(14, 62 + k * 36); g.lineTo(14, 42 + k * 36); g.closePath(); g.fill(); } });
 const PADS = [], BOXES = [];
 function placeAt(i, off) { const k = ((i % TR.N) + TR.N) % TR.N; return { x: TR.px[k] + TR.nx[k] * off, z: TR.pz[k] + TR.nz[k] * off, ang: Math.atan2(TR.tx[k], TR.tz[k]) }; }
 for (const idx of [.14, .39, .62, .86]) { const p = placeAt(Math.round(idx * TR.N), (idx * 100 % 2 < 1 ? -2.6 : 2.6)); const m = mk(new THREE.PlaneGeometry(4.2, 5.6), new THREE.MeshBasicMaterial({ map: padTex })); m.rotation.x = -Math.PI / 2; m.rotation.z = -p.ang; m.position.set(p.x, .06, p.z); scene.add(m); PADS.push({ x: p.x, z: p.z, r: 3 }); }
