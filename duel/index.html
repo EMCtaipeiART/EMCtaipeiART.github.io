@@ -201,7 +201,7 @@ header{position:fixed;right:8px;bottom:8px;z-index:6;width:auto;gap:6px;flex-wra
 .skcut.l{left:0;transform:translateX(-110%)}.skcut.r{right:0;flex-direction:row-reverse;padding:8px 10px 8px 22px;background:linear-gradient(270deg,rgba(40,14,14,.94),rgba(80,26,26,.9));border:3px solid #ff7a6b;border-right:0;border-radius:14px 0 0 14px;transform:translateX(110%);text-align:right}
 .skcut.on{opacity:1;transform:none}.skcut canvas{width:68px;height:68px;border-radius:50%;border:3px solid #ffd166;background:#102a1e;flex:none}.skcut.r canvas{border-color:#ff7a6b}
 .skcut small{display:block;font-weight:900;font-size:12px;letter-spacing:.25em;color:#ffd166}.skcut b{display:block;font-weight:900;font-size:clamp(20px,3.4vw,34px);color:#fff;-webkit-text-stroke:2px #000;paint-order:stroke fill;letter-spacing:.06em;white-space:nowrap}
-#cdS,#tbE{position:relative;overflow:hidden}#cdS::after,.tb.sk::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.5) calc(var(--p,0)*100%),transparent 0);pointer-events:none;border-radius:inherit}.tb.sk{font-weight:900;font-size:15px}
+#cdS{position:relative;overflow:hidden}#cdS::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.5) calc(var(--p,0)*100%),transparent 0);pointer-events:none;border-radius:inherit}.tb.sk{font-weight:900;font-size:15px}
 .cine{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .cine .cb{position:absolute;left:0;right:0;height:11vh;background:#000;transition:transform .2s ease-out}.cine .cb.t{top:0;transform:translateY(-100%)}.cine .cb.b{bottom:0;transform:translateY(100%)}
 .cine.on .cb{transform:none}
@@ -236,7 +236,24 @@ header{position:fixed;right:8px;bottom:8px;z-index:6;width:auto;gap:6px;flex-wra
   .tb.lock,.tb.pause{width:34px;height:34px;font-size:10px}
 }
 
-@media (max-width:700px){.dhud .nm{font-size:12px}.dhud .tm{font-size:22px}.cds{display:none}}
+@media (max-width:700px){.dhud .tm{font-size:22px}.cds{display:none}}
+@media (pointer:coarse),(max-width:700px){
+  .dhud{gap:6px}.dhud .nm{font-size:12px}.dhud .lo{display:none}
+  .dhud .side{padding:5px 8px 5px 54px;min-height:46px;border-width:2px;border-radius:11px;gap:2px}.dhud .side.r{padding:5px 54px 5px 8px}
+  .dhud .pt{width:42px;height:42px;margin-top:-21px;left:6px;border-width:2px}.dhud .side.r .pt{left:auto;right:6px}
+  .dhud .hp{height:16px;border-width:2px}.dhud .ul{height:14px;border-width:2px;width:86%}.dhud .hp b{font-size:10px}.dhud .ul b{font-size:9px}
+  .tb{flex-direction:column;gap:1px;overflow:hidden;border-color:#0b1d15;background:linear-gradient(#1d4a36,#0f2a1d);box-shadow:0 3px 0 #000,inset 0 0 0 2px rgba(95,224,138,.35)}
+  .tb .ic{font-size:22px;line-height:1;font-weight:900;text-shadow:0 2px 0 rgba(0,0,0,.6)}.tb .nm{font-size:9px;font-weight:900;max-width:90%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1}
+  .tb .sw{position:absolute;inset:0;border-radius:50%;background:conic-gradient(rgba(0,0,0,.68) calc(var(--p,0)*360deg),transparent 0);pointer-events:none}
+  .tb .ct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:900 19px/1 system-ui;font-style:normal;color:#fff;text-shadow:0 2px 0 #000,0 0 6px #000;pointer-events:none}
+  .tb.ready{box-shadow:0 3px 0 #000,0 0 14px rgba(95,224,138,.85),inset 0 0 0 2px rgba(95,224,138,.7)}
+  .tb.cd{filter:saturate(.3) brightness(.8)}.tb.cd.atk,.tb.cd.dash,.tb.cd.ult,.tb.cd.sk{opacity:1}
+  .tb.on{background:linear-gradient(#ffe08a,#e0a82a);color:#241a00;animation:ulp .4s infinite alternate}
+  .tb.pass{opacity:.7}
+  .tb.ult.ready{background:linear-gradient(#ffe08a,#e0a82a);box-shadow:0 3px 0 #000,0 0 18px rgba(255,209,102,.95);animation:ulp .5s infinite alternate}
+  .skcut{top:70px;padding:4px 14px 4px 6px;gap:8px;max-width:46vw}.skcut.r{padding:4px 6px 4px 14px}.skcut canvas{width:38px;height:38px;border-width:2px}.skcut b{font-size:15px;-webkit-text-stroke:1.5px #000}.skcut small{font-size:9px;letter-spacing:.1em}
+  .tb.atk{background:linear-gradient(#ff8a7a,#b8403c)}.tb.dash{background:linear-gradient(#8fd6ff,#2f74b0)}.tb.sk{background:linear-gradient(#c9b8ff,#6a4fc0)}
+}
 </style>
 </head>
 <body>
@@ -948,20 +965,28 @@ function showLo() { $('loL').textContent = loText(ME); $('loR').textContent = lo
 function beginMatch() { if (!net) { OP.isBot = true; setLo(ME, myLo()); setLo(OP, randLo()); } showLo(); wins = [0, 0]; round = 1; stats = { hits: 0, dmg: 0, high: 0, combo: 0, ult: 0, taken: 0 }; $('nmL').textContent = ME.name; $('nmR').textContent = OP.name; drawHead($('ptL'), ME.name); drawHead($('ptR'), OP.name); startRound(); lockPtr() }
 
 // ───────── HUD ─────────
-const sbSt = {}, SB_DEF = [['J', '跳', '空白', '⤒'], ['A', '', '左鍵', '⚔'], ['D', '衝刺', 'Shift', '≫'], ['S', '', 'E', '✦'], ['U', '', 'R', '★'], ['L', '鎖定', '右鍵', '◎']];
+const sbSt = {}, sbLast = {}, TB_ID = { J: 'tbJ', A: 'tbA', D: 'tbD', S: 'tbE', U: 'tbU', L: 'tbL' }, IC_PE = { coffee: '☕', thick: '🛡️', dodge: '💨', sip: '🍵', overtime: '🌙', slack: '🐟' }, IC_UE = { quake: '💥', rush: '⚡', heal: '💚', shield: '🫧', rage: '🔥' }, SB_DEF = [['J', '跳', '空白', '⤒'], ['A', '', '左鍵', '⚔'], ['D', '衝刺', 'Shift', '≫'], ['S', '', 'E', '✦'], ['U', '', 'R', '★'], ['L', '鎖定', '右鍵', '◎']];
 function cdRatio(k, v) { const s = sbSt[k] || (sbSt[k] = { max: 0, last: 0 }); if (v <= 0) { s.max = 0; s.last = 0; return 0; } if (v > s.last + .02 || v > s.max) s.max = v; s.last = v; return Math.min(1, v / (s.max || v)); }
 function updSbar() {
   const bar = $('sbar'); if (!bar || !ME) return;
   if (!bar.firstChild) bar.innerHTML = SB_DEF.map(([k, n, key, ic]) => '<div class="sl' + (k === 'U' ? ' ult' : '') + '" id="sl' + k + '"><kbd>' + key + '</kbd><b class="ic">' + ic + '</b><span class="sn">' + n + '</span><span class="st"></span><i class="sw"></i><em class="ct"></em></div>').join('');
-  const set = (k, o) => { const el = $('sl' + k); if (!el) return; el.className = 'sl' + (k === 'U' ? ' ult' : '') + ' ' + o.s; el.querySelector('.sn').textContent = o.n; el.querySelector('.st').textContent = o.t; el.querySelector('.ct').textContent = o.c || ''; el.style.setProperty('--p', o.p || 0); el.querySelector('kbd').textContent = o.key || SB_DEF.find(d => d[0] === k)[2]; };
+  const set = (k, o) => { sbLast[k] = o; const el = $('sl' + k); if (!el) return; el.className = 'sl' + (k === 'U' ? ' ult' : '') + ' ' + o.s; el.querySelector('.sn').textContent = o.n; el.querySelector('.st').textContent = o.t; if (o.ic) el.querySelector('.ic').textContent = o.ic; el.querySelector('.ct').textContent = o.c || ''; el.style.setProperty('--p', o.p || 0); el.querySelector('kbd').textContent = o.key || SB_DEF.find(d => d[0] === k)[2]; };
   const W = wOf(ME), P = PASSIVES[ME.pas] || {}, U = ULTS[ME.ulk] || ULTS.quake;
-  set('J', ME.grounded ? { s: 'ready', n: '跳', t: '可施放' } : { s: 'cd', n: '跳', t: '空中' });
-  { const r = cdRatio('A', ME.atkCD); set('A', r > 0 ? { s: 'cd', n: W.n, t: '冷卻中', p: r, c: ME.atkCD.toFixed(1) } : { s: 'ready', n: W.n, t: '可施放' }); }
-  { const r = cdRatio('D', ME.dashCD); set('D', r > 0 ? { s: 'cd', n: '衝刺', t: '冷卻中', p: r, c: ME.dashCD.toFixed(1) } : { s: 'ready', n: '衝刺', t: '可施放' }); }
-  if (P.act) { if (ME.skT > 0) set('S', { s: 'on', n: P.n, t: '作用中', p: 1 - ME.skT / P.dur, c: Math.ceil(ME.skT) + '' }); else { const r = cdRatio('S', ME.skCD); set('S', r > 0 ? { s: 'cd', n: P.n, t: '冷卻中', p: r, c: Math.ceil(ME.skCD) + '' } : { s: 'ready', n: P.n, t: '可施放' }); } }
-  else set('S', { s: 'pass', n: P.n || '小招', t: '常駐', key: '小招' });
-  set('U', ME.ult >= 100 ? { s: 'ready', n: U.n, t: '可施放' } : { s: 'cd', n: U.n, t: '充能中', p: 1 - ME.ult / 100, c: Math.floor(ME.ult) + '%' });
-  set('L', lockOn ? { s: 'on', n: '鎖定', t: '已鎖定' } : { s: 'ready', n: '鎖定', t: '待命' });
+  set('J', ME.grounded ? { s: 'ready', n: '跳', t: '可施放', ic: '⤒' } : { s: 'cd', n: '跳', t: '空中', ic: '⤒' });
+  { const r = cdRatio('A', ME.atkCD); set('A', r > 0 ? { s: 'cd', n: W.n, t: '冷卻中', p: r, c: ME.atkCD.toFixed(1), ic: W.ic } : { s: 'ready', n: W.n, t: '可施放', ic: W.ic }); }
+  { const r = cdRatio('D', ME.dashCD); set('D', r > 0 ? { s: 'cd', n: '衝刺', t: '冷卻中', p: r, c: ME.dashCD.toFixed(1), ic: '≫' } : { s: 'ready', n: '衝刺', t: '可施放', ic: '≫' }); }
+  if (P.act) { if (ME.skT > 0) set('S', { s: 'on', n: P.n, t: '作用中', p: 1 - ME.skT / P.dur, c: Math.ceil(ME.skT) + '', ic: IC_PE[ME.pas] }); else { const r = cdRatio('S', ME.skCD); set('S', r > 0 ? { s: 'cd', n: P.n, t: '冷卻中', p: r, c: Math.ceil(ME.skCD) + '', ic: IC_PE[ME.pas] } : { s: 'ready', n: P.n, t: '可施放', ic: IC_PE[ME.pas] }); } }
+  else set('S', { s: 'pass', n: P.n || '小招', t: '常駐', key: '小招', ic: IC_PE[ME.pas] });
+  set('U', ME.ult >= 100 ? { s: 'ready', n: U.n, t: '可施放', ic: IC_UE[ME.ulk] || '★' } : { s: 'cd', n: U.n, t: '充能中', p: 1 - ME.ult / 100, c: Math.floor(ME.ult) + '%', ic: IC_UE[ME.ulk] || '★' });
+  set('L', lockOn ? { s: 'on', n: '鎖定', t: '已鎖定', ic: '◎' } : { s: 'ready', n: '鎖定', t: '待命', ic: '◎' });
+}
+function applyTouch() {
+  for (const k in TB_ID) {
+    const el = $(TB_ID[k]), o = sbLast[k]; if (!el || !o) continue;
+    if (!el.querySelector('.ic')) el.innerHTML = '<b class="ic"></b><span class="nm"></span><i class="sw"></i><em class="ct"></em>';
+    el.classList.remove('ready', 'cd', 'on', 'pass'); el.classList.add(o.s); el.style.setProperty('--p', o.p || 0);
+    el.querySelector('.ic').textContent = o.ic || ''; el.querySelector('.nm').textContent = o.n; el.querySelector('.ct').textContent = o.c || '';
+  }
 }
 function updHud() {
   if (!ME || !OP) return;
@@ -969,7 +994,7 @@ function updHud() {
   $('hpL').style.width = Math.max(0, ME.hp) + '%'; $('hpR').style.width = Math.max(0, OP.hp) + '%'; $('ulL').style.width = ME.ult + '%'; $('ulR').style.width = OP.ult + '%';
   $('ulL').parentNode.classList.toggle('full', ME.ult >= 100); $('ulR').parentNode.classList.toggle('full', OP.ult >= 100);
   $('tmV').textContent = Math.max(0, Math.ceil(tLeft));
-  $('cdA').classList.toggle('cd', ME.atkCD > 0); $('cdD').classList.toggle('cd', ME.dashCD > 0); $('cdU').classList.toggle('on', ME.ult >= 100); $('tbU').classList.toggle('on', ME.ult >= 100); { const P = PASSIVES[ME.pas], el = $('cdS'); el.hidden = !(P && P.act); if (P && P.act) { el.textContent = '小招 E・' + P.n + (ME.skT > 0 ? '　作用 ' + Math.ceil(ME.skT) + 's' : ME.skCD > 0 ? '　冷卻 ' + Math.ceil(ME.skCD) + 's' : '　就緒'); const pr = ME.skT > 0 ? ME.skT / P.dur : ME.skCD > 0 ? ME.skCD / P.cd : 0; el.style.setProperty('--p', Math.min(1, pr)); $('tbE').style.setProperty('--p', Math.min(1, pr)); $('tbE').textContent = ME.skT > 0 ? Math.ceil(ME.skT) : ME.skCD > 0 ? Math.ceil(ME.skCD) : 'E'; el.classList.toggle('cd', ME.skT <= 0 && ME.skCD > 0); el.classList.toggle('on', ME.skT > 0); const tb = $('tbE'); tb.hidden = !(P && P.act); if (P && P.act) { tb.classList.toggle('cd', ME.skT <= 0 && ME.skCD > 0); tb.classList.toggle('on', ME.skT > 0); } } } $('cdJ').classList.toggle('cd', !ME.grounded);
+  $('cdA').classList.toggle('cd', ME.atkCD > 0); $('cdD').classList.toggle('cd', ME.dashCD > 0); $('cdU').classList.toggle('on', ME.ult >= 100); $('tbU').classList.toggle('on', ME.ult >= 100); { const P = PASSIVES[ME.pas], el = $('cdS'); el.hidden = !(P && P.act); if (P && P.act) { el.textContent = '小招 E・' + P.n + (ME.skT > 0 ? '　作用 ' + Math.ceil(ME.skT) + 's' : ME.skCD > 0 ? '　冷卻 ' + Math.ceil(ME.skCD) + 's' : '　就緒'); const pr = ME.skT > 0 ? ME.skT / P.dur : ME.skCD > 0 ? ME.skCD / P.cd : 0; el.style.setProperty('--p', Math.min(1, pr));  el.classList.toggle('cd', ME.skT <= 0 && ME.skCD > 0); el.classList.toggle('on', ME.skT > 0); const tb = $('tbE'); tb.hidden = !(P && P.act); if (P && P.act) { tb.classList.toggle('cd', ME.skT <= 0 && ME.skCD > 0); tb.classList.toggle('on', ME.skT > 0); } } } $('cdJ').classList.toggle('cd', !ME.grounded); applyTouch();
 }
 const popLayer = document.createElement('div'); popLayer.className = 'pops'; stage.appendChild(popLayer);
 const _v = new THREE.Vector3();
