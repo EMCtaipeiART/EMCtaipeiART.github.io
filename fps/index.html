@@ -171,11 +171,6 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
 @media (max-width:700px){#cast{bottom:120px}}
 
 /* ==== 命中提示加強 ==== */
-#hm{width:46px;height:46px;margin:-23px 0 0 -23px}
-#hm::before,#hm::after{left:21px;top:-5px;width:4px;height:56px;background:#fff;box-shadow:0 0 6px #000,0 0 12px rgba(255,90,60,.95)}
-#hm.on{animation:hmPop .24s ease-out}@keyframes hmPop{0%{transform:scale(2.1)}100%{transform:scale(1)}}
-#hm.hs::before,#hm.hs::after{background:#ffd24a;box-shadow:0 0 6px #000,0 0 14px rgba(255,210,74,1)}
-#hm.kill::before,#hm.kill::after{background:#ff3b2e;width:6px;box-shadow:0 0 8px #000,0 0 16px rgba(255,59,46,1)}
 #killT{position:absolute;left:50%;top:64%;transform:translateX(-50%);z-index:8;pointer-events:none;font-weight:900;font-size:clamp(22px,3.8vw,38px);letter-spacing:.12em;color:#ff5a4a;text-shadow:0 0 12px rgba(255,60,40,.9),0 3px 0 #000;opacity:0;white-space:nowrap}
 #killT.on{animation:killIn 1.4s ease-out}@keyframes killIn{0%{opacity:0;transform:translateX(-50%) scale(1.7)}10%{opacity:1;transform:translateX(-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translateX(-50%) translateY(10px)}}
 </style>
@@ -350,7 +345,7 @@ const HEROES = [
   { id: 'noise', char: 'Noise', name: 'Noise', title: '截稿狂熱', role: '輸出', ic: '⚡', hp: 120, speed: 6.0, w: 'stapler', pref: 9, sleeve: 0x1d4ed8,
     e: { n: '閃身步', ic: '💨', cd: 5, d: '向移動方向急衝一小段' }, s: { n: '咖啡因', ic: '☕', cd: 12, d: '5 秒內移速 +45%、射速 +20%' }, q: { n: '截稿狂暴', ic: '🔥', d: '6 秒內射速 ×1.6、傷害 ×1.35' } },
   { id: 'anna', char: 'Anna', name: 'Anna', title: '精準標記', role: '輸出', ic: '🎯', hp: 100, speed: 5.4, w: 'ruler', pref: 18, sleeve: 0xf59e0b,
-    e: { n: '彈跳', ic: '🦘', cd: 6, d: '向上彈跳並往前飛一段' }, s: { n: '標記', ic: '🔍', cd: 12, d: '標記 40 公尺內的敵人 4 秒（隔牆可見）' }, q: { n: '全場鎖定', ic: '🎯', d: '標記所有敵人 7 秒，期間傷害 ×1.3' } },
+    e: { n: '彈跳', ic: '🦘', cd: 6, d: '向上彈跳並往前飛一段' }, s: { n: '標記', ic: '🔍', cd: 12, d: '標記 40 公尺內的敵人 4 秒：他們受到的傷害 +25%（不會穿牆顯示）' }, q: { n: '全場鎖定', ic: '🎯', d: '標記所有敵人 7 秒（受傷 +25%），自己傷害 ×1.3' } },
   { id: 'amber', char: 'Amber', name: 'Amber', title: '茶歇補給', role: '支援', ic: '☕', hp: 110, speed: 5.6, w: 'mouse', pref: 12, sleeve: 0x16a34a,
     e: { n: '治療光環', ic: '💚', cd: 12, d: '4 秒內持續治療身邊 8 公尺內的隊友（含自己）' }, s: { n: '加油鼓舞', ic: '📣', cd: 10, d: '附近隊友 4 秒移速 +35%' }, q: { n: '茶歇回復', ic: '🫖', d: '全隊立刻回滿血' } },
   { id: 'leona', char: 'Leona', name: 'Leona', title: '電話客服', role: '支援', ic: '☎️', hp: 120, speed: 5.5, w: 'phone', pref: 14, sleeve: 0xdb2777,
@@ -530,6 +525,7 @@ function wallHit(x, y, z, n, col) { decal(x, y, z, n); sparkBurst(x + (n ? n[0] 
 function addUlt(a, v) { if (a && a.ult < 100) a.ult = Math.min(100, a.ult + v); }
 function dmgTo(t, d, src, head, wname, hx, hy, hz) {
   if (t.dead || t.inv > 0) return;
+  if (t.mark > 0 && src && src.team !== t.team) d *= 1.25;
   if (t.armor > 0) { const ab = Math.min(t.armor, d); t.armor -= ab; d -= ab; t.fl = .08; if (d <= 0) { if (src && src.isMe) hitMark(false); return; } }
   t.hp -= d; t.fl = .22; if (src && src !== t) { src.dmg += d; addUlt(src, d * .2); }
   if (t.isMe) { SFX.hurt(); $('dmg').classList.add('on'); setTimeout(() => $('dmg').classList.remove('on'), 60); shake = Math.min(1, shake + d / 60); if (src) dirHit(Math.atan2(src.x - t.x, src.z - t.z)); }
@@ -779,8 +775,8 @@ function render(dt) {
     a.vyaw = a.vyaw === undefined ? a.yaw : a.vyaw + wrapA(a.yaw - a.vyaw) * Math.min(1, dt * 7); const toCam = Math.atan2(camera.position.x - a.x, camera.position.z - a.z), face = a.vyaw + Math.PI, rel = wrapA(face - toCam), idx = (Math.round(rel / (Math.PI * 2) * ANGLES) + ANGLES) % ANGLES; if (a.fidx === undefined) a.fidx = idx; else if (Math.abs(wrapA(rel - a.fidx / ANGLES * Math.PI * 2)) > Math.PI / ANGLES * 1.6) a.fidx = idx; const col = a.fidx / ANGLES; a.spr.rotation.set(0, toCam, 0);
     const moving = Math.hypot(a.vx, a.vz) > 1; a.wph += dt * (moving && !a.dead ? 12 : 0); { const st = Math.floor(a.wph) % 4, useWalk = moving && !a.dead && st % 2 === 1 && a.walk && a.walk.image, mp = useWalk ? a.walk : a.stand; if (useWalk) mp.offset.set(col, st === 1 ? .5 : 0); else mp.offset.x = col; if (a.spr.material.map !== mp) { a.spr.material.map = mp; a.spr.material.needsUpdate = true; } }
     a.anim += dt * (moving ? 12 : 3); a.spr.position.y = moving ? Math.abs(Math.sin(a.anim)) * .08 : 0; { if (!a.gun || a.gunW !== a.hero.w) { if (a.gun) scene.remove(a.gun); a.gun = makeGunModel(a.hero.w); a.gunW = a.hero.w; scene.add(a.gun); } a.fireAnim = Math.max(0, (a.fireAnim || 0) - dt); const kick = a.fireAnim * 1.3, f = fwd(a); a.gun.visible = !a.dead; a.gun.position.set(a.x + f[0] * (.55 - kick) - f[1] * .34, a.y + 1.0 + (moving ? Math.sin(a.anim) * .03 : 0), a.z + f[1] * (.55 - kick) + f[0] * .34); a.gun.rotation.set(a.pitch, a.yaw, 0); a.spr.scale.set(1 + a.fireAnim * .5 + a.fl * .45, 1 - a.fireAnim * .3 + a.fl * .25, 1); }
-    const seeThru = ally || a.mark > 0; a.nm.material.depthTest = !(seeThru && !a.dead); a.hpb.material.depthTest = a.hpbB.material.depthTest = a.nm.material.depthTest; a.tri.material.depthTest = a.nm.material.depthTest; a.spr.material.depthTest = !(a.mark > 0 && !a.dead); a.spr.renderOrder = a.mark > 0 ? 999 : 0; a.ring.visible = a.sh.visible = !a.dead;
-    if (a.ol) { a.ol.visible = !a.dead; a.ol.material.depthTest = !(a.mark > 0); a.ol.material.map = a.spr.material.map; a.ol.position.set(0, a.spr.position.y + a.ks - .02, 0); a.ol.rotation.set(0, toCam, 0); a.ol.scale.set(1.13 * a.spr.scale.x, 1.1 * a.spr.scale.y, 1); }
+    const seeThru = ally; a.nm.material.depthTest = !(seeThru && !a.dead); a.hpb.material.depthTest = a.hpbB.material.depthTest = a.nm.material.depthTest; a.tri.material.depthTest = a.nm.material.depthTest; a.spr.material.depthTest = true; a.spr.renderOrder = 0; a.ring.visible = a.sh.visible = !a.dead;
+    if (a.ol) { a.ol.visible = !a.dead; a.ol.material.depthTest = true; a.ol.material.map = a.spr.material.map; a.ol.position.set(0, a.spr.position.y + a.ks - .02, 0); a.ol.rotation.set(0, toCam, 0); a.ol.scale.set(1.13 * a.spr.scale.x, 1.1 * a.spr.scale.y, 1); }
     a.fall = a.dead ? Math.min(1.57, (a.fall || 0) + dt * 9) : 0; a.spr.rotation.z = a.fall * (Math.sin(toCam - face) >= 0 ? 1 : -1); a.spr.position.y = a.dead ? .12 : a.spr.position.y; if (a.dead) { a.nm.visible = a.hpb.visible = a.hpbB.visible = a.tri.visible = false; } else { a.nm.visible = a.hpb.visible = a.hpbB.visible = a.tri.visible = true; drawHpBar(a); a.tri.position.y = (2.95 + Math.sin(performance.now() * .005) * .06) * a.ks; }
     a.spr.material.color.setHex(a.fl > 0 ? 0xff3838 : a.mark > 0 ? 0xffb0a0 : a.stun > 0 ? 0xbbbbff : a.armor > 0 ? 0xffe6a8 : 0xffffff); }
   if (me.heal > 0) me.hring.position.set(me.x, me.y + .08, me.z);
