@@ -1135,6 +1135,7 @@ function updGear(f, toCam, bob) {
   if (f.swingT > 0) { f.wsp.position.set(rX * .5 + fx * (.2 + 1.1 * sn), .95 + sn * .2, rZ * .5 + fz * (.2 + 1.1 * sn)); const k = 1 + .6 * sn; f.wsp.scale.set(k, k, 1); f.wsp.material.rotation = -1.4 + 2.8 * p; }
   else { f.wsp.position.set(rX * .62 + Math.sin(toCam) * .08, .8 + bob + sw * .25, rZ * .62 + Math.cos(toCam) * .08); const k = .7 + sw * .5; f.wsp.scale.set(k, k, 1); f.wsp.material.rotation = -.5 - sw * 1.2 + (f.moving > 1 && f.grounded ? Math.sin(f.phase) * .15 : 0); }
   f.wsp.visible = f.hp > 0;
+  if (f.rig) { f.holder.updateMatrixWorld(true); const hp = new THREE.Vector3(-.14, -.46, .2); f.rig.armR.localToWorld(hp); f.wsp.material.depthTest = false; f.wsp.renderOrder = 10; f.holder.worldToLocal(hp); f.wsp.position.copy(hp); const k = f.wsp.scale.x * .85; f.wsp.scale.set(k, k, 1); }
   const al = f !== ME && wind && f.hp > 0 && on; f.alert.visible = al; if (al) { const pz = 1 + Math.sin(performance.now() * .03) * .18; f.alert.position.set(0, 2.9, 0); f.alert.scale.set(.95 * pz, .95 * pz, 1); }
   const tl = teles[f === ME ? 0 : 1], ut = f.ultWind > 0 && f.ulk === 'quake' && on; tl.visible = ut; if (ut) { tl.position.set(f.x, f.y + .1, f.z); tl.scale.setScalar(R.ultR); const col = f === ME ? 0x5fe08a : 0xff3b30; tl.userData.fl.material.color.setHex(col); tl.userData.rg.material.color.setHex(col); }
   const fan = f.fan, d = fan.userData, show = on && f.hp > 0 && (f === ME || f.windT > 0 || f.swingT > 0);
