@@ -1923,7 +1923,7 @@ const inTheater = p => { const x = p.holder.position.x / U, z = p.holder.positio
 // ───────── 背景音樂（雙軌交叉淡入淡出循環；音量／靜音存在瀏覽器，三款遊戲共用設定）─────────
 function emcBgm(url, opts) {
   const KEY = 'emcBgmV1'; let st = {}; try { st = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
-  const o = Object.assign({ vol: .3, fade: 4 }, opts || {}); let vol = typeof st.vol === 'number' ? st.vol : o.vol, muted = !!st.muted, started = false, paused = false, timer = 0;
+  const o = Object.assign({ vol: .3, fade: 4 }, opts || {}); let vol = typeof st.vol === 'number' ? st.vol : o.vol, muted = !!st.muted, started = false, paused = false, timer = 0, trying = false;
   const A = [new Audio(url), new Audio(url)]; A.forEach(a => { a.preload = 'auto'; a.volume = 0; }); let cur = 0;
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ vol, muted })); } catch (e) {} };
   const gainOf = a => { const d = Math.max(a.duration || 0, o.dur || 0), t = a.currentTime; if (!d) return 0; return Math.max(0, Math.min(1, t / 1.5, (d - t) / o.fade)); };
@@ -1935,15 +1935,16 @@ function emcBgm(url, opts) {
     apply();
   }
   const ctl = {
-    start() { if (started) return; started = true; A[cur].currentTime = 0; A[cur].play().catch(() => { started = false; }); clearInterval(timer); timer = setInterval(tick, 100); },
+    start() { if (started || trying) return; trying = true; const x = A[cur]; try { x.currentTime = 0; } catch (e) {} let p; try { p = x.play(); } catch (e) { trying = false; return; } const ok = () => { trying = false; if (started) return; started = true; clearInterval(timer); timer = setInterval(tick, 100); ['pointerdown', 'mousedown', 'touchstart', 'click', 'keydown'].forEach(ev => removeEventListener(ev, once, true)); }; if (p && p.then) p.then(ok).catch(() => { trying = false; }); else ok(); },
     pause() { paused = true; A.forEach(a => a.pause()); },
     resume() { if (!started) return; paused = false; A[cur].play().catch(() => {}); },
-    get vol() { return vol; }, get muted() { return muted; }, get playing() { return started && !paused; }, get t() { return A[cur].currentTime; }, get d() { return A[cur].duration; }, get level() { return A.map(x => +x.volume.toFixed(2)); },
+    get vol() { return vol; }, get muted() { return muted; }, get on() { return started; }, get playing() { return started && !paused; }, get t() { return A[cur].currentTime; }, get d() { return A[cur].duration; }, get level() { return A.map(x => +x.volume.toFixed(2)); },
     setVol(v) { vol = Math.max(0, Math.min(1, v)); if (vol > 0) muted = false; save(); apply(); },
     setMuted(m) { muted = !!m; save(); apply(); }
   };
-  const once = () => { ctl.start(); removeEventListener('pointerdown', once, true); removeEventListener('keydown', once, true); };
-  addEventListener('pointerdown', once, true); addEventListener('keydown', once, true);   // 瀏覽器規定要使用者操作後才能播放
+  function once() { ctl.start(); }
+  ['pointerdown', 'mousedown', 'touchstart', 'click', 'keydown'].forEach(ev => addEventListener(ev, once, true));   // 瀏覽器規定要使用者操作後才能播放：先嘗試直接播，被擋就等第一次操作，成功才解除
+  ctl.start();
   return ctl;
 }
 function bgmUI(ctl, css) {
@@ -1953,7 +1954,7 @@ function bgmUI(ctl, css) {
   const sync = () => { b.textContent = ctl.muted || ctl.vol === 0 ? '🔇' : ctl.vol < .35 ? '🔈' : '🔊'; r.value = ctl.muted ? 0 : Math.round(ctl.vol * 100); };
   b.onclick = e => { e.stopPropagation(); ctl.setMuted(!ctl.muted); if (!ctl.muted && ctl.vol === 0) ctl.setVol(.3); sync(); };
   r.oninput = () => { ctl.setVol(r.value / 100); sync(); }; ['pointerdown', 'mousedown', 'touchstart'].forEach(ev => w.addEventListener(ev, e => e.stopPropagation()));
-  w.append(b, r); document.body.appendChild(w); sync(); return w;
+  const hint = document.createElement('span'); hint.textContent = '點一下開啟音樂'; hint.style.cssText = 'font-size:11px;color:#ffd24a;white-space:nowrap'; w.append(b, r, hint); document.body.appendChild(w); sync(); setInterval(() => { hint.style.display = ctl.on ? 'none' : 'inline'; }, 400); return w;
 }
 const metaBgm = emcBgm('bgm.m4a', { vol: .28, dur: 181.6 }); bgmUI(metaBgm, matchMedia('(pointer:coarse)').matches ? 'left:12px;bottom:200px;' : 'left:12px;bottom:12px;');
 const EXP_GAMES = {exp:{title:'設計部遠征隊', fade:'倉庫', url:'../expedition/'}, deadline:{title:'截稿倒數 2', fade:'截稿倒數', url:'../deadline/'}, hoops:{title:'廢紙投籃 3D', fade:'廢紙投籃', url:'../hoops3d/'}, duel:{title:'辦公室對決', fade:'辦公室對決', url:'../duel/'}, soccer:{title:'大顆足球賽', fade:'大顆足球賽', url:'../soccer/'}, kart:{title:'辦公室賽車', fade:'辦公室賽車', url:'../kart/'}, fps:{title:'辦公室槍戰', fade:'辦公室槍戰', url:'../fps/'}};
