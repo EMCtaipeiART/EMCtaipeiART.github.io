@@ -977,7 +977,7 @@ function damage(att, tgt, base, heavy, kbMul, kind) {
   if (tgt.dashT > 0 || tgt.hp <= 0) return false;
   if (net && att === ME) {   // 連線：我是攻擊方，傷害由對方（受擊方）自己扣
     const hi = att.y - tgt.y >= R.hiDelta, d = base * dmgMul(att) * (hi ? R.hiBonus : 1);
-    if (kind !== 'ult') gainUlt(att, Math.min(13, d * .9)); if (att.pas === 'sip') { att.hp = Math.min(100, att.hp + (heavy ? 2 : 1)); sipFx(att); } if (barrierOn(tgt)) fxRing(v3(tgt.x, tgt.y + 1, tgt.z), '#ffc857', .5, 2, .3); else { tgt.flash = .14; tgt.hitStun = heavy ? .3 : .16;
+    if (kind !== 'ult') gainUlt(att, Math.min(20, d * 1.4)); if (att.pas === 'sip') { att.hp = Math.min(100, att.hp + (heavy ? 2 : 1)); sipFx(att); } if (barrierOn(tgt)) fxRing(v3(tgt.x, tgt.y + 1, tgt.z), '#ffc857', .5, 2, .3); else { tgt.flash = .14; tgt.hitStun = heavy ? .3 : .16;
     hitFx(att, tgt, d, hi, heavy); }
     stats.hits++; stats.dmg += d; if (hi) stats.high++; stats.combo = Math.max(stats.combo, att.combo + 1); if (kind === 'ult') stats.ult++;
     netSend({ t: 'h', d: +d.toFixed(2), hv: heavy ? 1 : 0, kb: kbMul || 1, k: kind === 'ult' && att.ulk === 'quake' ? 1 : 0, hi: hi ? 1 : 0, ax: +att.x.toFixed(2), az: +att.z.toFixed(2) });
@@ -985,7 +985,7 @@ function damage(att, tgt, base, heavy, kbMul, kind) {
   }
   const hi = att.y - tgt.y >= R.hiDelta; let d = base * dmgMul(att) * (hi ? R.hiBonus : 1); if (att.isBot) d *= [.7, 1, 1.15][lvl]; if (barrierOn(tgt)) { barrierAbsorb(tgt, d); return true; }   // 責任壁壘：吸收全部、累計到結束時爆發
   d = absorb(tgt, d);
-  tgt.hp -= d; tgt.flash = .14; tgt.hitStun = heavy ? .3 : .16; tgt.windT = 0; tgt.ultWind = 0; if (kind !== 'ult') gainUlt(att, Math.min(13, d * .9)); gainUlt(tgt, d * .6); if (att.pas === 'sip') { att.hp = Math.min(100, att.hp + (heavy ? 2 : 1)); sipFx(att); }
+  tgt.hp -= d; tgt.flash = .14; tgt.hitStun = heavy ? .3 : .16; tgt.windT = 0; tgt.ultWind = 0; if (kind !== 'ult') gainUlt(att, Math.min(20, d * 1.4)); gainUlt(tgt, d * .6); if (att.pas === 'sip') { att.hp = Math.min(100, att.hp + (heavy ? 2 : 1)); sipFx(att); }
   const dx = tgt.x - att.x, dz = tgt.z - att.z, l = Math.hypot(dx, dz) || 1, kb = (heavy ? 12 : 6.5) * (kbMul || 1);
   tgt.kx = dx / l * kb; tgt.kz = dz / l * kb; if (heavy) { tgt.vy = 5; tgt.grounded = false; }
   hitFx(att, tgt, d, hi, heavy);
@@ -1068,7 +1068,7 @@ function doUlt(f, o) {
 }
 function stepFighter(f, o, dt) {
   const inp = f.inp, can = f.hitStun <= 0 && f.ultWind <= 0 && state === 'fight';
-  f.rageT = Math.max(0, (f.rageT || 0) - dt); { const wasBar = barrierOn(f); f.skT = Math.max(0, f.skT - dt); if (wasBar && f.skT <= 0 && state === 'fight') barrierBurst(f); } f.skCD = Math.max(0, f.skCD - dt); if (f.shieldT > 0) { f.shieldT -= dt; if (f.shieldT <= 0) f.shield = 0; } f.swingT = Math.max(0, (f.swingT || 0) - dt); f.atkCD = Math.max(0, f.atkCD - dt); f.dashCD = Math.max(0, f.dashCD - dt); f.hitStun = Math.max(0, f.hitStun - dt); f.flash = Math.max(0, f.flash - dt); f.comboT -= dt; if (f.comboT <= 0) f.combo = 0;
+  f.rageT = Math.max(0, (f.rageT || 0) - dt); if (state === 'fight' && f.hp > 0) gainUlt(f, dt); { const wasBar = barrierOn(f); f.skT = Math.max(0, f.skT - dt); if (wasBar && f.skT <= 0 && state === 'fight') barrierBurst(f); } f.skCD = Math.max(0, f.skCD - dt); if (f.shieldT > 0) { f.shieldT -= dt; if (f.shieldT <= 0) f.shield = 0; } f.swingT = Math.max(0, (f.swingT || 0) - dt); f.atkCD = Math.max(0, f.atkCD - dt); f.dashCD = Math.max(0, f.dashCD - dt); f.hitStun = Math.max(0, f.hitStun - dt); f.flash = Math.max(0, f.flash - dt); f.comboT -= dt; if (f.comboT <= 0) f.combo = 0;
   // 揮擊前搖
   if (f.windT > 0) { f.windT -= dt; if (f.windT <= 0) doAttack(f, o); }
   if (f.ultWind > 0) { f.ultWind -= dt; if (f.ultWind <= 0) doUlt(f, o); }
