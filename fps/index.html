@@ -432,13 +432,17 @@ addEventListener('keydown', e => { if (e.repeat) return; keys[e.code] = true; un
   if (e.code === 'KeyE') useSkill(me); if (e.code === 'KeyR') useUlt(me); if (/^Digit[1-5]$/.test(e.code)) swapTo(+e.code.slice(5) - 1); if (e.code === 'Tab') showSB(true); if (e.code === 'KeyQ') swapTo((me.wi + 1) % WEAPONS.length); });
 addEventListener('keyup', e => { keys[e.code] = false; if (e.code === 'Tab') showSB(false); });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; hold.fire = false; });
-cv.addEventListener('mousedown', e => { unlock(); if (state === 'play' && !locked && !touch) { cv.requestPointerLock && cv.requestPointerLock(); return; } if (e.button === 0) hold.fire = true; if (e.button === 2) setZoom(true); });
+cv.addEventListener('mousedown', e => { unlock(); if (state === 'play' && !locked && !lockFail && !touch) { askLock(); return; } if (e.button === 0) hold.fire = true; if (e.button === 2) setZoom(true); });
 addEventListener('mouseup', e => { if (e.button === 0) hold.fire = false; if (e.button === 2) setZoom(false); });
 cv.addEventListener('contextmenu', e => e.preventDefault());
 addEventListener('wheel', e => { if (state !== 'play') return; swapTo((me.wi + (e.deltaY > 0 ? 1 : -1) + WEAPONS.length) % WEAPONS.length); }, { passive: true });
-document.addEventListener('pointerlockchange', () => { locked = document.pointerLockElement === cv; $('lock').hidden = locked || touch || state !== 'play'; if (!locked && state === 'play') paused = true; else paused = false; });
-addEventListener('mousemove', e => { if (!locked || state !== 'play') return; yaw -= e.movementX * .0022 * (zoom ? .4 : 1); pitch = clamp(pitch - e.movementY * .0022 * (zoom ? .4 : 1), -1.45, 1.45); });
-$('lock').onclick = () => { unlock(); cv.requestPointerLock && cv.requestPointerLock(); };
+let lockFail = false;   // 瀏覽器不給鎖定滑鼠（內嵌、權限、剛按過 Esc…）時改走一般模式：游標隱藏、移動滑鼠就轉視角
+function askLock() { try { const p = cv.requestPointerLock && cv.requestPointerLock(); if (p && p.catch) p.catch(() => { setFail(); }); } catch (e) { setFail(); } clearTimeout(askLock.t); askLock.t = setTimeout(() => { if (!locked && state !== 'menu' && state !== 'over') setFail(); }, 900); }
+function setFail() { if (lockFail || touch) return; lockFail = true; paused = false; $('lock').hidden = true; cv.style.cursor = 'none'; banner('一般滑鼠模式', '無法鎖定滑鼠：移動滑鼠轉視角，碰到螢幕邊緣會停住（可用方向鍵繼續轉）', 3500); }
+document.addEventListener('pointerlockerror', setFail);
+document.addEventListener('pointerlockchange', () => { locked = document.pointerLockElement === cv; if (locked) { lockFail = false; cv.style.cursor = ''; } $('lock').hidden = locked || touch || lockFail || state !== 'play'; if (!locked && state === 'play' && !lockFail) paused = true; else paused = false; });
+addEventListener('mousemove', e => { if ((!locked && !lockFail) || state !== 'play') return; yaw -= e.movementX * .0022 * (zoom ? .4 : 1); pitch = clamp(pitch - e.movementY * .0022 * (zoom ? .4 : 1), -1.45, 1.45); });
+$('lock').onclick = () => { unlock(); lockFail = false; askLock(); };
 function setZoom(v) { if (state !== 'play' || !me || me.dead) { zoom = false; } else zoom = v; }
 function swapTo(i) { if (!me || me.dead || i === me.wi) return; me.wi = i; me.fireT = .15; setViewmodel(); buildWL(); zoom = false; }
 const stick = $('stick'), knob = stick.firstElementChild;
@@ -464,6 +468,7 @@ function stepActor(a, dt) {
   a.inv = Math.max(0, a.inv - dt); a.fireT = Math.max(0, a.fireT - dt); a.skCD = Math.max(0, a.skCD - dt); a.buff = Math.max(0, a.buff - dt); a.rage = Math.max(0, a.rage - dt); a.shield = Math.max(0, a.shield - dt); a.fl = Math.max(0, a.fl - dt);
   if (state === 'play') a.ult = Math.min(100, a.ult + dt * 1.2);
   if (a.isMe) {
+    if (keys.ArrowLeft) yaw += 2.2 * dt; if (keys.ArrowRight) yaw -= 2.2 * dt; if (keys.ArrowUp) pitch = clamp(pitch + 1.6 * dt, -1.45, 1.45); if (keys.ArrowDown) pitch = clamp(pitch - 1.6 * dt, -1.45, 1.45);
     const mx = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + joy.x, mz = (keys.KeyS ? 1 : 0) - (keys.KeyW ? 1 : 0) + joy.y, l = Math.hypot(mx, mz), sp = (keys.ShiftLeft || keys.ShiftRight ? 7.8 : 5.6) * (a.buff > 0 ? 1.45 : 1) * (zoom ? .6 : 1), fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = -fz, rz = fx;
     if (a.dashT > 0) a.dashT -= dt; else { const k = l > 1 ? 1 / l : 1, tx = (fx * -mz + rx * mx) * k * sp, tz = (fz * -mz + rz * mx) * k * sp, ac = a.ground ? 14 : 3; a.vx += (tx - a.vx) * Math.min(1, dt * ac); a.vz += (tz - a.vz) * Math.min(1, dt * ac); }
     a.yaw = yaw; a.pitch = pitch; if (keys.Space && a.ground) { a.vy = 6.6; a.ground = false; }
@@ -490,7 +495,7 @@ function endMatch() { if (state === 'over') return; state = 'over'; try { docume
   for (const id of ['xh', 'top', 'hp', 'wp', 'sk', 'stick', 'fire', 'jump', 'aim', 'swap', 'skE', 'skR']) $(id).hidden = true; $('scope').classList.remove('on');
   $('againB').onclick = () => { location.reload(); }; $('backB').onclick = () => location.reload(); }
 function startMatch() { unlock(); $('menu').hidden = true; setupMatch(); document.documentElement.classList.add('playing'); resize(); for (const id of ['xh', 'top', 'hp', 'wp', 'sk']) $(id).hidden = false; if (touch) for (const id of ['stick', 'fire', 'jump', 'aim', 'swap', 'skE', 'skR']) $(id).hidden = false; $('xh').hidden = false; $('exitB2').hidden = !embed;
-  state = 'count'; stT = 3.6; paused = false; if (!touch) { cv.requestPointerLock && cv.requestPointerLock(); $('lock').hidden = false; } }
+  state = 'count'; stT = 3.6; paused = false; if (!touch) { lockFail = false; askLock(); $('lock').hidden = false; } }
 const lerp = (a, b, t) => a + (b - a) * t;
 let last = performance.now();
 function render(dt) {
