@@ -295,7 +295,8 @@ bindBtn('drift', () => { hold.drift = true; if (state === 'countdown') gasEarly 
 bindBtn('brake', () => { hold.brake = true; }, () => { hold.brake = false; });
 bindBtn('itembox', () => { useItem(me); }, null);
 function readMe() {
-  let st = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0); if (Math.abs(joy.x) > .08) st += joy.x * 1.15; st = clamp(st, -1, 1);
+  // 內部 st>0 ＝ 航向角增加 ＝ 畫面向左轉（鏡頭朝 +z 時 +x 在畫面左邊），所以「按右」要給負值
+  let st = (keys.KeyA || keys.ArrowLeft ? 1 : 0) - (keys.KeyD || keys.ArrowRight ? 1 : 0); if (Math.abs(joy.x) > .08) st -= joy.x * 1.15; st = clamp(st, -1, 1);
   const gas = keys.KeyW || keys.ArrowUp || touch, brake = keys.KeyS || keys.ArrowDown || hold.brake, dr = keys.Space || hold.drift;
   return { st, gas: !!gas, brake: !!brake, drift: !!dr };
 }
