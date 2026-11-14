@@ -254,7 +254,7 @@ const rotW = () => isRot() ? innerHeight : innerWidth, rotH = () => isRot() ? in
 function resize() { const w = Math.max(320, rotW()), h = Math.max(240, rotH()); renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); try { matchMedia('(orientation:portrait)').addEventListener('change', () => setTimeout(resize, 60)); } catch (e) {}
 scene.background = new THREE.Color(0x2a3340); scene.fog = new THREE.Fog(0x2a3340, 45, 120);
-scene.add(new THREE.HemisphereLight(0xeaf2ff, 0x8a93a3, .8), new THREE.AmbientLight(0xffffff, .85));
+scene.add(new THREE.HemisphereLight(0xeaf2ff, 0x8a93a3, .7), new THREE.AmbientLight(0xffffff, .55));
 { const d = new THREE.DirectionalLight(0xfff2dc, .45); d.position.set(10, 30, 8); scene.add(d); }
 const mk = (g, m) => new THREE.Mesh(g, m), lam = (c, o = {}) => new THREE.MeshLambertMaterial(Object.assign({ color: c }, o));
 function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t; }
@@ -296,6 +296,60 @@ for (const [x, z, w, d] of [[-20, 0, 1.4, 6], [20, 0, 1.4, 6], [0, -20, 6, 1.4],
 for (const [x, z, w, d] of [[-12, -29, 6, 1.1], [12, 29, 6, 1.1], [29, -8, 1.1, 6], [-29, 8, 1.1, 6], [-24, 14, 1.1, 4], [24, -14, 1.1, 4]]) addBox('cab', 0xaab3c2, x - w / 2, z - d / 2, x + w / 2, z + d / 2, 2.3);
 // 沙發／茶水間（矮）
 addBox('sofa', 0x9a6bff, -3, 24, 3, 26, .7); addBox('sofa', 0x9a6bff, -3, -26, 3, -24, .7); addBox('bar', 0x4a4f63, 24, 3, 26, 9, 1.1); addBox('bar', 0x4a4f63, -26, -9, -24, -3, 1.1);
+// ───────── 場地修飾：地板圖樣、牆面踢腳板與窗景、桌面擺設、海報、出生區、盆栽 ─────────
+{
+  const S1 = 1024 / (HALF * 2);
+  const FT = canvasTex(1024, 1024, (g, w, h) => {
+    const X = x => (x + HALF) * S1, Z = z => (z + HALF) * S1;
+    for (let i = 0; i < 30; i++) for (let j = 0; j < 30; j++) { g.fillStyle = (i + j) % 2 ? '#4b596f' : '#435169'; g.fillRect(i * 34.13, j * 34.13, 34.13, 34.13); }
+    for (let k = 0; k < 6000; k++) { g.fillStyle = Math.random() < .5 ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.08)'; g.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
+    g.fillStyle = 'rgba(255,255,255,.1)'; g.fillRect(X(-HALF), Z(-1.8), 60 * S1, 3.6 * S1); g.fillRect(X(-1.8), Z(-HALF), 3.6 * S1, 60 * S1);   // 十字主通道
+    g.fillStyle = 'rgba(94,200,255,.26)'; g.fillRect(X(-HALF), Z(-HALF), 9 * S1, 60 * S1); g.fillStyle = 'rgba(255,75,62,.26)'; g.fillRect(X(21), Z(-HALF), 9 * S1, 60 * S1);   // 出生區
+    g.setLineDash([22, 16]); g.lineWidth = 6; g.strokeStyle = 'rgba(94,200,255,.85)'; g.beginPath(); g.moveTo(X(-21), Z(-HALF)); g.lineTo(X(-21), Z(HALF)); g.stroke(); g.strokeStyle = 'rgba(255,75,62,.85)'; g.beginPath(); g.moveTo(X(21), Z(-HALF)); g.lineTo(X(21), Z(HALF)); g.stroke(); g.setLineDash([]);
+    g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 7; for (const r of [6.5, 5.5, 2.4]) { g.beginPath(); g.arc(X(0), Z(0), r * S1, 0, 7); g.stroke(); }
+    g.fillStyle = 'rgba(255,255,255,.12)'; g.beginPath(); g.arc(X(0), Z(0), 6.4 * S1, 0, 7); g.fill();
+    g.strokeStyle = 'rgba(255,208,70,.9)'; g.lineWidth = 6; g.setLineDash([26, 18]); g.beginPath(); g.arc(X(0), Z(0), 7.3 * S1, 0, 7); g.stroke(); g.setLineDash([]);   // 警示線
+    g.fillStyle = 'rgba(255,255,255,.55)'; g.font = '700 52px "Noto Sans TC",sans-serif'; g.textAlign = 'center'; g.save(); g.translate(X(-25.5), Z(0)); g.rotate(-Math.PI / 2); g.fillText('藍隊出生區', 0, 0); g.restore(); g.save(); g.translate(X(25.5), Z(0)); g.rotate(Math.PI / 2); g.fillText('紅隊出生區', 0, 0); g.restore();
+  });
+  floor.material.map = FT; floor.material.needsUpdate = true;
+  // 牆邊踢腳板＋腰線
+  for (const [x0, z0, x1, z1] of [[-HALF, -HALF, HALF, -HALF + .18], [-HALF, HALF - .18, HALF, HALF], [-HALF, -HALF, -HALF + .18, HALF], [HALF - .18, -HALF, HALF, HALF]]) { addBox('base', 0x262d38, x0, z0, x1, z1, .32, 0, false); addBox('acc', 0xffb000, x0, z0, x1, z1, 1.2, 1.1, false); }
+  // 窗景
+  const winT = canvasTex(256, 128, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#6cb4ff'); gr.addColorStop(1, '#d7ecff'); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(70,90,130,.8)'; let bx = 0; while (bx < w) { const bw = 12 + Math.random() * 22, bh = 20 + Math.random() * 60; g.fillRect(bx, h - bh, bw, bh); bx += bw + 2; } g.strokeStyle = '#eef1f6'; g.lineWidth = 8; g.strokeRect(0, 0, w, h); g.beginPath(); g.moveTo(w / 2, 0); g.lineTo(w / 2, h); g.moveTo(0, h / 2); g.lineTo(w, h / 2); g.lineWidth = 5; g.stroke(); });
+  const winM = new THREE.MeshBasicMaterial({ map: winT });
+  const win = (x, z, ry) => { const m = mk(new THREE.PlaneGeometry(4, 1.8), winM); m.position.set(x, 2.55, z); m.rotation.y = ry; scene.add(m); };
+  for (const x of [-22, -11, 11, 22]) { win(x, -HALF + .03, 0); win(x, HALF - .03, Math.PI); }
+  for (const z of [-22, -11, 11, 22]) { win(-HALF + .03, z, Math.PI / 2); win(HALF - .03, z, -Math.PI / 2); }
+  // 海報與團隊旗幟
+  const poster = (txt, sub, col, x, z, ry, w = 2.6, hh = 1.6) => { const t = canvasTex(256, 160, (g, ww, hh2) => { g.fillStyle = '#f3f5f9'; g.fillRect(0, 0, ww, hh2); g.fillStyle = col; g.fillRect(0, 0, ww, 34); g.fillStyle = '#fff'; g.font = '800 22px "Noto Sans TC",sans-serif'; g.textAlign = 'center'; g.fillText(txt, ww / 2, 25); g.fillStyle = col; for (let i = 0; i < 5; i++) g.fillRect(24 + i * 44, 130 - (20 + (i * 37) % 70), 30, 20 + (i * 37) % 70); g.fillStyle = '#556'; g.font = '600 16px "Noto Sans TC",sans-serif'; g.fillText(sub, ww / 2, 60); }); const m = mk(new THREE.PlaneGeometry(w, hh), new THREE.MeshBasicMaterial({ map: t })); m.position.set(x, 1.9, z); m.rotation.y = ry; scene.add(m); };
+  poster('本月 KPI', '加班不是選項', '#2b5bd7', -16.5, -HALF + .04, 0); poster('緊急出口', '→ 往中央', '#19b36b', 16.5, HALF - .04, Math.PI); poster('組織圖', '今天誰請客', '#e8307a', -HALF + .04, -17, Math.PI / 2); poster('進度看板', 'Q4 衝刺中', '#ff7a1a', HALF - .04, 17, -Math.PI / 2);
+  const banner = (txt, col, x, z, ry) => { const t = canvasTex(256, 96, (g, w, hh) => { g.fillStyle = col; g.fillRect(0, 0, w, hh); g.fillStyle = 'rgba(255,255,255,.9)'; g.font = '900 44px "Noto Sans TC",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, w / 2, hh / 2 + 3); g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 5; g.strokeRect(5, 5, w - 10, hh - 10); }); const m = mk(new THREE.PlaneGeometry(5, 1.9), new THREE.MeshBasicMaterial({ map: t })); m.position.set(x, 3.0, z); m.rotation.y = ry; scene.add(m); };
+  banner('藍隊基地', '#2b6df0', -HALF + .05, -8, Math.PI / 2); banner('藍隊基地', '#2b6df0', -HALF + .05, 8, Math.PI / 2); banner('紅隊基地', '#d93a2e', HALF - .05, -8, -Math.PI / 2); banner('紅隊基地', '#d93a2e', HALF - .05, 8, -Math.PI / 2);
+  // 桌面擺設：螢幕（發光）、鍵盤、馬克杯；旁邊放辦公椅
+  const monGlow = canvasTex(64, 40, g => { const gr = g.createLinearGradient(0, 0, 64, 40); gr.addColorStop(0, '#2f7bff'); gr.addColorStop(1, '#17c3d9'); g.fillStyle = gr; g.fillRect(0, 0, 64, 40); g.fillStyle = 'rgba(255,255,255,.75)'; for (let i = 0; i < 5; i++) g.fillRect(6, 6 + i * 6, 28 + (i * 9) % 22, 2); });
+  const bezel = lam(0x1b1f27), keyM = lam(0xcfd5df), mugM = lam(0xffffff), chM = lam(0x2b2d3a), seatC = [0xe8307a, 0x19b36b, 0x5b6cff, 0xffb000];
+  const deskDecor = (x, z, w, d, n) => {
+    const alongX = w >= d, len = alongX ? w : d, step = len / n;
+    for (let i = 0; i < n; i++) {
+      const off = -len / 2 + step * (i + .5), cx = alongX ? x + off : x, cz = alongX ? z : z + off, ry = alongX ? (z < 0 ? 0 : Math.PI) : (x < 0 ? -Math.PI / 2 : Math.PI / 2);
+      const g = new THREE.Group(); g.position.set(cx, .95, cz); g.rotation.y = ry; scene.add(g);
+      const b = mk(new THREE.BoxGeometry(.78, .5, .05), bezel); b.position.set(0, .42, 0); g.add(b);
+      const s = mk(new THREE.PlaneGeometry(.7, .43), new THREE.MeshBasicMaterial({ map: monGlow })); s.position.set(0, .42, .03); g.add(s);
+      const st = mk(new THREE.BoxGeometry(.08, .2, .08), bezel); st.position.set(0, .12, -.02); g.add(st);
+      const kb = mk(new THREE.BoxGeometry(.5, .03, .17), keyM); kb.position.set(0, .02, .32); g.add(kb);
+      const mg = mk(new THREE.CylinderGeometry(.06, .06, .1, 10), mugM); mg.position.set(.42, .06, .3); g.add(mg);
+      const ch = new THREE.Group(); ch.position.set(0, -.95, .95); g.add(ch); const sb = mk(new THREE.BoxGeometry(.6, .1, .6), lam(seatC[(i + Math.abs(Math.round(x + z))) % 4])); sb.position.y = .5; ch.add(sb); const bk = mk(new THREE.BoxGeometry(.6, .6, .08), chM); bk.position.set(0, .86, .3); ch.add(bk); const pl = mk(new THREE.CylinderGeometry(.05, .05, .5, 6), chM); pl.position.y = .25; ch.add(pl); const bs = mk(new THREE.CylinderGeometry(.34, .34, .06, 8), chM); bs.position.y = .04; ch.add(bs);
+    }
+  };
+  for (const [x, z, w, d] of [[-20, 0, 1.4, 6], [20, 0, 1.4, 6], [0, -20, 6, 1.4], [0, 20, 6, 1.4], [-4, -10, 3, 1.2], [4, 10, 3, 1.2], [-14, 22, 4, 1.2], [14, -22, 4, 1.2]]) deskDecor(x, z, w, d, Math.max(1, Math.round(Math.max(w, d) / 2)));
+  // 盆栽
+  const potM = lam(0xc47a4a), leafM = lam(0x2fb35a), leafD = lam(0x1f8a44);
+  for (const [x, z] of [[-28.4, -18], [28.4, 18], [-5, -28.5], [5, 28.5], [-28.4, 23], [28.4, -23], [-15.5, 12], [15.5, -12]]) { const p = mk(new THREE.CylinderGeometry(.45, .35, .7, 10), potM); p.position.set(x, .35, z); scene.add(p); for (let i = 0; i < 4; i++) { const l = mk(new THREE.SphereGeometry(.5 - i * .06, 8, 6), i % 2 ? leafM : leafD); l.position.set(x + Math.sin(i * 1.9) * .18, .95 + i * .3, z + Math.cos(i * 1.9) * .18); scene.add(l); } }
+  // 柱子的橘色腰帶
+  for (const [x, z] of [[-10, -10], [10, -10], [-10, 10], [10, 10], [0, 0]]) { const band = mk(new THREE.BoxGeometry(1.46, .55, 1.46), lam(0xff7a1a)); band.position.set(x, 1.0, z); scene.add(band); const band2 = mk(new THREE.BoxGeometry(1.46, .12, 1.46), lam(0x262d38)); band2.position.set(x, .06, z); scene.add(band2); }
+  // 陣營色燈
+  const lb = new THREE.PointLight(0x5ec8ff, .9, 36); lb.position.set(-26, 3, 0); scene.add(lb); const lr = new THREE.PointLight(0xff5a4a, .9, 36); lr.position.set(26, 3, 0); scene.add(lr);
+}
 flush();
 // 牆上的標語（純裝飾）
 for (const [txt, x, z, ry] of [['保持安靜 · 專心槍戰', 0, -HALF + .02, 0], ['KPI 衝刺', 0, HALF - .02, Math.PI], ['會議室使用中', -HALF + .02, 0, Math.PI / 2], ['今天要交稿', HALF - .02, 0, -Math.PI / 2]]) {
