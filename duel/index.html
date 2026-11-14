@@ -411,7 +411,7 @@ function bgmUI(ctl, css) {
   r.oninput = () => { ctl.setVol(r.value / 100); sync(); }; ['pointerdown', 'mousedown', 'touchstart'].forEach(ev => w.addEventListener(ev, e => e.stopPropagation()));
   const hint = document.createElement('span'); hint.textContent = '點一下開啟音樂'; hint.style.cssText = 'font-size:11px;color:#ffd24a;white-space:nowrap'; w.append(b, r, hint); document.body.appendChild(w); sync(); setInterval(() => { hint.style.display = ctl.on ? 'none' : 'inline'; }, 400); return w;
 }
-const bgm = emcBgm('bgm.m4a', { vol: .28, dur: 187.2 }); bgmUI(bgm, 'right:8px;top:100px;');
+const bgm = emcBgm('bgm-battle.m4a', { vol: .28, dur: 183.9 }); bgmUI(bgm, 'right:8px;top:100px;');
 let cloud = {}, cloudWalks = {}, NAMES = LOCAL_NAMES.slice();
 const cloudReady = (async () => {
   try { const r = await fetch(CHAR_API, { signal: AbortSignal.timeout(5000) }); if (r.ok) { const j = await r.json(); cloud = j.characters || {}; cloudWalks = j.walks || {}; } } catch (e) {}
