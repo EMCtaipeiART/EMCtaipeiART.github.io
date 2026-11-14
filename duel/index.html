@@ -252,7 +252,8 @@ header{position:fixed;right:8px;bottom:8px;z-index:6;width:auto;gap:6px;flex-wra
   .tb.pass{opacity:.7}
   .tb.ult.ready{background:linear-gradient(#ffe08a,#e0a82a);box-shadow:0 3px 0 #000,0 0 18px rgba(255,209,102,.95);animation:ulp .5s infinite alternate}
   .skcut{top:70px;padding:4px 14px 4px 6px;gap:8px;max-width:46vw}.skcut.r{padding:4px 6px 4px 14px}.skcut canvas{width:38px;height:38px;border-width:2px}.skcut b{font-size:15px;-webkit-text-stroke:1.5px #000}.skcut small{font-size:9px;letter-spacing:.1em}
-  .jstick{width:120px;height:120px}.jstick i{width:52px;height:52px;left:34px;top:34px}.jstick::before{content:'';position:absolute;inset:-26px}
+  .jstick{width:110px;height:110px;border:0;background:radial-gradient(circle at 50% 40%,rgba(255,255,255,.28),rgba(255,255,255,.1));box-shadow:inset 0 4px 10px rgba(0,0,0,.25),0 3px 0 rgba(255,255,255,.3)}
+  .jstick i{width:40px;height:40px;left:35px;top:35px;border:0;background:radial-gradient(circle at 32% 26%,#fff 0 10%,transparent 34%),linear-gradient(180deg,#58d98e,#2bb468);box-shadow:inset 0 -4px 0 rgba(0,0,0,.18),0 4px 0 #16794a,0 7px 8px rgba(0,0,0,.3)}.jstick::before{content:'';position:absolute;inset:-24px}
   .tb.atk{width:74px;height:74px;right:calc(18px + env(safe-area-inset-right,0px));bottom:calc(62px + env(safe-area-inset-bottom,0px))}
   .tb.jump{width:54px;height:54px;right:calc(104px + env(safe-area-inset-right,0px));bottom:calc(46px + env(safe-area-inset-bottom,0px))}
   .tb.dash{width:54px;height:54px;right:calc(102px + env(safe-area-inset-right,0px));bottom:calc(128px + env(safe-area-inset-bottom,0px))}
@@ -908,7 +909,7 @@ const camDragEnd = e => { if (camDrag && e.pointerId === camDrag.id) camDrag = n
 cv.addEventListener('pointerup', camDragEnd); cv.addEventListener('pointercancel', camDragEnd);
 // 手機搖桿：左下角虛擬搖桿控制移動
 const jstick = $('jstick'), jknob = $('jknob');
-function jMove(e) { const r = jstick.getBoundingClientRect(), rad = Math.min(r.width, r.height); let sx = e.clientX - r.left - r.width / 2, sy = e.clientY - r.top - r.height / 2; if (isRot()) { const t = sx; sx = sy; sy = -t; } let dx = sx / (rad * .4), dy = sy / (rad * .4); const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; } if (l < .12) { dx = dy = 0; } joy.x = dx; joy.y = dy; jknob.style.transform = 'translate(' + (dx * rad * .3) + 'px,' + (dy * rad * .3) + 'px)'; }
+function jMove(e) { const r = jstick.getBoundingClientRect(), rad = Math.min(r.width, r.height); let sx = e.clientX - r.left - r.width / 2, sy = e.clientY - r.top - r.height / 2; if (isRot()) { const t = sx; sx = sy; sy = -t; } const k = rad / 110; let dx = sx / (45 * k), dy = sy / (45 * k); const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; } joy.x = dx; joy.y = dy; jknob.style.transform = 'translate(' + (dx * 30 * k) + 'px,' + (dy * 30 * k) + 'px)'; }
 jstick.addEventListener('pointerdown', e => { e.preventDefault(); try { jstick.setPointerCapture(e.pointerId); } catch (err) {} jMove(e); }, { passive: false });
 jstick.addEventListener('pointermove', e => { if (e.buttons) jMove(e); });
 const jEnd = () => { joy.x = joy.y = 0; jknob.style.transform = ''; };
