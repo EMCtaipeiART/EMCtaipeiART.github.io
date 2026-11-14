@@ -138,6 +138,15 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
 @media (max-width:700px){.heroes{grid-template-columns:repeat(5,1fr);gap:4px}.hc{padding:4px}.hc .hn{font-size:10px;flex-direction:column;align-items:flex-start;gap:2px}.hc .ht,.hc .hw{font-size:9px}.hd{font-size:11px}
   #obj .tm i{width:70px}#obj .tm b{font-size:16px;min-width:38px}#obj .pt{width:44px;height:44px}#allies{width:140px;font-size:11px}}
 @media (pointer:coarse){#skS{right:calc(236px + env(safe-area-inset-right,0px));bottom:calc(60px + env(safe-area-inset-bottom,0px));width:52px;height:52px}#skE{right:calc(166px + env(safe-area-inset-right,0px));bottom:calc(100px + env(safe-area-inset-bottom,0px))}#skR{right:calc(96px + env(safe-area-inset-right,0px));bottom:calc(150px + env(safe-area-inset-bottom,0px))}#allies{top:46px}#hp{top:auto;bottom:calc(150px + env(safe-area-inset-bottom,0px));left:16px}}
+
+#xh i{box-shadow:0 0 3px #000}
+#xh::after{content:'';position:absolute;left:-2px;top:-2px;width:4px;height:4px;border-radius:50%;background:#fff;box-shadow:0 0 3px #000}
+#xh[data-k=shotgun] i{display:none}
+#xh[data-k=shotgun]::before{content:'';position:absolute;left:calc(-22px - var(--sp,0px));top:calc(-22px - var(--sp,0px));width:calc(44px + var(--sp,0px) * 2);height:calc(44px + var(--sp,0px) * 2);border:2px solid rgba(255,255,255,.92);border-radius:50%;box-shadow:0 0 3px #000}
+#xh[data-k=rocket] i{display:none}
+#xh[data-k=rocket]::before{content:'';position:absolute;left:-16px;top:-16px;width:32px;height:32px;border:2px solid #7fe3ff;border-radius:50%;box-shadow:0 0 4px #000}
+#xh[data-k=semi] .t,#xh[data-k=semi] .b{height:6px}#xh[data-k=semi] .l,#xh[data-k=semi] .r{width:6px}
+#xh[data-k=auto] .t,#xh[data-k=auto] .b{width:2px}
 </style>
 </head>
 <body>
@@ -178,7 +187,7 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
       <div class="row"><span class="lab">難度</span><span id="gDiff"></span></div>
       <button class="go" id="startB" type="button">部署</button>
       <div class="row" style="justify-content:center"><button class="pill" id="exitB" type="button" hidden>離開遊戲</button></div>
-      <div class="help"><b>模式：</b>3 對 3 控制點。占領中央圓圈（兩隊同時在圈內為爭奪、不計進度），擁有控制點且圈內沒有敵人時，隊伍進度會增加，先到 100% 的隊伍獲勝（8 分鐘到則比進度）。<br><b>電腦：</b>WASD 移動　空白 跳　滑鼠 瞄準／左鍵射擊　右鍵 瞄準鏡（直尺）　<b>E</b> 技能一　<b>Shift</b> 技能二　<b>Q</b> 大招　Tab 戰績。陣亡後可選其他英雄（1–5）。<br><b>手機：</b>左搖桿移動、右半邊滑動轉視角，右下 射擊／跳／瞄準／技能一／技能二／大招。咖啡杯可補血。</div>
+      <div class="help"><b>模式：</b>5 對 5 控制點，每隊固定 1 重裝＋2 輸出＋2 支援（5 位英雄各一，選一位，其餘由電腦扮演；陣亡重選會與隊友交換）。占領中央圓圈（兩隊同時在圈內為爭奪、不計進度），擁有控制點且圈內沒有敵人時，隊伍進度會增加，先到 100% 的隊伍獲勝（8 分鐘到則比進度）。<br><b>電腦：</b>WASD 移動　空白 跳　滑鼠 瞄準／左鍵射擊　右鍵 瞄準鏡（直尺）　<b>E</b> 技能一　<b>Shift</b> 技能二　<b>Q</b> 大招　Tab 戰績。陣亡後可選其他英雄（1–5）。<br><b>手機：</b>左搖桿移動、右半邊滑動轉視角，右下 射擊／跳／瞄準／技能一／技能二／大招。咖啡杯可補血。</div>
     </div>
   </div>
 </div>
@@ -296,24 +305,24 @@ function rayCyl(ox, oy, oz, dx, dy, dz, c, maxT) {   // 垂直圓柱：半徑 .4
 
 // ───────── 武器（每位英雄一把專屬主武器，彈藥無限） ─────────
 const WEAPONS = {
-  stapler: { n: '訂書機衝鋒槍', ic: '📌', kind: 'auto', rate: 11, dmg: 9, spread: .018, pellets: 1, range: 90, kick: .012, col: 0xffd24a, view: [0xe8307a, 1.0] },
-  keyboard: { n: '鍵盤霰彈', ic: '⌨️', kind: 'shotgun', rate: 1.2, dmg: 8, spread: .07, pellets: 9, range: 30, kick: .05, col: 0xffffff, view: [0x2b2d3a, 1.0] },
-  mouse: { n: '滑鼠手槍', ic: '🖱️', kind: 'semi', rate: 5.5, dmg: 19, spread: .005, pellets: 1, range: 110, kick: .02, col: 0xbfe9ff, view: [0xe6e9ef, .8] },
-  ruler: { n: '直尺狙擊', ic: '📏', kind: 'sniper', rate: 1.1, dmg: 70, spread: .045, pellets: 1, range: 200, kick: .05, col: 0xffb000, view: [0xf2c14e, 1.2], zoom: 26 },
-  phone: { n: '電話火箭', ic: '☎️', kind: 'rocket', rate: .8, dmg: 70, spread: .006, pellets: 1, range: 60, kick: .06, col: 0xff6a3d, view: [0xe8456b, 1.0], splash: 4.6, speed: 30 }
+  stapler: { n: '訂書機衝鋒槍', ic: '📌', kind: 'auto', rate: 12, dmg: 9, spread: .018, pellets: 1, range: 90, kick: .012, col: 0xffd24a },
+  keyboard: { n: '鍵盤霰彈', ic: '⌨️', kind: 'shotgun', rate: 1.2, dmg: 8, spread: .07, pellets: 10, range: 30, kick: .05, col: 0xffffff },
+  mouse: { n: '滑鼠手槍', ic: '🖱️', kind: 'semi', rate: 5.5, dmg: 19, spread: .005, pellets: 1, range: 110, kick: .02, col: 0xbfe9ff },
+  ruler: { n: '直尺狙擊', ic: '📏', kind: 'sniper', rate: 1.1, dmg: 70, spread: .045, pellets: 1, range: 200, kick: .05, col: 0xffb000, zoom: 26 },
+  phone: { n: '電話訊號彈', ic: '☎️', kind: 'rocket', rate: 1.6, dmg: 32, heal: 26, spread: .006, pellets: 1, range: 60, kick: .035, col: 0x7fe3ff, splash: 3.0, speed: 26 }
 };
-// ───────── 英雄：5 位，3 種定位 ─────────
+// ───────── 英雄：5 位（每隊固定 1 重裝＋2 輸出＋2 支援） ─────────
 const HEROES = [
-  { id: 'machi', char: 'Machi', name: 'Machi', title: '責任壁壘', role: '重裝', ic: '🛡️', hp: 200, speed: 5.0, w: 'keyboard', pref: 6,
+  { id: 'machi', char: 'Machi', name: 'Machi', title: '責任壁壘', role: '重裝', ic: '🛡️', hp: 200, speed: 5.0, w: 'keyboard', pref: 6, sleeve: 0x2b2d3a,
     e: { n: '壁壘護盾', ic: '🛡️', cd: 10, d: '在前方立起擋子彈的護盾（300 血、5 秒）' }, s: { n: '衝鋒', ic: '🐂', cd: 8, d: '向前猛衝，撞到的敵人受 30 傷害並被擊退' }, q: { n: '震地', ic: '💥', d: '半徑 8 公尺：70 傷害＋暈眩 1.2 秒' } },
-  { id: 'noise', char: 'Noise', name: 'Noise', title: '截稿狂熱', role: '輸出', ic: '⚡', hp: 120, speed: 6.0, w: 'stapler', pref: 9,
+  { id: 'noise', char: 'Noise', name: 'Noise', title: '截稿狂熱', role: '輸出', ic: '⚡', hp: 120, speed: 6.0, w: 'stapler', pref: 9, sleeve: 0x1d4ed8,
     e: { n: '閃身步', ic: '💨', cd: 5, d: '向移動方向急衝一小段' }, s: { n: '咖啡因', ic: '☕', cd: 12, d: '5 秒內移速 +45%、射速 +20%' }, q: { n: '截稿狂暴', ic: '🔥', d: '6 秒內射速 ×1.6、傷害 ×1.35' } },
-  { id: 'anna', char: 'Anna', name: 'Anna', title: '精準標記', role: '輸出', ic: '🎯', hp: 100, speed: 5.4, w: 'ruler', pref: 18,
+  { id: 'anna', char: 'Anna', name: 'Anna', title: '精準標記', role: '輸出', ic: '🎯', hp: 100, speed: 5.4, w: 'ruler', pref: 18, sleeve: 0xf59e0b,
     e: { n: '彈跳', ic: '🦘', cd: 6, d: '向上彈跳並往前飛一段' }, s: { n: '標記', ic: '🔍', cd: 12, d: '標記 40 公尺內的敵人 4 秒（隔牆可見）' }, q: { n: '全場鎖定', ic: '🎯', d: '標記所有敵人 7 秒，期間傷害 ×1.3' } },
-  { id: 'amber', char: 'Amber', name: 'Amber', title: '茶歇補給', role: '支援', ic: '☕', hp: 110, speed: 5.6, w: 'mouse', pref: 12,
-    e: { n: '治療光環', ic: '💚', cd: 12, d: '4 秒內持續治療身邊 8 公尺內的隊友（含自己）' }, s: { n: '加油鼓舞', ic: '📣', cd: 10, d: '附近隊友 4 秒移速 +35%' }, q: { n: '茶歇回復', ic: '🫖', d: '範圍內全隊立刻回滿血' } },
-  { id: 'leona', char: 'Leona', name: 'Leona', title: '電話轟炸', role: '輸出', ic: '☎️', hp: 150, speed: 5.0, w: 'phone', pref: 12,
-    e: { n: '火箭跳', ic: '🚀', cd: 7, d: '朝腳下爆炸，把自己彈上高處' }, s: { n: '震波', ic: '🌀', cd: 9, d: '半徑 6 公尺：25 傷害並把敵人推開' }, q: { n: '連環轟炸', ic: '💣', d: '2.4 秒內自動連發火箭' } }
+  { id: 'amber', char: 'Amber', name: 'Amber', title: '茶歇補給', role: '支援', ic: '☕', hp: 110, speed: 5.6, w: 'mouse', pref: 12, sleeve: 0x16a34a,
+    e: { n: '治療光環', ic: '💚', cd: 12, d: '4 秒內持續治療身邊 8 公尺內的隊友（含自己）' }, s: { n: '加油鼓舞', ic: '📣', cd: 10, d: '附近隊友 4 秒移速 +35%' }, q: { n: '茶歇回復', ic: '🫖', d: '全隊立刻回滿血' } },
+  { id: 'leona', char: 'Leona', name: 'Leona', title: '電話客服', role: '支援', ic: '☎️', hp: 120, speed: 5.5, w: 'phone', pref: 14, sleeve: 0xdb2777,
+    e: { n: '療癒訊號', ic: '📞', cd: 6, d: '對瞄準的隊友立即治療 70 點（沒瞄準就治療附近血最少的隊友）' }, s: { n: '不再占線', ic: '🛡️', cd: 12, d: '附近隊友獲得 40 點護甲，持續 6 秒' }, q: { n: '全頻道廣播', ic: '📢', d: '全隊獲得 50 護甲、治療 30、傷害 ×1.3（6 秒）' } }
 ];
 const HERO_BY = Object.fromEntries(HEROES.map(h => [h.id, h]));
 // ───────── 角色（12 角度公告板＋跑步圖集） ─────────
@@ -329,7 +338,7 @@ const triTex = [0, 1].map(t => canvasTex(64, 64, g => { g.fillStyle = t ? '#ff4b
 let actors = [], me = null;
 function applyHero(a, h) { a.hero = h; a.maxHp = h.hp; a.cd = { e: 0, s: 0 }; a.w = WEAPONS[h.w]; }
 function makeActor(hero, team, isMe) {
-  const o = { name: hero.name, team, isMe, x: 0, y: 0, z: 0, vx: 0, vz: 0, vy: 0, yaw: 0, pitch: 0, hp: 100, dead: false, respT: 0, inv: 0, fireT: 0, kills: 0, deaths: 0, dmg: 0, heals: 0, ult: 0, buff: 0, rage: 0, dmgT: 0, spd: 0, stun: 0, mark: 0, heal: 0, volley: 0, volT: 0, chargeT: 0, fl: 0, ground: true, bot: null, path: [], tgt: null, anim: 0, dashT: 0, wph: 0 };
+  const o = { name: hero.name, team, isMe, x: 0, y: 0, z: 0, vx: 0, vz: 0, vy: 0, yaw: 0, pitch: 0, hp: 100, dead: false, respT: 0, inv: 0, fireT: 0, kills: 0, deaths: 0, dmg: 0, heals: 0, ult: 0, buff: 0, rage: 0, dmgT: 0, spd: 0, stun: 0, mark: 0, heal: 0, volley: 0, armor: 0, armorT: 0, volT: 0, chargeT: 0, fl: 0, ground: true, bot: null, path: [], tgt: null, anim: 0, dashT: 0, wph: 0 };
   applyHero(o, hero);
   if (!isMe) {
     const name = hero.char, ks = CHAR_SCALE[name] || 1, spr = mk(new THREE.PlaneGeometry(2 * ks, 2 * ks), new THREE.MeshBasicMaterial({ map: loadTex(name), transparent: true, alphaTest: .5, side: THREE.DoubleSide })); spr.geometry.translate(0, 1 * ks - .02, 0); spr.rotation.order = 'YXZ';
@@ -353,14 +362,14 @@ const ptBeam = mk(new THREE.CylinderGeometry(.5, .5, 12, 12, 1, true), new THREE
 const TEAMCOL = [0x5ec8ff, 0xff4b3e];
 
 // ───────── 狀態 ─────────
-let state = 'menu', paused = false, tLeft = 480, prog = [0, 0], owner = -1, cap = 0, capTeam = -1, contested = false, present = [0, 0], stT = 0, yaw = 0, pitch = 0, locked = false, zoom = false, shake = 0, recoil = 0, bobT = 0;
+let vmKick = 0, state = 'menu', paused = false, tLeft = 480, prog = [0, 0], owner = -1, cap = 0, capTeam = -1, contested = false, present = [0, 0], stT = 0, yaw = 0, pitch = 0, locked = false, zoom = false, shake = 0, recoil = 0, bobT = 0;
 const keys = {}, joy = { x: 0, y: 0 }, hold = { fire: false };
 function spawnPoint(team) { const pts = team === 0 ? [[-26, -10], [-26, 0], [-26, 10], [-22, 20], [-22, -20]] : [[26, -10], [26, 0], [26, 10], [22, 20], [22, -20]]; let best = null, bd = -1; for (let i = 0; i < 6; i++) { const p = pts[Math.floor(Math.random() * pts.length)]; let md = 1e9; for (const a of actors) if (!a.dead && a.team !== team) md = Math.min(md, Math.hypot(a.x - p[0], a.z - p[1])); if (md > bd) { bd = md; best = p; } } return best; }
-function respawn(a) { if (a.nextHero) { applyHero(a, HERO_BY[a.nextHero]); a.nextHero = null; if (a.isMe) { setViewmodel(); } } const p = spawnPoint(a.team); a.x = p[0] + rand(-1, 1); a.z = p[1] + rand(-1, 1); a.y = 0; a.vx = a.vz = a.vy = 0; a.hp = a.maxHp; a.dead = false; a.inv = 2; a.pitch = 0; a.path = []; a.tgt = null; a.fireT = .4; a.stun = a.mark = a.heal = a.volley = a.chargeT = a.buff = a.rage = a.dmgT = a.spd = 0; a.yaw = a.team === 0 ? -Math.PI / 2 : Math.PI / 2; if (a.isMe) { yaw = a.yaw; pitch = 0; $('heroSel').hidden = true; } }
+function respawn(a) { if (a.nextHero) { applyHero(a, HERO_BY[a.nextHero]); a.nextHero = null; if (a.isMe) { setViewmodel(); buildHud(); } else rebuildLook(a); } const p = spawnPoint(a.team); a.x = p[0] + rand(-1, 1); a.z = p[1] + rand(-1, 1); a.y = 0; a.vx = a.vz = a.vy = 0; a.hp = a.maxHp; a.dead = false; a.inv = 2; a.pitch = 0; a.path = []; a.tgt = null; a.fireT = .4; a.stun = a.mark = a.heal = a.volley = a.chargeT = a.buff = a.rage = a.dmgT = a.spd = 0; a.armor = a.armorT = 0; a.yaw = a.team === 0 ? -Math.PI / 2 : Math.PI / 2; if (a.isMe) { yaw = a.yaw; pitch = 0; $('heroSel').hidden = true; } }
+function rebuildLook(a) { if (!a.spr) return; const name = a.hero.char; a.stand = loadTex(name); a.walk = loadWalk(name); a.spr.material.map = a.stand; a.spr.material.needsUpdate = true; a.nm.material.map = nameTexOf((a.team ? '敵 ' : '友 ') + a.hero.ic + ' ' + a.hero.name, a.team ? '#ff8f84' : '#8fd8ff'); a.nm.material.needsUpdate = true; a.name = a.hero.name; }
 function setupMatch() {
-  clearActors(); const mine = HERO_BY[CFG.hero], pool = HEROES.slice().sort(() => Math.random() - .5);
-  const pick = (exclude) => { const c = pool.filter(h => !exclude.includes(h.id)); return (c.length ? c : pool)[Math.floor(Math.random() * (c.length || pool.length))]; };
-  const teamA = [mine], teamB = []; teamA.push(pick(teamA.map(h => h.id))); teamA.push(pick(teamA.map(h => h.id))); for (let i = 0; i < 3; i++) teamB.push(pick(teamB.map(h => h.id)));
+  clearActors(); const mine = HERO_BY[CFG.hero], shuffle = arr => arr.slice().sort(() => Math.random() - .5);
+  const teamA = [mine, ...shuffle(HEROES.filter(h => h.id !== mine.id))], teamB = shuffle(HEROES);
   [teamA, teamB].forEach((t, ti) => t.forEach((h, i) => { const a = makeActor(h, ti, ti === 0 && i === 0); a.bot = a.isMe ? null : { react: 0, strafe: 1, strafeT: 0, think: 0, seen: 0, patrol: null, abT: rand(1, 3) }; actors.push(a); }));
   me = actors[0]; for (const a of actors) respawn(a);
   prog = [0, 0]; owner = -1; cap = 0; capTeam = -1; tLeft = 480; $('feed').innerHTML = ''; setViewmodel(); buildHud();
@@ -368,18 +377,57 @@ function setupMatch() {
 function banner(t, s, dur) { $('bnT').textContent = t; $('bnS').textContent = s || ''; $('banner').classList.add('on'); clearTimeout(banner.t); if (dur) banner.t = setTimeout(() => $('banner').classList.remove('on'), dur); }
 function feed(t, cls) { const d = document.createElement('div'); d.textContent = t; if (cls) d.className = cls; $('feed').appendChild(d); setTimeout(() => d.remove(), 5000); while ($('feed').children.length > 5) $('feed').firstChild.remove(); }
 
-// ───────── 第一人稱手持模型 ─────────
-const vm = new THREE.Group(); camera.add(vm); vm.position.set(.26, -.24, -.5); vm.scale.setScalar(.78);
-const vmParts = [], flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: canvasTex(64, 64, g => { const r = g.createRadialGradient(32, 32, 2, 32, 32, 30); r.addColorStop(0, 'rgba(255,255,220,1)'); r.addColorStop(.4, 'rgba(255,190,60,.7)'); r.addColorStop(1, 'rgba(255,120,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); }), transparent: true, depthTest: false, blending: THREE.AdditiveBlending }));
-flash.scale.set(.35, .35, 1); flash.visible = false; vm.add(flash);
+// ───────── 第一人稱手持模型（有手臂、材質貼圖與開火動畫） ─────────
+const vm = new THREE.Group(); camera.add(vm); vm.position.set(.26, -.24, -.5); vm.scale.setScalar(.82);
+const starTex = canvasTex(64, 64, g => { g.translate(32, 32); const r = g.createRadialGradient(0, 0, 1, 0, 0, 30); r.addColorStop(0, 'rgba(255,255,230,1)'); r.addColorStop(.35, 'rgba(255,200,80,.85)'); r.addColorStop(1, 'rgba(255,120,0,0)'); g.fillStyle = r; g.beginPath(); for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2, rr = i % 2 ? 9 : 30; g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } g.closePath(); g.fill(); g.fillStyle = 'rgba(255,255,255,.95)'; g.beginPath(); g.arc(0, 0, 8, 0, 7); g.fill(); });
+const flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: starTex, transparent: true, depthTest: false, blending: THREE.AdditiveBlending })); flash.scale.set(.4, .4, 1); flash.visible = false; flash.renderOrder = 20; vm.add(flash);
+const flashLight = new THREE.PointLight(0xffc060, 0, 9); camera.add(flashLight); flashLight.position.set(.3, -.1, -1);
+const vmRef = { wG: null, slide: null, pump: null, base: 0 }, vmParts = [];
+const keysTex = canvasTex(256, 96, (g, w, h) => { g.fillStyle = '#23262f'; g.fillRect(0, 0, w, h); for (let r = 0; r < 5; r++) for (let c = 0; c < 15; c++) { g.fillStyle = (r + c) % 7 === 0 ? '#ffb000' : '#e9ecf2'; g.fillRect(6 + c * 16.2, 6 + r * 17, 14, 14); g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(6 + c * 16.2, 18 + r * 17, 14, 2); } });
+const rulerTex = canvasTex(512, 32, (g, w, h) => { g.fillStyle = '#f2c14e'; g.fillRect(0, 0, w, h); g.fillStyle = '#3a2a00'; for (let i = 0; i <= 50; i++) { const x = 4 + i * 10; g.fillRect(x, 0, 2, i % 5 ? 8 : 16); if (i % 10 === 0 && i < 50) { g.font = '700 11px system-ui'; g.fillText(String(i / 10), x + 3, 28); } } });
+const padTexVM = canvasTex(64, 96, (g, w, h) => { g.fillStyle = '#c71f5e'; g.fillRect(0, 0, w, h); for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) { g.fillStyle = '#fff'; g.beginPath(); g.arc(14 + c * 18, 30 + r * 16, 6, 0, 7); g.fill(); } g.fillStyle = '#1b1b1b'; g.fillRect(8, 6, 48, 14); });
 function setViewmodel() {
-  for (const p of vmParts) vm.remove(p); vmParts.length = 0; const wid = me ? me.hero.w : 'stapler', w = WEAPONS[wid], c = w.view[0], add = (g, col, x, y, z, rx = 0) => { const m = mk(g, lam(col)); m.position.set(x, y, z); m.rotation.x = rx; vm.add(m); vmParts.push(m); m.renderOrder = 10; m.material.depthTest = false; return m; };
-  add(new THREE.BoxGeometry(.07, .1, .09), 0xf0c49a, .0, -.02, .22);
-  if (wid === 'stapler') { add(new THREE.BoxGeometry(.09, .08, .42), c, 0, .02, -.02); add(new THREE.BoxGeometry(.07, .04, .3), 0x2b2d3a, 0, .07, -.05); add(new THREE.BoxGeometry(.05, .13, .06), 0x2b2d3a, 0, -.07, .08); flash.position.set(0, .03, -.3); }
-  else if (wid === 'keyboard') { add(new THREE.BoxGeometry(.2, .035, .5), c, 0, 0, -.05); for (let i = 0; i < 6; i++) add(new THREE.BoxGeometry(.18, .02, .04), 0xf2f2f2, 0, .03, -.25 + i * .08); flash.position.set(0, .03, -.38); }
-  else if (wid === 'mouse') { add(new THREE.BoxGeometry(.1, .06, .17), c, 0, 0, -.06); add(new THREE.BoxGeometry(.015, .02, .06), 0x2b2d3a, 0, .04, -.1); add(new THREE.BoxGeometry(.03, .03, .22), 0x9aa3b5, 0, .02, -.25); flash.position.set(0, .03, -.38); }
-  else if (wid === 'ruler') { add(new THREE.BoxGeometry(.045, .035, .9), c, 0, .03, -.25); for (let i = 0; i < 12; i++) add(new THREE.BoxGeometry(.047, .036, .006), 0x5a4210, 0, .031, -.65 + i * .07); add(new THREE.BoxGeometry(.06, .06, .12), 0x2b2d3a, 0, .06, .02); flash.position.set(0, .03, -.72); }
-  else { add(new THREE.BoxGeometry(.13, .12, .34), c, 0, 0, -.04); add(new THREE.CylinderGeometry(.04, .04, .22, 8), 0x2b2d3a, 0, .02, -.3, Math.PI / 2); add(new THREE.BoxGeometry(.05, .1, .06), 0xffffff, 0, .08, -.04); flash.position.set(0, .02, -.45); }
+  for (const p of vmParts) vm.remove(p); vmParts.length = 0; const h = me ? me.hero : HEROES[1], wid = h.w;
+  const wG = new THREE.Group(); vm.add(wG); vmParts.push(wG); vmRef.wG = wG; vmRef.slide = vmRef.pump = null;
+  const mat = (c, o = {}) => { const m = lam(c, o); m.depthTest = false; return m; }, add = (parent, geo, m, x, y, z, rx = 0, ry = 0, rz = 0) => { const o = mk(geo, m); o.position.set(x, y, z); o.rotation.set(rx, ry, rz); o.renderOrder = 10; parent.add(o); return o; };
+  const metal = mat(0xaab3c2), dark = mat(0x2b2d3a), steel = mat(0x6b7488), skin = mat(0xf0c49a), sleeve = mat(h.sleeve), white = mat(0xf2f2f2);
+  const arm = (x, y, z, rx, ry) => { add(wG, new THREE.BoxGeometry(.1, .1, .55), sleeve, x, y, z, rx, ry); add(wG, new THREE.BoxGeometry(.085, .085, .1), skin, x, y + .01, z - .3, rx, ry); };
+  const box = (parent, w, hh, d, m, x, y, z, rx, ry, rz) => add(parent, new THREE.BoxGeometry(w, hh, d), m, x, y, z, rx, ry, rz);
+  const cyl = (parent, r0, r1, len, m, x, y, z, rx = Math.PI / 2, ry = 0, rz = 0) => add(parent, new THREE.CylinderGeometry(r0, r1, len, 12), m, x, y, z, rx, ry, rz);
+  if (wid === 'stapler') {
+    const top = new THREE.Group(); top.position.set(0, .05, -.02); wG.add(top); vmRef.slide = top;
+    box(top, .1, .06, .46, mat(0xe8307a), 0, 0, 0); box(top, .08, .025, .4, mat(0xff6aa3), 0, .04, 0); cyl(top, .026, .026, .22, steel, 0, .015, -.32); box(top, .02, .03, .03, dark, 0, .075, -.2); box(top, .016, .04, .016, dark, 0, .08, .1);
+    box(wG, .1, .05, .44, dark, 0, -.01, -.02); box(wG, .085, .02, .3, steel, 0, .01, -.04);   // 底座與釘匣
+    box(wG, .045, .14, .07, dark, 0, -.1, .1, .15); box(wG, .06, .1, .1, mat(0x555b6e), 0, -.085, -.08, 0, 0, 0);   // 握把與彈匣
+    cyl(wG, .008, .008, .5, mat(0xffd24a), .0, .0, -.04); flash.position.set(0, .05, -.55); vmRef.flashZ = -.55;
+    arm(.04, -.18, .36, .5, 0);
+  } else if (wid === 'keyboard') {
+    const kb = new THREE.Group(); wG.add(kb); box(kb, .26, .04, .5, dark, 0, 0, 0); const topP = add(kb, new THREE.PlaneGeometry(.24, .46), new THREE.MeshBasicMaterial({ map: keysTex, depthTest: false }), 0, .022, 0, -Math.PI / 2, 0, 0); topP.renderOrder = 11; box(kb, .26, .015, .02, mat(0xffb000), 0, .02, -.25);
+    cyl(wG, .014, .014, .6, steel, .06, .0, -.38); cyl(wG, .014, .014, .6, steel, -.06, .0, -.38);   // 雙管（排線）
+    const pump = new THREE.Group(); pump.position.set(0, -.04, -.2); wG.add(pump); vmRef.pump = pump; box(pump, .1, .06, .16, mat(0x555b6e), 0, 0, 0);
+    box(wG, .05, .12, .08, dark, 0, -.09, .1, .2); kb.rotation.x = .02; wG.position.y = .0; flash.position.set(0, .01, -.7); vmRef.flashZ = -.7;
+    arm(.04, -.18, .36, .5, 0); arm(-.06, -.2, .0, .2, -.2);
+  } else if (wid === 'mouse') {
+    const body = add(wG, new THREE.SphereGeometry(.07, 16, 10), white, 0, 0, -.02); body.scale.set(1, .55, 1.5);
+    box(wG, .012, .02, .07, dark, 0, .035, -.07); box(wG, .004, .006, .09, steel, 0, .033, -.07); cyl(wG, .012, .012, .02, mat(0xe8307a), 0, .045, -.05, 0, 0, Math.PI / 2);
+    cyl(wG, .02, .02, .3, steel, 0, .0, -.22); cyl(wG, .028, .02, .04, dark, 0, .0, -.38); box(wG, .004, .004, .08, mat(0xff2a2a), 0, .0, -.44);
+    cyl(wG, .006, .006, .35, dark, 0, -.02, .2, 0.3); flash.position.set(0, .0, -.42); vmRef.flashZ = -.42;
+    arm(.03, -.16, .34, .45, 0);
+  } else if (wid === 'ruler') {
+    box(wG, .05, .035, 1.0, new THREE.MeshBasicMaterial({ color: 0xffffff, map: rulerTex, depthTest: false }), 0, .02, -.2).renderOrder = 10;
+    cyl(wG, .03, .03, .26, dark, 0, .09, -.1); cyl(wG, .026, .026, .02, mat(0x66ccff, { emissive: 0x2288cc }), 0, .09, -.24); cyl(wG, .026, .026, .02, mat(0x66ccff, { emissive: 0x2288cc }), 0, .09, .03);
+    box(wG, .02, .06, .02, steel, 0, .055, -.1); box(wG, .02, .1, .02, steel, .05, -.04, -.5, 0, 0, .5); box(wG, .02, .1, .02, steel, -.05, -.04, -.5, 0, 0, -.5);
+    box(wG, .06, .07, .13, dark, 0, -.01, .12); flash.position.set(0, .02, -.72); vmRef.flashZ = -.72;
+    arm(.03, -.16, .36, .45, 0);
+  } else {
+    box(wG, .13, .1, .3, mat(0xdb2777), 0, 0, -.02); add(wG, new THREE.PlaneGeometry(.1, .24), new THREE.MeshBasicMaterial({ map: padTexVM, depthTest: false }), 0, .052, -.02, -Math.PI / 2).renderOrder = 11;
+    const hs = new THREE.Group(); hs.position.set(0, .0, -.3); wG.add(hs); vmRef.slide = hs; box(hs, .06, .05, .24, dark, 0, .0, 0); box(hs, .075, .07, .07, dark, 0, -.015, -.12); box(hs, .075, .07, .07, dark, 0, -.015, .12);
+    cyl(wG, .045, .05, .3, mat(0x555b6e), 0, .03, -.32); cyl(wG, .032, .032, .02, mat(0x7fe3ff, { emissive: 0x2aa6d0 }), 0, .03, -.48);
+    box(wG, .018, .018, .22, mat(0x1b1b1b), .1, -.04, .0); box(wG, .05, .1, .06, dark, 0, -.08, .08, .15); flash.position.set(0, .03, -.52); vmRef.flashZ = -.52;
+    arm(.04, -.17, .36, .45, 0);
+  }
+  if (vmRef.slide) vmRef.slide.userData.z0 = vmRef.slide.position.z; if (vmRef.pump) vmRef.pump.userData.z0 = vmRef.pump.position.z;
+  for (const m of vmParts) m.traverse && m.traverse(o => { o.frustumCulled = false; });
 }
 // ───────── 護盾（重裝專用） ─────────
 function spawnBarrier(a) {
@@ -394,92 +442,139 @@ function rayBarriers(ox, oy, oz, dx, dy, dz, maxT, team) {
 }
 function stepBarriers(dt) { for (let i = BAR.length - 1; i >= 0; i--) { const b = BAR[i]; b.life -= dt; b.m.material.opacity = .15 + .3 * clamp(b.hp / 300, 0, 1); if (b.life <= 0 || b.hp <= 0) { scene.remove(b.m); BAR.splice(i, 1); } } }
 
+// ───────── 特效：粒子、傷害數字、彈孔、光束、爆炸 ─────────
+const PART = [], DEC = [], NUMS = [];
+const paperTex = canvasTex(32, 32, g => { g.fillStyle = '#fff'; g.fillRect(4, 3, 24, 26); g.strokeStyle = '#9aa3b5'; g.lineWidth = 2; for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(8, 9 + i * 5); g.lineTo(24, 9 + i * 5); g.stroke(); } });
+const smokeTex = canvasTex(64, 64, g => { const r = g.createRadialGradient(32, 32, 2, 32, 32, 30); r.addColorStop(0, 'rgba(200,200,205,.75)'); r.addColorStop(1, 'rgba(120,120,130,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); });
+const holeTex = canvasTex(32, 32, g => { const r = g.createRadialGradient(16, 16, 1, 16, 16, 14); r.addColorStop(0, 'rgba(10,10,12,.95)'); r.addColorStop(.5, 'rgba(30,30,34,.7)'); r.addColorStop(1, 'rgba(30,30,34,0)'); g.fillStyle = r; g.fillRect(0, 0, 32, 32); });
+function addPart(map, color, x, y, z, vx, vy, vz, life, size, grav = 0, add = true, spin = 0, grow = 0) {
+  if (PART.length > 260) { const o = PART.shift(); scene.remove(o.s); o.s.material.dispose(); }
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map, color, transparent: true, depthWrite: false, blending: add ? THREE.AdditiveBlending : THREE.NormalBlending })); s.position.set(x, y, z); s.scale.set(size, size, 1); scene.add(s); PART.push({ s, vx, vy, vz, life, max: life, size, grav, spin, grow });
+}
+function stepParts(dt) {
+  for (let i = PART.length - 1; i >= 0; i--) { const p = PART[i]; p.life -= dt; p.vy -= p.grav * dt; p.s.position.x += p.vx * dt; p.s.position.y += p.vy * dt; p.s.position.z += p.vz * dt; if (p.s.position.y < .03 && p.grav > 0) { p.s.position.y = .03; p.vy = 0; p.vx *= .8; p.vz *= .8; } const k = p.life / p.max; p.s.material.opacity = clamp(k * 1.5, 0, 1); const sc = p.size * (1 + p.grow * (1 - k)); p.s.scale.set(sc, sc, 1); p.s.material.rotation += p.spin * dt; if (p.life <= 0) { scene.remove(p.s); p.s.material.dispose(); PART.splice(i, 1); } }
+  for (let i = DEC.length - 1; i >= 0; i--) { const d = DEC[i]; d.life -= dt; if (d.life < 1.5) d.m.material.opacity = Math.max(0, d.life / 1.5); if (d.life <= 0) { scene.remove(d.m); d.m.material.dispose(); DEC.splice(i, 1); } }
+  for (let i = NUMS.length - 1; i >= 0; i--) { const n = NUMS[i]; n.life -= dt; n.s.position.y += dt * 1.1; n.s.position.x += n.vx * dt; n.s.material.opacity = clamp(n.life * 2.2, 0, 1); if (n.life <= 0) { scene.remove(n.s); NUMS.splice(i, 1); } }
+}
+const numTexCache = new Map();
+function numTex(txt, col) { const k = txt + col; let t = numTexCache.get(k); if (!t) { t = canvasTex(128, 64, (g, w, h) => { g.font = '900 44px "JetBrains Mono",Consolas,monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 8; g.strokeStyle = '#000'; g.strokeText(txt, w / 2, h / 2); g.fillStyle = col; g.fillText(txt, w / 2, h / 2); }); if (numTexCache.size > 120) numTexCache.clear(); numTexCache.set(k, t); } return t; }
+function floatNum(x, y, z, txt, col, big) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: numTex(txt, col), transparent: true, depthTest: false })); s.position.set(x + (Math.random() - .5) * .4, y, z + (Math.random() - .5) * .4); const k = (big ? 1.25 : .85) * clamp(Math.hypot(camera.position.x - x, camera.position.z - z) / 9, .8, 2.6); s.scale.set(k * 1.0, k * .5, 1); s.renderOrder = 30; scene.add(s); NUMS.push({ s, life: .9, vx: (Math.random() - .5) * .8 }); }
+function beam(from, to, col, w = .03, dur = .1) {
+  const dx = to[0] - from[0], dy = to[1] - from[1], dz = to[2] - from[2], len = Math.hypot(dx, dy, dz) || 1, m = mk(new THREE.CylinderGeometry(w, w, 1, 6, 1, true), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: .95, blending: THREE.AdditiveBlending, depthWrite: false }));
+  m.position.set((from[0] + to[0]) / 2, (from[1] + to[1]) / 2, (from[2] + to[2]) / 2); m.scale.set(1, len, 1); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(dx / len, dy / len, dz / len)); scene.add(m); FX.push({ s: m, t: 0, d: dur, line: true });
+}
+function ringFx(x, y, z, col, maxR, dur = .45) { const m = mk(new THREE.RingGeometry(.85, 1, 40), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: .9, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.position.set(x, y + .06, z); scene.add(m); FX.push({ s: m, t: 0, d: dur, ring: maxR }); }
+function sparkBurst(x, y, z, n, col, speed = 4) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, e = Math.random() * 1.2, v = speed * (.4 + Math.random()); addPart(sparkTex, col, x, y, z, Math.cos(a) * v * Math.cos(e), Math.sin(e) * v + 1, Math.sin(a) * v * Math.cos(e), .35 + Math.random() * .3, .18, 12, true); } }
+function paperBurst(x, y, z, n) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, v = 1.5 + Math.random() * 3; addPart(paperTex, Math.random() < .3 ? 0xfff1a8 : 0xffffff, x, y, z, Math.cos(a) * v, 1.5 + Math.random() * 2.5, Math.sin(a) * v, .9 + Math.random() * .5, .22, 7, false, (Math.random() - .5) * 8); } }
+function boomLight(x, y, z) { boomL.position.set(x, y + 1, z); boomL.intensity = 8; }
+const boomL = new THREE.PointLight(0xff9a3d, 0, 18); scene.add(boomL);
+function hitNormal(b, px, py, pz) { const d = [Math.abs(px - b.x0), Math.abs(px - b.x1), Math.abs(py - (b.y0 || 0)), Math.abs(py - b.h), Math.abs(pz - b.z0), Math.abs(pz - b.z1)], N = [[-1, 0, 0], [1, 0, 0], [0, -1, 0], [0, 1, 0], [0, 0, -1], [0, 0, 1]]; let bi = 0; for (let i = 1; i < 6; i++) if (d[i] < d[bi]) bi = i; return N[bi]; }
+function rayWorldN(ox, oy, oz, dx, dy, dz, maxT) {
+  let best = maxT, nrm = null; for (const b of BOXES) { const t = rayBox(ox, oy, oz, dx, dy, dz, b, best); if (t >= 0 && t < best) { best = t; nrm = hitNormal(b, ox + dx * t, oy + dy * t, oz + dz * t); } }
+  if (dy < 0) { const t = -oy / dy; if (t > 0 && t < best) { best = t; nrm = [0, 1, 0]; } } if (dy > 0) { const t = (WALLH - oy) / dy; if (t > 0 && t < best) { best = t; nrm = [0, -1, 0]; } }
+  return { t: best, n: nrm };
+}
+function decal(x, y, z, n) { if (!n) return; if (DEC.length > 44) { const o = DEC.shift(); scene.remove(o.m); o.m.material.dispose(); } const m = mk(new THREE.PlaneGeometry(.22, .22), new THREE.MeshBasicMaterial({ map: holeTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })); m.position.set(x + n[0] * .02, y + n[1] * .02, z + n[2] * .02); m.lookAt(x + n[0], y + n[1], z + n[2]); m.rotateZ(Math.random() * 6.28); scene.add(m); DEC.push({ m, life: 8 }); }
+function wallHit(x, y, z, n, col) { decal(x, y, z, n); sparkBurst(x + (n ? n[0] * .05 : 0), y, z + (n ? n[2] * .05 : 0), 5, col, 2.6); addPart(smokeTex, 0xbfc5d0, x, y, z, 0, .5, 0, .6, .5, 0, false, 0, 1.2); }
 // ───────── 戰鬥 ─────────
 function addUlt(a, v) { if (a && a.ult < 100) a.ult = Math.min(100, a.ult + v); }
-function dmgTo(t, d, src, head, wname) {
+function dmgTo(t, d, src, head, wname, hx, hy, hz) {
   if (t.dead || t.inv > 0) return;
+  if (t.armor > 0) { const ab = Math.min(t.armor, d); t.armor -= ab; d -= ab; t.fl = .08; if (d <= 0) { if (src && src.isMe) hitMark(false); return; } }
   t.hp -= d; t.fl = .12; if (src && src !== t) { src.dmg += d; addUlt(src, d * .2); }
   if (t.isMe) { SFX.hurt(); $('dmg').classList.add('on'); setTimeout(() => $('dmg').classList.remove('on'), 60); shake = Math.min(1, shake + d / 60); if (src) dirHit(Math.atan2(src.x - t.x, src.z - t.z)); }
-  if (src && src.isMe && src !== t) hitMark(head);
+  if (src && src.isMe && src !== t) { hitMark(head); floatNum(hx ?? t.x, hy ?? t.y + 1.8, hz ?? t.z, String(Math.round(d)), head ? '#ffd24a' : '#ffffff', head); }
+  if (t.g && !t.dead) { const px = hx ?? t.x, py = hy ?? t.y + 1.2, pz = hz ?? t.z; paperBurst(px, py, pz, head ? 6 : 3); sparkBurst(px, py, pz, head ? 6 : 3, head ? 0xffd24a : 0xffffff, 2.5); }
   if (t.hp <= 0) kill(t, src, wname);
 }
-function healTo(t, amt, src) { if (t.dead || t.hp >= t.maxHp) return; const a = Math.min(amt, t.maxHp - t.hp); t.hp += a; if (src) { src.heals += a; addUlt(src, a * .3); } }
+function healTo(t, amt, src) { if (t.dead || t.hp >= t.maxHp) return; const a = Math.min(amt, t.maxHp - t.hp); t.hp += a; if (src) { src.heals += a; addUlt(src, a * .3); } if (t.isMe || (src && src.isMe)) { t.healAcc = (t.healAcc || 0) + a; if (t.healAcc >= 12) { floatNum(t.x, t.y + 2.1, t.z, '+' + Math.round(t.healAcc), '#5ef0a4', false); t.healAcc = 0; } } }
 function dirHit(a) { const el = $('dir').firstElementChild; el.style.transform = 'rotate(' + (wrapA(a + yaw + Math.PI) * 180 / Math.PI) + 'deg)'; el.style.opacity = 1; clearTimeout(dirHit.t); dirHit.t = setTimeout(() => { el.style.opacity = 0; }, 700); }
-function hitMark(head) { const el = $('hm'); el.classList.add('on'); el.classList.toggle('hs', !!head); clearTimeout(hitMark.t); hitMark.t = setTimeout(() => el.classList.remove('on'), 120); head ? SFX.head() : SFX.hit(); }
+function hitMark(head) { const el = $('hm'); el.classList.add('on'); el.classList.toggle('hs', !!head); clearTimeout(hitMark.t); hitMark.t = setTimeout(() => el.classList.remove('on'), 130); head ? SFX.head() : SFX.hit(); }
 function kill(t, src, wname) {
-  t.dead = true; t.respT = 5; t.deaths++; t.vx = t.vz = 0; t.heal = 0; t.volley = 0; t.chargeT = 0; t.hring.visible = false;
+  t.dead = true; t.respT = 5; t.deaths++; t.vx = t.vz = 0; t.heal = 0; t.chargeT = 0; t.hring.visible = false; t.armor = 0; sparkBurst(t.x, t.y + 1, t.z, 14, 0xffffff, 5); paperBurst(t.x, t.y + 1.2, t.z, 12);
   if (src && src !== t) { src.kills++; addUlt(src, 12); }
   feed((src ? src.hero.ic + src.name : '自爆') + ' ' + (wname || '💥') + ' ' + t.hero.ic + t.name, src && src.isMe ? 'me' : t.isMe ? 'die' : '');
-  if (t.isMe) { SFX.die(); banner('陣亡', (src ? '被 ' + src.name + ' 擊倒' : ''), 2800); zoom = false; showHeroSel(true); } else if (src && src.isMe) SFX.kill();
+  if (t.isMe) { SFX.die(); banner('陣亡', (src ? '被 ' + src.name + ' 擊倒' : ''), 2800); zoom = false; showHeroSel(true); } else if (src && src.isMe) { SFX.kill(); floatNum(t.x, t.y + 2.4, t.z, '擊倒', '#ff6a5a', true); }
 }
 function aimDir(a, spread) { const cp = Math.cos(a.pitch), sx = Math.sin(a.yaw) * cp, sz = Math.cos(a.yaw) * cp, sy = Math.sin(a.pitch); let dx = -sx, dy = sy, dz = -sz; if (spread) { dx += (Math.random() - .5) * spread * 2; dy += (Math.random() - .5) * spread * 2; dz += (Math.random() - .5) * spread * 2; } const l = Math.hypot(dx, dy, dz); return [dx / l, dy / l, dz / l]; }
 function fire(a) {
   if (a.dead || a.stun > 0 || a.fireT > 0) return; const w = a.w; let rate = w.rate * (a.buff > 0 ? 1.2 : 1) * (a.rage > 0 ? 1.6 : 1); a.fireT = 1 / rate; fireWeapon(a, w);
 }
+const vTmp = new THREE.Vector3();
+function muzzleOf(a) { if (a.isMe) { camera.updateMatrixWorld(true); flash.getWorldPosition(vTmp); return [vTmp.x, vTmp.y, vTmp.z]; } const f = fwd(a), rx = -f[1], rz = f[0]; return [a.x + f[0] * .6 + rx * .25, a.y + 1.3, a.z + f[1] * .6 + rz * .25]; }
 function fireWeapon(a, w) {
-  const dm = (a.rage > 0 ? 1.35 : 1) * (a.dmgT > 0 ? 1.3 : 1), eye = [a.x, a.y + 1.55, a.z];
+  const dm = (a.rage > 0 ? 1.35 : 1) * (a.dmgT > 0 ? 1.3 : 1), eye = [a.x, a.y + 1.55, a.z], mz = muzzleOf(a);
   const baseSpread = a.isMe ? (w.spread * (w.kind === 'sniper' && zoom ? 0 : 1) * (Math.hypot(a.vx, a.vz) > 2 ? 1.6 : 1) * (a.ground ? 1 : 2.2)) : ((w.kind === 'sniper' ? .012 : w.spread) + [.07, .04, .018][CFG.diff]);
-  if (a.isMe) { SFX.shot(w.kind); recoil = Math.min(1, recoil + w.kick * 8); pitch += w.kick * (w.kind === 'sniper' ? 1 : .5) * (.7 + Math.random() * .6); flash.visible = true; setTimeout(() => flash.visible = false, 45); } else if (Math.hypot(a.x - me.x, a.z - me.z) < 40) SFX.shot(w.kind);
-  if (w.kind === 'rocket') { const [dx, dy, dz] = aimDir(a, baseSpread); const m = mk(new THREE.SphereGeometry(.16, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff8a3d })); m.position.set(eye[0] + dx * .8, eye[1] - .1 + dy * .8, eye[2] + dz * .8); scene.add(m); PROJ.push({ m, x: m.position.x, y: m.position.y, z: m.position.z, vx: dx * w.speed, vy: dy * w.speed, vz: dz * w.speed, owner: a, w, life: 3, dm }); return; }
+  if (a.isMe) { SFX.shot(w.kind); recoil = Math.min(1, recoil + w.kick * 8); vmKick = 1; pitch += w.kick * (w.kind === 'sniper' ? 1 : .5) * (.7 + Math.random() * .6); yaw += (Math.random() - .5) * w.kick * .5; flash.visible = true; flash.material.rotation = Math.random() * 6.28; const fs = w.kind === 'shotgun' || w.kind === 'rocket' ? .7 : w.kind === 'sniper' ? .6 : .4; flash.scale.set(fs * (.8 + Math.random() * .4), fs * (.8 + Math.random() * .4), 1); flashLight.intensity = 2.6; setTimeout(() => flash.visible = false, 50); }
+  else { if (Math.hypot(a.x - me.x, a.z - me.z) < 40) SFX.shot(w.kind); addPart(starTex, 0xffc060, mz[0], mz[1], mz[2], 0, 0, 0, .06, .7, 0, true); }
+  if (w.kind !== 'sniper' && w.kind !== 'rocket') addPart(sparkTex, 0xffd24a, mz[0], mz[1], mz[2], rand(-1, 1) + (a.isMe ? 1.2 : 0), rand(1, 2.4), rand(-1, 1), .5, .08, 12, false);   // 彈殼／釘子
+  if (w.kind === 'rocket') { const [dx, dy, dz] = aimDir(a, baseSpread); const g = new THREE.Group(), core = mk(new THREE.BoxGeometry(.12, .12, .3), lam(0xdb2777)), glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTex, color: 0x7fe3ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); glow.scale.set(.7, .7, 1); g.add(core, glow); g.position.set(mz[0] + dx * .2, mz[1] + dy * .2, mz[2] + dz * .2); g.lookAt(g.position.x + dx, g.position.y + dy, g.position.z + dz); scene.add(g); PROJ.push({ m: g, x: g.position.x, y: g.position.y, z: g.position.z, vx: dx * w.speed, vy: dy * w.speed, vz: dz * w.speed, owner: a, w, life: 3, dm, trail: 0 }); return; }
   for (let p = 0; p < w.pellets; p++) {
-    const [dx, dy, dz] = aimDir(a, baseSpread); let bestT = rayWorld(eye[0], eye[1], eye[2], dx, dy, dz, w.range), who = null, head = false, bar = null;
-    const rb = rayBarriers(eye[0], eye[1], eye[2], dx, dy, dz, bestT, a.team); if (rb.bar) { bestT = rb.t; bar = rb.bar; }
+    const [dx, dy, dz] = aimDir(a, baseSpread); const wr = rayWorldN(eye[0], eye[1], eye[2], dx, dy, dz, w.range); let bestT = wr.t, nrm = wr.n, who = null, head = false, bar = null;
+    const rb = rayBarriers(eye[0], eye[1], eye[2], dx, dy, dz, bestT, a.team); if (rb.bar) { bestT = rb.t; bar = rb.bar; nrm = null; }
     for (const t of actors) { if (t === a || t.dead || t.team === a.team) continue; const tt = rayCyl(eye[0], eye[1], eye[2], dx, dy, dz, t, bestT); if (tt >= 0 && tt < bestT) { bestT = tt; who = t; bar = null; head = eye[1] + dy * tt > t.y + 1.45; } }
     const ex = eye[0] + dx * bestT, ey = eye[1] + dy * bestT, ez = eye[2] + dz * bestT;
-    if (a.isMe || Math.hypot(a.x - me.x, a.z - me.z) < 35) tracer(a, eye, [ex, ey, ez], w.col);
-    if (bar) { bar.hp -= w.dmg * dm; if (a.isMe) hitMark(false); impact(ex, ey, ez); }
-    else if (who) { const fall = w.kind === 'shotgun' ? clamp(1.1 - bestT / 40, .25, 1) : 1; dmgTo(who, w.dmg * dm * fall * (head ? 1.7 : 1), a, head, w.ic); }
-    else if (a.isMe) impact(ex, ey, ez);
+    if (a.isMe || Math.hypot(a.x - me.x, a.z - me.z) < 38) beam(mz, [ex, ey, ez], w.col, w.kind === 'sniper' ? .035 : w.kind === 'shotgun' ? .018 : .026, w.kind === 'sniper' ? .18 : .09);
+    if (bar) { bar.hp -= w.dmg * dm; if (a.isMe) hitMark(false); burst(ex, ey, ez, 0x7fd0ff, 1.3, .3, 1); sparkBurst(ex, ey, ez, 3, 0x7fd0ff, 2); }
+    else if (who) { const fall = w.kind === 'shotgun' ? clamp(1.1 - bestT / 40, .25, 1) : 1; dmgTo(who, w.dmg * dm * fall * (head ? 1.7 : 1), a, head, w.ic, ex, ey, ez); }
+    else wallHit(ex, ey, ez, nrm, w.col);
   }
 }
-const tracerMat = col => new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: .9 });
-function tracer(a, from, to, col) { const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(from[0], from[1] - (a.isMe ? .2 : .1), from[2]), new THREE.Vector3(to[0], to[1], to[2])]); const l = new THREE.Line(g, tracerMat(col)); scene.add(l); FX.push({ s: l, t: 0, d: .08, line: true }); }
-function impact(x, y, z) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTex, color: 0xffe9a0, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); s.position.set(x, y, z); s.scale.set(.3, .3, 1); scene.add(s); FX.push({ s, t: 0, d: .18 }); }
-function burst(x, y, z, col, size, d = .4, grow = 1) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTex, color: col, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); s.position.set(x, y, z); s.scale.set(size, size, 1); scene.add(s); FX.push({ s, t: 0, d, grow }); }
+function burst(x, y, z, col, size, d = .4, grow = 1) { addPart(sparkTex, col, x, y, z, 0, 0, 0, d, size, 0, true, 0, grow * 1.2); }
 function explode(x, y, z, owner, w, dm) {
-  SFX.boom(); burst(x, y, z, 0xff8a3d, w.splash * 1.6); shake = Math.min(1, shake + Math.max(0, .8 - Math.hypot(me.x - x, me.z - z) / 12));
-  for (const t of actors) { if (t.dead) continue; const d = Math.hypot(t.x - x, (t.y + .9) - y, t.z - z); if (d < w.splash) { const k = 1 - d / w.splash; let dmg = w.dmg * dm * (.3 + .7 * k); if (t.team === owner.team && t !== owner) continue; if (t === owner) dmg *= .25; dmgTo(t, dmg, owner, false, w.ic); const a = Math.atan2(t.x - x, t.z - z); t.vx += Math.sin(a) * 8 * k; t.vz += Math.cos(a) * 8 * k; } }
+  SFX.boom(); burst(x, y, z, 0xffffff, w.splash * .9, .18, 1.5); burst(x, y, z, 0x7fe3ff, w.splash * 1.9, .5, 1.1); ringFx(x, y, z, 0x7fe3ff, w.splash * 1.1, .4); boomLight(x, y, z); sparkBurst(x, y, z, 14, 0x9ae8ff, 6);
+  for (let i = 0; i < 5; i++) addPart(smokeTex, 0xcfd4dc, x + rand(-.5, .5), y, z + rand(-.5, .5), rand(-.6, .6), rand(.4, 1.2), rand(-.6, .6), 1 + Math.random() * .6, 1 + Math.random(), 0, false, 0, 1.6);
+  shake = Math.min(1, shake + Math.max(0, .6 - Math.hypot(me.x - x, me.z - z) / 12));
+  for (const t of actors) { if (t.dead) continue; const d = Math.hypot(t.x - x, (t.y + .9) - y, t.z - z); if (d < w.splash) { const k = 1 - d / w.splash; if (t.team === owner.team) { healTo(t, w.heal * (.4 + .6 * k), owner); continue; } dmgTo(t, w.dmg * dm * (.3 + .7 * k), owner, false, w.ic, t.x, t.y + 1.4, t.z); const a = Math.atan2(t.x - x, t.z - z); t.vx += Math.sin(a) * 5 * k; t.vz += Math.cos(a) * 5 * k; } }
 }
 function stepProj(dt) {
   for (let i = PROJ.length - 1; i >= 0; i--) { const p = PROJ[i]; p.life -= dt; const nx = p.x + p.vx * dt, ny = p.y + p.vy * dt, nz = p.z + p.vz * dt; let hit = p.life <= 0 || ny < .05 || ny > WALLH;
     const d = Math.hypot(nx - p.x, ny - p.y, nz - p.z) + 1e-6, ux = (nx - p.x) / d, uy = (ny - p.y) / d, uz = (nz - p.z) / d; if (rayWorld(p.x, p.y, p.z, ux, uy, uz, d) < d) hit = true;
     const rb = rayBarriers(p.x, p.y, p.z, ux, uy, uz, d, p.owner.team); if (rb.bar) { rb.bar.hp -= p.w.dmg * .6; hit = true; }
     for (const a of actors) if (!a.dead && a !== p.owner && a.team !== p.owner.team && Math.hypot(a.x - nx, a.z - nz) < .6 && ny > a.y && ny < a.y + 1.9) hit = true;
-    p.x = nx; p.y = ny; p.z = nz; p.m.position.set(nx, ny, nz); if (hit) { explode(nx, ny, nz, p.owner, p.w, p.dm); scene.remove(p.m); PROJ.splice(i, 1); } }
+    p.x = nx; p.y = ny; p.z = nz; p.m.position.set(nx, ny, nz); p.trail -= dt; if (p.trail <= 0) { p.trail = .02; addPart(sparkTex, 0x7fe3ff, nx, ny, nz, rand(-.2, .2), rand(-.2, .2), rand(-.2, .2), .35, .32, 0, true); addPart(smokeTex, 0xdfe4ec, nx, ny, nz, 0, .2, 0, .5, .3, 0, false, 0, 1.4); }
+    if (hit) { explode(nx, ny, nz, p.owner, p.w, p.dm); scene.remove(p.m); PROJ.splice(i, 1); } }
 }
 // ───────── 技能（E／Shift／大招 Q） ─────────
 const enemiesOf = a => actors.filter(t => t.team !== a.team && !t.dead), alliesOf = a => actors.filter(t => t.team === a.team && !t.dead);
 function fwd(a) { return [-Math.sin(a.yaw), -Math.cos(a.yaw)]; }
 function moveDir(a) { if (a.isMe) { const mx = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + joy.x, mz = (keys.KeyS ? 1 : 0) - (keys.KeyW ? 1 : 0) + joy.y, l = Math.hypot(mx, mz); if (l > .15) { const f = fwd(a), rx = -f[1], rz = f[0]; return [(f[0] * -mz + rx * mx) / l, (f[1] * -mz + rz * mx) / l]; } } return fwd(a); }
+function giveArmor(t, amt, dur) { t.armor = Math.max(t.armor || 0, amt); t.armorT = dur; ringFx(t.x, t.y, t.z, 0xffd066, 1.6, .5); }
+function leonaTarget(a) {
+  let best = null;
+  if (a.isMe) { let ba = .22; const d0 = aimDir(a, 0), ex = a.x, ey = a.y + 1.55, ez = a.z; for (const t of alliesOf(a)) { if (t === a) continue; const vx = t.x - ex, vy = t.y + 1.2 - ey, vz = t.z - ez, l = Math.hypot(vx, vy, vz); if (l > 40 || l < .5) continue; const ang = Math.acos(clamp((vx * d0[0] + vy * d0[1] + vz * d0[2]) / l, -1, 1)); if (ang < ba && los(a, t, 1.55, t.y + 1.2)) { ba = ang; best = t; } } }
+  if (!best) best = alliesOf(a).filter(t => t !== a && t.hp < t.maxHp && Math.hypot(t.x - a.x, t.z - a.z) < 28 && los(a, t, 1.55, t.y + 1.2)).sort((p, q) => p.hp / p.maxHp - q.hp / q.maxHp)[0];
+  return best || a;
+}
 function useE(a) {
   if (state !== 'play' || a.dead || a.stun > 0 || a.cd.e > 0 || a.chargeT > 0) return; a.cd.e = a.hero.e.cd; if (a.isMe) SFX.skill();
   const f = fwd(a);
   switch (a.hero.id) {
     case 'machi': spawnBarrier(a); break;
-    case 'noise': { const d = moveDir(a); a.vx = d[0] * 20; a.vz = d[1] * 20; a.dashT = .22; break; }
-    case 'anna': { a.vy = 9; a.ground = false; a.vx = f[0] * 8; a.vz = f[1] * 8; a.dashT = .5; break; }
-    case 'amber': a.heal = 4; break;
-    case 'leona': { a.vy = 10.5; a.ground = false; const d = moveDir(a); a.vx = d[0] * 6; a.vz = d[1] * 6; a.dashT = .5; burst(a.x, a.y + .3, a.z, 0xff8a3d, 5, .35); SFX.boom(); for (const t of enemiesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 3.5) dmgTo(t, 22, a, false, '🚀'); break; }
+    case 'noise': { const d = moveDir(a); a.vx = d[0] * 20; a.vz = d[1] * 20; a.dashT = .22; for (let i = 0; i < 6; i++) addPart(sparkTex, 0x7fb0ff, a.x - d[0] * i * .3, a.y + .8, a.z - d[1] * i * .3, 0, 0, 0, .3, .8, 0, true); break; }
+    case 'anna': { a.vy = 9; a.ground = false; a.vx = f[0] * 8; a.vz = f[1] * 8; a.dashT = .5; ringFx(a.x, a.y, a.z, 0xffd066, 2.2, .35); break; }
+    case 'amber': a.heal = 4; ringFx(a.x, a.y, a.z, 0x5ef0a4, 8, .6); break;
+    case 'leona': { const t = leonaTarget(a); if (t === a) { healTo(a, 35, a); } else healTo(t, 70, a); const m = muzzleOf(a); beam(m, [t.x, t.y + 1.2, t.z], 0xffd066, .07, .4); ringFx(t.x, t.y, t.z, 0x5ef0a4, 2, .5); sparkBurst(t.x, t.y + 1.2, t.z, 10, 0x5ef0a4, 3); break; }
   }
 }
 function useS(a) {
   if (state !== 'play' || a.dead || a.stun > 0 || a.cd.s > 0 || a.chargeT > 0) return; a.cd.s = a.hero.s.cd; if (a.isMe) SFX.skill();
   switch (a.hero.id) {
     case 'machi': { const f = fwd(a); a.vx = f[0] * 16; a.vz = f[1] * 16; a.chargeT = .6; a.dashT = .6; a.chHit = new Set(); break; }
-    case 'noise': a.buff = 5; break;
-    case 'anna': for (const t of enemiesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 40) t.mark = 4; break;
-    case 'amber': for (const t of alliesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 12) { t.spd = 4; if (t.isMe) SFX.pick(); } burst(a.x, a.y + .5, a.z, 0xffd066, 12, .5); break;
-    case 'leona': { burst(a.x, a.y + .3, a.z, 0x9ad0ff, 12, .4); SFX.boom(); for (const t of enemiesOf(a)) { const d = Math.hypot(t.x - a.x, t.z - a.z); if (d < 6) { dmgTo(t, 25, a, false, '🌀'); const ang = Math.atan2(t.x - a.x, t.z - a.z); t.vx += Math.sin(ang) * 12; t.vz += Math.cos(ang) * 12; t.stun = Math.max(t.stun, .3); } } break; }
+    case 'noise': a.buff = 5; ringFx(a.x, a.y, a.z, 0xffb000, 2, .4); break;
+    case 'anna': for (const t of enemiesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 40) { t.mark = 4; } ringFx(a.x, a.y, a.z, 0xff6a5a, 40, .8); break;
+    case 'amber': for (const t of alliesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 12) { t.spd = 4; if (t.isMe) SFX.pick(); } ringFx(a.x, a.y, a.z, 0xffd066, 12, .6); break;
+    case 'leona': for (const t of alliesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 14) giveArmor(t, 40, 6); ringFx(a.x, a.y, a.z, 0xffd066, 14, .6); break;
   }
 }
 function useQ(a) {
   if (state !== 'play' || a.dead || a.stun > 0 || a.ult < 100) return; a.ult = 0; if (a.isMe) { SFX.skill(); banner(a.hero.q.n, '', 900); }
   switch (a.hero.id) {
-    case 'machi': { SFX.boom(); burst(a.x, a.y + .3, a.z, 0xffb000, 18, .5); for (const t of enemiesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 8) { dmgTo(t, 70, a, false, '💥'); t.stun = 1.2; } shake = Math.min(1, shake + .6); break; }
-    case 'noise': a.rage = 6; break;
-    case 'anna': for (const t of enemiesOf(a)) t.mark = 7; a.dmgT = 7; break;
-    case 'amber': for (const t of alliesOf(a)) { const lost = t.maxHp - t.hp; healTo(t, lost, a); } burst(a.x, a.y + .5, a.z, 0x5ef0a4, 16, .6); break;
-    case 'leona': a.volley = 2.4; a.volT = 0; break;
+    case 'machi': { SFX.boom(); burst(a.x, a.y + .4, a.z, 0xffb000, 14, .5); ringFx(a.x, a.y, a.z, 0xffb000, 8, .55); ringFx(a.x, a.y, a.z, 0xffffff, 5, .35); sparkBurst(a.x, a.y + .3, a.z, 20, 0xffb000, 7); for (const t of enemiesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 8) { dmgTo(t, 70, a, false, '💥', t.x, t.y + 1.4, t.z); t.stun = 1.2; } shake = Math.min(1, shake + .7); break; }
+    case 'noise': a.rage = 6; ringFx(a.x, a.y, a.z, 0xff6a3d, 4, .5); break;
+    case 'anna': for (const t of enemiesOf(a)) t.mark = 7; a.dmgT = 7; ringFx(a.x, a.y, a.z, 0xff6a5a, 60, 1); break;
+    case 'amber': for (const t of alliesOf(a)) { healTo(t, t.maxHp - t.hp, a); ringFx(t.x, t.y, t.z, 0x5ef0a4, 2.4, .6); } ringFx(a.x, a.y, a.z, 0x5ef0a4, 18, .8); break;
+    case 'leona': for (const t of alliesOf(a)) { giveArmor(t, 50, 6); healTo(t, 30, a); t.dmgT = Math.max(t.dmgT, 6); } ringFx(a.x, a.y, a.z, 0x7fe3ff, 26, .9); break;
   }
 }
 // ───────── 控制點結算 ─────────
@@ -499,9 +594,9 @@ function updPoint(dt) {
 // ───────── 電腦 ─────────
 function botAbilities(a, best, bd) {
   const B = a.bot, id = a.hero.id, near = enemiesOf(a).filter(t => Math.hypot(t.x - a.x, t.z - a.z) < 9).length;
-  if (a.ult >= 100) { let ok = false; if (id === 'machi') ok = near >= 2; else if (id === 'noise') ok = !!best; else if (id === 'anna') ok = enemiesOf(a).length >= 2; else if (id === 'amber') ok = alliesOf(a).filter(t => t.hp < t.maxHp * .45).length >= 2; else if (id === 'leona') ok = !!best && bd < 22; if (ok) useQ(a); }
-  if (a.cd.e <= 0) { let ok = false; if (id === 'machi') ok = !!best && bd < 25; else if (id === 'noise') ok = (!!best && (a.hp < a.maxHp * .5 || bd > 14)); else if (id === 'anna') ok = !best && Math.random() < .3 && a.path.length > 3; else if (id === 'amber') ok = alliesOf(a).some(t => t.hp < t.maxHp * .7 && Math.hypot(t.x - a.x, t.z - a.z) < 8); else if (id === 'leona') ok = !!best && bd < 5 && Math.random() < .5; if (ok) useE(a); }
-  if (a.cd.s <= 0) { let ok = false; if (id === 'machi') ok = !!best && bd < 12 && bd > 4; else if (id === 'noise') ok = !!best; else if (id === 'anna') ok = enemiesOf(a).some(t => Math.hypot(t.x - a.x, t.z - a.z) < 35); else if (id === 'amber') ok = alliesOf(a).length > 1 && Math.random() < .4; else if (id === 'leona') ok = !!best && bd < 6; if (ok) useS(a); }
+  if (a.ult >= 100) { let ok = false; if (id === 'machi') ok = near >= 2; else if (id === 'noise') ok = !!best; else if (id === 'anna') ok = enemiesOf(a).length >= 2; else if (id === 'amber') ok = alliesOf(a).filter(t => t.hp < t.maxHp * .45).length >= 2; else if (id === 'leona') ok = !!best && alliesOf(a).filter(t => Math.hypot(t.x - a.x, t.z - a.z) < 14).length >= 3; if (ok) useQ(a); }
+  if (a.cd.e <= 0) { let ok = false; if (id === 'machi') ok = !!best && bd < 25; else if (id === 'noise') ok = (!!best && (a.hp < a.maxHp * .5 || bd > 14)); else if (id === 'anna') ok = !best && Math.random() < .3 && a.path.length > 3; else if (id === 'amber') ok = alliesOf(a).some(t => t.hp < t.maxHp * .7 && Math.hypot(t.x - a.x, t.z - a.z) < 8); else if (id === 'leona') ok = alliesOf(a).some(t => t !== a && t.hp < t.maxHp * .6 && Math.hypot(t.x - a.x, t.z - a.z) < 26 && los(a, t, 1.55, t.y + 1.2)); if (ok) useE(a); }
+  if (a.cd.s <= 0) { let ok = false; if (id === 'machi') ok = !!best && bd < 12 && bd > 4; else if (id === 'noise') ok = !!best; else if (id === 'anna') ok = enemiesOf(a).some(t => Math.hypot(t.x - a.x, t.z - a.z) < 35); else if (id === 'amber') ok = alliesOf(a).length > 1 && Math.random() < .4; else if (id === 'leona') ok = !!best && alliesOf(a).filter(t => Math.hypot(t.x - a.x, t.z - a.z) < 12).length >= 2; if (ok) useS(a); }
 }
 function botThink(a, dt) {
   const B = a.bot, D = [.7, 1, 1.25][CFG.diff]; B.think -= dt; B.strafeT -= dt; B.abT -= dt;
@@ -566,16 +661,16 @@ bindBtn('aim', () => setZoom(!zoom), null); bindBtn('skE', () => useE(me), null)
 function showSB(on) { const el = $('sb'); if (!on) { el.hidden = true; return; } const rows = [...actors].sort((a, b) => b.dmg + b.heals - (a.dmg + a.heals)).map(a => '<tr class="' + (a.team ? 'b' : 'a') + (a.isMe ? ' me' : '') + '"><td>' + a.hero.ic + ' ' + a.name + '</td><td>' + a.kills + '</td><td>' + a.deaths + '</td><td>' + Math.round(a.dmg) + '</td><td>' + Math.round(a.heals) + '</td></tr>').join(''); el.innerHTML = '<table><tr><th>英雄</th><th>擊殺</th><th>死亡</th><th>傷害</th><th>治療</th></tr>' + rows + '</table>'; el.hidden = false; }
 // 陣亡時重選英雄
 function showHeroSel(on) { const box = $('heroSel'); box.hidden = !on; if (!on) return; box.innerHTML = '<small>重生中　選擇下一位英雄（1–5）</small><div>' + HEROES.map((h, i) => '<button type="button" class="' + (me.nextHero === h.id || (!me.nextHero && me.hero.id === h.id) ? 'on' : '') + '" data-id="' + h.id + '"><b>' + (i + 1) + '</b>' + h.ic + '<span>' + h.name + '</span><em>' + h.role + '</em></button>').join('') + '</div>'; box.querySelectorAll('button').forEach(b => { b.onclick = () => chooseHero(b.dataset.id); }); }
-function chooseHero(id) { me.nextHero = id; CFG.hero = id; saveCfg(); showHeroSel(true); }
+function chooseHero(id) { const cur = me.nextHero || me.hero.id; if (id === cur) return; const mate = actors.find(a => a.team === me.team && !a.isMe && (a.nextHero || a.hero.id) === id); if (mate) mate.nextHero = cur; me.nextHero = id; CFG.hero = id; saveCfg(); showHeroSel(true); }
 function buildHud() { $('wpN').textContent = me.w.n; }
 
 // ───────── 主迴圈 ─────────
 function stepActor(a, dt) {
   if (a.dead) { a.respT -= dt; if (a.respT <= 0 && state === 'play') { respawn(a); if (a.isMe) { $('banner').classList.remove('on'); } } return; }
-  a.inv = Math.max(0, a.inv - dt); a.fireT = Math.max(0, a.fireT - dt); a.cd.e = Math.max(0, a.cd.e - dt); a.cd.s = Math.max(0, a.cd.s - dt); a.buff = Math.max(0, a.buff - dt); a.rage = Math.max(0, a.rage - dt); a.dmgT = Math.max(0, a.dmgT - dt); a.spd = Math.max(0, a.spd - dt); a.stun = Math.max(0, a.stun - dt); a.mark = Math.max(0, a.mark - dt); a.fl = Math.max(0, a.fl - dt);
+  a.inv = Math.max(0, a.inv - dt); a.fireT = Math.max(0, a.fireT - dt); a.cd.e = Math.max(0, a.cd.e - dt); a.cd.s = Math.max(0, a.cd.s - dt); a.buff = Math.max(0, a.buff - dt); a.rage = Math.max(0, a.rage - dt); a.dmgT = Math.max(0, a.dmgT - dt); a.spd = Math.max(0, a.spd - dt); a.stun = Math.max(0, a.stun - dt); a.mark = Math.max(0, a.mark - dt); a.fl = Math.max(0, a.fl - dt); if (a.armorT > 0) { a.armorT -= dt; if (a.armorT <= 0) a.armor = 0; }
   if (state === 'play') addUlt(a, dt * .9);
   // 治療光環
-  if (a.heal > 0) { a.heal -= dt; for (const t of alliesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 8) healTo(t, 35 * dt, a); } a.hring.visible = a.heal > 0; if (a.heal > 0) a.hring.position.set(a.x, a.y + .08, a.z);
+  if (a.heal > 0) { a.heal -= dt; for (const t of alliesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 8) healTo(t, 35 * dt, a); } a.hring.visible = a.heal > 0; if (a.heal > 0) { a.hring.position.set(a.x, a.y + .08, a.z); a.hring.scale.setScalar(.92 + Math.sin(performance.now() * .008) * .08); if (Math.random() < dt * 40) { const an = Math.random() * 6.283, rr = Math.random() * 7.5; addPart(sparkTex, 0x5ef0a4, a.x + Math.cos(an) * rr, a.y + .1, a.z + Math.sin(an) * rr, 0, 1.6, 0, .9, .35, 0, true); } }
   // 連環轟炸
   if (a.volley > 0) { a.volley -= dt; a.volT -= dt; if (a.volT <= 0) { a.volT = .4; fireWeapon(a, WEAPONS.phone); } }
   // 衝鋒撞人
@@ -615,7 +710,8 @@ function render(dt) {
   if (me.dead) { camera.position.set(me.x, .45 + me.y, me.z); camera.rotation.z = lerp(camera.rotation.z, .7, dt * 3); } else { camera.position.set(me.x + (Math.random() - .5) * shake * .1, me.y + 1.6 + bob, me.z + (Math.random() - .5) * shake * .1); camera.rotation.z = lerp(camera.rotation.z, 0, dt * 8); }
   camera.rotation.y = yaw; camera.rotation.x = pitch;
   const w = me.w, zf = zoom && w.zoom ? w.zoom : 75; camera.fov += (zf - camera.fov) * Math.min(1, dt * 14); camera.updateProjectionMatrix(); $('scope').classList.toggle('on', zoom && !!w.zoom && !me.dead); vm.visible = !(zoom && w.zoom) && !me.dead;
-  vm.position.set(.26 - (zoom ? .26 : 0), -.24 + Math.sin(bobT * 2) * .006 + (zoom ? .05 : 0), -.5 + recoil * .12); vm.rotation.x = recoil * .12;
+  vmKick = Math.max(0, vmKick - dt * 8); const kk = vmKick, spd = Math.hypot(me.vx, me.vz); vm.position.set(.26 - (zoom ? .26 : 0) + Math.sin(bobT) * .008 * Math.min(1, spd / 5), -.24 + Math.abs(Math.sin(bobT)) * .012 * Math.min(1, spd / 5) + (zoom ? .05 : 0) - kk * .01, -.5 + kk * .06); vm.rotation.x = kk * .08; vm.rotation.z = Math.sin(bobT) * .01 * Math.min(1, spd / 5);
+  if (vmRef.wG) { vmRef.wG.position.z = kk * .03; vmRef.wG.rotation.x = -kk * .05; } if (vmRef.slide) vmRef.slide.position.z = (vmRef.slide.userData.z0 || 0) + kk * .1; if (vmRef.pump) vmRef.pump.position.z = (vmRef.pump.userData.z0 || 0) + Math.sin(Math.min(1, kk) * Math.PI) * .14;
   for (const a of actors) { if (a.isMe) continue; const ally = a.team === me.team;
     a.g.position.set(a.x, a.y, a.z); a.ring.position.set(a.x, a.y + .04, a.z); a.sh.position.set(a.x, a.y + .03, a.z);
     const toCam = Math.atan2(camera.position.x - a.x, camera.position.z - a.z), face = a.yaw + Math.PI, rel = wrapA(face - toCam), col = ((Math.round(rel / (Math.PI * 2) * ANGLES) + ANGLES) % ANGLES) / ANGLES; a.spr.rotation.set(0, toCam, 0);
@@ -623,11 +719,12 @@ function render(dt) {
     a.anim += dt * (moving ? 12 : 3); a.spr.position.y = moving ? Math.abs(Math.sin(a.anim)) * .08 : 0;
     const seeThru = ally || a.mark > 0; a.nm.material.depthTest = !(seeThru && !a.dead); a.hpb.material.depthTest = a.hpbB.material.depthTest = a.nm.material.depthTest; a.tri.material.depthTest = a.nm.material.depthTest; a.spr.material.depthTest = !(a.mark > 0 && !a.dead); a.spr.renderOrder = a.mark > 0 ? 999 : 0; a.ring.visible = a.sh.visible = !a.dead;
     a.fall = a.dead ? Math.min(1.57, (a.fall || 0) + dt * 9) : 0; a.spr.rotation.z = a.fall * (Math.sin(toCam - face) >= 0 ? 1 : -1); a.spr.position.y = a.dead ? .12 : a.spr.position.y; if (a.dead) { a.nm.visible = a.hpb.visible = a.hpbB.visible = a.tri.visible = false; } else { a.nm.visible = a.hpb.visible = a.hpbB.visible = a.tri.visible = true; a.hpb.scale.x = Math.max(.01, 1.1 * a.hp / a.maxHp); a.hpb.material.color.setHex(a.hp < a.maxHp * .3 ? 0xffd24a : (a.team ? 0xff4b3e : 0x5ec8ff)); a.tri.position.y = (2.95 + Math.sin(performance.now() * .005) * .06) * a.ks; }
-    a.spr.material.color.setHex(a.fl > 0 ? 0xff9a9a : a.mark > 0 ? 0xffb0a0 : a.stun > 0 ? 0xbbbbff : 0xffffff); }
+    a.spr.material.color.setHex(a.fl > 0 ? 0xff9a9a : a.mark > 0 ? 0xffb0a0 : a.stun > 0 ? 0xbbbbff : a.armor > 0 ? 0xffe6a8 : 0xffffff); }
   if (me.heal > 0) me.hring.position.set(me.x, me.y + .08, me.z);
-  for (let i = FX.length - 1; i >= 0; i--) { const f = FX[i]; f.t += dt; const k = f.t / f.d; f.s.material.opacity = 1 - k; if (f.grow && !f.line) f.s.scale.setScalar(f.s.scale.x * (1 + dt * 2)); if (f.t >= f.d) { scene.remove(f.s); FX.splice(i, 1); } }
+  for (let i = FX.length - 1; i >= 0; i--) { const f = FX[i]; f.t += dt; const k = f.t / f.d; f.s.material.opacity = 1 - k; if (f.ring) f.s.scale.setScalar(.2 + f.ring * Math.min(1, k * 1.2)); if (f.t >= f.d) { scene.remove(f.s); if (f.s.geometry) f.s.geometry.dispose(); f.s.material.dispose(); FX.splice(i, 1); } }
+  stepParts(dt); flashLight.intensity = Math.max(0, flashLight.intensity - dt * 40); boomL.intensity = Math.max(0, boomL.intensity - dt * 22);
   if (state === 'play' || state === 'count') {
-    $('hpN').textContent = Math.max(0, Math.ceil(me.hp)); $('hpB').style.width = Math.max(0, me.hp / me.maxHp * 100) + '%'; $('hp').classList.toggle('low', me.hp < me.maxHp * .3 && !me.dead); $('wpN').textContent = me.w.n;
+    $('hpN').innerHTML = Math.max(0, Math.ceil(me.hp)) + (me.armor > 0 ? '<small style="color:#ffd066;font-size:20px;letter-spacing:0">+' + Math.ceil(me.armor) + '</small>' : ''); $('hpB').style.width = Math.max(0, me.hp / me.maxHp * 100) + '%'; $('hp').classList.toggle('low', me.hp < me.maxHp * .3 && !me.dead); $('wpN').textContent = me.w.n;
     const t = Math.max(0, Math.ceil(tLeft)); $('tm').textContent = Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
     // 目標列
     $('pA').textContent = Math.floor(prog[0]) + '%'; $('pB').textContent = Math.floor(prog[1]) + '%'; $('bA').style.width = prog[0] + '%'; $('bB').style.width = prog[1] + '%';
@@ -637,7 +734,7 @@ function render(dt) {
     const eS = me.cd.e > 0 ? { s: 'cd', p: me.cd.e / H.e.cd, c: Math.ceil(me.cd.e) } : { s: 'ready' }, sS = me.cd.s > 0 ? { s: 'cd', p: me.cd.s / H.s.cd, c: Math.ceil(me.cd.s) } : { s: 'ready' }, qS = (me.rage > 0 || me.volley > 0 || me.dmgT > 0) ? { s: 'on' } : me.ult >= 100 ? { s: 'ready' } : { s: 'cd', p: 1 - me.ult / 100, c: Math.floor(me.ult) + '%' };
     cd('scE', eS); cd('skE', eS); cd('scS', sS); cd('skS', sS); cd('scR', qS); cd('skR', qS);
     for (const [id, k] of [['scE', 'e'], ['scS', 's'], ['scR', 'q']]) { const el = $(id); el.querySelector('.ic').textContent = H[k].ic; el.querySelector('.nm').textContent = H[k].n; } for (const [id, k] of [['skE', 'e'], ['skS', 's'], ['skR', 'q']]) { const el = $(id); if (el.querySelector('.ic')) { el.querySelector('.ic').textContent = H[k].ic; } }
-    $('xh').style.setProperty('--sp', (Math.hypot(me.vx, me.vz) * 1.2 + (me.ground ? 0 : 8) + recoil * 30 + w.spread * 200) + 'px'); $('xh').style.display = zoom && w.zoom ? 'none' : ''; $('sh').classList.toggle('on', me.stun > 0);
+    $('xh').dataset.k = w.kind; $('xh').style.setProperty('--sp', (Math.hypot(me.vx, me.vz) * 1.2 + (me.ground ? 0 : 8) + recoil * 30 + w.spread * 200) + 'px'); $('xh').style.display = zoom && w.zoom ? 'none' : ''; $('sh').classList.toggle('on', me.stun > 0);
     $('allies').innerHTML = actors.filter(a => a.team === me.team && !a.isMe).map(a => '<div class="al' + (a.dead ? ' dead' : '') + '"><b>' + a.hero.ic + '</b><span>' + a.name + '</span><i><u style="width:' + Math.max(0, a.hp / a.maxHp * 100) + '%"></u></i></div>').join('');
   }
   renderer.render(scene, camera);
