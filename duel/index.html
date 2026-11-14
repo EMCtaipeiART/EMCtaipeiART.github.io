@@ -375,6 +375,42 @@ $('fsB').onclick = () => { try { if (document.fullscreenElement) document.exitFu
 const CHAR_API = 'https://emc-ai-stage-classifier.machi-chen.workers.dev/api/public/characters';
 const LOCAL_NAMES = ['Machi', 'Anna', 'Leona', 'Amber', 'Noise', '余采馨', '吳冠賢', '廖秦葦', '李明庭', '王藍庭', '鄭筱舢', '黎子瑄'];
 const CHAR_SCALE = { Leona: 1.1, 廖秦葦: 1.18 };
+// ───────── 背景音樂（雙軌交叉淡入淡出循環；音量／靜音存在瀏覽器，三款遊戲共用設定）─────────
+function emcBgm(url, opts) {
+  const KEY = 'emcBgmV1'; let st = {}; try { st = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+  const o = Object.assign({ vol: .3, fade: 4 }, opts || {}); let vol = typeof st.vol === 'number' ? st.vol : o.vol, muted = !!st.muted, started = false, paused = false, timer = 0;
+  const A = [new Audio(url), new Audio(url)]; A.forEach(a => { a.preload = 'auto'; a.volume = 0; }); let cur = 0;
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ vol, muted })); } catch (e) {} };
+  const gainOf = a => { const d = Math.max(a.duration || 0, o.dur || 0), t = a.currentTime; if (!d) return 0; return Math.max(0, Math.min(1, t / 1.5, (d - t) / o.fade)); };
+  function apply() { for (const a of A) { const g = a.paused ? 0 : gainOf(a); try { a.volume = muted ? 0 : Math.max(0, Math.min(1, vol * g)); } catch (e) {} a.muted = muted; } }
+  function tick() {
+    if (!started || paused) return; const a = A[cur], b = A[1 - cur];
+    const da = Math.max(a.duration || 0, o.dur || 0); if (da && a.currentTime > da - o.fade && b.paused) { b.currentTime = 0; b.play().catch(() => {}); cur = 1 - cur; }
+    for (const x of A) { const dx = Math.max(x.duration || 0, o.dur || 0); if (!x.paused && dx && x.currentTime >= dx - .05) x.pause(); }
+    apply();
+  }
+  const ctl = {
+    start() { if (started) return; started = true; A[cur].currentTime = 0; A[cur].play().catch(() => { started = false; }); clearInterval(timer); timer = setInterval(tick, 100); },
+    pause() { paused = true; A.forEach(a => a.pause()); },
+    resume() { if (!started) return; paused = false; A[cur].play().catch(() => {}); },
+    get vol() { return vol; }, get muted() { return muted; }, get playing() { return started && !paused; }, get t() { return A[cur].currentTime; }, get d() { return A[cur].duration; }, get level() { return A.map(x => +x.volume.toFixed(2)); },
+    setVol(v) { vol = Math.max(0, Math.min(1, v)); if (vol > 0) muted = false; save(); apply(); },
+    setMuted(m) { muted = !!m; save(); apply(); }
+  };
+  const once = () => { ctl.start(); removeEventListener('pointerdown', once, true); removeEventListener('keydown', once, true); };
+  addEventListener('pointerdown', once, true); addEventListener('keydown', once, true);   // 瀏覽器規定要使用者操作後才能播放
+  return ctl;
+}
+function bgmUI(ctl, css) {
+  const w = document.createElement('div'); w.id = 'bgmUI'; w.style.cssText = 'position:fixed;z-index:9999;display:flex;gap:6px;align-items:center;background:rgba(12,16,22,.78);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:4px 8px;color:#fff;font:700 12px system-ui;user-select:none;' + (css || '');
+  const b = document.createElement('button'), r = document.createElement('input'); b.type = 'button'; b.style.cssText = 'all:unset;cursor:pointer;font-size:16px;line-height:1;padding:2px'; b.title = '背景音樂';
+  r.type = 'range'; r.min = 0; r.max = 100; r.style.cssText = 'width:64px;height:4px;accent-color:#ffb000;cursor:pointer';
+  const sync = () => { b.textContent = ctl.muted || ctl.vol === 0 ? '🔇' : ctl.vol < .35 ? '🔈' : '🔊'; r.value = ctl.muted ? 0 : Math.round(ctl.vol * 100); };
+  b.onclick = e => { e.stopPropagation(); ctl.setMuted(!ctl.muted); if (!ctl.muted && ctl.vol === 0) ctl.setVol(.3); sync(); };
+  r.oninput = () => { ctl.setVol(r.value / 100); sync(); }; ['pointerdown', 'mousedown', 'touchstart'].forEach(ev => w.addEventListener(ev, e => e.stopPropagation()));
+  w.append(b, r); document.body.appendChild(w); sync(); return w;
+}
+const bgm = emcBgm('bgm.m4a', { vol: .28, dur: 187.2 }); bgmUI(bgm, 'right:8px;top:100px;');
 let cloud = {}, cloudWalks = {}, NAMES = LOCAL_NAMES.slice();
 const cloudReady = (async () => {
   try { const r = await fetch(CHAR_API, { signal: AbortSignal.timeout(5000) }); if (r.ok) { const j = await r.json(); cloud = j.characters || {}; cloudWalks = j.walks || {}; } } catch (e) {}

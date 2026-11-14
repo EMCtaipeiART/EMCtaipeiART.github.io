@@ -1920,10 +1920,46 @@ const expFade = document.createElement('div'); expFade.id = 'expFade'; document.
 let expFrame = null, expBusy = false, expArmed = false;
 const THEATER = {x0:150, x1:262, z0:zN(1110), z1:zN(1210)};   // 倉庫內側中央（px，過 zN）
 const inTheater = p => { const x = p.holder.position.x / U, z = p.holder.position.z / U; return floorOf(p) === 5 && x > THEATER.x0 && x < THEATER.x1 && z > THEATER.z0 && z < THEATER.z1; };
+// ───────── 背景音樂（雙軌交叉淡入淡出循環；音量／靜音存在瀏覽器，三款遊戲共用設定）─────────
+function emcBgm(url, opts) {
+  const KEY = 'emcBgmV1'; let st = {}; try { st = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+  const o = Object.assign({ vol: .3, fade: 4 }, opts || {}); let vol = typeof st.vol === 'number' ? st.vol : o.vol, muted = !!st.muted, started = false, paused = false, timer = 0;
+  const A = [new Audio(url), new Audio(url)]; A.forEach(a => { a.preload = 'auto'; a.volume = 0; }); let cur = 0;
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ vol, muted })); } catch (e) {} };
+  const gainOf = a => { const d = Math.max(a.duration || 0, o.dur || 0), t = a.currentTime; if (!d) return 0; return Math.max(0, Math.min(1, t / 1.5, (d - t) / o.fade)); };
+  function apply() { for (const a of A) { const g = a.paused ? 0 : gainOf(a); try { a.volume = muted ? 0 : Math.max(0, Math.min(1, vol * g)); } catch (e) {} a.muted = muted; } }
+  function tick() {
+    if (!started || paused) return; const a = A[cur], b = A[1 - cur];
+    const da = Math.max(a.duration || 0, o.dur || 0); if (da && a.currentTime > da - o.fade && b.paused) { b.currentTime = 0; b.play().catch(() => {}); cur = 1 - cur; }
+    for (const x of A) { const dx = Math.max(x.duration || 0, o.dur || 0); if (!x.paused && dx && x.currentTime >= dx - .05) x.pause(); }
+    apply();
+  }
+  const ctl = {
+    start() { if (started) return; started = true; A[cur].currentTime = 0; A[cur].play().catch(() => { started = false; }); clearInterval(timer); timer = setInterval(tick, 100); },
+    pause() { paused = true; A.forEach(a => a.pause()); },
+    resume() { if (!started) return; paused = false; A[cur].play().catch(() => {}); },
+    get vol() { return vol; }, get muted() { return muted; }, get playing() { return started && !paused; }, get t() { return A[cur].currentTime; }, get d() { return A[cur].duration; }, get level() { return A.map(x => +x.volume.toFixed(2)); },
+    setVol(v) { vol = Math.max(0, Math.min(1, v)); if (vol > 0) muted = false; save(); apply(); },
+    setMuted(m) { muted = !!m; save(); apply(); }
+  };
+  const once = () => { ctl.start(); removeEventListener('pointerdown', once, true); removeEventListener('keydown', once, true); };
+  addEventListener('pointerdown', once, true); addEventListener('keydown', once, true);   // 瀏覽器規定要使用者操作後才能播放
+  return ctl;
+}
+function bgmUI(ctl, css) {
+  const w = document.createElement('div'); w.id = 'bgmUI'; w.style.cssText = 'position:fixed;z-index:9999;display:flex;gap:6px;align-items:center;background:rgba(12,16,22,.78);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:4px 8px;color:#fff;font:700 12px system-ui;user-select:none;' + (css || '');
+  const b = document.createElement('button'), r = document.createElement('input'); b.type = 'button'; b.style.cssText = 'all:unset;cursor:pointer;font-size:16px;line-height:1;padding:2px'; b.title = '背景音樂';
+  r.type = 'range'; r.min = 0; r.max = 100; r.style.cssText = 'width:64px;height:4px;accent-color:#ffb000;cursor:pointer';
+  const sync = () => { b.textContent = ctl.muted || ctl.vol === 0 ? '🔇' : ctl.vol < .35 ? '🔈' : '🔊'; r.value = ctl.muted ? 0 : Math.round(ctl.vol * 100); };
+  b.onclick = e => { e.stopPropagation(); ctl.setMuted(!ctl.muted); if (!ctl.muted && ctl.vol === 0) ctl.setVol(.3); sync(); };
+  r.oninput = () => { ctl.setVol(r.value / 100); sync(); }; ['pointerdown', 'mousedown', 'touchstart'].forEach(ev => w.addEventListener(ev, e => e.stopPropagation()));
+  w.append(b, r); document.body.appendChild(w); sync(); return w;
+}
+const metaBgm = emcBgm('bgm.m4a', { vol: .28, dur: 181.6 }); bgmUI(metaBgm, matchMedia('(pointer:coarse)').matches ? 'left:12px;bottom:200px;' : 'left:12px;bottom:12px;');
 const EXP_GAMES = {exp:{title:'設計部遠征隊', fade:'倉庫', url:'../expedition/'}, deadline:{title:'截稿倒數 2', fade:'截稿倒數', url:'../deadline/'}, hoops:{title:'廢紙投籃 3D', fade:'廢紙投籃', url:'../hoops3d/'}, duel:{title:'辦公室對決', fade:'辦公室對決', url:'../duel/'}, soccer:{title:'大顆足球賽', fade:'大顆足球賽', url:'../soccer/'}, kart:{title:'辦公室賽車', fade:'辦公室賽車', url:'../kart/'}, fps:{title:'辦公室槍戰', fade:'辦公室槍戰', url:'../fps/'}};
 function expEnter(kind){
   const gm = EXP_GAMES[kind] || EXP_GAMES.exp;
-  if (expBusy) return; expBusy = true; target = null; wantSeat = null; wantElev = false; wheelClose(); fridgeClose();
+  if (expBusy) return; expBusy = true; metaBgm.pause(); target = null; wantSeat = null; wantElev = false; wheelClose(); fridgeClose();
   expFade.textContent = gm.fade; expFade.classList.add('on');
   setTimeout(() => {
     expFrame = document.createElement('iframe'); expFrame.id = 'expFrame'; expFrame.title = gm.title; expFrame.allow = 'autoplay; fullscreen'; expFrame.src = gm.url + '?embed=1&t=' + Date.now() + (player && player.name ? '&me=' + encodeURIComponent(player.name) : ''); expFrame.style.display = 'block'; document.body.appendChild(expFrame); expFrame.addEventListener('load', () => { try { expFrame.focus(); expFrame.contentWindow.focus(); } catch (e) {} });
@@ -1931,7 +1967,7 @@ function expEnter(kind){
   }, 1000);
 }
 function expLeave(){
-  if (!expFrame) return; expFade.textContent = ''; expFade.classList.add('fast', 'on');
+  if (!expFrame) return; metaBgm.resume(); expFade.textContent = ''; expFade.classList.add('fast', 'on');
   setTimeout(() => { expFrame.remove(); expFrame = null; expArmed = false; setTimeout(() => { expFade.classList.remove('on'); expBusy = false; }, 150); setTimeout(() => expFade.classList.remove('fast'), 700); }, 560);
 }
 // 遊戲開著時，外層收到的按鍵（焦點還在外層時）轉給遊戲，並擋掉外層的走路等操作
