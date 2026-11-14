@@ -318,7 +318,7 @@ function bgmUI(ctl, css) {
   r.oninput = () => { ctl.setVol(r.value / 100); sync(); }; ['pointerdown', 'mousedown', 'touchstart'].forEach(ev => w.addEventListener(ev, e => e.stopPropagation()));
   const hint = document.createElement('span'); hint.textContent = '點一下開啟音樂'; hint.style.cssText = 'font-size:11px;color:#ffd24a;white-space:nowrap'; w.append(b, r, hint); document.body.appendChild(w); sync(); setInterval(() => { hint.style.display = ctl.on ? 'none' : 'inline'; }, 400); return w;
 }
-const bgm = emcBgm('bgm.m4a', { vol: .3, dur: 166.7 }); bgmUI(bgm, 'right:10px;top:48px;');
+const bgm = emcBgm('bgm-mellow.m4a', { vol: .3, dur: 181.6 }); bgmUI(bgm, 'right:10px;top:48px;');
 const CHAR_API = 'https://emc-ai-stage-classifier.machi-chen.workers.dev/api/public/characters';   // 與元宇宙／辦公室對決同一份「最新角色」
 let cloud = {}, cloudWalks = {}, cloudDone = false;
 const cloudReady = (async () => { try { const r = await fetch(CHAR_API, { signal: AbortSignal.timeout(5000) }); if (r.ok) { const j = await r.json(); cloud = j.characters || {}; cloudWalks = j.walks || {}; } } catch (e) {} cloudDone = true; })();
