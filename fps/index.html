@@ -986,7 +986,8 @@ function drawHeroes() {
   $('heroes').querySelectorAll('canvas').forEach(c => drawPort(c, c.dataset.c));
   $('heroes').querySelectorAll('button').forEach(b => { b.onclick = () => { CFG.hero = b.dataset.id; saveCfg(); drawHeroes(); }; });
 }
-drawHeroes(); $('startB').onclick = startMatch;
+drawHeroes(); cloudReady.then(() => { for (const k in portCache) delete portCache[k]; drawHeroes(); });   // 雲端最新角色清單到了再重畫頭像
+$('startB').onclick = startMatch;
 const goBack = () => { if (embed) { leave(); return; } try { if (document.pointerLockElement) document.exitPointerLock(); } catch (e) {} try { if (history.length > 1) history.back(); else location.href = '../'; } catch (e) { location.href = '../'; } };
 $('exitB').onclick = goBack; $('exitB2').onclick = goBack; $('lockExit').onclick = e => { e.stopPropagation(); goBack(); };
 resize(); requestAnimationFrame(frame);

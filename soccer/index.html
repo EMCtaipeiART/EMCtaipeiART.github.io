@@ -513,7 +513,7 @@ function drawHead() {
   loadImg(CFG.who, false, im => { const cw = im.naturalWidth / ANGLES, ch = im.naturalHeight, size = ch * .6, sx = (cw - size) / 2, sy = ch * .05; g.clearRect(0, 0, c.width, c.height); g.drawImage(im, sx, sy, size, size, 0, 0, c.width, c.height); });
 }
 const stepWho = d => { const i = LOCAL_NAMES.indexOf(CFG.who); CFG.who = LOCAL_NAMES[(i + d + LOCAL_NAMES.length) % LOCAL_NAMES.length]; saveCfg(); drawHead(); };
-$('prev').onclick = () => stepWho(-1); $('next').onclick = () => stepWho(1); $('startB').onclick = startMatch; drawHead();
+$('prev').onclick = () => stepWho(-1); $('next').onclick = () => stepWho(1); $('startB').onclick = startMatch; drawHead(); cloudReady.then(drawHead);
 
 if (embed) { $('exitB').hidden = false; $('exitB2').hidden = false; $('exitB').onclick = $('exitB2').onclick = leave; }
 resize(); requestAnimationFrame(frame);

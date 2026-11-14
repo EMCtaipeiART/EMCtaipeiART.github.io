@@ -576,7 +576,7 @@ pills('gDiff', [['輕鬆', 0], ['標準', 1], ['競速', 2]], () => CFG.diff, v 
 pills('gLaps', [['2 圈', 2], ['3 圈', 3], ['5 圈', 5]], () => CFG.laps, v => CFG.laps = v);
 function drawHead() { const c = $('pv'), g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); $('pvN').textContent = CFG.who; loadImg(CFG.who, false, im => { const cw = im.naturalWidth / ANGLES, ch = im.naturalHeight, size = ch * .6, sx = (cw - size) / 2, sy = ch * .05; g.clearRect(0, 0, c.width, c.height); g.drawImage(im, sx, sy, size, size, 0, 0, c.width, c.height); }); }
 const stepWho = d => { const i = LOCAL_NAMES.indexOf(CFG.who); CFG.who = LOCAL_NAMES[(i + d + LOCAL_NAMES.length) % LOCAL_NAMES.length]; saveCfg(); drawHead(); };
-$('prev').onclick = () => stepWho(-1); $('next').onclick = () => stepWho(1); $('startB').onclick = startRace; drawHead();
+$('prev').onclick = () => stepWho(-1); $('next').onclick = () => stepWho(1); $('startB').onclick = startRace; drawHead(); cloudReady.then(drawHead);
 if (embed) { $('exitB').hidden = false; $('exitB2').hidden = false; $('exitB').onclick = $('exitB2').onclick = leave; }
 resize(); requestAnimationFrame(frame);
 if (Q.get('debug') === '1') window.KART = { sim, TR, locate, get karts() { return karts; }, get me() { return me; }, get state() { return state; }, set state(v) { state = v; }, CFG, startRace, get raceT() { return raceT; }, useItem, readMe };
