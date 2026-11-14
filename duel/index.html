@@ -1161,7 +1161,7 @@ const _cp = new THREE.Vector3();
 function ensureGear(f) {
   const key = f.w + '|' + f.name; if (f.gearKey === key) return; f.gearKey = key; const W = wOf(f);
   if (f.wsp) { f.holder.remove(f.wsp); f.wsp.material.dispose(); } if (f.fan) { scene.remove(f.fan); f.fan.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
-  f.wsp = new THREE.Sprite(new THREE.SpriteMaterial({ map: iconTexture(W.ic), transparent: true })); f.wsp.scale.set(.75, .75, 1); f.holder.add(f.wsp);
+  f.wsp = new THREE.Sprite(new THREE.SpriteMaterial({ map: iconTexture(W.ic), transparent: true, depthWrite: false, alphaTest: .02 })); f.wsp.scale.set(.75, .75, 1); f.holder.add(f.wsp);
   const grp = new THREE.Group(), pos = [], idx = [], pts = [];
   if (W.ranged) { const hw = W.r * .8, L = W.speed * W.life; pts.push([-hw, .6], [hw, .6], [hw, L], [-hw, L]); }
   else { const h = W.arc * Math.PI / 360; pts.push([0, 0]); for (let i = 0; i <= 28; i++) { const a = -h + (2 * h) * i / 28; pts.push([Math.sin(a), Math.cos(a)]); } }
@@ -1177,7 +1177,7 @@ const alertTex = (() => { const c = document.createElement('canvas'); c.width = 
 const teles = [0, 1].map(() => { const g = new THREE.Group(), fl = new THREE.Mesh(new THREE.CircleGeometry(1, 40), new THREE.MeshBasicMaterial({ color: 0xff3b30, transparent: true, opacity: .25, depthWrite: false, side: THREE.DoubleSide })), rg = new THREE.Mesh(new THREE.RingGeometry(.93, 1, 48), new THREE.MeshBasicMaterial({ color: 0xff3b30, transparent: true, opacity: .9, depthWrite: false, side: THREE.DoubleSide })); fl.rotation.x = rg.rotation.x = -Math.PI / 2; g.add(fl, rg); g.visible = false; g.userData = { fl, rg }; scene.add(g); return g; });
 function updGear(f, toCam, bob) {
   ensureGear(f); const W = wOf(f), on = state === 'countdown' || state === 'fight' || state === 'roundEnd';
-  if (!f.alert) { f.alert = new THREE.Sprite(new THREE.SpriteMaterial({ map: alertTex, transparent: true, depthTest: false })); f.alert.scale.set(.9, .9, 1); f.alert.visible = false; f.holder.add(f.alert); }
+  if (!f.alert) { f.alert = new THREE.Sprite(new THREE.SpriteMaterial({ map: alertTex, transparent: true, depthTest: false, depthWrite: false })); f.alert.scale.set(.9, .9, 1); f.alert.visible = false; f.holder.add(f.alert); }
   const rX = Math.cos(toCam), rZ = -Math.sin(toCam), sw = f.windT > 0 ? Math.min(1, f.windT / Math.max(.05, W.wind)) : 0, fx = Math.sin(f.face), fz = Math.cos(f.face);
   const wind = f.windT > 0 || f.ultWind > 0, p = f.swingT > 0 ? 1 - f.swingT / .26 : 0, sn = Math.sin(p * Math.PI);
   if (f.swingT > 0) { f.wsp.position.set(rX * .5 + fx * (.2 + 1.1 * sn), .95 + sn * .2, rZ * .5 + fz * (.2 + 1.1 * sn)); const k = 1 + .6 * sn; f.wsp.scale.set(k, k, 1); f.wsp.material.rotation = -1.4 + 2.8 * p; }
