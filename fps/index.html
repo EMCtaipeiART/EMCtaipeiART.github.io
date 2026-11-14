@@ -176,6 +176,42 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
 
 #spec{left:50%;top:14%;transform:translateX(-50%);padding:8px 22px;background:rgba(8,11,15,.82);border:1px solid var(--line);border-top:3px solid var(--ice);font-size:18px;white-space:nowrap;text-align:center}
 #spec small{display:block;font-size:11px;letter-spacing:.2em;color:var(--dim);margin-top:3px}
+
+/* ==== 首頁改版（遊戲感）==== */
+.ov{background:radial-gradient(ellipse at 20% 10%,rgba(255,176,0,.16),transparent 55%),radial-gradient(ellipse at 90% 90%,rgba(94,200,255,.14),transparent 50%),repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 1px,transparent 1px 4px),linear-gradient(#0a0d12,#12161d)!important}
+.card.st{width:min(1080px,100%);padding:18px 22px 16px;background:linear-gradient(160deg,rgba(24,30,38,.96),rgba(12,15,20,.96));border:1px solid #3a4654;clip-path:polygon(26px 0,100% 0,100% calc(100% - 26px),calc(100% - 26px) 100%,0 100%,0 26px);position:relative;overflow:hidden}
+.card.st::before{content:'';position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,#ffb000,transparent 60%)}
+.card.st::after{content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 40%,rgba(255,176,0,.05) 50%,transparent 60%);animation:sweep 6s linear infinite;pointer-events:none}@keyframes sweep{from{transform:translateX(-60%)}to{transform:translateX(60%)}}
+.sthead{display:flex;align-items:flex-end;gap:18px}
+.logo2 small{display:block;font-size:10px;letter-spacing:.55em;color:#ffb000;margin-bottom:4px}.logo2 b{display:block;font-size:clamp(34px,5.5vw,58px);font-weight:900;font-style:italic;letter-spacing:.12em;line-height:1;color:#fff;text-shadow:0 0 18px rgba(255,176,0,.55),3px 3px 0 #000;transform:skewX(-8deg)}
+.stmode{margin-left:auto;text-align:right;border-right:3px solid #ffb000;padding-right:12px}.stmode span{display:block;font-size:12px;letter-spacing:.3em;color:#8a97a6}.stmode b{font-size:24px;font-style:italic;color:#fff}
+.exitbtn{font:800 13px/1 inherit;color:#fff;background:rgba(255,75,62,.18);border:1px solid #ff4b3e;padding:10px 16px;cursor:pointer;letter-spacing:.15em;clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}.exitbtn:hover{background:#ff4b3e}
+.stmain{display:grid;grid-template-columns:1.05fr 1fr;gap:18px;margin-top:14px}
+.hero-big{display:flex;gap:16px;align-items:stretch}
+.portrait{position:relative;flex:none;width:min(260px,34vw);aspect-ratio:1;background:radial-gradient(circle at 50% 35%,rgba(255,176,0,.22),#10151b 70%);border:2px solid #ffb000;box-shadow:0 0 22px rgba(255,176,0,.35),inset 0 0 30px rgba(0,0,0,.6);clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,18px 100%,0 calc(100% - 18px))}
+.portrait canvas{width:100%;height:100%;display:block;object-fit:contain}
+.portrait .rl{position:absolute;left:8px;bottom:8px;font-size:12px;padding:3px 10px}
+.hinfo{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
+.hsub{font-size:12px;letter-spacing:.35em;color:#ffb000}.hinfo h2{margin:2px 0 10px;font-size:clamp(34px,5vw,56px);font-style:italic;font-weight:900;line-height:1;letter-spacing:.06em;text-shadow:2px 2px 0 #000}
+.sb2{display:flex;align-items:center;gap:8px;margin-top:5px;font-size:12px;color:#8a97a6;letter-spacing:.2em}.sb2 span{width:36px}.sb2 i{flex:1;height:9px;background:rgba(255,255,255,.1);transform:skewX(-20deg);overflow:hidden;border:1px solid #3a4654}.sb2 u{display:block;height:100%}
+.wpn{margin-top:10px;font-size:12px;color:#8a97a6;letter-spacing:.2em}.wpn b{display:block;margin-top:3px;color:#ffb000;font-size:17px;letter-spacing:.05em}
+.abil{display:flex;flex-direction:column;gap:8px}
+.ab2{display:flex;gap:12px;align-items:center;position:relative;padding:9px 12px 9px 58px;background:rgba(255,255,255,.045);border-left:3px solid #3a4654;clip-path:polygon(0 0,100% 0,calc(100% - 12px) 100%,0 100%)}
+.ab2 kbd{position:absolute;left:8px;top:8px;font:800 10px/1 system-ui;background:#ffb000;color:#1a1200;padding:2px 5px}.ab2 .ai{font-size:30px;position:absolute;left:12px;top:22px}
+.ab2 strong{font-size:15px;letter-spacing:.06em}.ab2 p{margin:2px 0;font-size:12px;line-height:1.5;color:#c4cdd8}.ab2 small{font-size:11px;color:#ffb000}
+.ab2.ult{border-left-color:#ffb000;background:linear-gradient(90deg,rgba(255,176,0,.16),rgba(255,255,255,.03))}
+.strip{display:flex;gap:8px;margin-top:14px}
+.hc2{flex:1;min-width:0;background:rgba(255,255,255,.04);border:1px solid #3a4654;border-bottom:3px solid #3a4654;color:#e8edf2;padding:6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font:inherit;transition:transform .12s,border-color .12s;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%)}
+.hc2:hover{transform:translateY(-3px);border-color:#ffb000}.hc2.on{border-color:#ffb000;border-bottom-color:#ffb000;background:linear-gradient(rgba(255,176,0,.22),rgba(255,176,0,.04));box-shadow:0 0 14px rgba(255,176,0,.4)}
+.hc2 canvas{width:100%;max-width:92px;aspect-ratio:1;background:#10151b;display:block}.hc2 b{font-size:13px}.hc2 em.rl{font-size:10px;padding:1px 8px}
+.rl{font-style:normal;background:#3a4654;color:#fff;letter-spacing:.1em}.rl.r重裝{background:#2f6bd9}.rl.r輸出{background:#d9402f}.rl.r支援{background:#1c9a6a}
+.stfoot{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center;margin-top:14px}
+.modebox span{display:block;font-size:11px;letter-spacing:.25em;color:#8a97a6;margin-bottom:5px}.modebox b{font-size:13px;line-height:1.5}.modebox.right{text-align:right}
+.card.st .go{margin:0;padding:16px 64px;font-size:24px;font-style:italic;letter-spacing:.4em;box-shadow:0 0 24px rgba(255,176,0,.5);animation:glowGo 1.6s ease-in-out infinite alternate}@keyframes glowGo{to{box-shadow:0 0 42px rgba(255,176,0,.85)}}
+.card.st .help{margin-top:12px}
+#lock .lk{text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}#lock .lk b{font-size:26px}#lock .lk small{font-size:13px;letter-spacing:.2em;color:#ffb000}
+#lock #lockExit{margin-top:8px;font:800 14px/1 inherit;color:#fff;background:rgba(255,75,62,.25);border:1px solid #ff4b3e;padding:10px 22px;cursor:pointer;letter-spacing:.2em}#lock #lockExit:hover{background:#ff4b3e}
+@media (max-width:820px){.stmain{grid-template-columns:1fr}.hero-big{align-items:center}.stfoot{grid-template-columns:1fr}.modebox.right{text-align:left}.card.st .go{padding:13px 40px;font-size:20px}.portrait{width:120px}.hinfo h2{font-size:30px}.ab2 p{display:none}.card.st .help{display:none}.logo2 b{font-size:30px}.stmode{display:none}.hc2 b{font-size:11px}.hc2 em.rl{display:none}.card.st{padding:12px}}
 </style>
 </head>
 <body>
@@ -198,7 +234,7 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
   <div class="hud" id="spec" hidden></div><div id="heroSel" hidden></div>
   <div id="cast"></div><div id="killT"></div><div class="hud" id="flashS"></div>
   <div id="banner"><b id="bnT"></b><small id="bnS"></small></div>
-  <div id="lock" hidden>點擊畫面　開始瞄準</div>
+  <div id="lock" hidden><div class="lk"><b>點擊畫面　繼續</b><small>按 Esc 可隨時暫停</small><button type="button" id="lockExit">離開遊戲</button></div></div>
   <div id="sb" hidden></div>
   <div id="lookpad"></div>
   <div id="stick" hidden><i></i></div>
@@ -211,13 +247,31 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
   <button class="pb" id="exitB2" type="button" hidden style="position:absolute;right:10px;top:10px;z-index:9;font:700 12px/1 inherit;color:#fff;background:rgba(10,14,18,.7);border:1px solid #3a4654;padding:7px 10px">離開</button>
 
   <div class="ov" id="menu">
-    <div class="card">
-      <div class="logo"><small>OFFICE  FIREFIGHT  RANGE</small>辦公室槍戰</div>
-      <div id="heroes" class="heroes"></div><div class="hd" id="hd"></div>
-      <div class="row"><span class="lab">難度</span><span id="gDiff"></span></div>
-      <button class="go" id="startB" type="button">部署</button>
-      <div class="row" style="justify-content:center"><button class="pill" id="exitB" type="button" hidden>離開遊戲</button></div>
-      <div class="help"><b>模式：</b>5 對 5 控制點，每隊固定 1 重裝＋2 輸出＋2 支援（5 位英雄各一，選一位，其餘由電腦扮演；陣亡重選會與隊友交換）。占領中央圓圈（兩隊同時在圈內為爭奪、不計進度），擁有控制點且圈內沒有敵人時，隊伍進度會增加，先到 100% 的隊伍獲勝（8 分鐘到則比進度）。<br><b>電腦：</b>WASD 移動　空白 跳　滑鼠 瞄準／左鍵射擊　右鍵 瞄準鏡（直尺）　<b>E</b> 技能一　<b>Shift</b> 技能二　<b>Q</b> 大招　Tab 戰績。陣亡後可選其他英雄（1–5）。<br><b>手機：</b>左搖桿移動、右半邊滑動轉視角，右下 射擊／跳／瞄準／技能一／技能二／大招。咖啡杯可補血。</div>
+    <div class="card st">
+      <div class="sthead">
+        <div class="logo2"><small>OFFICE  FIREFIGHT  RANGE</small><b>辦公室槍戰</b></div>
+        <div class="stmode"><span>5 v 5</span><b>控制點</b></div>
+        <button class="exitbtn" id="exitB" type="button">⏏ 離開</button>
+      </div>
+      <div class="stmain">
+        <div class="hero-big">
+          <div class="portrait"><canvas id="hbig" width="260" height="260"></canvas><em class="rl" id="hrole"></em></div>
+          <div class="hinfo">
+            <div class="hsub" id="htitle"></div>
+            <h2 id="hname"></h2>
+            <div class="stats" id="hstats"></div>
+            <div class="wpn" id="hweap"></div>
+          </div>
+        </div>
+        <div class="abil" id="habil"></div>
+      </div>
+      <div class="strip" id="heroes"></div>
+      <div class="stfoot">
+        <div class="modebox"><span>難度</span><div id="gDiff"></div></div>
+        <button class="go" id="startB" type="button">部　署</button>
+        <div class="modebox right"><span>勝利條件</span><b>占領中央控制點，隊伍進度先到 100%</b></div>
+      </div>
+      <div class="help"><b>電腦：</b>WASD 移動　空白 跳　滑鼠 瞄準／左鍵射擊　右鍵 瞄準鏡（直尺）　<b>E</b> 技能一　<b>Shift</b> 技能二　<b>Q</b> 大招　按住 <b>Tab</b> 看戰績　陣亡後可選其他英雄（1–5）、左鍵／空白切換觀戰。<br><b>手機：</b>左搖桿移動、右半邊滑動轉視角，右下 射擊／跳／瞄準／技能一／技能二／大招。咖啡杯可補血。</div>
     </div>
   </div>
 </div>
@@ -757,7 +811,8 @@ addEventListener('keydown', e => { if (e.repeat) return; keys[e.code] = true; un
   if (me.dead) { if (/^Digit[1-5]$/.test(e.code)) chooseHero(HEROES[+e.code.slice(5) - 1].id); if (e.code === 'Space' || e.code === 'ArrowRight') nextSpec(1); if (e.code === 'ArrowLeft') nextSpec(-1); return; }
   if (e.code === 'KeyE') useE(me); if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') useS(me); if (e.code === 'KeyQ' || e.code === 'KeyR') useQ(me); if (e.code === 'Tab') showSB(true); });
 addEventListener('keyup', e => { keys[e.code] = false; if (e.code === 'Tab') showSB(false); });
-addEventListener('blur', () => { for (const k in keys) keys[k] = false; hold.fire = false; });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; hold.fire = false; showSB(false); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { for (const k in keys) keys[k] = false; hold.fire = false; showSB(false); } });
 cv.addEventListener('mousedown', e => { unlock(); if (state === 'play' && me && me.dead && e.button === 0) nextSpec(1); if (state === 'play' && !locked && !lockFail && !touch) { askLock(); return; } if (e.button === 0) hold.fire = true; if (e.button === 2) setZoom(true); });
 addEventListener('mouseup', e => { if (e.button === 0) hold.fire = false; if (e.button === 2) setZoom(false); });
 cv.addEventListener('contextmenu', e => e.preventDefault());
@@ -825,7 +880,7 @@ function endMatch() { if (state === 'over') return; state = 'over'; try { docume
   const o = $('menu'); o.hidden = false; o.firstElementChild.innerHTML = '<div class="logo"><small>' + (win === 0 ? 'VICTORY' : win === 1 ? 'DEFEAT' : 'DRAW') + '</small>' + (win === 0 ? '勝利' : win === 1 ? '敗北' : '平手') + '</div><div class="mono" style="text-align:center;font-size:38px;margin:8px 0">' + Math.floor(prog[0]) + '% : ' + Math.floor(prog[1]) + '%</div><table style="width:100%;border-collapse:collapse;font-size:14px"><tr style="color:#8a97a6;font-size:10px;letter-spacing:.2em;text-align:left"><th style="text-align:left;padding:4px 8px">英雄</th><th style="text-align:left">擊殺</th><th style="text-align:left">死亡</th><th style="text-align:left">傷害</th><th style="text-align:left">治療</th></tr>' + rows + '</table><button class="go" id="againB" type="button">再戰一場</button>';
   for (const id of ['xh', 'obj', 'hp', 'wp', 'sk', 'allies', 'stick', 'fire', 'jump', 'aim', 'skE', 'skS', 'skR']) $(id).hidden = true; $('scope').classList.remove('on');
   $('againB').onclick = () => { location.reload(); }; }
-function startMatch() { unlock(); $('menu').hidden = true; setupMatch(); document.documentElement.classList.add('playing'); resize(); for (const id of ['xh', 'obj', 'hp', 'wp', 'sk', 'allies']) $(id).hidden = false; if (touch) for (const id of ['stick', 'fire', 'jump', 'aim', 'skE', 'skS', 'skR']) $(id).hidden = false; $('exitB2').hidden = !embed;
+function startMatch() { unlock(); $('menu').hidden = true; setupMatch(); document.documentElement.classList.add('playing'); resize(); for (const id of ['xh', 'obj', 'hp', 'wp', 'sk', 'allies']) $(id).hidden = false; if (touch) for (const id of ['stick', 'fire', 'jump', 'aim', 'skE', 'skS', 'skR']) $(id).hidden = false; $('exitB2').hidden = false;
   state = 'count'; stT = 3.6; paused = false; if (!touch) { lockFail = false; askLock(); $('lock').hidden = false; } }
 const lerp = (a, b, t) => a + (b - a) * t;
 let last = performance.now();
@@ -873,14 +928,24 @@ function frame(now) { requestAnimationFrame(frame); const dt = Math.min(.05, (no
 // ───────── 選單：選英雄 ─────────
 function pills(id, opts, get, set) { const box = $(id); box.innerHTML = ''; opts.forEach(([label, val]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pill' + (get() === val ? ' on' : ''); b.textContent = label; b.onclick = () => { set(val); saveCfg(); pills(id, opts, get, set); }; box.appendChild(b); }); }
 pills('gDiff', [['簡單', 0], ['普通', 1], ['困難', 2]], () => CFG.diff, v => CFG.diff = v);
+const portCache = {};
+function drawPort(c, name) {   // 取方形頭像區（不拉伸變形）
+  const draw = im => { const g = c.getContext('2d'), cw = im.naturalWidth / ANGLES, ch = im.naturalHeight, size = ch * .6, sx = (cw - size) / 2, sy = ch * .05; g.clearRect(0, 0, c.width, c.height); g.imageSmoothingEnabled = true; g.drawImage(im, sx, sy, size, size, 0, 0, c.width, c.height); };
+  if (portCache[name]) { draw(portCache[name]); return; } const im = new Image(); im.onload = () => { portCache[name] = im; draw(im); }; im.src = '../pixel-plaza/sprites-hd/' + name + '.webp';
+}
 function drawHeroes() {
-  $('heroes').innerHTML = HEROES.map(h => '<button type="button" class="hc' + (CFG.hero === h.id ? ' on' : '') + '" data-id="' + h.id + '"><canvas width="96" height="96" data-c="' + h.char + '"></canvas><div class="hn"><b>' + h.ic + ' ' + h.name + '</b><em class="rl r' + h.role + '">' + h.role + '</em></div><div class="ht">' + h.title + '　HP ' + h.hp + '</div><div class="hw">' + WEAPONS[h.w].ic + ' ' + WEAPONS[h.w].n + '</div></button>').join('');
-  $('heroes').querySelectorAll('canvas').forEach(c => { const im = new Image(), g = c.getContext('2d'); im.onload = () => { const cw = im.naturalWidth / ANGLES, ch = im.naturalHeight, sw = cw * .8, sh = ch * .56; g.drawImage(im, (cw - sw) / 2, ch * .06, sw, sh, 0, 0, c.width, c.height); }; im.src = '../pixel-plaza/sprites-hd/' + c.dataset.c + '.webp'; });
+  const h = HERO_BY[CFG.hero], W = WEAPONS[h.w], fire = Math.min(1, W.dmg * W.pellets * W.rate / 115), bar = (n, v, col) => '<div class="sb2"><span>' + n + '</span><i><u style="width:' + Math.round(clamp(v, .05, 1) * 100) + '%;background:' + col + '"></u></i></div>';
+  drawPort($('hbig'), h.char); $('hrole').textContent = h.role; $('hrole').className = 'rl r' + h.role; $('hname').textContent = h.name; $('htitle').textContent = h.title;
+  $('hstats').innerHTML = bar('生命', h.hp / 500, 'linear-gradient(90deg,#5ec8ff,#bfe9ff)') + bar('速度', h.speed / 6.2, 'linear-gradient(90deg,#5ef0a4,#c6ffe0)') + bar('火力', fire, 'linear-gradient(90deg,#ff6a3d,#ffd24a)');
+  $('hweap').innerHTML = '<span>主武器</span><b>' + W.ic + ' ' + W.n + '</b>';
+  $('habil').innerHTML = [['E', h.e], ['SHIFT', h.s], ['Q', h.q]].map(([k, a]) => '<div class="ab2' + (k === 'Q' ? ' ult' : '') + '"><kbd>' + k + '</kbd><b class="ai">' + a.ic + '</b><div><strong>' + a.n + '</strong><p>' + a.d + '</p><small>' + (a.cd ? '冷卻 ' + a.cd + ' 秒' : '靠傷害、治療、占點充能') + '</small></div></div>').join('');
+  $('heroes').innerHTML = HEROES.map(x => '<button type="button" class="hc2' + (CFG.hero === x.id ? ' on' : '') + '" data-id="' + x.id + '"><canvas width="96" height="96" data-c="' + x.char + '"></canvas><b>' + x.ic + ' ' + x.name + '</b><em class="rl r' + x.role + '">' + x.role + '</em></button>').join('');
+  $('heroes').querySelectorAll('canvas').forEach(c => drawPort(c, c.dataset.c));
   $('heroes').querySelectorAll('button').forEach(b => { b.onclick = () => { CFG.hero = b.dataset.id; saveCfg(); drawHeroes(); }; });
-  const h = HERO_BY[CFG.hero]; $('hd').innerHTML = '<b>' + h.ic + ' ' + h.name + '・' + h.title + '</b>（' + h.role + '，HP ' + h.hp + '）<br>主武器：' + WEAPONS[h.w].ic + ' ' + WEAPONS[h.w].n + '<br><b>E</b> ' + h.e.ic + h.e.n + '：' + h.e.d + '（冷卻 ' + h.e.cd + ' 秒）<br><b>Shift</b> ' + h.s.ic + h.s.n + '：' + h.s.d + '（冷卻 ' + h.s.cd + ' 秒）<br><b>Q</b> ' + h.q.ic + h.q.n + '：' + h.q.d + '（靠時間、傷害、治療與占點充能）';
 }
 drawHeroes(); $('startB').onclick = startMatch;
-if (embed) { $('exitB').hidden = false; $('exitB').onclick = leave; $('exitB2').onclick = leave; }
+const goBack = () => { if (embed) { leave(); return; } try { if (document.pointerLockElement) document.exitPointerLock(); } catch (e) {} try { if (history.length > 1) history.back(); else location.href = '../'; } catch (e) { location.href = '../'; } };
+$('exitB').onclick = goBack; $('exitB2').onclick = goBack; $('lockExit').onclick = e => { e.stopPropagation(); goBack(); };
 resize(); requestAnimationFrame(frame);
 if (Q.get('debug') === '1') window.FPS = { sim, get actors() { return actors; }, get me() { return me; }, get state() { return state; }, set state(v) { state = v; }, get prog() { return prog; }, get owner() { return owner; }, get cap() { return cap; }, CFG, startMatch, fire, useE, useS, useQ, astar, los, BOXES, BAR, HEROES, get yaw() { return yaw; }, set yaw(v) { yaw = v; }, set pitch(v) { pitch = v; }, keys, hold, POINT, respawn };
 
