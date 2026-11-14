@@ -32,6 +32,10 @@ on:
       - 'hoops3d/**'
       - 'expedition/**'
       - 'deadline/**'
+      # 2026-11-15：新小遊戲（足球賽、賽車、槍戰）資料夾也要能自動發布，之前漏了，只改它們時改完不會上線。
+      - 'soccer/**'
+      - 'kart/**'
+      - 'fps/**'
   repository_dispatch:
     types:
       - database_changed
