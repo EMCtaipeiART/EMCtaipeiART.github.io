@@ -1956,11 +1956,11 @@ function bgmUI(ctl, css) {
   r.oninput = () => { ctl.setVol(r.value / 100); sync(); }; ['pointerdown', 'mousedown', 'touchstart'].forEach(ev => w.addEventListener(ev, e => e.stopPropagation()));
   const hint = document.createElement('span'); hint.textContent = '點一下開啟音樂'; hint.style.cssText = 'font-size:11px;color:#ffd24a;white-space:nowrap'; w.append(b, r, hint); document.body.appendChild(w); sync(); setInterval(() => { hint.style.display = ctl.on ? 'none' : 'inline'; }, 400); return w;
 }
-const metaBgm = emcBgm('bgm-steady.m4a', { vol: .28, dur: 166.7 }); bgmUI(metaBgm, matchMedia('(pointer:coarse)').matches ? 'left:12px;bottom:200px;' : 'left:12px;bottom:12px;');
+const metaBgm = emcBgm('bgm-steady.m4a', { vol: .28, dur: 166.7 }); const metaBgmUI = bgmUI(metaBgm, matchMedia('(pointer:coarse)').matches ? 'left:12px;bottom:200px;' : 'left:12px;bottom:12px;');
 const EXP_GAMES = {exp:{title:'設計部遠征隊', fade:'倉庫', url:'../expedition/'}, deadline:{title:'截稿倒數 2', fade:'截稿倒數', url:'../deadline/'}, hoops:{title:'廢紙投籃 3D', fade:'廢紙投籃', url:'../hoops3d/'}, duel:{title:'辦公室對決', fade:'辦公室對決', url:'../duel/'}, soccer:{title:'大顆足球賽', fade:'大顆足球賽', url:'../soccer/'}, kart:{title:'辦公室賽車', fade:'辦公室賽車', url:'../kart/'}, fps:{title:'辦公室槍戰', fade:'辦公室槍戰', url:'../fps/'}};
 function expEnter(kind){
   const gm = EXP_GAMES[kind] || EXP_GAMES.exp;
-  if (expBusy) return; expBusy = true; metaBgm.pause(); target = null; wantSeat = null; wantElev = false; wheelClose(); fridgeClose();
+  if (expBusy) return; expBusy = true; metaBgm.pause(); metaBgmUI.style.display = 'none'; target = null; wantSeat = null; wantElev = false; wheelClose(); fridgeClose();
   expFade.textContent = gm.fade; expFade.classList.add('on');
   setTimeout(() => {
     expFrame = document.createElement('iframe'); expFrame.id = 'expFrame'; expFrame.title = gm.title; expFrame.allow = 'autoplay; fullscreen'; expFrame.src = gm.url + '?embed=1&t=' + Date.now() + (player && player.name ? '&me=' + encodeURIComponent(player.name) : ''); expFrame.style.display = 'block'; document.body.appendChild(expFrame); expFrame.addEventListener('load', () => { try { expFrame.focus(); expFrame.contentWindow.focus(); } catch (e) {} });
@@ -1968,7 +1968,7 @@ function expEnter(kind){
   }, 1000);
 }
 function expLeave(){
-  if (!expFrame) return; metaBgm.resume(); expFade.textContent = ''; expFade.classList.add('fast', 'on');
+  if (!expFrame) return; metaBgm.resume(); metaBgmUI.style.display = 'flex'; expFade.textContent = ''; expFade.classList.add('fast', 'on');
   setTimeout(() => { expFrame.remove(); expFrame = null; expArmed = false; setTimeout(() => { expFade.classList.remove('on'); expBusy = false; }, 150); setTimeout(() => expFade.classList.remove('fast'), 700); }, 560);
 }
 // 遊戲開著時，外層收到的按鍵（焦點還在外層時）轉給遊戲，並擋掉外層的走路等操作
