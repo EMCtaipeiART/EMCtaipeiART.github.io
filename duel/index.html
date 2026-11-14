@@ -177,6 +177,11 @@ header{position:fixed;right:8px;bottom:8px;z-index:6;width:auto;gap:6px;flex-wra
 
 .hurt{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,rgba(255,40,40,0) 42%,rgba(255,40,40,.7) 100%)}
 .pop2.miss{font-size:15px;color:#d9e6de;opacity:.85}
+.skcut{position:absolute;top:22%;z-index:30;display:flex;align-items:center;gap:12px;padding:8px 22px 8px 10px;pointer-events:none;background:linear-gradient(90deg,rgba(11,29,21,.94),rgba(22,58,42,.9));border:3px solid #5fe08a;border-left:0;border-radius:0 14px 14px 0;box-shadow:0 6px 0 rgba(0,0,0,.4);transition:transform .28s cubic-bezier(.2,.9,.3,1),opacity .2s;opacity:0;max-width:62vw}
+.skcut.l{left:0;transform:translateX(-110%)}.skcut.r{right:0;flex-direction:row-reverse;padding:8px 10px 8px 22px;background:linear-gradient(270deg,rgba(40,14,14,.94),rgba(80,26,26,.9));border:3px solid #ff7a6b;border-right:0;border-radius:14px 0 0 14px;transform:translateX(110%);text-align:right}
+.skcut.on{opacity:1;transform:none}.skcut canvas{width:68px;height:68px;border-radius:50%;border:3px solid #ffd166;background:#102a1e;flex:none}.skcut.r canvas{border-color:#ff7a6b}
+.skcut small{display:block;font-weight:900;font-size:12px;letter-spacing:.25em;color:#ffd166}.skcut b{display:block;font-weight:900;font-size:clamp(20px,3.4vw,34px);color:#fff;-webkit-text-stroke:2px #000;paint-order:stroke fill;letter-spacing:.06em;white-space:nowrap}
+#cdS,#tbE{position:relative;overflow:hidden}#cdS::after,.tb.sk::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.5) calc(var(--p,0)*100%),transparent 0);pointer-events:none;border-radius:inherit}.tb.sk{font-weight:900;font-size:15px}
 .cine{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .cine .cb{position:absolute;left:0;right:0;height:11vh;background:#000;transition:transform .2s ease-out}.cine .cb.t{top:0;transform:translateY(-100%)}.cine .cb.b{bottom:0;transform:translateY(100%)}
 .cine.on .cb{transform:none}
@@ -244,6 +249,7 @@ header{position:fixed;right:8px;bottom:8px;z-index:6;width:auto;gap:6px;flex-wra
     </div>
     <div class="flash" id="flash"></div>
     <div class="hurt" id="hurt"></div>
+    <div class="skcut l" id="skcutL"><canvas width="120" height="120"></canvas><div class="tx"><small></small><b></b></div></div><div class="skcut r" id="skcutR"><canvas width="120" height="120"></canvas><div class="tx"><small></small><b></b></div></div>
     <div class="cine" id="cine"><i class="cb t"></i><i class="cb b"></i><div class="ctx"><small id="cineWho"></small><b id="cineName"></b></div></div>
     <div class="banner" id="banner" hidden></div>
     <div class="ov menu" id="startO">
@@ -657,7 +663,7 @@ const cine = { t: 0, dur: 0, f: null }, CINE_T = { quake: 1.9, rush: 1.2, heal: 
 function startCine(f, k) { cine.t = cine.dur = CINE_T[k] || 1.3; cine.f = f; $('cineWho').textContent = f.name; $('cineName').textContent = (ULTS[k] || ULTS.quake).n; $('cine').classList.add('on'); zoomT = .9; }
 function endCine() { cine.t = 0; $('cine').classList.remove('on'); }
 
-// ───────── 裝備：武器／被動／大招 ─────────
+// ───────── 裝備：武器／小招／大招 ─────────
 // 武器平衡：每秒傷害都落在 17～21 之間，強項（距離、範圍、攻速、擊退）用「窗口、前搖、傷害」互相換
 const WEAPONS = {
   mouse: { n: '滑鼠', ic: '🖱️', tag: '快速近戰', dmg: 6, cd: .30, wind: .12, range: 2.8, arc: 56, kb: .75, d: '攻速最快、距離短，靠連擊累積傷害' },
@@ -924,7 +930,7 @@ function updHud() {
   $('hpL').style.width = Math.max(0, ME.hp) + '%'; $('hpR').style.width = Math.max(0, OP.hp) + '%'; $('ulL').style.width = ME.ult + '%'; $('ulR').style.width = OP.ult + '%';
   $('ulL').parentNode.classList.toggle('full', ME.ult >= 100); $('ulR').parentNode.classList.toggle('full', OP.ult >= 100);
   $('tmV').textContent = Math.max(0, Math.ceil(tLeft));
-  $('cdA').classList.toggle('cd', ME.atkCD > 0); $('cdD').classList.toggle('cd', ME.dashCD > 0); $('cdU').classList.toggle('on', ME.ult >= 100); $('tbU').classList.toggle('on', ME.ult >= 100); { const P = PASSIVES[ME.pas], el = $('cdS'); el.hidden = !(P && P.act); if (P && P.act) { el.textContent = P.n + ' E' + (ME.skT > 0 ? ' ' + Math.ceil(ME.skT) + 's' : ME.skCD > 0 ? ' ' + Math.ceil(ME.skCD) + 's' : ''); el.classList.toggle('cd', ME.skT <= 0 && ME.skCD > 0); el.classList.toggle('on', ME.skT > 0); const tb = $('tbE'); tb.hidden = !(P && P.act); if (P && P.act) { tb.classList.toggle('cd', ME.skT <= 0 && ME.skCD > 0); tb.classList.toggle('on', ME.skT > 0); } } } $('cdJ').classList.toggle('cd', !ME.grounded);
+  $('cdA').classList.toggle('cd', ME.atkCD > 0); $('cdD').classList.toggle('cd', ME.dashCD > 0); $('cdU').classList.toggle('on', ME.ult >= 100); $('tbU').classList.toggle('on', ME.ult >= 100); { const P = PASSIVES[ME.pas], el = $('cdS'); el.hidden = !(P && P.act); if (P && P.act) { el.textContent = '小招 E・' + P.n + (ME.skT > 0 ? '　作用 ' + Math.ceil(ME.skT) + 's' : ME.skCD > 0 ? '　冷卻 ' + Math.ceil(ME.skCD) + 's' : '　就緒'); const pr = ME.skT > 0 ? ME.skT / P.dur : ME.skCD > 0 ? ME.skCD / P.cd : 0; el.style.setProperty('--p', Math.min(1, pr)); $('tbE').style.setProperty('--p', Math.min(1, pr)); $('tbE').textContent = ME.skT > 0 ? Math.ceil(ME.skT) : ME.skCD > 0 ? Math.ceil(ME.skCD) : 'E'; el.classList.toggle('cd', ME.skT <= 0 && ME.skCD > 0); el.classList.toggle('on', ME.skT > 0); const tb = $('tbE'); tb.hidden = !(P && P.act); if (P && P.act) { tb.classList.toggle('cd', ME.skT <= 0 && ME.skCD > 0); tb.classList.toggle('on', ME.skT > 0); } } } $('cdJ').classList.toggle('cd', !ME.grounded);
 }
 const popLayer = document.createElement('div'); popLayer.className = 'pops'; stage.appendChild(popLayer);
 const _v = new THREE.Vector3();
@@ -939,7 +945,11 @@ function hitFx(att, tgt, d, hi, heavy) {
   pop(String(Math.round(d)) + (hi ? '↑' : ''), tgt.x, tgt.y + 2.3, tgt.z, (heavy ? 'big ' : '') + (hi ? 'hi' : '') + (att === ME ? '' : ' red')); SFX.hit(heavy); shake = heavy ? .35 : .15; hitstop = heavy ? .09 : .045;
 }
 const dashMul = f => (f.pas === 'dodge' && f.skT > 0 ? 2 : 1);
-function skVisual(f) { const th = f.pas === 'thick', c = th ? '#ffc857' : '#c9b8ff'; SFX.beep(); fxRing(v3(f.x, f.y + .1, f.z), c, .4, th ? 2.4 : 2, .45); if (!th) fxPoof(v3(f.x, f.y + 1, f.z), c); pop(PASSIVES[f.pas].n, f.x, f.y + 2.4, f.z, 'hi big'); }
+const skHeadCache = {};
+function drawHead(cv, n) { const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height); const paint = im => { const cw = im.naturalWidth / ANGLES, ch = im.naturalHeight, sw = cw * .8, sh = ch * .56; g.imageSmoothingEnabled = true; g.drawImage(im, (cw - sw) / 2, ch * .06, sw, sh, 0, 0, cv.width, cv.height); }; if (skHeadCache[n]) { paint(skHeadCache[n]); return; } const go = src => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => { skHeadCache[n] = im; paint(im); }; im.onerror = () => { if (src.indexOf('pixel-plaza') < 0) go(atlasUrl(n, true)); }; im.src = src; }; go(atlasUrl(n, false)); }
+const skCutT = {};
+function skCutIn(f) { const P = PASSIVES[f.pas]; if (!P) return; const side = f === ME ? 'L' : 'R', el = $('skcut' + side); drawHead(el.querySelector('canvas'), f.name); el.querySelector('small').textContent = f.name + (f === ME ? '' : '（對手）') + '・小招'; el.querySelector('b').textContent = P.n; el.classList.add('on'); clearTimeout(skCutT[side]); skCutT[side] = setTimeout(() => el.classList.remove('on'), 1700); }
+function skVisual(f) { skCutIn(f);  const th = f.pas === 'thick', c = th ? '#ffc857' : '#c9b8ff'; SFX.beep(); fxRing(v3(f.x, f.y + .1, f.z), c, .4, th ? 2.4 : 2, .45); if (!th) fxPoof(v3(f.x, f.y + 1, f.z), c); pop(PASSIVES[f.pas].n, f.x, f.y + 2.4, f.z, 'hi big'); }
 // 責任壁壘：作用期間吸收「所有」傷害（自己不扣血）並累計；時間到時把累計的傷害一次爆出去，只打到範圍內的對手（BURST_R）。
 // 爆發是真實傷害，但對手閃身（無敵）期間不會被打到。
 const BURST_R = 5;   // 爆發範圍（世界單位）：比大招震波 ultR 5.5 小一點
@@ -1395,7 +1405,7 @@ async function setup() {
   const menuSync = () => {
     const W = WEAPONS[$('selW').value], P = PASSIVES[$('selP').value], U = ULTS[$('selU').value];
     const reach = W.ranged ? W.speed * W.life / 12.75 : W.range / 4.9, wide = W.ranged ? W.r / .9 * .35 : W.arc / 124;
-    $('slotsMe').innerHTML = slotHtml('selW', '武器', W.ic, W.n, W.tag, W.d, '<div class="bars">' + bar('傷害', W.dmg / 17) + bar('攻速', 1 / W.cd / 3.4) + bar('距離', reach) + bar(W.ranged ? '彈幅' : '範圍', wide) + '</div>') + slotHtml('selP', '被動', IC_P[$('selP').value], P.n, '', P.d) + slotHtml('selU', '大招', IC_U[$('selU').value], U.n, '', U.d);
+    $('slotsMe').innerHTML = slotHtml('selW', '武器', W.ic, W.n, W.tag, W.d, '<div class="bars">' + bar('傷害', W.dmg / 17) + bar('攻速', 1 / W.cd / 3.4) + bar('距離', reach) + bar(W.ranged ? '彈幅' : '範圍', wide) + '</div>') + slotHtml('selP', '小招', IC_P[$('selP').value], P.n, '', P.d) + slotHtml('selU', '大招', IC_U[$('selU').value], U.n, '', U.d);
     $('nmMe').textContent = $('selMe').value; $('nmOp').textContent = $('selOp').value;
     document.querySelectorAll('.seg').forEach(x => x.classList.toggle('on', x.dataset.lv === $('selLv').value));
     store.set('duel:w', $('selW').value); store.set('duel:p', $('selP').value); store.set('duel:u', $('selU').value);
