@@ -212,6 +212,14 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
 #lock .lk{text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}#lock .lk b{font-size:26px}#lock .lk small{font-size:13px;letter-spacing:.2em;color:#ffb000}
 #lock #lockExit{margin-top:8px;font:800 14px/1 inherit;color:#fff;background:rgba(255,75,62,.25);border:1px solid #ff4b3e;padding:10px 22px;cursor:pointer;letter-spacing:.2em}#lock #lockExit:hover{background:#ff4b3e}
 @media (max-width:820px){.stmain{grid-template-columns:1fr}.hero-big{align-items:center}.stfoot{grid-template-columns:1fr}.modebox.right{text-align:left}.card.st .go{padding:13px 40px;font-size:20px}.portrait{width:120px}.hinfo h2{font-size:30px}.ab2 p{display:none}.card.st .help{display:none}.logo2 b{font-size:30px}.stmode{display:none}.hc2 b{font-size:11px}.hc2 em.rl{display:none}.card.st{padding:12px}}
+
+/* ==== 殘血畫面與擊殺圖示 ==== */
+#lowhp{inset:0;opacity:0;background:radial-gradient(ellipse at 50% 50%,transparent 36%,rgba(160,0,0,.5) 74%,rgba(90,0,0,.9) 100%)}
+#killIc{left:50%;top:50%;width:150px;height:150px;margin:-75px 0 0 -75px;opacity:0;transform:scale(.4);filter:drop-shadow(0 0 14px rgba(255,50,30,.95))}
+#killIc.on{animation:killPop 1s ease-out}
+#killIc svg{width:100%;height:100%;overflow:visible}#killIc .kr{transform-origin:50px 50px;animation:krExp 1s ease-out}
+@keyframes killPop{0%{opacity:0;transform:scale(.35)}12%{opacity:1;transform:scale(1.2)}25%{transform:scale(1)}75%{opacity:1}100%{opacity:0;transform:scale(1.05)}}
+@keyframes krExp{from{transform:scale(.6);opacity:1}to{transform:scale(1.7);opacity:0}}
 </style>
 </head>
 <body>
@@ -232,7 +240,7 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
     <div class="sc ult" id="scR"><kbd>Q</kbd><b class="ic">💥</b><span class="nm">大招</span><i class="sw"></i><em class="ct"></em></div>
   </div>
   <div class="hud" id="spec" hidden></div><div id="heroSel" hidden></div>
-  <div id="cast"></div><div id="killT"></div><div class="hud" id="flashS"></div>
+  <div class="hud" id="lowhp"></div><div class="hud" id="killIc"><svg viewBox="0 0 100 100"><circle class="kr" cx="50" cy="50" r="46" fill="none" stroke="#ff3b2e" stroke-width="3"/><circle cx="50" cy="50" r="40" fill="rgba(30,0,0,.55)" stroke="#ff3b2e" stroke-width="5"/><path d="M50 18c-15 0-25 10-25 23 0 8 3 13 8 16v9h7v-5h5v5h10v-5h5v5h7v-9c5-3 8-8 8-16 0-13-10-23-25-23z" fill="#fff" stroke="#000" stroke-width="2.5"/><circle cx="40" cy="42" r="6" fill="#000"/><circle cx="60" cy="42" r="6" fill="#000"/><path d="M50 50l-4 8h8z" fill="#000"/></svg></div><div id="cast"></div><div id="killT"></div><div class="hud" id="flashS"></div>
   <div id="banner"><b id="bnT"></b><small id="bnS"></small></div>
   <div id="lock" hidden><div class="lk"><b>點擊畫面　繼續</b><small>按 Esc 可隨時暫停</small><button type="button" id="lockExit">離開遊戲</button></div></div>
   <div id="sb" hidden></div>
@@ -341,7 +349,7 @@ const unlock = () => { try { if (!AC) AC = new (window.AudioContext || window.we
 function tone(f, d, type = 'sine', vol = .1, f2 = 0, delay = 0) { if (!AC) return; const t = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain(); o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + d); o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + d + .02); }
 let noiseBuf = null;
 function noise(d, vol, f0 = 3000, f1 = 300) { if (!AC) return; if (!noiseBuf) { noiseBuf = AC.createBuffer(1, AC.sampleRate * .5, AC.sampleRate); const a = noiseBuf.getChannelData(0); for (let i = 0; i < a.length; i++) a[i] = Math.random() * 2 - 1; } const s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain(), t = AC.currentTime; s.buffer = noiseBuf; f.type = 'lowpass'; f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + d); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + d); s.connect(f); f.connect(g); g.connect(AC.destination); s.start(t); s.stop(t + d + .02); }
-const SFX = { shot: (k) => { if (k === 'shotgun') { noise(.22, .35, 2500, 200); tone(90, .2, 'square', .08, 40); } else if (k === 'sniper') { noise(.4, .4, 4000, 150); tone(70, .35, 'sawtooth', .1, 30); } else if (k === 'rocket') { noise(.35, .3, 1500, 120); tone(120, .3, 'sawtooth', .1, 50); } else { noise(.07, .18, 4000, 600); tone(300, .05, 'square', .04, 120); } }, hit: () => { tone(1700, .05, 'square', .11); tone(900, .09, 'triangle', .09, 0, .02); }, head: () => { tone(2400, .09, 'square', .13); tone(1600, .14, 'square', .09, 0, .05); tone(800, .16, 'triangle', .08, 0, .05); }, kill: () => { tone(700, .1, 'triangle', .14); tone(1100, .12, 'triangle', .14, 0, .08); tone(1700, .3, 'triangle', .14, 0, .16); }, hurt: () => { tone(160, .15, 'sawtooth', .1, 70); }, boom: () => { noise(.6, .5, 1200, 60); tone(70, .5, 'sawtooth', .15, 25); }, skill: () => tone(500, .25, 'triangle', .1, 1000), cast: (k, v = 1) => { if (k === 'q') { tone(220, .6, 'sawtooth', .12 * v, 880); tone(330, .6, 'triangle', .1 * v, 1320, .05); noise(.3, .2 * v, 2500, 200); } else if (k === 'e') { tone(600, .22, 'square', .09 * v, 1200); tone(900, .2, 'triangle', .08 * v, 450, .06); } else { tone(420, .25, 'sawtooth', .08 * v, 840); tone(840, .2, 'triangle', .07 * v, 1260, .08); } }, pick: () => { tone(700, .08, 'triangle', .1); tone(1000, .1, 'triangle', .1, 0, .07); }, beep: () => tone(800, .1, 'square', .06), die: () => tone(220, .5, 'sawtooth', .12, 50) };
+const SFX = { shot: (k) => { if (k === 'shotgun') { noise(.22, .35, 2500, 200); tone(90, .2, 'square', .08, 40); } else if (k === 'sniper') { noise(.4, .4, 4000, 150); tone(70, .35, 'sawtooth', .1, 30); } else if (k === 'rocket') { noise(.35, .3, 1500, 120); tone(120, .3, 'sawtooth', .1, 50); } else { noise(.07, .18, 4000, 600); tone(300, .05, 'square', .04, 120); } }, hit: () => { tone(1700, .05, 'square', .11); tone(900, .09, 'triangle', .09, 0, .02); }, head: () => { tone(2400, .09, 'square', .13); tone(1600, .14, 'square', .09, 0, .05); tone(800, .16, 'triangle', .08, 0, .05); }, kill: () => { tone(700, .1, 'triangle', .14); tone(1100, .12, 'triangle', .14, 0, .08); tone(1700, .3, 'triangle', .14, 0, .16); }, hurt: () => { tone(160, .15, 'sawtooth', .1, 70); }, boom: () => { noise(.6, .5, 1200, 60); tone(70, .5, 'sawtooth', .15, 25); }, skill: () => tone(500, .25, 'triangle', .1, 1000), cast: (k, v = 1) => { if (k === 'q') { tone(220, .6, 'sawtooth', .12 * v, 880); tone(330, .6, 'triangle', .1 * v, 1320, .05); noise(.3, .2 * v, 2500, 200); } else if (k === 'e') { tone(600, .22, 'square', .09 * v, 1200); tone(900, .2, 'triangle', .08 * v, 450, .06); } else { tone(420, .25, 'sawtooth', .08 * v, 840); tone(840, .2, 'triangle', .07 * v, 1260, .08); } }, pick: () => { tone(700, .08, 'triangle', .1); tone(1000, .1, 'triangle', .1, 0, .07); }, beep: () => tone(800, .1, 'square', .06), die: () => tone(220, .5, 'sawtooth', .12, 50), heart: () => { tone(62, .13, 'sine', .22, 38); tone(54, .15, 'sine', .17, 32, .17); } };
 
 // ───────── 場景與地圖 ─────────
 const cv = $('c3'), renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
@@ -466,7 +474,9 @@ const GN = HALF * 2, grid = new Uint8Array(GN * GN);
 for (const b of BOXES) if (b.h > .5) { const pad = .45; for (let gx = Math.floor(b.x0 - pad + HALF); gx <= Math.floor(b.x1 + pad + HALF); gx++) for (let gz = Math.floor(b.z0 - pad + HALF); gz <= Math.floor(b.z1 + pad + HALF); gz++) if (gx >= 0 && gz >= 0 && gx < GN && gz < GN) grid[gz * GN + gx] = 1; }
 const cellOf = v => clamp(Math.floor(v + HALF), 0, GN - 1);
 function astar(sx, sz, tx, tz) {
-  const s = cellOf(sz) * GN + cellOf(sx), t = cellOf(tz) * GN + cellOf(tx); if (s === t) return [];
+  let s = cellOf(sz) * GN + cellOf(sx); const t = cellOf(tz) * GN + cellOf(tx);
+  if (grid[s]) { let bd = 1e9, bs = s; for (let r = 1; r < 6; r++) { for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) { const x = (s % GN) + dx, z = Math.floor(s / GN) + dz; if (x < 0 || z < 0 || x >= GN || z >= GN || grid[z * GN + x]) continue; const dd = dx * dx + dz * dz; if (dd < bd && clearLine(sx, sz, x - HALF + .5, z - HALF + .5, 0)) { bd = dd; bs = z * GN + x; } } if (bs !== s) break; } s = bs; }   // 起點若在牆邊的「膨脹禁區」內，改從最近的可走格出發（否則找不到路、原地不動）
+  if (s === t) return [];
   let tt = t; if (grid[tt]) { let bd = 1e9; for (let r = 1; r < 6 && grid[tt]; r++) for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) { const x = (t % GN) + dx, z = Math.floor(t / GN) + dz; if (x < 0 || z < 0 || x >= GN || z >= GN) continue; if (!grid[z * GN + x] && dx * dx + dz * dz < bd) { bd = dx * dx + dz * dz; tt = z * GN + x; } } }
   const open = [s], came = new Map([[s, -1]]), g = new Map([[s, 0]]), f = new Map([[s, 0]]), closed = new Set(); let guard = 0;
   while (open.length && guard++ < 3000) {
@@ -481,6 +491,7 @@ function astar(sx, sz, tx, tz) {
 const PR = .38;   // 人物半徑
 function groundAt(x, z, feet) { let g = 0; for (const b of BOXES) if (x > b.x0 - PR * .5 && x < b.x1 + PR * .5 && z > b.z0 - PR * .5 && z < b.z1 + PR * .5 && b.h <= feet + .55 && b.h > g) g = b.h; return g; }
 function blocked(x, z, feet) { for (const b of BOXES) if (b.h > feet + .55 && x > b.x0 - PR && x < b.x1 + PR && z > b.z0 - PR && z < b.z1 + PR) return true; return false; }
+function clearLine(x0, z0, x1, z1, feet) { const d = Math.hypot(x1 - x0, z1 - z0), n = Math.ceil(d / .3); for (let i = 1; i <= n; i++) { const t = i / n; if (blocked(x0 + (x1 - x0) * t, z0 + (z1 - z0) * t, feet)) return false; } return true; }
 function pushOut(o) { let best = null, bd = 1e9; for (let r = 0; r < 8 && !best; r++) for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) { const gx = cellOf(o.x) + dx, gz = cellOf(o.z) + dz; if (gx < 0 || gz < 0 || gx >= GN || gz >= GN || grid[gz * GN + gx]) continue; const cx = gx - HALF + .5, cz = gz - HALF + .5, d = Math.hypot(cx - o.x, cz - o.z); if (d < bd) { bd = d; best = [cx, cz]; } } if (best) { o.x = best[0]; o.z = best[1]; } }
 function moveXZ(o, dx, dz) { const f = o.y; if (!blocked(o.x + dx, o.z, f)) o.x += dx; if (!blocked(o.x, o.z + dz, f)) o.z += dz; o.x = clamp(o.x, -HALF + PR, HALF - PR); o.z = clamp(o.z, -HALF + PR, HALF - PR); }
 function rayBox(ox, oy, oz, dx, dy, dz, b, maxT) {   // slab
@@ -552,7 +563,7 @@ const ptBeam = mk(new THREE.CylinderGeometry(.5, .5, 12, 12, 1, true), new THREE
 const TEAMCOL = [0x5ec8ff, 0xff4b3e];
 
 // ───────── 狀態 ─────────
-let vmSX = 0, vmSY = 0, vmLY = 0, vmLP = 0, vmEquip = 0, vmKick = 0, state = 'menu', paused = false, tLeft = 480, prog = [0, 0], owner = -1, cap = 0, capTeam = -1, contested = false, present = [0, 0], stT = 0, yaw = 0, pitch = 0, locked = false, zoom = false, shake = 0, recoil = 0, bobT = 0;
+let hbT = 0, vmSX = 0, vmSY = 0, vmLY = 0, vmLP = 0, vmEquip = 0, vmKick = 0, state = 'menu', paused = false, tLeft = 480, prog = [0, 0], owner = -1, cap = 0, capTeam = -1, contested = false, present = [0, 0], stT = 0, yaw = 0, pitch = 0, locked = false, zoom = false, shake = 0, recoil = 0, bobT = 0;
 const keys = {}, joy = { x: 0, y: 0 }, hold = { fire: false };
 function spawnPoint(team) { const pts = team === 0 ? [[-26, -10], [-26, 0], [-26, 10], [-22, 20], [-22, -20]] : [[26, -10], [26, 0], [26, 10], [22, 20], [22, -20]]; let best = null, bd = -1; for (let i = 0; i < 6; i++) { const p = pts[Math.floor(Math.random() * pts.length)]; let md = 1e9; for (const a of actors) if (!a.dead && a.team !== team) md = Math.min(md, Math.hypot(a.x - p[0], a.z - p[1])); if (md > bd) { bd = md; best = p; } } return best; }
 function respawn(a) { if (a.nextHero) { applyHero(a, HERO_BY[a.nextHero]); a.nextHero = null; if (a.isMe) { setViewmodel(); buildHud(); } else rebuildLook(a); } const p = spawnPoint(a.team); a.x = p[0] + rand(-1, 1); a.z = p[1] + rand(-1, 1); a.y = 0; a.vx = a.vz = a.vy = 0; a.hp = a.maxHp; a.dead = false; a.inv = 2; a.pitch = 0; a.path = []; a.tgt = null; a.fireT = .4; a.stun = a.mark = a.heal = a.volley = a.chargeT = a.buff = a.rage = a.dmgT = a.spd = 0; a.armor = a.armorT = 0; a.actT = { e: 0, s: 0, q: 0 }; a.yaw = a.team === 0 ? -Math.PI / 2 : Math.PI / 2; if (a.isMe) { yaw = a.yaw; pitch = 0; $('heroSel').hidden = true; specT = null; $('spec').hidden = true; } }
@@ -702,12 +713,13 @@ function dmgTo(t, d, src, head, wname, hx, hy, hz) {
 function healTo(t, amt, src) { if (t.dead || t.hp >= t.maxHp) return; const a = Math.min(amt, t.maxHp - t.hp); t.hp += a; if (src) { src.heals += a; addUlt(src, a * .3); } if (t.isMe || (src && src.isMe)) { t.healAcc = (t.healAcc || 0) + a; if (t.healAcc >= 12) { floatNum(t.x, t.y + 2.1, t.z, '+' + Math.round(t.healAcc), '#5ef0a4', false); t.healAcc = 0; } } }
 function dirHit(a) { const el = $('dir').firstElementChild; el.style.transform = 'rotate(' + (wrapA(a + yaw + Math.PI) * 180 / Math.PI) + 'deg)'; el.style.opacity = 1; clearTimeout(dirHit.t); dirHit.t = setTimeout(() => { el.style.opacity = 0; }, 700); }
 function hitMark(head, kill) { const el = $('hm'); el.classList.remove('on'); void el.offsetWidth; el.classList.toggle('hs', !!head); el.classList.toggle('kill', !!kill); el.classList.add('on'); clearTimeout(hitMark.t); hitMark.t = setTimeout(() => el.classList.remove('on'), 280); kill ? SFX.kill() : head ? SFX.head() : SFX.hit(); }
+function killIcon() { const el = $('killIc'); el.className = 'hud'; void el.getBoundingClientRect(); el.className = 'hud on'; clearTimeout(killIcon.t); killIcon.t = setTimeout(() => el.className = 'hud', 1000); }
 function killBanner(t) { const el = $('killT'); el.textContent = '✕ 擊倒　' + t.hero.ic + ' ' + t.name; el.className = ''; void el.offsetWidth; el.className = 'on'; clearTimeout(killBanner.t); killBanner.t = setTimeout(() => el.className = '', 1400); }
 function kill(t, src, wname) {
   t.dead = true; t.respT = 5; t.deaths++; t.vx = t.vz = 0; t.heal = 0; t.chargeT = 0; t.hring.visible = false; t.armor = 0; sparkBurst(t.x, t.y + 1, t.z, 14, 0xffffff, 5); paperBurst(t.x, t.y + 1.2, t.z, 12);
   if (src && src !== t) { src.kills++; addUlt(src, 12); }
   feed((src ? src.hero.ic + src.name : '自爆') + ' ' + (wname || '💥') + ' ' + t.hero.ic + t.name, src && src.isMe ? 'me' : t.isMe ? 'die' : '');
-  if (t.isMe) { SFX.die(); banner('陣亡', (src ? '被 ' + src.name + ' 擊倒' : ''), 2800); zoom = false; showHeroSel(true); } else if (src && src.isMe) { killBanner(t); floatNum(t.x, t.y + 2.6, t.z, '擊倒', '#ff6a5a', true); }
+  if (t.isMe) { SFX.die(); banner('陣亡', (src ? '被 ' + src.name + ' 擊倒' : ''), 2800); zoom = false; showHeroSel(true); } else if (src && src.isMe) { killIcon(); killBanner(t); floatNum(t.x, t.y + 2.6, t.z, '擊倒', '#ff6a5a', true); }
 }
 function aimDir(a, spread) { const cp = Math.cos(a.pitch), sx = Math.sin(a.yaw) * cp, sz = Math.cos(a.yaw) * cp, sy = Math.sin(a.pitch); let dx = -sx, dy = sy, dz = -sz; if (spread) { dx += (Math.random() - .5) * spread * 2; dy += (Math.random() - .5) * spread * 2; dz += (Math.random() - .5) * spread * 2; } const l = Math.hypot(dx, dy, dz); return [dx / l, dy / l, dz / l]; }
 function fire(a) {
@@ -833,6 +845,7 @@ function botThink(a, dt) {
       if (!gp && a.hero.id === 'amber') { const al = alliesOf(a).filter(t => t !== a).sort((p, q) => Math.hypot(p.x - a.x, p.z - a.z) - Math.hypot(q.x - a.x, q.z - a.z))[0]; if (al && Math.hypot(al.x - a.x, al.z - a.z) > 5) gp = [al.x, al.z]; }
       if (!gp) { if (owner === a.team && present[1 - a.team] === 0 && !B.patrol) B.patrol = [POINT.x + rand(-5, 5), POINT.z + rand(-5, 5)]; if (!B.patrol || Math.hypot(B.patrol[0] - a.x, B.patrol[1] - a.z) < 1.5) B.patrol = [POINT.x + rand(-4.5, 4.5), POINT.z + rand(-4.5, 4.5)]; gp = a.tgt ? [a.tgt.x, a.tgt.z] : B.patrol; }
       a.path = astar(a.x, a.z, gp[0], gp[1]);
+      if (!a.path.length && Math.hypot(gp[0] - a.x, gp[1] - a.z) > 2.5) { B.patrol = null; for (let k = 0; k < 5 && !a.path.length; k++) { const p = [rand(-26, 26), rand(-26, 26)]; a.path = astar(a.x, a.z, p[0], p[1]); if (a.path.length) B.patrol = p; } }
     } else a.path = [];
   }
   if (B.abT <= 0) { B.abT = rand(.4, 1.1); botAbilities(a, a.tgt, B.bd || 99); }
@@ -841,7 +854,7 @@ function botThink(a, dt) {
     if (B.strafeT <= 0) { B.strafe = Math.random() < .5 ? -1 : 1; B.strafeT = rand(.6, 1.6); }
     const fx = -Math.sin(a.yaw), fz = -Math.cos(a.yaw), rx = -fz, rz = fx, pref = a.hero.pref, adv = d > pref + 3 ? 1 : d < pref - 3 ? -.6 : .1; mx = fx * adv + rx * B.strafe * .8; mz = fz * adv + rz * B.strafe * .8;
     B.react -= dt; if (B.react <= 0 && Math.abs(diff) < (.12 + .05 / D) && a.fireT <= 0 && los(a, t, 1.55, t.y + 1.3)) fire(a); }
-  else if (a.path.length) { while (a.path.length > 1 && Math.hypot(a.path[0][0] - a.x, a.path[0][1] - a.z) < 1.4) a.path.shift(); const n = a.path[Math.min(1, a.path.length - 1)], dx = n[0] - a.x, dz = n[1] - a.z, d = Math.hypot(dx, dz); if (a.path.length === 1 && d < .6) a.path.shift(); else { mx = dx / d; mz = dz / d; const want = Math.atan2(-dx, -dz); a.yaw += clamp(wrapA(want - a.yaw), -dt * 3.2, dt * 3.2); a.pitch *= .9; } }
+  else if (a.path.length) { while (a.path.length > 1 && Math.hypot(a.path[0][0] - a.x, a.path[0][1] - a.z) < 1.0) a.path.shift(); let n = a.path[0]; if (a.path.length > 1 && clearLine(a.x, a.z, a.path[1][0], a.path[1][1], a.y)) n = a.path[1]; const dx = n[0] - a.x, dz = n[1] - a.z, d = Math.hypot(dx, dz) || 1; if (a.path.length === 1 && d < .6) a.path.shift(); else { mx = dx / d; mz = dz / d; const want = Math.atan2(-dx, -dz); a.yaw += clamp(wrapA(want - a.yaw), -dt * 3.2, dt * 3.2); a.pitch *= .9; } }
   const l = Math.hypot(mx, mz) || 1, sp = a.hero.speed * D * (a.buff > 0 ? 1.45 : 1) * (a.spd > 0 ? 1.35 : 1);
   if (a.dashT > 0) { a.dashT -= dt; } else { a.vx += ((mx / l) * (l > .01 ? sp : 0) - a.vx) * Math.min(1, dt * 8); a.vz += ((mz / l) * (l > .01 ? sp : 0) - a.vz) * Math.min(1, dt * 8); }
   if (a.ground && Math.hypot(a.vx, a.vz) < .5 && a.path.length && Math.random() < .02) { a.vy = 6; a.ground = false; }
@@ -908,7 +921,7 @@ function stepActor(a, dt) {
   } else if (state === 'play') botThink(a, dt);
   a.vy -= 20 * dt; const f0 = a.y; a.y += a.vy * dt; const g = groundAt(a.x, a.z, f0 + .1); if (a.y <= g) { a.y = g; a.vy = 0; a.ground = true; } else a.ground = false;
   moveXZ(a, a.vx * dt, a.vz * dt); if (blocked(a.x, a.z, a.y)) pushOut(a);
-  if (a.bot && state === 'play') { a.stkT = (a.stkT || 0) + dt; if (a.stkT > 1.2) { const d = Math.hypot(a.x - (a.sx || 0), a.z - (a.sz || 0)); if (d < .6 && (a.path.length || a.tgt) && a.stun <= 0) { a.bot.patrol = null; a.path = astar(a.x, a.z, rand(-26, 26), rand(-26, 26)); a.tgt = null; a.bot.seen = 0; if (a.ground) { a.vy = 6; a.ground = false; } } a.stkT = 0; a.sx = a.x; a.sz = a.z; } }
+  if (a.bot && state === 'play') { a.stkT = (a.stkT || 0) + dt; if (a.stkT > 1.2) { const d = Math.hypot(a.x - (a.sx || 0), a.z - (a.sz || 0)); if (d < .6 && (!a.tgt || a.path.length) && a.stun <= 0) { a.bot.patrol = null; a.path = []; for (let k = 0; k < 5 && !a.path.length; k++) a.path = astar(a.x, a.z, rand(-26, 26), rand(-26, 26)); a.tgt = null; a.bot.seen = 0; a.bot.think = 0; if (blocked(a.x, a.z, a.y)) pushOut(a); if (a.ground) { a.vy = 6; a.ground = false; } } a.stkT = 0; a.sx = a.x; a.sz = a.z; } }
   for (let i = 0; i < PICKS.length; i++) { const p = PICKS[i]; if (p.t <= 0 && a.hp < a.maxHp && Math.hypot(a.x - p.x, a.z - p.z) < 1.1) { p.t = 15; a.hp = Math.min(a.maxHp, a.hp + 50); if (a.isMe) SFX.pick(); } }
 }
 function sim(dt) {
@@ -952,7 +965,8 @@ function render(dt) {
   for (let i = FX.length - 1; i >= 0; i--) { const f = FX[i]; f.t += dt; const k = f.t / f.d; f.s.material.opacity = 1 - k; if (f.ring) f.s.scale.setScalar(.2 + f.ring * Math.min(1, k * 1.2)); if (f.t >= f.d) { scene.remove(f.s); if (f.s.geometry) f.s.geometry.dispose(); f.s.material.dispose(); FX.splice(i, 1); } }
   stepParts(dt); flashLight.intensity = Math.max(0, flashLight.intensity - dt * 40); boomL.intensity = Math.max(0, boomL.intensity - dt * 22);
   if (state === 'play' || state === 'count') {
-    $('hpN').innerHTML = Math.max(0, Math.ceil(me.hp)) + (me.armor > 0 ? '<small style="color:#ffd066;font-size:20px;letter-spacing:0">+' + Math.ceil(me.armor) + '</small>' : ''); $('hpB').style.width = Math.max(0, me.hp / me.maxHp * 100) + '%'; $('hp').classList.toggle('low', me.hp < me.maxHp * .3 && !me.dead); $('wpN').textContent = me.w.n; { const sp = $('spec'); if (me.dead && state === 'play') { sp.hidden = false; sp.innerHTML = (SP ? '觀戰　' + SP.hero.ic + ' <b>' + SP.name + '</b>（' + Math.ceil(SP.hp) + ' HP）' : '全隊陣亡') + '<small>重生 ' + Math.max(0, Math.ceil(me.respT)) + ' 秒　' + (touch ? '點畫面切換隊友' : '左鍵／空白鍵切換隊友') + '</small>'; } else sp.hidden = true; }
+    $('hpN').innerHTML = Math.max(0, Math.ceil(me.hp)) + (me.armor > 0 ? '<small style="color:#ffd066;font-size:20px;letter-spacing:0">+' + Math.ceil(me.armor) + '</small>' : ''); $('hpB').style.width = Math.max(0, me.hp / me.maxHp * 100) + '%'; $('hp').classList.toggle('low', me.hp < me.maxHp * .3 && !me.dead);
+    { const low = me.dead ? 0 : clamp(1 - me.hp / (me.maxHp * .4), 0, 1), el = $('lowhp'), tt = performance.now() * .001, rate = 5 + low * 4; el.style.opacity = low > 0 ? ((.3 + low * .7) * (.7 + .3 * Math.pow(Math.max(0, Math.sin(tt * rate)), 2))).toFixed(3) : 0; cv.style.filter = low > 0 ? 'saturate(' + (1 - low * .7).toFixed(2) + ') contrast(' + (1 + low * .1).toFixed(2) + ')' : ''; if (low > .15 && state === 'play') { hbT -= dt; if (hbT <= 0) { hbT = 1.05 - low * .5; SFX.heart(); shake = Math.max(shake, .1 + low * .12); } } } $('wpN').textContent = me.w.n; { const sp = $('spec'); if (me.dead && state === 'play') { sp.hidden = false; sp.innerHTML = (SP ? '觀戰　' + SP.hero.ic + ' <b>' + SP.name + '</b>（' + Math.ceil(SP.hp) + ' HP）' : '全隊陣亡') + '<small>重生 ' + Math.max(0, Math.ceil(me.respT)) + ' 秒　' + (touch ? '點畫面切換隊友' : '左鍵／空白鍵切換隊友') + '</small>'; } else sp.hidden = true; }
     const t = Math.max(0, Math.ceil(tLeft)); $('tm').textContent = Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
     // 目標列
     $('pA').textContent = Math.floor(prog[0]) + '%'; $('pB').textContent = Math.floor(prog[1]) + '%'; $('bA').style.width = prog[0] + '%'; $('bB').style.width = prog[1] + '%';
