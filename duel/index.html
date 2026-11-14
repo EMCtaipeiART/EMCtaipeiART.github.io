@@ -708,7 +708,7 @@ function carveRig(img) {
   let top = ch, bot = 0; for (let k = 0; k < N; k++) for (let v = 0; v < ch; v++) for (let u = 0; u < cw; u++) if (A(k, u, v) > 128) { if (v < top) top = v; if (v > bot) bot = v; }
   const ppu = (bot - top + 1) / 2, gy = bot + 1, cx = cw / 2, mask = [];
   for (let k = 0; k < N; k++) { const m = new Uint8Array(cw * ch); for (let v = 0; v < ch; v++) for (let u = 0; u < cw; u++) if (A(k, u, v) > 100) m[v * cw + u] = 1; const d = new Uint8Array(m); for (let v = 1; v < ch - 1; v++) for (let u = 1; u < cw - 1; u++) if (!m[v * cw + u] && (m[v * cw + u - 1] || m[v * cw + u + 1] || m[(v - 1) * cw + u] || m[(v + 1) * cw + u])) d[v * cw + u] = 1; mask.push(d); }
-  const S = .024, NX = 64, NY = 88, NZ = 64, X0 = -NX * S / 2, Z0 = -NZ * S / 2, occ = new Uint8Array(NX * NY * NZ), cs = [], sn = [];
+  const S = .015, NX = 104, NY = 140, NZ = 104, X0 = -NX * S / 2, Z0 = -NZ * S / 2, occ = new Uint8Array(NX * NY * NZ), cs = [], sn = [];
   for (let k = 0; k < N; k++) { const a = RIG_SGN * k * Math.PI / 6; cs.push(Math.cos(a)); sn.push(Math.sin(a)); }
   for (let iy = 0; iy < NY; iy++) { const y = (iy + .5) * S, v = Math.round(gy - y * ppu); for (let iz = 0; iz < NZ; iz++) { const z = Z0 + (iz + .5) * S; for (let ix = 0; ix < NX; ix++) { const x = X0 + (ix + .5) * S; let ok = 1; for (let k = 0; k < N; k++) { const u = Math.round(cx + (x * cs[k] + z * sn[k]) * ppu); if (u < 0 || u >= cw || v < 0 || v >= ch || !mask[k][v * cw + u]) { ok = 0; break; } } occ[(iy * NZ + iz) * NX + ix] = ok; } } }
   const at = (ix, iy, iz) => (ix < 0 || iy < 0 || iz < 0 || ix >= NX || iy >= NY || iz >= NZ) ? 0 : occ[(iy * NZ + iz) * NX + ix];
@@ -717,13 +717,13 @@ function carveRig(img) {
     for (const kk of [bk, (bk + 1) % N, (bk + N - 1) % N]) { const u0 = Math.round(cx + (x * cs[kk] + z * sn[kk]) * ppu), v0 = Math.round(gy - y * ppu); for (let r = 0; r < 6; r++) for (let oy = -r; oy <= r; oy++) for (let ox = -r; ox <= r; ox++) { if (Math.max(Math.abs(ox), Math.abs(oy)) !== r) continue; const u = u0 + ox, v = v0 + oy; if (A(kk, u, v) > 200) { const p = (v * img.width + kk * cw + u) * 4; return [all[p] / 255, all[p + 1] / 255, all[p + 2] / 255]; } } }
     return [.25, .25, .25];
   };
-  const HIP = .44, NECK = 1.06, ARMX = .27, parts = { torso: [], head: [], armL: [], armR: [], legL: [], legR: [] };
-  const FACES = [[1, 0, 0, .86], [-1, 0, 0, .86], [0, 1, 0, 1.04], [0, -1, 0, .7], [0, 0, 1, .95], [0, 0, -1, .8]];
+  const HIP = .44, NECK = 1.06, ARMX = .27, partOf = (x, y) => y >= NECK ? 'head' : y < HIP ? (x > 0 ? 'legL' : 'legR') : (Math.abs(x) > ARMX && y < NECK - .06) ? (x > 0 ? 'armL' : 'armR') : 'torso', parts = { torso: [], head: [], armL: [], armR: [], legL: [], legR: [] };
+  const FACES = [[1, 0, 0, .92], [-1, 0, 0, .92], [0, 1, 0, 1.0], [0, -1, 0, .8], [0, 0, 1, .97], [0, 0, -1, .88]];
   for (let iy = 0; iy < NY; iy++) for (let iz = 0; iz < NZ; iz++) for (let ix = 0; ix < NX; ix++) {
     if (!occ[(iy * NZ + iz) * NX + ix]) continue; const x = X0 + (ix + .5) * S, y = (iy + .5) * S, z = Z0 + (iz + .5) * S;
-    let part = y >= NECK ? 'head' : y < HIP ? (x > 0 ? 'legL' : 'legR') : (Math.abs(x) > ARMX && y < NECK - .06) ? (x > 0 ? 'armL' : 'armR') : 'torso';
+    const part = partOf(x, y);
     for (const [fx, fy, fz, sh] of FACES) {
-      if (at(ix + fx, iy + fy, iz + fz)) continue;
+      if (at(ix + fx, iy + fy, iz + fz) && partOf(x + fx * S, y + fy * S) === part) continue;
       let dx = fx, dz = fz; if (fy) { const l = Math.hypot(x, z) || 1; dx = x / l; dz = z / l; }
       const cc = colAt(x, y, z, dx, dz), h = S / 2, P = parts[part];
       const q = fx ? (fx > 0 ? [[h, -h, -h], [h, h, -h], [h, h, h], [h, -h, h]] : [[-h, -h, h], [-h, h, h], [-h, h, -h], [-h, -h, -h]]) : fy ? (fy > 0 ? [[-h, h, -h], [-h, h, h], [h, h, h], [h, h, -h]] : [[-h, -h, h], [-h, -h, -h], [h, -h, -h], [h, -h, h]]) : (fz > 0 ? [[-h, -h, h], [h, -h, h], [h, h, h], [-h, h, h]] : [[h, -h, -h], [-h, -h, -h], [-h, h, -h], [h, h, -h]]);
@@ -733,7 +733,7 @@ function carveRig(img) {
   return { parts, HIP, NECK, SH: [.33, .94] };
 }
 function makeRig(name) {
-  const mat = new THREE.MeshBasicMaterial({ vertexColors: true });
+  const mat = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide });
   const root = new THREE.Group(), hips = new THREE.Group(), HIP = .44; hips.position.y = HIP; root.add(hips);
   const mk = (parent, parentW, pivot) => { const g = new THREE.Group(); g.position.set(pivot[0] - parentW[0], pivot[1] - parentW[1], pivot[2] - parentW[2]); parent.add(g); return g; };
   const torso = mk(hips, [0, HIP, 0], [0, HIP, 0]), head = mk(torso, [0, HIP, 0], [0, 1.06, 0]);
