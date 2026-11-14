@@ -147,6 +147,28 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
 #xh[data-k=rocket]::before{content:'';position:absolute;left:-16px;top:-16px;width:32px;height:32px;border:2px solid #7fe3ff;border-radius:50%;box-shadow:0 0 4px #000}
 #xh[data-k=semi] .t,#xh[data-k=semi] .b{height:6px}#xh[data-k=semi] .l,#xh[data-k=semi] .r{width:6px}
 #xh[data-k=auto] .t,#xh[data-k=auto] .b{width:2px}
+
+/* ==== 技能格放大、讀秒清楚 ==== */
+#sk{gap:14px;bottom:14px}
+.sc{width:92px;height:92px;border-width:3px;background:rgba(8,11,15,.88)}
+.sc .ic{font-size:34px;filter:drop-shadow(0 2px 0 #000)}.sc kbd{font-size:12px;top:3px;left:6px;background:var(--amb);color:#1a1200;padding:2px 5px;border-radius:2px}
+.sc .nm{font-size:11px;color:#dfe6ee;font-weight:800;margin-top:2px}
+.sc .sw{background:conic-gradient(rgba(0,0,0,.82) calc(var(--p,0)*360deg),transparent 0)}
+.sc .ct{font:900 32px/1 "JetBrains Mono",Consolas,monospace;color:#fff;text-shadow:0 0 6px #000,0 2px 0 #000,2px 0 0 #000,-2px 0 0 #000}
+.sc.cd{border-color:#59606b;filter:saturate(.55)}.sc.cd .ic,.sc.cd .nm{opacity:.55}
+.sc.ready{border-color:var(--ok);box-shadow:0 0 16px rgba(94,240,164,.75),inset 0 0 12px rgba(94,240,164,.25)}
+.sc.on{border-color:var(--amb);background:linear-gradient(rgba(90,60,0,.9),rgba(40,26,0,.9));box-shadow:0 0 18px rgba(255,176,0,.9);animation:none}
+.sc.on .ct{color:var(--amb)}
+.sc.pop{animation:popR .6s}@keyframes popR{0%{transform:scale(1.35);box-shadow:0 0 30px #fff}100%{transform:scale(1)}}
+.sc.ult.ready{border-color:var(--amb);box-shadow:0 0 22px rgba(255,176,0,.95),inset 0 0 14px rgba(255,176,0,.3);animation:blink .6s infinite alternate}
+#cast{position:absolute;left:50%;bottom:160px;transform:translateX(-50%);z-index:8;pointer-events:none;font-weight:900;font-size:clamp(24px,4.2vw,42px);letter-spacing:.14em;color:#fff;text-shadow:0 0 14px var(--amb),0 3px 0 #000;opacity:0;white-space:nowrap}
+#cast.on{animation:castIn 1.15s ease-out}#cast.q{color:#ffd24a;font-size:clamp(30px,5.4vw,56px)}
+@keyframes castIn{0%{opacity:0;transform:translateX(-50%) scale(1.7)}12%{opacity:1;transform:translateX(-50%) scale(1)}78%{opacity:1}100%{opacity:0;transform:translateX(-50%) translateY(-16px)}}
+#flashS{inset:0;background:radial-gradient(circle at 50% 50%,transparent 35%,rgba(255,176,0,.45));opacity:0}#flashS.on{animation:fsh .6s ease-out}@keyframes fsh{0%{opacity:1}100%{opacity:0}}
+.tbtn .sw{position:absolute;inset:0;border-radius:50%;background:conic-gradient(rgba(0,0,0,.8) calc(var(--p,0)*360deg),transparent 0);pointer-events:none}
+.tbtn .ct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:900 20px/1 system-ui;font-style:normal;color:#fff;text-shadow:0 0 5px #000,0 2px 0 #000;pointer-events:none}
+.tbtn.cd{filter:saturate(.5)}.tbtn.ready{border-color:var(--ok);box-shadow:0 0 14px rgba(94,240,164,.8)}.tbtn.on{border-color:var(--amb);background:rgba(255,176,0,.35)}
+@media (max-width:700px){#cast{bottom:120px}}
 </style>
 </head>
 <body>
@@ -167,6 +189,7 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
     <div class="sc ult" id="scR"><kbd>Q</kbd><b class="ic">💥</b><span class="nm">大招</span><i class="sw"></i><em class="ct"></em></div>
   </div>
   <div id="heroSel" hidden></div>
+  <div id="cast"></div><div class="hud" id="flashS"></div>
   <div id="banner"><b id="bnT"></b><small id="bnS"></small></div>
   <div id="lock" hidden>點擊畫面　開始瞄準</div>
   <div id="sb" hidden></div>
@@ -213,7 +236,7 @@ const unlock = () => { try { if (!AC) AC = new (window.AudioContext || window.we
 function tone(f, d, type = 'sine', vol = .1, f2 = 0, delay = 0) { if (!AC) return; const t = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain(); o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + d); o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + d + .02); }
 let noiseBuf = null;
 function noise(d, vol, f0 = 3000, f1 = 300) { if (!AC) return; if (!noiseBuf) { noiseBuf = AC.createBuffer(1, AC.sampleRate * .5, AC.sampleRate); const a = noiseBuf.getChannelData(0); for (let i = 0; i < a.length; i++) a[i] = Math.random() * 2 - 1; } const s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain(), t = AC.currentTime; s.buffer = noiseBuf; f.type = 'lowpass'; f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + d); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + d); s.connect(f); f.connect(g); g.connect(AC.destination); s.start(t); s.stop(t + d + .02); }
-const SFX = { shot: (k) => { if (k === 'shotgun') { noise(.22, .35, 2500, 200); tone(90, .2, 'square', .08, 40); } else if (k === 'sniper') { noise(.4, .4, 4000, 150); tone(70, .35, 'sawtooth', .1, 30); } else if (k === 'rocket') { noise(.35, .3, 1500, 120); tone(120, .3, 'sawtooth', .1, 50); } else { noise(.07, .18, 4000, 600); tone(300, .05, 'square', .04, 120); } }, hit: () => tone(1500, .05, 'square', .06), head: () => { tone(2000, .08, 'square', .08); tone(1400, .1, 'square', .05, 0, .05); }, kill: () => { tone(900, .1, 'triangle', .1); tone(1300, .18, 'triangle', .1, 0, .08); }, hurt: () => { tone(160, .15, 'sawtooth', .1, 70); }, boom: () => { noise(.6, .5, 1200, 60); tone(70, .5, 'sawtooth', .15, 25); }, skill: () => tone(500, .25, 'triangle', .1, 1000), pick: () => { tone(700, .08, 'triangle', .1); tone(1000, .1, 'triangle', .1, 0, .07); }, beep: () => tone(800, .1, 'square', .06), die: () => tone(220, .5, 'sawtooth', .12, 50) };
+const SFX = { shot: (k) => { if (k === 'shotgun') { noise(.22, .35, 2500, 200); tone(90, .2, 'square', .08, 40); } else if (k === 'sniper') { noise(.4, .4, 4000, 150); tone(70, .35, 'sawtooth', .1, 30); } else if (k === 'rocket') { noise(.35, .3, 1500, 120); tone(120, .3, 'sawtooth', .1, 50); } else { noise(.07, .18, 4000, 600); tone(300, .05, 'square', .04, 120); } }, hit: () => tone(1500, .05, 'square', .06), head: () => { tone(2000, .08, 'square', .08); tone(1400, .1, 'square', .05, 0, .05); }, kill: () => { tone(900, .1, 'triangle', .1); tone(1300, .18, 'triangle', .1, 0, .08); }, hurt: () => { tone(160, .15, 'sawtooth', .1, 70); }, boom: () => { noise(.6, .5, 1200, 60); tone(70, .5, 'sawtooth', .15, 25); }, skill: () => tone(500, .25, 'triangle', .1, 1000), cast: (k, v = 1) => { if (k === 'q') { tone(220, .6, 'sawtooth', .12 * v, 880); tone(330, .6, 'triangle', .1 * v, 1320, .05); noise(.3, .2 * v, 2500, 200); } else if (k === 'e') { tone(600, .22, 'square', .09 * v, 1200); tone(900, .2, 'triangle', .08 * v, 450, .06); } else { tone(420, .25, 'sawtooth', .08 * v, 840); tone(840, .2, 'triangle', .07 * v, 1260, .08); } }, pick: () => { tone(700, .08, 'triangle', .1); tone(1000, .1, 'triangle', .1, 0, .07); }, beep: () => tone(800, .1, 'square', .06), die: () => tone(220, .5, 'sawtooth', .12, 50) };
 
 // ───────── 場景與地圖 ─────────
 const cv = $('c3'), renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
@@ -313,7 +336,7 @@ const WEAPONS = {
 };
 // ───────── 英雄：5 位（每隊固定 1 重裝＋2 輸出＋2 支援） ─────────
 const HEROES = [
-  { id: 'machi', char: 'Machi', name: 'Machi', title: '責任壁壘', role: '重裝', ic: '🛡️', hp: 200, speed: 5.0, w: 'keyboard', pref: 6, sleeve: 0x2b2d3a,
+  { id: 'machi', char: 'Machi', name: 'Machi', title: '責任壁壘', role: '重裝', ic: '🛡️', hp: 500, speed: 5.0, w: 'keyboard', pref: 6, sleeve: 0x2b2d3a,
     e: { n: '壁壘護盾', ic: '🛡️', cd: 10, d: '在前方立起擋子彈的護盾（300 血、5 秒）' }, s: { n: '衝鋒', ic: '🐂', cd: 8, d: '向前猛衝，撞到的敵人受 30 傷害並被擊退' }, q: { n: '震地', ic: '💥', d: '半徑 8 公尺：70 傷害＋暈眩 1.2 秒' } },
   { id: 'noise', char: 'Noise', name: 'Noise', title: '截稿狂熱', role: '輸出', ic: '⚡', hp: 120, speed: 6.0, w: 'stapler', pref: 9, sleeve: 0x1d4ed8,
     e: { n: '閃身步', ic: '💨', cd: 5, d: '向移動方向急衝一小段' }, s: { n: '咖啡因', ic: '☕', cd: 12, d: '5 秒內移速 +45%、射速 +20%' }, q: { n: '截稿狂暴', ic: '🔥', d: '6 秒內射速 ×1.6、傷害 ×1.35' } },
@@ -338,7 +361,7 @@ const triTex = [0, 1].map(t => canvasTex(64, 64, g => { g.fillStyle = t ? '#ff4b
 let actors = [], me = null;
 function applyHero(a, h) { a.hero = h; a.maxHp = h.hp; a.cd = { e: 0, s: 0 }; a.w = WEAPONS[h.w]; }
 function makeActor(hero, team, isMe) {
-  const o = { name: hero.name, team, isMe, x: 0, y: 0, z: 0, vx: 0, vz: 0, vy: 0, yaw: 0, pitch: 0, hp: 100, dead: false, respT: 0, inv: 0, fireT: 0, kills: 0, deaths: 0, dmg: 0, heals: 0, ult: 0, buff: 0, rage: 0, dmgT: 0, spd: 0, stun: 0, mark: 0, heal: 0, volley: 0, armor: 0, armorT: 0, volT: 0, chargeT: 0, fl: 0, ground: true, bot: null, path: [], tgt: null, anim: 0, dashT: 0, wph: 0 };
+  const o = { name: hero.name, team, isMe, x: 0, y: 0, z: 0, vx: 0, vz: 0, vy: 0, yaw: 0, pitch: 0, hp: 100, dead: false, respT: 0, inv: 0, fireT: 0, kills: 0, deaths: 0, dmg: 0, heals: 0, ult: 0, buff: 0, rage: 0, dmgT: 0, spd: 0, stun: 0, mark: 0, heal: 0, volley: 0, armor: 0, armorT: 0, actT: { e: 0, s: 0, q: 0 }, volT: 0, chargeT: 0, fl: 0, ground: true, bot: null, path: [], tgt: null, anim: 0, dashT: 0, wph: 0 };
   applyHero(o, hero);
   if (!isMe) {
     const name = hero.char, ks = CHAR_SCALE[name] || 1, spr = mk(new THREE.PlaneGeometry(2 * ks, 2 * ks), new THREE.MeshBasicMaterial({ map: loadTex(name), transparent: true, alphaTest: .5, side: THREE.DoubleSide })); spr.geometry.translate(0, 1 * ks - .02, 0); spr.rotation.order = 'YXZ';
@@ -365,14 +388,14 @@ const TEAMCOL = [0x5ec8ff, 0xff4b3e];
 let vmSX = 0, vmSY = 0, vmLY = 0, vmLP = 0, vmEquip = 0, vmKick = 0, state = 'menu', paused = false, tLeft = 480, prog = [0, 0], owner = -1, cap = 0, capTeam = -1, contested = false, present = [0, 0], stT = 0, yaw = 0, pitch = 0, locked = false, zoom = false, shake = 0, recoil = 0, bobT = 0;
 const keys = {}, joy = { x: 0, y: 0 }, hold = { fire: false };
 function spawnPoint(team) { const pts = team === 0 ? [[-26, -10], [-26, 0], [-26, 10], [-22, 20], [-22, -20]] : [[26, -10], [26, 0], [26, 10], [22, 20], [22, -20]]; let best = null, bd = -1; for (let i = 0; i < 6; i++) { const p = pts[Math.floor(Math.random() * pts.length)]; let md = 1e9; for (const a of actors) if (!a.dead && a.team !== team) md = Math.min(md, Math.hypot(a.x - p[0], a.z - p[1])); if (md > bd) { bd = md; best = p; } } return best; }
-function respawn(a) { if (a.nextHero) { applyHero(a, HERO_BY[a.nextHero]); a.nextHero = null; if (a.isMe) { setViewmodel(); buildHud(); } else rebuildLook(a); } const p = spawnPoint(a.team); a.x = p[0] + rand(-1, 1); a.z = p[1] + rand(-1, 1); a.y = 0; a.vx = a.vz = a.vy = 0; a.hp = a.maxHp; a.dead = false; a.inv = 2; a.pitch = 0; a.path = []; a.tgt = null; a.fireT = .4; a.stun = a.mark = a.heal = a.volley = a.chargeT = a.buff = a.rage = a.dmgT = a.spd = 0; a.armor = a.armorT = 0; a.yaw = a.team === 0 ? -Math.PI / 2 : Math.PI / 2; if (a.isMe) { yaw = a.yaw; pitch = 0; $('heroSel').hidden = true; } }
+function respawn(a) { if (a.nextHero) { applyHero(a, HERO_BY[a.nextHero]); a.nextHero = null; if (a.isMe) { setViewmodel(); buildHud(); } else rebuildLook(a); } const p = spawnPoint(a.team); a.x = p[0] + rand(-1, 1); a.z = p[1] + rand(-1, 1); a.y = 0; a.vx = a.vz = a.vy = 0; a.hp = a.maxHp; a.dead = false; a.inv = 2; a.pitch = 0; a.path = []; a.tgt = null; a.fireT = .4; a.stun = a.mark = a.heal = a.volley = a.chargeT = a.buff = a.rage = a.dmgT = a.spd = 0; a.armor = a.armorT = 0; a.actT = { e: 0, s: 0, q: 0 }; a.yaw = a.team === 0 ? -Math.PI / 2 : Math.PI / 2; if (a.isMe) { yaw = a.yaw; pitch = 0; $('heroSel').hidden = true; } }
 function drawHpBar(a) {
   const key = Math.ceil(a.hp) + '|' + Math.ceil(a.armor || 0) + '|' + a.maxHp; if (a._hk === key) return; a._hk = key;
   const c = a.hpC, g = c.getContext('2d'), w = c.width, h = c.height, pad = 3, iw = w - pad * 2, ih = h - pad * 2, f = clamp(a.hp / a.maxHp, 0, 1), col = a.hp < a.maxHp * .3 ? '#ffd24a' : (a.team ? '#ff4b3e' : '#5ec8ff');
   g.clearRect(0, 0, w, h); g.fillStyle = 'rgba(8,10,14,.92)'; g.fillRect(0, 0, w, h); g.fillStyle = '#2a323d'; g.fillRect(pad, pad, iw, ih);
   g.fillStyle = col; g.fillRect(pad, pad, iw * f, ih); g.fillStyle = 'rgba(255,255,255,.28)'; g.fillRect(pad, pad, iw * f, ih * .38);
   if (a.armor > 0) { const af = clamp(a.armor / a.maxHp, 0, 1 - f + .0001); g.fillStyle = '#ffd066'; g.fillRect(pad + iw * f, pad, Math.min(iw * (1 - f), iw * af), ih); }
-  g.fillStyle = 'rgba(0,0,0,.75)'; for (let hp = 25; hp < a.maxHp; hp += 25) g.fillRect(pad + iw * hp / a.maxHp - 1, pad, 2, ih);   // 每 25 點一格
+  g.fillStyle = 'rgba(0,0,0,.75)'; for (let hp = (a.maxHp > 250 ? 100 : 25); hp < a.maxHp; hp += (a.maxHp > 250 ? 100 : 25)) g.fillRect(pad + iw * hp / a.maxHp - 1, pad, 2, ih);   // 每 25 點一格
   g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 2; g.strokeRect(1, 1, w - 2, h - 2); a.hpT.needsUpdate = true;
 }
 function makeGunModel(wid) {
@@ -472,7 +495,7 @@ function addPart(map, color, x, y, z, vx, vy, vz, life, size, grav = 0, add = tr
 function stepParts(dt) {
   for (let i = PART.length - 1; i >= 0; i--) { const p = PART[i]; p.life -= dt; p.vy -= p.grav * dt; p.s.position.x += p.vx * dt; p.s.position.y += p.vy * dt; p.s.position.z += p.vz * dt; if (p.s.position.y < .03 && p.grav > 0) { p.s.position.y = .03; p.vy = 0; p.vx *= .8; p.vz *= .8; } const k = p.life / p.max; p.s.material.opacity = clamp(k * 1.5, 0, 1); const sc = p.size * (1 + p.grow * (1 - k)); p.s.scale.set(sc, sc, 1); p.s.material.rotation += p.spin * dt; if (p.life <= 0) { scene.remove(p.s); p.s.material.dispose(); PART.splice(i, 1); } }
   for (let i = DEC.length - 1; i >= 0; i--) { const d = DEC[i]; d.life -= dt; if (d.life < 1.5) d.m.material.opacity = Math.max(0, d.life / 1.5); if (d.life <= 0) { scene.remove(d.m); d.m.material.dispose(); DEC.splice(i, 1); } }
-  for (let i = NUMS.length - 1; i >= 0; i--) { const n = NUMS[i]; n.life -= dt; n.s.position.y += dt * 1.1; n.s.position.x += n.vx * dt; n.s.material.opacity = clamp(n.life * 2.2, 0, 1); if (n.life <= 0) { scene.remove(n.s); NUMS.splice(i, 1); } }
+  for (let i = NUMS.length - 1; i >= 0; i--) { const n = NUMS[i]; n.life -= dt; if (n.ref) { n.lift += dt * .5; n.s.position.set(n.ref.x, n.ref.y + n.lift, n.ref.z); } else { n.s.position.y += dt * 1.1; n.s.position.x += n.vx * dt; } n.s.material.opacity = clamp(n.life * 2.2, 0, 1); if (n.life <= 0) { scene.remove(n.s); NUMS.splice(i, 1); } }
 }
 const numTexCache = new Map();
 function numTex(txt, col) { const k = txt + col; let t = numTexCache.get(k); if (!t) { t = canvasTex(128, 64, (g, w, h) => { g.font = '900 44px "JetBrains Mono",Consolas,monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 8; g.strokeStyle = '#000'; g.strokeText(txt, w / 2, h / 2); g.fillStyle = col; g.fillText(txt, w / 2, h / 2); }); if (numTexCache.size > 120) numTexCache.clear(); numTexCache.set(k, t); } return t; }
@@ -554,6 +577,15 @@ function stepProj(dt) {
     if (hit) { explode(nx, ny, nz, p.owner, p.w, p.dm); scene.remove(p.m); PROJ.splice(i, 1); } }
 }
 // ───────── 技能（E／Shift／大招 Q） ─────────
+const CAST_DUR = { machi: { e: 5, s: .6, q: 0 }, noise: { e: .22, s: 5, q: 6 }, anna: { e: .5, s: 4, q: 7 }, amber: { e: 4, s: 4, q: 0 }, leona: { e: 0, s: 6, q: 6 } };
+const lblCache = new Map();
+function labelTex(txt, col) { const k = txt + col; let t = lblCache.get(k); if (!t) { t = canvasTex(384, 72, (g, w, h) => { g.font = '900 40px "Noto Sans TC",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 9; g.strokeStyle = '#000'; g.strokeText(txt, w / 2, h / 2); g.fillStyle = col; g.fillText(txt, w / 2, h / 2); }); if (lblCache.size > 60) lblCache.clear(); lblCache.set(k, t); } return t; }
+function castLabel(a, txt, col) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex(txt, col), transparent: true, depthTest: false })); const k = clamp(Math.hypot(camera.position.x - a.x, camera.position.z - a.z) / 7, 1.1, 3.2); s.scale.set(4 * k, .76 * k, 1); s.position.set(a.x, a.y + 3.4, a.z); s.renderOrder = 40; scene.add(s); NUMS.push({ s, life: 1.4, vx: 0, ref: a, lift: 3.4 }); }
+function cast(a, k) {
+  const H = a.hero; a.actT[k] = (CAST_DUR[H.id] || {})[k] || 0; castLabel(a, H[k].ic + ' ' + H[k].n, k === 'q' ? '#ffd24a' : a.team ? '#ff9a90' : '#8fd8ff');
+  if (a.isMe) { SFX.cast(k); const el = $('cast'); el.textContent = H[k].ic + ' ' + H[k].n; el.className = ''; void el.offsetWidth; el.className = 'on ' + k; if (k === 'q') { const f = $('flashS'); f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); } }
+  else if (Math.hypot(a.x - me.x, a.z - me.z) < 38) SFX.cast(k, .5);
+}
 const enemiesOf = a => actors.filter(t => t.team !== a.team && !t.dead), alliesOf = a => actors.filter(t => t.team === a.team && !t.dead);
 function fwd(a) { return [-Math.sin(a.yaw), -Math.cos(a.yaw)]; }
 function moveDir(a) { if (a.isMe) { const mx = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + joy.x, mz = (keys.KeyS ? 1 : 0) - (keys.KeyW ? 1 : 0) + joy.y, l = Math.hypot(mx, mz); if (l > .15) { const f = fwd(a), rx = -f[1], rz = f[0]; return [(f[0] * -mz + rx * mx) / l, (f[1] * -mz + rz * mx) / l]; } } return fwd(a); }
@@ -565,7 +597,7 @@ function leonaTarget(a) {
   return best || a;
 }
 function useE(a) {
-  if (state !== 'play' || a.dead || a.stun > 0 || a.cd.e > 0 || a.chargeT > 0) return; a.cd.e = a.hero.e.cd; if (a.isMe) SFX.skill();
+  if (state !== 'play' || a.dead || a.stun > 0 || a.cd.e > 0 || a.chargeT > 0) return; a.cd.e = a.hero.e.cd; cast(a, 'e');
   const f = fwd(a);
   switch (a.hero.id) {
     case 'machi': spawnBarrier(a); break;
@@ -576,7 +608,7 @@ function useE(a) {
   }
 }
 function useS(a) {
-  if (state !== 'play' || a.dead || a.stun > 0 || a.cd.s > 0 || a.chargeT > 0) return; a.cd.s = a.hero.s.cd; if (a.isMe) SFX.skill();
+  if (state !== 'play' || a.dead || a.stun > 0 || a.cd.s > 0 || a.chargeT > 0) return; a.cd.s = a.hero.s.cd; cast(a, 's');
   switch (a.hero.id) {
     case 'machi': { const f = fwd(a); a.vx = f[0] * 16; a.vz = f[1] * 16; a.chargeT = .6; a.dashT = .6; a.chHit = new Set(); break; }
     case 'noise': a.buff = 5; ringFx(a.x, a.y, a.z, 0xffb000, 2, .4); break;
@@ -586,7 +618,7 @@ function useS(a) {
   }
 }
 function useQ(a) {
-  if (state !== 'play' || a.dead || a.stun > 0 || a.ult < 100) return; a.ult = 0; if (a.isMe) { SFX.skill(); banner(a.hero.q.n, '', 900); }
+  if (state !== 'play' || a.dead || a.stun > 0 || a.ult < 100) return; a.ult = 0; cast(a, 'q');
   switch (a.hero.id) {
     case 'machi': { SFX.boom(); burst(a.x, a.y + .4, a.z, 0xffb000, 14, .5); ringFx(a.x, a.y, a.z, 0xffb000, 8, .55); ringFx(a.x, a.y, a.z, 0xffffff, 5, .35); sparkBurst(a.x, a.y + .3, a.z, 20, 0xffb000, 7); for (const t of enemiesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 8) { dmgTo(t, 70, a, false, '💥', t.x, t.y + 1.4, t.z); t.stun = 1.2; } shake = Math.min(1, shake + .7); break; }
     case 'noise': a.rage = 6; ringFx(a.x, a.y, a.z, 0xff6a3d, 4, .5); break;
@@ -673,6 +705,7 @@ lp.addEventListener('pointerdown', e => { e.preventDefault(); unlock(); lookId =
 lp.addEventListener('pointermove', e => { if (e.pointerId !== lookId) return; let dx = e.clientX - lx, dy = e.clientY - ly; lx = e.clientX; ly = e.clientY; if (isRot()) { const t = dx; dx = dy; dy = -t; } const s = (zoom ? .4 : 1) * .0055; yaw -= dx * s; pitch = clamp(pitch - dy * s, -1.45, 1.45); });
 const lend = e => { if (e.pointerId === lookId) lookId = null; }; lp.addEventListener('pointerup', lend); lp.addEventListener('pointercancel', lend);
 function bindBtn(id, down, up) { const el = $(id); el.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); unlock(); try { el.setPointerCapture(e.pointerId); } catch (x) {} down(); el.classList.add('on'); }); const u = () => { up && up(); el.classList.remove('on'); }; el.addEventListener('pointerup', u); el.addEventListener('pointercancel', u); el.addEventListener('contextmenu', e => e.preventDefault()); }
+['skE', 'skS', 'skR'].forEach(id => $(id).insertAdjacentHTML('beforeend', '<i class="sw"></i><em class="ct"></em>'));
 bindBtn('fire', () => { hold.fire = true; }, () => { hold.fire = false; });
 bindBtn('jump', () => { keys.Space = true; setTimeout(() => keys.Space = false, 120); }, null);
 bindBtn('aim', () => setZoom(!zoom), null); bindBtn('skE', () => useE(me), null); bindBtn('skS', () => useS(me), null); bindBtn('skR', () => useQ(me), null);
@@ -685,7 +718,7 @@ function buildHud() { $('wpN').textContent = me.w.n; }
 // ───────── 主迴圈 ─────────
 function stepActor(a, dt) {
   if (a.dead) { a.respT -= dt; if (a.respT <= 0 && state === 'play') { respawn(a); if (a.isMe) { $('banner').classList.remove('on'); } } return; }
-  a.inv = Math.max(0, a.inv - dt); a.fireT = Math.max(0, a.fireT - dt); a.cd.e = Math.max(0, a.cd.e - dt); a.cd.s = Math.max(0, a.cd.s - dt); a.buff = Math.max(0, a.buff - dt); a.rage = Math.max(0, a.rage - dt); a.dmgT = Math.max(0, a.dmgT - dt); a.spd = Math.max(0, a.spd - dt); a.stun = Math.max(0, a.stun - dt); a.mark = Math.max(0, a.mark - dt); a.fl = Math.max(0, a.fl - dt); if (a.armorT > 0) { a.armorT -= dt; if (a.armorT <= 0) a.armor = 0; }
+  a.inv = Math.max(0, a.inv - dt); a.fireT = Math.max(0, a.fireT - dt); a.cd.e = Math.max(0, a.cd.e - dt); a.cd.s = Math.max(0, a.cd.s - dt); a.buff = Math.max(0, a.buff - dt); a.rage = Math.max(0, a.rage - dt); a.dmgT = Math.max(0, a.dmgT - dt); a.spd = Math.max(0, a.spd - dt); a.stun = Math.max(0, a.stun - dt); a.mark = Math.max(0, a.mark - dt); a.fl = Math.max(0, a.fl - dt); if (a.armorT > 0) { a.armorT -= dt; if (a.armorT <= 0) a.armor = 0; } a.actT.e = Math.max(0, a.actT.e - dt); a.actT.s = Math.max(0, a.actT.s - dt); a.actT.q = Math.max(0, a.actT.q - dt);
   if (state === 'play') addUlt(a, dt * .9);
   // 治療光環
   if (a.heal > 0) { a.heal -= dt; for (const t of alliesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 8) healTo(t, 35 * dt, a); } a.hring.visible = a.heal > 0; if (a.heal > 0) { a.hring.position.set(a.x, a.y + .08, a.z); a.hring.scale.setScalar(.92 + Math.sin(performance.now() * .008) * .08); if (Math.random() < dt * 40) { const an = Math.random() * 6.283, rr = Math.random() * 7.5; addPart(sparkTex, 0x5ef0a4, a.x + Math.cos(an) * rr, a.y + .1, a.z + Math.sin(an) * rr, 0, 1.6, 0, .9, .35, 0, true); } }
@@ -750,8 +783,8 @@ function render(dt) {
     $('pA').textContent = Math.floor(prog[0]) + '%'; $('pB').textContent = Math.floor(prog[1]) + '%'; $('bA').style.width = prog[0] + '%'; $('bB').style.width = prog[1] + '%';
     const pt = $('pt'); pt.className = 'pt' + (owner === 0 ? ' a' : owner === 1 ? ' b' : '') + (contested ? ' ct' : ''); $('ptS').textContent = contested ? '爭奪中' : owner < 0 ? (cap > 0 ? '占領中' : '中立') : owner === 0 ? '我方' : '敵方';
     $('rg').style.background = 'conic-gradient(' + (capTeam === 0 ? '#5ec8ff' : '#ff4b3e') + ' ' + cap * 3.6 + 'deg, rgba(255,255,255,.12) 0)';
-    const H = me.hero, cd = (id, o) => { const el = $(id); if (!el) return; el.classList.remove('ready', 'cd', 'on'); el.classList.add(o.s); el.style.setProperty('--p', o.p || 0); const ct = el.querySelector('.ct'); if (ct) ct.textContent = o.c || ''; };
-    const eS = me.cd.e > 0 ? { s: 'cd', p: me.cd.e / H.e.cd, c: Math.ceil(me.cd.e) } : { s: 'ready' }, sS = me.cd.s > 0 ? { s: 'cd', p: me.cd.s / H.s.cd, c: Math.ceil(me.cd.s) } : { s: 'ready' }, qS = (me.rage > 0 || me.volley > 0 || me.dmgT > 0) ? { s: 'on' } : me.ult >= 100 ? { s: 'ready' } : { s: 'cd', p: 1 - me.ult / 100, c: Math.floor(me.ult) + '%' };
+    const H = me.hero, cd = (id, o) => { const el = $(id); if (!el) return; el.classList.remove('ready', 'cd', 'on'); el.classList.add(o.s); el.style.setProperty('--p', o.p || 0); const ct = el.querySelector('.ct'); if (ct) ct.textContent = o.c || ''; if (el._st !== o.s) { if (o.s === 'ready' && el._st) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); } el._st = o.s; } };
+    const fm = v => v >= 10 ? String(Math.ceil(v)) : v.toFixed(1), st = (key, cdv, cdmax) => me.actT[key] > 0.05 ? { s: 'on', p: 0, c: fm(me.actT[key]) } : cdv > 0 ? { s: 'cd', p: cdv / cdmax, c: fm(cdv) } : { s: 'ready', c: '' }; const eS = st('e', me.cd.e, H.e.cd), sS = st('s', me.cd.s, H.s.cd), qS = me.actT.q > .05 ? { s: 'on', p: 0, c: fm(me.actT.q) } : me.ult >= 100 ? { s: 'ready', c: '' } : { s: 'cd', p: 1 - me.ult / 100, c: Math.floor(me.ult) + '%' };
     cd('scE', eS); cd('skE', eS); cd('scS', sS); cd('skS', sS); cd('scR', qS); cd('skR', qS);
     for (const [id, k] of [['scE', 'e'], ['scS', 's'], ['scR', 'q']]) { const el = $(id); el.querySelector('.ic').textContent = H[k].ic; el.querySelector('.nm').textContent = H[k].n; } for (const [id, k] of [['skE', 'e'], ['skS', 's'], ['skR', 'q']]) { const el = $(id); if (el.querySelector('.ic')) { el.querySelector('.ic').textContent = H[k].ic; } }
     $('xh').dataset.k = w.kind; $('xh').style.setProperty('--sp', (Math.hypot(me.vx, me.vz) * 1.2 + (me.ground ? 0 : 8) + recoil * 30 + w.spread * 200) + 'px'); $('xh').style.display = zoom && w.zoom ? 'none' : ''; $('sh').classList.toggle('on', me.stun > 0);
