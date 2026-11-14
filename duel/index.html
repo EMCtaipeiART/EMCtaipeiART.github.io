@@ -692,55 +692,57 @@ const loText = f => (WEAPONS[f.w] || WEAPONS.tablet).n + '・' + (PASSIVES[f.pas
 // ───────── 戰鬥角色 ─────────
 const R = { gravity: 26, jumpV: 9.4, run: 7, airCtl: .55, dashSpeed: 17, dashT: .22, dashCD: 1.3, atkCD: .48, windup: .13, range: 3.3, halfAng: 62 * Math.PI / 180, dmg: 10, hiBonus: 1.25, hiDelta: .8, ultNeed: 100, ultDmg: 26, ultR: 5.5 };
 const fighters = [];
-// ───────── 簡易 3D 骨架角色（Q 版比例；三視圖整張投影到圓形零件上；網址加 ?rig=1 才啟用）─────────
-const RIG_ON = Q.get('rig') === '1', SKINS = { Machi: ['skins/Machi-front.png', 'skins/Machi-side.png', 'skins/Machi-back.png'] };
-const skinCache = {};
-function prepSkin(img) { // 去背（從邊緣填滿淺色背景）並量出人物範圍
-  const w = img.width, h = img.height, c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.drawImage(img, 0, 0); const im = g.getImageData(0, 0, w, h), d = im.data;
-  const bg = i => { const r = d[i], gg = d[i + 1], b = d[i + 2], mx = Math.max(r, gg, b), mn = Math.min(r, gg, b); return mn > 170 && mx - mn < 34; }, seen = new Uint8Array(w * h), st = [];
-  const push = (x, y) => { if (x < 0 || y < 0 || x >= w || y >= h) return; const k = y * w + x; if (seen[k] || !bg(k * 4)) return; seen[k] = 1; st.push(k); };
-  for (let x = 0; x < w; x++) { push(x, 0); push(x, h - 1); } for (let y = 0; y < h; y++) { push(0, y); push(w - 1, y); }
-  while (st.length) { const k = st.pop(), x = k % w, y = (k - x) / w; push(x + 1, y); push(x - 1, y); push(x, y + 1); push(x, y - 1); }
-  let x0 = w, x1 = 0, y0 = h, y1 = 0; for (let k = 0; k < w * h; k++) { if (seen[k]) d[k * 4 + 3] = 0; else { const x = k % w, y = (k - x) / w; if (d[k * 4 + 3] > 20) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } } }
-  g.putImageData(im, 0, 0); const t = new THREE.CanvasTexture(c); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false;
-  const H = y1 - y0 + 1; return { tex: t, v: new THREE.Vector4((x0 + x1 + 1) / 2 / w, (y1 + 1) / h, H / h / 2, H / w / 2) }; // 中心 x、腳底 y、每單位的 v、u 比例（人物高 2 單位）
+// ───────── 輪廓建模 3D 角色（網址加 ?rig=1 才啟用）─────────
+// 用角色 12 個角度圖集的輪廓做「體素雕刻」(shape-from-silhouette)，再把圖集顏色投影回表面，
+// 切成頭/軀幹/雙臂/雙腿 6 個零件，由程式動作驅動。其他角色只要有 12 角度圖集就能自動建出來。
+const RIG_ON = Q.get('rig') === '1', RIG_SGN = Q.get('rs') === '-1' ? -1 : 1;
+const rigCache = {};
+function rigData(name, cb) {
+  const C = rigCache[name] || (rigCache[name] = { cbs: [], data: null, loading: false });
+  if (C.data) { cb(C.data); return; } C.cbs.push(cb); if (C.loading) return; C.loading = true;
+  const im = new Image(); im.onload = () => { C.data = carveRig(im); C.cbs.forEach(f => f(C.data)); C.cbs = []; }; im.src = atlasUrl(name, true);
 }
-function pixCol(img, x, y) { const c = document.createElement('canvas'); c.width = c.height = 1; const g = c.getContext('2d'); g.drawImage(img, Math.floor(x * img.width), Math.floor(y * img.height), 3, 3, 0, 0, 1, 1); const d = g.getImageData(0, 0, 1, 1).data; return new THREE.Color(d[0] / 255, d[1] / 255, d[2] / 255); }
-function loadSkin(name) { if (skinCache[name]) return skinCache[name]; const S = skinCache[name] = { imgs: [], ready: false, cbs: [] }; let n = 0; SKINS[name].forEach((u, i) => { const im = new Image(); im.onload = () => { if (++n === 3) { S.ready = true; S.cbs.forEach(c => c()); } }; im.src = u; S.imgs[i] = im; }); return S; }
-const RIG_VS = 'attribute vec3 rest; attribute vec3 pcol; varying vec3 vR; varying vec3 vN; varying vec3 vC; void main(){ vR = rest; vN = normalize(normal); vC = pcol; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
-const RIG_FS = 'uniform sampler2D tF; uniform sampler2D tS; uniform sampler2D tB; uniform vec4 pF; uniform vec4 pS; uniform vec4 pB; uniform vec3 tint; uniform float op; varying vec3 vR; varying vec3 vN; varying vec3 vC;' +
-  'vec4 smp(sampler2D t, vec4 p, float u){ vec2 uv = vec2(p.x + u * p.w, 1.0 - (p.y - vR.y * p.z)); vec4 c = texture2D(t, uv); if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) c.a = 0.0; return c; }' +
-  'void main(){ float wf = pow(max(vN.z, 0.0), 3.0), wb = pow(max(-vN.z, 0.0), 3.0), ws = pow(abs(vN.x), 3.0); float s = wf + wb + ws + 0.0001; wf /= s; wb /= s; ws /= s;' +
-  ' vec4 a = smp(tF, pF, vR.x), b = smp(tB, pB, -vR.x), c = smp(tS, pS, vN.x < 0.0 ? vR.z : -vR.z);' +
-  ' float al = a.a * wf + b.a * wb + c.a * ws; vec3 tx = (a.rgb * a.a * wf + b.rgb * b.a * wb + c.rgb * c.a * ws) / max(al, 0.0001); vec3 col = mix(vC, tx, al) * tint * (0.9 + 0.1 * vN.y); gl_FragColor = vec4(col, op); }';
+function carveRig(img) {
+  const N = 12, cw = Math.floor(img.width / N), ch = img.height, c = document.createElement('canvas'); c.width = img.width; c.height = ch; const g = c.getContext('2d'); g.drawImage(img, 0, 0); const all = g.getImageData(0, 0, img.width, ch).data;
+  const A = (k, u, v) => (u < 0 || v < 0 || u >= cw || v >= ch) ? 0 : all[(v * img.width + k * cw + u) * 4 + 3];
+  let top = ch, bot = 0; for (let k = 0; k < N; k++) for (let v = 0; v < ch; v++) for (let u = 0; u < cw; u++) if (A(k, u, v) > 128) { if (v < top) top = v; if (v > bot) bot = v; }
+  const ppu = (bot - top + 1) / 2, gy = bot + 1, cx = cw / 2, mask = [];
+  for (let k = 0; k < N; k++) { const m = new Uint8Array(cw * ch); for (let v = 0; v < ch; v++) for (let u = 0; u < cw; u++) if (A(k, u, v) > 100) m[v * cw + u] = 1; const d = new Uint8Array(m); for (let v = 1; v < ch - 1; v++) for (let u = 1; u < cw - 1; u++) if (!m[v * cw + u] && (m[v * cw + u - 1] || m[v * cw + u + 1] || m[(v - 1) * cw + u] || m[(v + 1) * cw + u])) d[v * cw + u] = 1; mask.push(d); }
+  const S = .024, NX = 64, NY = 88, NZ = 64, X0 = -NX * S / 2, Z0 = -NZ * S / 2, occ = new Uint8Array(NX * NY * NZ), cs = [], sn = [];
+  for (let k = 0; k < N; k++) { const a = RIG_SGN * k * Math.PI / 6; cs.push(Math.cos(a)); sn.push(Math.sin(a)); }
+  for (let iy = 0; iy < NY; iy++) { const y = (iy + .5) * S, v = Math.round(gy - y * ppu); for (let iz = 0; iz < NZ; iz++) { const z = Z0 + (iz + .5) * S; for (let ix = 0; ix < NX; ix++) { const x = X0 + (ix + .5) * S; let ok = 1; for (let k = 0; k < N; k++) { const u = Math.round(cx + (x * cs[k] + z * sn[k]) * ppu); if (u < 0 || u >= cw || v < 0 || v >= ch || !mask[k][v * cw + u]) { ok = 0; break; } } occ[(iy * NZ + iz) * NX + ix] = ok; } } }
+  const at = (ix, iy, iz) => (ix < 0 || iy < 0 || iz < 0 || ix >= NX || iy >= NY || iz >= NZ) ? 0 : occ[(iy * NZ + iz) * NX + ix];
+  const colAt = (x, y, z, dx, dz) => { // 選最正對這個面的視角取色
+    let bk = 0, bd = -9; for (let k = 0; k < N; k++) { const d = -sn[k] * dx + cs[k] * dz; if (d > bd) { bd = d; bk = k; } }
+    for (const kk of [bk, (bk + 1) % N, (bk + N - 1) % N]) { const u0 = Math.round(cx + (x * cs[kk] + z * sn[kk]) * ppu), v0 = Math.round(gy - y * ppu); for (let r = 0; r < 6; r++) for (let oy = -r; oy <= r; oy++) for (let ox = -r; ox <= r; ox++) { if (Math.max(Math.abs(ox), Math.abs(oy)) !== r) continue; const u = u0 + ox, v = v0 + oy; if (A(kk, u, v) > 200) { const p = (v * img.width + kk * cw + u) * 4; return [all[p] / 255, all[p + 1] / 255, all[p + 2] / 255]; } } }
+    return [.25, .25, .25];
+  };
+  const HIP = .44, NECK = 1.06, ARMX = .27, parts = { torso: [], head: [], armL: [], armR: [], legL: [], legR: [] };
+  const FACES = [[1, 0, 0, .86], [-1, 0, 0, .86], [0, 1, 0, 1.04], [0, -1, 0, .7], [0, 0, 1, .95], [0, 0, -1, .8]];
+  for (let iy = 0; iy < NY; iy++) for (let iz = 0; iz < NZ; iz++) for (let ix = 0; ix < NX; ix++) {
+    if (!occ[(iy * NZ + iz) * NX + ix]) continue; const x = X0 + (ix + .5) * S, y = (iy + .5) * S, z = Z0 + (iz + .5) * S;
+    let part = y >= NECK ? 'head' : y < HIP ? (x > 0 ? 'legL' : 'legR') : (Math.abs(x) > ARMX && y < NECK - .06) ? (x > 0 ? 'armL' : 'armR') : 'torso';
+    for (const [fx, fy, fz, sh] of FACES) {
+      if (at(ix + fx, iy + fy, iz + fz)) continue;
+      let dx = fx, dz = fz; if (fy) { const l = Math.hypot(x, z) || 1; dx = x / l; dz = z / l; }
+      const cc = colAt(x, y, z, dx, dz), h = S / 2, P = parts[part];
+      const q = fx ? (fx > 0 ? [[h, -h, -h], [h, h, -h], [h, h, h], [h, -h, h]] : [[-h, -h, h], [-h, h, h], [-h, h, -h], [-h, -h, -h]]) : fy ? (fy > 0 ? [[-h, h, -h], [-h, h, h], [h, h, h], [h, h, -h]] : [[-h, -h, h], [-h, -h, -h], [h, -h, -h], [h, -h, h]]) : (fz > 0 ? [[-h, -h, h], [h, -h, h], [h, h, h], [-h, h, h]] : [[h, -h, -h], [-h, -h, -h], [-h, h, -h], [h, h, -h]]);
+      for (const i of [0, 1, 2, 0, 2, 3]) P.push(x + q[i][0], y + q[i][1], z + q[i][2], cc[0] * sh, cc[1] * sh, cc[2] * sh);
+    }
+  }
+  return { parts, HIP, NECK, SH: [.33, .94] };
+}
 function makeRig(name) {
-  const U = { tF: { value: null }, tS: { value: null }, tB: { value: null }, pF: { value: new THREE.Vector4(.5, 1, .5, .3) }, pS: { value: new THREE.Vector4(.5, 1, .5, .3) }, pB: { value: new THREE.Vector4(.5, 1, .5, .3) }, tint: { value: new THREE.Color(1, 1, 1) }, op: { value: 1 } };
-  const mat = new THREE.ShaderMaterial({ uniforms: U, vertexShader: RIG_VS, fragmentShader: RIG_FS });
-  const cols = { hair: new THREE.Color(0x4a2c1a), cloth: new THREE.Color(0x222222), skin: new THREE.Color(0xdcb08a) };
-  const root = new THREE.Group(), geos = [];
-  // 在「站立姿勢」的角色座標建幾何，再平移到樞紐位置；rest 屬性保留站立座標給貼圖投影
-  const part = (parent, parentW, pivotW, geo, colKey) => {
-    const n = geo.attributes.position.count, rest = new Float32Array(geo.attributes.position.array), pc = new Float32Array(n * 3);
-    geo.setAttribute('rest', new THREE.BufferAttribute(rest, 3)); geo.setAttribute('pcol', new THREE.BufferAttribute(pc, 3)); geos.push([geo, colKey]);
-    geo.translate(-pivotW[0], -pivotW[1], -pivotW[2]);
-    const g = new THREE.Group(); g.position.set(pivotW[0] - parentW[0], pivotW[1] - parentW[1], pivotW[2] - parentW[2]); g.add(new THREE.Mesh(geo, mat)); parent.add(g); return g;
-  };
-  const sph = (rx, ry, rz, cx, cy, cz) => { const g = new THREE.SphereGeometry(1, 28, 20); g.scale(rx, ry, rz); g.translate(cx, cy, cz); return g; };
-  const cyl = (r0, r1, h, cx, cy, cz) => { const g = new THREE.CylinderGeometry(r0, r1, h, 16); g.translate(cx, cy, cz); return g; };
-  const HIP = .46, NECK = 1.0, SH = .9;
-  const hips = new THREE.Group(); hips.position.y = HIP; root.add(hips);
-  const torso = part(hips, [0, HIP, 0], [0, HIP, 0], sph(.31, .3, .24, 0, .74, 0), 'cloth');
-  const head = part(torso, [0, HIP, 0], [0, NECK, 0], sph(.5, .5, .48, 0, 1.5, 0), 'hair');
-  const armL = part(torso, [0, HIP, 0], [.36, SH, 0], cyl(.1, .085, .42, .4, .72, 0), 'cloth'), armR = part(torso, [0, HIP, 0], [-.36, SH, 0], cyl(.1, .085, .42, -.4, .72, 0), 'cloth');
-  const legL = part(hips, [0, HIP, 0], [.15, HIP, 0], cyl(.125, .13, .46, .15, .23, 0), 'cloth'), legR = part(hips, [0, HIP, 0], [-.15, HIP, 0], cyl(.125, .13, .46, -.15, .23, 0), 'cloth');
+  const mat = new THREE.MeshBasicMaterial({ vertexColors: true });
+  const root = new THREE.Group(), hips = new THREE.Group(), HIP = .44; hips.position.y = HIP; root.add(hips);
+  const mk = (parent, parentW, pivot) => { const g = new THREE.Group(); g.position.set(pivot[0] - parentW[0], pivot[1] - parentW[1], pivot[2] - parentW[2]); parent.add(g); return g; };
+  const torso = mk(hips, [0, HIP, 0], [0, HIP, 0]), head = mk(torso, [0, HIP, 0], [0, 1.06, 0]);
+  const armL = mk(torso, [0, HIP, 0], [.33, .94, 0]), armR = mk(torso, [0, HIP, 0], [-.33, .94, 0]), legL = mk(hips, [0, HIP, 0], [.12, HIP, 0]), legR = mk(hips, [0, HIP, 0], [-.12, HIP, 0]);
   const rig = { root, hips, torso, head, armL, armR, legL, legR, mat, HIP, t: 0 };
-  const paint = () => { for (const [geo, k] of geos) { const a = geo.attributes.pcol, c = cols[k]; for (let i = 0; i < a.count; i++) a.setXYZ(i, c.r, c.g, c.b); a.needsUpdate = true; } };
-  const S = loadSkin(name), apply = () => {
-    const [F, Sd, B] = S.imgs, pf = prepSkin(F), ps = prepSkin(Sd), pb = prepSkin(B);
-    U.tF.value = pf.tex; U.tS.value = ps.tex; U.tB.value = pb.tex; U.pF.value.copy(pf.v); U.pS.value.copy(ps.v); U.pB.value.copy(pb.v);
-    cols.hair = pixCol(F, .5, .17); cols.cloth = pixCol(F, .5, .66); cols.skin = pixCol(F, .5, .46); paint();
-  };
-  paint(); if (S.ready) apply(); else S.cbs.push(apply);
+  rigData(name, D => {
+    const piv = { torso: [0, HIP, 0], head: [0, 1.06, 0], armL: [.33, .94, 0], armR: [-.33, .94, 0], legL: [.12, HIP, 0], legR: [-.12, HIP, 0] };
+    for (const k of Object.keys(D.parts)) { const a = D.parts[k], n = a.length / 6, pos = new Float32Array(n * 3), col = new Float32Array(n * 3); for (let i = 0; i < n; i++) { pos[i * 3] = a[i * 6] - piv[k][0]; pos[i * 3 + 1] = a[i * 6 + 1] - piv[k][1]; pos[i * 3 + 2] = a[i * 6 + 2] - piv[k][2]; col[i * 3] = a[i * 6 + 3]; col[i * 3 + 1] = a[i * 6 + 4]; col[i * 3 + 2] = a[i * 6 + 5]; } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); rig[k].add(new THREE.Mesh(g, mat)); }
+  });
   return rig;
 }
 function updRig(f, dt) {
@@ -756,7 +758,7 @@ function updRig(f, dt) {
   r.hips.position.y = r.HIP + bob; r.torso.rotation.set(lean, tw, tilt); r.head.rotation.x = hd - lean * .5; r.head.rotation.y = -tw * .6;
   r.armL.rotation.x = aL; r.armR.rotation.x = aR; r.armL.rotation.z = air ? -.35 : -.08; r.armR.rotation.z = air ? .35 : .08; r.legL.rotation.x = lL; r.legR.rotation.x = lR;
   r.root.rotation.set(f.hp <= 0 ? -Math.PI / 2 : 0, f.face, 0, 'YXZ'); r.root.position.y = f.hp <= 0 ? .5 : 0;
-  const o = f.mat.opacity, U = r.mat.uniforms; U.tint.value.copy(f.mat.color); U.op.value = o; r.mat.transparent = o < 1;
+  const o = f.mat.opacity; r.mat.color.copy(f.mat.color); r.mat.opacity = o; r.mat.transparent = o < 1;
 }
 function makeFighter(name, tex, isBot, color) {
   const geo = new THREE.PlaneGeometry(2.04, 2.04); geo.translate(0, 1.02 - .03, 0);
@@ -764,7 +766,7 @@ function makeFighter(name, tex, isBot, color) {
   if (!tex) { mat.map = null; mat.color.setHex(color); }
   const sprite = new THREE.Mesh(geo, mat); sprite.rotation.order = 'YXZ';
   const blob = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, opacity: .55, depthWrite: false })); blob.rotation.x = -Math.PI / 2;
-  const holder = new THREE.Group(); scene.add(holder); scene.add(blob); holder.add(sprite); let rig = null; if (RIG_ON && SKINS[name]) { rig = makeRig(name); holder.add(rig.root); sprite.visible = false; }
+  const holder = new THREE.Group(); scene.add(holder); scene.add(blob); holder.add(sprite); let rig = null; if (RIG_ON && LOCAL_NAMES.includes(name)) { rig = makeRig(name); holder.add(rig.root); sprite.visible = false; }
   const ks = CHAR_SCALE[name] || 1; sprite.scale.set(ks, ks, 1);
   return { name, isBot, tex, rig, sprite, holder, blob, mat, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, face: 0, hp: 100, ult: 0, grounded: true, atkT: 0, atkCD: 0, dashT: 0, dashCD: 0, windT: 0, windMul: 1.7, hitStun: 0, flash: 0, combo: 0, comboT: 0, ultWind: 0, slash: null, rageT: 0, shield: 0, shieldT: 0, skT: 0, skCD: 0, rushT: 0, rushHit: false, w: 'tablet', pas: 'coffee', ulk: 'quake', dashDir: [0, 0], moving: 0, phase: 0, inp: { mx: 0, mz: 0, jump: false, atk: false, dash: false, ult: false }, bot: { rt: 0, strafe: 1, strafeT: 0, stuck: 0, lastX: 0, lastZ: 0, nav: null, think: 0 } };
 }
