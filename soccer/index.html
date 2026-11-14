@@ -113,7 +113,7 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
     <div class="ab" id="abV"><kbd>E</kbd><b class="ic">🧤</b><span class="nm">撲接</span><i class="sw"></i><em class="ct"></em></div>
   </div>
   <div id="stick" hidden><i></i></div>
-  <div class="sys" id="sys" hidden><button class="pb" id="pauseB" type="button">暫停</button></div>
+  <div class="sys" id="sys" hidden><button class="pb" id="pauseB" type="button">暫停</button><button class="pb" id="exitB2" type="button" hidden>離開</button></div>
 
   <div class="ov" id="menu">
     <div class="card">
@@ -122,7 +122,7 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
       <div class="row"><span class="lab">模式</span><span id="gMode"></span></div>
       <div class="row"><span class="lab">難度</span><span id="gDiff"></span></div>
       <div class="row"><span class="lab">時間</span><span id="gTime"></span></div>
-      <button class="go" id="startB" type="button">開球！</button>
+      <button class="go" id="startB" type="button">開球！</button><div class="row"><button class="pill" id="exitB" type="button" hidden>離開遊戲</button></div>
       <div class="help"><b>電腦：</b>WASD／方向鍵移動　<b>空白鍵</b>按住蓄力、放開大力推球　<b>Shift</b> 衝撞（撞飛對手、撞球更有力）　<b>E</b> 撲接（守門用，撲完要休息一下）<br>
       <b>手機：</b>左下搖桿移動，右下三顆鈕：大力推（按住蓄力）、衝撞、撲接。<br>
       <b>規則：</b>把大球推進對方球門。時間到進球多的贏，平手進入延長賽（金球制）。</div>
@@ -143,7 +143,9 @@ try { Object.assign(CFG, JSON.parse(localStorage.getItem('soccerCfgV1') || '{}')
 if (!LOCAL_NAMES.includes(CFG.who)) CFG.who = 'Machi';
 const saveCfg = () => { try { localStorage.setItem('soccerCfgV1', JSON.stringify(CFG)); } catch (e) {} };
 const rand = (a, b) => a + Math.random() * (b - a), clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const touch = matchMedia('(pointer:coarse)').matches;
+const touch = matchMedia('(pointer:coarse)').matches, embed = /[?&]embed=1/.test(location.search);
+try { const mm = Q.get('me'); if (mm && LOCAL_NAMES.includes(mm)) CFG.who = mm; } catch (e) {}
+const leave = () => { try { parent.postMessage({ type: 'expeditionExit' }, location.origin); } catch (e) {} };
 
 // ───────── 音效 ─────────
 let AC = null;
@@ -503,6 +505,7 @@ function drawHead() {
 const stepWho = d => { const i = LOCAL_NAMES.indexOf(CFG.who); CFG.who = LOCAL_NAMES[(i + d + LOCAL_NAMES.length) % LOCAL_NAMES.length]; saveCfg(); drawHead(); };
 $('prev').onclick = () => stepWho(-1); $('next').onclick = () => stepWho(1); $('startB').onclick = startMatch; drawHead();
 
+if (embed) { $('exitB').hidden = false; $('exitB2').hidden = false; $('exitB').onclick = $('exitB2').onclick = leave; }
 resize(); requestAnimationFrame(frame);
 if (Q.get('debug') === '1') window.SOCCER = { sim, get ball() { return ball; }, get players() { return players; }, get me() { return me; }, get state() { return state; }, set state(v) { state = v; }, get score() { return score; }, CFG, startMatch, goal, get time() { return time; }, set time(v) { time = v; } };
 })();

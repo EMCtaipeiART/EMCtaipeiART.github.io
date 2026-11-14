@@ -1269,6 +1269,21 @@ function build3dObjects(T, place){
     rects.push([rx - I(40), rz - I(10), rx + I(40), rz + I(14)]);
     const hit = new THREE.Mesh(new THREE.BoxGeometry(2.8, 2.3, 1.2), new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false}));
     hit.position.set(rx, 1.15, rz + .1); hit.userData.pick = {kind:'duelrack'}; scene.add(hit); pickables.push(hit); }
+  // 倉庫東南角：大顆健身球＋小球門，點一下進「大顆足球賽」
+  { const sx = I(250), sz = I(1221), grp = new THREE.Group(); grp.position.set(sx, 0, sz); scene.add(grp);
+    const bt = (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 128; const g = c.getContext('2d'); g.fillStyle = '#ff8a3d'; g.fillRect(0, 0, 256, 128); g.fillStyle = '#fff'; for (let i = 0; i < 6; i++) { g.beginPath(); g.arc(i * 44 + 20, 64, 17, 0, 7); g.fill(); } g.strokeStyle = '#14233b'; g.lineWidth = 6; g.beginPath(); g.moveTo(0, 22); g.lineTo(256, 22); g.moveTo(0, 106); g.lineTo(256, 106); g.stroke(); const t = new THREE.CanvasTexture(c); t.minFilter = THREE.LinearFilter; return t; })();
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(.62, 24, 16), new THREE.MeshLambertMaterial({map:bt})); ball.position.set(.3, .62, .25); grp.add(ball);
+    (globalThis.__soccerBall = globalThis.__soccerBall || []).push(ball);
+    const pm = new THREE.MeshLambertMaterial({color:0xffffff}), post = (x) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 1.1, 8), pm); m.position.set(x, .55, -.85); grp.add(m); };
+    post(-.95); post(.95); const bar = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 1.9, 8), pm); bar.rotation.z = Math.PI / 2; bar.position.set(0, 1.1, -.85); grp.add(bar);
+    const net = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.1), new THREE.MeshBasicMaterial({color:0xcfe0ff, transparent:true, opacity:.35, side:THREE.DoubleSide, depthWrite:false})); net.position.set(0, .55, -.95); grp.add(net);
+    const cvs = document.createElement('canvas'); cvs.width = 256; cvs.height = 64; const cg = cvs.getContext('2d');
+    cg.font = '800 34px "Noto Sans TC","PingFang TC",sans-serif'; cg.textAlign = 'center'; cg.lineWidth = 7; cg.strokeStyle = '#1b1b1b'; cg.lineJoin = 'round'; cg.strokeText('大顆足球賽', 128, 46); cg.fillStyle = '#ffd9a8'; cg.fillText('大顆足球賽', 128, 46);
+    const tx = new THREE.CanvasTexture(cvs); tx.minFilter = THREE.LinearFilter;
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.9, .47), new THREE.MeshBasicMaterial({map:tx, transparent:true, depthWrite:false})); sign.position.set(sx, 1.85, sz); scene.add(sign); billboards.push(sign);
+    rects.push([sx - I(34), sz - I(24), sx + I(34), sz + I(16)]);
+    const hit = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.8, 2.2), new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false}));
+    hit.position.set(sx, .9, sz - .3); hit.userData.pick = {kind:'soccerball'}; scene.add(hit); pickables.push(hit); }
   projectorRig(I(162), I(1360), 'W', {room:'C', wallX:I(98) + .02, wallDir:1, zc:I(1355), w:4.0, h:2.1, title:'專案會議', kind:'list'});
   for (const [x0, z0, ww, dd] of [[1046, 84, 4, 150], [94, 1072, 4, 156], [94, 1274, 4, 162]]) {   // 投影用白牆
     pbox(I(ww), 2.3, I(dd), 0xf6f7f9, I(x0 + ww / 2), 0, I(z0 + dd / 2));
@@ -1869,7 +1884,7 @@ const expFade = document.createElement('div'); expFade.id = 'expFade'; document.
 let expFrame = null, expBusy = false, expArmed = false;
 const THEATER = {x0:150, x1:262, z0:zN(1110), z1:zN(1210)};   // 倉庫內側中央（px，過 zN）
 const inTheater = p => { const x = p.holder.position.x / U, z = p.holder.position.z / U; return floorOf(p) === 5 && x > THEATER.x0 && x < THEATER.x1 && z > THEATER.z0 && z < THEATER.z1; };
-const EXP_GAMES = {exp:{title:'設計部遠征隊', fade:'倉庫', url:'../expedition/'}, deadline:{title:'截稿倒數 2', fade:'截稿倒數', url:'../deadline/'}, hoops:{title:'廢紙投籃 3D', fade:'廢紙投籃', url:'../hoops3d/'}, duel:{title:'辦公室對決', fade:'辦公室對決', url:'../duel/'}};
+const EXP_GAMES = {exp:{title:'設計部遠征隊', fade:'倉庫', url:'../expedition/'}, deadline:{title:'截稿倒數 2', fade:'截稿倒數', url:'../deadline/'}, hoops:{title:'廢紙投籃 3D', fade:'廢紙投籃', url:'../hoops3d/'}, duel:{title:'辦公室對決', fade:'辦公室對決', url:'../duel/'}, soccer:{title:'大顆足球賽', fade:'大顆足球賽', url:'../soccer/'}};
 function expEnter(kind){
   const gm = EXP_GAMES[kind] || EXP_GAMES.exp;
   if (expBusy) return; expBusy = true; target = null; wantSeat = null; wantElev = false; wheelClose(); fridgeClose();
@@ -2227,7 +2242,7 @@ renderer.domElement.addEventListener('wheel', e => { if (player) { e.preventDefa
 // 可點選範圍：只有自己人物周圍「人物身高的三倍」以內的物件／人物才能點（太遠的點不到，避免人物一直跑去很遠的地方）；點自己的人物不受限，管理者切換人物不受限
 const CLICK_RANGE = 3 * 2.2;
 function pickInRange(h, pk){
-  if (!player || !h.point || (pk && (pk.kind === 'portal' || pk.kind === 'arcade' || pk.kind === 'hoopsbin' || pk.kind === 'duelrack'))) return true;
+  if (!player || !h.point || (pk && (pk.kind === 'portal' || pk.kind === 'arcade' || pk.kind === 'hoopsbin' || pk.kind === 'duelrack' || pk.kind === 'soccerball'))) return true;
   if (pk && pk.kind === 'char' && (pk.c === player || adminHome)) return true;
   return Math.hypot(h.point.x - player.holder.position.x, h.point.z - player.holder.position.z) <= CLICK_RANGE;
 }
@@ -2235,7 +2250,7 @@ function onPick(e){
   if (!wheel.hidden) { wheelClose(); return; }   // 輪盤開著時，點外面只收合輪盤，人物先不動；下一下才移動
   ray.setFromCamera({x:e.clientX / innerWidth * 2 - 1, y:-(e.clientY / innerHeight * 2 - 1)}, camera);
   const hits = ray.intersectObjects(pickables, true).filter((h => { const r = h.object.userData.pickRoot || h.object, pk = r.userData.pick; return r.visible !== false && !(pk && pk.kind === 'char' && !pk.desk && !pk.c.holder.visible) && pickInRange(h, pk); })), hit = hits.find(h => ((h.object.userData.pickRoot || h.object).userData.pick || {}).kind === 'char') || hits[0];
-  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { clickChar = pk.c; clickUntil = performance.now() + 3000; if (pk.c !== player && player && adminHome) select(pk.c.name); if (pk.c === player) wheelOpen(pk.c); else wheelClose(); if (false) { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); else if (pk.kind === 'fridge') fridgeInteract(); else if (pk.kind === 'cat') CATS.find(c => c.id === pk.id).click(); else if (pk.kind === 'catbowl') CATS.find(c => c.id === pk.id).bowlClick(); else if (pk.kind === 'portal') expEnter(); else if (pk.kind === 'arcade') expEnter('deadline'); else if (pk.kind === 'hoopsbin') expEnter('hoops'); else if (pk.kind === 'duelrack') expEnter('duel'); else if (pk.kind === 'elev') elevInteract(); else if (pk.kind === 'seat') { const st = pk.seat || chairSeats.filter(q => q.kind === 'toilet').sort((a, b) => Math.hypot(a.x - pk.at.x, a.z - pk.at.z) - Math.hypot(b.x - pk.at.x, b.z - pk.at.z))[0]; if (st && player && !st.by && !st.hidden) { wantSeat = st; target = new THREE.Vector3(st.x, 0, st.z); } } return; } }
+  if (hit) { const root = hit.object.userData.pickRoot || hit.object, pk = (root.userData.pick); if (pk) { if (pk.kind === 'drop') collectDrop(pk.d); else if (pk.kind === 'note') collectNote(pk.n); else if (pk.kind === 'proj') toggleProjector(pk.p); else if (pk.kind === 'char') { clickChar = pk.c; clickUntil = performance.now() + 3000; if (pk.c !== player && player && adminHome) select(pk.c.name); if (pk.c === player) wheelOpen(pk.c); else wheelClose(); if (false) { const c = pk.c, st = STATUS[c.status] || STATUS.present; showQuote(c.name + '・' + st[1] + ' ' + st[0], [c.mood ? '心情：' + (MOOD[c.mood] || c.mood) : '', c.message ? '留言：' + c.message : ''].filter(Boolean).join('　') || (live.ok ? '（即時資料）' : '（模擬資料）')); } } else if (pk.kind === 'poop') flushPoop(pk.p); else if (pk.kind === 'fridge') fridgeInteract(); else if (pk.kind === 'cat') CATS.find(c => c.id === pk.id).click(); else if (pk.kind === 'catbowl') CATS.find(c => c.id === pk.id).bowlClick(); else if (pk.kind === 'portal') expEnter(); else if (pk.kind === 'arcade') expEnter('deadline'); else if (pk.kind === 'hoopsbin') expEnter('hoops'); else if (pk.kind === 'duelrack') expEnter('duel'); else if (pk.kind === 'soccerball') expEnter('soccer'); else if (pk.kind === 'elev') elevInteract(); else if (pk.kind === 'seat') { const st = pk.seat || chairSeats.filter(q => q.kind === 'toilet').sort((a, b) => Math.hypot(a.x - pk.at.x, a.z - pk.at.z) - Math.hypot(b.x - pk.at.x, b.z - pk.at.z))[0]; if (st && player && !st.by && !st.hidden) { wantSeat = st; target = new THREE.Vector3(st.x, 0, st.z); } } return; } }
   radialClose(); wantSeat = null; fridgeWant = false; wantElev = false; wheelClose();
   const p = new THREE.Vector3();
   if (e.pointerType === 'mouse') return;   // 桌面版：點地面不再自動走過去（用 WASD／方向鍵），只有點可點物件（椅子、馬桶、電梯…）才會走；手機（觸控）維持點地面走過去
