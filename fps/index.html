@@ -927,6 +927,11 @@ function stepActor(a, dt) {
     if (keys.ArrowLeft) yaw += 2.2 * dt; if (keys.ArrowRight) yaw -= 2.2 * dt; if (keys.ArrowUp) pitch = clamp(pitch + 1.6 * dt, -1.45, 1.45); if (keys.ArrowDown) pitch = clamp(pitch - 1.6 * dt, -1.45, 1.45);
     const mx = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + joy.x, mz = (keys.KeyS ? 1 : 0) - (keys.KeyW ? 1 : 0) + joy.y, l = Math.hypot(mx, mz), sp = a.hero.speed * (a.buff > 0 ? 1.45 : 1) * (a.spd > 0 ? 1.35 : 1) * (zoom ? .6 : 1), fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = -fz, rz = fx;
     if (a.dashT > 0) a.dashT -= dt; else if (a.stun > 0) { a.vx *= .9; a.vz *= .9; } else { const k = l > 1 ? 1 / l : 1, tx = (fx * -mz + rx * mx) * k * sp, tz = (fz * -mz + rz * mx) * k * sp, ac = a.ground ? 14 : 3; a.vx += (tx - a.vx) * Math.min(1, dt * ac); a.vz += (tz - a.vz) * Math.min(1, dt * ac); }
+    if (touch && state === 'play' && !a.dead) {   // 手機半自瞄：準心接近敵人時輕輕吸附（開火時更強），只修正小角度，不會自己轉去找人
+      let best = null, bd = 1e9; const cone = hold.fire ? .2 : .13;
+      for (const t of enemiesOf(a)) { if (t.dead) continue; const dx = t.x - a.x, dz = t.z - a.z, dy = t.y + 1.15 - (a.y + 1.55), h = Math.hypot(dx, dz); if (h < .5 || h > 45) continue; let dyaw = Math.atan2(-dx, -dz) - yaw; dyaw = Math.atan2(Math.sin(dyaw), Math.cos(dyaw)); const dp = Math.atan2(dy, h) - pitch, ang = Math.hypot(dyaw * Math.cos(pitch), dp); if (ang < cone && ang < bd && los(a, t, a.y + 1.55, t.y + 1.15)) { bd = ang; best = [dyaw, dp]; } }
+      if (best) { const k = Math.min(1, dt * (hold.fire ? 8 : 3.5)) * (zoom ? .5 : 1); yaw += best[0] * k; pitch = clamp(pitch + best[1] * k, -1.45, 1.45); }
+    }
     a.yaw = yaw; a.pitch = pitch; if (keys.Space && a.ground && a.stun <= 0) { a.vy = 6.6; a.ground = false; }
     if (hold.fire && a.fireT <= 0 && state === 'play') { if (a.w.kind === 'auto' || !a.held) { fire(a); if (a.w.kind !== 'auto') a.held = true; } } if (!hold.fire) a.held = false;
   } else if (state === 'play') botThink(a, dt);
