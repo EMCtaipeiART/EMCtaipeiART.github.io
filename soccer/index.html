@@ -143,7 +143,8 @@ let cloud = {}, cloudWalks = {}, cloudDone = false;
 const cloudReady = (async () => { try { const r = await fetch(CHAR_API, { signal: AbortSignal.timeout(5000) }); if (r.ok) { const j = await r.json(); cloud = j.characters || {}; cloudWalks = j.walks || {}; } } catch (e) {} cloudDone = true; })();
 const atlasSrc = (n, walk) => { const v = walk ? cloudWalks[n] : cloud[n]; return v ? CHAR_API + '/' + encodeURIComponent(n) + '/' + (walk ? 'walk-hd.png' : 'atlas-hd.png') + '?v=' + v : null; };
 const localSrc = (n, walk) => '../pixel-plaza/' + (walk ? 'sprites-walk-hd/' : 'sprites-hd/') + n + '.webp';
-function loadImg(n, walk, cb, fail) { const im = new Image(); im.crossOrigin = 'anonymous'; let local = false; im.onload = () => cb(im); im.onerror = () => { if (!local) { local = true; im.removeAttribute('crossorigin'); im.src = localSrc(n, walk); } else if (fail) fail(); }; im.src = atlasSrc(n, walk) || localSrc(n, walk); }
+function loadImg(n, walk, cb, fail) { if (!cloudDone) { cloudReady.then(() => loadImg(n, walk, cb, fail)); return; }   // 先等雲端最新清單，避免先閃出本機舊人物
+  const im = new Image(); im.crossOrigin = 'anonymous'; let local = false; im.onload = () => cb(im); im.onerror = () => { if (!local) { local = true; im.removeAttribute('crossorigin'); im.src = localSrc(n, walk); } else if (fail) fail(); }; im.src = atlasSrc(n, walk) || localSrc(n, walk); }
 function texFromAtlas(n, walk, rx, ry, fail) { const t = new THREE.Texture(); t.magFilter = t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; t.repeat.set(rx, ry); loadImg(n, walk, im => { t.image = im; t.needsUpdate = true; }, fail); return t; }
 const CFG = { mode: 2, diff: 1, time: 180, who: 'Machi' };
 try { Object.assign(CFG, JSON.parse(localStorage.getItem('soccerCfgV1') || '{}')); } catch (e) {}

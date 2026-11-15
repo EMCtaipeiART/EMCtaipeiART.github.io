@@ -427,22 +427,22 @@ const cloudReady = (async () => {
 const atlasUrl = (n, local) => (!local && cloud[n]) ? CHAR_API + '/' + encodeURIComponent(n) + '/atlas-hd.png?v=' + cloud[n] : '../pixel-plaza/sprites-hd/' + n + '.webp';
 const ANGLES = 12;
 function loadAtlas(n) {   // 先雲端、失敗退回本機；回傳 THREE.Texture
-  return new Promise(res => {
+  return cloudReady.then(() => new Promise(res => {
     const go = local => { const ld = new THREE.TextureLoader(); ld.setCrossOrigin('anonymous'); ld.load(atlasUrl(n, local), t => { t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; t.repeat.set(1 / ANGLES, 1); res(t); }, undefined, () => { if (!local) go(true); else res(null); }); };
     go(false);
-  });
+  }));
 }
 function loadWalk(n) {   // 跑步影格圖集（2 排：左腳出、右腳出）；雲端優先，退回專案裡的靜態檔，都沒有就回 null（改用彈跳）
-  return new Promise(res => {
+  return cloudReady.then(() => new Promise(res => {
     const urls = []; if (cloudWalks[n]) urls.push(CHAR_API + '/' + encodeURIComponent(n) + '/walk-hd.png?v=' + cloudWalks[n]); urls.push('../pixel-plaza/sprites-walk-hd/' + n + '.webp');
     const go = i => { if (i >= urls.length) { res(null); return; } const ld = new THREE.TextureLoader(); ld.setCrossOrigin('anonymous'); ld.load(urls[i], t => { t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; t.repeat.set(1 / ANGLES, .5); res(t); }, undefined, () => go(i + 1)); };
     go(0);
-  });
+  }));
 }
 function drawPreview(cv, n) {   // 開始畫面的頭像：用圖集第 0 格（正面）
   const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height); if (!n) return;
   const draw = src => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => { g.clearRect(0, 0, cv.width, cv.height); const cw = im.naturalWidth / ANGLES; g.imageSmoothingEnabled = true; g.drawImage(im, 0, 0, cw, im.naturalHeight, 0, 0, cv.width, cv.height); }; im.onerror = () => { if (src.indexOf('pixel-plaza') < 0) draw(atlasUrl(n, true)); }; im.src = src; };
-  draw(atlasUrl(n, false));
+  cloudReady.then(() => draw(atlasUrl(n, false)));
 }
 
 // ───────── 場景 ─────────
