@@ -539,7 +539,7 @@ const HEROES = [
   { id: 'amber', char: 'Amber', name: 'Amber', title: '茶歇補給', role: '支援', ic: '☕', hp: 150, speed: 5.6, w: 'mouse', pref: 12, sleeve: 0x16a34a,
     e: { n: '治療光環', ic: '💚', cd: 12, d: '4 秒內持續治療身邊 8 公尺內的隊友（含自己）' }, s: { n: '加油鼓舞', ic: '📣', cd: 10, d: '附近隊友 4 秒移速 +35%' }, q: { n: '茶歇回復', ic: '🫖', d: '全隊立刻回滿血' } },
   { id: 'leona', char: 'Leona', name: 'Leona', title: '電話客服', role: '支援', ic: '☎️', hp: 150, speed: 5.5, w: 'phone', pref: 14, sleeve: 0xdb2777,
-    e: { n: '療癒訊號', ic: '📞', cd: 6, d: '對瞄準的隊友立即治療 70 點（沒瞄準就治療附近血最少的隊友）' }, s: { n: '不再占線', ic: '🛡️', cd: 12, d: '附近隊友獲得 40 點護甲，持續 6 秒' }, q: { n: '全頻道廣播', ic: '📢', d: '全隊獲得 50 護甲、治療 30、傷害 ×1.3（6 秒）' } }
+    e: { n: '療癒訊號', ic: '📞', cd: 6, d: '立即治療瞄準的隊友 100 點（沒瞄準就治療附近血最少的隊友，自己 50），接著自動發射 3 波追蹤補血球，每波追上附近血最少的隊友補 50 點' }, s: { n: '不再占線', ic: '🛡️', cd: 12, d: '附近隊友獲得 40 點護甲，持續 6 秒' }, q: { n: '全頻道廣播', ic: '📢', d: '原地復活所有倒下的隊友（60% 血、無敵 2.5 秒）；沒有人倒下時全隊獲得 50 護甲並治療 30' } }
 ];
 const HERO_BY = Object.fromEntries(HEROES.map(h => [h.id, h]));
 // ───────── 角色（12 角度公告板＋跑步圖集） ─────────
@@ -570,7 +570,7 @@ function makeActor(hero, team, isMe) {
   return o;
 }
 const PROJ = [], FX = [], BAR = [];
-function clearActors() { for (const a of actors) { if (a.g) scene.remove(a.g, a.ring, a.sh); if (a.gun) scene.remove(a.gun); scene.remove(a.hring); } actors = []; for (const p of PROJ) scene.remove(p.m); PROJ.length = 0; for (const f of FX) scene.remove(f.s); FX.length = 0; for (const b of BAR) scene.remove(b.m); BAR.length = 0; }
+function clearActors() { for (const a of actors) { if (a.g) scene.remove(a.g, a.ring, a.sh); if (a.gun) scene.remove(a.gun); scene.remove(a.hring); } actors = []; for (const p of PROJ) scene.remove(p.m); PROJ.length = 0; for (const f of FX) scene.remove(f.s); FX.length = 0; for (const b of BAR) scene.remove(b.m); BAR.length = 0; for (const k of SEEK) scene.remove(k.m); SEEK.length = 0; }
 
 // ───────── 控制點 ─────────
 const POINT = { x: 0, z: 0, r: 6.5 };
@@ -583,7 +583,7 @@ const TEAMCOL = [0x5ec8ff, 0xff4b3e];
 let hbT = 0, vmSX = 0, vmSY = 0, vmLY = 0, vmLP = 0, vmEquip = 0, vmKick = 0, state = 'menu', paused = false, tLeft = 480, prog = [0, 0], owner = -1, cap = 0, capTeam = -1, contested = false, present = [0, 0], stT = 0, yaw = 0, pitch = 0, locked = false, zoom = false, shake = 0, recoil = 0, bobT = 0;
 const keys = {}, joy = { x: 0, y: 0 }, hold = { fire: false };
 function spawnPoint(team, lt) { if (lt === undefined) lt = team; const pts = team === 0 ? [[-26, -10], [-26, 0], [-26, 10], [-22, 20], [-22, -20]] : [[26, -10], [26, 0], [26, 10], [22, 20], [22, -20]]; let best = null, bd = -1; for (let i = 0; i < 6; i++) { const p = pts[Math.floor(Math.random() * pts.length)]; let md = 1e9; for (const a of actors) if (!a.dead && a.team !== lt) md = Math.min(md, Math.hypot(a.x - p[0], a.z - p[1])); if (md > bd) { bd = md; best = p; } } return best; }
-function respawn(a) { if (a.nextHero) { applyHero(a, HERO_BY[a.nextHero]); a.nextHero = null; if (a.isMe) { setViewmodel(); buildHud(); } else rebuildLook(a); } const p = spawnPoint(a.gt === undefined ? a.team : a.gt, a.team); a.x = p[0] + rand(-1, 1); a.z = p[1] + rand(-1, 1); a.y = 0; a.vx = a.vz = a.vy = 0; a.hp = a.maxHp; a.dead = false; a.inv = 2; a.pitch = 0; a.path = []; a.tgt = null; a.fireT = .4; a.stun = a.mark = a.heal = a.volley = a.chargeT = a.buff = a.rage = a.dmgT = a.spd = a.lockT = 0; a.armor = a.armorT = 0; a.actT = { e: 0, s: 0, q: 0 }; a.yaw = (a.gt === undefined ? a.team : a.gt) === 0 ? -Math.PI / 2 : Math.PI / 2; if (a.isMe) { yaw = a.yaw; pitch = 0; $('heroSel').hidden = true; specT = null; $('spec').hidden = true; } }
+function respawn(a) { if (a.nextHero) { applyHero(a, HERO_BY[a.nextHero]); a.nextHero = null; if (a.isMe) { setViewmodel(); buildHud(); } else rebuildLook(a); } const p = spawnPoint(a.gt === undefined ? a.team : a.gt, a.team); a.x = p[0] + rand(-1, 1); a.z = p[1] + rand(-1, 1); a.y = 0; a.vx = a.vz = a.vy = 0; a.hp = a.maxHp; a.dead = false; a.inv = 2; a.pitch = 0; a.path = []; a.tgt = null; a.fireT = .4; a.stun = a.mark = a.heal = a.volley = a.chargeT = a.buff = a.rage = a.dmgT = a.spd = a.lockT = a.seekW = 0; a.armor = a.armorT = 0; a.actT = { e: 0, s: 0, q: 0 }; a.yaw = (a.gt === undefined ? a.team : a.gt) === 0 ? -Math.PI / 2 : Math.PI / 2; if (a.isMe) { yaw = a.yaw; pitch = 0; $('heroSel').hidden = true; specT = null; $('spec').hidden = true; } }
 function drawHpBar(a) {
   const key = Math.ceil(a.hp) + '|' + Math.ceil(a.armor || 0) + '|' + a.maxHp; if (a._hk === key) return; a._hk = key;
   const c = a.hpC, g = c.getContext('2d'), w = c.width, h = c.height, pad = 3, iw = w - pad * 2, ih = h - pad * 2, f = clamp(a.hp / a.maxHp, 0, 1), col = a.hp < a.maxHp * .3 ? '#ffd24a' : (a.team ? '#ff4b3e' : '#5ec8ff');
@@ -679,6 +679,19 @@ function rayBarriers(ox, oy, oz, dx, dy, dz, maxT, team) {
   let best = maxT, hit = null;
   for (const b of BAR) { if (b.team === team) continue; const px = ox - b.x, py = oy - b.y, pz = oz - b.z, c = px * px + py * py + pz * pz - BUB_R * BUB_R; if (c <= 0) continue; const hb = px * dx + py * dy + pz * dz, disc = hb * hb - c; if (disc < 0) continue; const t = -hb - Math.sqrt(disc); if (t <= 0 || t >= best) continue; if (oy + dy * t < b.y) continue; best = t; hit = b; }
   return { t: best, bar: hit };
+}
+const SEEK = [];
+function seekTarget(a, s) { let best = null, br = 9; for (const t of alliesOf(a)) { if (t === a) continue; const d = Math.hypot(t.x - (s ? s.x : a.x), t.z - (s ? s.z : a.z)); if (d > 40) continue; const ratio = t.hp / t.maxHp; if (ratio < br) { br = ratio; best = t; } } return best; }
+function launchSeeker(a) {   // 追蹤補血球：飛向附近血量比例最低的隊友，碰到補 50 點
+  if (a.dead) return; const t = seekTarget(a); if (!t) return; const mz = muzzleOf(a), m = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTex, color: 0x5ef0a4, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); m.scale.set(.55, .55, 1); m.position.set(mz[0], mz[1], mz[2]); scene.add(m); SEEK.push({ m, x: mz[0], y: mz[1], z: mz[2], tgt: t, owner: a, life: 5, v: 8 }); SFX.pick && SFX.pick();
+}
+function stepSeekers(dt) {
+  for (let i = SEEK.length - 1; i >= 0; i--) {
+    const k = SEEK[i]; k.life -= dt; if (!k.tgt || k.tgt.dead || k.owner.dead) { k.tgt = k.owner.dead ? null : seekTarget(k.owner, k); } if (!k.tgt || k.life <= 0) { scene.remove(k.m); SEEK.splice(i, 1); continue; }
+    const tx = k.tgt.x, ty = k.tgt.y + 1.2, tz = k.tgt.z, dx = tx - k.x, dy = ty - k.y, dz = tz - k.z, d = Math.hypot(dx, dy, dz); k.v = Math.min(22, k.v + 18 * dt);
+    if (d < .9) { healTo(k.tgt, 50, k.owner); ringFx(k.tgt.x, k.tgt.y, k.tgt.z, 0x5ef0a4, 2, .5); sparkBurst(k.tgt.x, k.tgt.y + 1.2, k.tgt.z, 10, 0x5ef0a4, 3); scene.remove(k.m); SEEK.splice(i, 1); continue; }
+    const st = Math.min(d, k.v * dt); k.x += dx / d * st; k.y += dy / d * st; k.z += dz / d * st; k.m.position.set(k.x, k.y, k.z); if (Math.random() < .6) addPart(sparkTex, 0x5ef0a4, k.x, k.y, k.z, 0, 0, 0, .35, .25, 0, true);
+  }
 }
 function stepBarriers(dt) { for (let i = BAR.length - 1; i >= 0; i--) { const b = BAR[i]; b.life -= dt; for (const t of actors) if (!t.dead && !t.remote && t.team === b.team && t.hp < t.maxHp && Math.hypot(t.x - b.x, t.z - b.z) < BUB_R && Math.abs(t.y - b.y) < 3) t.hp = Math.min(t.maxHp, t.hp + t.maxHp * .03 * dt);   // 泡泡內我方輕微回血（每秒 3%）
     b.m.material.opacity = .15 + .3 * clamp(b.hp / BUB_HP, 0, 1); if (b.life <= 0 || b.hp <= 0) { scene.remove(b.m); BAR.splice(i, 1); } } }
@@ -820,7 +833,7 @@ function useE(a) {
     case 'noise': { const d = moveDir(a); a.vx = d[0] * 20; a.vz = d[1] * 20; a.dashT = .22; for (let i = 0; i < 6; i++) addPart(sparkTex, 0x7fb0ff, a.x - d[0] * i * .3, a.y + .8, a.z - d[1] * i * .3, 0, 0, 0, .3, .8, 0, true); break; }
     case 'anna': { const d = moveDir(a); a.vy = 9; a.ground = false; a.vx = d[0] * 9; a.vz = d[1] * 9; a.dashT = .5; healTo(a, 20, a); ringFx(a.x, a.y, a.z, 0xffd066, 2.2, .35); break; }
     case 'amber': a.heal = 4; ringFx(a.x, a.y, a.z, 0x5ef0a4, 8, .6); break;
-    case 'leona': { const t = leonaTarget(a); if (t === a) { healTo(a, 35, a); } else healTo(t, 70, a); const m = muzzleOf(a); beam(m, [t.x, t.y + 1.2, t.z], 0xffd066, .07, .4); ringFx(t.x, t.y, t.z, 0x5ef0a4, 2, .5); sparkBurst(t.x, t.y + 1.2, t.z, 10, 0x5ef0a4, 3); break; }
+    case 'leona': { const t = leonaTarget(a); if (t === a) { healTo(a, 50, a); } else healTo(t, 100, a); a.seekW = 3; a.seekT = 1; const m = muzzleOf(a); beam(m, [t.x, t.y + 1.2, t.z], 0xffd066, .07, .4); ringFx(t.x, t.y, t.z, 0x5ef0a4, 2, .5); sparkBurst(t.x, t.y + 1.2, t.z, 10, 0x5ef0a4, 3); break; }
   }
 }
 function useS(a) {
@@ -944,6 +957,7 @@ function stepActor(a, dt) {
   // 連環轟炸
   if (a.volley > 0) { a.volley -= dt; a.volT -= dt; if (a.volT <= 0) { a.volT = .4; fireWeapon(a, WEAPONS.phone); } }
   // 衝鋒撞人
+  if (a.seekW > 0) { a.seekT -= dt; if (a.seekT <= 0) { a.seekW--; a.seekT = 1.1; launchSeeker(a); } }   // Leona：三波自動追蹤補血球
   if (a.lockT > 0) a.lockT -= dt; if (!a.remote && !a.dead && a.hp < a.maxHp) { a.hurtT = (a.hurtT || 0) + dt; if (a.hurtT > 4) a.hp = Math.min(a.maxHp, a.hp + a.maxHp * .08 * dt); }   // 4 秒沒受傷開始自動回血（每秒 8% 血量）
   if (a.chargeT > 0) { a.chargeT -= dt; for (const t of enemiesOf(a)) if (!a.chHit.has(t) && Math.hypot(t.x - a.x, t.z - a.z) < 1.5) { a.chHit.add(t); dmgTo(t, 60, a, false, '🐂'); const f = fwd(a); t.vx += f[0] * 12; t.vz += f[1] * 12; t.stun = Math.max(t.stun, .4); if (t.remote) netKb(t, f[0] * 12, f[1] * 12, .4); } }
   if (a.isMe) {
@@ -968,7 +982,7 @@ function sim(dt) {
   if (state === 'menu' || state === 'over') return;
   if (state === 'count') { if (keys.ArrowLeft) yaw += 2.2 * dt; if (keys.ArrowRight) yaw -= 2.2 * dt; if (keys.ArrowUp) pitch = clamp(pitch + 1.6 * dt, -1.45, 1.45); if (keys.ArrowDown) pitch = clamp(pitch - 1.6 * dt, -1.45, 1.45); stT -= dt; const c = Math.ceil(stT); if (stT > 0) banner(String(c), '占領中央的控制點', 0); else { state = 'play'; banner('開戰', '', 700); SFX.beep(); } for (const a of actors) { if (a.remote) netStepRemote(a, dt); else a.vx = a.vz = 0; } if (net) netTick(dt); return; }
   tLeft -= dt; for (const a of actors) stepActor(a, dt); if (net) netTick(dt);
-  stepProj(dt); stepBarriers(dt); updPoint(dt); for (let i = 0; i < PICKS.length; i++) { const p = PICKS[i]; if (p.t > 0) p.t -= dt; pickMeshes[i].visible = p.t <= 0; }
+  stepProj(dt); stepBarriers(dt); stepSeekers(dt); updPoint(dt); for (let i = 0; i < PICKS.length; i++) { const p = PICKS[i]; if (p.t > 0) p.t -= dt; pickMeshes[i].visible = p.t <= 0; }
   if ((!net || net.role === 'host') && (prog[0] >= 100 || prog[1] >= 100 || tLeft <= 0)) { if (net) netSend({ t: 'end', pr: [+prog[0].toFixed(1), +prog[1].toFixed(1)] }); endMatch(); }
 }
 function teamTable(team, win, compact) {   // 一隊一張表：標題、勝負、各英雄的擊殺／死亡／傷害／治療與合計
