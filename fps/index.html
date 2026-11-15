@@ -303,15 +303,15 @@ const CHAR_SCALE = { Leona: 1.1, 廖秦葦: 1.18 };
 // ───────── 背景音樂（雙軌交叉淡入淡出循環；音量／靜音存在瀏覽器，三款遊戲共用設定）─────────
 function emcBgm(url, opts) {
   const KEY = 'emcBgmV1'; let st = {}; try { st = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
-  const o = Object.assign({ vol: .3, fade: 4 }, opts || {}); let vol = typeof st.vol === 'number' ? st.vol : o.vol, muted = !!st.muted, started = false, paused = false, timer = 0, trying = false;
+  const o = Object.assign({ vol: .3, fade: 4 }, opts || {}); let vol = typeof st.vol === 'number' ? st.vol : o.vol, muted = !!st.muted, started = false, paused = false, timer = 0, trying = false, gapAt = 0;
   const A = [new Audio(url), new Audio(url)]; A.forEach(a => { a.preload = 'auto'; a.volume = 0; }); let cur = 0;
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ vol, muted })); } catch (e) {} };
   const gainOf = a => { const d = Math.max(a.duration || 0, o.dur || 0), t = a.currentTime; if (!d) return 0; return Math.max(0, Math.min(1, t / 1.5, (d - t) / o.fade)); };
   function apply() { for (const a of A) { const g = a.paused ? 0 : gainOf(a); try { a.volume = muted ? 0 : Math.max(0, Math.min(1, vol * g)); } catch (e) {} a.muted = muted; } }
   function tick() {
     if (!started || paused) return; const a = A[cur], b = A[1 - cur];
-    const da = Math.max(a.duration || 0, o.dur || 0); if (da && a.currentTime > da - o.fade && b.paused) { b.currentTime = 0; b.play().catch(() => {}); cur = 1 - cur; }
-    for (const x of A) { const dx = Math.max(x.duration || 0, o.dur || 0); if (!x.paused && dx && x.currentTime >= dx - .05) x.pause(); }
+    if (gapAt && Date.now() >= gapAt && a.paused && b.paused) { gapAt = 0; a.currentTime = 0; a.play().catch(() => { gapAt = Date.now() + 2000; }); }   // 同一個播放器重播（手機只有它被使用者操作解鎖過，換另一個會被擋）   // 播完先安靜 6 秒再重播
+    for (const x of A) { const dx = Math.max(x.duration || 0, o.dur || 0); if (!x.paused && dx && x.currentTime >= dx - .05) { x.pause(); gapAt = Date.now() + 6000; } }
     apply();
   }
   const ctl = {
