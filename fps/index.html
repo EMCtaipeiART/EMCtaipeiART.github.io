@@ -536,7 +536,7 @@ const HEROES = [
   { id: 'noise', char: 'Noise', name: 'Noise', title: '截稿狂熱', role: '輸出', ic: '⚡', hp: 230, speed: 6.0, w: 'stapler', pref: 9, sleeve: 0x1d4ed8,
     e: { n: '閃身步', ic: '💨', cd: 5, d: '向移動方向急衝一小段' }, s: { n: '咖啡因', ic: '☕', cd: 12, d: '5 秒內移速 +45%、射速 +20%' }, q: { n: '截稿狂暴', ic: '🔥', d: '6 秒內射速 ×1.6、傷害 ×1.35' } },
   { id: 'anna', char: 'Anna', name: 'Anna', title: '精準標記', role: '輸出', ic: '🎯', hp: 230, speed: 5.4, w: 'ruler', pref: 18, sleeve: 0xf59e0b,
-    e: { n: '彈跳', ic: '🦘', cd: 6, d: '朝你按的方向（前後左右，沒按就往前）彈跳一段，並回復 20 血' }, s: { n: '標記', ic: '🔍', cd: 12, d: '標記 40 公尺內的敵人 4 秒：他們受到的傷害 +25%（不會穿牆顯示）' }, q: { n: '鎖頭', ic: '🎯', d: '6 秒內自動鎖定最近敵人的頭部，每一槍都是爆頭' } },
+    e: { n: '彈跳', ic: '🦘', cd: 6, d: '朝你按的方向（前後左右，沒按就往前）彈跳一段，並回復 20 血' }, s: { n: '標記', ic: '🔍', cd: 12, d: '標記 40 公尺內的敵人 4 秒：他們受到的傷害 +25%（不會穿牆顯示）' }, q: { n: '鎖頭', ic: '🎯', d: '4 秒內自動鎖定最近敵人的頭部，每一槍都是爆頭' } },
   { id: 'amber', char: 'Amber', name: 'Amber', title: '茶歇補給', role: '支援', ic: '☕', hp: 150, speed: 5.6, w: 'mouse', pref: 12, sleeve: 0x16a34a,
     e: { n: '治療光環', ic: '💚', cd: 12, d: '4 秒內持續治療身邊 8 公尺內的隊友（含自己）' }, s: { n: '加油鼓舞', ic: '📣', cd: 10, d: '附近隊友 4 秒移速 +35%' }, q: { n: '茶歇回復', ic: '🫖', d: '全隊立刻回滿血' } },
   { id: 'leona', char: 'Leona', name: 'Leona', title: '電話客服', role: '支援', ic: '☎️', hp: 150, speed: 5.5, w: 'phone', pref: 14, sleeve: 0xdb2777,
@@ -866,7 +866,7 @@ function useQ(a) {
   switch (a.hero.id) {
     case 'machi': { SFX.boom(); burst(a.x, a.y + .4, a.z, 0xffb000, 14, .5); ringFx(a.x, a.y, a.z, 0xffb000, 8, .55); ringFx(a.x, a.y, a.z, 0xffffff, 5, .35); sparkBurst(a.x, a.y + .3, a.z, 20, 0xffb000, 7); for (const t of enemiesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 8) { dmgTo(t, 70, a, false, '💥', t.x, t.y + 1.4, t.z); t.stun = 1.2; if (t.remote) netKb(t, 0, 0, 1.2); } shake = Math.min(1, shake + .7); break; }
     case 'noise': a.rage = 6; ringFx(a.x, a.y, a.z, 0xff6a3d, 4, .5); break;
-    case 'anna': a.lockT = 6; ringFx(a.x, a.y, a.z, 0xff6a5a, 6, .8); ringFx(a.x, a.y, a.z, 0xffd066, 3, .5); if (a.isMe) banner('鎖頭', '6 秒內自動瞄準最近敵人的頭', 1400); break;
+    case 'anna': a.lockT = 4; ringFx(a.x, a.y, a.z, 0xff6a5a, 6, .8); ringFx(a.x, a.y, a.z, 0xffd066, 3, .5); if (a.isMe) banner('鎖頭', '4 秒內自動瞄準最近敵人的頭', 1400); break;
     case 'amber': for (const t of alliesOf(a)) { healTo(t, t.maxHp - t.hp, a); ringFx(t.x, t.y, t.z, 0x5ef0a4, 2.4, .6); } ringFx(a.x, a.y, a.z, 0x5ef0a4, 18, .8); break;
     case 'leona': { const down = actors.filter(t => t.team === a.team && t.dead && t !== a); if (down.length) { for (const t of down) if (!t.remote) reviveHere(t, a); else ringFx(t.x, t.y, t.z, 0x7fe3ff, 3, .8); } else { for (const t of alliesOf(a)) { giveArmor(t, 50, 6); healTo(t, 30, a); t.dmgT = Math.max(t.dmgT, 6); } }   // 沒有倒下的隊友時，退回原本的護甲加治療
       ringFx(a.x, a.y, a.z, 0x7fe3ff, 26, .9); break; }
