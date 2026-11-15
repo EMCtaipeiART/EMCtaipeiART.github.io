@@ -945,14 +945,22 @@ addEventListener('keydown', e => { if (e.code === 'Tab') { e.preventDefault(); c
 addEventListener('keyup', e => { keys[e.code] = false; if (e.code === 'Tab') { e.preventDefault(); showSB(false); } });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; hold.fire = false; showSB(false); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { for (const k in keys) keys[k] = false; hold.fire = false; showSB(false); } });
-cv.addEventListener('mousedown', e => { unlock(); if (state === 'play' && me && me.dead && e.button === 0) nextSpec(1); if (state === 'play' && !locked && !lockFail && !touch) { askLock(); return; } if (e.button === 0) hold.fire = true; if (e.button === 2) setZoom(true); });
+cv.addEventListener('mousedown', e => { unlock(); if (state === 'play' && !locked && lockFail && !touch) { try { const p = cv.requestPointerLock && cv.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (x) {} } if (state === 'play' && me && me.dead && e.button === 0) nextSpec(1); if (state === 'play' && !locked && !lockFail && !touch) { askLock(); return; } if (e.button === 0) hold.fire = true; if (e.button === 2) setZoom(true); });
 addEventListener('mouseup', e => { if (e.button === 0) hold.fire = false; if (e.button === 2) setZoom(false); });
 cv.addEventListener('contextmenu', e => e.preventDefault());
 let lockFail = false;
 function askLock() { try { const p = cv.requestPointerLock && cv.requestPointerLock(); if (p && p.catch) p.catch(() => { setFail(); }); } catch (e) { setFail(); } clearTimeout(askLock.t); askLock.t = setTimeout(() => { if (!locked && state !== 'menu' && state !== 'over') setFail(); }, 900); }
-function setFail() { if (lockFail || touch) return; lockFail = true; paused = false; $('lock').hidden = true; cv.style.cursor = 'none'; banner('一般滑鼠模式', '無法鎖定滑鼠：移動滑鼠轉視角，碰到螢幕邊緣會停住（可用方向鍵繼續轉）', 3500); }
-document.addEventListener('pointerlockerror', setFail);
-document.addEventListener('pointerlockchange', () => { locked = document.pointerLockElement === cv; if (locked) { lockFail = false; cv.style.cursor = ''; } $('lock').hidden = locked || touch || lockFail || state !== 'play'; if (!locked && state === 'play' && !lockFail) paused = true; else paused = false; });
+function setFail() { if (lockFail || touch) return; lockFail = true; paused = false; $('lock').hidden = true; cv.style.cursor = 'none'; banner('一般滑鼠模式', '無法鎖定滑鼠：移動滑鼠轉視角，貼到視窗邊緣會持續轉向；點一下畫面會再試著鎖定', 3500); }
+let lockErrN = 0;
+document.addEventListener('pointerlockerror', () => { if (lockErrN++ === 0 && state === 'play' && !touch) { clearTimeout(askLock.t); $('lock').hidden = false; } else setFail(); });
+document.addEventListener('pointerlockchange', () => { locked = document.pointerLockElement === cv; if (locked) { lockFail = false; lockErrN = 0; cv.style.cursor = ''; } $('lock').hidden = locked || touch || lockFail || state !== 'play'; if (!locked && state === 'play' && !lockFail) paused = true; else paused = false; });
+let mX = -1, mY = -1;
+addEventListener('mousemove', e => { mX = e.clientX; mY = e.clientY; });
+document.addEventListener('mouseleave', () => { mX = mX < innerWidth / 2 ? 0 : innerWidth; });   // 滑鼠離開視窗：當成貼在最近的邊緣
+function edgeTurn(dt) {   // 一般滑鼠模式才用：貼邊就持續轉
+  if (!lockFail || locked || touch || mX < 0) return; const zx = Math.max(24, innerWidth * .035), zy = Math.max(24, innerHeight * .05), sp = 2.4 * (zoom ? .4 : 1);
+  if (mX <= zx) yaw += sp * dt; else if (mX >= innerWidth - zx) yaw -= sp * dt; if (mY <= zy) pitch = clamp(pitch + sp * .6 * dt, -1.45, 1.45); else if (mY >= innerHeight - zy) pitch = clamp(pitch - sp * .6 * dt, -1.45, 1.45);
+}
 addEventListener('mousemove', e => { if ((!locked && !lockFail) || (state !== 'play' && state !== 'count')) return; yaw -= e.movementX * .0022 * (zoom ? .4 : 1); pitch = clamp(pitch - e.movementY * .0022 * (zoom ? .4 : 1), -1.45, 1.45); });
 $('lock').onclick = () => { unlock(); lockFail = false; askLock(); };
 function setZoom(v) { if (state !== 'play' || !me || me.dead || !me.w.zoom) { zoom = false; } else zoom = v; }
@@ -990,7 +998,7 @@ function stepActor(a, dt) {
   if (a.lockT > 0) a.lockT -= dt; if (!a.remote && !a.dead && a.hp < a.maxHp) { a.hurtT = (a.hurtT || 0) + dt; if (a.hurtT > 4) a.hp = Math.min(a.maxHp, a.hp + a.maxHp * .08 * dt); }   // 4 秒沒受傷開始自動回血（每秒 8% 血量）
   if (a.chargeT > 0) { a.chargeT -= dt; for (const t of enemiesOf(a)) if (!a.chHit.has(t) && Math.hypot(t.x - a.x, t.z - a.z) < 1.5) { a.chHit.add(t); dmgTo(t, 60, a, false, '🐂'); const f = fwd(a); t.vx += f[0] * 12; t.vz += f[1] * 12; t.stun = Math.max(t.stun, .4); if (t.remote) netKb(t, f[0] * 12, f[1] * 12, .4); } }
   if (a.isMe) {
-    if (keys.ArrowLeft) yaw += 2.2 * dt; if (keys.ArrowRight) yaw -= 2.2 * dt; if (keys.ArrowUp) pitch = clamp(pitch + 1.6 * dt, -1.45, 1.45); if (keys.ArrowDown) pitch = clamp(pitch - 1.6 * dt, -1.45, 1.45);
+    edgeTurn(dt); if (keys.ArrowLeft) yaw += 2.2 * dt; if (keys.ArrowRight) yaw -= 2.2 * dt; if (keys.ArrowUp) pitch = clamp(pitch + 1.6 * dt, -1.45, 1.45); if (keys.ArrowDown) pitch = clamp(pitch - 1.6 * dt, -1.45, 1.45);
     const mx = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + joy.x, mz = (keys.KeyS ? 1 : 0) - (keys.KeyW ? 1 : 0) + joy.y, l = Math.hypot(mx, mz), sp = a.hero.speed * (a.buff > 0 ? 1.45 : 1) * (a.spd > 0 ? 1.35 : 1) * (zoom ? .6 : 1), fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = -fz, rz = fx;
     if (a.dashT > 0) a.dashT -= dt; else if (a.stun > 0) { a.vx *= .9; a.vz *= .9; } else { const k = l > 1 ? 1 / l : 1, tx = (fx * -mz + rx * mx) * k * sp, tz = (fz * -mz + rz * mx) * k * sp, ac = a.ground ? 14 : 3; a.vx += (tx - a.vx) * Math.min(1, dt * ac); a.vz += (tz - a.vz) * Math.min(1, dt * ac); }
     if (a.lockT > 0) { let bt = null, bd = 1e9; for (const t of enemiesOf(a)) { const dd = Math.hypot(t.x - a.x, t.z - a.z); if (dd < 90 && dd < bd && los(a, t, a.y + 1.55, t.y + 1.62)) { bd = dd; bt = t; } } if (bt) { const dx = bt.x - a.x, dz = bt.z - a.z, dy = bt.y + 1.62 - (a.y + 1.55), hh = Math.hypot(dx, dz); let dyw = Math.atan2(-dx, -dz) - yaw; dyw = Math.atan2(Math.sin(dyw), Math.cos(dyw)); const kk = Math.min(1, dt * 16); yaw += dyw * kk; pitch = clamp(pitch + (Math.atan2(dy, hh) - pitch) * kk, -1.45, 1.45); } }   // Anna 大招：鎖頭
@@ -1009,7 +1017,7 @@ function stepActor(a, dt) {
 }
 function sim(dt) {
   if (state === 'menu' || state === 'over') return;
-  if (state === 'count') { if (keys.ArrowLeft) yaw += 2.2 * dt; if (keys.ArrowRight) yaw -= 2.2 * dt; if (keys.ArrowUp) pitch = clamp(pitch + 1.6 * dt, -1.45, 1.45); if (keys.ArrowDown) pitch = clamp(pitch - 1.6 * dt, -1.45, 1.45); stT -= dt; const c = Math.ceil(stT); if (stT > 0) banner(String(c), '占領中央的控制點', 0); else { state = 'play'; banner('開戰', '', 700); SFX.beep(); } for (const a of actors) { if (a.remote) netStepRemote(a, dt); else a.vx = a.vz = 0; } if (net) netTick(dt); return; }
+  if (state === 'count') { edgeTurn(dt); if (keys.ArrowLeft) yaw += 2.2 * dt; if (keys.ArrowRight) yaw -= 2.2 * dt; if (keys.ArrowUp) pitch = clamp(pitch + 1.6 * dt, -1.45, 1.45); if (keys.ArrowDown) pitch = clamp(pitch - 1.6 * dt, -1.45, 1.45); stT -= dt; const c = Math.ceil(stT); if (stT > 0) banner(String(c), '占領中央的控制點', 0); else { state = 'play'; banner('開戰', '', 700); SFX.beep(); } for (const a of actors) { if (a.remote) netStepRemote(a, dt); else a.vx = a.vz = 0; } if (net) netTick(dt); return; }
   tLeft -= dt; for (const a of actors) stepActor(a, dt); if (net) netTick(dt);
   stepProj(dt); stepBarriers(dt); stepSeekers(dt); updPoint(dt); for (let i = 0; i < PICKS.length; i++) { const p = PICKS[i]; if (p.t > 0) p.t -= dt; pickMeshes[i].visible = p.t <= 0; }
   if ((!net || net.role === 'host') && (prog[0] >= 100 || prog[1] >= 100 || tLeft <= 0)) { if (net) netSend({ t: 'end', pr: [+prog[0].toFixed(1), +prog[1].toFixed(1)] }); endMatch(); }
@@ -1284,7 +1292,7 @@ $('startB').onclick = () => { netClose(); netUi(false, ''); startMatch(); };
 const goBack = () => { netClose(); if (embed) { leave(); return; } try { if (document.pointerLockElement) document.exitPointerLock(); } catch (e) {} try { if (history.length > 1) history.back(); else location.href = '../'; } catch (e) { location.href = '../'; } };
 $('exitB').onclick = goBack; $('exitB2').onclick = goBack; $('lockExit').onclick = e => { e.stopPropagation(); goBack(); };
 resize(); requestAnimationFrame(frame);
-if (Q.get('debug') === '1') window.FPS = { bgm, sim, get net() { return net; }, render, get actors() { return actors; }, get me() { return me; }, get state() { return state; }, set state(v) { state = v; }, get prog() { return prog; }, get owner() { return owner; }, get cap() { return cap; }, CFG, startMatch, fire, useE, useS, useQ, astar, los, BOXES, BAR, HEROES, get yaw() { return yaw; }, set yaw(v) { yaw = v; }, set pitch(v) { pitch = v; }, keys, hold, POINT, respawn };
+if (Q.get('debug') === '1') window.FPS = { bgm, sim, get net() { return net; }, render, get actors() { return actors; }, get me() { return me; }, get state() { return state; }, set state(v) { state = v; }, get prog() { return prog; }, get owner() { return owner; }, get cap() { return cap; }, CFG, startMatch, fire, useE, useS, useQ, astar, los, BOXES, BAR, HEROES, get yaw() { return yaw; }, set yaw(v) { yaw = v; }, set pitch(v) { pitch = v; }, get mX() { return mX; }, get lockFail() { return lockFail; }, edgeTurn, keys, hold, POINT, respawn };
 
 })();
 </script>
