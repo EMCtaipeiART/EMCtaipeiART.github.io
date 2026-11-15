@@ -37,9 +37,9 @@ html.embed #gMenuBtn,html.embed #gMenu,html.embed #gMask,html.embed #gWipe{displ
 #gMenuBtn:hover{transform:translateY(-2px);filter:brightness(1.06)}
 #gMenuBtn:active{transform:translateY(1px);filter:brightness(.95)}
 #gMenuBtn kbd{font:700 11px/1 inherit;border:1.5px solid rgba(4,16,10,.55);padding:2px 5px;margin-left:2px;opacity:.75}
-#gMask{position:fixed;inset:0;z-index:13;background:rgba(2,10,6,.46);opacity:0;pointer-events:none;transition:opacity .25s}
+#gMask{position:fixed;inset:0;z-index:10;background:rgba(2,10,6,.46);opacity:0;pointer-events:none;transition:opacity .25s}
 #gMask.on{opacity:1;pointer-events:auto}
-#gMenu{position:fixed;right:0;top:0;bottom:0;z-index:16;width:min(318px,86vw);box-sizing:border-box;padding:70px 16px 16px;display:flex;flex-direction:column;gap:6px;color:var(--tx);font-family:'Fredoka','Noto Sans TC',system-ui,sans-serif;
+#gMenu{position:fixed;right:0;top:0;bottom:0;z-index:11;width:min(318px,86vw);box-sizing:border-box;padding:70px 16px 16px;display:flex;flex-direction:column;gap:6px;color:var(--tx);font-family:'Fredoka','Noto Sans TC',system-ui,sans-serif;
   background:var(--stripe),linear-gradient(180deg,var(--g2),var(--g0));box-shadow:-8px 0 0 var(--g0),inset 2px 0 0 var(--gl);transform:translateX(104%);transition:transform .32s cubic-bezier(.2,.9,.25,1);visibility:hidden}
 #gMenu.on{transform:none;visibility:visible}
 #gMenu .gm-title{position:absolute;left:18px;top:20px;font-weight:700;font-size:13px;letter-spacing:.34em;color:var(--ga)}
@@ -69,6 +69,9 @@ html.embed #gMenuBtn,html.embed #gMenu,html.embed #gMask,html.embed #gWipe{displ
 .dr-head,.px-head{letter-spacing:.1em;color:var(--tx);padding-top:8px!important}
 .px-x{border-radius:0!important;clip-path:var(--cut-s);background:rgba(255,255,255,.12)!important}
 .px-x:hover{background:rgba(255,255,255,.24)!important}
+/* 其餘還是圓形的關閉／小按鈕：動態檢視器的 ✕、開聲音、移除提名 ✕ */
+#svClose,#svMute,.sv-top button,.cp-story .rm,.cat-name .rm{border-radius:0!important;clip-path:var(--cut-s)}
+#svClose{width:34px;height:34px;padding:0!important;display:grid;place-items:center}
 #roster button{border:0!important;border-radius:0!important;clip-path:var(--cut-s);background:rgba(255,255,255,.07)!important}
 #roster button.on{background:rgba(255,209,102,.2)!important;box-shadow:inset 3px 0 0 var(--gold)}
 #cpage .cp-wrap{border:0!important;border-radius:0!important;clip-path:var(--cut);background:var(--stripe),linear-gradient(180deg,var(--g2),var(--g1))!important;box-shadow:inset 0 0 0 2px var(--gl)!important}

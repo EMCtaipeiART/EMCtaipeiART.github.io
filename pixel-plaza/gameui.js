@@ -41,11 +41,15 @@
     if (v) setTimeout(() => { const f = rows.find(r => !r.hidden); if (f) f.focus({ preventScroll: true }); }, 60); else if (lastFocus && lastFocus.focus) { try { lastFocus.blur(); } catch (e) {} }
   }
   btn.onclick = e => { e.stopPropagation(); setOpen(!open); };
-  mask.onclick = () => setOpen(false); menu.querySelector('.gm-x').onclick = () => setOpen(false);
-  rows.forEach(r => r.onclick = () => { const src = $(r.dataset.src); setOpen(false); if (src) setTimeout(() => src.click(), 140); });   // 先收選單再開對應面板，動畫不打架
+  // 面板（圖鑑、說明、角色頁面…）開在選單上面；關掉面板後選單還開著，不會收合
+  const PANELS = ['dexPanel', 'helpPanel', 'drawer', 'cpage', 'fridgeP', 'catP', 'sv'];
+  const panelOpen = () => PANELS.some(id => { const el = $(id); return el && !el.hidden; });
+  mask.onclick = () => { if (!panelOpen()) setOpen(false); }; menu.querySelector('.gm-x').onclick = () => setOpen(false);
+  rows.forEach(r => r.onclick = () => { const src = $(r.dataset.src); if (src) setTimeout(() => src.click(), 60); });
   addEventListener('keydown', e => {
     const t = e.target, typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
-    if (e.key === 'Escape' && open) { e.stopImmediatePropagation(); setOpen(false); return; }
+    if (e.key === 'Escape') { const p = ['dexPanel', 'helpPanel', 'drawer'].map($).find(el => el && !el.hidden); if (p) { p.hidden = true; e.stopImmediatePropagation(); return; } }   // Esc 先關最上層的圖鑑／說明／選角面板
+    if (e.key === 'Escape' && open && !panelOpen()) { e.stopImmediatePropagation(); setOpen(false); return; }   // 有面板開著時 Esc 先關面板
     if (!typing && !e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 'm' || e.key === 'M') && !($('title') && !$('title').classList.contains('gone'))) { e.preventDefault(); setOpen(!open); }
   }, true);
 
