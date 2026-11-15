@@ -112,7 +112,7 @@ table.rk tr.me td{background:var(--yel);color:#2a0f00}
   <div class="hud" id="itembox" hidden><kbd>Shift</kbd><b class="ic" id="itemIc"></b><span class="nm" id="itemNm"></span></div>
   <div id="toast"></div>
   <div id="banner"><b id="bnT"></b><small id="bnS"></small></div>
-  <div class="sys" id="sys" hidden><button class="pb" id="pauseB" type="button">暫停</button><button class="pb" id="exitB2" type="button" hidden>離開</button></div>
+  <div class="sys" id="sys" hidden><button class="pb" id="setB" type="button">設定</button><button class="pb" id="pauseB" type="button">暫停</button><button class="pb" id="exitB2" type="button" hidden>離開</button></div>
   <div id="stick" hidden><i></i></div>
   <button class="tbtn" id="drift" type="button" hidden><b class="ic">🌀</b><span>漂移</span></button>
   <button class="tbtn" id="brake" type="button" hidden><b class="ic">🛑</b><span>煞車</span></button>
@@ -148,6 +148,58 @@ const localSrc = (n, walk) => '../pixel-plaza/' + (walk ? 'sprites-walk-hd/' : '
 function loadImg(n, walk, cb, fail) { if (!cloudDone) { cloudReady.then(() => loadImg(n, walk, cb, fail)); return; }   // 先等雲端最新清單，避免先閃出本機舊人物
   const im = new Image(); im.crossOrigin = 'anonymous'; let local = false; im.onload = () => cb(im); im.onerror = () => { if (!local) { local = true; im.removeAttribute('crossorigin'); im.src = localSrc(n, walk); } else if (fail) fail(); }; im.src = atlasSrc(n, walk) || localSrc(n, walk); }
 function texFromAtlas(n, walk, rx, ry, fail) { const t = new THREE.Texture(); t.magFilter = t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; t.repeat.set(rx, ry); loadImg(n, walk, im => { t.image = im; t.needsUpdate = true; }, fail); return t; }
+// ───────── 語音播報（倒數、占領、勝負）：用瀏覽器內建的語音合成，找得到中文（台灣）語音就用，沒有就用預設；可在「設定」關閉 ─────────
+const VOICE_KEY = 'emcFpsVoice'; let voiceOn = true; try { voiceOn = localStorage.getItem(VOICE_KEY) !== '0'; } catch (e) {}
+function say(text) {
+  if (!voiceOn || !window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') return;
+  try { const u = new SpeechSynthesisUtterance(text); u.lang = 'zh-TW'; u.rate = 1.05; u.pitch = 1; u.volume = 1; const vs = speechSynthesis.getVoices(), v = vs.find(x => /zh[-_]TW|cmn[-_]Hant|Taiwan|台灣/i.test(x.lang + ' ' + x.name)) || vs.find(x => /^zh/i.test(x.lang)); if (v) u.voice = v; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) {}
+}
+let sayC = 0, sayLowT = 0;
+function sayLow(text) { const now = performance.now(); if (now - sayLowT < 1200) return; sayLowT = now; say(text); }
+function emcBgm(url, opts) {
+  const KEY = 'emcBgmV1'; let st = {}; try { st = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+  const o = Object.assign({ vol: .3, fade: 4 }, opts || {}); let vol = typeof st.vol === 'number' ? st.vol : o.vol, muted = !!st.muted, started = false, paused = false, timer = 0, trying = false, gapAt = 0;
+  const A = [new Audio(url), new Audio(url)]; A.forEach(a => { a.preload = 'auto'; a.volume = 0; }); let cur = 0;
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ vol, muted })); } catch (e) {} };
+  const gainOf = a => { const d = Math.max(a.duration || 0, o.dur || 0), t = a.currentTime; if (!d) return 0; return Math.max(0, Math.min(1, t / 1.5, (d - t) / o.fade)); };
+  function apply() { for (const a of A) { const g = a.paused ? 0 : gainOf(a); try { a.volume = muted ? 0 : Math.max(0, Math.min(1, vol * g)); } catch (e) {} a.muted = muted; } }
+  function tick() {
+    if (!started || paused) return; const a = A[cur], b = A[1 - cur];
+    if (gapAt && Date.now() >= gapAt && a.paused && b.paused) { gapAt = 0; a.currentTime = 0; a.play().catch(() => { gapAt = Date.now() + 2000; }); }   // 同一個播放器重播（手機只有它被使用者操作解鎖過，換另一個會被擋）   // 播完先安靜 6 秒再重播
+    for (const x of A) { const dx = Math.max(x.duration || 0, o.dur || 0); if (!x.paused && dx && x.currentTime >= dx - .05) { x.pause(); gapAt = Date.now() + 6000; } }
+    apply();
+  }
+  const ctl = {
+    start() { if (started || trying) return; trying = true; const x = A[cur]; try { x.currentTime = 0; } catch (e) {} let p; try { p = x.play(); } catch (e) { trying = false; return; } const ok = () => { trying = false; if (started) return; started = true; clearInterval(timer); timer = setInterval(tick, 100); ['pointerdown', 'mousedown', 'touchstart', 'click', 'keydown'].forEach(ev => removeEventListener(ev, once, true)); }; if (p && p.then) p.then(ok).catch(() => { trying = false; }); else ok(); },
+    pause() { paused = true; A.forEach(a => a.pause()); },
+    resume() { if (!started) return; paused = false; A[cur].play().catch(() => {}); },
+    get vol() { return vol; }, get muted() { return muted; }, get on() { return started; }, get playing() { return started && !paused; }, get t() { return A[cur].currentTime; }, get d() { return A[cur].duration; }, get level() { return A.map(x => +x.volume.toFixed(2)); },
+    setVol(v) { vol = Math.max(0, Math.min(1, v)); if (vol > 0) muted = false; save(); apply(); },
+    setMuted(m) { muted = !!m; save(); apply(); }
+  };
+  function once() { ctl.start(); }
+  ['pointerdown', 'mousedown', 'touchstart', 'click', 'keydown'].forEach(ev => addEventListener(ev, once, true));   // 瀏覽器規定要使用者操作後才能播放：先嘗試直接播，被擋就等第一次操作，成功才解除
+  ctl.start();
+  return ctl;
+}
+function bgmUI(ctl, css) {
+  const w = document.createElement('div'); w.id = 'bgmUI'; w.style.cssText = 'position:fixed;z-index:9999;display:flex;gap:6px;align-items:center;background:rgba(12,16,22,.78);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:4px 8px;color:#fff;font:700 12px system-ui;user-select:none;' + (css || '');
+  const b = document.createElement('button'), r = document.createElement('input'); b.type = 'button'; b.style.cssText = 'all:unset;cursor:pointer;font-size:16px;line-height:1;padding:2px'; b.title = '背景音樂';
+  r.type = 'range'; r.min = 0; r.max = 100; r.style.cssText = 'width:64px;height:4px;accent-color:#ffb000;cursor:pointer';
+  const sync = () => { b.textContent = ctl.muted || ctl.vol === 0 ? '🔇' : ctl.vol < .35 ? '🔈' : '🔊'; r.value = ctl.muted ? 0 : Math.round(ctl.vol * 100); };
+  b.onclick = e => { e.stopPropagation(); ctl.setMuted(!ctl.muted); if (!ctl.muted && ctl.vol === 0) ctl.setVol(.3); sync(); };
+  r.oninput = () => { ctl.setVol(r.value / 100); sync(); }; ['pointerdown', 'mousedown', 'touchstart'].forEach(ev => w.addEventListener(ev, e => e.stopPropagation()));
+  const hint = document.createElement('span'); hint.textContent = '點一下開啟音樂'; hint.style.cssText = 'font-size:11px;color:#ffd24a;white-space:nowrap'; w.append(b, r, hint); document.body.appendChild(w); sync(); setInterval(() => { hint.style.display = ctl.on ? 'none' : 'inline'; }, 400); return w;
+}
+const bgm = emcBgm('bgm-race.m4a', { vol: .3, dur: 185 });
+{ const bw = bgmUI(bgm, 'position:static;background:none;border:0;padding:0;'), sp = document.createElement('div'), sb = $('setB');   // 音樂與語音整合進「設定」面板
+  sp.style.cssText = 'position:fixed;right:10px;top:50px;z-index:9998;display:none;background:rgba(12,16,22,.92);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:8px;color:#fff;font:700 12px system-ui'; sp.appendChild(bw);
+  const vl = document.createElement('label'); vl.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer'; const vc = document.createElement('input'); vc.type = 'checkbox'; vc.checked = voiceOn;
+  vc.onchange = () => { voiceOn = vc.checked; try { localStorage.setItem(VOICE_KEY, voiceOn ? '1' : '0'); } catch (e) {} if (voiceOn) say('語音播報已開啟'); else if (window.speechSynthesis) speechSynthesis.cancel(); }; vl.append(vc, document.createTextNode('語音播報（倒數、圈數、名次）')); sp.appendChild(vl);
+  sb.onclick = e => { e.stopPropagation(); sp.style.display = sp.style.display === 'none' ? 'block' : 'none'; sb.blur(); };
+  ['pointerdown', 'mousedown', 'touchstart'].forEach(ev => sp.addEventListener(ev, e => e.stopPropagation()));
+  document.addEventListener('pointerdown', e => { if (sp.style.display !== 'none' && !sp.contains(e.target) && e.target !== sb) sp.style.display = 'none'; });
+  document.body.appendChild(sp); }
 const CFG = { diff: 1, laps: 3, who: 'Machi' };
 try { Object.assign(CFG, JSON.parse(localStorage.getItem('kartCfgV1') || '{}')); } catch (e) {}
 const LOGGED_IN = (() => { try { if (localStorage.getItem('designRequestEditorLoggedOut') === '1') return false; const h = JSON.parse(localStorage.getItem('pixelViewerHandoff') || 'null'); if (h && (h.token || h.name) && Date.now() - Number(h.at) < 86400000) return true; return !!(localStorage.getItem('designRequestEditorToken') || sessionStorage.getItem('designRequestEditorToken')); } catch (e) { return false; } })();   // 沒登入的預設角色是「透明人」
@@ -370,7 +422,7 @@ function stepKart(k, inp, dt) {
   k.boost = Math.max(0, k.boost - dt); k.inv = Math.max(0, k.inv - dt); k.shield = Math.max(0, k.shield - dt);
   const loc = locate(k.x, k.z, k.idx); k.idx = loc.i; const off = Math.abs(loc.d) > HW + 1.4;   // 出了路緣（在護欄與路緣間的碎地）
   // 圈數
-  const prevS = k.lastS; k.lastS = loc.s; if (prevS > TR.L * .75 && loc.s < TR.L * .25) k.lap++; else if (prevS < TR.L * .25 && loc.s > TR.L * .75) k.lap--; k.s = loc.s; k.prog = k.lap * TR.L + loc.s;
+  const prevS = k.lastS; k.lastS = loc.s; if (prevS > TR.L * .75 && loc.s < TR.L * .25) { k.lap++; if (k === me && state === 'race') { const L = k.lap + 1; if (L >= 2 && L <= CFG.laps) say(L === CFG.laps ? '最後一圈' : '第' + ['', '一', '二', '三', '四', '五'][L] + '圈'); } } else if (prevS < TR.L * .25 && loc.s > TR.L * .75) k.lap--; k.s = loc.s; k.prog = k.lap * TR.L + loc.s;
   if (k.spin > 0) { k.spin -= dt; k.h += dt * 11; k.sp *= Math.exp(-2.2 * dt); inp = { st: 0, gas: false, brake: false, drift: false }; }
   const vmax = (VMAX * D) * (off ? .55 : 1) + (k.boost > 0 ? 11 : 0);
   // 加減速
@@ -471,8 +523,8 @@ function setupRace() {
   raceT = 0; finT = 0; camShake = 0; camH = me.h; $('banner').classList.remove('on');
 }
 function updRanks() { const s = [...karts].sort((a, b) => (b.fin ? 1e9 - b.tFin : b.prog) - (a.fin ? 1e9 - a.tFin : a.prog)); s.forEach((k, i) => k.rank = i + 1); }
-function startRace() { if (!cloudDone) { cloudReady.then(startRace); return; } unlock(); $('menu').hidden = true; $('endO').hidden = true; setupRace(); document.documentElement.classList.add('playing'); resize(); for (const id of ['pos', 'lapb', 'mini', 'spd', 'itembox', 'sys']) $(id).hidden = false; $('stick').hidden = !touch; $('drift').hidden = $('brake').hidden = !touch; state = 'countdown'; stT = 3.9; gasEarly = 99; paused = false; updRanks(); }
-function finishKart(k) { if (k.fin) return; k.fin = true; k.tFin = raceT; if (k === me) { SFX.fin(); banner('FINISH!', '第 ' + k.rank + ' 名', 2400); finT = 3.5; state = 'finishing'; } }
+function startRace() { if (!cloudDone) { cloudReady.then(startRace); return; } unlock(); $('menu').hidden = true; $('endO').hidden = true; setupRace(); document.documentElement.classList.add('playing'); resize(); for (const id of ['pos', 'lapb', 'mini', 'spd', 'itembox', 'sys']) $(id).hidden = false; $('stick').hidden = !touch; $('drift').hidden = $('brake').hidden = !touch; state = 'countdown'; stT = 3.9; gasEarly = 99; paused = false; updRanks(); say('三'); }
+function finishKart(k) { if (k.fin) return; k.fin = true; k.tFin = raceT; if (k === me) { SFX.fin(); banner('FINISH!', '第 ' + k.rank + ' 名', 2400); say('完賽，第' + ['零', '一', '二', '三', '四', '五', '六', '七', '八'][Math.min(8, k.rank)] + '名'); finT = 3.5; state = 'finishing'; } }
 function fmt(t) { const m = Math.floor(t / 60), s = t - m * 60; return m + ':' + s.toFixed(2).padStart(5, '0'); }
 function endRace() {
   state = 'over'; document.documentElement.classList.remove('playing'); engine(false, 0);
@@ -495,9 +547,9 @@ function sim(dt) {
   if (state === 'menu' || state === 'over') return;
   if (state === 'countdown') {
     const before = Math.ceil(stT - .9); stT -= dt; const c = Math.ceil(stT - .9);
-    if (c !== before && c > 0 && c <= 3) SFX.beep();
+    if (c !== before && c > 0 && c <= 3) { SFX.beep(); say(['', '一', '二', '三'][c]); }
     if (stT > .9) banner(String(Math.max(1, Math.ceil(stT - .9))), '準備起跑', 0);
-    if (stT <= .9) { $('banner').classList.remove('on'); state = 'race'; SFX.go(); banner('GO!', '', 700);
+    if (stT <= .9) { $('banner').classList.remove('on'); state = 'race'; SFX.go(); banner('GO!', '', 700); say('出發');
       // 起跑加速：倒數最後 0.5 秒內按油門
       const gas = (keys.KeyW || keys.ArrowUp || keys.Space || touch || hold.drift); if (gasEarly < 99 && gasEarly > .9 && gasEarly < 1.5) { me.boost = 1.2; toast('ROCKET START!'); } else if (gasEarly < 99 && gasEarly >= 1.5) { me.spin = .6; toast('起跑打滑'); } void gas;
       for (const k of karts) if (k.ai) k.boost = Math.random() < .35 ? 1 : 0; }
