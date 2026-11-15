@@ -378,7 +378,7 @@ $('fsB').onclick = () => { try { if (document.fullscreenElement) document.exitFu
 
 // ───────── 角色圖集（沿用元宇宙的 12 面向圖集）─────────
 const CHAR_API = 'https://emc-ai-stage-classifier.machi-chen.workers.dev/api/public/characters';
-const LOCAL_NAMES = ['Machi', 'Anna', 'Leona', 'Amber', 'Noise', '余采馨', '吳冠賢', '廖秦葦', '李明庭', '王藍庭', '鄭筱舢', '黎子瑄'];
+const LOCAL_NAMES = ['Machi', 'Anna', 'Leona', 'Amber', 'Noise', '余采馨', '吳冠賢', '廖秦葦', '李明庭', '王藍庭', '鄭筱舢', '黎子瑄', '透明人'];
 const CHAR_SCALE = { Leona: 1.1, 廖秦葦: 1.18 };
 // ───────── 背景音樂（雙軌交叉淡入淡出循環；音量／靜音存在瀏覽器，三款遊戲共用設定）─────────
 function emcBgm(url, opts) {
@@ -901,7 +901,7 @@ function makeFighter(name, tex, isBot, color) {
   if (!tex) { mat.map = null; mat.color.setHex(color); }
   const sprite = new THREE.Mesh(geo, mat); sprite.rotation.order = 'YXZ';
   const blob = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, opacity: .55, depthWrite: false })); blob.rotation.x = -Math.PI / 2;
-  const holder = new THREE.Group(); scene.add(holder); scene.add(blob); holder.add(sprite); let rig = null; if (RIG_ON && LOCAL_NAMES.includes(name)) { rig = makeRig(name); holder.add(rig.root); sprite.visible = false; }
+  const holder = new THREE.Group(); scene.add(holder); scene.add(blob); holder.add(sprite); let rig = null; if (RIG_ON && LOCAL_NAMES.includes(name) && name !== '透明人') { rig = makeRig(name); holder.add(rig.root); sprite.visible = false; }
   const ks = CHAR_SCALE[name] || 1; sprite.scale.set(ks, ks, 1);
   return { name, isBot, tex, rig, sprite, holder, blob, mat, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, face: 0, hp: 100, ult: 0, grounded: true, atkT: 0, atkCD: 0, dashT: 0, dashCD: 0, windT: 0, windMul: 1.7, hitStun: 0, flash: 0, combo: 0, comboT: 0, ultWind: 0, slash: null, rageT: 0, shield: 0, shieldT: 0, skT: 0, skCD: 0, rushT: 0, rushHit: false, w: 'tablet', pas: 'coffee', ulk: 'quake', dashDir: [0, 0], moving: 0, phase: 0, inp: { mx: 0, mz: 0, jump: false, atk: false, dash: false, ult: false }, bot: { rt: 0, strafe: 1, strafeT: 0, stuck: 0, lastX: 0, lastZ: 0, nav: null, think: 0 } };
 }
@@ -1556,7 +1556,8 @@ async function netJoin() {
 // ───────── 開始畫面 ─────────
 async function setup() {
   await cloudReady;
-  const me0 = Q.get('me') || Q.get('as') || store.get('duel:me') || 'Machi', opts = n => NAMES.map(x => '<option value="' + x + '"' + (x === n ? ' selected' : '') + '>' + x + '</option>').join('');
+  window.__duelLogged = (() => { try { if (localStorage.getItem('designRequestEditorLoggedOut') === '1') return false; const h = JSON.parse(localStorage.getItem('pixelViewerHandoff') || 'null'); if (h && (h.token || h.name) && Date.now() - Number(h.at) < 86400000) return true; return !!(localStorage.getItem('designRequestEditorToken') || sessionStorage.getItem('designRequestEditorToken')); } catch (e) { return false; } })();   // 沒登入的預設角色是「透明人」
+  const me0 = Q.get('me') || Q.get('as') || store.get('duel:me') || (window.__duelLogged ? 'Machi' : '透明人'), opts = n => NAMES.map(x => '<option value="' + x + '"' + (x === n ? ' selected' : '') + '>' + x + '</option>').join('');
   const op0 = store.get('duel:op'); const rest = NAMES.filter(n => n !== me0);
   $('selMe').innerHTML = opts(NAMES.includes(me0) ? me0 : NAMES[0]); $('selOp').innerHTML = opts(op0 && NAMES.includes(op0) && op0 !== me0 ? op0 : rest[Math.floor(Math.random() * rest.length)]); $('selLv').value = store.get('duel:lv') || '1';
   const fillSel = (id, o, cur) => { $(id).innerHTML = Object.keys(o).map(k => '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + o[k].n + '</option>').join(''); };

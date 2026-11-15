@@ -136,7 +136,7 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
 'use strict';
 const $ = id => document.getElementById(id), Q = new URLSearchParams(location.search);
 const FL = 20, FW = 12, GW = 5.2, GD = 3.2, PR = .9, BR = 1.5;          // 球場半長／半寬／球門半寬／球門深／人半徑／球半徑
-const ANGLES = 12, LOCAL_NAMES = ['Machi', 'Anna', 'Leona', 'Amber', 'Noise', '余采馨', '吳冠賢', '廖秦葦', '李明庭', '王藍庭', '鄭筱舢', '黎子瑄'];
+const ANGLES = 12, LOCAL_NAMES = ['Machi', 'Anna', 'Leona', 'Amber', 'Noise', '余采馨', '吳冠賢', '廖秦葦', '李明庭', '王藍庭', '鄭筱舢', '黎子瑄', '透明人'];
 const CHAR_SCALE = { Leona: 1.1, 廖秦葦: 1.18 };
 const CHAR_API = 'https://emc-ai-stage-classifier.machi-chen.workers.dev/api/public/characters';   // 與元宇宙／辦公室對決同一份「最新角色」
 let cloud = {}, cloudWalks = {}, cloudDone = false;
@@ -148,7 +148,8 @@ function loadImg(n, walk, cb, fail) { if (!cloudDone) { cloudReady.then(() => lo
 function texFromAtlas(n, walk, rx, ry, fail) { const t = new THREE.Texture(); t.magFilter = t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; t.repeat.set(rx, ry); loadImg(n, walk, im => { t.image = im; t.needsUpdate = true; }, fail); return t; }
 const CFG = { mode: 2, diff: 1, time: 180, who: 'Machi' };
 try { Object.assign(CFG, JSON.parse(localStorage.getItem('soccerCfgV1') || '{}')); } catch (e) {}
-if (!LOCAL_NAMES.includes(CFG.who)) CFG.who = 'Machi';
+const LOGGED_IN = (() => { try { if (localStorage.getItem('designRequestEditorLoggedOut') === '1') return false; const h = JSON.parse(localStorage.getItem('pixelViewerHandoff') || 'null'); if (h && (h.token || h.name) && Date.now() - Number(h.at) < 86400000) return true; return !!(localStorage.getItem('designRequestEditorToken') || sessionStorage.getItem('designRequestEditorToken')); } catch (e) { return false; } })();   // 沒登入的預設角色是「透明人」
+{ let saved = null; try { saved = (JSON.parse(localStorage.getItem('soccerCfgV1') || '{}') || {}).who; } catch (e) {} if (!LOCAL_NAMES.includes(CFG.who)) CFG.who = 'Machi'; if (!LOGGED_IN && !saved) CFG.who = '透明人'; }
 const saveCfg = () => { try { localStorage.setItem('soccerCfgV1', JSON.stringify(CFG)); } catch (e) {} };
 const rand = (a, b) => a + Math.random() * (b - a), clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const touch = matchMedia('(pointer:coarse)').matches, embed = /[?&]embed=1/.test(location.search);
