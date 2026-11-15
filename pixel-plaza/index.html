@@ -357,7 +357,7 @@ html.embed #hud,html.embed #dock,html.embed #proj,html.embed .lbl,html.cinema bo
 .cp-grid.mood button.clr{grid-column:1/-1;padding:9px!important;font-size:14px!important}
 #swheel{position:fixed;left:0;top:0;z-index:9;width:0;height:0;pointer-events:none}#swheel[hidden]{display:none}
 .sw-b{position:absolute;left:0;top:0;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;border:2.5px solid var(--ink);background:#fff;color:var(--ink);display:grid;place-items:center;align-content:center;gap:0;padding:0;pointer-events:auto;font:700 9px/1 'Fredoka','Noto Sans TC',sans-serif;box-shadow:0 3px 0 rgba(11,61,30,.4);transform:translate(0,0) scale(.2);opacity:0;transition:transform .28s cubic-bezier(.3,1.5,.5,1) var(--d),opacity .2s var(--d)}
-#swheel .qc{position:absolute;left:40px;top:-60px;width:238px;box-sizing:border-box;padding:8px 10px 10px;border:3px solid var(--ink);border-radius:14px;background:#fffdf5;color:var(--ink);box-shadow:0 4px 0 rgba(0,0,0,.28);pointer-events:auto;font:700 12px/1.2 'Fredoka','Noto Sans TC',sans-serif;opacity:0;transform:scale(.92);transform-origin:left center;transition:opacity .12s,transform .12s}
+#swheel .qc{position:absolute;left:40px;top:-60px;width:min(238px,calc(100vw - 16px));box-sizing:border-box;padding:8px 10px 10px;border:3px solid var(--ink);border-radius:14px;background:#fffdf5;color:var(--ink);box-shadow:0 4px 0 rgba(0,0,0,.28);pointer-events:auto;font:700 12px/1.2 'Fredoka','Noto Sans TC',sans-serif;opacity:0;transform:scale(.92);transform-origin:left center;transition:opacity .12s,transform .12s}
 #swheel.open .qc{opacity:1;transform:none}#swheel .qc.flip{left:auto;right:40px;transform-origin:right center}
 .qc-h{margin:6px 0 4px;font-size:11px;color:#59606a}.qc-h:first-child{margin-top:0}
 .qc-row{display:flex;flex-wrap:wrap;gap:5px}.qc-extra{margin-top:5px}.qc-extra[hidden]{display:none}
@@ -2243,7 +2243,7 @@ const bootChars = cloudReady.then(() => {
 Promise.all([buildOffice(), loadIcons(), bootChars])
   .then(async () => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); setLoad('讀取出勤狀態', .9); live.version = 0; await Promise.race([pollNow(), new Promise(r => setTimeout(r, 12000))]);   // 人物都建好後才（重新）完整讀一次：先前 WebSocket 等提早的讀取當時人物還沒建完，那次的狀態與位置沒人接，之後讀到「沒變」就一直不補，進站後才慢慢補上
     { let n = 0; const tot = walkLoads.length; walkLoads.forEach(pr => pr.then(() => setLoad('載入走路動畫', .9 + .1 * ++n / tot))); setLoad('載入走路動畫', .9); await Promise.race([Promise.all(walkLoads), new Promise(r => setTimeout(r, 10000))]); }   // 最多等 10 秒，網路太慢就先進站，沒載完的人物走路時先用彈跳搖擺
- settleChars(); startLiveSync(); CATS.forEach(c => c.init()); showTitleCard(); window.__plaza = {remoteFromState, catAt:CATS[0].at, wanderStep, findPath, guestAt, guestGoFloor, updateElev, elevGo, floorOf, elevInteract, fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
+ settleChars(); startLiveSync(); CATS.forEach(c => c.init()); showTitleCard(); window.__plaza = {wheelOpen: c => wheelOpen(c), updateWheel: () => updateWheel(), get player() { return player; }, remoteFromState, catAt:CATS[0].at, wanderStep, findPath, guestAt, guestGoFloor, updateElev, elevGo, floorOf, elevInteract, fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
 
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
 const TILT = 0, STRETCH = 1 / Math.cos(Math.atan(8.4 / 9.4)), _e = new THREE.Euler(0, 0, 0, 'YXZ');   // 垂直站立：不再後傾（避免穿進桌子、牆），高度拉長 STRETCH 倍抵消俯視縮短
@@ -2762,7 +2762,10 @@ function updateWheel(){
   if (wheel.hidden || !wheelChar) return;
   const p = wheelChar.holder.position.clone(); p.y = wheelChar.holder.visible ? 1.05 : 1.3; p.project(camera);
   wheel.style.transform = 'translate(' + ((p.x * .5 + .5) * innerWidth) + 'px,' + ((-p.y * .5 + .5) * innerHeight) + 'px)';
-  const q = wheel.firstElementChild; if (q) { const w = q.offsetWidth, h = q.offsetHeight, px = (p.x * .5 + .5) * innerWidth, py = (-p.y * .5 + .5) * innerHeight; q.classList.toggle('flip', px + 40 + w > innerWidth - 8); q.style.top = Math.max(8 - py, Math.min(innerHeight - 8 - py - h, -h * .5)) + 'px'; }   // 靠右邊就放左側；上下不超出畫面
+  const q = wheel.firstElementChild; if (q) { const w = q.offsetWidth, h = q.offsetHeight, px = (p.x * .5 + .5) * innerWidth, py = (-p.y * .5 + .5) * innerHeight; const fitsR = px + 40 + w <= innerWidth - 8, fitsL = px - 40 - w >= 8; q.classList.toggle('flip', !fitsR && fitsL);
+    if (fitsR || fitsL) { q.style.left = ''; q.style.right = ''; q.style.top = Math.max(8 - py, Math.min(innerHeight - 8 - py - h, -h * .5)) + 'px'; }   // 靠右邊就放左側；上下不超出畫面
+    else { q.classList.remove('flip'); q.style.right = 'auto'; q.style.left = Math.max(8 - px, Math.min(innerWidth - 8 - px - w, 40)) + 'px'; q.style.top = Math.max(8 - py, Math.min(innerHeight - 8 - py - h, py + 40 + h <= innerHeight - 8 ? 36 : -(h + 100))) + 'px'; }   // 手機窄螢幕：左右都放不下就貼齊畫面內，並放在人物下方（放不下就放上方），不再被裁切
+  }
 }
 let hoverChar = null, clickChar = null, clickUntil = 0;
 const plate = document.createElement('div'); plate.className = 'cui-tag'; plate.style.cssText = 'position:fixed;left:0;top:0;z-index:7;display:none;pointer-events:none'; document.body.appendChild(plate);
