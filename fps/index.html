@@ -872,6 +872,32 @@ function updPoint(dt) {
   const col = owner >= 0 ? TEAMCOL[owner] : 0xffffff; ptRing.material.color.setHex(col); ptDisc.material.color.setHex(capTeam >= 0 && cap > 0 ? TEAMCOL[capTeam] : col); ptBeam.material.color.setHex(col); ptRing.material.opacity = contested ? .5 + .4 * Math.sin(performance.now() * .01) : .9;
 }
 // ───────── 電腦 ─────────
+// ───────── 電腦隊友的角色分工 ─────────
+// 坦克（Machi）：衝在最前面占點、扛傷害；長槍（Anna）：遠處高點架槍、被貼近就拉開；中短槍（Noise）：繞側翼游擊；兩位輔助（Amber、Leona）：站在坦克後方，專心補血、保護坦克與輸出。
+const ROLE = { machi: 'tank', anna: 'sniper', noise: 'skirm', amber: 'support', leona: 'support' };
+const OWC = {};
+function overwatchSpots(side) {   // 架槍點：離控制點 15～25 公尺、看得到控制點、走得到，靠己方出生側
+  if (OWC[side]) return OWC[side]; const out = [], sp = spawnPoint(side, side), sx = sp[0], sz = sp[1];
+  for (let x = -26; x <= 26; x += 3) for (let z = -26; z <= 26; z += 3) { if ((side === 0 ? x : -x) > -6) continue; const d = Math.hypot(x - POINT.x, z - POINT.z); if (d < 15 || d > 25) continue; if (!los({ x, z, y: 0 }, { x: POINT.x, z: POINT.z, y: 0 }, 1.55, 1.3)) continue; if (astar(sx, sz, x, z).length) out.push([x, z]); }
+  return OWC[side] = out;
+}
+function roleGoal(a, B) {   // 沒有交戰時（或定位型角色）要去的位置；回傳 null 表示照原本的巡邏／追人
+  const role = ROLE[a.hero.id], side = a.gt === undefined ? a.team : a.gt, dx = side === 0 ? 1 : -1, al = alliesOf(a).filter(t => t !== a);
+  if (role === 'tank') return a.tgt ? null : [POINT.x + dx * 2.5, POINT.z];
+  if (role === 'skirm') { if (a.tgt) return null; const sg = a.team === 0 ? 1 : -1, ph = Math.floor(performance.now() / 7000) % 2; return ph ? [POINT.x + dx * 1.5, POINT.z + sg * 3] : [POINT.x + dx * 5, POINT.z + sg * 13]; }   // 繞到側面再切入
+  if (role === 'sniper') { const sp = overwatchSpots(side); if (!sp.length) return null; let best = sp[0], bd = 1e9; for (const p of sp) { const d = Math.hypot(p[0] - a.x, p[1] - a.z); if (d < bd) { bd = d; best = p; } } return B.ow && sp.includes(B.ow) ? B.ow : (B.ow = best); }
+  if (role === 'support') {
+    const tank = al.find(t => ROLE[t.hero.id] === 'tank'), dps = al.filter(t => ROLE[t.hero.id] === 'skirm' || ROLE[t.hero.id] === 'sniper').sort((p, q) => p.hp / p.maxHp - q.hp / q.maxHp)[0], anchor = tank || dps, lat = a.hero.id === 'leona' ? 3 : -3;
+    if (!anchor) return [POINT.x - dx * 8, POINT.z + lat];
+    return [clamp(anchor.x - dx * 4.5, -28, 28), clamp(anchor.z + lat, -28, 28)];   // 站在坦克（沒有就最需要照顧的輸出）後方
+  }
+  return null;
+}
+function pathStep(a) {   // 沿路徑走一步，不改變面向（讓角色邊走邊瞄準）
+  if (!a.path.length) return [0, 0]; while (a.path.length > 1 && Math.hypot(a.path[0][0] - a.x, a.path[0][1] - a.z) < 1.0) a.path.shift();
+  let nn = a.path[0]; if (a.path.length > 1 && clearLine(a.x, a.z, a.path[1][0], a.path[1][1], a.y)) nn = a.path[1];
+  const dx = nn[0] - a.x, dz = nn[1] - a.z, d = Math.hypot(dx, dz) || 1; if (a.path.length === 1 && d < .6) { a.path.shift(); return [0, 0]; } return [dx / d, dz / d];
+}
 function botAbilities(a, best, bd) {
   const B = a.bot, id = a.hero.id, near = enemiesOf(a).filter(t => Math.hypot(t.x - a.x, t.z - a.z) < 9).length;
   if (a.ult >= 100) { let ok = false; if (id === 'machi') ok = near >= 2; else if (id === 'noise') ok = !!best; else if (id === 'anna') ok = enemiesOf(a).length >= 2; else if (id === 'amber') ok = alliesOf(a).filter(t => t.hp < t.maxHp * .45).length >= 2; else if (id === 'leona') ok = !!best && alliesOf(a).filter(t => Math.hypot(t.x - a.x, t.z - a.z) < 14).length >= 3; if (ok) useQ(a); }
@@ -884,11 +910,11 @@ function botThink(a, dt) {
   if (B.think <= 0) {
     B.think = .25; let best = null, bd = 1e9; for (const t of actors) { if (t.team === a.team || t.dead) continue; const d = Math.hypot(t.x - a.x, t.z - a.z); if (d < bd && d < 48 && los(a, t, 1.55, t.y + 1.3)) { bd = d; best = t; } }
     if (best) { if (a.tgt !== best) B.react = [.7, .5, .18][CFG.diff]; a.tgt = best; B.seen = 2; B.bd = bd; } else { B.seen -= .25; if (B.seen <= 0) a.tgt = null; B.bd = 99; }
-    const pref = a.hero.pref; let wantPath = !a.tgt || bd > pref + 8;
+    const pref = a.hero.pref, role = ROLE[a.hero.id], stat = (role === 'sniper' || role === 'support') ? roleGoal(a, B) : null; let wantPath = !a.tgt || bd > pref + 8 || (stat && Math.hypot(stat[0] - a.x, stat[1] - a.z) > 4);
     if (wantPath) {
       let gp;
       if (a.hp < a.maxHp * .35) { const c = PICKS.filter(p => p.t <= 0).sort((p, q) => Math.hypot(p.x - a.x, p.z - a.z) - Math.hypot(q.x - a.x, q.z - a.z))[0]; if (c) gp = [c.x, c.z]; }
-      if (!gp && a.hero.id === 'amber') { const al = alliesOf(a).filter(t => t !== a).sort((p, q) => Math.hypot(p.x - a.x, p.z - a.z) - Math.hypot(q.x - a.x, q.z - a.z))[0]; if (al && Math.hypot(al.x - a.x, al.z - a.z) > 5) gp = [al.x, al.z]; }
+      if (!gp) { const g = stat || roleGoal(a, B); if (g) gp = g; }   // 依角色站位
       if (!gp) { if (owner === a.team && present[1 - a.team] === 0 && !B.patrol) B.patrol = [POINT.x + rand(-5, 5), POINT.z + rand(-5, 5)]; if (!B.patrol || Math.hypot(B.patrol[0] - a.x, B.patrol[1] - a.z) < 1.5) B.patrol = [POINT.x + rand(-4.5, 4.5), POINT.z + rand(-4.5, 4.5)]; gp = a.tgt ? [a.tgt.x, a.tgt.z] : B.patrol; }
       a.path = astar(a.x, a.z, gp[0], gp[1]);
       if (!a.path.length && Math.hypot(gp[0] - a.x, gp[1] - a.z) > 2.5) { B.patrol = null; for (let k = 0; k < 5 && !a.path.length; k++) { const p = [rand(-26, 26), rand(-26, 26)]; a.path = astar(a.x, a.z, p[0], p[1]); if (a.path.length) B.patrol = p; } }
@@ -898,7 +924,9 @@ function botThink(a, dt) {
   let mx = 0, mz = 0;
   if (a.tgt && !a.tgt.dead) { const t = a.tgt, dx = t.x - a.x, dz = t.z - a.z, d = Math.hypot(dx, dz), want = Math.atan2(-dx, -dz), diff = wrapA(want - a.yaw); a.yaw += clamp(diff, -dt * 5 * D, dt * 5 * D); const dy = (t.y + 1.3) - (a.y + 1.55); a.pitch += clamp(Math.atan2(dy, d) - a.pitch, -dt * 3, dt * 3);
     if (B.strafeT <= 0) { B.strafe = Math.random() < .5 ? -1 : 1; B.strafeT = rand(.6, 1.6); }
-    const fx = -Math.sin(a.yaw), fz = -Math.cos(a.yaw), rx = -fz, rz = fx, pref = a.hero.pref, adv = d > pref + 3 ? 1 : d < pref - 3 ? -.6 : .1; mx = fx * adv + rx * B.strafe * .8; mz = fz * adv + rz * B.strafe * .8;
+    const fx = -Math.sin(a.yaw), fz = -Math.cos(a.yaw), rx = -fz, rz = fx, pref = a.hero.pref, role = ROLE[a.hero.id]; let adv = d > pref + 3 ? 1 : d < pref - 3 ? -.6 : .1, sw = .8;
+    if (role === 'sniper' || role === 'support') { if (d < (role === 'sniper' ? 11 : 9)) { adv = -1; sw = .5; mx = fx * adv + rx * B.strafe * sw; mz = fz * adv + rz * B.strafe * sw; } else { const ps = pathStep(a); if (ps[0] || ps[1]) { mx = ps[0]; mz = ps[1]; } else { mx = rx * B.strafe * .35; mz = rz * B.strafe * .35; } } }   // 長槍／輔助：被貼近就後退，否則回站位
+    else { if (role === 'skirm') sw = 1.1; mx = fx * adv + rx * B.strafe * sw; mz = fz * adv + rz * B.strafe * sw; }
     B.react -= dt; if (B.react <= 0 && Math.abs(diff) < (.12 + .05 / D) && a.fireT <= 0 && los(a, t, 1.55, t.y + 1.3)) fire(a); }
   else if (a.path.length) { while (a.path.length > 1 && Math.hypot(a.path[0][0] - a.x, a.path[0][1] - a.z) < 1.0) a.path.shift(); let n = a.path[0]; if (a.path.length > 1 && clearLine(a.x, a.z, a.path[1][0], a.path[1][1], a.y)) n = a.path[1]; const dx = n[0] - a.x, dz = n[1] - a.z, d = Math.hypot(dx, dz) || 1; if (a.path.length === 1 && d < .6) a.path.shift(); else { mx = dx / d; mz = dz / d; const want = Math.atan2(-dx, -dz); a.yaw += clamp(wrapA(want - a.yaw), -dt * 3.2, dt * 3.2); a.pitch *= .9; } }
   const l = Math.hypot(mx, mz) || 1, sp = a.hero.speed * D * (a.buff > 0 ? 1.45 : 1) * (a.spd > 0 ? 1.35 : 1);
