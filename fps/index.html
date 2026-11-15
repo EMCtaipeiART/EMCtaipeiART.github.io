@@ -524,7 +524,7 @@ const WEAPONS = {
 // ───────── 英雄：5 位（每隊固定 1 重裝＋2 輸出＋2 支援） ─────────
 const HEROES = [
   { id: 'machi', char: 'Machi', name: 'Machi', title: '責任壁壘', role: '重裝', ic: '🛡️', hp: 500, speed: 5.0, w: 'keyboard', pref: 6, sleeve: 0x2b2d3a,
-    e: { n: '壁壘泡泡', ic: '🛡️', cd: 10, d: '在前方撐起大泡泡，約可罩住 3 個人，擋住外面射進來的子彈（300 血、5 秒）' }, s: { n: '衝鋒', ic: '🐂', cd: 8, d: '向前猛衝並把血量補滿，撞到的敵人受 60 傷害並被擊退' }, q: { n: '震地', ic: '💥', d: '半徑 8 公尺：70 傷害＋暈眩 1.2 秒' } },
+    e: { n: '壁壘泡泡', ic: '🛡️', cd: 10, d: '在前方撐起大泡泡，約可罩住 3 個人，擋住外面射進來的子彈（900 血、5 秒）' }, s: { n: '衝鋒', ic: '🐂', cd: 8, d: '向前猛衝並把血量補滿，撞到的敵人受 60 傷害並被擊退' }, q: { n: '震地', ic: '💥', d: '半徑 8 公尺：70 傷害＋暈眩 1.2 秒' } },
   { id: 'noise', char: 'Noise', name: 'Noise', title: '截稿狂熱', role: '輸出', ic: '⚡', hp: 230, speed: 6.0, w: 'stapler', pref: 9, sleeve: 0x1d4ed8,
     e: { n: '閃身步', ic: '💨', cd: 5, d: '向移動方向急衝一小段' }, s: { n: '咖啡因', ic: '☕', cd: 12, d: '5 秒內移速 +45%、射速 +20%' }, q: { n: '截稿狂暴', ic: '🔥', d: '6 秒內射速 ×1.6、傷害 ×1.35' } },
   { id: 'anna', char: 'Anna', name: 'Anna', title: '精準標記', role: '輸出', ic: '🎯', hp: 230, speed: 5.4, w: 'ruler', pref: 18, sleeve: 0xf59e0b,
@@ -662,18 +662,18 @@ function setViewmodel() {
   for (const m of vmParts) m.traverse && m.traverse(o => { o.frustumCulled = false; });
 }
 // ───────── 護盾（重裝專用） ─────────
-const BUB_R = 4;   // 大泡泡半徑（約可罩住 3 個人）
+const BUB_HP = 900, BUB_R = 4;   // 大泡泡半徑（約可罩住 3 個人）
 function spawnBarrier(a) {
   for (let i = BAR.length - 1; i >= 0; i--) if (BAR[i].owner === a) { scene.remove(BAR[i].m); BAR.splice(i, 1); }
   const fx = -Math.sin(a.yaw), fz = -Math.cos(a.yaw), m = mk(new THREE.SphereGeometry(BUB_R, 28, 16, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: TEAMCOL[a.team], transparent: true, opacity: .38, side: THREE.DoubleSide, depthWrite: false }));
-  const b = { x: a.x + fx * 1.2, z: a.z + fz * 1.2, y: a.y, yaw: a.yaw, hp: 300, life: 5, team: a.team, owner: a, m }; m.position.set(b.x, a.y, b.z); scene.add(m); BAR.push(b);
+  const b = { x: a.x + fx * 1.2, z: a.z + fz * 1.2, y: a.y, yaw: a.yaw, hp: BUB_HP, life: 5, team: a.team, owner: a, m }; m.position.set(b.x, a.y, b.z); scene.add(m); BAR.push(b);
 }
 function rayBarriers(ox, oy, oz, dx, dy, dz, maxT, team) {
   let best = maxT, hit = null;
   for (const b of BAR) { if (b.team === team) continue; const px = ox - b.x, py = oy - b.y, pz = oz - b.z, c = px * px + py * py + pz * pz - BUB_R * BUB_R; if (c <= 0) continue; const hb = px * dx + py * dy + pz * dz, disc = hb * hb - c; if (disc < 0) continue; const t = -hb - Math.sqrt(disc); if (t <= 0 || t >= best) continue; if (oy + dy * t < b.y) continue; best = t; hit = b; }
   return { t: best, bar: hit };
 }
-function stepBarriers(dt) { for (let i = BAR.length - 1; i >= 0; i--) { const b = BAR[i]; b.life -= dt; b.m.material.opacity = .15 + .3 * clamp(b.hp / 300, 0, 1); if (b.life <= 0 || b.hp <= 0) { scene.remove(b.m); BAR.splice(i, 1); } } }
+function stepBarriers(dt) { for (let i = BAR.length - 1; i >= 0; i--) { const b = BAR[i]; b.life -= dt; b.m.material.opacity = .15 + .3 * clamp(b.hp / BUB_HP, 0, 1); if (b.life <= 0 || b.hp <= 0) { scene.remove(b.m); BAR.splice(i, 1); } } }
 
 // ───────── 特效：粒子、傷害數字、彈孔、光束、爆炸 ─────────
 const PART = [], DEC = [], NUMS = [];
