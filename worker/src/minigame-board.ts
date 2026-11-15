@@ -35,6 +35,8 @@ export class MinigameBoard extends DurableObject<Env> {
       sql.exec(`CREATE TABLE IF NOT EXISTS salts (day TEXT PRIMARY KEY, v TEXT NOT NULL)`);
       sql.exec(`CREATE TABLE IF NOT EXISTS exp_scores (id INTEGER PRIMARY KEY AUTOINCREMENT, nick TEXT NOT NULL, score INTEGER NOT NULL, secs INTEGER NOT NULL, ip_hash TEXT NOT NULL, at INTEGER NOT NULL)`);
       sql.exec(`CREATE INDEX IF NOT EXISTS idx_exp_scores ON exp_scores(score DESC)`);
+      sql.exec(`CREATE TABLE IF NOT EXISTS fps_scores (id INTEGER PRIMARY KEY AUTOINCREMENT, nick TEXT NOT NULL, win INTEGER NOT NULL, dmg INTEGER NOT NULL, kills INTEGER NOT NULL, hero TEXT NOT NULL, mode INTEGER NOT NULL, secs INTEGER NOT NULL, ip_hash TEXT NOT NULL, at INTEGER NOT NULL)`);
+      sql.exec(`CREATE INDEX IF NOT EXISTS idx_fps_scores ON fps_scores(nick, at)`);
       sql.exec(`CREATE TABLE IF NOT EXISTS fridge_stock (slot TEXT PRIMARY KEY, qty INTEGER NOT NULL)`);
       sql.exec(`CREATE TABLE IF NOT EXISTS fridge_meta (k TEXT PRIMARY KEY, v TEXT NOT NULL)`);
       sql.exec(`CREATE TABLE IF NOT EXISTS fridge_events (id INTEGER PRIMARY KEY AUTOINCREMENT, floor INTEGER NOT NULL, nick TEXT NOT NULL, kind TEXT NOT NULL, slot TEXT NOT NULL DEFAULT '', flag TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL)`);
@@ -73,6 +75,28 @@ export class MinigameBoard extends DurableObject<Env> {
     this.sql().exec('DELETE FROM exp_scores WHERE at < ?', now - LIMITS.retentionDays * DAY);
     const rank = this.one<{ n: number }>('SELECT COUNT(*) AS n FROM (SELECT nick, MAX(score) AS sc FROM exp_scores GROUP BY nick) WHERE sc > (SELECT MAX(score) FROM exp_scores WHERE nick = ?)', nick)!.n + 1;
     return reply(200, { ...this.expBoard(), me: { nick, score, rank } });
+  }
+
+  // ───────── 辦公室槍戰排行榜（勝場、單場最高傷害）：只收登入帳號的成績；輕量，不重放遊戲過程，只做範圍與頻率限制 ─────────
+  private fpsBoards(range: string): { wins: Record<string, unknown>[]; dmg: Record<string, unknown>[] } {
+    const from = range === 'week' ? this.clock() - 7 * DAY : 0;
+    const wins = this.all<{ nick: string; wins: number; games: number }>('SELECT nick, SUM(win) AS wins, COUNT(*) AS games FROM fps_scores WHERE at > ? GROUP BY nick HAVING wins > 0 ORDER BY wins DESC, games ASC, nick LIMIT 20', from);
+    const dmg = this.all<{ nick: string; dmg: number; hero: string }>('SELECT nick, MAX(dmg) AS dmg, hero FROM fps_scores WHERE at > ? GROUP BY nick HAVING dmg > 0 ORDER BY dmg DESC, nick LIMIT 20', from);
+    return { wins: wins.map((r, i) => ({ rank: i + 1, nick: r.nick, wins: r.wins, games: r.games })), dmg: dmg.map((r, i) => ({ rank: i + 1, nick: r.nick, dmg: r.dmg, hero: r.hero })) };
+  }
+  async fpsGet(req: { range?: unknown } = {}): Promise<Reply> { const range = req.range === 'week' ? 'week' : 'all'; return reply(200, { ok: true, range, ...this.fpsBoards(range) }); }
+  async fpsSubmit(req: { nick?: unknown; win?: unknown; dmg?: unknown; kills?: unknown; hero?: unknown; mode?: unknown; diff?: unknown; secs?: unknown; ip?: unknown }): Promise<Reply> {
+    const nick = cleanNick(req.nick), dmg = Math.floor(Number(req.dmg)), kills = Math.floor(Number(req.kills)), secs = Math.floor(Number(req.secs)), win = req.win === 1 || req.win === true ? 1 : 0, mode = req.mode === 1 ? 1 : 0, diff = Math.floor(Number(req.diff));
+    const hero = String(req.hero ?? '').replace(/[^a-z]/g, '').slice(0, 12);
+    if (!nick || nick === '未登入') return reply(200, { ok: true, recorded: false, reason: 'login-required', ...this.fpsBoards('all') });
+    if (!Number.isFinite(dmg) || !Number.isFinite(kills) || !Number.isFinite(secs) || dmg < 0 || dmg > 8000 || kills < 0 || kills > 80 || secs < 30 || secs > 1800 || !['machi', 'noise', 'anna', 'amber', 'leona'].includes(hero)) return reply(400, { ok: false, error: 'bad-score' });
+    if (!mode && !(diff >= 1)) return reply(200, { ok: true, recorded: false, reason: 'easy-mode', ...this.fpsBoards('all') });   // 單人「簡單」不計入排行榜
+    const now = this.clock(), ip = await this.ipHash(String(req.ip ?? 'unknown'), dayKey(new Date(now)));
+    if (this.one<{ n: number }>('SELECT COUNT(*) AS n FROM fps_scores WHERE ip_hash = ? AND at > ?', ip, now - HOUR)!.n >= 30 || this.one<{ n: number }>('SELECT COUNT(*) AS n FROM fps_scores WHERE nick = ? AND at > ?', nick, now - HOUR)!.n >= 20) return reply(429, { ok: false, error: 'rate-limited' });
+    this.sql().exec('INSERT INTO fps_scores (nick, win, dmg, kills, hero, mode, secs, ip_hash, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', nick, win, dmg, kills, hero, mode, secs, ip, now);
+    this.sql().exec('DELETE FROM fps_scores WHERE at < ?', now - LIMITS.retentionDays * DAY);
+    const mine = this.one<{ wins: number; games: number; best: number }>('SELECT SUM(win) AS wins, COUNT(*) AS games, MAX(dmg) AS best FROM fps_scores WHERE nick = ?', nick);
+    return reply(200, { ok: true, recorded: true, ...this.fpsBoards('all'), me: { nick, wins: mine?.wins ?? 0, games: mine?.games ?? 0, best: mine?.best ?? 0 } });
   }
 
   // ───────── 開局：發票 ─────────

@@ -218,13 +218,14 @@ async function handleMinigames(request: Request, env: Env): Promise<Response> {
       return send(await stubOf(q.get('game')).board({ game: q.get('game'), range: q.get('range') }));
     }
     if (path === '/minigames/exp' && request.method === 'GET') return send(await (env.MINIGAME_BOARD.getByName('expedition', { locationHint: 'apac' }) as DurableObjectStub<MinigameBoard>).expGet());
+    if (path === '/minigames/fps' && request.method === 'GET') return send(await (env.MINIGAME_BOARD.getByName('fps', { locationHint: 'apac' }) as DurableObjectStub<MinigameBoard>).fpsGet({ range: new URL(request.url).searchParams.get('range') }));
     if (path === '/minigames/top3') {
       if (request.method !== 'GET') return jsonResponse(request, env, { ok: false, error: 'method' }, 405);
       return send(await stub.top3({ range: new URL(request.url).searchParams.get('range') }));
     }
     if (path === '/minigames/fridge' && request.method === 'GET') { const q = new URL(request.url).searchParams; return send(await stub.fridge({ floor: q.get('floor'), since: q.get('since') })); }
-    if (path === '/minigames/exp' && request.method !== 'POST') return jsonResponse(request, env, { ok: false, error: 'method' }, 405);
-    if (path !== '/minigames/exp' && path !== '/minigames/run' && path !== '/minigames/fridge' && path !== '/minigames/submit') return jsonResponse(request, env, { ok: false, error: 'not-found' }, 404);
+    if ((path === '/minigames/exp' || path === '/minigames/fps') && request.method !== 'POST') return jsonResponse(request, env, { ok: false, error: 'method' }, 405);
+    if (path !== '/minigames/exp' && path !== '/minigames/fps' && path !== '/minigames/run' && path !== '/minigames/fridge' && path !== '/minigames/submit') return jsonResponse(request, env, { ok: false, error: 'not-found' }, 404);
     if (request.method !== 'POST') return jsonResponse(request, env, { ok: false, error: 'method' }, 405);
     if ((Number(request.headers.get('Content-Length')) || 0) > MINIGAME_MAX_BODY) return jsonResponse(request, env, { ok: false, error: 'too-large' }, 413);
     const raw = await request.text();
@@ -233,6 +234,15 @@ async function handleMinigames(request: Request, env: Env): Promise<Response> {
     try { const v = JSON.parse(raw); if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error('shape'); body = v; }
     catch { return jsonResponse(request, env, { ok: false, error: 'bad-json' }, 400); }
     if (path === '/minigames/fridge') return send(await stub.fridgeAct({ action: body.action, slot: body.slot, nick: body.nick, floor: body.floor }));
+    if (path === '/minigames/fps') {
+      // 辦公室槍戰：帶登入 token 才算（由主站驗證出帳號）；沒登入的不記錄，只回榜單
+      let account = '';
+      if (typeof body.token === 'string' && body.token) {
+        const coord = env.DATABASE_COORDINATOR.getByName('primary', { locationHint: 'apac' }) as DurableObjectStub<DatabaseCoordinator>;
+        account = await coord.minigameViewer(body.token);
+      }
+      return send(await (env.MINIGAME_BOARD.getByName('fps', { locationHint: 'apac' }) as DurableObjectStub<MinigameBoard>).fpsSubmit({ nick: account, win: body.win, dmg: body.dmg, kills: body.kills, hero: body.hero, mode: body.mode, diff: body.diff, secs: body.secs, ip: request.headers.get('CF-Connecting-IP') || 'unknown' }));
+    }
     if (path === '/minigames/exp') {
       // 帶登入 token 就由主站驗證出帳號；驗不到（沒登入／過期）一律記為「未登入」
       let account = '';

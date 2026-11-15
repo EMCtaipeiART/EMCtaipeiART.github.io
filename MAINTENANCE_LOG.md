@@ -2974,3 +2974,7 @@
 - 新增 pixel-plaza/gameui.css／gameui.js：配色收斂成深綠＋亮綠＋金色高亮，元件改斜切角＋斜紋＋分段經驗條；右上彩色四顆按鈕與右下說明鈕、左下音樂條整合成單一「選單」（M 鍵），選單內：角色、圖鑑、說明、切換人物（管理者）、音樂音量、離開。
 - 動態：載入頁結束時綠色雙幕向上下拉開（START）＋玩家卡／時鐘／選單鈕依序滑入；面板彈出、選單列依序滑入；尊重 prefers-reduced-motion。
 - 舊按鈕只隱藏、由新選單轉呼叫；?embed=1 不啟用。已更新 UI-SPEC §11、MAINTENANCE.md。
+
+## 2026-11-15 槍戰：雲端排行榜（勝場、單場最高傷害）
+- Worker：MinigameBoard 新增 fps_scores 表與 fpsGet／fpsSubmit；index.ts 新增 GET／POST /minigames/fps（獨立實例 getByName(fps)）。只收登入帳號（token 由主站驗證出帳號名），沒登入不記錄；單人「簡單」不計入；範圍檢查（傷害 ≤ 8000、擊倒 ≤ 80、30～1800 秒、英雄白名單）、每 IP 每小時 30 筆、每帳號每小時 20 筆；資料保留 90 天。測試 worker/test/fps-board.test.ts。**Worker 要另外 wrangler deploy 才有效。**
+- 前端 fps/index.html：主選單與結算畫面新增「🏆 排行榜」（勝場榜／單場最高傷害榜，本週／全部，前 20）；每場結束自動上傳（結算畫面顯示上傳結果與累計勝場）。

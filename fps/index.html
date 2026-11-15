@@ -280,7 +280,7 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
         <button class="go" id="startB" type="button">部　署</button>
         <div class="modebox right"><span>勝利條件</span><b>占領中央控制點，隊伍進度先到 100%</b></div>
       </div>
-      <div class="netrow"><button class="exitbtn" id="netB" type="button">連線對戰（最多 4 人）</button><button class="exitbtn" id="recB" type="button" style="margin-left:10px">📊 戰績紀錄</button></div>
+      <div class="netrow"><button class="exitbtn" id="netB" type="button">連線對戰（最多 4 人）</button><button class="exitbtn" id="recB" type="button" style="margin-left:10px">📊 戰績紀錄</button><button class="exitbtn" id="boardB" type="button" style="margin-left:10px">🏆 排行榜</button></div>
       <div class="netbox" id="netBox" hidden>
         <b class="nbt">連線對戰　真人對真人，依加入順序分兩隊（2 人＝1v1，3 人＝2v1，4 人＝2v2）</b>
         <div class="nrow"><button class="exitbtn" id="qmB" type="button">快速配對</button><button class="exitbtn" id="mkB" type="button">邀請朋友</button></div>
@@ -1041,13 +1041,38 @@ function showRecords() {
   $('recX').onclick = () => { box.style.display = 'none'; }; box.onclick = e => { if (e.target === box) box.style.display = 'none'; };
   const cl = $('recClr'); if (cl) cl.onclick = () => { if (confirm('確定要清除這台裝置上的全部戰績嗎？')) { try { localStorage.removeItem(REC_KEY); } catch (e) {} showRecords(); } };
 }
+// ───────── 雲端排行榜（勝場、單場最高傷害；只有登入網站的帳號會被記錄）─────────
+const FPS_API = 'https://machi-design-api.machi-chen.workers.dev/minigames/fps';
+const fpsToken = () => { try { if (localStorage.getItem('designRequestEditorLoggedOut') === '1') return ''; const h = JSON.parse(localStorage.getItem('pixelViewerHandoff') || 'null'); if (h && h.token && Date.now() - Number(h.at) < 86400000) return h.token; return localStorage.getItem('designRequestEditorToken') || sessionStorage.getItem('designRequestEditorToken') || ''; } catch (e) { return ''; } };
+const escH = v => String(v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function cloudSubmit(win) {
+  const note = $('cloudNote'); if (!me) return; const secs = Math.max(30, Math.round((Date.now() - (window.__matchT0 || Date.now())) / 1000));
+  const set = t => { const e = $('cloudNote'); if (e) e.textContent = t; };
+  if (!fpsToken()) { set('登入網站後，成績才會上雲端排行榜'); return; }
+  fetch(FPS_API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify({ token: fpsToken(), win: win === 0 ? 1 : 0, dmg: Math.round(me.dmg || 0), kills: me.kills | 0, hero: me.hero.id, mode: net ? 1 : 0, diff: CFG.diff, secs }) })
+    .then(r => r.json()).then(j => { if (!j.ok) set(j.error === 'rate-limited' ? '上傳太頻繁，這場先不計入排行榜' : '排行榜暫時無法記錄'); else if (j.recorded) set('已上傳雲端排行榜 ✓　累計 ' + (j.me ? j.me.wins : 0) + ' 勝・單場最高傷害 ' + (j.me ? j.me.best : 0)); else set(j.reason === 'easy-mode' ? '單人「簡單」模式不計入排行榜' : '登入網站後，成績才會上雲端排行榜'); })
+    .catch(() => set('排行榜暫時連不上，這場成績只存在本機'));
+}
+function showBoard(tab, range) {
+  tab = tab || 'wins'; range = range || 'week';
+  let box = $('boardPanel'); if (!box) { box = document.createElement('div'); box.id = 'boardPanel'; box.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(6,9,12,.86);display:flex;align-items:center;justify-content:center;padding:14px'; document.body.appendChild(box); }
+  box.style.display = 'flex'; box.onclick = e => { if (e.target === box) box.style.display = 'none'; };
+  const tb = (id, label, on, fn) => '<button type="button" data-k="' + id + '" class="exitbtn" style="' + (on ? 'background:rgba(255,176,0,.25);border-color:#ffb000;' : '') + 'margin-right:8px">' + label + '</button>';
+  const frame = inner => { box.innerHTML = '<div style="background:#0f141a;border:1px solid #3a4654;max-width:560px;width:100%;max-height:92vh;overflow:auto;padding:16px 18px;color:#e8eef5;font:600 13px/1.5 system-ui"><div style="display:flex;align-items:center;gap:10px"><b style="font-size:18px;letter-spacing:.12em">🏆 槍戰排行榜</b><button id="bdX" type="button" class="exitbtn" style="margin-left:auto">關閉</button></div><div style="margin:12px 0 8px">' + tb('wins', '勝場榜', tab === 'wins') + tb('dmg', '單場最高傷害', tab === 'dmg') + '<span style="float:right">' + tb('week', '本週', range === 'week') + tb('all', '全部', range === 'all') + '</span></div>' + inner + '<div style="margin-top:10px;color:#8a97a6;font-size:11px">只有登入網站的帳號會上榜；單人「簡單」模式不計入。成績由遊戲端回報，僅供同事同樂。</div></div>'; $('bdX').onclick = () => { box.style.display = 'none'; }; box.querySelectorAll('button[data-k]').forEach(b => b.onclick = () => { const k = b.dataset.k; if (k === 'wins' || k === 'dmg') showBoard(k, range); else showBoard(tab, k); }); };
+  frame('<div style="color:#8a97a6;padding:14px 0">讀取中…</div>');
+  fetch(FPS_API + '?range=' + range, { cache: 'no-store' }).then(r => r.json()).then(j => {
+    if (!j.ok) throw new Error('board');
+    const rows = (tab === 'wins' ? j.wins : j.dmg) || [], medal = i => ['🥇', '🥈', '🥉'][i] || String(i + 1);
+    frame(rows.length ? '<table style="width:100%;border-collapse:collapse;font-size:13px"><tbody>' + rows.map((x, i) => '<tr style="border-bottom:1px solid #232c36"><td style="padding:7px 8px;width:36px;text-align:center">' + medal(i) + '</td><td style="padding:7px 8px">' + escH(x.nick) + '</td><td style="padding:7px 8px;text-align:right;color:#ffd166"><b>' + (tab === 'wins' ? x.wins + ' 勝' : x.dmg) + '</b></td><td style="padding:7px 8px;text-align:right;color:#8a97a6;font-size:12px">' + (tab === 'wins' ? x.games + ' 場' : (HERO_BY[x.hero] ? HERO_BY[x.hero].ic + ' ' + HERO_BY[x.hero].name : '')) + '</td></tr>').join('') + '</tbody></table>' : '<div style="color:#8a97a6;padding:14px 0">這個區間還沒有人上榜，打一場登入網站的對戰就會出現。</div>');
+  }).catch(() => frame('<div style="color:#ff9c8f;padding:14px 0">排行榜暫時連不上，稍後再試。</div>'));
+}
 function endMatch() { if (state === 'over') return; state = 'over'; try { document.exitPointerLock(); } catch (e) {} document.documentElement.classList.remove('playing'); $('banner').classList.remove('on'); showHeroSel(false); showSB(false);
   const win = prog[0] > prog[1] ? 0 : prog[1] > prog[0] ? 1 : -1; recSave(win);
   const o = $('menu'); o.hidden = false; o.firstElementChild.innerHTML = '<div class="logo"><small>' + (win === 0 ? 'VICTORY' : win === 1 ? 'DEFEAT' : 'DRAW') + '</small>' + (win === 0 ? '勝利' : win === 1 ? '敗北' : '平手') + '</div><div class="mono" style="text-align:center;font-size:38px;margin:8px 0"><span style="color:#5ec8ff">' + Math.floor(prog[0]) + '%</span> : <span style="color:#ff4b3e">' + Math.floor(prog[1]) + '%</span></div>' + teamTable(0, win) + teamTable(1, win) +
-    '<div style="display:flex;gap:14px;align-items:center;justify-content:center;margin-top:16px;flex-wrap:wrap"><button class="go" id="againB" type="button">再戰一場</button><button class="exitbtn" id="toMenu" type="button">🏠 回主選單</button><button class="exitbtn" id="endRec" type="button">📊 戰績紀錄</button><button class="exitbtn" id="endExit" type="button">⏏ 離開</button></div><div style="text-align:center;color:#8a97a6;font-size:12px;margin-top:8px">本場成績已記錄在這台裝置</div>';
+    '<div style="display:flex;gap:14px;align-items:center;justify-content:center;margin-top:16px;flex-wrap:wrap"><button class="go" id="againB" type="button">再戰一場</button><button class="exitbtn" id="toMenu" type="button">🏠 回主選單</button><button class="exitbtn" id="endRec" type="button">📊 戰績紀錄</button><button class="exitbtn" id="endBoard" type="button">🏆 排行榜</button><button class="exitbtn" id="endExit" type="button">⏏ 離開</button></div><div style="text-align:center;color:#8a97a6;font-size:12px;margin-top:8px">本場成績已記錄在這台裝置</div><div id="cloudNote" style="text-align:center;color:#ffd166;font-size:12px;margin-top:4px">成績上傳中…</div>';
   for (const id of ['xh', 'obj', 'hp', 'wp', 'sk', 'allies', 'stick', 'fire', 'jump', 'aim', 'skE', 'skS', 'skR']) $(id).hidden = true; $('scope').classList.remove('on');
-  $('againB').onclick = () => { if (net) netAgain(); else startMatch(); }; $('toMenu').onclick = () => { if (net) { try { netClose(); } catch (e) {} } location.reload(); }; $('endRec').onclick = showRecords; $('endExit').onclick = () => goBack(); }
-function startMatch() { if (!cloudDone) { cloudReady.then(startMatch); return; } unlock(); $('menu').hidden = true; setupMatch(); document.documentElement.classList.add('playing'); resize(); for (const id of ['xh', 'obj', 'hp', 'wp', 'sk', 'allies']) $(id).hidden = false; if (touch) for (const id of ['stick', 'jump', 'aim', 'skE', 'skS', 'skR']) $(id).hidden = false; $('exitB2').hidden = false;
+  $('againB').onclick = () => { if (net) netAgain(); else startMatch(); }; $('toMenu').onclick = () => { if (net) { try { netClose(); } catch (e) {} } location.reload(); }; $('endRec').onclick = showRecords; $('endBoard').onclick = () => showBoard(); $('endExit').onclick = () => goBack(); cloudSubmit(win); }
+function startMatch() { if (!cloudDone) { cloudReady.then(startMatch); return; } window.__matchT0 = Date.now(); unlock(); $('menu').hidden = true; setupMatch(); document.documentElement.classList.add('playing'); resize(); for (const id of ['xh', 'obj', 'hp', 'wp', 'sk', 'allies']) $(id).hidden = false; if (touch) for (const id of ['stick', 'jump', 'aim', 'skE', 'skS', 'skR']) $(id).hidden = false; $('exitB2').hidden = false;
   state = 'count'; stT = 3.6; paused = false; if (!touch) { lockFail = false; askLock(); $('lock').hidden = false; } }
 const lerp = (a, b, t) => a + (b - a) * t;
 let last = performance.now();
@@ -1251,7 +1276,7 @@ async function netJoin() {
 const inviteLink = code => location.origin + location.pathname + '?room=' + code;
 const copyText = async (t, btn) => { try { await navigator.clipboard.writeText(t); } catch (e) { const x = document.createElement('textarea'); x.value = t; document.body.appendChild(x); x.select(); try { document.execCommand('copy'); } catch (e2) {} x.remove(); } const o = btn.textContent; btn.textContent = '已複製 ✓'; setTimeout(() => { btn.textContent = o; }, 1400); };
 function showShare(code) { $('shareBox').hidden = false; $('shCode').textContent = code; $('shLink').value = inviteLink(code); $('cpLink').onclick = () => copyText(inviteLink(code), $('cpLink')); $('shLink').onclick = () => $('shLink').select(); }
-$('recB').onclick = showRecords;
+$('recB').onclick = showRecords; $('boardB').onclick = () => showBoard();
 $('netB').onclick = () => { const b = $('netBox'); b.hidden = !b.hidden; if (b.hidden) { netClose(); netUi(false, ''); } else setTimeout(() => b.scrollIntoView({ behavior: 'smooth', block: 'end' }), 50); };
 { const rm = (Q.get('room') || '').toUpperCase(); if (/^[A-Z0-9]{6}$/.test(rm)) { $('netBox').hidden = false; $('joinIn').value = rm; netSt('受邀加入房間 ' + rm + '：選好英雄，按「加入」'); $('joinB').classList.add('pulse'); } }
 $('qmB').onclick = netQuick; $('mkB').onclick = netMake; $('joinB').onclick = netJoin; $('joinIn').onkeydown = e => { if (e.key === 'Enter') netJoin(); }; $('netCancel').onclick = () => { netClose(); netUi(false, ''); }; $('goB').onclick = netStart; $('botB').onclick = () => { if (!net || net.order || net.role !== 'host') return; net.bots = net.bots || {}; const used = Object.values(net.bots), pool = HEROES.filter(h => !used.includes(h.id)), arr = pool.length ? pool : HEROES, h = arr[Math.floor(Math.random() * arr.length)]; let id = 10; while (net.bots[id]) id++; net.bots[id] = h.id; netLobby(); }; $('lobPl').onclick = e => { const t = e.target.closest && e.target.closest('.bt'); if (t && net && !net.order && net.role === 'host') { delete net.bots[t.dataset.b]; netLobby(); } };
