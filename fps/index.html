@@ -524,7 +524,7 @@ const WEAPONS = {
   stapler: { n: '訂書機衝鋒槍', ic: '📌', kind: 'auto', rate: 12, dmg: 11, spread: .018, pellets: 1, range: 90, kick: .012, col: 0xffd24a },
   keyboard: { n: '鍵盤霰彈', ic: '⌨️', kind: 'shotgun', rate: 1.2, dmg: 8, spread: .07, pellets: 10, range: 30, kick: .05, col: 0xffffff },
   mouse: { n: '滑鼠手槍', ic: '🖱️', kind: 'semi', rate: 5.5, dmg: 16, spread: .005, pellets: 1, range: 110, kick: .02, col: 0xbfe9ff },
-  ruler: { n: '直尺狙擊', ic: '📏', kind: 'sniper', rate: 1.1, dmg: 85, spread: .045, pellets: 1, range: 200, kick: .05, col: 0xffb000, zoom: 26 },
+  ruler: { n: '直尺狙擊', ic: '📏', kind: 'sniper', rate: 1.1, dmg: 115, hm: 2, spread: .045, pellets: 1, range: 200, kick: .05, col: 0xffb000, zoom: 26 },
   phone: { n: '電話訊號彈', ic: '☎️', kind: 'rocket', rate: 1.6, dmg: 32, heal: 26, spread: .006, pellets: 1, range: 60, kick: .035, col: 0x7fe3ff, splash: 3.0, speed: 26 }
 };
 // ───────── 英雄：5 位（每隊固定 1 重裝＋2 輸出＋2 支援） ─────────
@@ -534,7 +534,7 @@ const HEROES = [
   { id: 'noise', char: 'Noise', name: 'Noise', title: '截稿狂熱', role: '輸出', ic: '⚡', hp: 230, speed: 6.0, w: 'stapler', pref: 9, sleeve: 0x1d4ed8,
     e: { n: '閃身步', ic: '💨', cd: 5, d: '向移動方向急衝一小段' }, s: { n: '咖啡因', ic: '☕', cd: 12, d: '5 秒內移速 +45%、射速 +20%' }, q: { n: '截稿狂暴', ic: '🔥', d: '6 秒內射速 ×1.6、傷害 ×1.35' } },
   { id: 'anna', char: 'Anna', name: 'Anna', title: '精準標記', role: '輸出', ic: '🎯', hp: 230, speed: 5.4, w: 'ruler', pref: 18, sleeve: 0xf59e0b,
-    e: { n: '彈跳', ic: '🦘', cd: 6, d: '向上彈跳並往前飛一段' }, s: { n: '標記', ic: '🔍', cd: 12, d: '標記 40 公尺內的敵人 4 秒：他們受到的傷害 +25%（不會穿牆顯示）' }, q: { n: '全場鎖定', ic: '🎯', d: '標記所有敵人 7 秒（受傷 +25%），自己傷害 ×1.3' } },
+    e: { n: '彈跳', ic: '🦘', cd: 6, d: '朝你按的方向（前後左右，沒按就往前）彈跳一段，並回復 20 血' }, s: { n: '標記', ic: '🔍', cd: 12, d: '標記 40 公尺內的敵人 4 秒：他們受到的傷害 +25%（不會穿牆顯示）' }, q: { n: '鎖頭', ic: '🎯', d: '6 秒內自動鎖定最近敵人的頭部，每一槍都是爆頭' } },
   { id: 'amber', char: 'Amber', name: 'Amber', title: '茶歇補給', role: '支援', ic: '☕', hp: 150, speed: 5.6, w: 'mouse', pref: 12, sleeve: 0x16a34a,
     e: { n: '治療光環', ic: '💚', cd: 12, d: '4 秒內持續治療身邊 8 公尺內的隊友（含自己）' }, s: { n: '加油鼓舞', ic: '📣', cd: 10, d: '附近隊友 4 秒移速 +35%' }, q: { n: '茶歇回復', ic: '🫖', d: '全隊立刻回滿血' } },
   { id: 'leona', char: 'Leona', name: 'Leona', title: '電話客服', role: '支援', ic: '☎️', hp: 150, speed: 5.5, w: 'phone', pref: 14, sleeve: 0xdb2777,
@@ -582,7 +582,7 @@ const TEAMCOL = [0x5ec8ff, 0xff4b3e];
 let hbT = 0, vmSX = 0, vmSY = 0, vmLY = 0, vmLP = 0, vmEquip = 0, vmKick = 0, state = 'menu', paused = false, tLeft = 480, prog = [0, 0], owner = -1, cap = 0, capTeam = -1, contested = false, present = [0, 0], stT = 0, yaw = 0, pitch = 0, locked = false, zoom = false, shake = 0, recoil = 0, bobT = 0;
 const keys = {}, joy = { x: 0, y: 0 }, hold = { fire: false };
 function spawnPoint(team, lt) { if (lt === undefined) lt = team; const pts = team === 0 ? [[-26, -10], [-26, 0], [-26, 10], [-22, 20], [-22, -20]] : [[26, -10], [26, 0], [26, 10], [22, 20], [22, -20]]; let best = null, bd = -1; for (let i = 0; i < 6; i++) { const p = pts[Math.floor(Math.random() * pts.length)]; let md = 1e9; for (const a of actors) if (!a.dead && a.team !== lt) md = Math.min(md, Math.hypot(a.x - p[0], a.z - p[1])); if (md > bd) { bd = md; best = p; } } return best; }
-function respawn(a) { if (a.nextHero) { applyHero(a, HERO_BY[a.nextHero]); a.nextHero = null; if (a.isMe) { setViewmodel(); buildHud(); } else rebuildLook(a); } const p = spawnPoint(a.gt === undefined ? a.team : a.gt, a.team); a.x = p[0] + rand(-1, 1); a.z = p[1] + rand(-1, 1); a.y = 0; a.vx = a.vz = a.vy = 0; a.hp = a.maxHp; a.dead = false; a.inv = 2; a.pitch = 0; a.path = []; a.tgt = null; a.fireT = .4; a.stun = a.mark = a.heal = a.volley = a.chargeT = a.buff = a.rage = a.dmgT = a.spd = 0; a.armor = a.armorT = 0; a.actT = { e: 0, s: 0, q: 0 }; a.yaw = (a.gt === undefined ? a.team : a.gt) === 0 ? -Math.PI / 2 : Math.PI / 2; if (a.isMe) { yaw = a.yaw; pitch = 0; $('heroSel').hidden = true; specT = null; $('spec').hidden = true; } }
+function respawn(a) { if (a.nextHero) { applyHero(a, HERO_BY[a.nextHero]); a.nextHero = null; if (a.isMe) { setViewmodel(); buildHud(); } else rebuildLook(a); } const p = spawnPoint(a.gt === undefined ? a.team : a.gt, a.team); a.x = p[0] + rand(-1, 1); a.z = p[1] + rand(-1, 1); a.y = 0; a.vx = a.vz = a.vy = 0; a.hp = a.maxHp; a.dead = false; a.inv = 2; a.pitch = 0; a.path = []; a.tgt = null; a.fireT = .4; a.stun = a.mark = a.heal = a.volley = a.chargeT = a.buff = a.rage = a.dmgT = a.spd = a.lockT = 0; a.armor = a.armorT = 0; a.actT = { e: 0, s: 0, q: 0 }; a.yaw = (a.gt === undefined ? a.team : a.gt) === 0 ? -Math.PI / 2 : Math.PI / 2; if (a.isMe) { yaw = a.yaw; pitch = 0; $('heroSel').hidden = true; specT = null; $('spec').hidden = true; } }
 function drawHpBar(a) {
   const key = Math.ceil(a.hp) + '|' + Math.ceil(a.armor || 0) + '|' + a.maxHp; if (a._hk === key) return; a._hk = key;
   const c = a.hpC, g = c.getContext('2d'), w = c.width, h = c.height, pad = 3, iw = w - pad * 2, ih = h - pad * 2, f = clamp(a.hp / a.maxHp, 0, 1), col = a.hp < a.maxHp * .3 ? '#ffd24a' : (a.team ? '#ff4b3e' : '#5ec8ff');
@@ -753,7 +753,7 @@ const vTmp = new THREE.Vector3();
 function muzzleOf(a) { if (a.isMe) { camera.updateMatrixWorld(true); flash.getWorldPosition(vTmp); return [vTmp.x, vTmp.y, vTmp.z]; } const f = fwd(a), rx = -f[1], rz = f[0]; return [a.x + f[0] * .6 + rx * .25, a.y + 1.3, a.z + f[1] * .6 + rz * .25]; }
 function fireWeapon(a, w) {
   const dm = (a.rage > 0 ? 1.35 : 1) * (a.dmgT > 0 ? 1.3 : 1), eye = [a.x, a.y + 1.55, a.z], mz = muzzleOf(a);
-  const baseSpread = a.isMe ? (w.spread * (w.kind === 'sniper' && zoom ? 0 : 1) * (Math.hypot(a.vx, a.vz) > 2 ? 1.6 : 1) * (a.ground ? 1 : 2.2)) : ((w.kind === 'sniper' ? .012 : w.spread) + [.09, .065, .018][CFG.diff]);
+  const baseSpread = a.isMe ? (w.spread * (w.kind === 'sniper' && (zoom || a.lockT > 0) ? 0 : 1) * (Math.hypot(a.vx, a.vz) > 2 ? 1.6 : 1) * (a.ground ? 1 : 2.2)) : ((w.kind === 'sniper' ? .012 : w.spread) + [.09, .065, .018][CFG.diff]);
   if (a.isMe) { SFX.shot(w.kind); recoil = Math.min(1, recoil + w.kick * 8); vmKick = 1; pitch += w.kick * (w.kind === 'sniper' ? 1 : .5) * (.7 + Math.random() * .6); yaw += (Math.random() - .5) * w.kick * .5; flash.visible = true; flash.material.rotation = Math.random() * 6.28; const fs = w.kind === 'shotgun' || w.kind === 'rocket' ? .7 : w.kind === 'sniper' ? .6 : .4; flash.scale.set(fs * (.8 + Math.random() * .4), fs * (.8 + Math.random() * .4), 1); flashLight.intensity = 2.6; setTimeout(() => flash.visible = false, 50); }
   else { a.fireAnim = .12; if (Math.hypot(a.x - me.x, a.z - me.z) < 40) SFX.shot(w.kind); addPart(starTex, 0xffc060, mz[0], mz[1], mz[2], 0, 0, 0, .06, .7, 0, true); }
   if (w.kind !== 'sniper' && w.kind !== 'rocket') addPart(sparkTex, 0xffd24a, mz[0], mz[1], mz[2], rand(-1, 1) + (a.isMe ? 1.2 : 0), rand(1, 2.4), rand(-1, 1), .5, .08, 12, false);   // 彈殼／釘子
@@ -762,11 +762,12 @@ function fireWeapon(a, w) {
     const [dx, dy, dz] = aimDir(a, baseSpread); const wr = rayWorldN(eye[0], eye[1], eye[2], dx, dy, dz, w.range), pierce = w.kind === 'sniper' && a.hero.id === 'anna' && (!a.isMe || zoom); let bestT = pierce ? w.range : wr.t, nrm = wr.n, who = null, head = false, bar = null, thru = false;   // Anna 開鏡：子彈可穿牆，穿牆後傷害 ×0.5
     const rb = rayBarriers(eye[0], eye[1], eye[2], dx, dy, dz, bestT, a.team); if (rb.bar) { bestT = rb.t; bar = rb.bar; nrm = null; }
     for (const t of actors) { if (t === a || t.dead || t.team === a.team) continue; const tt = rayCyl(eye[0], eye[1], eye[2], dx, dy, dz, t, bestT); if (tt >= 0 && tt < bestT) { bestT = tt; who = t; bar = null; head = eye[1] + dy * tt > t.y + 1.45; } }
+    if (who && a.lockT > 0) head = true;
     if (pierce) { if (who && bestT > wr.t) thru = true; else if (!who && !bar) { bestT = wr.t; nrm = wr.n; } }
     const ex = eye[0] + dx * bestT, ey = eye[1] + dy * bestT, ez = eye[2] + dz * bestT;
     if (a.isMe || Math.hypot(a.x - me.x, a.z - me.z) < 38) beam(mz, [ex, ey, ez], w.col, w.kind === 'sniper' ? .035 : w.kind === 'shotgun' ? .018 : .026, w.kind === 'sniper' ? .18 : .09);
     if (bar) { bar.hp -= w.dmg * dm; if (a.isMe) hitMark(false); burst(ex, ey, ez, 0x7fd0ff, 1.3, .3, 1); sparkBurst(ex, ey, ez, 3, 0x7fd0ff, 2); }
-    else if (who) { const fall = w.kind === 'shotgun' ? clamp(1.1 - bestT / 40, .25, 1) : 1; dmgTo(who, w.dmg * dm * fall * (head ? 1.7 : 1) * (thru ? .5 : 1), a, head, w.ic, ex, ey, ez); }
+    else if (who) { const fall = w.kind === 'shotgun' ? clamp(1.1 - bestT / 40, .25, 1) : 1; dmgTo(who, w.dmg * dm * fall * (head ? (w.hm || 1.7) : 1) * (thru ? .5 : 1), a, head, w.ic, ex, ey, ez); }
     else wallHit(ex, ey, ez, nrm, w.col);
   }
 }
@@ -816,7 +817,7 @@ function useE(a) {
   switch (a.hero.id) {
     case 'machi': spawnBarrier(a); break;
     case 'noise': { const d = moveDir(a); a.vx = d[0] * 20; a.vz = d[1] * 20; a.dashT = .22; for (let i = 0; i < 6; i++) addPart(sparkTex, 0x7fb0ff, a.x - d[0] * i * .3, a.y + .8, a.z - d[1] * i * .3, 0, 0, 0, .3, .8, 0, true); break; }
-    case 'anna': { a.vy = 9; a.ground = false; a.vx = f[0] * 8; a.vz = f[1] * 8; a.dashT = .5; ringFx(a.x, a.y, a.z, 0xffd066, 2.2, .35); break; }
+    case 'anna': { const d = moveDir(a); a.vy = 9; a.ground = false; a.vx = d[0] * 9; a.vz = d[1] * 9; a.dashT = .5; healTo(a, 20, a); ringFx(a.x, a.y, a.z, 0xffd066, 2.2, .35); break; }
     case 'amber': a.heal = 4; ringFx(a.x, a.y, a.z, 0x5ef0a4, 8, .6); break;
     case 'leona': { const t = leonaTarget(a); if (t === a) { healTo(a, 35, a); } else healTo(t, 70, a); const m = muzzleOf(a); beam(m, [t.x, t.y + 1.2, t.z], 0xffd066, .07, .4); ringFx(t.x, t.y, t.z, 0x5ef0a4, 2, .5); sparkBurst(t.x, t.y + 1.2, t.z, 10, 0x5ef0a4, 3); break; }
   }
@@ -836,7 +837,7 @@ function useQ(a) {
   switch (a.hero.id) {
     case 'machi': { SFX.boom(); burst(a.x, a.y + .4, a.z, 0xffb000, 14, .5); ringFx(a.x, a.y, a.z, 0xffb000, 8, .55); ringFx(a.x, a.y, a.z, 0xffffff, 5, .35); sparkBurst(a.x, a.y + .3, a.z, 20, 0xffb000, 7); for (const t of enemiesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 8) { dmgTo(t, 70, a, false, '💥', t.x, t.y + 1.4, t.z); t.stun = 1.2; if (t.remote) netKb(t, 0, 0, 1.2); } shake = Math.min(1, shake + .7); break; }
     case 'noise': a.rage = 6; ringFx(a.x, a.y, a.z, 0xff6a3d, 4, .5); break;
-    case 'anna': for (const t of enemiesOf(a)) t.mark = 7; a.dmgT = 7; ringFx(a.x, a.y, a.z, 0xff6a5a, 60, 1); break;
+    case 'anna': a.lockT = 6; ringFx(a.x, a.y, a.z, 0xff6a5a, 6, .8); ringFx(a.x, a.y, a.z, 0xffd066, 3, .5); if (a.isMe) banner('鎖頭', '6 秒內自動瞄準最近敵人的頭', 1400); break;
     case 'amber': for (const t of alliesOf(a)) { healTo(t, t.maxHp - t.hp, a); ringFx(t.x, t.y, t.z, 0x5ef0a4, 2.4, .6); } ringFx(a.x, a.y, a.z, 0x5ef0a4, 18, .8); break;
     case 'leona': { const down = actors.filter(t => t.team === a.team && t.dead && t !== a); if (down.length) { for (const t of down) if (!t.remote) reviveHere(t, a); else ringFx(t.x, t.y, t.z, 0x7fe3ff, 3, .8); } else { for (const t of alliesOf(a)) { giveArmor(t, 50, 6); healTo(t, 30, a); t.dmgT = Math.max(t.dmgT, 6); } }   // 沒有倒下的隊友時，退回原本的護甲加治療
       ringFx(a.x, a.y, a.z, 0x7fe3ff, 26, .9); break; }
@@ -942,12 +943,13 @@ function stepActor(a, dt) {
   // 連環轟炸
   if (a.volley > 0) { a.volley -= dt; a.volT -= dt; if (a.volT <= 0) { a.volT = .4; fireWeapon(a, WEAPONS.phone); } }
   // 衝鋒撞人
-  if (!a.remote && !a.dead && a.hp < a.maxHp) { a.hurtT = (a.hurtT || 0) + dt; if (a.hurtT > 4) a.hp = Math.min(a.maxHp, a.hp + a.maxHp * .08 * dt); }   // 4 秒沒受傷開始自動回血（每秒 8% 血量）
+  if (a.lockT > 0) a.lockT -= dt; if (!a.remote && !a.dead && a.hp < a.maxHp) { a.hurtT = (a.hurtT || 0) + dt; if (a.hurtT > 4) a.hp = Math.min(a.maxHp, a.hp + a.maxHp * .08 * dt); }   // 4 秒沒受傷開始自動回血（每秒 8% 血量）
   if (a.chargeT > 0) { a.chargeT -= dt; for (const t of enemiesOf(a)) if (!a.chHit.has(t) && Math.hypot(t.x - a.x, t.z - a.z) < 1.5) { a.chHit.add(t); dmgTo(t, 60, a, false, '🐂'); const f = fwd(a); t.vx += f[0] * 12; t.vz += f[1] * 12; t.stun = Math.max(t.stun, .4); if (t.remote) netKb(t, f[0] * 12, f[1] * 12, .4); } }
   if (a.isMe) {
     if (keys.ArrowLeft) yaw += 2.2 * dt; if (keys.ArrowRight) yaw -= 2.2 * dt; if (keys.ArrowUp) pitch = clamp(pitch + 1.6 * dt, -1.45, 1.45); if (keys.ArrowDown) pitch = clamp(pitch - 1.6 * dt, -1.45, 1.45);
     const mx = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + joy.x, mz = (keys.KeyS ? 1 : 0) - (keys.KeyW ? 1 : 0) + joy.y, l = Math.hypot(mx, mz), sp = a.hero.speed * (a.buff > 0 ? 1.45 : 1) * (a.spd > 0 ? 1.35 : 1) * (zoom ? .6 : 1), fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = -fz, rz = fx;
     if (a.dashT > 0) a.dashT -= dt; else if (a.stun > 0) { a.vx *= .9; a.vz *= .9; } else { const k = l > 1 ? 1 / l : 1, tx = (fx * -mz + rx * mx) * k * sp, tz = (fz * -mz + rz * mx) * k * sp, ac = a.ground ? 14 : 3; a.vx += (tx - a.vx) * Math.min(1, dt * ac); a.vz += (tz - a.vz) * Math.min(1, dt * ac); }
+    if (a.lockT > 0) { let bt = null, bd = 1e9; for (const t of enemiesOf(a)) { const dd = Math.hypot(t.x - a.x, t.z - a.z); if (dd < 90 && dd < bd && los(a, t, a.y + 1.55, t.y + 1.62)) { bd = dd; bt = t; } } if (bt) { const dx = bt.x - a.x, dz = bt.z - a.z, dy = bt.y + 1.62 - (a.y + 1.55), hh = Math.hypot(dx, dz); let dyw = Math.atan2(-dx, -dz) - yaw; dyw = Math.atan2(Math.sin(dyw), Math.cos(dyw)); const kk = Math.min(1, dt * 16); yaw += dyw * kk; pitch = clamp(pitch + (Math.atan2(dy, hh) - pitch) * kk, -1.45, 1.45); } }   // Anna 大招：鎖頭
     let tAim = false; if (touch && state === 'play' && !a.dead) {   // 手機半自瞄：準心接近敵人時輕輕吸附（開火時更強），只修正小角度，不會自己轉去找人
       let best = null, bd = 1e9; const cone = .2;
       for (const t of enemiesOf(a)) { if (t.dead) continue; const dx = t.x - a.x, dz = t.z - a.z, dy = t.y + 1.15 - (a.y + 1.55), h = Math.hypot(dx, dz); if (h < .5 || h > 45) continue; let dyaw = Math.atan2(-dx, -dz) - yaw; dyaw = Math.atan2(Math.sin(dyaw), Math.cos(dyaw)); const dp = Math.atan2(dy, h) - pitch, ang = Math.hypot(dyaw * Math.cos(pitch), dp); if (ang < cone && ang < bd && los(a, t, a.y + 1.55, t.y + 1.15)) { bd = ang; best = [dyaw, dp]; } }
@@ -1110,7 +1112,7 @@ function netStepRemote(a, dt) {   // 其他玩家：只做平滑靠近與視覺�
 function netAbilityOnMe(P, k) {   // 別人施放的技能，對我生效的部分（依隊伍與距離）
   const id = P.hero.id, ally = P.team === me.team, d = Math.hypot(P.x - me.x, P.z - me.z); if (me.dead) { if (k === 'q' && id === 'leona' && ally) reviveHere(me, P); return; }
   if (k === 's') { if (id === 'anna' && !ally && d < 40) me.mark = 4; else if (id === 'amber' && ally && d < 12) { me.spd = 4; SFX.pick(); } else if (id === 'leona' && ally && d < 14) giveArmor(me, 40, 6); }
-  else if (k === 'q') { if (id === 'anna' && !ally) me.mark = 7; else if (id === 'amber' && ally) { NETIN = true; healTo(me, me.maxHp - me.hp, P); NETIN = false; } else if (id === 'leona' && ally) { giveArmor(me, 50, 6); NETIN = true; healTo(me, 30, P); NETIN = false; me.dmgT = Math.max(me.dmgT, 6); } }
+  else if (k === 'q') { if (id === 'amber' && ally) { NETIN = true; healTo(me, me.maxHp - me.hp, P); NETIN = false; } else if (id === 'leona' && ally) { giveArmor(me, 50, 6); NETIN = true; healTo(me, 30, P); NETIN = false; me.dmgT = Math.max(me.dmgT, 6); } }
 }
 function netMsg(m) {
   if (!net) return; const sid = m.r !== undefined ? m.r : m.i !== undefined ? m.i : (net.role === 'host' ? 1 : 0);
