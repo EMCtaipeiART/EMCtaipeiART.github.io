@@ -1,0 +1,113 @@
+/* 凱曜多元宇宙｜遊戲風介面（2026-11-15）
+   原則：只用一組綠色＋金色高亮；選項整合進單一「選單」；斜切角、斜紋、分段血條；進場／開面板有動態。
+   這份蓋在 index.html 內舊樣式之後（先載入 index.html 的 <style>，再載入這份），舊的彩色按鈕列直接隱藏，功能由新選單轉呼叫。 */
+:root{
+  --g0:#04100a;--g1:#09201a;--g2:#10362a;--g3:#194a38;--gl:#2d6a50;--ga:#5fe08a;--gold:#ffd166;--tx:#eafff2;--tx2:#9fc8b0;
+  --cut:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+  --cut-s:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+  --stripe:repeating-linear-gradient(135deg,rgba(255,255,255,.045) 0 8px,transparent 8px 16px);
+}
+html.embed #gMenuBtn,html.embed #gMenu,html.embed #gMask,html.embed #gWipe{display:none!important}
+
+/* ── 舊的彩色按鈕列、右下說明鈕：隱藏（功能仍在，由新選單轉呼叫） ── */
+#hud .hp-top,#hud .hp-br{display:none!important}
+
+/* ── 左上玩家卡 ── */
+#hud .hp-card{left:14px;top:14px;min-width:208px;padding:9px 18px 9px 9px;gap:11px;border:0!important;border-radius:0!important;clip-path:var(--cut);
+  background:var(--stripe),linear-gradient(180deg,var(--g2),var(--g1))!important;box-shadow:inset 0 0 0 2px var(--gl),inset 0 2px 0 rgba(255,255,255,.08)!important;backdrop-filter:none!important}
+#hud .hp-card::after,#hud .hp-clock::after{display:none!important}
+#hud .hp-card::before{content:'';position:absolute;left:0;top:10px;bottom:10px;width:4px;background:linear-gradient(var(--gold),#e0a92c);clip-path:polygon(0 0,100% 4px,100% calc(100% - 4px),0 100%)}
+#hud .hp-av{width:58px;height:58px;border-radius:10px;padding:3px;background:linear-gradient(135deg,var(--ga),var(--gl));box-shadow:0 0 0 2px var(--g0)}
+#hud .hp-av img{border-radius:8px;background:var(--g3)}
+#hud .hp-name{font-size:17px;letter-spacing:.04em;color:var(--tx);text-shadow:0 2px 0 rgba(0,0,0,.45)}
+#hud .hp-st{border-radius:0;clip-path:var(--cut-s);background:rgba(95,224,138,.16);color:var(--ga);padding:1px 11px;font-size:12px;letter-spacing:.06em}
+#hud .hp-exp{height:9px;border-radius:0;border:0;background:rgba(0,0,0,.5);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);position:relative}
+#hud .hp-exp i{background:linear-gradient(var(--ga),#2eb866);border-radius:0}
+#hud .hp-exp::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 9px,rgba(4,16,10,.75) 9px 11px);pointer-events:none}
+#hud .hp-lv{color:var(--gold);letter-spacing:.08em;font-size:11px}
+
+/* ── 上中時鐘 ── */
+#hud .hp-clock{top:14px;border:0!important;border-radius:0!important;clip-path:var(--cut-s);padding:7px 20px;font-size:14px;letter-spacing:.08em;color:var(--tx);
+  background:var(--stripe),linear-gradient(180deg,var(--g2),var(--g1))!important;box-shadow:inset 0 0 0 2px var(--gl)!important;backdrop-filter:none!important}
+
+/* ── 右上：單一「選單」入口 ── */
+#gMenuBtn{position:fixed;right:14px;top:14px;z-index:11;height:48px;padding:0 20px 0 14px;display:flex;align-items:center;gap:10px;cursor:pointer;border:0;color:var(--g0);font:700 16px/1 'Fredoka','Noto Sans TC',system-ui,sans-serif;letter-spacing:.1em;
+  clip-path:var(--cut);background:var(--stripe),linear-gradient(180deg,#ffe08a,#f2b93c);box-shadow:inset 0 -4px 0 rgba(0,0,0,.2),inset 0 2px 0 rgba(255,255,255,.5);transition:transform .12s,filter .12s}
+#gMenuBtn svg{width:24px;height:24px;stroke:var(--g0);stroke-width:2.4;fill:none;stroke-linecap:round}
+#gMenuBtn:hover{transform:translateY(-2px);filter:brightness(1.06)}
+#gMenuBtn:active{transform:translateY(1px);filter:brightness(.95)}
+#gMenuBtn kbd{font:700 11px/1 inherit;border:1.5px solid rgba(4,16,10,.55);padding:2px 5px;margin-left:2px;opacity:.75}
+#gMask{position:fixed;inset:0;z-index:13;background:rgba(2,10,6,.46);opacity:0;pointer-events:none;transition:opacity .25s}
+#gMask.on{opacity:1;pointer-events:auto}
+#gMenu{position:fixed;right:0;top:0;bottom:0;z-index:16;width:min(318px,86vw);box-sizing:border-box;padding:70px 16px 16px;display:flex;flex-direction:column;gap:6px;color:var(--tx);font-family:'Fredoka','Noto Sans TC',system-ui,sans-serif;
+  background:var(--stripe),linear-gradient(180deg,var(--g2),var(--g0));box-shadow:-8px 0 0 var(--g0),inset 2px 0 0 var(--gl);transform:translateX(104%);transition:transform .32s cubic-bezier(.2,.9,.25,1);visibility:hidden}
+#gMenu.on{transform:none;visibility:visible}
+#gMenu .gm-title{position:absolute;left:18px;top:20px;font-weight:700;font-size:13px;letter-spacing:.34em;color:var(--ga)}
+#gMenu .gm-title::after{content:'';display:block;width:34px;height:3px;margin-top:6px;background:var(--gold)}
+#gMenu .gm-x{position:absolute;right:14px;top:14px;width:38px;height:38px;border:0;color:var(--tx);cursor:pointer;font-size:16px;clip-path:var(--cut-s);background:rgba(255,255,255,.1)}
+#gMenu .gm-x:hover{background:rgba(255,255,255,.2)}
+#gMenu .gm-sec{margin:12px 2px 2px;font-size:11px;font-weight:700;letter-spacing:.3em;color:var(--tx2)}
+#gMenu .gm-row{position:relative;display:flex;align-items:center;gap:13px;height:50px;padding:0 16px 0 14px;border:0;color:var(--tx);cursor:pointer;text-align:left;font:700 16px/1 inherit;letter-spacing:.06em;
+  clip-path:var(--cut-s);background:rgba(255,255,255,.06);transition:background .12s,transform .12s,color .12s}
+#gMenu .gm-row::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:transparent;transition:background .12s}
+#gMenu .gm-row svg{width:24px;height:24px;flex:none;stroke:var(--ga);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+#gMenu .gm-row:hover,#gMenu .gm-row:focus-visible{background:rgba(95,224,138,.18);transform:translateX(-4px);outline:0}
+#gMenu .gm-row:hover::before,#gMenu .gm-row:focus-visible::before{background:var(--gold)}
+#gMenu .gm-row:active{transform:translateX(-4px) scale(.985)}
+#gMenu .gm-row small{margin-left:auto;font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--tx2);border:1.5px solid rgba(159,200,176,.4);padding:2px 6px}
+#gMenu .gm-row.danger svg{stroke:#ff9c8f}
+#gMenu .gm-row.danger:hover{background:rgba(255,120,105,.18)}
+#gMenu .gm-set{margin-top:2px;padding:12px 14px;clip-path:var(--cut-s);background:rgba(255,255,255,.06);display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700}
+#gMenu .gm-set>svg{width:22px;height:22px;stroke:var(--ga);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:none}
+#gMenu #bgmUI{position:static!important;background:none!important;border:0!important;padding:0!important;margin-left:auto;gap:8px!important}
+#gMenu #bgmUI input[type=range]{accent-color:var(--ga)!important;width:96px!important}
+#gMenu .gm-foot{margin-top:auto;font-size:11px;letter-spacing:.14em;color:var(--tx2);text-align:center;padding-top:10px}
+
+/* ── 面板統一成同一種遊戲風（圖鑑、說明、選角、角色頁面） ── */
+#drawer,#dexPanel,#helpPanel{border:0!important;border-radius:0!important;clip-path:var(--cut);background:var(--stripe),linear-gradient(180deg,var(--g2),var(--g1))!important;box-shadow:inset 0 0 0 2px var(--gl)!important;backdrop-filter:none!important}
+#drawer::before,#dexPanel::before,#helpPanel::before{content:'';position:absolute;left:0;right:0;top:0;height:4px;background:linear-gradient(90deg,var(--gold) 0 64px,var(--ga) 64px 100%)}
+.dr-head,.px-head{letter-spacing:.1em;color:var(--tx);padding-top:8px!important}
+.px-x{border-radius:0!important;clip-path:var(--cut-s);background:rgba(255,255,255,.12)!important}
+.px-x:hover{background:rgba(255,255,255,.24)!important}
+#roster button{border:0!important;border-radius:0!important;clip-path:var(--cut-s);background:rgba(255,255,255,.07)!important}
+#roster button.on{background:rgba(255,209,102,.2)!important;box-shadow:inset 3px 0 0 var(--gold)}
+#cpage .cp-wrap{border:0!important;border-radius:0!important;clip-path:var(--cut);background:var(--stripe),linear-gradient(180deg,var(--g2),var(--g1))!important;box-shadow:inset 0 0 0 2px var(--gl)!important}
+#cpage{background:rgba(2,10,6,.62)!important;backdrop-filter:none!important}
+
+/* ── 動態 ── */
+@keyframes gSlideL{from{opacity:0;transform:translateX(-70px)}to{opacity:1;transform:none}}
+@keyframes gSlideT{from{opacity:0;transform:translate(-50%,-50px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes gSlideR{from{opacity:0;transform:translateX(70px)}to{opacity:1;transform:none}}
+@keyframes gPopC{from{opacity:0;transform:translate(-50%,-47%) scale(.94)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes gPopD{from{opacity:0;transform:translateX(-50%) translateY(18px)}to{opacity:1;transform:translateX(-50%)}}
+@keyframes gPopW{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes gGlint{0%{box-shadow:inset 0 -4px 0 rgba(0,0,0,.2),inset 0 2px 0 rgba(255,255,255,.5),0 0 0 0 rgba(255,209,102,.7)}100%{box-shadow:inset 0 -4px 0 rgba(0,0,0,.2),inset 0 2px 0 rgba(255,255,255,.5),0 0 0 18px rgba(255,209,102,0)}}
+@keyframes gRowIn{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
+#gWipe{position:fixed;inset:0;z-index:60;pointer-events:none;display:none;overflow:hidden}
+#gWipe.on{display:block}
+#gWipe i{position:absolute;left:-10%;right:-10%;height:52%;background:var(--stripe),linear-gradient(135deg,var(--g3),var(--g0))}
+#gWipe i.t{top:0;border-bottom:5px solid var(--gold)}
+#gWipe i.b{bottom:0;border-top:5px solid var(--ga)}
+#gWipe b{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:700 clamp(30px,8vw,58px)/1 'Fredoka',sans-serif;letter-spacing:.3em;color:var(--tx);text-shadow:0 4px 0 rgba(0,0,0,.4)}
+@media (prefers-reduced-motion:no-preference){
+  #gWipe.on i.t{animation:gWipeT .62s .42s cubic-bezier(.7,0,.2,1) both}
+  #gWipe.on i.b{animation:gWipeB .62s .42s cubic-bezier(.7,0,.2,1) both}
+  #gWipe.on b{animation:gWipeTx .9s both}
+  @keyframes gWipeT{to{transform:translateY(-104%)}}
+  @keyframes gWipeB{to{transform:translateY(104%)}}
+  @keyframes gWipeTx{0%{opacity:0;letter-spacing:.7em}25%{opacity:1;letter-spacing:.3em}70%{opacity:1}100%{opacity:0}}
+  html.g-in #hud .hp-card{animation:gSlideL .5s .78s cubic-bezier(.2,.9,.25,1) both}
+  html.g-in #hud .hp-clock{animation:gSlideT .5s .9s cubic-bezier(.2,.9,.25,1) both}
+  html.g-in #gMenuBtn{animation:gSlideR .5s 1s cubic-bezier(.2,.9,.25,1) both,gGlint 1.2s 1.6s 2 ease-out}
+  #dexPanel:not([hidden]),#helpPanel:not([hidden]){animation:gPopC .24s cubic-bezier(.2,1.2,.4,1)}
+  #drawer:not([hidden]){animation:gPopD .24s cubic-bezier(.2,1.2,.4,1)}
+  #cpage:not([hidden]) .cp-wrap{animation:gPopW .26s cubic-bezier(.2,1.2,.4,1)}
+  #gMenu.on .gm-row,#gMenu.on .gm-set{animation:gRowIn .3s both cubic-bezier(.2,.9,.25,1)}
+  #gMenu.on .gm-row:nth-of-type(2){animation-delay:.04s}#gMenu.on .gm-row:nth-of-type(3){animation-delay:.08s}#gMenu.on .gm-row:nth-of-type(4){animation-delay:.12s}#gMenu.on .gm-row:nth-of-type(5){animation-delay:.16s}#gMenu.on .gm-set{animation-delay:.2s}
+}
+@media (max-width:640px){
+  #hud .hp-card{min-width:0;padding-right:14px}
+  #hud .hp-clock{top:84px!important;left:14px!important;transform:none!important;padding:5px 14px!important;font-size:13px!important}
+  @keyframes gSlideT{from{opacity:0;transform:translateY(-40px)}to{opacity:1;transform:none}}
+  #gMenuBtn{height:44px;padding:0 14px 0 10px}#gMenuBtn kbd{display:none}
+}

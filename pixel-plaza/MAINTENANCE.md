@@ -137,3 +137,8 @@
 
 ## 倉庫＝設計部遠征隊入口（2026-11-13）
 - 五樓倉庫（ROOMS 的 B）中央走進去會收黑並開啟 `expedition/`（內嵌 iframe，`#expFrame`／`#expFade`），邏輯在 `updateTheater()`。觸發範圍 `THEATER`（px，z 已過 `zN`）。遊戲本身是獨立單檔 `expedition/index.html`，不碰後端；離開用 postMessage `expeditionExit`。
+
+## 遊戲風介面（2026-11-15）
+- 新增 `pixel-plaza/gameui.css`、`gameui.js`（見 UI-SPEC §11）：單一「選單」整合角色／圖鑑／說明／切換人物／音樂／離開，進場轉場與面板動畫。`index.html` 只多兩行載入（`<link>` 與 `<script src>`，`?v=` 版本號要跟著改，否則 Pages 快取最長 10 分鐘）。
+- 舊的彩色按鈕列沒刪，只被隱藏；選單按鈕是轉呼叫它們，所以 `#bWheel/#bDex/#bHelp/#bPeople/#bClose` 的 id 與邏輯不能刪。
+- `bgmUI` 的音樂控制條由 `gameui.js` 在載入後搬進選單（輪詢最多 20 秒）。
