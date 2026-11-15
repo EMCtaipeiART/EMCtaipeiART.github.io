@@ -555,6 +555,18 @@ const sparkTex = canvasTex(32, 32, g => { const r = g.createRadialGradient(16, 1
 const triTex = [0, 1].map(t => canvasTex(64, 64, g => { g.fillStyle = t ? '#ff4b3e' : '#5ec8ff'; g.strokeStyle = '#000'; g.lineWidth = 6; g.beginPath(); g.moveTo(8, 12); g.lineTo(56, 12); g.lineTo(32, 56); g.closePath(); g.stroke(); g.fill(); }));
 let actors = [], me = null, net = null, NETIN = false;
 function applyHero(a, h) { a.hero = h; a.maxHp = h.hp; a.cd = { e: 0, s: 0 }; a.w = WEAPONS[h.w]; }
+// ───────── 玩家名字：有登入網站就用帳號名；沒登入的只顯示職位（重裝／輸出／支援）；電腦維持英雄名 ─────────
+const ME_NAME = (() => { try {
+  if (localStorage.getItem('designRequestEditorLoggedOut') === '1') return '';
+  const h = JSON.parse(localStorage.getItem('pixelViewerHandoff') || 'null'); if (h && h.name && Date.now() - Number(h.at) < 86400000) return String(h.name);
+  const get = k => localStorage.getItem(k) || sessionStorage.getItem(k) || ''; if (get('designRequestEditorToken')) return get('designRequestEditorDisplayName') || get('designRequestEditorUser') || '';
+  const as = new URLSearchParams(location.search).get('as'); if (as && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return as;
+} catch (e) {} return ''; })().replace(/[<>&"]/g, '').trim().slice(0, 12);
+const isHuman = a => a.isMe || (a.remote && a.rid !== undefined && a.rid < 10 && !a.hb);
+const labelOf = a => isHuman(a) ? (a.pname || a.hero.role) : a.hero.name;
+function relabel(a) {
+  a.name = labelOf(a); if (a.nm && a.nm.material) { a.nm.material.map = nameTexOf((a.team ? '敵 ' : '友 ') + a.hero.ic + ' ' + a.name, a.team ? '#ff8f84' : '#8fd8ff'); a.nm.material.needsUpdate = true; }
+}
 function makeActor(hero, team, isMe) {
   const o = { name: hero.name, team, isMe, x: 0, y: 0, z: 0, vx: 0, vz: 0, vy: 0, yaw: 0, pitch: 0, hp: 100, dead: false, respT: 0, inv: 0, fireT: 0, kills: 0, deaths: 0, dmg: 0, heals: 0, ult: 0, buff: 0, rage: 0, dmgT: 0, spd: 0, stun: 0, mark: 0, heal: 0, volley: 0, armor: 0, armorT: 0, actT: { e: 0, s: 0, q: 0 }, volT: 0, chargeT: 0, fl: 0, ground: true, bot: null, path: [], tgt: null, anim: 0, dashT: 0, wph: 0 };
   applyHero(o, hero);
@@ -583,7 +595,7 @@ const TEAMCOL = [0x5ec8ff, 0xff4b3e];
 let hbT = 0, vmSX = 0, vmSY = 0, vmLY = 0, vmLP = 0, vmEquip = 0, vmKick = 0, state = 'menu', paused = false, tLeft = 480, prog = [0, 0], owner = -1, cap = 0, capTeam = -1, contested = false, present = [0, 0], stT = 0, yaw = 0, pitch = 0, locked = false, zoom = false, shake = 0, recoil = 0, bobT = 0;
 const keys = {}, joy = { x: 0, y: 0 }, hold = { fire: false };
 function spawnPoint(team, lt) { if (lt === undefined) lt = team; const pts = team === 0 ? [[-26, -10], [-26, 0], [-26, 10], [-22, 20], [-22, -20]] : [[26, -10], [26, 0], [26, 10], [22, 20], [22, -20]]; let best = null, bd = -1; for (let i = 0; i < 6; i++) { const p = pts[Math.floor(Math.random() * pts.length)]; let md = 1e9; for (const a of actors) if (!a.dead && a.team !== lt) md = Math.min(md, Math.hypot(a.x - p[0], a.z - p[1])); if (md > bd) { bd = md; best = p; } } return best; }
-function respawn(a) { if (a.nextHero) { applyHero(a, HERO_BY[a.nextHero]); a.nextHero = null; if (a.isMe) { setViewmodel(); buildHud(); } else rebuildLook(a); } const p = spawnPoint(a.gt === undefined ? a.team : a.gt, a.team); a.x = p[0] + rand(-1, 1); a.z = p[1] + rand(-1, 1); a.y = 0; a.vx = a.vz = a.vy = 0; a.hp = a.maxHp; a.dead = false; a.inv = 2; a.pitch = 0; a.path = []; a.tgt = null; a.fireT = .4; a.stun = a.mark = a.heal = a.volley = a.chargeT = a.buff = a.rage = a.dmgT = a.spd = a.lockT = a.seekW = a.immT = 0; a.armor = a.armorT = 0; a.actT = { e: 0, s: 0, q: 0 }; a.yaw = (a.gt === undefined ? a.team : a.gt) === 0 ? -Math.PI / 2 : Math.PI / 2; if (a.isMe) { yaw = a.yaw; pitch = 0; $('heroSel').hidden = true; specT = null; $('spec').hidden = true; } }
+function respawn(a) { if (a.nextHero) { applyHero(a, HERO_BY[a.nextHero]); a.nextHero = null; if (a.isMe) { setViewmodel(); buildHud(); relabel(a); } else rebuildLook(a); } const p = spawnPoint(a.gt === undefined ? a.team : a.gt, a.team); a.x = p[0] + rand(-1, 1); a.z = p[1] + rand(-1, 1); a.y = 0; a.vx = a.vz = a.vy = 0; a.hp = a.maxHp; a.dead = false; a.inv = 2; a.pitch = 0; a.path = []; a.tgt = null; a.fireT = .4; a.stun = a.mark = a.heal = a.volley = a.chargeT = a.buff = a.rage = a.dmgT = a.spd = a.lockT = a.seekW = a.immT = 0; a.armor = a.armorT = 0; a.actT = { e: 0, s: 0, q: 0 }; a.yaw = (a.gt === undefined ? a.team : a.gt) === 0 ? -Math.PI / 2 : Math.PI / 2; if (a.isMe) { yaw = a.yaw; pitch = 0; $('heroSel').hidden = true; specT = null; $('spec').hidden = true; } }
 function drawHpBar(a) {
   const key = Math.ceil(a.hp) + '|' + Math.ceil(a.armor || 0) + '|' + a.maxHp; if (a._hk === key) return; a._hk = key;
   const c = a.hpC, g = c.getContext('2d'), w = c.width, h = c.height, pad = 3, iw = w - pad * 2, ih = h - pad * 2, f = clamp(a.hp / a.maxHp, 0, 1), col = a.hp < a.maxHp * .3 ? '#ffd24a' : (a.team ? '#ff4b3e' : '#5ec8ff');
@@ -602,12 +614,12 @@ function makeGunModel(wid) {
   else { box(.15, .12, .36, 0xdb2777, 0, 0, -.1); cyl(.05, .35, 0x555b6e, 0, .03, -.4); box(.07, .07, .26, 0x1b1b1b, 0, .1, -.05); }
   g.scale.setScalar(1.15); g.rotation.order = 'YXZ'; return g;
 }
-function rebuildLook(a) { if (!a.spr) return; const name = a.hero.char; a.stand = uniqTex(name, false); a.walk = uniqTex(name, true); a.spr.material.map = a.stand; a.spr.material.needsUpdate = true; a.nm.material.map = nameTexOf((a.team ? '敵 ' : '友 ') + a.hero.ic + ' ' + a.hero.name, a.team ? '#ff8f84' : '#8fd8ff'); a.nm.material.needsUpdate = true; a.name = a.hero.name; if (a.gun) { scene.remove(a.gun); a.gun = null; } }
+function rebuildLook(a) { if (!a.spr) { relabel(a); return; } const name = a.hero.char; a.stand = uniqTex(name, false); a.walk = uniqTex(name, true); a.spr.material.map = a.stand; a.spr.material.needsUpdate = true; relabel(a); if (a.gun) { scene.remove(a.gun); a.gun = null; } }
 function setupMatch() { if (net && net.order) { setupNetMatch(); return; }
   clearActors(); const mine = HERO_BY[CFG.hero], shuffle = arr => arr.slice().sort(() => Math.random() - .5);
   const teamA = [mine, ...shuffle(HEROES.filter(h => h.id !== mine.id))], teamB = shuffle(HEROES);
   [teamA, teamB].forEach((t, ti) => t.forEach((h, i) => { const a = makeActor(h, ti, ti === 0 && i === 0); a.bot = a.isMe ? null : { react: 0, strafe: 1, strafeT: 0, think: 0, seen: 0, patrol: null, abT: rand(1, 3) }; actors.push(a); }));
-  me = actors[0]; for (const a of actors) respawn(a);
+  me = actors[0]; me.pname = ME_NAME; for (const a of actors) { respawn(a); relabel(a); }
   prog = [0, 0]; owner = -1; cap = 0; capTeam = -1; tLeft = 480; $('feed').innerHTML = ''; setViewmodel(); buildHud();
 }
 function banner(t, s, dur) { $('bnT').textContent = t; $('bnS').textContent = s || ''; $('banner').classList.add('on'); clearTimeout(banner.t); if (dur) banner.t = setTimeout(() => $('banner').classList.remove('on'), dur); }
@@ -1026,7 +1038,7 @@ function teamTable(team, win, compact) {   // 一隊一張表：標題、勝負�
   const list = actors.filter(a => a.team === team).sort((a, b) => (b.dmg + b.heals) - (a.dmg + a.heals)), col = team ? '#ff4b3e' : '#5ec8ff', td = 'padding:' + (compact ? 3 : 4) + 'px 8px;border-bottom:1px solid #3a4654';
   const sum = f => list.reduce((t, a) => t + f(a), 0), rows = list.map(a => '<tr' + (a.isMe ? ' style="background:rgba(255,176,0,.18)"' : '') + (a.dead ? ' class="dead"' : '') + '><td style="' + td + '">' + a.hero.ic + ' ' + a.name + (a.isMe ? '（你）' : '') + '</td><td style="' + td + '">' + a.kills + '</td><td style="' + td + '">' + a.deaths + '</td><td style="' + td + '">' + Math.round(a.dmg) + '</td><td style="' + td + '">' + Math.round(a.heals) + '</td></tr>').join('');
   return '<div style="margin-top:10px"><div style="display:flex;align-items:center;gap:10px;border-left:4px solid ' + col + ';padding:3px 10px;background:rgba(255,255,255,.05)"><b style="color:' + col + ';letter-spacing:.15em">' + (team ? '敵方' : '我方') + '</b><span style="font-size:12px;color:#8a97a6">占領進度 ' + Math.floor(prog[team]) + '%</span>' + (win === team ? '<span style="margin-left:auto;font-size:12px;color:#ffb000">★ 勝</span>' : '') + '</div>' +
-    '<table style="width:100%;border-collapse:collapse;font-size:' + (compact ? 13 : 14) + 'px"><tr style="color:#8a97a6;font-size:10px;letter-spacing:.2em;text-align:left"><th style="text-align:left;padding:3px 8px">英雄</th><th style="text-align:left">擊殺</th><th style="text-align:left">死亡</th><th style="text-align:left">傷害</th><th style="text-align:left">治療</th></tr>' + rows +
+    '<table style="width:100%;border-collapse:collapse;font-size:' + (compact ? 13 : 14) + 'px"><tr style="color:#8a97a6;font-size:10px;letter-spacing:.2em;text-align:left"><th style="text-align:left;padding:3px 8px">玩家</th><th style="text-align:left">擊殺</th><th style="text-align:left">死亡</th><th style="text-align:left">傷害</th><th style="text-align:left">治療</th></tr>' + rows +
     '<tr style="color:#ffb000;font-weight:700"><td style="padding:3px 8px">合計</td><td>' + sum(a => a.kills) + '</td><td>' + sum(a => a.deaths) + '</td><td>' + Math.round(sum(a => a.dmg)) + '</td><td>' + Math.round(sum(a => a.heals)) + '</td></tr></table></div>';
 }
 let sbHeld = false, sbT = 0;   // 按住 Tab 期間每 0.25 秒更新一次戰績，放開就收起
@@ -1169,7 +1181,7 @@ function netAdopt(ws, room, role, info) {
   ws.onclose = () => { if (net && net.ws === ws) netLost(); };
   return net;
 }
-const netHi = () => netSend({ t: 'hi', hero: CFG.hero });
+const netHi = () => netSend({ t: 'hi', hero: CFG.hero, nm: ME_NAME });
 const heroTag = id => { const h = HERO_BY[id]; return h ? h.ic + ' ' + h.name : '連線中…'; };
 // ───────── 連線：自選隊伍（A 隊／B 隊）。房主是隊伍表的唯一來源；每位玩家點自己的名字換隊，房主可以替任何人（含電腦）換隊 ─────────
 const TM_MAX = 3;
@@ -1190,8 +1202,8 @@ function netLobby() {   // 等待室：誰在房裡、各在哪一隊、房主�
   if (!net || net.order) return;
   if (net.role === 'host') tmEnsure();
   const ids = Object.keys(net.peers).map(Number).sort((a, b) => a - b), bl = Object.keys(net.bots || {}).map(Number).sort((a, b) => a - b), n = ids.length + 1 + bl.length, host = net.role === 'host';
-  const people = [{ id: net.myId, hero: CFG.hero, me: true }].concat(ids.filter(id => id !== net.myId).map(id => ({ id, hero: net.peers[id].hero, hi: net.peers[id].hi })), bl.map(id => ({ id, hero: net.bots[id], bot: true })));
-  const grp = g => { const list = people.filter(p => teamOf(p.id, 0) === g); return '<div style="flex:1 1 210px;min-width:0;border:1px solid ' + (g ? '#ff8a5f' : '#5ec8ff') + ';padding:8px;display:flex;flex-direction:column;gap:6px;align-items:center"><b style="letter-spacing:.2em;color:' + (g ? '#ff8a5f' : '#5ec8ff') + '">' + (g ? 'B 隊' : 'A 隊') + '（' + list.length + '）</b>' + (list.map(p => '<span class="pl tmx" data-id="' + p.id + '" data-g="' + g + '" title="' + (p.me || host ? '點一下換到另一隊' : '') + '" style="' + (p.me || host ? 'cursor:pointer;' : '') + (p.me ? 'border-color:#5fe08a;' : '') + '">' + (p.bot ? '🤖 ' : '') + heroTag(p.hero) + (p.me ? '（你）' : '') + (p.bot && host ? ' <i class="rmb" data-b="' + p.id + '" title="移除這台電腦" style="font-style:normal;opacity:.8;margin-left:4px">✕</i>' : '') + '</span>').join('') || '<span style="color:#8a97a6;font-size:12px">（沒有人）</span>') + '</div>'; };
+  const people = [{ id: net.myId, hero: CFG.hero, me: true, nm: ME_NAME }].concat(ids.filter(id => id !== net.myId).map(id => ({ id, hero: net.peers[id].hero, hi: net.peers[id].hi, nm: net.peers[id].nm })), bl.map(id => ({ id, hero: net.bots[id], bot: true })));
+  const grp = g => { const list = people.filter(p => teamOf(p.id, 0) === g); return '<div style="flex:1 1 210px;min-width:0;border:1px solid ' + (g ? '#ff8a5f' : '#5ec8ff') + ';padding:8px;display:flex;flex-direction:column;gap:6px;align-items:center"><b style="letter-spacing:.2em;color:' + (g ? '#ff8a5f' : '#5ec8ff') + '">' + (g ? 'B 隊' : 'A 隊') + '（' + list.length + '）</b>' + (list.map(p => '<span class="pl tmx" data-id="' + p.id + '" data-g="' + g + '" title="' + (p.me || host ? '點一下換到另一隊' : '') + '" style="' + (p.me || host ? 'cursor:pointer;' : '') + (p.me ? 'border-color:#5fe08a;' : '') + '">' + (p.bot ? '🤖 ' : '') + heroTag(p.hero) + (p.nm ? ' · ' + p.nm : '') + (p.me ? '（你）' : '') + (p.bot && host ? ' <i class="rmb" data-b="' + p.id + '" title="移除這台電腦" style="font-style:normal;opacity:.8;margin-left:4px">✕</i>' : '') + '</span>').join('') || '<span style="color:#8a97a6;font-size:12px">（沒有人）</span>') + '</div>'; };
   const c = tmCount(), both = !!net.tm && c[0] > 0 && c[1] > 0, anyOther = ids.some(id => net.peers[id].hi) || bl.length > 0, ok = both && anyOther;
   $('lobPl').hidden = false; $('lobPl').style.cssText = 'display:flex;flex-wrap:wrap;gap:10px;width:100%;justify-content:center'; $('lobPl').innerHTML = grp(0) + grp(1) + '<em style="flex-basis:100%;text-align:center">' + n + ' / 6 人（每隊最多 ' + TM_MAX + '）</em>'; $('botB').hidden = !host; $('botB').disabled = n >= 6;
   $('goB').hidden = !host; $('goB').disabled = !ok; $('goB').textContent = '開始對戰（' + n + ' 人）';
@@ -1208,7 +1220,7 @@ function netAgain() { if (!net) return; net.myRm = true; const b = $('againB'); 
 function tryRematch() { if (net && net.role === 'host' && net.myRm && net.order.every(id => id === net.myId || id >= 10 || (net.peers[id] && net.peers[id].rm))) { netSend({ t: 'st', ids: net.order, bh: net.bots || {}, tm: net.tm }); netLaunch(); } }
 function setupNetMatch() {   // 兩隊依加入順序輪流分：0、2 號一隊，1、3 號一隊；每個人看自己這隊都是「我方」(藍)，出生側用全域隊伍
   clearActors(); const ord = net.order; net.myG = teamOf(net.myId, ord.indexOf(net.myId));
-  ord.forEach((id, i) => { const g = teamOf(id, i), isB = id >= 10, hero = HERO_BY[id === net.myId ? CFG.hero : isB ? (net.bots || {})[id] : (net.peers[id] || {}).hero] || HEROES[0], a = makeActor(hero, g === net.myG ? 0 : 1, id === net.myId); a.rid = id; a.gt = g; a.hb = isB && net.role === 'host'; a.remote = id !== net.myId && !a.hb; if (a.hb) a.bot = { react: 0, strafe: 1, strafeT: 0, think: 0, seen: 0, patrol: null, abT: rand(1, 3) }; if (id === net.myId) me = a; actors.push(a); });
+  ord.forEach((id, i) => { const g = teamOf(id, i), isB = id >= 10, hero = HERO_BY[id === net.myId ? CFG.hero : isB ? (net.bots || {})[id] : (net.peers[id] || {}).hero] || HEROES[0], a = makeActor(hero, g === net.myG ? 0 : 1, id === net.myId); a.rid = id; a.gt = g; a.hb = isB && net.role === 'host'; a.remote = id !== net.myId && !a.hb; if (a.hb) a.bot = { react: 0, strafe: 1, strafeT: 0, think: 0, seen: 0, patrol: null, abT: rand(1, 3) }; if (id === net.myId) me = a; if (!isB) a.pname = id === net.myId ? ME_NAME : ((net.peers[id] || {}).nm || ''); relabel(a); actors.push(a); });
   for (const a of actors) respawn(a);
   prog = [0, 0]; owner = -1; cap = 0; capTeam = -1; tLeft = 480; $('feed').innerHTML = ''; setViewmodel(); buildHud(); net.live = true; net.acc = 0; net.hlT = 0;
 }
@@ -1232,7 +1244,7 @@ function netAbilityOnMe(P, k) {   // 別人施放的技能，對我生效的部�
 function netMsg(m) {
   if (!net) return; const sid = m.r !== undefined ? m.r : m.i !== undefined ? m.i : (net.role === 'host' ? 1 : 0);
   if (m.t === 'ready' || m.t === 'join') { if (net.order) return; net.peers[sid] = net.peers[sid] || {}; netHi(); netLobby(); tmSync(); if (net.role === 'host' && net.quick && !net.autoT) { const nn = net; nn.autoT = setTimeout(() => { if (net === nn) netStart(); }, 15000); } return; }
-  if (m.t === 'hi') { const p = net.peers[sid] = net.peers[sid] || {}; p.hero = HERO_BY[m.hero] ? m.hero : 'machi'; p.hi = true; netLobby(); tmSync(); return; }
+  if (m.t === 'hi') { const p = net.peers[sid] = net.peers[sid] || {}; p.hero = HERO_BY[m.hero] ? m.hero : 'machi'; p.nm = String(m.nm || '').replace(/[<>&"]/g, '').trim().slice(0, 12); p.hi = true; netLobby(); tmSync(); return; }
   if (m.t === 'tm') { if (net.role === 'host' && !net.order) tmSet(sid, Number(m.g)); return; }
   if (m.t === 'tms') { if (net.role !== 'host' && !net.order) { net.tm = {}; for (const k in (m.m || {})) net.tm[Number(k)] = m.m[k]; netLobby(); } return; }
   if (m.t === 'st') { if (net.role === 'host') return; const ids = (m.ids || []).map(Number); net.bots = m.bh || {}; net.tm = {}; for (const k in (m.tm || {})) net.tm[Number(k)] = m.tm[k]; if (!ids.includes(net.myId)) { netClose(); netUi(false, '房主已經開始對戰了，你沒趕上，請再加入一次'); return; } net.order = ids; netLaunch(); return; }
