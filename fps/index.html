@@ -693,7 +693,7 @@ function stepSeekers(dt) {
     const st = Math.min(d, k.v * dt); k.x += dx / d * st; k.y += dy / d * st; k.z += dz / d * st; k.m.position.set(k.x, k.y, k.z); if (Math.random() < .6) addPart(sparkTex, 0x5ef0a4, k.x, k.y, k.z, 0, 0, 0, .35, .25, 0, true);
   }
 }
-function stepBarriers(dt) { for (let i = BAR.length - 1; i >= 0; i--) { const b = BAR[i]; b.life -= dt; for (const t of actors) if (!t.dead && !t.remote && t.team === b.team && t.hp < t.maxHp && Math.hypot(t.x - b.x, t.z - b.z) < BUB_R && Math.abs(t.y - b.y) < 3) t.hp = Math.min(t.maxHp, t.hp + t.maxHp * .03 * dt);   // 泡泡內我方輕微回血（每秒 3%）
+function stepBarriers(dt) { for (let i = BAR.length - 1; i >= 0; i--) { const b = BAR[i]; b.life -= dt; for (const t of actors) if (!t.dead && !t.remote && t.team === b.team && t.hp < t.maxHp && Math.hypot(t.x - b.x, t.z - b.z) < BUB_R && Math.abs(t.y - b.y) < 3) { const amt = t.maxHp * .03 * dt; if (!b.owner.remote) healTo(t, amt, b.owner); else t.hp = Math.min(t.maxHp, t.hp + amt); }   // 自己放的泡泡走 healTo，治療量才會算進 Machi 的治療數據   // 泡泡內我方輕微回血（每秒 3%）
     b.m.material.opacity = .15 + .3 * clamp(b.hp / BUB_HP, 0, 1); if (b.life <= 0 || b.hp <= 0) { scene.remove(b.m); BAR.splice(i, 1); } } }
 
 // ───────── 特效：粒子、傷害數字、彈孔、光束、爆炸 ─────────
