@@ -286,7 +286,7 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
         <div class="nrow"><button class="exitbtn" id="qmB" type="button">快速配對</button><button class="exitbtn" id="mkB" type="button">邀請朋友</button></div>
         <div class="nrow"><input id="joinIn" maxlength="6" placeholder="輸入房間碼" autocomplete="off" spellcheck="false"><button class="exitbtn" id="joinB" type="button">加入</button></div>
         <div class="share" id="shareBox" hidden><div class="sc"><small>房間碼</small><b id="shCode"></b></div><input id="shLink" readonly><button class="exitbtn" id="cpLink" type="button">複製連結</button></div>
-        <div class="plist" id="lobPl" hidden></div><button class="exitbtn" id="botB" type="button" hidden>＋ 加入電腦</button><button class="go" id="goB" type="button" hidden>開始對戰</button>
+        <div class="plist" id="lobPl" hidden></div><button class="exitbtn" id="botB" type="button" hidden>＋ 加入電腦</button><button class="exitbtn" id="tlockB" type="button" hidden>🔓 隊伍：自由選隊</button><button class="go" id="goB" type="button" hidden>開始對戰</button>
         <div class="netst" id="netSt"></div><button class="exitbtn" id="netCancel" type="button" hidden>取消</button>
       </div>
       <div class="help"><b>電腦：</b>WASD 移動　空白 跳　滑鼠 瞄準／左鍵射擊　右鍵 瞄準鏡（直尺）　<b>E</b> 技能一　<b>Shift</b> 技能二　<b>Q</b> 大招　按住 <b>Tab</b> 看戰績　陣亡後可選其他英雄（1–5）、左鍵／空白切換觀戰。<br><b>手機：</b>左搖桿移動、右半邊滑動轉視角，右下 射擊／跳／瞄準／技能一／技能二／大招。咖啡杯可補血。</div>
@@ -1191,11 +1191,11 @@ function tmEnsure() {   // 房主：替還沒有隊伍的人補上人數較少�
   net.tm = net.tm || {}; const here = new Set(tmPresent()); for (const k of Object.keys(net.tm)) if (!here.has(Number(k))) delete net.tm[k];
   for (const id of tmPresent()) if (net.tm[id] === undefined) { const c = tmCount(); net.tm[id] = c[0] <= c[1] ? 0 : 1; }
 }
-function tmSync() { if (!net || net.role !== 'host' || net.order) return; tmEnsure(); netSend({ t: 'tms', m: net.tm }); netLobby(); }
+function tmSync() { if (!net || net.role !== 'host' || net.order) return; tmEnsure(); netSend({ t: 'tms', m: net.tm, lk: net.tlock ? 1 : 0 }); netLobby(); }
 function tmSet(id, g) {   // 換隊：房主直接改；訪客只能請房主改自己
   if (!net || net.order || (g !== 0 && g !== 1)) return;
   if (net.role === 'host') { tmEnsure(); if (net.tm[id] === g) return; if (tmCount()[g] >= TM_MAX) { netSt('這一隊已經滿了（每隊最多 ' + TM_MAX + ' 人）'); return; } net.tm[id] = g; tmSync(); }
-  else if (id === net.myId) netSend({ t: 'tm', g });
+  else if (id === net.myId) { if (net.tlock) { netSt('隊伍由房主分配'); return; } netSend({ t: 'tm', g }); }
 }
 const teamOf = (id, i) => (net.tm && (net.tm[id] === 0 || net.tm[id] === 1)) ? net.tm[id] : i % 2;
 function netLobby() {   // 等待室：誰在房裡、各在哪一隊、房主可以開始
@@ -1203,11 +1203,11 @@ function netLobby() {   // 等待室：誰在房裡、各在哪一隊、房主�
   if (net.role === 'host') tmEnsure();
   const ids = Object.keys(net.peers).map(Number).sort((a, b) => a - b), bl = Object.keys(net.bots || {}).map(Number).sort((a, b) => a - b), n = ids.length + 1 + bl.length, host = net.role === 'host';
   const people = [{ id: net.myId, hero: CFG.hero, me: true, nm: ME_NAME }].concat(ids.filter(id => id !== net.myId).map(id => ({ id, hero: net.peers[id].hero, hi: net.peers[id].hi, nm: net.peers[id].nm })), bl.map(id => ({ id, hero: net.bots[id], bot: true })));
-  const grp = g => { const list = people.filter(p => teamOf(p.id, 0) === g); return '<div style="flex:1 1 210px;min-width:0;border:1px solid ' + (g ? '#ff8a5f' : '#5ec8ff') + ';padding:8px;display:flex;flex-direction:column;gap:6px;align-items:center"><b style="letter-spacing:.2em;color:' + (g ? '#ff8a5f' : '#5ec8ff') + '">' + (g ? 'B 隊' : 'A 隊') + '（' + list.length + '）</b>' + (list.map(p => '<span class="pl tmx" data-id="' + p.id + '" data-g="' + g + '" title="' + (p.me || host ? '點一下換到另一隊' : '') + '" style="' + (p.me || host ? 'cursor:pointer;' : '') + (p.me ? 'border-color:#5fe08a;' : '') + '">' + (p.bot ? '🤖 ' : '') + heroTag(p.hero) + (p.nm ? ' · ' + p.nm : '') + (p.me ? '（你）' : '') + (p.bot && host ? ' <i class="rmb" data-b="' + p.id + '" title="移除這台電腦" style="font-style:normal;opacity:.8;margin-left:4px">✕</i>' : '') + '</span>').join('') || '<span style="color:#8a97a6;font-size:12px">（沒有人）</span>') + '</div>'; };
+  const grp = g => { const list = people.filter(p => teamOf(p.id, 0) === g); return '<div style="flex:1 1 210px;min-width:0;border:1px solid ' + (g ? '#ff8a5f' : '#5ec8ff') + ';padding:8px;display:flex;flex-direction:column;gap:6px;align-items:center"><b style="letter-spacing:.2em;color:' + (g ? '#ff8a5f' : '#5ec8ff') + '">' + (g ? 'B 隊' : 'A 隊') + '（' + list.length + '）</b>' + (list.map(p => '<span class="pl tmx" data-id="' + p.id + '" data-g="' + g + '" title="' + (host || (p.me && !net.tlock) ? '點一下換到另一隊' : '') + '" style="' + (host || (p.me && !net.tlock) ? 'cursor:pointer;' : '') + (p.me ? 'border-color:#5fe08a;' : '') + '">' + (p.bot ? '🤖 ' : '') + heroTag(p.hero) + (p.nm ? ' · ' + p.nm : '') + (p.me ? '（你）' : '') + (host ? ' <i style="font-style:normal;opacity:.7">⇄</i>' : '') + (p.bot && host ? ' <i class="rmb" data-b="' + p.id + '" title="移除這台電腦" style="font-style:normal;opacity:.8;margin-left:4px">✕</i>' : '') + '</span>').join('') || '<span style="color:#8a97a6;font-size:12px">（沒有人）</span>') + '</div>'; };
   const c = tmCount(), both = !!net.tm && c[0] > 0 && c[1] > 0, anyOther = ids.some(id => net.peers[id].hi) || bl.length > 0, ok = both && anyOther;
-  $('lobPl').hidden = false; $('lobPl').style.cssText = 'display:flex;flex-wrap:wrap;gap:10px;width:100%;justify-content:center'; $('lobPl').innerHTML = grp(0) + grp(1) + '<em style="flex-basis:100%;text-align:center">' + n + ' / 6 人（每隊最多 ' + TM_MAX + '）</em>'; $('botB').hidden = !host; $('botB').disabled = n >= 6;
+  $('lobPl').hidden = false; $('lobPl').style.cssText = 'display:flex;flex-wrap:wrap;gap:10px;width:100%;justify-content:center'; $('lobPl').innerHTML = grp(0) + grp(1) + '<em style="flex-basis:100%;text-align:center">' + n + ' / 6 人（每隊最多 ' + TM_MAX + '）</em>'; $('botB').hidden = !host; $('botB').disabled = n >= 6; $('tlockB').hidden = !host; $('tlockB').textContent = net.tlock ? '🔒 隊伍：房主分配' : '🔓 隊伍：自由選隊';
   $('goB').hidden = !host; $('goB').disabled = !ok; $('goB').textContent = '開始對戰（' + n + ' 人）';
-  netSt(host ? (anyOther ? (both ? '點名字可以換隊；A、B 隊都有人就能開始' + (net.quick ? '（15 秒後自動開始）' : '') : 'A、B 兩隊都要有人才能開始，點名字換隊') : '等待玩家加入…') : '已加入房間：點自己的名字可以選 A 隊或 B 隊，等房主開始對戰…');
+  netSt(host ? (anyOther ? (both ? '點名字可以換隊；A、B 隊都有人就能開始' + (net.quick ? '（15 秒後自動開始）' : '') : 'A、B 兩隊都要有人才能開始，點名字換隊') : '等待玩家加入…') : (net.tlock ? '隊伍由房主分配，等房主開始對戰…' : '已加入房間：點自己的名字可以選 A 隊或 B 隊，等房主開始對戰…'));
 }
 function netStart() {   // 房主開始：鎖定名單、通知大家
   if (!net || net.role !== 'host' || net.order) return;
@@ -1215,7 +1215,7 @@ function netStart() {   // 房主開始：鎖定名單、通知大家
   tmEnsure(); const cc = tmCount(); if (!(cc[0] > 0 && cc[1] > 0)) { netSt('A、B 兩隊都要有人才能開始'); return; }
   net.order = [0].concat(ids, bl); netSend({ t: 'st', ids: net.order, bh: net.bots || {}, tm: net.tm }); netLaunch();
 }
-function netLaunch() { for (const k in net.peers) net.peers[k].rm = false; net.myRm = false; { const lp = $('lobPl'), gb = $('goB'); if (lp) lp.hidden = true; if (gb) gb.hidden = true; const bb = $('botB'); if (bb) bb.hidden = true; } startMatch(); }
+function netLaunch() { for (const k in net.peers) net.peers[k].rm = false; net.myRm = false; { const lp = $('lobPl'), gb = $('goB'); if (lp) lp.hidden = true; if (gb) gb.hidden = true; const bb = $('botB'); if (bb) bb.hidden = true; const tb = $('tlockB'); if (tb) tb.hidden = true; } startMatch(); }
 function netAgain() { if (!net) return; net.myRm = true; const b = $('againB'); if (b) { b.disabled = true; b.textContent = '等待其他人…'; } netSend({ t: 'rm' }); tryRematch(); }
 function tryRematch() { if (net && net.role === 'host' && net.myRm && net.order.every(id => id === net.myId || id >= 10 || (net.peers[id] && net.peers[id].rm))) { netSend({ t: 'st', ids: net.order, bh: net.bots || {}, tm: net.tm }); netLaunch(); } }
 function setupNetMatch() {   // 兩隊依加入順序輪流分：0、2 號一隊，1、3 號一隊；每個人看自己這隊都是「我方」(藍)，出生側用全域隊伍
@@ -1245,8 +1245,8 @@ function netMsg(m) {
   if (!net) return; const sid = m.r !== undefined ? m.r : m.i !== undefined ? m.i : (net.role === 'host' ? 1 : 0);
   if (m.t === 'ready' || m.t === 'join') { if (net.order) return; net.peers[sid] = net.peers[sid] || {}; netHi(); netLobby(); tmSync(); if (net.role === 'host' && net.quick && !net.autoT) { const nn = net; nn.autoT = setTimeout(() => { if (net === nn) netStart(); }, 15000); } return; }
   if (m.t === 'hi') { const p = net.peers[sid] = net.peers[sid] || {}; p.hero = HERO_BY[m.hero] ? m.hero : 'machi'; p.nm = String(m.nm || '').replace(/[<>&"]/g, '').trim().slice(0, 12); p.hi = true; netLobby(); tmSync(); return; }
-  if (m.t === 'tm') { if (net.role === 'host' && !net.order) tmSet(sid, Number(m.g)); return; }
-  if (m.t === 'tms') { if (net.role !== 'host' && !net.order) { net.tm = {}; for (const k in (m.m || {})) net.tm[Number(k)] = m.m[k]; netLobby(); } return; }
+  if (m.t === 'tm') { if (net.role === 'host' && !net.order && !net.tlock) tmSet(sid, Number(m.g)); return; }
+  if (m.t === 'tms') { if (net.role !== 'host' && !net.order) { net.tm = {}; net.tlock = !!m.lk; for (const k in (m.m || {})) net.tm[Number(k)] = m.m[k]; netLobby(); } return; }
   if (m.t === 'st') { if (net.role === 'host') return; const ids = (m.ids || []).map(Number); net.bots = m.bh || {}; net.tm = {}; for (const k in (m.tm || {})) net.tm[Number(k)] = m.tm[k]; if (!ids.includes(net.myId)) { netClose(); netUi(false, '房主已經開始對戰了，你沒趕上，請再加入一次'); return; } net.order = ids; netLaunch(); return; }
   if (m.t === 'gone') { netPeerGone(sid); return; }
   if (m.t === 'rm') { const p = net.peers[sid] = net.peers[sid] || {}; p.rm = true; tryRematch(); return; }
@@ -1321,7 +1321,7 @@ function showShare(code) { $('shareBox').hidden = false; $('shCode').textContent
 $('recB').onclick = showRecords; $('boardB').onclick = () => showBoard();
 $('netB').onclick = () => { const b = $('netBox'); b.hidden = !b.hidden; if (b.hidden) { netClose(); netUi(false, ''); } else setTimeout(() => b.scrollIntoView({ behavior: 'smooth', block: 'end' }), 50); };
 { const rm = (Q.get('room') || '').toUpperCase(); if (/^[A-Z0-9]{6}$/.test(rm)) { $('netBox').hidden = false; $('joinIn').value = rm; netSt('受邀加入房間 ' + rm + '：選好英雄，按「加入」'); $('joinB').classList.add('pulse'); } }
-$('qmB').onclick = netQuick; $('mkB').onclick = netMake; $('joinB').onclick = netJoin; $('joinIn').onkeydown = e => { if (e.key === 'Enter') netJoin(); }; $('netCancel').onclick = () => { netClose(); netUi(false, ''); }; $('goB').onclick = netStart; $('botB').onclick = () => { if (!net || net.order || net.role !== 'host') return; net.bots = net.bots || {}; const used = Object.values(net.bots), pool = HEROES.filter(h => !used.includes(h.id)), arr = pool.length ? pool : HEROES, h = arr[Math.floor(Math.random() * arr.length)]; let id = 10; while (net.bots[id]) id++; net.bots[id] = h.id; tmSync(); }; $('lobPl').onclick = e => {
+$('qmB').onclick = netQuick; $('mkB').onclick = netMake; $('joinB').onclick = netJoin; $('joinIn').onkeydown = e => { if (e.key === 'Enter') netJoin(); }; $('netCancel').onclick = () => { netClose(); netUi(false, ''); }; $('goB').onclick = netStart; $('tlockB').onclick = () => { if (!net || net.order || net.role !== 'host') return; net.tlock = !net.tlock; tmSync(); }; $('botB').onclick = () => { if (!net || net.order || net.role !== 'host') return; net.bots = net.bots || {}; const used = Object.values(net.bots), pool = HEROES.filter(h => !used.includes(h.id)), arr = pool.length ? pool : HEROES, h = arr[Math.floor(Math.random() * arr.length)]; let id = 10; while (net.bots[id]) id++; net.bots[id] = h.id; tmSync(); }; $('lobPl').onclick = e => {
   if (!net || net.order) return; const rb = e.target.closest && e.target.closest('.rmb');
   if (rb && net.role === 'host') { const bid = Number(rb.dataset.b); delete net.bots[bid]; if (net.tm) delete net.tm[bid]; tmSync(); return; }
   const t = e.target.closest && e.target.closest('.tmx'); if (!t) return; const id = Number(t.dataset.id), g = Number(t.dataset.g); if (id === net.myId || net.role === 'host') tmSet(id, 1 - g);
