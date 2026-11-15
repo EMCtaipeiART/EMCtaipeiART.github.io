@@ -715,7 +715,7 @@ function dmgTo(t, d, src, head, wname, hx, hy, hz) {
   if (net && t.remote) { netHit(t, d, head, wname, hx, hy, hz); if (src && src.isMe) { src.dmg += d; addUlt(src, d * .2); hitMark(head, false); floatNum(hx ?? t.x, (hy ?? t.y + 1.8) + .2, hz ?? t.z, String(Math.round(d)), head ? '#ffd24a' : '#ffffff', head); } if (t.g) { const px = hx ?? t.x, py = hy ?? t.y + 1.2, pz = hz ?? t.z; paperBurst(px, py, pz, head ? 6 : 3); sparkBurst(px, py, pz, head ? 6 : 3, head ? 0xffd24a : 0xffffff, 2.5); } return; }
   if (t.mark > 0 && src && src.team !== t.team) d *= 1.25;
   if (t.armor > 0) { const ab = Math.min(t.armor, d); t.armor -= ab; d -= ab; t.fl = .08; if (d <= 0) { if (src && src.isMe) hitMark(false); return; } }
-  t.hp -= d; t.fl = .22; if (src && src !== t) { src.dmg += d; addUlt(src, d * .2); }
+  t.hp -= d; t.hurtT = 0; t.fl = .22; if (src && src !== t) { src.dmg += d; addUlt(src, d * .2); }
   if (t.isMe) { SFX.hurt(); $('dmg').classList.add('on'); setTimeout(() => $('dmg').classList.remove('on'), 60); shake = Math.min(1, shake + d / 60); if (src) dirHit(Math.atan2(src.x - t.x, src.z - t.z)); }
   if (src && src.isMe && src !== t) { const kl = t.hp <= 0; hitMark(head, kl); floatNum(hx ?? t.x, (hy ?? t.y + 1.8) + .2, hz ?? t.z, String(Math.round(d)), kl ? '#ff5a4a' : head ? '#ffd24a' : '#ffffff', head || kl); }
   if (t.g && !t.dead) { const px = hx ?? t.x, py = hy ?? t.y + 1.2, pz = hz ?? t.z; paperBurst(px, py, pz, head ? 6 : 3); sparkBurst(px, py, pz, head ? 6 : 3, head ? 0xffd24a : 0xffffff, 2.5); }
@@ -922,6 +922,7 @@ function stepActor(a, dt) {
   // 連環轟炸
   if (a.volley > 0) { a.volley -= dt; a.volT -= dt; if (a.volT <= 0) { a.volT = .4; fireWeapon(a, WEAPONS.phone); } }
   // 衝鋒撞人
+  if (!a.remote && !a.dead && a.hp < a.maxHp) { a.hurtT = (a.hurtT || 0) + dt; if (a.hurtT > 4) a.hp = Math.min(a.maxHp, a.hp + a.maxHp * .08 * dt); }   // 4 秒沒受傷開始自動回血（每秒 8% 血量）
   if (a.chargeT > 0) { a.chargeT -= dt; for (const t of enemiesOf(a)) if (!a.chHit.has(t) && Math.hypot(t.x - a.x, t.z - a.z) < 1.5) { a.chHit.add(t); dmgTo(t, 30, a, false, '🐂'); const f = fwd(a); t.vx += f[0] * 12; t.vz += f[1] * 12; t.stun = Math.max(t.stun, .4); if (t.remote) netKb(t, f[0] * 12, f[1] * 12, .4); } }
   if (a.isMe) {
     if (keys.ArrowLeft) yaw += 2.2 * dt; if (keys.ArrowRight) yaw -= 2.2 * dt; if (keys.ArrowUp) pitch = clamp(pitch + 1.6 * dt, -1.45, 1.45); if (keys.ArrowDown) pitch = clamp(pitch - 1.6 * dt, -1.45, 1.45);
