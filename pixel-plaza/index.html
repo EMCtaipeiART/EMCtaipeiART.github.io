@@ -1927,7 +1927,9 @@ function emcBgm(url, opts) {
   const A = [new Audio(url), new Audio(url)]; A.forEach(a => { a.preload = 'auto'; a.volume = 0; }); let cur = 0;
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ vol, muted })); } catch (e) {} };
   const gainOf = a => { const d = Math.max(a.duration || 0, o.dur || 0), t = a.currentTime; if (!d) return 0; return Math.max(0, Math.min(1, t / 1.5, (d - t) / o.fade)); };
-  function apply() { for (const a of A) { const g = a.paused ? 0 : gainOf(a); try { a.volume = muted ? 0 : Math.max(0, Math.min(1, vol * g)); } catch (e) {} a.muted = muted; } }
+  let fadeAt = 0;   // 從小遊戲回來（resume）時音量慢慢增強，不要突然出現
+  const rampOf = () => { if (!fadeAt) return 1; const r = Math.min(1, (performance.now() - fadeAt) / (o.resumeFade || 4500)); if (r >= 1) fadeAt = 0; return r * r * (3 - 2 * r); };
+  function apply() { const rp = rampOf(); for (const a of A) { const g = a.paused ? 0 : gainOf(a); try { a.volume = muted ? 0 : Math.max(0, Math.min(1, vol * g * rp)); } catch (e) {} a.muted = muted; } }
   function tick() {
     if (!started || paused) return; const a = A[cur], b = A[1 - cur];
     const da = Math.max(a.duration || 0, o.dur || 0); if (da && a.currentTime > da - o.fade && b.paused) { b.currentTime = 0; b.play().catch(() => {}); cur = 1 - cur; }
@@ -1937,7 +1939,7 @@ function emcBgm(url, opts) {
   const ctl = {
     start() { if (started || trying) return; trying = true; const x = A[cur]; try { x.currentTime = 0; } catch (e) {} let p; try { p = x.play(); } catch (e) { trying = false; return; } const ok = () => { trying = false; if (started) return; started = true; clearInterval(timer); timer = setInterval(tick, 100); ['pointerdown', 'mousedown', 'touchstart', 'click', 'keydown'].forEach(ev => removeEventListener(ev, once, true)); }; if (p && p.then) p.then(ok).catch(() => { trying = false; }); else ok(); },
     pause() { paused = true; A.forEach(a => a.pause()); },
-    resume() { if (!started) return; paused = false; A[cur].play().catch(() => {}); },
+    resume() { if (!started) return; paused = false; fadeAt = performance.now(); apply(); A[cur].play().catch(() => {}); },
     get vol() { return vol; }, get muted() { return muted; }, get on() { return started; }, get playing() { return started && !paused; }, get t() { return A[cur].currentTime; }, get d() { return A[cur].duration; }, get level() { return A.map(x => +x.volume.toFixed(2)); },
     setVol(v) { vol = Math.max(0, Math.min(1, v)); if (vol > 0) muted = false; save(); apply(); },
     setMuted(m) { muted = !!m; save(); apply(); }
