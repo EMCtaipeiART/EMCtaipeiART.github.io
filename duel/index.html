@@ -264,16 +264,17 @@ header{position:fixed;right:8px;bottom:8px;z-index:6;width:auto;gap:6px;flex-wra
   .tb.lock{right:calc(12px + env(safe-area-inset-right,0px));top:84px}.tb.pause{right:calc(60px + env(safe-area-inset-right,0px));top:84px}
   .tb.atk{background:linear-gradient(#ff8a7a,#b8403c)}.tb.dash{background:linear-gradient(#8fd6ff,#2f74b0)}.tb.sk{background:linear-gradient(#c9b8ff,#6a4fc0)}
 }
+#setP{position:fixed;right:8px;bottom:46px;z-index:9998;display:flex;flex-direction:column;gap:6px;align-items:stretch;background:rgba(12,16,22,.9);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:8px}#setP[hidden]{display:none}#setP .pk{font-size:12px;padding:4px 9px;border-width:2px;opacity:1;text-align:center}#setP .pk.off{opacity:.8}#setBgm #bgmUI{position:static!important;background:none!important;border:0!important;padding:0!important}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <h1>辦公室對決<small id="sub">高低落差 1 對 1</small></h1>
-    <button class="pk off" id="sndB" type="button">音效：開</button>
-    <button class="pk off" id="fsB" type="button">全螢幕</button>
+    <button class="pk" id="setB" type="button" aria-expanded="false">⚙ 設定</button>
     <button class="pk" id="exitB" type="button" hidden>離開</button>
   </header>
+  <div id="setP" hidden><div id="setBgm"></div><button class="pk off" id="sndB" type="button">音效：開</button><button class="pk off" id="fsB" type="button">全螢幕</button></div>
   <div id="stage">
     <canvas id="c3"></canvas>
     <div class="dhud" id="dhud" hidden>
@@ -415,7 +416,9 @@ function bgmUI(ctl, css) {
   r.oninput = () => { ctl.setVol(r.value / 100); sync(); }; ['pointerdown', 'mousedown', 'touchstart'].forEach(ev => w.addEventListener(ev, e => e.stopPropagation()));
   const hint = document.createElement('span'); hint.textContent = '點一下開啟音樂'; hint.style.cssText = 'font-size:11px;color:#ffd24a;white-space:nowrap'; w.append(b, r, hint); document.body.appendChild(w); sync(); setInterval(() => { hint.style.display = ctl.on ? 'none' : 'inline'; }, 400); return w;
 }
-const bgm = emcBgm('bgm-battle.m4a', { vol: .28, dur: 183.9 }); bgmUI(bgm, 'right:8px;bottom:46px;');
+const bgm = emcBgm('bgm-battle.m4a', { vol: .28, dur: 183.9 }); $('setBgm').appendChild(bgmUI(bgm, ''));
+$('setB').onclick = e => { e.stopPropagation(); const p = $('setP'); p.hidden = !p.hidden; $('setB').setAttribute('aria-expanded', String(!p.hidden)); };
+document.addEventListener('pointerdown', e => { const p = $('setP'); if (!p.hidden && !p.contains(e.target) && e.target !== $('setB')) { p.hidden = true; $('setB').setAttribute('aria-expanded', 'false'); } });
 let cloud = {}, cloudWalks = {}, NAMES = LOCAL_NAMES.slice();
 const cloudReady = (async () => {
   try { const r = await fetch(CHAR_API, { signal: AbortSignal.timeout(5000) }); if (r.ok) { const j = await r.json(); cloud = j.characters || {}; cloudWalks = j.walks || {}; } } catch (e) {}
