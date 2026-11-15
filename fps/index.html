@@ -539,7 +539,7 @@ const HEROES = [
   { id: 'amber', char: 'Amber', name: 'Amber', title: '茶歇補給', role: '支援', ic: '☕', hp: 150, speed: 5.6, w: 'mouse', pref: 12, sleeve: 0x16a34a,
     e: { n: '治療光環', ic: '💚', cd: 12, d: '4 秒內持續治療身邊 8 公尺內的隊友（含自己）' }, s: { n: '加油鼓舞', ic: '📣', cd: 10, d: '附近隊友 4 秒移速 +35%' }, q: { n: '茶歇回復', ic: '🫖', d: '全隊立刻回滿血' } },
   { id: 'leona', char: 'Leona', name: 'Leona', title: '電話客服', role: '支援', ic: '☎️', hp: 150, speed: 5.5, w: 'phone', pref: 14, sleeve: 0xdb2777,
-    e: { n: '療癒訊號', ic: '📞', cd: 6, d: '立即治療瞄準的隊友 100 點（沒瞄準就治療附近血最少的隊友，自己 50），接著自動發射 3 波追蹤補血球，每波追上附近血最少的隊友補 50 點' }, s: { n: '不再占線', ic: '🛡️', cd: 12, d: '附近隊友獲得 50 點護甲（6 秒）；自己 4 秒內無敵：不受傷害、不被暈眩' }, q: { n: '全頻道廣播', ic: '📢', d: '原地復活所有倒下的隊友（60% 血、無敵 2.5 秒）；沒有人倒下時全隊獲得 50 護甲並治療 30' } }
+    e: { n: '療癒訊號', ic: '📞', cd: 6, d: '立即治療瞄準的隊友 100 點（沒瞄準就治療附近血最少的隊友，自己 50），接著自動發射 3 波追蹤補血球，每波追上附近血最少的隊友補 50 點' }, s: { n: '不再占線', ic: '🛡️', cd: 12, d: '附近隊友獲得 50 點護甲（6 秒）；自己 2 秒內無敵：不受傷害、不被暈眩' }, q: { n: '全頻道廣播', ic: '📢', d: '原地復活所有倒下的隊友（60% 血、無敵 2.5 秒）；沒有人倒下時全隊獲得 50 護甲並治療 30' } }
 ];
 const HERO_BY = Object.fromEntries(HEROES.map(h => [h.id, h]));
 // ───────── 角色（12 角度公告板＋跑步圖集） ─────────
@@ -843,7 +843,7 @@ function useS(a) {
     case 'noise': a.buff = 5; ringFx(a.x, a.y, a.z, 0xffb000, 2, .4); break;
     case 'anna': for (const t of enemiesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 40) { t.mark = 4; } ringFx(a.x, a.y, a.z, 0xff6a5a, 40, .8); break;
     case 'amber': for (const t of alliesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 12) { t.spd = 4; if (t.isMe) SFX.pick(); } ringFx(a.x, a.y, a.z, 0xffd066, 12, .6); break;
-    case 'leona': for (const t of alliesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 14) giveArmor(t, 50, 6); a.immT = 4; a.inv = Math.max(a.inv, 4); a.stun = 0; ringFx(a.x, a.y, a.z, 0xffd066, 14, .6); ringFx(a.x, a.y, a.z, 0xffffff, 2.4, .5); break;
+    case 'leona': for (const t of alliesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 14) giveArmor(t, 50, 6); a.immT = 2; a.inv = Math.max(a.inv, 2); a.stun = 0; ringFx(a.x, a.y, a.z, 0xffd066, 14, .6); ringFx(a.x, a.y, a.z, 0xffffff, 2.4, .5); break;
   }
 }
 function useQ(a) {
@@ -986,7 +986,7 @@ function stepActor(a, dt) {
   if (a.volley > 0) { a.volley -= dt; a.volT -= dt; if (a.volT <= 0) { a.volT = .4; fireWeapon(a, WEAPONS.phone); } }
   // 衝鋒撞人
   if (a.seekW > 0) { a.seekT -= dt; if (a.seekT <= 0) { a.seekW--; a.seekT = 1.1; launchSeeker(a); } }   // Leona：三波自動追蹤補血球
-  if (a.immT > 0) { a.immT -= dt; a.stun = 0; a.inv = Math.max(a.inv, .2); }   // Leona 小招：4 秒無敵＋免疫暈眩
+  if (a.immT > 0) { a.immT -= dt; a.stun = 0; a.inv = Math.max(a.inv, .2); }   // Leona 小招：2 秒無敵＋免疫暈眩
   if (a.lockT > 0) a.lockT -= dt; if (!a.remote && !a.dead && a.hp < a.maxHp) { a.hurtT = (a.hurtT || 0) + dt; if (a.hurtT > 4) a.hp = Math.min(a.maxHp, a.hp + a.maxHp * .08 * dt); }   // 4 秒沒受傷開始自動回血（每秒 8% 血量）
   if (a.chargeT > 0) { a.chargeT -= dt; for (const t of enemiesOf(a)) if (!a.chHit.has(t) && Math.hypot(t.x - a.x, t.z - a.z) < 1.5) { a.chHit.add(t); dmgTo(t, 60, a, false, '🐂'); const f = fwd(a); t.vx += f[0] * 12; t.vz += f[1] * 12; t.stun = Math.max(t.stun, .4); if (t.remote) netKb(t, f[0] * 12, f[1] * 12, .4); } }
   if (a.isMe) {
