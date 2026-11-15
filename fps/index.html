@@ -753,13 +753,14 @@ function fireWeapon(a, w) {
   if (w.kind !== 'sniper' && w.kind !== 'rocket') addPart(sparkTex, 0xffd24a, mz[0], mz[1], mz[2], rand(-1, 1) + (a.isMe ? 1.2 : 0), rand(1, 2.4), rand(-1, 1), .5, .08, 12, false);   // 彈殼／釘子
   if (w.kind === 'rocket') { const [dx, dy, dz] = aimDir(a, baseSpread); const g = new THREE.Group(), core = mk(new THREE.BoxGeometry(.12, .12, .3), lam(0xdb2777)), glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTex, color: 0x7fe3ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); glow.scale.set(.7, .7, 1); g.add(core, glow); g.position.set(mz[0] + dx * .2, mz[1] + dy * .2, mz[2] + dz * .2); g.lookAt(g.position.x + dx, g.position.y + dy, g.position.z + dz); scene.add(g); PROJ.push({ m: g, x: g.position.x, y: g.position.y, z: g.position.z, vx: dx * w.speed, vy: dy * w.speed, vz: dz * w.speed, owner: a, w, life: 3, dm, trail: 0 }); return; }
   for (let p = 0; p < w.pellets; p++) {
-    const [dx, dy, dz] = aimDir(a, baseSpread); const wr = rayWorldN(eye[0], eye[1], eye[2], dx, dy, dz, w.range); let bestT = wr.t, nrm = wr.n, who = null, head = false, bar = null;
+    const [dx, dy, dz] = aimDir(a, baseSpread); const wr = rayWorldN(eye[0], eye[1], eye[2], dx, dy, dz, w.range), pierce = w.kind === 'sniper' && a.hero.id === 'anna' && (!a.isMe || zoom); let bestT = pierce ? w.range : wr.t, nrm = wr.n, who = null, head = false, bar = null, thru = false;   // Anna 開鏡：子彈可穿牆，穿牆後傷害 ×0.5
     const rb = rayBarriers(eye[0], eye[1], eye[2], dx, dy, dz, bestT, a.team); if (rb.bar) { bestT = rb.t; bar = rb.bar; nrm = null; }
     for (const t of actors) { if (t === a || t.dead || t.team === a.team) continue; const tt = rayCyl(eye[0], eye[1], eye[2], dx, dy, dz, t, bestT); if (tt >= 0 && tt < bestT) { bestT = tt; who = t; bar = null; head = eye[1] + dy * tt > t.y + 1.45; } }
+    if (pierce) { if (who && bestT > wr.t) thru = true; else if (!who && !bar) { bestT = wr.t; nrm = wr.n; } }
     const ex = eye[0] + dx * bestT, ey = eye[1] + dy * bestT, ez = eye[2] + dz * bestT;
     if (a.isMe || Math.hypot(a.x - me.x, a.z - me.z) < 38) beam(mz, [ex, ey, ez], w.col, w.kind === 'sniper' ? .035 : w.kind === 'shotgun' ? .018 : .026, w.kind === 'sniper' ? .18 : .09);
     if (bar) { bar.hp -= w.dmg * dm; if (a.isMe) hitMark(false); burst(ex, ey, ez, 0x7fd0ff, 1.3, .3, 1); sparkBurst(ex, ey, ez, 3, 0x7fd0ff, 2); }
-    else if (who) { const fall = w.kind === 'shotgun' ? clamp(1.1 - bestT / 40, .25, 1) : 1; dmgTo(who, w.dmg * dm * fall * (head ? 1.7 : 1), a, head, w.ic, ex, ey, ez); }
+    else if (who) { const fall = w.kind === 'shotgun' ? clamp(1.1 - bestT / 40, .25, 1) : 1; dmgTo(who, w.dmg * dm * fall * (head ? 1.7 : 1) * (thru ? .5 : 1), a, head, w.ic, ex, ey, ez); }
     else wallHit(ex, ey, ez, nrm, w.col);
   }
 }
@@ -791,6 +792,11 @@ function cast(a, k) { if (net && (a.isMe || a.hb)) netSend({ r: a.hb ? a.rid : u
 const enemiesOf = a => actors.filter(t => t.team !== a.team && !t.dead), alliesOf = a => actors.filter(t => t.team === a.team && !t.dead);
 function fwd(a) { return [-Math.sin(a.yaw), -Math.cos(a.yaw)]; }
 function moveDir(a) { if (a.isMe) { const mx = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + joy.x, mz = (keys.KeyS ? 1 : 0) - (keys.KeyW ? 1 : 0) + joy.y, l = Math.hypot(mx, mz); if (l > .15) { const f = fwd(a), rx = -f[1], rz = f[0]; return [(f[0] * -mz + rx * mx) / l, (f[1] * -mz + rz * mx) / l]; } } return fwd(a); }
+function reviveHere(t, by) {   // 原地復活（保留死亡位置），血量 60%、無敵 2.5 秒
+  if (!t.dead) return; t.dead = false; t.respT = 0; t.hp = t.maxHp * .6; t.inv = 2.5; t.stun = t.mark = t.heal = t.volley = t.chargeT = t.buff = t.rage = t.dmgT = t.spd = 0; t.armor = t.armorT = 0; t.fall = 0; t.nextHero = null;
+  ringFx(t.x, t.y, t.z, 0x7fe3ff, 3, .8); ringFx(t.x, t.y, t.z, 0xffd066, 1.8, .6); sparkBurst(t.x, t.y + 1, t.z, 18, 0x7fe3ff, 5); beam([t.x, t.y + 6, t.z], [t.x, t.y, t.z], 0x7fe3ff, .09, .6);
+  if (t.isMe) { $('heroSel').hidden = true; $('spec').hidden = true; specT = null; $('banner').classList.remove('on'); banner('被復活', (by ? by.name + ' 把你拉了回來' : ''), 1800); yaw = t.yaw; pitch = 0; SFX.pick && SFX.pick(); }
+}
 function giveArmor(t, amt, dur) { t.armor = Math.max(t.armor || 0, amt); t.armorT = dur; ringFx(t.x, t.y, t.z, 0xffd066, 1.6, .5); }
 function leonaTarget(a) {
   let best = null;
@@ -826,7 +832,8 @@ function useQ(a) {
     case 'noise': a.rage = 6; ringFx(a.x, a.y, a.z, 0xff6a3d, 4, .5); break;
     case 'anna': for (const t of enemiesOf(a)) t.mark = 7; a.dmgT = 7; ringFx(a.x, a.y, a.z, 0xff6a5a, 60, 1); break;
     case 'amber': for (const t of alliesOf(a)) { healTo(t, t.maxHp - t.hp, a); ringFx(t.x, t.y, t.z, 0x5ef0a4, 2.4, .6); } ringFx(a.x, a.y, a.z, 0x5ef0a4, 18, .8); break;
-    case 'leona': for (const t of alliesOf(a)) { giveArmor(t, 50, 6); healTo(t, 30, a); t.dmgT = Math.max(t.dmgT, 6); } ringFx(a.x, a.y, a.z, 0x7fe3ff, 26, .9); break;
+    case 'leona': { const down = actors.filter(t => t.team === a.team && t.dead && t !== a); if (down.length) { for (const t of down) if (!t.remote) reviveHere(t, a); else ringFx(t.x, t.y, t.z, 0x7fe3ff, 3, .8); } else { for (const t of alliesOf(a)) { giveArmor(t, 50, 6); healTo(t, 30, a); t.dmgT = Math.max(t.dmgT, 6); } }   // 沒有倒下的隊友時，退回原本的護甲加治療
+      ringFx(a.x, a.y, a.z, 0x7fe3ff, 26, .9); break; }
   }
 }
 // ───────── 控制點結算 ─────────
@@ -1095,7 +1102,7 @@ function netStepRemote(a, dt) {   // 其他玩家：只做平滑靠近與視覺�
   if (a.heal > 0 && !a.dead) { a.hring.visible = true; a.hring.position.set(a.x, a.y + .08, a.z); a.hring.scale.setScalar(.92 + Math.sin(performance.now() * .008) * .08); } else a.hring.visible = false;
 }
 function netAbilityOnMe(P, k) {   // 別人施放的技能，對我生效的部分（依隊伍與距離）
-  const id = P.hero.id, ally = P.team === me.team, d = Math.hypot(P.x - me.x, P.z - me.z); if (me.dead) return;
+  const id = P.hero.id, ally = P.team === me.team, d = Math.hypot(P.x - me.x, P.z - me.z); if (me.dead) { if (k === 'q' && id === 'leona' && ally) reviveHere(me, P); return; }
   if (k === 's') { if (id === 'anna' && !ally && d < 40) me.mark = 4; else if (id === 'amber' && ally && d < 12) { me.spd = 4; SFX.pick(); } else if (id === 'leona' && ally && d < 14) giveArmor(me, 40, 6); }
   else if (k === 'q') { if (id === 'anna' && !ally) me.mark = 7; else if (id === 'amber' && ally) { NETIN = true; healTo(me, me.maxHp - me.hp, P); NETIN = false; } else if (id === 'leona' && ally) { giveArmor(me, 50, 6); NETIN = true; healTo(me, 30, P); NETIN = false; me.dmgT = Math.max(me.dmgT, 6); } }
 }
