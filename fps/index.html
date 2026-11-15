@@ -962,7 +962,8 @@ function teamTable(team, win, compact) {   // 一隊一張表：標題、勝負�
     '<table style="width:100%;border-collapse:collapse;font-size:' + (compact ? 13 : 14) + 'px"><tr style="color:#8a97a6;font-size:10px;letter-spacing:.2em;text-align:left"><th style="text-align:left;padding:3px 8px">英雄</th><th style="text-align:left">擊殺</th><th style="text-align:left">死亡</th><th style="text-align:left">傷害</th><th style="text-align:left">治療</th></tr>' + rows +
     '<tr style="color:#ffb000;font-weight:700"><td style="padding:3px 8px">合計</td><td>' + sum(a => a.kills) + '</td><td>' + sum(a => a.deaths) + '</td><td>' + Math.round(sum(a => a.dmg)) + '</td><td>' + Math.round(sum(a => a.heals)) + '</td></tr></table></div>';
 }
-function showSB(on) { const el = $('sb'); if (!on) { el.hidden = true; return; } const win = prog[0] > prog[1] ? 0 : prog[1] > prog[0] ? 1 : -1; el.innerHTML = teamTable(0, win, true) + teamTable(1, win, true); el.hidden = false; }
+let sbHeld = false, sbT = 0;   // 按住 Tab 期間每 0.25 秒更新一次戰績，放開就收起
+function showSB(on) { sbHeld = !!on; sbT = .25; const el = $('sb'); if (!on) { el.hidden = true; return; } const win = prog[0] > prog[1] ? 0 : prog[1] > prog[0] ? 1 : -1; el.innerHTML = teamTable(0, win, true) + teamTable(1, win, true); el.hidden = false; }
 function endMatch() { if (state === 'over') return; state = 'over'; try { document.exitPointerLock(); } catch (e) {} document.documentElement.classList.remove('playing'); $('banner').classList.remove('on'); showHeroSel(false); showSB(false);
   const win = prog[0] > prog[1] ? 0 : prog[1] > prog[0] ? 1 : -1;
   const o = $('menu'); o.hidden = false; o.firstElementChild.innerHTML = '<div class="logo"><small>' + (win === 0 ? 'VICTORY' : win === 1 ? 'DEFEAT' : 'DRAW') + '</small>' + (win === 0 ? '勝利' : win === 1 ? '敗北' : '平手') + '</div><div class="mono" style="text-align:center;font-size:38px;margin:8px 0"><span style="color:#5ec8ff">' + Math.floor(prog[0]) + '%</span> : <span style="color:#ff4b3e">' + Math.floor(prog[1]) + '%</span></div>' + teamTable(0, win) + teamTable(1, win) +
@@ -1013,7 +1014,7 @@ function render(dt) {
   }
   renderer.render(scene, camera);
 }
-function frame(now) { requestAnimationFrame(frame); const dt = Math.min(.05, (now - last) / 1000); last = now; if (!paused) sim(dt); render(paused ? 0 : dt); }
+function frame(now) { requestAnimationFrame(frame); const dt = Math.min(.05, (now - last) / 1000); last = now; if (sbHeld) { sbT -= dt; if (sbT <= 0) { if (state === 'play') showSB(true); else showSB(false); } } if (!paused) sim(dt); render(paused ? 0 : dt); }
 
 // ───────── 選單：選英雄 ─────────
 function pills(id, opts, get, set) { const box = $(id); box.innerHTML = ''; opts.forEach(([label, val]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pill' + (get() === val ? ' on' : ''); b.textContent = label; b.onclick = () => { set(val); saveCfg(); pills(id, opts, get, set); }; box.appendChild(b); }); }
