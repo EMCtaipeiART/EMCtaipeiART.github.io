@@ -539,7 +539,7 @@ const HEROES = [
   { id: 'amber', char: 'Amber', name: 'Amber', title: '茶歇補給', role: '支援', ic: '☕', hp: 150, speed: 5.6, w: 'mouse', pref: 12, sleeve: 0x16a34a,
     e: { n: '治療光環', ic: '💚', cd: 12, d: '4 秒內持續治療身邊 8 公尺內的隊友（含自己）' }, s: { n: '加油鼓舞', ic: '📣', cd: 10, d: '附近隊友 4 秒移速 +35%' }, q: { n: '茶歇回復', ic: '🫖', d: '全隊立刻回滿血' } },
   { id: 'leona', char: 'Leona', name: 'Leona', title: '電話客服', role: '支援', ic: '☎️', hp: 150, speed: 5.5, w: 'phone', pref: 14, sleeve: 0xdb2777,
-    e: { n: '療癒訊號', ic: '📞', cd: 6, d: '立即治療瞄準的隊友 100 點（沒瞄準就治療附近血最少的隊友，自己 50），接著自動發射 3 波追蹤補血球，每波追上附近血最少的隊友補 50 點' }, s: { n: '不再占線', ic: '🛡️', cd: 12, d: '附近隊友獲得 40 點護甲，持續 6 秒' }, q: { n: '全頻道廣播', ic: '📢', d: '原地復活所有倒下的隊友（60% 血、無敵 2.5 秒）；沒有人倒下時全隊獲得 50 護甲並治療 30' } }
+    e: { n: '療癒訊號', ic: '📞', cd: 6, d: '立即治療瞄準的隊友 100 點（沒瞄準就治療附近血最少的隊友，自己 50），接著自動發射 3 波追蹤補血球，每波追上附近血最少的隊友補 50 點' }, s: { n: '不再占線', ic: '🛡️', cd: 12, d: '附近隊友獲得 50 點護甲（6 秒）；自己 4 秒內無敵：不受傷害、不被暈眩' }, q: { n: '全頻道廣播', ic: '📢', d: '原地復活所有倒下的隊友（60% 血、無敵 2.5 秒）；沒有人倒下時全隊獲得 50 護甲並治療 30' } }
 ];
 const HERO_BY = Object.fromEntries(HEROES.map(h => [h.id, h]));
 // ───────── 角色（12 角度公告板＋跑步圖集） ─────────
@@ -583,7 +583,7 @@ const TEAMCOL = [0x5ec8ff, 0xff4b3e];
 let hbT = 0, vmSX = 0, vmSY = 0, vmLY = 0, vmLP = 0, vmEquip = 0, vmKick = 0, state = 'menu', paused = false, tLeft = 480, prog = [0, 0], owner = -1, cap = 0, capTeam = -1, contested = false, present = [0, 0], stT = 0, yaw = 0, pitch = 0, locked = false, zoom = false, shake = 0, recoil = 0, bobT = 0;
 const keys = {}, joy = { x: 0, y: 0 }, hold = { fire: false };
 function spawnPoint(team, lt) { if (lt === undefined) lt = team; const pts = team === 0 ? [[-26, -10], [-26, 0], [-26, 10], [-22, 20], [-22, -20]] : [[26, -10], [26, 0], [26, 10], [22, 20], [22, -20]]; let best = null, bd = -1; for (let i = 0; i < 6; i++) { const p = pts[Math.floor(Math.random() * pts.length)]; let md = 1e9; for (const a of actors) if (!a.dead && a.team !== lt) md = Math.min(md, Math.hypot(a.x - p[0], a.z - p[1])); if (md > bd) { bd = md; best = p; } } return best; }
-function respawn(a) { if (a.nextHero) { applyHero(a, HERO_BY[a.nextHero]); a.nextHero = null; if (a.isMe) { setViewmodel(); buildHud(); } else rebuildLook(a); } const p = spawnPoint(a.gt === undefined ? a.team : a.gt, a.team); a.x = p[0] + rand(-1, 1); a.z = p[1] + rand(-1, 1); a.y = 0; a.vx = a.vz = a.vy = 0; a.hp = a.maxHp; a.dead = false; a.inv = 2; a.pitch = 0; a.path = []; a.tgt = null; a.fireT = .4; a.stun = a.mark = a.heal = a.volley = a.chargeT = a.buff = a.rage = a.dmgT = a.spd = a.lockT = a.seekW = 0; a.armor = a.armorT = 0; a.actT = { e: 0, s: 0, q: 0 }; a.yaw = (a.gt === undefined ? a.team : a.gt) === 0 ? -Math.PI / 2 : Math.PI / 2; if (a.isMe) { yaw = a.yaw; pitch = 0; $('heroSel').hidden = true; specT = null; $('spec').hidden = true; } }
+function respawn(a) { if (a.nextHero) { applyHero(a, HERO_BY[a.nextHero]); a.nextHero = null; if (a.isMe) { setViewmodel(); buildHud(); } else rebuildLook(a); } const p = spawnPoint(a.gt === undefined ? a.team : a.gt, a.team); a.x = p[0] + rand(-1, 1); a.z = p[1] + rand(-1, 1); a.y = 0; a.vx = a.vz = a.vy = 0; a.hp = a.maxHp; a.dead = false; a.inv = 2; a.pitch = 0; a.path = []; a.tgt = null; a.fireT = .4; a.stun = a.mark = a.heal = a.volley = a.chargeT = a.buff = a.rage = a.dmgT = a.spd = a.lockT = a.seekW = a.immT = 0; a.armor = a.armorT = 0; a.actT = { e: 0, s: 0, q: 0 }; a.yaw = (a.gt === undefined ? a.team : a.gt) === 0 ? -Math.PI / 2 : Math.PI / 2; if (a.isMe) { yaw = a.yaw; pitch = 0; $('heroSel').hidden = true; specT = null; $('spec').hidden = true; } }
 function drawHpBar(a) {
   const key = Math.ceil(a.hp) + '|' + Math.ceil(a.armor || 0) + '|' + a.maxHp; if (a._hk === key) return; a._hk = key;
   const c = a.hpC, g = c.getContext('2d'), w = c.width, h = c.height, pad = 3, iw = w - pad * 2, ih = h - pad * 2, f = clamp(a.hp / a.maxHp, 0, 1), col = a.hp < a.maxHp * .3 ? '#ffd24a' : (a.team ? '#ff4b3e' : '#5ec8ff');
@@ -843,7 +843,7 @@ function useS(a) {
     case 'noise': a.buff = 5; ringFx(a.x, a.y, a.z, 0xffb000, 2, .4); break;
     case 'anna': for (const t of enemiesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 40) { t.mark = 4; } ringFx(a.x, a.y, a.z, 0xff6a5a, 40, .8); break;
     case 'amber': for (const t of alliesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 12) { t.spd = 4; if (t.isMe) SFX.pick(); } ringFx(a.x, a.y, a.z, 0xffd066, 12, .6); break;
-    case 'leona': for (const t of alliesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 14) giveArmor(t, 40, 6); ringFx(a.x, a.y, a.z, 0xffd066, 14, .6); break;
+    case 'leona': for (const t of alliesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 14) giveArmor(t, 50, 6); a.immT = 4; a.inv = Math.max(a.inv, 4); a.stun = 0; ringFx(a.x, a.y, a.z, 0xffd066, 14, .6); ringFx(a.x, a.y, a.z, 0xffffff, 2.4, .5); break;
   }
 }
 function useQ(a) {
@@ -958,6 +958,7 @@ function stepActor(a, dt) {
   if (a.volley > 0) { a.volley -= dt; a.volT -= dt; if (a.volT <= 0) { a.volT = .4; fireWeapon(a, WEAPONS.phone); } }
   // 衝鋒撞人
   if (a.seekW > 0) { a.seekT -= dt; if (a.seekT <= 0) { a.seekW--; a.seekT = 1.1; launchSeeker(a); } }   // Leona：三波自動追蹤補血球
+  if (a.immT > 0) { a.immT -= dt; a.stun = 0; a.inv = Math.max(a.inv, .2); }   // Leona 小招：4 秒無敵＋免疫暈眩
   if (a.lockT > 0) a.lockT -= dt; if (!a.remote && !a.dead && a.hp < a.maxHp) { a.hurtT = (a.hurtT || 0) + dt; if (a.hurtT > 4) a.hp = Math.min(a.maxHp, a.hp + a.maxHp * .08 * dt); }   // 4 秒沒受傷開始自動回血（每秒 8% 血量）
   if (a.chargeT > 0) { a.chargeT -= dt; for (const t of enemiesOf(a)) if (!a.chHit.has(t) && Math.hypot(t.x - a.x, t.z - a.z) < 1.5) { a.chHit.add(t); dmgTo(t, 60, a, false, '🐂'); const f = fwd(a); t.vx += f[0] * 12; t.vz += f[1] * 12; t.stun = Math.max(t.stun, .4); if (t.remote) netKb(t, f[0] * 12, f[1] * 12, .4); } }
   if (a.isMe) {
@@ -1126,7 +1127,7 @@ function netStepRemote(a, dt) {   // 其他玩家：只做平滑靠近與視覺�
 }
 function netAbilityOnMe(P, k) {   // 別人施放的技能，對我生效的部分（依隊伍與距離）
   const id = P.hero.id, ally = P.team === me.team, d = Math.hypot(P.x - me.x, P.z - me.z); if (me.dead) { if (k === 'q' && id === 'leona' && ally) reviveHere(me, P); return; }
-  if (k === 's') { if (id === 'anna' && !ally && d < 40) me.mark = 4; else if (id === 'amber' && ally && d < 12) { me.spd = 4; SFX.pick(); } else if (id === 'leona' && ally && d < 14) giveArmor(me, 40, 6); }
+  if (k === 's') { if (id === 'anna' && !ally && d < 40) me.mark = 4; else if (id === 'amber' && ally && d < 12) { me.spd = 4; SFX.pick(); } else if (id === 'leona' && ally && d < 14) giveArmor(me, 50, 6); }
   else if (k === 'q') { if (id === 'amber' && ally) { NETIN = true; healTo(me, me.maxHp - me.hp, P); NETIN = false; } else if (id === 'leona' && ally) { giveArmor(me, 50, 6); NETIN = true; healTo(me, 30, P); NETIN = false; me.dmgT = Math.max(me.dmgT, 6); } }
 }
 function netMsg(m) {
