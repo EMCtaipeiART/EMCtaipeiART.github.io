@@ -149,10 +149,38 @@ const dayDiff = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 86400000)
 let DEVICE = ''; try { DEVICE = localStorage.getItem('dl2:device') || ''; } catch (e) {}
 const post = (path, body) => fetch(API + path, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(body) }).then(async r => ({ status: r.status, j: await r.json().catch(() => ({})) }));
 
-// ───────── 音效與音樂（WebAudio 合成）─────────
+// ───────── 背景音樂（使用者提供的 Suno 曲；音量／靜音存在瀏覽器，和其他遊戲共用）─────────
+function emcBgm(url, opts) {
+  const KEY = 'emcBgmV1'; let st = {}; try { st = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+  const o = Object.assign({ vol: .3, fade: 4 }, opts || {}); let vol = typeof st.vol === 'number' ? st.vol : o.vol, muted = !!st.muted, started = false, paused = false, timer = 0, trying = false, gapAt = 0;
+  const A = [new Audio(url), new Audio(url)]; A.forEach(a => { a.preload = 'auto'; a.volume = 0; }); let cur = 0;
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ vol, muted })); } catch (e) {} };
+  const gainOf = a => { const d = Math.max(a.duration || 0, o.dur || 0), t = a.currentTime; if (!d) return 0; return Math.max(0, Math.min(1, t / 1.5, (d - t) / o.fade)); };
+  function apply() { for (const a of A) { const g = a.paused ? 0 : gainOf(a); try { a.volume = muted ? 0 : Math.max(0, Math.min(1, vol * g)); } catch (e) {} a.muted = muted; } }
+  function tick() {
+    if (!started || paused) return; const a = A[cur], b = A[1 - cur];
+    if (gapAt && Date.now() >= gapAt && a.paused && b.paused) { gapAt = 0; a.currentTime = 0; a.play().catch(() => { gapAt = Date.now() + 2000; }); }   // 同一個播放器重播（手機只有它被使用者操作解鎖過，換另一個會被擋）   // 播完先安靜 6 秒再重播
+    for (const x of A) { const dx = Math.max(x.duration || 0, o.dur || 0); if (!x.paused && dx && x.currentTime >= dx - .05) { x.pause(); gapAt = Date.now() + 6000; } }
+    apply();
+  }
+  const ctl = {
+    start() { if (started || trying) return; trying = true; const x = A[cur]; try { x.currentTime = 0; } catch (e) {} let p; try { p = x.play(); } catch (e) { trying = false; return; } const ok = () => { trying = false; if (started) return; started = true; clearInterval(timer); timer = setInterval(tick, 100); ['pointerdown', 'mousedown', 'touchstart', 'click', 'keydown'].forEach(ev => removeEventListener(ev, once, true)); }; if (p && p.then) p.then(ok).catch(() => { trying = false; }); else ok(); },
+    pause() { paused = true; A.forEach(a => a.pause()); },
+    resume() { if (!started) return; paused = false; A[cur].play().catch(() => {}); },
+    get vol() { return vol; }, get muted() { return muted; }, get on() { return started; }, get playing() { return started && !paused; }, get t() { return A[cur].currentTime; }, get d() { return A[cur].duration; }, get level() { return A.map(x => +x.volume.toFixed(2)); },
+    setVol(v) { vol = Math.max(0, Math.min(1, v)); if (vol > 0) muted = false; save(); apply(); },
+    setMuted(m) { muted = !!m; save(); apply(); }
+  };
+  function once() { ctl.start(); }
+  ['pointerdown', 'mousedown', 'touchstart', 'click', 'keydown'].forEach(ev => addEventListener(ev, once, true));   // 瀏覽器規定要使用者操作後才能播放：先嘗試直接播，被擋就等第一次操作，成功才解除
+  ctl.start();
+  return ctl;
+}
+const bgm = emcBgm('bgm-deadline.m4a', { vol: .3, dur: 122 });
+// ───────── 音效（WebAudio 合成）─────────
 const SFX = (() => {
   let ac = null, master = null, bus = null, muted = false, musicOn = true, mus = null, out = null;
-  try { muted = localStorage.getItem('dl2:mute') === '1'; musicOn = localStorage.getItem('dl2:music') !== '0'; } catch (e) {}
+  try { muted = localStorage.getItem('dl2:mute') === '1'; musicOn = localStorage.getItem('dl2:music') !== '0'; if (!musicOn) bgm.setMuted(true); } catch (e) {}
   const ok = () => { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); master = ac.createGain(); master.gain.value = muted ? 0 : .5; master.connect(ac.destination); bus = ac.createGain(); bus.gain.value = musicOn ? .5 : 0; bus.connect(master); } catch (e) { return false; } } if (ac.state === 'suspended') ac.resume(); return true; };
   function tone(f0, dur, type = 'sine', vol = .15, f1 = null, delay = 0) {
     if (!ok()) return; const t = ac.currentTime + delay, o = ac.createOscillator(), gn = ac.createGain();
@@ -162,9 +190,9 @@ const SFX = (() => {
   }
   const N = m => 440 * Math.pow(2, (m - 69) / 12);
   return {
-    get muted() { return muted; }, get musicOn() { return musicOn; },
+    get muted() { return muted; }, get musicOn() { return !bgm.muted; },
     setMuted(v) { muted = v; try { localStorage.setItem('dl2:mute', v ? '1' : '0'); } catch (e) {} if (master) master.gain.value = v ? 0 : .5; },
-    setMusic(v) { musicOn = v; try { localStorage.setItem('dl2:music', v ? '1' : '0'); } catch (e) {} if (bus) bus.gain.setTargetAtTime(v ? .5 : 0, ac.currentTime, .05); },
+    setMusic(v) { musicOn = v; try { localStorage.setItem('dl2:music', v ? '1' : '0'); } catch (e) {} bgm.setMuted(!v); if (v && bgm.vol === 0) bgm.setVol(.3); },
     unlock() { ok(); },
     click() { tone(660, .06, 'square', .06, 990); },
     good(combo) { const m = 72 + Math.min(combo, 12); tone(N(m), .12, 'triangle', .16); tone(N(m + 7), .16, 'sine', .1, null, .05); },
@@ -174,6 +202,7 @@ const SFX = (() => {
     count() { tone(520, .14, 'triangle', .14); }, go() { tone(784, .3, 'triangle', .16, 1175); },
     end() { [84, 79, 76, 72].forEach((m, i) => tone(N(m), .3, 'triangle', .12, null, i * .14)); },
     music(on) {   // 明快的 4 和弦循環，越接近截稿節奏越密
+      if (!on) { bgm.pause(); return; } bgm.start(); bgm.resume(); return;   // 一局開始播背景音樂、結束暫停（原本的程式合成伴奏已停用）
       if (!ok()) return; if (!on) { if (mus) { clearInterval(mus.t); mus = null; } return; } if (mus) return;
       const st = 60 / 132 / 4, ROOT = [48, 44, 41, 43], CH = [[60, 64, 67], [56, 60, 63], [53, 57, 60], [55, 59, 62]];
       mus = { step: 0, next: ac.currentTime + .1, hot: false, t: null };
