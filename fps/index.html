@@ -336,7 +336,13 @@ function bgmUI(ctl, css) {
   r.oninput = () => { ctl.setVol(r.value / 100); sync(); }; ['pointerdown', 'mousedown', 'touchstart'].forEach(ev => w.addEventListener(ev, e => e.stopPropagation()));
   const hint = document.createElement('span'); hint.textContent = '點一下開啟音樂'; hint.style.cssText = 'font-size:11px;color:#ffd24a;white-space:nowrap'; w.append(b, r, hint); document.body.appendChild(w); sync(); setInterval(() => { hint.style.display = ctl.on ? 'none' : 'inline'; }, 400); return w;
 }
-const bgm = emcBgm('bgm-mellow.m4a', { vol: .3, dur: 181.6 }); bgmUI(bgm, 'right:10px;top:48px;');
+const bgm = emcBgm('bgm-mellow.m4a', { vol: .3, dur: 181.6 }); { const bw = bgmUI(bgm, 'position:static;background:none;border:0;padding:0;'), sb = document.createElement('button'), sp = document.createElement('div');   // 右上角音樂鈕整合進「設定」面板
+  sb.type = 'button'; sb.textContent = '⚙ 設定'; sb.style.cssText = 'position:fixed;right:10px;top:48px;z-index:9999;font:700 12px/1 inherit;color:#fff;background:rgba(10,14,18,.7);border:1px solid #3a4654;padding:7px 10px;cursor:pointer';
+  sp.style.cssText = 'position:fixed;right:10px;top:84px;z-index:9998;display:none;background:rgba(12,16,22,.9);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:8px;color:#fff;font:700 12px system-ui'; sp.appendChild(bw);
+  sb.onclick = e => { e.stopPropagation(); sp.style.display = sp.style.display === 'none' ? 'block' : 'none'; sb.blur(); };
+  ['pointerdown', 'mousedown', 'touchstart'].forEach(ev => sp.addEventListener(ev, e => e.stopPropagation()));
+  document.addEventListener('pointerdown', e => { if (sp.style.display !== 'none' && !sp.contains(e.target) && e.target !== sb) sp.style.display = 'none'; });
+  document.body.append(sb, sp); }
 const CHAR_API = 'https://emc-ai-stage-classifier.machi-chen.workers.dev/api/public/characters';   // 與元宇宙／辦公室對決同一份「最新角色」
 let cloud = {}, cloudWalks = {}, cloudDone = false;
 const cloudReady = (async () => { try { const r = await fetch(CHAR_API, { signal: AbortSignal.timeout(5000) }); if (r.ok) { const j = await r.json(); cloud = j.characters || {}; cloudWalks = j.walks || {}; } } catch (e) {} cloudDone = true; })();
@@ -888,12 +894,12 @@ const PICKS = [{ x: 0, z: 24, t: 0 }, { x: 0, z: -24, t: 0 }, { x: 18, z: 0, t: 
 const pickMeshes = PICKS.map(p => { const g = new THREE.Group(), cup = mk(new THREE.CylinderGeometry(.22, .17, .32, 10), lam(0xffffff)); cup.position.y = .45; const cof = mk(new THREE.CylinderGeometry(.2, .2, .04, 10), lam(0x6b3a1a)); cof.position.y = .6; const base = mk(new THREE.CylinderGeometry(.35, .35, .08, 12), new THREE.MeshBasicMaterial({ color: 0x5ef0a4, transparent: true, opacity: .6 })); base.position.y = .05; g.add(cup, cof, base); g.position.set(p.x, 0, p.z); scene.add(g); return g; });
 
 // ───────── 輸入 ─────────
-addEventListener('keydown', e => { if (e.repeat) return; keys[e.code] = true; unlock(); if (['Space', 'ArrowUp', 'ArrowDown', 'Tab'].includes(e.code)) e.preventDefault();
+addEventListener('keydown', e => { if (e.code === 'Tab') { e.preventDefault(); const ae = document.activeElement; if (ae && ae !== document.body && ae.blur) ae.blur(); } if (e.repeat) return; keys[e.code] = true; unlock(); if (['Space', 'ArrowUp', 'ArrowDown', 'Tab'].includes(e.code)) e.preventDefault();
   if (state !== 'play') return;
   if (e.code === 'Tab') { showSB(true); return; }
   if (me.dead) { if (/^Digit[1-5]$/.test(e.code)) chooseHero(HEROES[+e.code.slice(5) - 1].id); if (e.code === 'Space' || e.code === 'ArrowRight') nextSpec(1); if (e.code === 'ArrowLeft') nextSpec(-1); return; }
   if (e.code === 'KeyE') useE(me); if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') useS(me); if (e.code === 'KeyQ' || e.code === 'KeyR') useQ(me); if (e.code === 'Tab') showSB(true); });
-addEventListener('keyup', e => { keys[e.code] = false; if (e.code === 'Tab') showSB(false); });
+addEventListener('keyup', e => { keys[e.code] = false; if (e.code === 'Tab') { e.preventDefault(); showSB(false); } });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; hold.fire = false; showSB(false); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { for (const k in keys) keys[k] = false; hold.fire = false; showSB(false); } });
 cv.addEventListener('mousedown', e => { unlock(); if (state === 'play' && me && me.dead && e.button === 0) nextSpec(1); if (state === 'play' && !locked && !lockFail && !touch) { askLock(); return; } if (e.button === 0) hold.fire = true; if (e.button === 2) setZoom(true); });
