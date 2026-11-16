@@ -3068,3 +3068,8 @@
 - 規則：每個角色都要「雲端可展示＋本機 12 角度備份」。本機自己重做且比雲端新的走路圖（`walk-manifest.json` 版本較大）不會被舊的雲端版蓋掉（例如設計測試組）。
 - 目前缺口：Amber、Noise、余采馨、李明庭、王藍庭、鄭筱舢、黎子瑄 只在本機（備份齊全），雲端沒有；廖秦葦雲端與本機都沒有走路圖。
 - 新入庫的角色請在發佈後執行 `node pixel-plaza/tools/sync-chars.mjs` 並 commit。
+
+## 2026-11-16 隱眼團購獨立版（純淨版）
+- 在 /Users/emc-imac1/Documents/lens-group-buy 另建獨立資料夾（非 Git repo，未動線上站）：只保留隱眼團購、以上傳 Excel 開團、僅管理者密碼登入。
+- 移除餐飲團／自訂團／Uber Eats／你訂、Google 登入與同事帳號、emctaipei.com／Gmail 設定、自動填單；改中性品牌「隱形眼鏡團購」。
+- 本機用 wrangler dev 測過：密碼登入、建立團購、後台頁無錯誤；未用真實報價 Excel 測上傳（本機沒有範本）。
