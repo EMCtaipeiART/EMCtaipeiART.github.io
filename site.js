@@ -3878,7 +3878,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       readRowsSafe();const r=state.editRow,id=state.detailId,orig=allRows().find(x=>idKey(x)===id);if(!r||!orig||state.saving)return;
       if(!loggedIn()){toast('請先登入',true);startLogin();return}
       const problem=validateRow(r,'');if(problem){toast(problem,true);return}
-      const statusChanged=r.status&&r.status!==String(orig['狀態']||'').trim(),payload={...payloadRow(r)};
+      const statusChanged=r.status&&r.status!==String(orig['狀態']||'').trim(),payload={...payloadRow(r)};delete payload.details; /* 急件細節只在新增時自動帶；編輯送 details 會被當成改項目細節而要求 request.status 權限 */
       if(statusChanged)payload.status=r.status;
       const headers=[...FORM_HEADERS,...(statusChanged?['案件狀態']:[])];
       state.saving=true;renderDetail();
