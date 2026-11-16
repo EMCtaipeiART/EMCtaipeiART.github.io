@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-11-16T00:54:17.274Z",
+ "updatedAt": "2026-11-16T00:55:24.579Z",
  "note": "每個角色需雲端可展示＋本機 12 角度備份（stand 必備；walk 為走路影格）",
  "characters": {
   "傅思凱": {
@@ -293,6 +293,24 @@
     "standHdWebp": true,
     "walk": 12,
     "walkHd": 12
+   },
+   "localWalkVersion": null,
+   "ok": false,
+   "problems": [
+    "雲端沒有（無法展示）"
+   ]
+  },
+  "透明人": {
+   "cloud": {
+    "stand": null,
+    "walk": null
+   },
+   "local": {
+    "stand": 12,
+    "standHd": 12,
+    "standHdWebp": true,
+    "walk": 0,
+    "walkHd": 0
    },
    "localWalkVersion": null,
    "ok": false,
