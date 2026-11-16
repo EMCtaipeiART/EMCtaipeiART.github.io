@@ -3060,3 +3060,8 @@
 - 配樂：expedition/bgm-expedition.m4a（使用者提供的 suno_d_5.m4a，約 198 秒，沿用 emcBgm，dur=198.2；音量／靜音與其他遊戲共用 emcBgmV1）。
 - 原本程式合成的戰鬥曲停用（SFX.music 改呼叫 bgm）；「音樂：開／關」鈕改控制這首歌；開戰播放、勝負後暫停；以前存過「音樂：關」（expMusic）的人維持關閉。音效、環境音不變。
 - 注意：CLAUDE.md 說 expedition/index.html 由部署腳本產生，但倉庫內找不到產生來源，歷史上也是直接改這個檔；若之後在別處重新產生這個檔，需要把這次的音樂改動一併帶過去。
+## 2026-11-16 角色入庫紀錄與 12 角度備份
+- 新增 `pixel-plaza/tools/sync-chars.mjs`：從雲端（角色工坊公開 API）把所有角色的 12 角度站姿（標準＋高清）與走路圖備份到 `pixel-plaza/sprites*/`，並寫入 `pixel-plaza/characters-registry.json`（每人：雲端站姿／走路版本、本機各檔的角度數、問題清單）。`--check` 只檢查，有缺會以非 0 結束。
+- 規則：每個角色都要「雲端可展示＋本機 12 角度備份」。本機自己重做且比雲端新的走路圖（`walk-manifest.json` 版本較大）不會被舊的雲端版蓋掉（例如設計測試組）。
+- 目前缺口：Amber、Noise、余采馨、李明庭、王藍庭、鄭筱舢、黎子瑄 只在本機（備份齊全），雲端沒有；廖秦葦雲端與本機都沒有走路圖。
+- 新入庫的角色請在發佈後執行 `node pixel-plaza/tools/sync-chars.mjs` 並 commit。

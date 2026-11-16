@@ -1,0 +1,340 @@
+{
+ "updatedAt": "2026-11-16T00:54:17.274Z",
+ "note": "每個角色需雲端可展示＋本機 12 角度備份（stand 必備；walk 為走路影格）",
+ "characters": {
+  "傅思凱": {
+   "cloud": {
+    "stand": 3,
+    "walk": null
+   },
+   "local": {
+    "stand": 12,
+    "standHd": 12,
+    "standHdWebp": true,
+    "walk": 12,
+    "walkHd": 12
+   },
+   "localWalkVersion": 3,
+   "ok": true,
+   "problems": []
+  },
+  "吳冠賢": {
+   "cloud": {
+    "stand": 5,
+    "walk": null
+   },
+   "local": {
+    "stand": 12,
+    "standHd": 12,
+    "standHdWebp": true,
+    "walk": 12,
+    "walkHd": 12
+   },
+   "localWalkVersion": 5,
+   "ok": true,
+   "problems": []
+  },
+  "Machi": {
+   "cloud": {
+    "stand": 5,
+    "walk": null
+   },
+   "local": {
+    "stand": 12,
+    "standHd": 12,
+    "standHdWebp": true,
+    "walk": 12,
+    "walkHd": 12
+   },
+   "localWalkVersion": 5,
+   "ok": true,
+   "problems": []
+  },
+  "廖秦葦": {
+   "cloud": {
+    "stand": 5,
+    "walk": null
+   },
+   "local": {
+    "stand": 12,
+    "standHd": 12,
+    "standHdWebp": true,
+    "walk": 0,
+    "walkHd": 0
+   },
+   "localWalkVersion": null,
+   "ok": true,
+   "problems": []
+  },
+  "Leona": {
+   "cloud": {
+    "stand": 8,
+    "walk": null
+   },
+   "local": {
+    "stand": 12,
+    "standHd": 12,
+    "standHdWebp": true,
+    "walk": 12,
+    "walkHd": 12
+   },
+   "localWalkVersion": 8,
+   "ok": true,
+   "problems": []
+  },
+  "王穗紜": {
+   "cloud": {
+    "stand": 2,
+    "walk": null
+   },
+   "local": {
+    "stand": 12,
+    "standHd": 12,
+    "standHdWebp": true,
+    "walk": 12,
+    "walkHd": 12
+   },
+   "localWalkVersion": 2,
+   "ok": true,
+   "problems": []
+  },
+  "陳雅筠": {
+   "cloud": {
+    "stand": 2,
+    "walk": null
+   },
+   "local": {
+    "stand": 12,
+    "standHd": 12,
+    "standHdWebp": true,
+    "walk": 12,
+    "walkHd": 12
+   },
+   "localWalkVersion": 2,
+   "ok": true,
+   "problems": []
+  },
+  "謝榕": {
+   "cloud": {
+    "stand": 5,
+    "walk": 5
+   },
+   "local": {
+    "stand": 12,
+    "standHd": 12,
+    "standHdWebp": true,
+    "walk": 12,
+    "walkHd": 12
+   },
+   "localWalkVersion": 5,
+   "ok": true,
+   "problems": []
+  },
+  "設計測試組": {
+   "cloud": {
+    "stand": 8,
+    "walk": 1
+   },
+   "local": {
+    "stand": 12,
+    "standHd": 12,
+    "standHdWebp": true,
+    "walk": 12,
+    "walkHd": 12
+   },
+   "localWalkVersion": 2,
+   "ok": true,
+   "problems": []
+  },
+  "朱祖翎": {
+   "cloud": {
+    "stand": 5,
+    "walk": 1
+   },
+   "local": {
+    "stand": 12,
+    "standHd": 12,
+    "standHdWebp": true,
+    "walk": 12,
+    "walkHd": 12
+   },
+   "localWalkVersion": null,
+   "ok": true,
+   "problems": []
+  },
+  "Anna": {
+   "cloud": {
+    "stand": 3,
+    "walk": 1
+   },
+   "local": {
+    "stand": 12,
+    "standHd": 12,
+    "standHdWebp": true,
+    "walk": 12,
+    "walkHd": 12
+   },
+   "localWalkVersion": null,
+   "ok": true,
+   "problems": []
+  },
+  "古晟如": {
+   "cloud": {
+    "stand": 2,
+    "walk": 1
+   },
+   "local": {
+    "stand": 12,
+    "standHd": 12,
+    "standHdWebp": true,
+    "walk": 12,
+    "walkHd": 12
+   },
+   "localWalkVersion": null,
+   "ok": true,
+   "problems": []
+  },
+  "周鈴真": {
+   "cloud": {
+    "stand": 3,
+    "walk": 1
+   },
+   "local": {
+    "stand": 12,
+    "standHd": 12,
+    "standHdWebp": true,
+    "walk": 12,
+    "walkHd": 12
+   },
+   "localWalkVersion": null,
+   "ok": true,
+   "problems": []
+  },
+  "Amber": {
+   "cloud": {
+    "stand": null,
+    "walk": null
+   },
+   "local": {
+    "stand": 12,
+    "standHd": 12,
+    "standHdWebp": true,
+    "walk": 12,
+    "walkHd": 12
+   },
+   "localWalkVersion": null,
+   "ok": false,
+   "problems": [
+    "雲端沒有（無法展示）"
+   ]
+  },
+  "Noise": {
+   "cloud": {
+    "stand": null,
+    "walk": null
+   },
+   "local": {
+    "stand": 12,
+    "standHd": 12,
+    "standHdWebp": true,
+    "walk": 12,
+    "walkHd": 12
+   },
+   "localWalkVersion": null,
+   "ok": false,
+   "problems": [
+    "雲端沒有（無法展示）"
+   ]
+  },
+  "余采馨": {
+   "cloud": {
+    "stand": null,
+    "walk": null
+   },
+   "local": {
+    "stand": 12,
+    "standHd": 12,
+    "standHdWebp": true,
+    "walk": 12,
+    "walkHd": 12
+   },
+   "localWalkVersion": null,
+   "ok": false,
+   "problems": [
+    "雲端沒有（無法展示）"
+   ]
+  },
+  "李明庭": {
+   "cloud": {
+    "stand": null,
+    "walk": null
+   },
+   "local": {
+    "stand": 12,
+    "standHd": 12,
+    "standHdWebp": true,
+    "walk": 12,
+    "walkHd": 12
+   },
+   "localWalkVersion": null,
+   "ok": false,
+   "problems": [
+    "雲端沒有（無法展示）"
+   ]
+  },
+  "王藍庭": {
+   "cloud": {
+    "stand": null,
+    "walk": null
+   },
+   "local": {
+    "stand": 12,
+    "standHd": 12,
+    "standHdWebp": true,
+    "walk": 12,
+    "walkHd": 12
+   },
+   "localWalkVersion": null,
+   "ok": false,
+   "problems": [
+    "雲端沒有（無法展示）"
+   ]
+  },
+  "鄭筱舢": {
+   "cloud": {
+    "stand": null,
+    "walk": null
+   },
+   "local": {
+    "stand": 12,
+    "standHd": 12,
+    "standHdWebp": true,
+    "walk": 12,
+    "walkHd": 12
+   },
+   "localWalkVersion": null,
+   "ok": false,
+   "problems": [
+    "雲端沒有（無法展示）"
+   ]
+  },
+  "黎子瑄": {
+   "cloud": {
+    "stand": null,
+    "walk": null
+   },
+   "local": {
+    "stand": 12,
+    "standHd": 12,
+    "standHdWebp": true,
+    "walk": 12,
+    "walkHd": 12
+   },
+   "localWalkVersion": null,
+   "ok": false,
+   "problems": [
+    "雲端沒有（無法展示）"
+   ]
+  }
+ }
+}
