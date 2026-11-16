@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 11649,
+  "revision": 11650,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-16T02:11:44.488Z",
+  "updatedAt": "2026-11-16T02:16:13.649Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -2229,7 +2229,9 @@
         "案件摘要"
       ],
       "primaryKey": "案件編號",
-      "rows": []
+      "rows": [
+        {"案件編號":"26110039","申請人帳號":"anna.hsu@emctaipei.com","申請人":"Anna","申請時間":"2026-11-16T02:16:13.649Z","案件摘要":"soundcore_蝦皮soundcore館/11/25 蝦皮商城日(單日限定活動)/ 電商*5+影片*1｜Anna｜未開始"}
+      ]
     },
     "短連結": {
       "headers": [
