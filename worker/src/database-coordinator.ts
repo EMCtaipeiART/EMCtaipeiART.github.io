@@ -6862,7 +6862,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         // 已經是過稿中就不動；已完成／暫停中的案件不因為搬圖被改回來。
         let statusChanged = false;
         let targetStatus = '';
-        if (crossCase && toRound === 0) {
+        // 2026-11-17：不只初稿——搬到修改輪次（合併信件的一修、二修）也一樣，圖片已交付就是過稿中。
+        if (crossCase) {
           const targetCase = draft.tables.database.rows.find(row => text(row['案件編號']) === toCaseId);
           targetStatus = text(targetCase?.['狀態']);
           if (targetCase && !['過稿中', '已完成', '暫停中'].includes(targetStatus)) {
