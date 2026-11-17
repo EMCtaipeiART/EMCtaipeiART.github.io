@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 11858,
+  "revision": 11859,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-17T08:43:29.334Z",
+  "updatedAt": "2026-11-17T08:43:33.630Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1363,7 +1363,7 @@
         {"案件編號":"26110030","修改次數":"1","建立日期":"2026/11/17 14:42:50","修改日期":"2026-11-17","修改內容":"圖片元素需要微調，詳細請看：附件。\n這篇預計今晚上線，希望有機會16:30收到修改素材","修改內容連結":"[{\"text\":\"附件\",\"url\":\"https://docs.google.com/presentation/d/1gGFJWR8lk-pyFWbixCsRczZl1atqnLOGJjXP1DbB4W4/edit?slide=id.h1e59e9d2cf5a8140_0_0#slide=id.h1e59e9d2cf5a8140_0_0\"}]","修改人":"朱祖翎","確認修正日":"2026/11/17 15:16:16","待修改圖片":"","圖片連結":"[{\"fileName\":\"261117_Emfusion_11月FB貼文_認識角質橋粒_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/18P96Z4yPqYKQC3ABo-prq25IyqzW-_6z=w1600\"},{\"fileName\":\"261117_Emfusion_11月FB貼文_認識角質橋粒_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1-y3CjOGhQKphzoid3XGkyiXpBLIb31BV=w1600\"},{\"fileName\":\"261117_Emfusion_11月FB貼文_認識角質橋粒_3.png\",\"url\":\"https://lh3.googleusercontent.com/d/1G7BrcEMy52CqrU7ynqhXyMUuERkyw0H8=w1600\"},{\"fileName\":\"261117_Emfusion_11月FB貼文_認識角質橋粒_4.png\",\"url\":\"https://lh3.googleusercontent.com/d/1XBVFTfmpM60sOXLgIvVmpCpl9v8zJVEO=w1600\"},{\"fileName\":\"261117_Emfusion_11月FB貼文_認識角質橋粒_5.png\",\"url\":\"https://lh3.googleusercontent.com/d/1SUib977i6SlrOroX9f4FPXaaRMF7wprM=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/17 15:15:51"},
         {"案件編號":"26110112","修改次數":"0","建立日期":"2026/11/17 15:33:10","修改日期":"2026/11/17 15:33:10","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/17 15:33:10","圖片連結":"[{\"fileName\":\"261117_ANKER_全案型_momo_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1lNSq3vqiukMctP2MBxJ-XGzdMsnhyU8N=w1600\"},{\"fileName\":\"261117_ANKER_全案型_momo_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1woVezaf0C-vcOeRP3Yf3F--rqQtv5pMl=w1600\"},{\"fileName\":\"261117_ANKER_全案型_momo_3.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Nc9Ku4WWMEVMhUbcKTGGzMmcHCd7ITdD=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/17 15:33:10"},
         {"案件編號":"26110106","修改次數":"1","建立日期":"2026/11/17 15:40:27","修改日期":"2026-11-17","修改內容":"來信提供客戶修改回饋，\n詳閱雲端簡報P.7-10說明，再請協助調整，謝謝！","修改內容連結":"[{\"text\":\"雲端簡報\",\"url\":\"https://docs.google.com/presentation/d/16oCNKeU9fez7P98H8cZ4dJ2NBCG7hEy6/edit?slide=id.h48122f8e340fe8ab_3_0#slide=id.h48122f8e340fe8ab_3_0\"}]","修改人":"羅珮云","確認修正日":"","待修改圖片":""},
-        {"案件編號":"26110131","修改次數":"0","建立日期":"2026/11/17 16:05:34","修改日期":"2026/11/17 16:05:34","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/17 16:05:34","圖片連結":"[{\"fileName\":\"261117_官網_代言人CPAS_AeroClip 2_A款.png\",\"url\":\"https://lh3.googleusercontent.com/d/17B6eTUkY2rHsnxiiSbvBo72CT6_R0yIq=w1600\"},{\"fileName\":\"261117_官網_代言人CPAS_AeroClip 2_B款.png\",\"url\":\"https://lh3.googleusercontent.com/d/1mLmndtRA4Aloz8Xpfrp909R2YMLFAho-=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/17 16:43:29"}
+        {"案件編號":"26110131","修改次數":"0","建立日期":"2026/11/17 16:05:34","修改日期":"2026/11/17 16:05:34","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/17 16:05:34","圖片連結":"[{\"fileName\":\"261117_官網_代言人CPAS_AeroClip 2_B款.png\",\"url\":\"https://lh3.googleusercontent.com/d/1mLmndtRA4Aloz8Xpfrp909R2YMLFAho-=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/17 16:43:33"}
       ]
     },
     "補充資料連結": {
