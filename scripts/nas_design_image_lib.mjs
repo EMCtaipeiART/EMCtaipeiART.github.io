@@ -887,6 +887,8 @@ export function designImageNameList(value) {
 
 /** 這個檔名要不要算在這個資料夾設定底下：skip 優先排除，pin 直接收下，pinOnly 只收 pin，其餘照關鍵字。 */
 export function folderAcceptsFile(fileName, folder) {
+  // 回信時設計師在檔案清單勾選了哪些檔案（只在那一次立即備份用，不會存進案件設定）：只收勾選的檔名。
+  if (Array.isArray(folder?.only)) return folder.only.includes(String(fileName));
   const baseName = designImageBaseName(fileName);
   if ((folder?.skip || []).includes(baseName)) return false;
   if ((folder?.pin || []).includes(baseName)) return true;
@@ -1192,6 +1194,36 @@ export function recordedTimesByBaseName(dbData, caseId) {
 
 // 檔案存檔時間比資料庫備份時間晚超過這個值，就視為「備份之後又改過的新版本」。
 const NEWER_THAN_RECORDED_MS = 2 * 60 * 1000;
+
+/**
+ * 回信前列出「這次準備備份的檔案」讓設計師勾選：資料夾這一層、符合關鍵字的圖片／影片，
+ * 每個檔案標示有沒有備份過、是否備份後又更新。suggest＝建議勾選（從沒備份過，或備份後有更新）；
+ * 已備份且沒再改過的舊檔預設不勾，避免每一輪都把舊圖抓回來。
+ */
+export async function listCandidateFiles({ config, folderPath, keyword, dbData, caseId }) {
+  const media = await walkMedia(folderPath, config);
+  const rounds = recordedRoundsByBaseName(dbData, caseId);
+  const times = recordedTimesByBaseName(dbData, caseId);
+  const files = [];
+  for (const item of media) {
+    const name = path.basename(item.filePath);
+    if (!matchesKeyword(name, keyword)) continue;
+    let stat;
+    try { stat = await fs.stat(item.filePath); } catch { continue; }
+    const base = designImageBaseName(name);
+    const round = rounds.has(base) ? rounds.get(base) : null;
+    const at = times.get(base) ?? null;
+    let suggest = true;
+    let reason = '尚未備份過';
+    if (round !== null) {
+      if (at !== null && stat.mtimeMs > at + NEWER_THAN_RECORDED_MS) reason = `第 ${round} 輪備份後有更新`;
+      else { suggest = false; reason = `已備份在第 ${round} 輪`; }
+    }
+    files.push({ name, mtimeMs: Math.round(stat.mtimeMs), size: stat.size, kind: item.kind, suggest, reason, round });
+  }
+  files.sort((a, b) => b.mtimeMs - a.mtimeMs);
+  return files;
+}
 
 /** 這個檔案在這台電腦完全沒有上傳歷史（第一次掃到）。 */
 export function fileHasNoLocalHistory(entry) {

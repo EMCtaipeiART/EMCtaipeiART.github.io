@@ -249,7 +249,7 @@ function readJsonBody(req) {
  * 呼叫端一次只處理一個資料夾就呼叫一次這支函式，不會合併成一次呼叫塞多
  * 個路徑，個別資料夾失敗也只會影響它自己這一筆結果。
  */
-async function backupSelectedFolder({ config, configDir, mountRoot, relPath, caseId, keyword, folderIndex = 0, onPreviews = null }) {
+async function backupSelectedFolder({ config, configDir, mountRoot, relPath, caseId, keyword, folderIndex = 0, onPreviews = null, onlyFiles = null }) {
   const dbData = await lib.fetchDatabaseWithCase(config, caseId);
   const meta = lib.findCaseMeta(dbData, caseId);
   if (!meta) {
@@ -284,6 +284,7 @@ async function backupSelectedFolder({ config, configDir, mountRoot, relPath, cas
     // 既有值取這個資料夾在資料庫既有清單裡對應位置的那一組關鍵字，不是固定用第一組。
     const effectiveKeyword = keyword != null ? String(keyword).trim() : (meta.folders[folderIndex]?.keyword || '');
     const project = { caseId: stateKey, rawFolderPath: relPath, keyword: effectiveKeyword, designer: meta.designer, client: meta.client || '未分類客戶', start: meta.start };
+    if (Array.isArray(onlyFiles)) project.only = onlyFiles;
 
     const scanResult = await lib.scanProject(project, config, state, previewDir, warnings);
     if (scanResult.error) {
@@ -607,6 +608,89 @@ const PICKER_PAGE = `<!doctype html>
     try{ window.focus(); }catch(error){}
   }
 
+  // 備份前先列出「準備備份的檔案」讓設計師勾選：已備份過且沒改過的舊檔預設不勾，避免每一輪把舊圖抓回來。
+  // 沒有任何需要確認的檔案（全是建議勾選的新檔）且是沿用路徑的背景模式時，直接略過這個畫面照原本流程備份。
+  // 取清單失敗（舊版伺服器、網路問題）就退回原本「全部備份」的行為。回傳 null＝使用者取消。
+  async function reviewFiles(folders){
+    let data;
+    try{
+      const res = await fetch('/api/preview-files', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ caseId, token, folders: folders.map(item => ({ path: item.path, keyword: item.keyword })) }) });
+      data = await res.json();
+      if(!res.ok || !data.success) return folders;
+    }catch(error){ return folders; }
+    const groups = Array.isArray(data.folders) ? data.folders : [];
+    const total = groups.reduce((n, g) => n + (g.files || []).length, 0);
+    const ambiguous = groups.some(g => (g.files || []).some(f => !f.suggest));
+    if(!total) return folders;
+    if(mode === 'reuse' && !ambiguous) return folders;
+    restoreWindowForPrompt();
+    return await new Promise(resolve => {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#fff;overflow:auto;padding:16px;font-family:-apple-system,sans-serif;font-size:14px;color:#17211d';
+      const title = document.createElement('h2');
+      title.textContent = '選擇要備份的檔案';
+      title.style.cssText = 'margin:0 0 4px;font-size:18px';
+      const hint = document.createElement('p');
+      hint.textContent = '已預先勾選「還沒備份過」或「備份後有更新」的檔案；已備份且沒改過的舊檔不勾。沒勾的檔案之後也不會被自動抓進這個案件。';
+      hint.style.cssText = 'margin:0 0 12px;color:#6b7772;font-size:13px';
+      overlay.appendChild(title);
+      overlay.appendChild(hint);
+      const boxes = [];
+      groups.forEach((g, gi) => {
+        const head = document.createElement('div');
+        head.textContent = (g.path || '（根目錄）') + (g.keyword ? '　關鍵字：' + g.keyword : '');
+        head.style.cssText = 'font-weight:800;margin:10px 0 6px;word-break:break-all';
+        overlay.appendChild(head);
+        (g.files || []).forEach(f => {
+          const row = document.createElement('label');
+          row.style.cssText = 'display:flex;gap:8px;align-items:flex-start;padding:7px 8px;border:1px solid #e3e9e5;border-radius:10px;margin-bottom:6px;cursor:pointer';
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.checked = Boolean(f.suggest);
+          cb.style.cssText = 'margin-top:3px;width:16px;height:16px';
+          boxes.push({ cb, gi, name: f.name });
+          const info = document.createElement('div');
+          const nm = document.createElement('div');
+          nm.textContent = f.name;
+          nm.style.cssText = 'word-break:break-all;font-weight:700';
+          const meta = document.createElement('div');
+          meta.textContent = new Date(f.mtimeMs).toLocaleString('zh-TW', { hour12: false }) + '　' + f.reason;
+          meta.style.cssText = 'font-size:12px;color:' + (f.suggest ? '#0f7f27' : '#6b7772');
+          info.appendChild(nm);
+          info.appendChild(meta);
+          row.appendChild(cb);
+          row.appendChild(info);
+          overlay.appendChild(row);
+        });
+      });
+      const bar = document.createElement('div');
+      bar.style.cssText = 'position:sticky;bottom:0;background:#fff;padding:10px 0;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid #e3e9e5;margin-top:10px';
+      const mk = (label, primary) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.style.cssText = 'padding:9px 14px;border-radius:10px;border:1px solid ' + (primary ? '#159e31' : '#c9d3ce') + ';background:' + (primary ? '#159e31' : '#fff') + ';color:' + (primary ? '#fff' : '#17211d') + ';font-weight:800;cursor:pointer'; return b; };
+      const okBtn = mk('', true), allBtn = mk('全選', false), noneBtn = mk('全不選', false), cancelBtn = mk('取消', false);
+      const refreshLabel = () => { okBtn.textContent = '備份勾選的 ' + boxes.filter(x => x.cb.checked).length + ' 個檔案'; };
+      boxes.forEach(x => x.cb.addEventListener('change', refreshLabel));
+      allBtn.addEventListener('click', () => { boxes.forEach(x => { x.cb.checked = true; }); refreshLabel(); });
+      noneBtn.addEventListener('click', () => { boxes.forEach(x => { x.cb.checked = false; }); refreshLabel(); });
+      cancelBtn.addEventListener('click', () => { overlay.remove(); resolve(null); });
+      okBtn.addEventListener('click', () => {
+        const baseOf = name => { const dot = name.lastIndexOf('.'); return (dot > 0 ? name.slice(0, dot) : name).toLowerCase(); };
+        const out = folders.map((item, gi) => {
+          const mine = boxes.filter(x => x.gi === gi);
+          return { path: item.path, keyword: item.keyword, onlyFiles: mine.filter(x => x.cb.checked).map(x => x.name), skipNames: mine.filter(x => !x.cb.checked).map(x => baseOf(x.name)) };
+        });
+        overlay.remove();
+        resolve(out);
+      });
+      refreshLabel();
+      bar.appendChild(okBtn);
+      bar.appendChild(allBtn);
+      bar.appendChild(noneBtn);
+      bar.appendChild(cancelBtn);
+      overlay.appendChild(bar);
+      document.body.appendChild(overlay);
+    });
+  }
+
   async function doConfirm(){
     if(mode === 'insert'){
       // 純選路徑模式：不問關鍵字、不呼叫 /api/confirm、不觸發任何備份或上傳，
@@ -625,7 +709,7 @@ const PICKER_PAGE = `<!doctype html>
     // 話，把目前瀏覽到的這個資料夾當成唯一一筆——維持「只選一個資料夾」的既有單選用法完全
     // 不變，不強迫使用者一定要先按「加入這個資料夾」。目前瀏覽器裡正在看、但還沒按過「加入
     // 這個資料夾」的路徑，不會在清單非空時被自動一併含入。
-    const foldersToSubmit = selectedFolders.length
+    let foldersToSubmit = selectedFolders.length
       ? selectedFolders.map(item => ({ path: item.path, keyword: (item.keyword || '').trim() }))
       : [{ path: relPath, keyword: currentKeyword }];
 
@@ -651,6 +735,15 @@ const PICKER_PAGE = `<!doctype html>
       return;
     }
 
+    const reviewed = await reviewFiles(foldersToSubmit);
+    if(reviewed === null){
+      if(mode === 'reuse' && window.opener){
+        window.opener.postMessage({ type: 'machi-nas-folder-selected', caseId, nonce, folders: foldersToSubmit.map(item => ({ path: item.path, keyword: item.keyword, ok: false })), error: '已取消備份' }, origin || '*');
+        window.close();
+      }
+      return;
+    }
+    foldersToSubmit = reviewed;
     // 點選當下立刻通知主頁面（讓它顯示右下角小提示卡片）並把焦點還給主頁
     // 面分頁，讓這個視窗自然被蓋到後面，不在這個視窗裡顯示大轉圈畫面。path
     // 維持只放第一筆（給還在讀舊格式的呼叫端相容用），paths 是完整清單——
@@ -1224,9 +1317,10 @@ async function main() {
         try {
           const backup = await backupSelectedFolder({
             config, configDir, mountRoot, relPath: safe.relPath, caseId, keyword, folderIndex: index,
+            onlyFiles: Array.isArray(folder.onlyFiles) ? folder.onlyFiles.map(String) : null,
             onPreviews: previewJob ? previews => lib.addPreviewsToJob(previewJob, previews, safe.relPath) : null
           });
-          results.push({ path: safe.relPath, keyword: keyword || '', ok: true, backup });
+          results.push({ path: safe.relPath, keyword: keyword || '', ok: true, backup, skip: Array.isArray(folder.skipNames) ? folder.skipNames.map(String) : [] });
         } catch (error) {
           // 就算立即備份這段整個爆炸（例如讀資料庫失敗），路徑本身已經驗證過存在，
           // 這一筆仍然標記 ok:true 讓路徑正常登記，只是 backup 標記為沒有嘗試成功；
@@ -1270,6 +1364,33 @@ async function main() {
         });
       } catch (error) {
         sendJson(res, 200, { success: true, total: 0, folders: [], keyword: '' });
+      }
+      return;
+    }
+
+    if (url.pathname === '/api/preview-files' && req.method === 'POST') {
+      if (!(await ensureMountRoot())) {
+        sendJson(res, 400, { success: false, message: mountMissingMessage });
+        return;
+      }
+      let body;
+      try { body = await readJsonBody(req); } catch (error) { sendJson(res, 400, { success: false, message: error.message }); return; }
+      if (String(body.token || '') !== pickerToken) { sendJson(res, 401, { success: false, message: TOKEN_ERROR_MESSAGE }); return; }
+      const caseId = String(body.caseId || '').trim();
+      const rawFolders = Array.isArray(body.folders) ? body.folders : [];
+      if (!caseId || !rawFolders.length) { sendJson(res, 400, { success: false, message: '缺少案件編號或資料夾清單' }); return; }
+      try {
+        const dbData = await lib.fetchDatabaseWithCase(config, caseId);
+        const folders = [];
+        for (const folder of rawFolders) {
+          const keyword = typeof folder.keyword === 'string' ? folder.keyword : '';
+          const safe = resolveSafeDir(mountRoot, String(folder.path || ''));
+          const files = await lib.listCandidateFiles({ config, folderPath: safe.absPath, keyword, dbData, caseId });
+          folders.push({ path: safe.relPath, keyword, files });
+        }
+        sendJson(res, 200, { success: true, folders });
+      } catch (error) {
+        sendJson(res, 500, { success: false, message: error.message });
       }
       return;
     }

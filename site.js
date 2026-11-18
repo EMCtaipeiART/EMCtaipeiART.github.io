@@ -2974,7 +2974,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const p=String(row&&(row.designImageFolderUrl||row['設計圖資料夾連結'])||'').trim();return p?[{path:p,keyword:String(row.designImageFolderKeyword||row['設計圖檔名關鍵字']||'').trim()}]:[];
     }
     function saveCaseNas(id,ok){
-      const old=caseNasFolders(id,allRows().find(r=>idKey(r)===id)),list=ok.map(f=>{const o={path:f.path,keyword:f.keyword||''},prev=old.find(x=>x.path===f.path);if(prev){if(prev.pin)o.pin=prev.pin;if(prev.skip)o.skip=prev.skip;if(prev.pinOnly)o.pinOnly=true}return o}),st=nasStoreGet();st[id]=list;try{localStorage.setItem(NAS_STORE,JSON.stringify(st))}catch(e){}
+      const old=caseNasFolders(id,allRows().find(r=>idKey(r)===id)),list=ok.map(f=>{const o={path:f.path,keyword:f.keyword||''},prev=old.find(x=>x.path===f.path);if(prev){if(prev.pin)o.pin=prev.pin;if(prev.skip)o.skip=prev.skip;if(prev.pinOnly)o.pinOnly=true}const sk=[...new Set([...(o.skip||[]),...(Array.isArray(f.skip)?f.skip:[])])];if(sk.length)o.skip=sk;return o}),st=nasStoreGet();st[id]=list;try{localStorage.setItem(NAS_STORE,JSON.stringify(st))}catch(e){}
       api('update',{id,row:{id,designImageFolderUrl:list[0].path,designImageFolderKeyword:list[0].keyword,designImageFolders:JSON.stringify(list)},forceHeaders:[],writeHeaders:[]}).catch(err=>toast(`NAS 資料夾已備份，但寫入案件設定失敗：${err.message}`,true));
     }
     function insertNasPath(path,range){
