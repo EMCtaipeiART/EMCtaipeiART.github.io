@@ -1519,19 +1519,13 @@ function cabinetFrontTexture(){
 }
 const SNACK_PACKS = [['snack_kuaikuai', .6], ['snack_kolaguo', .56], ['snack_puff', .5], ['snack_peacock', .42], ['snack_sarsaparilla', .56], ['snack_maixiang', .52], ['snack_yakult', .46], ['snack_77', .42]];   // 台灣經典零食（pixel-plaza/snacks/ 的像素圖），高度（世界單位）
 const snackImgCache = {};
-function snackPacks3d(parent, left, right, baseY, zBack, zFront){   // 一包一包的立體零食：前後兩面貼圖＋中間數片黑色剪影疊出厚度；兩排各 4 包、固定格位不重疊
+function snackPacks3d(parent, left, right, baseY, zBack, zFront){   // 一包一包的零食（朝向鏡頭的 billboard，不做薄片疊厚度）；兩排各 4 包、固定格位不重疊
   const slot = (right - left) / 4;
   SNACK_PACKS.forEach(async ([k, h], i) => {
     const img = await (snackImgCache[k] || (snackImgCache[k] = loadImg('snacks/' + k + '.png'))); const raw = img && trimmed(img); if (!raw) return;
     const src = outlined(raw, 6), maxW = slot - .06; let dh = h * src.height / raw.height, dw = dh * src.width / src.height; if (dw > maxW) { dh *= maxW / dw; dw = maxW; }
-    const tex = new THREE.CanvasTexture(src); tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false; tex.colorSpace = THREE.SRGBColorSpace;
-    const col = i % 4, row = i < 4 ? 0 : 1, x = left + slot * (col + .5), z = row ? zFront : zBack, y = baseY + (row ? 0 : .1) + dh / 2, T = .14;
-    const geo = new THREE.PlaneGeometry(dw, dh), front = new THREE.MeshBasicMaterial({map:tex, transparent:true, alphaTest:.5}), mid = new THREE.MeshBasicMaterial({color:0x3b3f47, alphaMap:tex, transparent:true, alphaTest:.5});
-    const grp = new THREE.Group(); grp.position.set(x, y, z);
-    const f = new THREE.Mesh(geo, front); f.position.z = T / 2; grp.add(f);
-    const b = new THREE.Mesh(geo, front); b.rotation.y = Math.PI; b.position.z = -T / 2; grp.add(b);
-    for (let s2 = 1; s2 < 5; s2++) { const m = new THREE.Mesh(geo, mid); m.position.z = -T / 2 + T * s2 / 5; grp.add(m); }
-    parent.add(grp);
+    const col = i % 4, row = i < 4 ? 0 : 1, wx = parent.position.x + left + slot * (col + .5), wz = parent.position.z + (row ? zFront : zBack);
+    const m = addBillboard(src, wx, wz, dw, dh); m.position.y = baseY + (row ? 0 : .1);   // 和以前一樣是朝向鏡頭的整包圖，任何角度都是完整一包
   });
   if (!(snackPacks3d.riser)) snackPacks3d.riser = 1;
 }
