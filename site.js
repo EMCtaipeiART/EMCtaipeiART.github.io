@@ -2694,8 +2694,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const m=state.mail,stage=$('stage');if(!m){backToBoard();return;}
       setTimeout(()=>{collapseChips('to');collapseChips('cc')},0);
       const d=m.drafts[m.index],total=m.drafts.length,g=state.gmail,locked=d.sent;
-      const drBlock=Boolean(d.dr&&d.dr.pending&&!(d.dr.early&&d.dr.early.size)),drEarly=Boolean(d.dr&&d.dr.pending&&d.dr.early&&d.dr.early.size);
-      const gmailNotice=!m.gmailChecked?'<div class="notice">正在確認 Gmail 連線…</div>'
+            const gmailNotice=!m.gmailChecked?'<div class="notice">正在確認 Gmail 連線…</div>'
         :!g?.connected?`<div class="notice error" role="alert">${g?.error?`無法確認 Gmail 連線狀態：${esc(g.error)}。`:'您的帳號尚未連接 Gmail，現在無法從系統寄信。'}<button type="button" class="btn primary" data-gmail-connect style="margin-left:6px">串接 Gmail</button>　連接完成後即可寄信；也可以先按「略過，回案件列表」。</div>`:'';
       const canMerge=total>1&&m.drafts.every(x=>!x.reply)&&m.drafts.some(x=>!x.sent&&!x.ids);
       const mergedAny=m.drafts.some(x=>x.ids);
@@ -2709,10 +2708,9 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         ${d.editSchedId?`<div class="notice">正在編輯「已排程」的信件（原本會在 ${esc(d.scheduledAt.replace('T',' '))} 寄出）。改好後按「儲存排程修改」才會更新；按「放棄修改」不會動到原本的排程。</div>`:(!d.sent&&schedFor(d.id).length?`<div class="notice">這個案件已有 ${schedFor(d.id).length} 封排程中的信件（時間到會自動寄出）。<button type="button" class="btn" data-mail="sched-open" style="margin-left:6px">查看／編輯／取消</button>（目前這封還沒寄的內容不會保留）</div>`:'')}
         ${gmailNotice}
         ${d.reply?threadPanelHtml(false):''}
-        ${drBlock?'<div class="notice">圖片備份／上傳中，完成後信件會自動帶入圖片並可寄出。 <button type="button" class="btn" data-mail="dr-skip">不等圖片，直接寄出</button></div>':''}
+        <div id="drNotice">${drNoticeHtml(d)}</div>
         ${(d.dr&&d.mode==='designer'&&!d.sent)?`<section class="dr-nas" aria-label="NAS 路徑"><div class="dr-nas-head"><b>NAS 路徑</b><button type="button" class="btn" data-mail="dr-track">${nasTrackLabel(d.id)?'更換／追加':'補上 NAS 路徑'}</button></div>${nasTrackItems(d.id)}</section>`:''}
         ${drClassifyHtml(d)}
-        ${drEarly?'<div class="notice">圖片已先放進信件，雲端備份在背景進行；現在就可以寄出，備份不會中斷（請先不要關閉這個頁面）。</div>':''}
         <div class="queue-bar"><span class="queue-step">${total>1?`第 ${m.index+1} / ${total} 封`:'1 封'}</span>${d.sent?`<span class="pill st-done">${d.scheduledDone?'已排程':'這封已寄出'}</span>`:''}${total>1?`<button type="button" class="btn" data-mail="prev"${m.index===0?' disabled':''}>上一封</button><button type="button" class="btn" data-mail="next"${m.index===total-1?' disabled':''}>下一封</button>`:''}</div>
         ${mergePanel}
         <div class="mail-head">
@@ -2730,7 +2728,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         ${sigShown?`<div class="signature"><span class="signature-label">簽名檔（寄出時自動附上；也可按工具列「簽名檔」放進內文指定位置）</span>${state.signature}</div>`:''}
         ${d.scheduleOpen?schedulePickerHtml(d):''}
         <div class="form-actions mail-actions">
-          <button type="button" class="btn primary" id="sendBtn" data-mail="send"${(!g?.connected||m.sending||d.sent||drBlock)?' disabled':''}>${m.sending?'處理中…':drBlock?'圖片上傳中…':(d.editSchedId?'儲存排程修改':d.scheduleOpen&&d.scheduledAt?'排程寄出':(total>1?(m.drafts.filter(x=>!x.sent).length===1?'寄出這封並完成':'寄出這封，下一封'):'寄出信件'))}</button>
+          <button type="button" class="btn primary" id="sendBtn" data-mail="send"${(!g?.connected||m.sending||d.sent)?' disabled':''}>${m.sending?'處理中…':(d.editSchedId?'儲存排程修改':d.scheduleOpen&&d.scheduledAt?'排程寄出':(total>1?(m.drafts.filter(x=>!x.sent).length===1?'寄出這封並完成':'寄出這封，下一封'):'寄出信件'))}</button>
           ${d.editSchedId?'<button type="button" class="btn" data-mail="sched-abort">放棄修改，回已排程清單</button>':`<button type="button" class="btn" data-mail="schedule-toggle"${d.sent?' disabled':''}>${d.scheduleOpen?'立即寄出':'指定排程時間'}</button>`}
           ${d.editSchedId?'':'<button type="button" class="btn" data-mail="skip">略過，回案件列表</button>'}
         </div>
@@ -2769,6 +2767,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(!d.to){toast('請填寫收件人',true);return}if(!d.subject){toast('請填寫主旨',true);return}
       if(d.scheduleOpen&&!d.scheduledAt){toast('請選擇排程寄出時間',true);return}
       if(d.scheduleOpen&&schedSummary(d.scheduledAt).cls==='warn'){toast('排程時間已經過了或太近，請選 3 分鐘以後的時間',true);return}
+      if(d.dr&&d.dr.pending){const t=document.createElement('div');t.innerHTML=d.body;t.querySelectorAll('.dr-up').forEach(x=>x.remove());d.body=t.innerHTML}
       m.sending=true;renderMail();
       try{
         const {bodyHtml,inlineImages}=prepareBody(d),signatureHtml=d.sigInserted?'':(state.signature||''),attachments=(d.attachments||[]).map(a=>({fileName:a.fileName,mimeType:a.mimeType,base64:a.base64})),ids=d.ids||[d.id];
@@ -3071,6 +3070,16 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     const drLive=new Map();
     const drNasHtml=folders=>folders.length?`<br> NAS路徑${folders.length>1?`（共 ${folders.length} 個資料夾）`:''}`+folders.map(p=>`<br><b>${esc(p)}</b>`).join(''):'';
     function drPlaceholders(dr){return `<div id="v5DrImages"><span class="dr-up">　${dr.skip?'圖片備份中，這次不會放進信件...':'圖片上傳中...'}</span></div><div id="v5DrNas">${drNasHtml(dr.folders)}</div><div id="v5DrVideo"></div>`}
+    /* 圖片備份狀態提示：只更新提示區，不重畫整個編輯頁（重畫會讓打字中的編輯框跳開）。備份期間也可以直接寄出。 */
+    function drNoticeHtml(d){
+      if(!d||!d.dr||!d.dr.pending)return '';
+      return d.dr.early&&d.dr.early.size?'<div class="notice">圖片已先放進信件，雲端備份在背景進行；現在就可以寄出，備份不會中斷（請先不要關閉這個頁面）。</div>':'<div class="notice">圖片備份中，不影響打字。現在寄出的信不會帶圖片，備份完成後圖片會自動寫進修改紀錄（請先不要關閉這個頁面）；也可以等圖片出現在信裡再寄。</div>';
+    }
+    function drRefreshUi(d){
+      const m=state.mail;if(!(state.view==='mail'&&m&&m.drafts[m.index]===d))return;
+      const box=$('drNotice');if(box)box.innerHTML=drNoticeHtml(d);
+      const bt=$('sendBtn');if(bt&&!m.sending&&!d.sent&&!(d.dr&&d.dr.pending)&&bt.textContent==='圖片上傳中…')bt.textContent='寄出信件';
+    }
     function drMutate(d,fn){
       const live=state.view==='mail'&&state.mail&&state.mail.drafts[state.mail.index]===d&&$('mBody');
       const root=live?$('mBody'):(()=>{const x=document.createElement('div');x.innerHTML=d.body;return x})();
@@ -3125,7 +3134,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(Object.keys(d.images).length>=DR_MAX_IMAGES||total+size>DR_EARLY_MAX_BYTES)continue;
         const cid=newCid();d.images[cid]={contentId:cid,fileName,mimeType,base64};dr.early.add(fileName);dr.nasIds.add(cid);total+=size;fresh.push({cid,fileName,mimeType,base64});
       }
-      if(!fresh.length){if(vidNew&&state.view==='mail'&&state.mail.drafts[state.mail.index]===d){saveMailDraft();renderMail()}return}
+      if(!fresh.length){if(vidNew&&state.view==='mail'&&state.mail.drafts[state.mail.index]===d){saveMailDraft();drRefreshUi(d)}return}
       drMutate(d,root=>{
         const box=root.querySelector('#v5DrImages');if(!box)return;
         const ph=box.querySelector('.dr-up');
@@ -3135,7 +3144,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         }
         if(ph)ph.remove();
       });
-      if(state.view==='mail'&&state.mail.drafts[state.mail.index]===d){saveMailDraft();renderMail()}
+      if(state.view==='mail'&&state.mail.drafts[state.mail.index]===d){saveMailDraft();drRefreshUi(d)}
     }
     async function drFinish(id,round,{folders=null,fileFolders=null,skip=null}={}){
       await refreshMods(id);
@@ -3151,7 +3160,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
           if(vids.length)vb.innerHTML=`<br> 影片路徑${vids.length>1?`（共 ${vids.length} 支）`:''}`+vids.map(v=>`<br><b>${esc(v)}</b>`).join('');else vb.remove()}
       });
       dr.pending=false;drLive.delete(`${id}|${round}`);
-      if(state.view==='mail'&&m&&m.drafts[m.index]===d){saveMailDraft();renderMail()}
+      if(state.view==='mail'&&m&&m.drafts[m.index]===d){saveMailDraft();drRefreshUi(d)}
     }
     /* 修改中用一般回覆寄出：把最新一輪尚未確認的修改標記為已修改（同設計師回覆的做法） */
     async function markLatestRoundDone(id){try{const list=state.mods.get(id)||[],last=list.reduce((m,x)=>Math.max(m,+x['修改次數']||0),0);if(last<=0)return;const rec=list.find(x=>(+x['修改次數']||0)===last);if(rec&&!String(rec['確認修正日']||'').trim())await setConfirm(id,last,true)}catch(err){toast(`自動標記修改完成失敗：${err.message}`,true)}}

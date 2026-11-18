@@ -40,8 +40,9 @@ test('picker track-only mode records the path without any backup (used by the �
 
 test('v5 designer reply: with preview images in the mail the send button is no longer blocked by the Drive backup, and the post-send bookkeeping waits for it', async () => {
   const site = await readFile(new URL('../../site.js', import.meta.url), 'utf8');
-  assert.match(site, /const drBlock=Boolean\(d\.dr&&d\.dr\.pending&&!\(d\.dr\.early&&d\.dr\.early\.size\)\)/);
-  assert.match(site, /\$\{\(!g\?\.connected\|\|m\.sending\|\|d\.sent\|\|drBlock\)\?' disabled':''\}/);
+  // 2026-11-18：備份期間完全不鎖寄出鈕，提示區只局部更新（drRefreshUi），不重畫編輯頁以免打字中的編輯框跳開
+  assert.match(site, /\$\{\(!g\?\.connected\|\|m\.sending\|\|d\.sent\)\?' disabled':''\}/);
+  assert.match(site, /function drRefreshUi\(d\)/);
   assert.match(site, /drLive\.get\(`\$\{id\}\|\$\{round\}`\)/);
   assert.match(site, /for\(let i=0;i<360&&d\.dr\.pending;i\+\+\)await new Promise\(r=>setTimeout\(r,500\)\)/);
   const finish = site.indexOf('async function drFinish');
