@@ -1064,104 +1064,6 @@ function officeDecal(parent, key, w, h, x, y, z, rx, ry, draw){
   const gk='plane:'+w+':'+h; if(!officeGeoCache.has(gk)) officeGeoCache.set(gk,new THREE.PlaneGeometry(w,h));
   const m=new THREE.Mesh(officeGeoCache.get(gk),officeMatCache.get(mk)); m.position.set(x,y,z); m.rotation.set(rx,ry,0); parent.add(m); return m;
 }
-function snackDisplay(parent,w,h,x,y,z){ // 櫃面後緣直立雙層展示：一張共用正面貼圖，八品各佔一格。
-  const key='snack-display-front';
-  if(!officeTexCache.has(key)){
-    const canvas=document.createElement('canvas');canvas.width=768;canvas.height=512;
-    const c=canvas.getContext('2d'), W=384,H=256,ink='#14191d';c.scale(2,2);
-    c.fillStyle='#f4f1ea';c.fillRect(0,0,W,H);
-    // 層板、格位與接觸陰影都畫在同一平面，沒有互相遮擋的前後排。
-    for(let row=0;row<2;row++){
-      const top=row*128;
-      const shade=c.createLinearGradient(0,top,0,top+119);shade.addColorStop(0,'#d9cbb5');shade.addColorStop(.35,'#f4f1ea');shade.addColorStop(1,'#e6d9c3');
-      c.fillStyle=shade;c.fillRect(3,top+3,W-6,116);
-      c.fillStyle='#8a6a3c';c.fillRect(3,top+119,W-6,7);c.fillStyle='#b98a50';c.fillRect(3,top+119,W-6,2);
-      c.fillStyle=ink;c.fillRect(3,top+126,W-6,2);
-      c.fillStyle='rgba(138,106,60,.22)';for(let col=1;col<4;col++)c.fillRect(col*96,top+9,1,104);
-    }
-    const ellipse=(x,y,rx,ry,fill,stroke=false)=>{c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fillStyle=fill;c.fill();if(stroke){c.strokeStyle=ink;c.lineWidth=1.5;c.stroke();}};
-    SNACKS.forEach(([id,kind,base,accent],i)=>{
-      const cx=48+(i%4)*96, bottom=Math.floor(i/4)*128+118;
-      const pw=kind==='bar'?42:kind==='can'?49:kind==='bottle'?48:68;
-      const ph=id==='cultured'?78:kind==='bar'?94:kind==='can'?95:102;
-      c.save();c.translate(cx-pw/2,bottom-ph);
-      ellipse(pw/2,ph-1,pw*.54,3,'rgba(30,24,18,.24)');
-      const shape=new Path2D();
-      if(kind==='bag'||kind==='bar'){
-        shape.moveTo(2,3);
-        for(let q=2;q<=pw-2;q+=4)shape.lineTo(q,(Math.round((q-2)/4)%2)*3);
-        shape.lineTo(pw-3,12);shape.quadraticCurveTo(pw+2,ph*.5,pw-3,ph-11);
-        for(let q=pw-2;q>=2;q-=4)shape.lineTo(q,ph-(Math.round((pw-2-q)/4)%2)*3);
-        shape.lineTo(3,ph-11);shape.quadraticCurveTo(-2,ph*.5,3,12);
-      }else if(kind==='can'){
-        shape.roundRect(2,3,pw-4,ph-5,6);
-      }else{
-        const neck=pw*.28;
-        shape.moveTo(neck,4);shape.lineTo(pw-neck,4);shape.lineTo(pw-neck,17);
-        shape.bezierCurveTo(pw-neck,25,pw-3,26,pw-3,35);
-        if(id==='cultured'){shape.quadraticCurveTo(pw-12,ph*.65,pw-3,ph-8);}
-        else shape.lineTo(pw-3,ph-8);
-        shape.quadraticCurveTo(pw-3,ph,pw/2,ph);shape.quadraticCurveTo(3,ph,3,ph-8);
-        if(id==='cultured')shape.quadraticCurveTo(12,ph*.65,3,35);else shape.lineTo(3,35);
-        shape.bezierCurveTo(3,26,neck,25,neck,17);
-      }
-      shape.closePath();c.fillStyle=base;c.fill(shape);
-      c.save();c.clip(shape);
-      c.fillStyle=accent;c.fillRect(0,ph*.30,pw,ph*.39);
-      const sheen=c.createLinearGradient(0,0,pw,0);sheen.addColorStop(0,'rgba(0,0,0,.28)');sheen.addColorStop(.19,'rgba(255,255,255,.38)');sheen.addColorStop(.43,'rgba(255,255,255,.05)');sheen.addColorStop(.78,'rgba(0,0,0,0)');sheen.addColorStop(1,'rgba(0,0,0,.32)');c.fillStyle=sheen;c.fillRect(0,0,pw,ph);
-      c.fillStyle='rgba(255,255,255,.45)';c.fillRect(7,15,3,ph-28);
-      if(kind==='bag'||kind==='bar'){
-        c.strokeStyle='rgba(20,25,29,.45)';c.lineWidth=1;
-        for(const yy of [8,ph-8]){c.beginPath();c.moveTo(3,yy);c.lineTo(pw-3,yy);c.stroke();}
-        for(let q=5;q<pw-3;q+=4){c.fillStyle='rgba(20,25,29,.3)';c.fillRect(q,2,1,6);c.fillRect(q,ph-7,1,5);}
-        c.beginPath();c.moveTo(4,12);c.lineTo(11,21);c.moveTo(pw-4,ph-12);c.lineTo(pw-11,ph-21);c.stroke();
-      }
-      c.restore();c.strokeStyle=ink;c.lineWidth=1.8;c.stroke(shape);
-      if(kind==='can'){
-        ellipse(pw/2,5,pw/2-3,4,'#cdd3d7',true);ellipse(pw/2+2,4,5,2,'#616c76');
-        c.fillStyle='#cdd3d7';c.fillRect(5,ph-5,pw-10,3);
-      }else if(kind==='bottle'){
-        c.fillStyle=id==='cultured'?accent:'#d9bd69';c.fillRect(pw*.26,0,pw*.48,9);
-        c.strokeStyle=ink;c.lineWidth=1.5;c.strokeRect(pw*.26,0,pw*.48,9);
-        c.fillStyle='rgba(255,255,255,.55)';for(let q=pw*.3;q<pw*.7;q+=4)c.fillRect(q,2,1,5);
-      }
-      // 食品圖案取代品牌文字：玉米、餅乾、螺旋脆果、泡芙、巧克力、氣泡、茶葉、乳酸菌。
-      c.save();c.translate(pw/2,ph*.51);
-      if(id==='kuaikuai'){
-        ellipse(0,0,9,15,'#f8d451',true);c.strokeStyle='#987227';c.lineWidth=1;
-        for(const yy of [-8,-2,4,10]){c.beginPath();c.moveTo(-7,yy);c.lineTo(7,yy);c.stroke();}
-        c.fillStyle='#28783c';c.beginPath();c.moveTo(-2,16);c.quadraticCurveTo(-21,12,-16,-5);c.closePath();c.fill();
-      }else if(id==='peacock'){
-        c.fillStyle='#efcf87';c.strokeStyle=ink;c.lineWidth=1.6;c.beginPath();c.roundRect(-19,-12,38,25,5);c.fill();c.stroke();
-        for(const xx of [-11,0,11])for(const yy of [-5,5])ellipse(xx,yy,1.5,1.5,'#885d35');
-      }else if(id==='kolaguo'){
-        c.strokeStyle='#8a4e1e';c.lineWidth=8;c.beginPath();c.moveTo(-15,12);c.bezierCurveTo(22,11,-20,-14,15,-13);c.stroke();
-        c.strokeStyle='#fff0a6';c.lineWidth=4;c.stroke();
-      }else if(id==='puff'){
-        for(const [xx,yy] of [[-12,5],[10,7],[-1,-9]]){ellipse(xx,yy,9,8,'#eac389',true);ellipse(xx-2,yy-2,4,3,'#fff0c5');}
-      }else if(id==='choco'){
-        c.fillStyle='#57342a';c.fillRect(-14,-14,28,29);c.strokeStyle='#d5a273';c.lineWidth=2;
-        for(const yy of [-12,1])for(const xx of [-12,1])c.strokeRect(xx,yy,11,11);
-      }else if(id==='soda'){
-        for(const [xx,yy,r] of [[-9,8,6],[8,-9,5],[10,11,3],[-9,-13,2]])ellipse(xx,yy,r,r,'#eff5e1',true);
-      }else if(id==='tea'){
-        c.fillStyle='#3d7139';c.beginPath();c.moveTo(-13,10);c.quadraticCurveTo(-17,-15,13,-13);c.quadraticCurveTo(17,8,-13,10);c.fill();
-        c.strokeStyle='#e6e3a7';c.lineWidth=2;c.beginPath();c.moveTo(-11,8);c.lineTo(10,-10);c.stroke();
-      }else{
-        ellipse(-7,0,5,9,'#fff8e6',true);ellipse(7,0,5,9,'#fff8e6',true);
-      }
-      c.restore();c.restore();
-    });
-    c.strokeStyle=ink;c.lineWidth=2;c.strokeRect(1,1,W-2,H-2);
-    const tex=new THREE.CanvasTexture(canvas);tex.colorSpace=THREE.SRGBColorSpace;officeTexCache.set(key,tex);
-  }
-  // 局部木架讓兩樓也共用合併幾何；每座只需木架、外殼、貼圖面三個 mesh。
-  const rack=new THREE.Group();rack.position.set(x,y,z);parent.add(rack);
-  // y 是外殼最低點：連黑框都抬離櫃面 .012，貼圖離背板外殼另留 .012。
-  officeParts(rack,[[w+.06,h+.06,.08,OFFICE.grain,0,OUT_T+(h+.06)/2,0],
-    [w+.12,.04,.23,OFFICE.grain,0,OUT_T+.02,.035]]);
-  return officeDecal(rack,key,w,h,0,OUT_T+.03+h/2,.04+OUT_T+.012,0,0,()=>{});
-}
 function officeParts(parent, parts){ // [寬,高,深,色,局部中心 x,y,z,繞 y 角度]；每色一個 mesh＋一個共用外殼
   const groups=new Map(); for(const p of parts){ if(!groups.has(p[3]))groups.set(p[3],[]);groups.get(p[3]).push(p); }
   for(const [color,ps] of groups){
@@ -1615,6 +1517,24 @@ function cabinetFrontTexture(){
   g.fillStyle = '#8c98ad'; for (const x of [17, 25, 38, 46]) g.fillRect(x, 6, 2, 6);
   const t = new THREE.CanvasTexture(c); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; t.colorSpace = THREE.SRGBColorSpace; return t;
 }
+const SNACK_PACKS = [['snack_kuaikuai', .6], ['snack_kolaguo', .56], ['snack_puff', .5], ['snack_peacock', .42], ['snack_sarsaparilla', .56], ['snack_maixiang', .52], ['snack_yakult', .46], ['snack_77', .42]];   // 台灣經典零食（pixel-plaza/snacks/ 的像素圖），高度（世界單位）
+const snackImgCache = {};
+function snackPacks3d(parent, left, right, baseY, zBack, zFront){   // 一包一包的立體零食：前後兩面貼圖＋中間數片黑色剪影疊出厚度；兩排各 4 包、固定格位不重疊
+  const slot = (right - left) / 4;
+  SNACK_PACKS.forEach(async ([k, h], i) => {
+    const img = await (snackImgCache[k] || (snackImgCache[k] = loadImg('snacks/' + k + '.png'))); const raw = img && trimmed(img); if (!raw) return;
+    const src = outlined(raw, 6), maxW = slot - .06; let dh = h * src.height / raw.height, dw = dh * src.width / src.height; if (dw > maxW) { dh *= maxW / dw; dw = maxW; }
+    const tex = new THREE.CanvasTexture(src); tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false; tex.colorSpace = THREE.SRGBColorSpace;
+    const col = i % 4, row = i < 4 ? 0 : 1, x = left + slot * (col + .5), z = row ? zFront : zBack, y = baseY + (row ? 0 : .1) + dh / 2, T = .14;
+    const geo = new THREE.PlaneGeometry(dw, dh), front = new THREE.MeshBasicMaterial({map:tex, transparent:true, alphaTest:.5}), mid = new THREE.MeshBasicMaterial({color:0x3b3f47, alphaMap:tex, transparent:true, alphaTest:.5});
+    const grp = new THREE.Group(); grp.position.set(x, y, z);
+    const f = new THREE.Mesh(geo, front); f.position.z = T / 2; grp.add(f);
+    const b = new THREE.Mesh(geo, front); b.rotation.y = Math.PI; b.position.z = -T / 2; grp.add(b);
+    for (let s2 = 1; s2 < 5; s2++) { const m = new THREE.Mesh(geo, mid); m.position.z = -T / 2 + T * s2 / 5; grp.add(m); }
+    parent.add(grp);
+  });
+  if (!(snackPacks3d.riser)) snackPacks3d.riser = 1;
+}
 function pantry3d(x0, z0, w, d){    // 版面圖像素：木紋檯面＋木櫃＋零食
   const I = v => v * U, W = I(w), D = I(d), cx = I(x0 + w / 2), cz = I(z0 + d / 2), wood = new THREE.MeshLambertMaterial({color:0xb98a50});
   const topMat = new THREE.MeshLambertMaterial({map:woodTexture()}), frontMat = new THREE.MeshLambertMaterial({map:cabinetFrontTexture()}), side = new THREE.MeshLambertMaterial({color:0x8a6a3c});
@@ -1625,8 +1545,9 @@ function pantry3d(x0, z0, w, d){    // 版面圖像素：木紋檯面＋木櫃�
     [.15,.22,.15,OFFICE.metal,W*.12,1.06,-D*.05],[.22,.02,.22,OFFICE.coal,W*.12,1.18,-D*.05],[.035,.035,.035,OFFICE.green,-W*.34,1.30,D*.16]]);
   officeDecal(g,'pantry-hardware',W-.1,.68,0,.44,D/2+.003,0,0,(c,W,H)=>{c.fillStyle='#8a6a3c';c.fillRect(0,0,W,H);for(let i=0;i<4;i++){const x=i*W/4;c.fillStyle='#2b2f36';c.fillRect(x,0,2,H);c.fillStyle='#8c98ad';c.fillRect(x+W/4-14,18,4,25);c.fillStyle='#b98a50';c.fillRect(x+6,7,W/4-22,2);}});
   officeDecal(g,'pantry-coffee',.22,.12,-W*.34,1.12,D*.158,0,0,(c,W,H)=>{c.fillStyle='#f4f1ea';c.fillRect(0,0,W,H);c.fillStyle='#2b2f36';c.fillRect(12,16,W-24,H-32);c.fillStyle='#ffb000';c.fillRect(W-28,16,12,12);});
-  // 後緣右側的直立展示架：兩樓同為 2.45 × 1.38，八品共用一張 Canvas，不載入 snacks/*.png。
-  const snackW=2.45;snackDisplay(g,snackW,1.38,W/2-snackW/2-.14,.962,-D/2+.14);
+  // 台灣零食：後排墊一層矮台，兩排各 4 包立體零食包（不與咖啡機重疊）
+  officeParts(g,[[2.5,.1,.34,OFFICE.grain,W/2-1.37,.9625+.05,-D/2+.24]]);
+  snackPacks3d(g,W/2-2.57,W/2-.12,.9625,-D/2+.24,D/2-.2);
   rects.push([I(x0), I(z0), I(x0 + w), I(z0 + d)]);
 }
 function fridge3d(x0, z0, w, d, h = 1.9){   // 深色冰箱：上冷凍、下冷藏；門可以轉開（點冰箱走過去開）
