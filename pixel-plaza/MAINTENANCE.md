@@ -1,7 +1,7 @@
 # 3D 辦公室｜維護手冊（改程式前先看）
 
 > 介面與視覺規範請看 [`UI-SPEC.md`](UI-SPEC.md)；這份講**結構、座標、資料、後端欄位、部署、排錯**。
-> 最後更新：2026-11-01。
+> 最後更新：2026-11-18。
 
 ## 1. 檔案
 
@@ -9,7 +9,7 @@
 | --- | --- |
 | `pixel-plaza/index.html` | 整個 3D 版（HTML＋CSS＋一支 `<script type="module">`，three.js 從 `../character-studio/vendor/` 載入）。**所有功能都在這一個檔案**，改完要保持 `node --check` 通過 |
 | `pixel-plaza/assets/` | 2D 版移過來的圖：`icons-v3.webp`、`icons-status-v4.webp`、`office-fun-v1/v2.webp/json`、`props2/elevator.png` |
-| `pixel-plaza/snacks/` | 茶水檯八款零食（Codex 生成的像素圖，256×256 透明底） |
+| `pixel-plaza/snacks/` | 保留舊八款零食像素圖；現行櫃面改由 `snackDisplay()` 生成共用直立 Canvas 展示，不載入此處圖片 |
 | `pixel-plaza/fridge/office-foods-v1.webp` | 冰箱食物圖集（28px 一格，順序見 `FOOD_IDX`） |
 | `pixel-plaza/sprites-hd/`、`sprites/` | 人物 12 面向圖集（`<名字>.png`，240／60px 一格） |
 | `pixel-plaza/ai-views/`、`bake.html`、`bake.mjs` | 人物圖集的來源與烘焙（**不上線**，線上只放 sprites） |
@@ -61,6 +61,7 @@
 - **一次只改一類東西**，改完先 `node --check`（把 `<script type="module">` 內容存成 .mjs 檢查），再用 puppeteer 截圖看。
 - **新增家具**：`pbox`/`table3d`/`chair3d`/`officeChair3d` 建模＋ **登記 `rects` 碰撞** ＋ 黑色外框；樓層加在 `buildOffice()`（五樓）或 `buildFloor4()`（四樓）。通道 ≥ 1.2 單位，不然會卡住（A\* 也走不過）。
 - **辦公室細緻化（2026-11-18）**：共用色票與材質走 `OFFICE`、`officeParts()`、`officeDecal()`；長桌與茶水／廁所／電梯的重複小零件優先合併或共用幾何。藍色辦公桌面 `#1d4ba0` 是指定色，禁止改色。四樓茶水間盆栽是 `plant3d()`，依 2D 原始位置放置且無碰撞；其餘既有家具只補視覺，不改 `SEATS`／`SEATS4`、`rects`、pick kind 或 `rng()`。
+- **茶水櫃零食展示（2026-11-18）**：`SNACKS` → `snackDisplay()` 產生一張 768×512 正面 Canvas，快取鍵 `snack-display-front`；`pantry3d()` 在兩樓櫃面後緣放相同 2.45×1.38 的兩層四格直立展示，每座 3 個 mesh。外殼最低點 y=.962（櫃面 .95＋.012），貼圖 z 偏移為背板半厚 .04＋`OUT_T`＋.012。包裝、層板與分格都在同一面，避免恢復成平貼櫃面或逐品 billboard；完整規格見 UI-SPEC §7.8。電梯鋁合金雙開門維持 `elevator3d()`，見 §7.7。
 - **新增隨機物件**：一定用 `rng(id)`＋時段；**不可依賴載入順序**（碰撞必須在場景蓋完才算）；寫入共用紀錄用 `fnClaim`。
 - **新增按鈕**：在 `SVG_ICONS` 加一個 24×24 單線條圖示（簡單、不塞滿），HTML 寫 `<i data-px="名稱"></i>`，class 選 `pk-*`（或新增一個 `--ac` 強調色）；手機要看過。
 - **新增要跨裝置保存的資料**：不要只放 `localStorage`；放後端（見 `pixelOfficeProgress` 的做法：取聯集／取較大值，才不會被舊裝置覆蓋）。
