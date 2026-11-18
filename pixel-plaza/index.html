@@ -646,7 +646,7 @@ const FLOOR_X0 = -3, FLOOR_X1 = 1201 * U + 3, FLOOR_Z0 = -100 * U, FLOOR_Z1 = 15
 const floorTiles = [];
 for (const [FLOOR_X0, FLOOR_X1, FLOOR_Z0, FLOOR_Z1] of [[-3, 1201 * U + 3, -100 * U, 1560 * U + 3], [(FX4 + F4_X0) * U, (FX4 + F4_X1) * U, F4_Z0 * U, F4_Z1 * U]]) {
   const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d');
-  g.fillStyle = '#f4f1ea'; g.fillRect(0, 0, 32, 32); g.fillStyle = '#f4f1ea'; g.fillRect(0, 0, 16, 16); g.fillRect(16, 16, 16, 16);
+  g.fillStyle = '#f4f1ea'; g.fillRect(0, 0, 32, 32); g.fillStyle = '#f4f1ea'; g.fillRect(0, 0, 16, 16); g.fillRect(16, 16, 16, 16); g.strokeStyle = 'rgba(43,47,54,.10)'; g.lineWidth = .5; g.strokeRect(.25,.25,31.5,31.5); g.fillStyle='rgba(140,152,173,.16)';g.fillRect(15.5,0,1,32);g.fillRect(0,15.5,32,1);
   const t = new THREE.CanvasTexture(c); floorTiles.push({c, t}); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.NearestFilter; t.colorSpace = THREE.SRGBColorSpace;
   t.repeat.set((FLOOR_X1 - FLOOR_X0) / 2, (FLOOR_Z1 - FLOOR_Z0) / 2);
   const f = new THREE.Mesh(new THREE.PlaneGeometry(FLOOR_X1 - FLOOR_X0, FLOOR_Z1 - FLOOR_Z0), new THREE.MeshLambertMaterial({map:t}));
@@ -924,6 +924,7 @@ function buildFloor4(T, place){
     for (let k = 0; k < 5; k++) { const cx = tx + tw * (2 * k + 1) / 10; chair3d(X(cx), I(cz - 52), 'S'); chair3d(X(cx), I(cz + 52), 'N'); } }
   const keep = pantry3d.snackSpot; pantry3d(862 + FX4, 49, 140, 38); const pantrySnack = pantry3d.snackSpot; pantry3d.snackSpot = keep;
   fridge3d(1012 + FX4, 54, 36, 34); fridge3d(1048 + FX4, 54, 36, 34);
+  plant3d(X(1117), I(119));   // 2D 版茶水間盆栽中心（原始座標 ×0.5），純裝飾、不改原碰撞語意
   if (pantrySnack && F4.snacks !== false) F4.snackSpot = pantrySnack;
   // 左側五個米黃桌子群（每群上下各一排、每排四張）
   for (let g = 0; g < 5; g++) {
@@ -1089,6 +1090,7 @@ function elevator3d(x,bottom,w){ // 原素材 footprint：x..x+w、bottom-40..bo
     c.fillStyle='#2b2f36';c.fillRect(W-28,45,20,25);c.fillStyle='#159e31';c.fillRect(W-22,52,8,4);c.fillStyle='#ffb000';c.fillRect(W-22,61,8,4);
   });
   officeDecal(g,'elevator-indicator',.47,.13,0,2.99,D/2-.012,0,0,(c,W,H)=>{c.fillStyle='#2b2f36';c.fillRect(0,0,W,H);c.fillStyle='#ffb000';c.beginPath();c.moveTo(70,85);c.lineTo(128,30);c.lineTo(186,85);c.fill();});
+  officeDecal(g,'elevator-threshold',W-.3,.13,0,.058,D/2+.005,-Math.PI/2,0,(c,W,H)=>{c.fillStyle='#2b2f36';c.fillRect(0,0,W,H);c.fillStyle='#8c98ad';for(let x=12;x<W-8;x+=22)c.fillRect(x,20,11,H-40);});
 }
 function projectionWall(w,d,x,z){
   pbox(w,2.3,d,OFFICE.cream,x,0,z);
@@ -1108,7 +1110,7 @@ function bookcase3d(x, z, w, d, h = 2.0){   // 版面圖像素；層櫃開口朝
       c.fillStyle='#8a6a3c';c.fillRect(2,base+1,W-4,4);c.fillStyle='#8c98ad';c.fillRect(2,y+2,3,3);c.fillRect(W-5,y+2,3,3);
     }
   });
-  const shelves = [[I(w)-.04,.05,I(d)-.04,OFFICE.wood,0,h-.025,0]];
+  const shelves = [[I(w)-.04,.05,I(d)-.04,OFFICE.wood,0,h-.025+.008,0]];
   for(let r=0;r<rows;r++) shelves.push([.06,.035,I(d)-.12,OFFICE.grain,-I(w)/2+.025,.06+r*(h-.12)/rows,0]);
   officeParts(g,shelves);
   rects.push([I(x), I(z), I(x + w), I(z + d)]);
@@ -1124,7 +1126,7 @@ function cabinet3d(x, z, w, d, h = 1.6){   // 炭灰工具櫃：抽屜在右側�
   x += 1; w -= 2;
   const I = v => v * U, cx = I(x + w / 2), cz = I(z + d / 2), ex = I(x + w) + .015;
   pbox(I(w), h, I(d), 0x2b2f36, cx, 0, cz);
-  const g=officeGroup(cx,cz), parts=[[I(w)-.04,.055,I(d)-.04,OFFICE.wood,0,h-.0275,0]];
+  const g=officeGroup(cx,cz), parts=[[I(w)-.04,.055,I(d)-.04,OFFICE.wood,0,h-.0275+.008,0]];
   for (let i=0;i<5;i++) {
     const y=.1+i*(h-.2)/5, dh=(h-.2)/5-.05;
     parts.push([.03,dh,I(d)-.2,OFFICE.slate,ex-cx,y+dh/2,0],
@@ -1254,8 +1256,11 @@ function table3d(cx, cz, w, d, color, h = .95){   // 世界座標；桌面＋四
   pbox(w, .14, d, warehouse ? color : color === 0x23282e ? OFFICE.coal : color, cx, h - .14, cz);
   if(warehouse) for (const sx of [-1,1]) for (const sz of [-1,1]) pbox(.14,h-.14,.14,0x14181c,cx+sx*(w/2-.18),0,cz+sz*(d/2-.18),false);
   else {const legs=[];for(const sx of [-1,1])for(const sz of [-1,1])legs.push([.14,h-.14,.14,OFFICE.metal,sx*(w/2-.18),(h-.14)/2,sz*(d/2-.18)]);officeParts(officeGroup(cx,cz),legs);}
-  if(!warehouse){const g=officeGroup(cx,cz);officeParts(g,[[w-.06,.045,d-.06,OFFICE.grain,0,h-.14,0],[w-.36,.08,.08,OFFICE.metal,0,.28,0]]);
-    officeDecal(g,'table-port',.3,.15,0,h+.002,0,-Math.PI/2,0,(c,W,H)=>{c.fillStyle='#2b2f36';c.fillRect(0,0,W,H);c.strokeStyle='#8c98ad';c.lineWidth=6;c.strokeRect(12,12,W-24,H-24);c.fillStyle='#8c98ad';for(const x of [55,145])c.fillRect(x,45,40,30);});}
+  if(!warehouse){const g=officeGroup(cx,cz), long=Math.max(w,d), ports=long>4.8?2:1, alongX=w>=d;
+    officeParts(g,[[w-.06,.045,d-.06,OFFICE.grain,0,h-.14,0],[w-.36,.08,.08,OFFICE.metal,0,.28,0],
+      [alongX?w-.64:.055,.035,alongX?.055:d-.64,OFFICE.slate,0,.34,0]]);
+    for(let n=0;n<ports;n++){const q=ports===1?0:(n? .23:-.23)*(alongX?w:d);officeDecal(g,'table-port',.3,.15,alongX?q:0,h+.002,alongX?0:q,-Math.PI/2,0,(c,W,H)=>{c.fillStyle='#2b2f36';c.fillRect(0,0,W,H);c.strokeStyle='#8c98ad';c.lineWidth=6;c.strokeRect(12,12,W-24,H-24);c.fillStyle='#8c98ad';for(const x of [55,145])c.fillRect(x,45,40,30);});}
+  }
 }
 function pmesh(geo, color, x, y, z, sx = 1, sy = 1, sz = 1, outline = true, k = 1.07){   // 圓形／圓角物件：外殼放大一點當黑色粗外框
   const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color})); m.position.set(x, y, z); m.scale.set(sx, sy, sz); scene.add(m);
@@ -1271,11 +1276,15 @@ function toilet3d(x, z){   // 朝右（+x）：圓角水箱在左、橢圓馬桶
   pbox(.16,.025,.12,OFFICE.metal,x-.52,.903,z,false);
   pbox(.37,.018,.8,OFFICE.cream,x-.52,.886,z,false);
   pmesh(G_WATER, 0x8c98ad, x + .14, .54, z, 1.05, 1, .85, false);
-  officeParts(officeGroup(x,z),[-1,1].map(side=>[.09,.035,.09,OFFICE.metal,-.25,.54,side*.23]));
+  const g=officeGroup(x,z);officeParts(g,[...[-1,1].map(side=>[.09,.035,.09,OFFICE.metal,-.25,.54,side*.23]),
+    [.12,.08,.055,OFFICE.metal,-.63,.66,.31],[.18,.05,.045,OFFICE.coal,-.08,.31,.43],[.055,.055,.065,OFFICE.cream,-.08,.31,.48]]);
+  officeDecal(g,'toilet-flush',.12,.12,-.52,.918,.062,-Math.PI/2,0,(c,W,H)=>{c.fillStyle='#8c98ad';c.fillRect(0,0,W,H);c.fillStyle='#2b2f36';c.beginPath();c.arc(W/2,H/2,Math.min(W,H)*.22,0,7);c.fill();});
 }
 function stallPanel(w,d,x,z){
   pbox(w,.7,d,OFFICE.cream,x,0,z);const g=officeGroup(x,z);
-  officeParts(g,[[w-.01,.035,d-.01,OFFICE.metal,0,.68,0],[w-.01,.07,d-.01,OFFICE.coal,0,.035,0]]);
+  officeParts(g,[[w-.01,.035,d-.01,OFFICE.metal,0,.68,0],[w-.01,.07,d-.01,OFFICE.coal,0,.035,0],
+    [w-.08,.025,d-.025,OFFICE.slate,0,.38,0],[.06,.56,.025,OFFICE.metal,-w/2+.07,.38,0],[.06,.56,.025,OFFICE.metal,w/2-.07,.38,0]]);
+  officeDecal(g,'stall-latch',.13,.08,w/2+.013,.44,d/2+.014,0,Math.PI/2,(c,W,H)=>{c.fillStyle='#8c98ad';c.fillRect(0,0,W,H);c.fillStyle='#2b2f36';c.fillRect(10,H/2-7,W-20,14);});
 }
 function sink3d(x, z){     // 朝右：圓柱腳、橢圓臉盆，水龍頭在左
   pmesh(G_PED, 0xf4f1ea, x, .33, z, 1, 1, 1, true, 1.2);
@@ -1283,8 +1292,16 @@ function sink3d(x, z){     // 朝右：圓柱腳、橢圓臉盆，水龍頭在�
   pmesh(G_SINKW, 0x8c98ad, x + .06, .89, z, 1, 1, .8, false);
   pmesh(G_WATER,OFFICE.coal,x+.06,.906,z,.21,1,.21,false);
   officeDecal(scene,'basin-drain',.09,.07,x+.06,.918,z,-Math.PI/2,0,(g,W,H)=>{g.fillStyle='#8c98ad';g.fillRect(0,0,W,H);g.fillStyle='#2b2f36';for(const px of [64,128,192])g.fillRect(px-9,20,18,H-40);});
-  pbox(.26,.055,.08,OFFICE.metal,x-.3,1.09,z);
+  pbox(.26,.055,.08,OFFICE.metal,x-.3,1.09,z); pbox(.08,.045,.12,OFFICE.coal,x+.27,.91,z,false);
   pmesh(G_FAUCET, 0x8c98ad, x - .4, 1.0, z, 1, 1, 1, true, 1.4);
+}
+function plant3d(x, z){   // 四樓茶水間既有小盆栽：共用葉片幾何／材質，不新增碰撞
+  const g=officeGroup(x,z), leafKey='plant-leaf';
+  officeParts(g,[[.42,.28,.42,OFFICE.coal,0,.14,0],[.34,.035,.34,OFFICE.wood,0,.30,0],[.07,.42,.07,OFFICE.grain,0,.48,0]]);
+  if(!officeGeoCache.has(leafKey)) officeGeoCache.set(leafKey,new THREE.SphereGeometry(.18,10,7));
+  const leaves=new THREE.InstancedMesh(officeGeoCache.get(leafKey),officeMat(OFFICE.green),6), edges=new THREE.InstancedMesh(officeGeoCache.get(leafKey),outlineMat,6), o=new THREE.Object3D(); edges.layers.set(HULL_LAYER);
+  for(let i=0;i<6;i++){const a=i*Math.PI*2/6;o.position.set(Math.sin(a)*.18,.62+(i%2)*.09,Math.cos(a)*.18);o.rotation.set(Math.cos(a)*.55,0,-Math.sin(a)*.55);o.scale.set(.62,1.55,.38);o.updateMatrix();leaves.setMatrixAt(i,o.matrix);o.scale.multiplyScalar(1.11);o.updateMatrix();edges.setMatrixAt(i,o.matrix);}
+  leaves.castShadow=!FLAT;leaves.receiveShadow=!FLAT;g.add(leaves,edges);
 }
 const chairsAt = [];   // 等素材載入後再放椅子
 function outlineOf(mesh, t) {
@@ -1490,8 +1507,11 @@ function pantry3d(x0, z0, w, d){    // 版面圖像素：木紋檯面＋木櫃�
   const topMat = new THREE.MeshLambertMaterial({map:woodTexture()}), frontMat = new THREE.MeshLambertMaterial({map:cabinetFrontTexture()}), side = new THREE.MeshLambertMaterial({color:0x8a6a3c});
   const top = new THREE.Mesh(new THREE.BoxGeometry(W + .1, .12, D + .1), [wood, wood, topMat, wood, wood, wood]); top.position.set(cx, .83 + .06, cz); scene.add(top); hull(scene, W + .1, .12, D + .1, cx, .89, cz);
   const base = new THREE.Mesh(new THREE.BoxGeometry(W, .83, D), [side, side, side, side, frontMat, side]); base.position.set(cx, .415, cz); scene.add(base); hull(scene, W, .83, D, cx, .415, cz);
-  const g=officeGroup(cx,cz);officeParts(g,[[W-.12,.09,.055,OFFICE.coal,0,.045,D/2-.028],[W-.06,.045,D-.04,OFFICE.grain,0,.81,0]]);
+  const g=officeGroup(cx,cz);officeParts(g,[[W-.12,.09,.055,OFFICE.coal,0,.045,D/2-.028],[W-.06,.045,D-.04,OFFICE.grain,0,.81,0],
+    [.46,.34,.3,OFFICE.coal,-W*.34,1.08,0],[.39,.025,.25,OFFICE.metal,-W*.34,1.27,0],[.18,.18,.035,OFFICE.slate,-W*.34,1.12,D*.17],
+    [.15,.22,.15,OFFICE.metal,W*.12,1.06,-D*.05],[.22,.02,.22,OFFICE.coal,W*.12,1.18,-D*.05],[.035,.035,.035,OFFICE.green,-W*.34,1.30,D*.16]]);
   officeDecal(g,'pantry-hardware',W-.1,.68,0,.44,D/2+.003,0,0,(c,W,H)=>{c.fillStyle='#8a6a3c';c.fillRect(0,0,W,H);for(let i=0;i<4;i++){const x=i*W/4;c.fillStyle='#2b2f36';c.fillRect(x,0,2,H);c.fillStyle='#8c98ad';c.fillRect(x+W/4-14,18,4,25);c.fillStyle='#b98a50';c.fillRect(x+6,7,W/4-22,2);}});
+  officeDecal(g,'pantry-coffee',.22,.12,-W*.34,1.12,D*.158,0,0,(c,W,H)=>{c.fillStyle='#f4f1ea';c.fillRect(0,0,W,H);c.fillStyle='#2b2f36';c.fillRect(12,16,W-24,H-32);c.fillStyle='#ffb000';c.fillRect(W-28,16,12,12);});
   pantry3d.snackSpot = {cx, cz: cz - .05};
   rects.push([I(x0), I(z0), I(x0 + w), I(z0 + d)]);
 }
@@ -1504,6 +1524,8 @@ function fridge3d(x0, z0, w, d, h = 1.9){   // 深色冰箱：上冷凍、下冷
     officeDecal(pv,'fridge-seal',dw-.05,.025,dw/2,.018,.022,0,0,(c,W,H)=>{c.fillStyle='#2b2f36';c.fillRect(0,0,W,H);c.fillStyle='#8c98ad';c.fillRect(0,54,W,12);}); if(y>.5) officeParts(pv,[[.06,.045,.012,OFFICE.green,.15,hh*.7,.029]]); scene.add(pv); pivots.push(pv); };
   door(h * .34, h * .62 - .04); door(h * .56, .08);
   officeDecal(scene,'fridge-vent',W-.18,.065,cx,.038,zf,0,0,(c,W,H)=>{c.fillStyle='#2b2f36';c.fillRect(0,0,W,H);c.fillStyle='#8c98ad';for(let i=8;i<W;i+=16)c.fillRect(i,25,5,78);});
+  const detail=officeGroup(cx,cz);officeParts(detail,[[.07,.08,.07,OFFICE.metal,-W/2+.12,.04,-D/2+.1],[.07,.08,.07,OFFICE.metal,W/2-.12,.04,-D/2+.1],
+    [.055,.055,.025,OFFICE.amber,W*.28,h-.16,D/2+.024]]);
   fridges.push({cx, cz, zf, pivots, inner, open:0});
   const root = new THREE.Object3D(); root.userData.pick = {kind:'fridge'};
   scene.children.slice(n0).forEach(o => { o.traverse(m => { if (m.isMesh && m.layers.mask === 1) { m.userData.pickRoot = root; pickables.push(m); } }); });

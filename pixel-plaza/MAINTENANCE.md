@@ -60,6 +60,7 @@
 
 - **一次只改一類東西**，改完先 `node --check`（把 `<script type="module">` 內容存成 .mjs 檢查），再用 puppeteer 截圖看。
 - **新增家具**：`pbox`/`table3d`/`chair3d`/`officeChair3d` 建模＋ **登記 `rects` 碰撞** ＋ 黑色外框；樓層加在 `buildOffice()`（五樓）或 `buildFloor4()`（四樓）。通道 ≥ 1.2 單位，不然會卡住（A\* 也走不過）。
+- **辦公室細緻化（2026-11-18）**：共用色票與材質走 `OFFICE`、`officeParts()`、`officeDecal()`；長桌與茶水／廁所／電梯的重複小零件優先合併或共用幾何。藍色辦公桌面 `#1d4ba0` 是指定色，禁止改色。四樓茶水間盆栽是 `plant3d()`，依 2D 原始位置放置且無碰撞；其餘既有家具只補視覺，不改 `SEATS`／`SEATS4`、`rects`、pick kind 或 `rng()`。
 - **新增隨機物件**：一定用 `rng(id)`＋時段；**不可依賴載入順序**（碰撞必須在場景蓋完才算）；寫入共用紀錄用 `fnClaim`。
 - **新增按鈕**：在 `SVG_ICONS` 加一個 24×24 單線條圖示（簡單、不塞滿），HTML 寫 `<i data-px="名稱"></i>`，class 選 `pk-*`（或新增一個 `--ac` 強調色）；手機要看過。
 - **新增要跨裝置保存的資料**：不要只放 `localStorage`；放後端（見 `pixelOfficeProgress` 的做法：取聯集／取較大值，才不會被舊裝置覆蓋）。
