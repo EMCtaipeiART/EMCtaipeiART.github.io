@@ -56,6 +56,8 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import crypto from 'node:crypto';
+import os from 'node:os';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import * as lib from './nas_design_image_lib.mjs';
 
@@ -191,6 +193,41 @@ async function guessBrowsePath(mountRoot, config, dbData, meta) {
     } catch { /* 路徑不合法就退回原本的猜法 */ }
   }
   return resolveDefaultBrowsePath(mountRoot, config.defaultBrowseRoot, meta?.client || '', config.clientFolderAliases);
+}
+
+/**
+ * 檔案清單用的小縮圖（macOS 內建 sips／qlmanage，跟爬蟲做預覽圖同一套工具）。
+ * 以「路徑＋修改時間＋大小」當快取鍵存在系統暫存資料夾，同一個檔案只做一次；失敗回 null（頁面改顯示文字佔位）。
+ */
+async function makeThumbnail(absFile, kind) {
+  const stat = await fs.stat(absFile);
+  const key = crypto.createHash('md5').update(absFile + '|' + stat.mtimeMs + '|' + stat.size).digest('hex');
+  const dir = path.join(os.tmpdir(), 'machi-picker-thumbs');
+  await fs.mkdir(dir, { recursive: true });
+  const out = path.join(dir, key + '.jpg');
+  try {
+    return await fs.readFile(out);
+  } catch {
+    // 還沒做過，往下產生
+  }
+  if (kind === 'video') {
+    const tmp = path.join(dir, key + '-ql');
+    await fs.mkdir(tmp, { recursive: true });
+    spawnSync('qlmanage', ['-t', '-s', '240', '-o', tmp, absFile], { timeout: 20000 });
+    const made = (await fs.readdir(tmp)).find(name => name.endsWith('.png'));
+    if (!made) return null;
+    const result = spawnSync('sips', ['-Z', '240', '-s', 'format', 'jpeg', path.join(tmp, made), '--out', out], { timeout: 15000 });
+    await fs.rm(tmp, { recursive: true, force: true });
+    if (result.status !== 0) return null;
+  } else {
+    const result = spawnSync('sips', ['-Z', '240', '-s', 'format', 'jpeg', '-s', 'formatOptions', '60', absFile, '--out', out], { timeout: 15000 });
+    if (result.status !== 0) return null;
+  }
+  try {
+    return await fs.readFile(out);
+  } catch {
+    return null;
+  }
 }
 
 function sendJson(res, status, payload) {
@@ -643,12 +680,20 @@ const PICKER_PAGE = `<!doctype html>
         overlay.appendChild(head);
         (g.files || []).forEach(f => {
           const row = document.createElement('label');
-          row.style.cssText = 'display:flex;gap:8px;align-items:flex-start;padding:7px 8px;border:1px solid #e3e9e5;border-radius:10px;margin-bottom:6px;cursor:pointer';
+          row.style.cssText = 'display:flex;gap:10px;align-items:center;padding:7px 8px;border:1px solid #e3e9e5;border-radius:10px;margin-bottom:6px;cursor:pointer';
           const cb = document.createElement('input');
           cb.type = 'checkbox';
           cb.checked = Boolean(f.suggest);
           cb.style.cssText = 'margin-top:3px;width:16px;height:16px';
           boxes.push({ cb, gi, name: f.name });
+          const thumb = document.createElement('div');
+          thumb.style.cssText = 'flex:0 0 64px;width:64px;height:64px;border-radius:8px;background:#f1f4f2;border:1px solid #e3e9e5;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:11px;color:#6b7772';
+          const img = document.createElement('img');
+          img.loading = 'lazy';
+          img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
+          img.addEventListener('error', () => { img.remove(); thumb.textContent = f.kind === 'video' ? '影片' : '無預覽'; });
+          img.src = '/api/thumb?token=' + encodeURIComponent(token) + '&path=' + encodeURIComponent(g.path || '') + '&name=' + encodeURIComponent(f.name);
+          thumb.appendChild(img);
           const info = document.createElement('div');
           const nm = document.createElement('div');
           nm.textContent = f.name;
@@ -659,6 +704,7 @@ const PICKER_PAGE = `<!doctype html>
           info.appendChild(nm);
           info.appendChild(meta);
           row.appendChild(cb);
+          row.appendChild(thumb);
           row.appendChild(info);
           overlay.appendChild(row);
         });
@@ -1364,6 +1410,26 @@ async function main() {
         });
       } catch (error) {
         sendJson(res, 200, { success: true, total: 0, folders: [], keyword: '' });
+      }
+      return;
+    }
+
+    if (url.pathname === '/api/thumb') {
+      if (requestToken(url) !== pickerToken) {
+        sendJson(res, 401, { success: false, message: TOKEN_ERROR_MESSAGE });
+        return;
+      }
+      try {
+        const safe = resolveSafeDir(mountRoot, url.searchParams.get('path') || '');
+        const name = path.basename(String(url.searchParams.get('name') || ''));
+        const kind = lib.classify(name, config);
+        if (!name || !kind) throw new Error('不是圖片或影片');
+        const data = await makeThumbnail(path.join(safe.absPath, name), kind);
+        if (!data) throw new Error('無法產生縮圖');
+        res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Content-Length': data.length, 'Cache-Control': 'private, max-age=3600' });
+        res.end(data);
+      } catch (error) {
+        sendJson(res, 404, { success: false, message: error.message });
       }
       return;
     }
