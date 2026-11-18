@@ -2290,7 +2290,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(!loggedIn()){toast('請先登入後再回信',true);startLogin();return}
       if(mode==='designer'&&!opts){openDrChooser(id);return}
       if(!st2.loaded&&loggedIn()){try{await loadUserSettings()}catch(err){}for(let i=0;i<30&&st2.loading;i++)await new Promise(r=>setTimeout(r,100))}
-      const dr=mode==='designer'?{round:opts.round,skip:Boolean(opts.skip),folders:opts.folders||[],fileFolders:{},pending:true,baseUrls:new Set(((state.mods.get(id)||[]).find(x=>(+x['修改次數']||0)===opts.round)?imageList((state.mods.get(id)||[]).find(x=>(+x['修改次數']||0)===opts.round)):[]).map(i=>i.url))}:null;
+      const dr=mode==='designer'?{round:opts.round,skip:Boolean(opts.skip),folders:opts.folders||[],fileFolders:{},later:Boolean(opts.later),pending:!opts.later,baseUrls:new Set(((state.mods.get(id)||[]).find(x=>(+x['修改次數']||0)===opts.round)?imageList((state.mods.get(id)||[]).find(x=>(+x['修改次數']||0)===opts.round)):[]).map(i=>i.url))}:null;
       const tplT=st2.templates[st2.tplDefault],tplBody=nm=>tplT?tplT.html.replace(/\{收件人名\}/g,esc(nm)).replace(/\{項目細節\}/g,esc(String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(x=>x&&x!=='急件'&&x!=='急急件').join('、'))):'',body=mode==='modification'?(tplBody(greetingName(row['設計負責人']))||'Hi '+esc(greetingName(row['設計負責人']))+',<br><br>'):mode==='designer'?designerReplyBody(row,dr):(tplBody(greetingName(row['專案負責人']))||'<br>');
       const d={id,row,to:'',cc:'',subject:'Re: 【'+id+'】'+row['客戶別']+'_'+row['專案名稱'],body,sent:false,reply:true,mode,existing:true,dr};
       state.mail={drafts:[d],index:0,sending:false,sentCount:0,gmailChecked:false};state.form=null;if(dr)drLive.set(`${id}|${dr.round}`,d);show('mail');loadGmailContext();loadThread(id,true);
@@ -3069,7 +3069,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     /* 設計師回覆信：先選圖片來源，再直接進信件編輯器 */
     const drLive=new Map();
     const drNasHtml=folders=>folders.length?`<br> NAS路徑${folders.length>1?`（共 ${folders.length} 個資料夾）`:''}`+folders.map(p=>`<br><b>${esc(p)}</b>`).join(''):'';
-    function drPlaceholders(dr){return `<div id="v5DrImages"><span class="dr-up">　${dr.skip?'圖片備份中，這次不會放進信件...':'圖片上傳中...'}</span></div><div id="v5DrNas">${drNasHtml(dr.folders)}</div><div id="v5DrVideo"></div>`}
+    function drPlaceholders(dr){if(dr.later)return `<div id="v5DrImages"></div><div id="v5DrNas">${drNasHtml(dr.folders)}</div><div id="v5DrVideo"></div>`;return `<div id="v5DrImages"><span class="dr-up">　${dr.skip?'圖片備份中，這次不會放進信件...':'圖片上傳中...'}</span></div><div id="v5DrNas">${drNasHtml(dr.folders)}</div><div id="v5DrVideo"></div>`}
     /* 圖片備份狀態提示：只更新提示區，不重畫整個編輯頁（重畫會讓打字中的編輯框跳開）。備份期間也可以直接寄出。 */
     function drNoticeHtml(d){
       if(!d||!d.dr||!d.dr.pending)return '';
@@ -3091,10 +3091,19 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(!acc('media.manage',false)){toast('此帳號沒有管理案件設計圖的權限',true);return}
       const supp=suppRound!==undefined,round=supp?suppRound:roundOf(id),reuse=caseNasFolders(id,row);state.drChoice={id,round,reuse,supp};$('drTitle').textContent=supp?'補上設計圖':'設計圖上傳方式';
       $('drSub').textContent=`${id}｜${row['專案名稱']||''}｜${roundLabel(round)}`;
-      $('drBody').innerHTML=`${supp?'':'<label class="designer-reply-skip-images"><input type="checkbox" id="drSkip"><span><b>信件編輯不同步圖片</b><small>圖片照常備份到修改紀錄，信件裡只放 NAS 路徑，適合素材很多張、不想全部塞進信件時</small></span></label>'}<div class="option-list reply-list">${reuse.length?`<button type="button" class="option reply-opt" data-dr-src="same"><span>同上次路徑</span><small>沿用 ${esc(reuse.map(i=>i.path).join('、'))} 與原本的檔名關鍵字，立即抓取這一輪最新修改圖${supp?'，補進這一輪的修改紀錄':''}</small></button>`:''}<button type="button" class="option reply-opt" data-dr-src="nas"><span>選擇 NAS 資料夾</span><small>立即備份資料夾內目前的圖片／影片，之後同一資料夾有新圖也會自動追蹤上傳，直到案件離開過稿中；下一步會請你填寫檔名關鍵字</small></button><button type="button" class="option reply-opt" data-dr-src="upload"><span>電腦上傳</span><small>NAS 連線中斷、選擇器沒開時的備援：從電腦挑選圖片／影片上傳這一輪的設計圖。這種方式不會記錄 NAS 路徑，之後可隨時用「補上 NAS 路徑」補記，讓後續修改圖自動追蹤</small></button></div>`;
+      $('drBody').innerHTML=`${supp?'':'<label class="designer-reply-skip-images"><input type="checkbox" id="drSkip"><span><b>信件編輯不同步圖片</b><small>圖片照常備份到修改紀錄，信件裡只放 NAS 路徑，適合素材很多張、不想全部塞進信件時</small></span></label>'}<div class="option-list reply-list">${reuse.length?`<button type="button" class="option reply-opt" data-dr-src="same"><span>同上次路徑</span><small>沿用 ${esc(reuse.map(i=>i.path).join('、'))} 與原本的檔名關鍵字，立即抓取這一輪最新修改圖${supp?'，補進這一輪的修改紀錄':''}</small></button>`:''}<button type="button" class="option reply-opt" data-dr-src="nas"><span>選擇 NAS 資料夾</span><small>立即備份資料夾內目前的圖片／影片，之後同一資料夾有新圖也會自動追蹤上傳，直到案件離開過稿中；下一步會請你填寫檔名關鍵字</small></button>${supp?'':'<button type="button" class="option reply-opt" data-dr-src="later"><span>稍後備份（在家／沒連 NAS）</span><small>不用連線：只填 NAS 路徑與檔名關鍵字，信先寫、先寄出；之後公司電腦的背景程式會依這個路徑自動把圖備份進這一輪，並持續追蹤後續修改</small></button>'}<button type="button" class="option reply-opt" data-dr-src="upload"><span>電腦上傳</span><small>NAS 連線中斷、選擇器沒開時的備援：從電腦挑選圖片／影片上傳這一輪的設計圖。這種方式不會記錄 NAS 路徑，之後可隨時用「補上 NAS 路徑」補記，讓後續修改圖自動追蹤</small></button></div>`;
       const chk=$('drSkip');if(chk){try{chk.checked=localStorage.getItem('drSkipPref')==='1'}catch(e){}chk.addEventListener('change',()=>{try{localStorage.setItem('drSkipPref',chk.checked?'1':'')}catch(e){}})}
       $('drModal').hidden=false;
       setTimeout(()=>{const first=document.querySelector('#drBody [data-dr-src]');if(first)first.focus()},0);
+    }
+    /* 稍後備份：在家也能用——只登記 NAS 路徑＋關鍵字（寫進案件資料，不需要連到 NAS），信照常寫、寄出；
+     * 案件變成過稿中後，公司任何一台連得到 NAS 的電腦的背景程式會依這個路徑補抓圖片並追蹤後續修改。 */
+    function drLaterForm(){
+      const c=state.drChoice;if(!c)return;
+      const old=(c.reuse&&c.reuse[0])||{path:'',keyword:''};
+      $('drTitle').textContent='稍後備份：填寫 NAS 路徑';
+      $('drBody').innerHTML=`<div class="field"><span class="label">NAS 資料夾路徑 <b>*</b></span><input class="input" id="drLaterPath" value="${esc(old.path||'')}" placeholder="例如：專案企劃部/執行中/客戶名/社群貼文/2026/11月" autocomplete="off"><small class="muted">從「設計部」分享根目錄之後開始寫，用 / 分隔；不確定就到公司再用「補上 NAS 路徑」更正</small></div><div class="field"><span class="label">檔名關鍵字（建議填）</span><input class="input" id="drLaterKw" value="${esc(old.keyword||'')}" placeholder="例如：261118_" autocomplete="off"><small class="muted">只抓檔名含這段文字的檔案，避免抓到同資料夾其他案件</small></div><div class="merge-actions"><button type="button" class="btn primary" data-dr-later-go>確認，開始寫信</button><button type="button" class="btn" data-dr-later-back>返回</button></div>`;
+      setTimeout(()=>$('drLaterPath')&&$('drLaterPath').focus(),0);
     }
     function openDrEditor(id,o){
       const m=state.mail,cur=m&&m.drafts[m.index];
@@ -3262,11 +3271,23 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const t=e.target;
       const src=t.closest?.('[data-dr-src]')?.dataset.drSrc;
       if(src&&state.drChoice){
+        if(src==='later'){drLaterForm();return}
         const {id,round,reuse}=state.drChoice,skip=Boolean($('drSkip')&&$('drSkip').checked);state.drChoice0=state.drChoice;$('drModal').hidden=true;state.drChoice=null;
         const supp=Boolean(state.drChoice0&&state.drChoice0.supp);
         if(src==='nas')nasOpen({id,round,afterReply:!supp,skip});
         else if(src==='same')nasOpen({id,round,mode:'reuse',folders:reuse,afterReply:!supp,skip});
         else openDrUpload(id,round,skip,supp);
+        return;
+      }
+      if(t.closest?.('[data-dr-later-back]')&&state.drChoice){const c=state.drChoice;openDrChooser(c.id,c.supp?c.round:undefined);return}
+      if(t.closest?.('[data-dr-later-go]')&&state.drChoice){
+        const path=String($('drLaterPath').value||'').trim().replace(/\\+/g,'/').replace(/^\/+|\/+$/g,''),kw=String($('drLaterKw').value||'').trim();
+        if(!path){toast('請填寫 NAS 資料夾路徑',true);return}
+        if(!kw&&!confirm('沒有填檔名關鍵字，資料夾內所有檔案都會被當成這個案件的圖，同資料夾若有其他案件的檔案會被誤抓。仍要繼續嗎？'))return;
+        const {id,round}=state.drChoice;$('drModal').hidden=true;state.drChoice=null;
+        saveCaseNas(id,[{path,keyword:kw}]);
+        startReply(id,'designer',{round,skip:true,later:true,folders:[path]});
+        toast('已登記 NAS 路徑；信寄出後，公司電腦的背景程式會自動補備份圖片');
         return;
       }
       if(t.closest?.('[data-dr-close]')||t.id==='drModal'){$('drModal').hidden=true;state.drChoice=null;return}

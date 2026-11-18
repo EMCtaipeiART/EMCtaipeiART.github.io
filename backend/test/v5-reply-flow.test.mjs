@@ -25,7 +25,7 @@ test('v5 designer reply source chooser: same-path / NAS / 電腦上傳 (NAS-outa
   assert.match(site, /localStorage\.getItem\('drSkipPref'\)==='1'/);
   assert.match(site, /async function shrinkMailImage\(file\)/);
   assert.match(site, /Math\.min\(1,1600\/Math\.max\(w,h\)\)/);
-  assert.match(site, /function drPlaceholders\(dr\)\{return `<div id="v5DrImages"><span class="dr-up">/);
+  assert.match(site, /function drPlaceholders\(dr\)\{if\(dr\.later\)return [^\n]*return `<div id="v5DrImages"><span class="dr-up">/);
 });
 
 test('picker track-only mode records the path without any backup (used by the 補上 NAS 路徑 entries), and keeps the file-name locate endpoint', async () => {
