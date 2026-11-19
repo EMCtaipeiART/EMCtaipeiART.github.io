@@ -279,6 +279,19 @@ export function compareSystemAnnouncements(left, right) {
     || a.localeCompare(b);
 }
 
+/** 最近的系統公告（新到舊）：小黃用它第一時間知道系統改了什麼，管理者在後台發公告就生效，不必部署。 */
+export function recentSystemAnnouncements(database, limit = 5) {
+  const rows = database?.tables?.['系統公告欄']?.rows || [];
+  const enabled = rows.map((row, index) => ({ row, index })).filter(({ row }) => {
+    const status = String(row?.['是否啟用'] ?? '').trim().toLowerCase();
+    return /^(?:啟用|發布|公開|v|true|1|yes)$/.test(status)
+      && String(row?.['公告版本'] ?? '').trim()
+      && String(row?.['公告內容'] ?? '').trim();
+  });
+  enabled.sort((left, right) => compareSystemAnnouncements(right.row, left.row) || right.index - left.index);
+  return enabled.slice(0, limit).map(({ row }) => row);
+}
+
 export function latestSystemAnnouncement(database) {
   const rows = database?.tables?.['系統公告欄']?.rows || [];
   const enabled = rows.map((row, index) => ({ row, index })).filter(({ row }) => {

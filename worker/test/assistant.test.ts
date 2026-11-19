@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { emptyDatabase } from '../../backend/schema.mjs';
 import {
   ASSISTANT_DAILY_TOKENS, LOW_BATTERY_LINE, NOT_READY_LINE, TIRED_LINES, assistantChat, cleanupAssistantStorage,
-  ASSISTANT_SYSTEM_PROMPT, assistantLogsReport, assistantUsageReport, findCase, getCaseCounts, logKey, recordFeedback, taipeiDay, usageKey, type AssistantLogEntry, type AssistantStore
+  ASSISTANT_SYSTEM_PROMPT, assistantLogsReport, getRecentUpdates, assistantUsageReport, findCase, getCaseCounts, logKey, recordFeedback, taipeiDay, usageKey, type AssistantLogEntry, type AssistantStore
 } from '../src/assistant';
 import { FEATURE_TIPS, KNOWLEDGE_TOPICS, lookupKnowledge } from '../src/assistant-knowledge';
 import { getNewsTicker, keepItem, parseRss } from '../src/assistant-news';
@@ -214,5 +214,21 @@ describe('logs report', () => {
     expect(logs.entries[1]).toMatchObject({ answer: '回答', helpful: false, user: 'Anna' });
     const usage = await assistantUsageReport(store, 1, NOW) as unknown as { days: Array<{ accounts: Array<{ account: string; unhelpful: number; department: string }> }> };
     expect(usage.days[0].accounts.find(x => x.account === 'anna@emctaipei.com')).toMatchObject({ unhelpful: 1, department: '設計部' });
+  });
+});
+
+describe('recent updates', () => {
+  it('reads the newest enabled system announcements, newest first, with trimmed content', () => {
+    const d = db();
+    d.tables['系統公告欄'].rows.push(
+      { 公告版本: 'v1.0', 公告標題: '舊公告', 公告內容: '舊內容', 發布時間: '2026/10/01', 是否啟用: '啟用' },
+      { 公告版本: 'v2.0', 公告標題: '小黃上線', 公告內容: '新功能：' + '很長'.repeat(500), 發布時間: '2026/11/19', 是否啟用: '啟用' },
+      { 公告版本: 'v3.0', 公告標題: '草稿', 公告內容: '還沒發', 發布時間: '2026/11/20', 是否啟用: '停用' }
+    );
+    const r = getRecentUpdates(d, { limit: 2 }) as { found: number; updates: Array<{ 標題: string; 內容: string }> };
+    expect(r.updates.map(u => u.標題).slice(0, 2)).toEqual(['小黃上線', '舊公告']);
+    expect(r.updates.some(u => u.標題 === '草稿')).toBe(false);
+    expect(r.updates[0].內容.length).toBeLessThanOrEqual(700);
+    expect(ASSISTANT_SYSTEM_PROMPT).toContain('getRecentUpdates');
   });
 });

@@ -3175,3 +3175,7 @@
 - 角色設定改為「小黃不是常駐機器人，他最近剛失業，暫時代替設計部做解答；之後會因為熱門話題或時事換成別的角色」。Worker 的 system prompt 由新的 `ASSISTANT_CHARACTER`（名字／外型／背景）組出，被問到身分、為什麼是你、會不會被換掉時用這個設定輕鬆自嘲回答，但不影射真實人物或公司人事，回答完仍正經幫忙。
 - 前台 `site.js` 新增 `ASSISTANT_CHARACTER`（名字、副標「設計部代班解答」、頭像、自我介紹、臉部圖層 vars）；滑過氣泡的自我介紹改成「前陣子剛失業，暫時來幫設計部代班解答」。眼皮與嘴的位置、膚色改用 CSS 變數（--lid-*、--mouth-*），換角色時只要改這個物件與頭像圖，不必動其他程式。
 - 換角色要同步改兩處：前台 `ASSISTANT_CHARACTER` 與 Worker `ASSISTANT_CHARACTER`（需 wrangler deploy）。
+
+## 2026-11-19 小黃：系統改動第一時間同步
+- 新工具 `getRecentUpdates`：讀取「系統公告欄」最近 5 則已啟用的公告（版本、標題、發布時間、內容前 700 字），問「最近有什麼更新／新功能」時使用；公告與內建知識庫衝突時以公告為準。管理者在後台發公告後立即生效，不必部署。後端新增 `recentSystemAnnouncements`（`backend/schema.mjs`，排序規則與 `latestSystemAnnouncement` 相同）。
+- 內建知識庫（`assistant-knowledge.ts`）仍要靠改程式＋部署更新；CLAUDE.md 新增規則：改了使用者看得到的功能時，同時發公告並更新知識庫。

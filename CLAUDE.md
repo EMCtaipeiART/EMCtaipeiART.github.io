@@ -76,3 +76,7 @@
 - 小幫手的問答紀錄與額度**只能存在 Durable Object storage（`this.ctx.storage`）**，不可寫進 JSON 快照（會產生 GitHub commit）。詳見 `MAINTENANCE_LOG.md` 的「設計部小幫手（第一期）」。
 - 後端沒有「依登入者過濾可見案件」的函式（前台 `canViewCustomerCases` 才有）；小幫手在 `worker/src/assistant.ts` 移植了一份，前台規則改了要一併改。
 - 部署需要使用者自己執行：`wrangler secret put ANTHROPIC_API_KEY`、`wrangler deploy`。
+
+## 系統改動要讓小黃第一時間知道（2026-11-19）
+- 小黃有兩個知識來源：①**系統公告欄**（工具 `getRecentUpdates`，管理者發公告即生效、不必部署）②**內建知識庫** `worker/src/assistant-knowledge.ts`（工具 `getSystemHelp`，要改程式並 `wrangler deploy`）。
+- 改了使用者看得到的功能時：請使用者（或 Machi）在後台發一則系統公告；若是長期成立的規則／入口／玩法，**同時更新 `assistant-knowledge.ts` 對應主題並部署 Worker**，並在 `MAINTENANCE_LOG.md` 記一筆。兩者衝突時小黃以公告為準。

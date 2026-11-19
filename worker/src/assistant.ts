@@ -6,6 +6,7 @@
 import type { DatabaseSnapshot, Row, SessionRecord } from './types';
 import { canonicalAccount, isManager, settingsRow, text } from './model';
 import { knowledgeIndex, lookupKnowledge } from './assistant-knowledge';
+import { recentSystemAnnouncements } from '../../backend/schema.mjs';
 
 export const ASSISTANT_MODEL = 'claude-haiku-5-5';
 export const ASSISTANT_DAILY_TOKENS = 30000;
@@ -48,7 +49,7 @@ export const ASSISTANT_SYSTEM_PROMPT = [
   '- 如果使用者問「你會不會記錄／記得我問的問題」，如實回答「會記錄下來，用來改善系統」，不否認也不轉移話題；不要主動提起紀錄，也不要提到管理者、管理功能或任何人看得到紀錄。',
   '系統知識目錄（細節請用 getSystemHelp 查，不要憑印象回答）：',
   knowledgeIndex(),
-  '可用工具：getCaseCounts（案量統計）、findCase（找案件）、getMyToday（登入者今天的待辦）、getSystemHelp（系統功能說明，問功能、操作、規則、哪裡找什麼時先呼叫它，再用查到的內容回答）。'
+  '可用工具：getCaseCounts（案量統計）、findCase（找案件）、getMyToday（登入者今天的待辦）、getSystemHelp（系統功能說明，問功能、操作、規則、哪裡找什麼時先呼叫它，再用查到的內容回答）、getRecentUpdates（最近的系統公告；問最近有什麼更新、新功能、改了什麼，或 getSystemHelp 的說明可能過時時呼叫，公告比說明新，兩者衝突以公告為準）。'
 ].join('\n');
 
 export const ASSISTANT_TOOLS = [
@@ -68,6 +69,11 @@ export const ASSISTANT_TOOLS = [
     name: 'findCase',
     description: '依案名、客戶別或案件編號模糊搜尋案件（只會回傳登入者看得到的案件，最多 3 筆）。',
     input_schema: { type: 'object', properties: { keyword: { type: 'string' } }, required: ['keyword'] }
+  },
+  {
+    name: 'getRecentUpdates',
+    description: '讀取最近的系統公告（新功能、改版、修正說明），知道系統最近改了什麼。問「最近有什麼更新／新功能／改了什麼」時使用。',
+    input_schema: { type: 'object', properties: { limit: { type: 'number' } } }
   },
   {
     name: 'getSystemHelp',
@@ -215,10 +221,20 @@ export function getMyToday(database: DatabaseSnapshot, session: SessionRecord, n
   return { pendingReply, dueSoon: due.length, dueCases: due, newToday: created };
 }
 
+/** 最近的系統公告（新功能、改版說明）。內容截短，避免一次吃太多 token。 */
+export function getRecentUpdates(database: DatabaseSnapshot, args: Row): Row {
+  const limit = Math.min(5, Math.max(1, Math.floor(Number(args.limit)) || 3));
+  const items = (recentSystemAnnouncements(database, limit) as Row[]).map(row => ({
+    版本: text(row['公告版本']), 標題: text(row['公告標題']), 發布時間: text(row['發布時間']), 內容: text(row['公告內容']).slice(0, 700)
+  }));
+  return { found: items.length, updates: items, hint: items.length ? undefined : '目前沒有公開的系統公告' };
+}
+
 export function runAssistantTool(name: string, args: Row, database: DatabaseSnapshot, session: SessionRecord, nowMs: number): Row {
   if (name === 'getCaseCounts') return getCaseCounts(database, args, nowMs);
   if (name === 'findCase') return findCase(database, session, args, nowMs);
   if (name === 'getMyToday') return getMyToday(database, session, nowMs);
+  if (name === 'getRecentUpdates') return getRecentUpdates(database, args);
   if (name === 'getSystemHelp') { const r = lookupKnowledge(args.query); return { ...r, found: r.topics.length }; }
   return { error: `沒有這個工具：${name}` };
 }
