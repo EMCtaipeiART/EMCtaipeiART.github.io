@@ -71,3 +71,8 @@
 - 按鈕不要厚邊／厚陰影；手機（≤700px）按鈕縮小（字 12px、邊 2px）。同權重的 CSS 規則後面的會蓋前面的，手機規則要放在最後。
 - 手機防誤放大：viewport 加 `maximum-scale=1,user-scalable=no`、`touch-action:manipulation`、擋 `gesturestart`；**不要攔 `touchend`**（會吃掉連點）。
 - 遠征隊的 `expedition/index.html` 是由部署腳本產生，改樣式要連同產生來源一起改，否則下次部署會被蓋掉。
+
+## 小幫手（2026-11-19）
+- 小幫手的問答紀錄與額度**只能存在 Durable Object storage（`this.ctx.storage`）**，不可寫進 JSON 快照（會產生 GitHub commit）。詳見 `MAINTENANCE_LOG.md` 的「設計部小幫手（第一期）」。
+- 後端沒有「依登入者過濾可見案件」的函式（前台 `canViewCustomerCases` 才有）；小幫手在 `worker/src/assistant.ts` 移植了一份，前台規則改了要一併改。
+- 部署需要使用者自己執行：`wrangler secret put ANTHROPIC_API_KEY`、`wrangler deploy`。

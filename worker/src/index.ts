@@ -317,6 +317,10 @@ export default {
     } catch (error) {
       console.error(JSON.stringify({ event: 'scheduled-mail-dispatch-error', message: error instanceof Error ? error.message : String(error) }));
     }
+    // 小幫手紀錄保留 180 天：每天只清理一次（DO 內自己記日期）。
+    try { await stub.runAssistantCleanup(); } catch (error) {
+      console.error(JSON.stringify({ event: 'assistant-cleanup-error', message: error instanceof Error ? error.message : String(error) }));
+    }
     // 資料遷移：「已取消」狀態已併入「暫停中」，把殘留的案件改掉（沒有殘留時什麼都不做）。
     try {
       const migration = await stub.runStatusMigration();

@@ -5899,3 +5899,18 @@ describe('會議室（行事曆會議 → 人物入座會議室）', () => {
     expect(pixelOfficeMeetingRoomOf({ summary: '會議', attendees: [{ resource: false, displayName: 'Anna A' }] })).toBe('');
   });
 });
+
+describe('assistant actions', () => {
+  it('rejects the three assistant actions without a session', async () => {
+    for (const action of ['assistantToday', 'assistantChat', 'assistantFeedback']) {
+      expect(await api({ action, message: 'hi', logId: 'x', helpful: true })).toMatchObject({ ok: false, error: '請先登入後再執行此操作' });
+    }
+  });
+
+  it('answers 還在準備中 when ANTHROPIC_API_KEY is not set, and does not write the JSON snapshot', async () => {
+    const token = await seedSession('machi.chen@emctaipei.com', 'Machi');
+    expect(await api({ action: 'assistantToday' }, token)).toMatchObject({ ok: true, quota: { tired: false } });
+    expect(await api({ action: 'assistantChat', message: '這個月接了幾案' }, token)).toMatchObject({ ok: true, skipped: true });
+    expect(await api({ action: 'ping' }, token)).toMatchObject({ revision: 7 });
+  });
+});

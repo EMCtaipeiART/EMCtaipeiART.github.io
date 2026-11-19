@@ -1,6 +1,7 @@
 import { PIXEL_MOVE_MIN_GAP_MS, parseMove, sessionMatchesName } from './pixel-ws';
 import { DurableObject } from 'cloudflare:workers';
-import { DEFAULT_CUSTOMER_CC_EMAILS, publicSystemAnnouncement, systemAnnouncementReadRecords, TABLE_SCHEMAS } from '../../backend/schema.mjs';
+import { assistantChat, assistantToday, cleanupAssistantStorage, recordFeedback } from './assistant';
+import { DEFAULT_CUSTOMER_CC_EMAILS, latestSystemAnnouncement, publicSystemAnnouncement, systemAnnouncementReadRecords, TABLE_SCHEMAS } from '../../backend/schema.mjs';
 import { normalizeDesignType, splitDetailValues } from '../../backend/weighting.mjs';
 import {
   VERSION, ACCESS_CAPABILITIES, ACCESS_PAGES, ACCESS_ROLE_TEMPLATES, ISSUE_STATUSES, SUPPLEMENT_SLOTS,
@@ -5332,6 +5333,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   private auditFlushing = false;
   /** Cron 每分鐘呼叫：佇列有 50 筆以上、或最舊的一筆超過 5 分鐘才寫入，避免頻繁 commit */
   /** 一次性資料遷移：把案件表裡還留著的「已取消」改成「暫停中」（之後任何寫入也會順手修正）。每分鐘排程呼叫，沒有殘留就什麼都不做。 */
+  /** 小幫手紀錄與額度的保留期限清理；每分鐘 Cron 會呼叫，函式內自己記日期，一天只真正跑一次。 */
+  async runAssistantCleanup(): Promise<number> { return cleanupAssistantStorage(this.ctx.storage, Date.now()); }
+
   async runStatusMigration(): Promise<Row> {
     const stored = this.storedSnapshot();
     if (!stored || !(stored.database.tables.database?.rows || []).some(row => text(row['狀態']) === '已取消')) return { ok: true, migrated: 0 };
@@ -5721,6 +5725,20 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'coinAdjust') return await this.coinAdjust(payload, database, session);
       if (action === 'coinEarnSyncNow') { requireCapability(database, session, 'database.manage'); return { ok: true, ...(await this.runCoinEarnSync()), action }; }
       if (action === 'ping') return { ok: true, action, version: VERSION, storage: 'cloudflare-worker-github-json', revision: database.revision, message: 'connected' };
+      if (action === 'assistantToday') {
+        const current = this.requireSession(session);
+        const latest = latestSystemAnnouncement(database);
+        const readAccounts = latest ? systemAnnouncementReadRecords(latest).map((record: { account: string }) => record.account) : [];
+        return await assistantToday(database, current, this.ctx.storage, publicSystemAnnouncement(database), readAccounts, Date.now());
+      }
+      if (action === 'assistantChat') {
+        const current = this.requireSession(session);
+        return await assistantChat(payload, database, current, this.ctx.storage, { apiKey: (this.env as { ANTHROPIC_API_KEY?: string }).ANTHROPIC_API_KEY });
+      }
+      if (action === 'assistantFeedback') {
+        const current = this.requireSession(session);
+        return { ok: true, action, saved: await recordFeedback(this.ctx.storage, current, payload, Date.now()) };
+      }
       if (action === 'getSystemAnnouncement') return { ok: true, action, announcement: publicSystemAnnouncement(database), revision: database.revision };
       if (action === 'markSystemAnnouncementRead') {
         const current = this.requireSession(session);

@@ -3128,3 +3128,13 @@
 ## 2026-11-19 lens-shop：到貨通知改為一次多人寄送
 - 新增 `sendMailBatch`：Brevo `messageVersions`，每 100 人一次請求，每人各自一封、互相看不到信箱；沒有 Brevo 金鑰時退回逐封寄。避開 Worker 一次請求的對外連線數上限。
 - 到貨通知回傳 `failedTo`，畫面列出沒寄成功的信箱。與 lens-group-buy 同步。
+
+## 2026-11-19 設計部小幫手（第一期）
+- 前台右下角（登入後才出現）對話小幫手：每日招呼（當天第一次載入自動展開，摘要待回信／3 天內截稿／今天新進；localStorage `assistantGreetedV1:<帳號>`）、案量查詢、案件追蹤、新功能公告（有未讀公告時小圖示紅點，【帶我去看】重用既有 `annOpen`、兩個按鈕都寫入已讀；首頁原本的公告提示條保留不變）、「有幫助／沒幫助」回饋。關閉會說「好喔，那我晚點再回來～」後縮成小圖示，當天不再自動展開（`assistantClosedV1:<帳號>`）。程式在 `site.js` 的「小幫手」區塊與 `site.css` 檔尾；造型之後只要換 `.as-avatar` 的 `--as-avatar-img`。
+- Worker 新增 `worker/src/assistant.ts` 與三個 action（都要登入）：`assistantToday`（不呼叫 AI、不扣額度）、`assistantChat`（額度→Claude→記錄）、`assistantFeedback`。模型 `claude-haiku-5-5`（`ASSISTANT_MODEL`），tool use 最多 3 輪，只帶本次問題＋最近 6 則。工具 `getCaseCounts`／`findCase`／`getMyToday` 全部用已載入的 database 計算；案件明細依登入者可見範圍過濾（移植前台 `canViewCustomerCases`＋`ownerMatches` 的規則，後端原本沒有這支函式），案量總數照 `designerCases` 的規則不過濾。待回信數＝登入者為專案負責人且狀態「過稿中」的案件數（同前台「回信」通知）。
+- 需要 secret `ANTHROPIC_API_KEY`；沒設定時 `assistantChat` 回「小幫手還在準備中」並帶 `skipped:true`。部署：`cd worker && wrangler secret put ANTHROPIC_API_KEY && wrangler deploy`。
+- **問答紀錄與額度存在 Durable Object storage，不寫進 JSON 快照（寫快照會產生 GitHub commit）**：額度 key `assistantUsage:<台灣日期>:<帳號>`（累計 input+output tokens，上限 `ASSISTANT_DAILY_TOKENS=30000`，試行一週後再調）；紀錄 key `assistantLog:<台灣日期>`（單日超過 2000 筆分片成 `assistantLog:<日期>:<序號>`），保留 180 天，由每分鐘 Cron 呼叫 `runAssistantCleanup`（內部記 `assistantLogCleanupDate`，一天只跑一次）。第一期沒有讀取紀錄的 API 或頁面。
+- 額度滿：不呼叫 API，隨機回 4 句「累了」台詞並停用輸入框；用量跨過 80% 時回覆後多附一次電量提醒。
+- 刻意的行為決定：小幫手不主動提起紀錄，也不提管理者；但被問「會不會記錄」會如實回答「會記錄下來，用來改善系統」。
+- 順手修：`index.html` 的 `site.js?v=fullscreen1` 不是 16 進位，`tools/stamp.cjs` 一直認不得、site.js 沒有帶雜湊版本；改成 `?v=0` 後由 stamp 換成內容雜湊。
+- 測試：`worker/test/assistant.test.ts`（額度、80% 只提醒一次、權限過濾、skipped、紀錄與回饋、清理）與 `index.test.ts` 的 assistant actions（未登入被拒、無金鑰 skipped、不動快照）。Worker 全套仍有 Pixel Office 的時間相關測試不穩定（改動前就有，每次失敗數不同）；`npm test` 失敗清單與改動前相同。

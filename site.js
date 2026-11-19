@@ -4721,6 +4721,112 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     window.addEventListener('load',()=>setTimeout(ensureArchive,200));/* 等級資料很小，進站就先讀，不等到滑過頭像才開始 */
     const AVATAR_BRIDGE_PAUSED=true;/* 頭像快照暫停掃描：首頁頭像依目前狀態用預設，不再載入隱藏的 2D 頭像橋接 iframe（要恢復就改成 false） */
     window.addEventListener('load',()=>setTimeout(function mk(){if(AVATAR_BRIDGE_PAUSED)return;if(document.getElementById('avatarBridge'))return;if(document.getElementById('uniLoading')){setTimeout(mk,800);return}/* 正在進入多元宇宙時先不開這個隱藏的第二份像素辦公室，免得跟主畫面搶頻寬 */const f=document.createElement('iframe');f.id='avatarBridge';f.title='設計師頭像';f.setAttribute('aria-hidden','true');f.tabIndex=-1;f.style.cssText='position:fixed;width:320px;height:120px;right:0;bottom:0;border:0;opacity:.01;pointer-events:none;z-index:-1';f.src='archive/EMC-ART-Pixel-Office-2D/dist/?avatars=1&v=33&t='+Math.floor(Date.now()/300000)+'';document.body.appendChild(f)},300));
+    /* ---------- 小幫手 ---------- */
+    /* 登入後固定在右下角的對話小幫手（第一期：每日招呼、案量查詢、案件追蹤、新功能公告、問答紀錄）。
+       對話只留在頁面記憶體；問答紀錄與額度由後端存在 Durable Object，不寫進 JSON 快照。
+       造型之後要換，只要改 .as-avatar 的背景圖（CSS 變數 --as-avatar-img），元件不用動。 */
+    const asHelper=(()=>{
+      const S={acct:'',open:false,min:false,msgs:[],busy:false,tired:false,ann:null,today:null,day:'',farewell:false,loadedFor:''};
+      const tpDay=()=>{const p=taipeiParts();return `${p.year}-${p.month}-${p.day}`};
+      const kGreet=()=>'assistantGreetedV1:'+S.acct,kClose=()=>'assistantClosedV1:'+S.acct;
+      const lsGet=k=>{try{return localStorage.getItem(k)||''}catch(err){return ''}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(err){}};
+      const SVG_FACE='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="4"/><path d="M12 6V3.5"/><circle cx="9" cy="12" r="1.2"/><circle cx="15" cy="12" r="1.2"/><path d="M9.5 15.2c1.4.8 3.6.8 5 0"/></svg>';
+      const SVG_X='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+      const SVG_SEND='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 4l-5 16-3-6.5L4 12z"/></svg>';
+      function root(){
+        let el=document.getElementById('asHelper');
+        if(!el){el=document.createElement('div');el.id='asHelper';el.className='as-root';document.body.appendChild(el);
+          el.addEventListener('click',onClick);el.addEventListener('submit',onSubmit)}
+        return el;
+      }
+      function greetText(){
+        const hr=+taipeiParts().hour,hello=hr<11?'早安':hr<18?'午安':'晚安',name=session().name||session().user||'';
+        const t=S.today||{},parts=[];
+        if(t.pendingReply>0)parts.push(`${t.pendingReply} 案等你回信`);
+        if(t.dueSoon>0)parts.push(`${t.dueSoon} 案 3 天內截稿`);
+        if(t.newToday>0)parts.push(`今天新進 ${t.newToday} 案`);
+        return `${hello}，${name}！`+(parts.length?`今天有 ${parts.join('、')}。`:'今天目前沒有急著處理的事，可以喘口氣～');
+      }
+      function msgHtml(m,i){
+        const fb=m.role==='assistant'&&m.logId?(m.fb==null?`<span class="as-fb"><button type="button" data-as-fb="1" data-i="${i}">有幫助</button><button type="button" data-as-fb="0" data-i="${i}">沒幫助</button></span>`:`<span class="as-fb as-fb-done">${m.fb?'謝謝回饋':'收到，我會改進'}</span>`):'';
+        return `<div class="as-msg ${m.role==='user'?'as-me':'as-bot'}"><div class="as-bubble">${esc(m.content).replace(/\n/g,'<br>')}</div>${fb}</div>`;
+      }
+      function render(){
+        if(!loggedIn()){const el=document.getElementById('asHelper');if(el)el.remove();return}
+        const el=root(),unread=Boolean(S.ann);
+        if(!S.open){
+          el.innerHTML=`<button type="button" class="as-fab" data-as="open" aria-label="開啟小幫手" title="小幫手"><span class="as-avatar">${SVG_FACE}</span>${unread?'<i class="as-dot" aria-label="有新公告"></i>':''}</button>`;
+          return;
+        }
+        const annHtml=S.ann?`<div class="as-ann"><b>新功能公告</b><span>${esc(S.ann.title||S.ann.version)}</span><div class="as-ann-acts"><button type="button" class="as-btn primary" data-as="ann-go">帶我去看</button><button type="button" class="as-btn" data-as="ann-ok">知道了</button></div></div>`:'';
+        const body=S.farewell?`<div class="as-msg as-bot"><div class="as-bubble">好喔，那我晚點再回來～</div></div>`:S.msgs.map(msgHtml).join('')+(S.busy?'<div class="as-msg as-bot"><div class="as-bubble as-think">思考中<i></i><i></i><i></i></div></div>':'');
+        el.innerHTML=`<section class="as-panel" role="dialog" aria-label="設計部小幫手"><header class="as-head"><span class="as-avatar sm">${SVG_FACE}</span><b>設計部小幫手</b><button type="button" class="as-x" data-as="close" aria-label="關閉小幫手">${SVG_X}</button></header>
+          <div class="as-body" id="asBody">${annHtml}${body}</div>
+          <form class="as-form"><input id="asInput" type="text" maxlength="500" autocomplete="off" placeholder="${S.tired?'明天再來找我':'問我案量、找案件…'}" ${S.tired||S.busy||S.farewell?'disabled':''}><button type="submit" class="as-send" aria-label="送出" ${S.tired||S.busy||S.farewell?'disabled':''}>${SVG_SEND}</button></form></section>`;
+        const b=document.getElementById('asBody');if(b)b.scrollTop=b.scrollHeight;
+      }
+      function openPanel(focus){S.open=true;render();if(focus)setTimeout(()=>document.getElementById('asInput')?.focus(),30)}
+      function closePanel(){
+        if(S.farewell)return;
+        S.farewell=true;render();
+        setTimeout(()=>{S.farewell=false;S.open=false;lsSet(kClose(),tpDay());render()},1500);
+      }
+      async function load(){
+        S.loadedFor=S.acct;
+        try{
+          const r=await api('assistantToday');
+          S.today=r.today||null;S.ann=r.announcement||null;S.tired=Boolean(r.quota&&r.quota.tired);S.day=r.day||tpDay();
+        }catch(err){render();return}/* 後端還沒部署或暫時連不上：不招呼、不顯示 */
+        const day=tpDay();
+        if(lsGet(kGreet())!==day){
+          lsSet(kGreet(),day);
+          S.msgs.push({role:'assistant',content:greetText()});
+          if(S.tired)S.msgs.push({role:'assistant',content:'今天的電量用光了，明天充飽再見！'});
+          if(lsGet(kClose())!==day)S.open=true;
+        }else if(S.tired&&!S.msgs.length){S.msgs.push({role:'assistant',content:'今天的電量用光了，明天充飽再見！'})}
+        render();
+      }
+      async function send(text){
+        const q=String(text||'').trim().slice(0,500);if(!q||S.busy||S.tired)return;
+        const history=S.msgs.filter(m=>m.content).slice(-6).map(m=>({role:m.role,content:m.content}));
+        S.msgs.push({role:'user',content:q});S.busy=true;render();
+        try{
+          const r=await api('assistantChat',{message:q,history});
+          S.msgs.push({role:'assistant',content:r.reply||'……',logId:r.logId||null,fb:null});
+          if(r.quota&&r.quota.tired)S.tired=true;
+        }catch(err){S.msgs.push({role:'assistant',content:'小幫手剛剛打了個盹，請再問一次！'})}
+        S.busy=false;render();
+        setTimeout(()=>document.getElementById('asInput')?.focus(),30);
+      }
+      function annRowFor(ver){const rows=state.annRows||[];return rows.find(r=>String(r['公告版本']||'').trim()===String(ver||'').trim())||annLatest()}
+      function onClick(e){
+        const a=e.target.closest('[data-as]');
+        if(a){
+          const k=a.dataset.as;
+          if(k==='open'){openPanel(true);return}
+          if(k==='close'){closePanel();return}
+          if(k==='ann-go'||k==='ann-ok'){
+            const ann=S.ann;S.ann=null;
+            const row=ann?annRowFor(ann.version):null;
+            if(k==='ann-go'&&row)annOpen(row);/* annOpen 內部已呼叫 markSystemAnnouncementRead */
+            else if(ann)api('markSystemAnnouncementRead',{version:ann.version}).catch(()=>{});
+            try{if(ann)localStorage.setItem('v5AnnDismissed',String(ann.version))}catch(err){}
+            const bar=document.getElementById('annBar');if(k==='ann-ok'&&bar)bar.hidden=true;
+            render();return;
+          }
+        }
+        const f=e.target.closest('[data-as-fb]');
+        if(f){const m=S.msgs[+f.dataset.i];if(!m||!m.logId||m.fb!=null)return;m.fb=f.dataset.asFb==='1';render();api('assistantFeedback',{logId:m.logId,helpful:m.fb}).catch(()=>{})}
+      }
+      function onSubmit(e){e.preventDefault();const inp=document.getElementById('asInput');if(!inp)return;const v=inp.value;inp.value='';send(v)}
+      function sync(){
+        const acct=loggedIn()?(selfAccount()||session().user):'';
+        if(acct!==S.acct){Object.assign(S,{acct,open:false,msgs:[],busy:false,tired:false,ann:null,today:null,farewell:false,loadedFor:''});render()}
+        if(acct&&S.loadedFor!==acct&&state.loaded)load();
+      }
+      setInterval(sync,2000);setTimeout(sync,800);
+      return {send,state:S};
+    })();
     window.__v5=state; // 方便除錯
   })();
   
