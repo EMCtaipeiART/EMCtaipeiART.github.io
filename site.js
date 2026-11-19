@@ -668,9 +668,17 @@
     function designerEmail(name){const row=state.settings.find(r=>norm(r['名字'])===norm(name)||norm(r['顯示名'])===norm(name)),account=String(row?.['帳號']||'').trim();return account||(name?`${String(name).replace(/\s+/g,'').toLowerCase()}@emctaipei.com`:'')}
     function recipientFor(name){const display=RECIPIENT_NAMES[name]||name,email=designerEmail(name);return display&&email?`${display} <${email}>`:email}
     const emailOf=text=>(String(text||'').match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i)||[''])[0].toLowerCase();
+    /* 副本只有信箱時，用設定表（帳號→名字）補上人名，寄出的信才會顯示「人名 <信箱>」而不是裸信箱 */
+    function withName(entry){
+      const e=String(entry||'').trim();if(!e||/</.test(e))return e;
+      const email=emailOf(e);if(!email||email!==e.toLowerCase())return e;
+      const row=(state.settings||[]).find(r=>String(r['帳號']||'').trim().toLowerCase()===email);
+      const key=row&&String(row['名字']||'').trim(),name=row&&((key&&RECIPIENT_NAMES[key])||String(row['顯示名']||'').trim()||key);
+      return name?`${name} <${email}>`:e;
+    }
     function ccFor(client,designer){
       const row=customerRow(client),raw=row?.['預設信箱'],unset=raw===undefined||raw===null||String(raw).trim()==='';
-      const base=(unset?[...DEFAULT_CC]:parseList(raw)).map(entry=>emailOf(entry)?entry:recipientFor(entry)).filter(Boolean);
+      const base=(unset?[...DEFAULT_CC]:parseList(raw)).map(entry=>emailOf(entry)?withName(entry):recipientFor(entry)).filter(Boolean);
       const toEmail=emailOf(recipientFor(designer)),seen=new Set();
       return base.filter(item=>{const key=emailOf(item)||item.toLowerCase();if(key===toEmail||seen.has(key))return false;seen.add(key);return true});
     }
