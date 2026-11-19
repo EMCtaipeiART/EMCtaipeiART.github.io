@@ -12,9 +12,9 @@ describe('小黃不呈現後台與管理者專屬的內容', () => {
       '## 2026-11-18 小黃：管理者不受每日限制', '- 管理者專屬', '',
       '## 2026-11-18 教小黃與試問框', '- 管理者專屬', '',
       '## 2026-11-19 Worker 部署與測試補強', '- 內部', '',
-      '## 2026-11-19 個人設定可關閉小黃', '- 使用者看得到', ''
+      '## 2026-11-19 個人設定新增深色模式切換', '- 使用者看得到', ''
     ].join('\n');
-    expect(parseChangeLog(log, 2).map(s => s.title)).toEqual(['2026-11-19 個人設定可關閉小黃', '2026-11-15 午餐地圖新增篩選']);
+    expect(parseChangeLog(log, 2).map(s => s.title)).toEqual(['2026-11-19 個人設定新增深色模式切換', '2026-11-15 午餐地圖新增篩選']);
     const commits = [
       { commit: { message: 'feat: 後台新增小黃追蹤頁', committer: { date: '2026-11-19T01:00:00Z' } } },
       { commit: { message: 'feat: 午餐地圖新增篩選', committer: { date: '2026-11-19T02:00:00Z' } } },
@@ -35,5 +35,28 @@ describe('小黃不呈現後台與管理者專屬的內容', () => {
 
   it('tells the model not to present or explain backend and admin-only things', () => {
     expect(ASSISTANT_SYSTEM_PROMPT).toContain('後台（資料庫後台）與管理者專屬的功能、設定與更動，你不需要呈現或說明');
+  });
+});
+
+describe('小黃自己的運作機制也不當成「系統更新」呈現', () => {
+  it('drops bubble / news / quota / battery / persona entries from the changelog and commits, keeps ordinary features', () => {
+    const log = [
+      '# 修改紀錄', '',
+      '## 2026-11-10 午餐地圖新增篩選', '- 一般功能', '',
+      '## 2026-11-15 小黃：新聞與設計議題主動彈出泡泡', '- 小黃自己的機制', '',
+      '## 2026-11-16 小黃：電量用完時頭像變成充電中的電池', '- 小黃自己的機制', '',
+      '## 2026-11-17 滑過氣泡與新聞話題', '- 小黃自己的機制', '',
+      '## 2026-11-18 每日額度調整', '- 小黃自己的機制', '',
+      '## 2026-11-19 行事曆新增值日生提醒', '- 一般功能', ''
+    ].join('\n');
+    expect(parseChangeLog(log, 5).map(x => x.title)).toEqual(['2026-11-19 行事曆新增值日生提醒', '2026-11-10 午餐地圖新增篩選']);
+    const commits = [
+      { commit: { message: 'feat: 小黃主動彈出新聞泡泡', committer: { date: '2026-11-19T01:00:00Z' } } },
+      { commit: { message: 'feat: 行事曆新增值日生提醒', committer: { date: '2026-11-19T02:00:00Z' } } },
+      { commit: { message: 'fix: 額度用完顯示電池', committer: { date: '2026-11-19T03:00:00Z' } } }
+    ];
+    expect(parseCommits(commits).map(c => c.subject)).toEqual(['feat: 行事曆新增值日生提醒']);
+    for (const t of ['新聞與設計議題主動彈出泡泡', '小幫手改版', '機器人頭像', '額度提醒', '充電中的電池']) expect(isAdminOnly(t)).toBe(true);
+    expect(isAdminOnly('午餐地圖新增篩選')).toBe(false);
   });
 });

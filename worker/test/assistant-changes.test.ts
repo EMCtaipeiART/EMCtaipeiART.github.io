@@ -20,7 +20,7 @@ const anna: SessionRecord = { user: 'Anna', account: 'anna@emctaipei.com', provi
 const LOG = ['# 修改紀錄', '', '## 2026-11-01 舊改動', '- 舊內容', '', '## 2026-11-18 新功能 A', '- 做了 A', '- 因為 B', '', '## 2026-11-19 修正 C', '- 修好 C', ''].join('\n');
 const COMMITS = [
   { commit: { message: 'data: audit log +2', committer: { date: '2026-11-19T01:00:00Z' } } },
-  { commit: { message: 'feat: 小黃讀取更新\n\nCo-Authored-By: x', committer: { date: '2026-11-19T17:30:00Z' } } },
+  { commit: { message: 'feat: 專案頁新增匯出\n\nCo-Authored-By: x', committer: { date: '2026-11-19T17:30:00Z' } } },
   { commit: { message: 'fix: 修正某頁', committer: { date: '2026-11-18T02:00:00Z' } } }
 ];
 const source = { owner: 'o', repo: 'r', branch: 'main', token: 'secret-token' };
@@ -31,7 +31,7 @@ describe('github changes', () => {
     expect(sections.map(x => x.title)).toEqual(['2026-11-19 修正 C', '2026-11-18 新功能 A']);
     expect(sections[1].body).toContain('做了 A');
     expect(parseCommits(COMMITS)).toEqual([
-      { date: '2026-11-20', subject: 'feat: 小黃讀取更新' },
+      { date: '2026-11-20', subject: 'feat: 專案頁新增匯出' },
       { date: '2026-11-18', subject: 'fix: 修正某頁' }
     ]);
   });

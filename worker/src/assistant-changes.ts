@@ -18,8 +18,8 @@ const SECTION_KEEP = 8;
 const BODY_MAX = 600;
 const COMMIT_KEEP = 12;
 
-/** 後台、管理者專屬、部署與內部維護相關的更動：小黃不需要向同仁呈現或說明，一律過濾掉。 */
-export const ADMIN_ONLY = /後台|管理者|管理員|教小黃|試問|用量|待補|稽核|備份|還原|金鑰|部署|Worker|DO storage|schema|測試|重構|知識庫|維護手冊|走訪|wrangler|ANTHROPIC|CLAUDE\.md|ASSISTANT\.md/i;
+/** 後台、管理者專屬、部署與內部維護相關的更動，以及小黃自己的運作機制（泡泡、新聞、額度、電池…，屬管理者層面的設定）：小黃不需要向同仁呈現或說明，一律過濾掉。 */
+export const ADMIN_ONLY = /後台|管理者|管理員|教小黃|試問|用量|待補|稽核|備份|還原|金鑰|部署|Worker|DO storage|schema|測試|重構|知識庫|維護手冊|走訪|wrangler|ANTHROPIC|CLAUDE\.md|ASSISTANT\.md|小黃|小幫手|機器人|泡泡|氣泡|彈出|額度|電池|充電|新聞/i;
 export const isAdminOnly = (value: string): boolean => ADMIN_ONLY.test(value);
 
 /** 取檔尾最新的 N 段「## 標題」；回傳新到舊。 */
