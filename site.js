@@ -4869,7 +4869,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       }
       /* 滑鼠移到小黃身上：彈出自我介紹／新功能／新聞話題小氣泡（內容是現成的，不呼叫 AI、不花 token；新聞每 3 小時由後端更新） */
       const HELLO_INTRO=ASSISTANT_CHARACTER.intro;
-      const HELLO_TIPS=['多元宇宙裡有寵物貓和狗，可以摸摸貓、餵點心，也能丟球給狗撿喔。','走進元宇宙五樓影廳中央，就能玩「設計部遠征隊」小遊戲。','想換個心情？出氣擂台有 8 種道具可以打，連擊越多倍率越高。','角色工坊可以用 AI 生出自己的元宇宙人物，第一個人物免費。','案件寄信可以「排程」，選好時間按送出就會自動寄。','首頁設計師頭像滑過去，可以看到等級、稱號和工作負載。','午餐不知道吃什麼？左側選單有「午餐地圖」。','行事曆有會議時，元宇宙裡的人物會自己走進會議室。'];
+      const HELLO_TIPS=['多元宇宙裡有 4 隻寵物：坂本龍喵、咪咪喵、北泡泡、腸汪，可以摸摸、餵點心喔。','元宇宙五樓的倉庫有 7 個小遊戲入口，點一下就能玩，像是辦公室賽車、槍戰。','想換個心情？出氣擂台有 8 種道具可以打，連擊越多倍率越高。','角色工坊可以用 AI 生出自己的元宇宙人物，第一個人物免費。','案件寄信可以「排程」，選好時間按送出就會自動寄。','首頁設計師頭像滑過去，可以看到等級、稱號和工作負載。','午餐不知道吃什麼？左側選單有「午餐地圖」。','行事曆有會議時，元宇宙裡的人物會自己走進會議室。'];
       const hello={deck:null,idx:-1,seen:false,tickerP:null,hideT:0,showT:0};
       const helloEl=()=>{let el=document.getElementById('asHello');if(!el){el=document.createElement('div');el.id='asHello';el.className='as-hello';el.hidden=true;document.body.appendChild(el);
         el.addEventListener('mouseenter',()=>clearTimeout(hello.hideT));el.addEventListener('mouseleave',()=>hideHello(500));

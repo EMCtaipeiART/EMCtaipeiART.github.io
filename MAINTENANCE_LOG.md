@@ -3302,3 +3302,9 @@
 - **名字不再寫死**：新增 `worker/src/assistant-character.ts`（id、name、look、backstory、launched、newDays），提示詞（怎麼關閉的說明）、知識庫（`assistant` 主題等）、更新紀錄過濾（`ADMIN_ONLY` 會加上目前角色的名字）都從這裡取名字；前台個人設定的開關文字、聊天視窗標題也用 `ASSISTANT_CHARACTER.name`；後台頁面的「小黃」字樣改成通用的「小幫手」（小幫手（機器人）、教小幫手、試問小幫手…），換角色後不用改。NEW 標籤的說明（提示詞、知識庫）也改成「新上架的角色，約兩週內」。
 - **新角色上架 checklist**：①`worker/src/assistant-character.ts` 與 `site.js` 的 `ASSISTANT_CHARACTER` 同步改：新 `id`、`launched`（上架日）、`name`、`look`／`backstory`（Worker）、`sub`／`intro`／`img`／`vars`（前台）；②換 `assets/` 頭像（透明背景）；③部署 Worker；④推前台（`node tools/stamp.cjs`）；⑤用後台「試問」問「你是誰」「可以把你關閉嗎」確認新角色答得出來。
 - 驗證（本機模擬）：新上架且沒點開過→顯示 NEW；點開聊天視窗後→消失，重新整理仍消失；換成新角色（新 id、新名字）→每位同事再次顯示，標題變成新名字；上架超過 14 天→不再顯示；電量用完→不顯示。Worker 測試 56 個全過，backend 測試失敗清單與基準相同。
+
+## 2026-11-20 小黃知識更新：寵物名字、倉庫小遊戲入口
+- 問「多元宇宙哪裡有貓狗」答案過時（還說無名小貓、影廳）。依實機唯讀查詢更新：4 隻寵物名字（五樓 坂本龍喵＋北泡泡〔薩摩耶〕、四樓 咪咪喵＋腸汪〔臘腸〕，狗的樓層依品種推定）、貓狗有飼料碗與水碗。
+- 影廳已改「倉庫」，有 7 個小遊戲入口（遠征隊、截稿倒數 2、廢紙投籃、辦公室對決、大顆足球賽、辦公室賽車、辦公室槍戰），不再走進中央自動進入。改 assistant-knowledge.ts（pets／games／FEATURE_TIPS／metaverse）、assistant-knowledge-pages.ts（metaverse）、site.js HELLO_TIPS。
+- 之後元宇宙有新改動，記得同步改這幾處。
+- 同日：泡泡跑出「lens-shop: fix admin password input…」這類英文後台修正 commit。ADMIN_ONLY 補 admin／password／密碼／source to repo／onkeydown，之後同類不再外露。

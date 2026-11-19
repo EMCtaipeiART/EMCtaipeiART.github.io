@@ -60,3 +60,9 @@ describe('小黃自己的運作機制也不當成「系統更新」呈現', () =
     expect(isAdminOnly('午餐地圖新增篩選')).toBe(false);
   });
 });
+
+import { isAdminOnly as __isAdminOnly } from '../src/assistant-changes';
+import { it as __it, expect as __expect } from 'vitest';
+__it('英文 admin／password 類 commit 也不會出現在泡泡', () => {
+  __expect(__isAdminOnly('lens-shop: fix admin password input (onkeydown returned false), add Worker source to repo')).toBe(true);
+});
