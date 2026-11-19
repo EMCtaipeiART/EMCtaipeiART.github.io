@@ -1929,6 +1929,12 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     const st2={loaded:false,loading:false,error:'',display:'',avatar:'',nicknames:[],templates:[],tplDefault:0,presets:[],presetDefault:0,custCurrent:'',custDrafts:new Map(),open:{profile:true,templates:false,nicknames:false,signatures:false,customers:false,groups:new Set()},busy:''};
     const selfAccount=()=>{const s=session();const a=String(s.account||s.user||'').trim().toLowerCase();return a.includes('@')?a:(a?`${a}@emctaipei.com`:'')};
     const canonAcc=v=>{const a=String(v||'').trim().toLowerCase();return !a||a.startsWith('local:')?a:(a.includes('@')?a:`${a}@emctaipei.com`)};
+    /* 目前上架的小幫手角色。角色不是永久的（小黃是剛失業、暫時代班，之後會因為熱門話題或時事換成別的角色）；換角色只改這個物件（與 Worker 的 assistant-character.ts）：
+       id（換一個新的，頭像旁就會對每位同事顯示 NEW 標籤）、launched（上架日）、名字、頭像、自我介紹；眼皮與嘴的位置用 vars（CSS 變數 --lid-top／--lid-h／--lid-w／--lid-l／--lid-r／--lid-color／--mouth-l／--mouth-t／--mouth-w／--mouth-h）調整。 */
+    const ASSISTANT_CHARACTER={id:'xiaohuang-2026-11',launched:'2026-11-19',name:'小黃',sub:'設計部代班解答',img:'assets/xiaohuang.webp',
+      intro:'嗨，我是小黃！前陣子剛失業，暫時來幫設計部代班解答。我能查案量、找案件、介紹系統功能，也會跟你分享新公告和設計圈新聞。點我就能問～',
+      vars:{}};
+    const NEW_DAYS=14;/* 新角色上架後，頭像旁的 NEW 標籤最多顯示幾天（Worker assistant-character.ts 的 newDays 同步） */
     /* 右下角小幫手開關（個人設定）：預設開；本機先記一份讓切換立即生效，同時寫進雲端個人設定跨裝置同步 */
     const assistantOn=()=>{try{return localStorage.getItem('assistantEnabledV1:'+selfAccount())!=='0'}catch(err){return true}};
     function setAssistantOn(on,sync){
@@ -2011,7 +2017,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         <div class="set-body"><div class="set-profile"><span class="set-avatar">${url?`<img src="${esc(url)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">`:esc(initial(name))}</span>
         <div class="set-fields"><label class="field"><span class="label">顯示名</span><input class="input${locked?' is-locked':''}" id="setDisplayName" maxlength="40" value="${esc(own||st2.display||name)}"${locked?' readonly disabled aria-disabled="true"':''}></label><small>${locked?'此名稱會顯示在帳號選單、案件與信件聯絡人中，已與像素辦公室綁定，不能自行修改。':'此名稱會顯示在帳號選單、案件與信件聯絡人中。'}</small></div></div>
         ${snapAv?'<p class="set-note">頭像使用你在「服裝」頁建立的個人形象快照，不能上傳照片更換。</p>':locked?'<p class="set-note">頭像固定使用像素辦公室的像素大頭，顯示名也已綁定，不能自行更換或修改。</p>':'<div class="set-actions"><button type="button" class="btn" data-avatar-upload>上傳／更換頭像</button></div>'}
-        <label class="set-switch" style="display:flex;gap:10px;align-items:center;margin:14px 0 4px;font-weight:800;cursor:pointer"><input type="checkbox" id="setAssistant"${assistantOn()?' checked':''}><span>顯示右下角小幫手（小黃）</span></label><small>預設開啟；關閉後右下角就不會再出現小黃，也不會彈出氣泡，隨時可以回來打開。</small>
+        <label class="set-switch" style="display:flex;gap:10px;align-items:center;margin:14px 0 4px;font-weight:800;cursor:pointer"><input type="checkbox" id="setAssistant"${assistantOn()?' checked':''}><span>顯示右下角小幫手（${esc(ASSISTANT_CHARACTER.name)}）</span></label><small>預設開啟；關閉後右下角就不會再出現${esc(ASSISTANT_CHARACTER.name)}，也不會彈出氣泡，隨時可以回來打開。</small>
         <div class="set-actions">${locked?'':`<button type="button" class="btn primary" data-set-save="profile"${st2.busy==='profile'?' disabled':''}>${st2.busy==='profile'?'儲存中…':'儲存'}</button>`}</div></div></details>`;
     }
     function templatesHtml(){
@@ -4739,11 +4745,6 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const tpDay=()=>{const p=taipeiParts();return `${p.year}-${p.month}-${p.day}`};
       const kGreet=()=>'assistantGreetedV1:'+S.acct,kClose=()=>'assistantClosedV1:'+S.acct;
       const lsGet=k=>{try{return localStorage.getItem(k)||''}catch(err){return ''}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(err){}};
-      /* 目前代班的角色。小黃不是常駐機器人（剛失業、暫時代班，之後會因熱門話題或時事換人）；換角色只要改這個物件：名字、頭像、自我介紹，
-         眼皮與嘴的位置用 vars（CSS 變數 --lid-top／--lid-h／--lid-w／--lid-l／--lid-r／--lid-color／--mouth-l／--mouth-t／--mouth-w／--mouth-h）調整。 */
-      const ASSISTANT_CHARACTER={name:'小黃',sub:'設計部代班解答',img:'assets/xiaohuang.webp',
-        intro:'嗨，我是小黃！前陣子剛失業，暫時來幫設計部代班解答。我能查案量、找案件、介紹系統功能，也會跟你分享新公告和設計圈新聞。點我就能問～',
-        vars:{}};
       const FACE='<span class="as-face"><img class="as-face-img" src="'+ASSISTANT_CHARACTER.img+'" alt="" draggable="false"><i class="as-lid l"></i><i class="as-lid r"></i><i class="as-mouth"></i></span>';
       const SVG_X='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
       const SVG_SEND='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 4l-5 16-3-6.5L4 12z"/></svg>';
@@ -4790,7 +4791,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       let talkT=0;
       function talk(ms){const el=document.getElementById('asHelper');if(!el)return;el.classList.add('talk');clearTimeout(talkT);talkT=setTimeout(()=>el.classList.remove('talk'),Math.max(600,ms||1200))}
       (function life(){const blink=()=>{const el=document.getElementById('asHelper');if(el){el.classList.add('blink');setTimeout(()=>el.classList.remove('blink'),160)}setTimeout(blink,2200+Math.random()*3800)};setTimeout(blink,1500)})();
-      function openPanel(focus){S.open=true;S.enter=true;hideHello(0);markAllSeen();render();if(focus)setTimeout(()=>document.getElementById('asInput')?.focus(),30)}
+      function openPanel(focus){S.open=true;S.enter=true;hideHello(0);markMet();render();if(focus)setTimeout(()=>document.getElementById('asInput')?.focus(),30)}
       function closePanel(){
         if(S.farewell)return;
         S.farewell=true;render();
@@ -4864,6 +4865,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const acct=loggedIn()?(selfAccount()||session().user):'';
         if(acct!==S.acct){Object.assign(S,{acct,open:false,msgs:[],busy:false,tired:false,ann:null,today:null,farewell:false,loadedFor:''});render()}
         if(acct&&assistantOn()&&S.loadedFor!==acct&&state.loaded)load();
+        updateNew();
       }
       /* 滑鼠移到小黃身上：彈出自我介紹／新功能／新聞話題小氣泡（內容是現成的，不呼叫 AI、不花 token；新聞每 3 小時由後端更新） */
       const HELLO_INTRO=ASSISTANT_CHARACTER.intro;
@@ -4926,14 +4928,22 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         t.items.filter(i=>i.topic!=='design').forEach(i=>cands.push({id:'n:'+(i.link||i.title),tag:'科技新聞',text:i.title,src:i.source,link:i.link}));
         return cands;
       }
-      /* 頭像旁的 NEW 標籤：還有沒看過的主題就顯示（時不時閃動一下）；按開聊天視窗就算看過；電量用完、關閉小黃時不顯示 */
-      async function refreshNew(){
-        if(S.tired||!loggedIn()||!assistantOn()){if(S.hasNew){S.hasNew=false;if(!S.open)render()}return}
-        try{const t=await loadTicker(),seen=autoSeen(),has=topicCandidates(t).some(c=>c.id&&!seen.has(c.id));if(has!==S.hasNew){S.hasNew=has;if(!S.open)render()}}catch(err){}
+      /* 頭像旁的 NEW 標籤＝這是「新上架的角色」：該角色上架後 NEW_DAYS 天內、而且這位同事還沒點開過聊天視窗時顯示（時不時閃動一下）；
+         每換一個新角色（新的 id）所有人都會再看到一次。點開聊天視窗就記下「認識過了」（本機 assistantMetV1:<帳號>）；電量用完、關閉小幫手時不顯示。 */
+      const metKey=()=>'assistantMetV1:'+selfAccount();
+      const metSet=()=>{try{return new Set(JSON.parse(localStorage.getItem(metKey())||'[]'))}catch(err){return new Set()}};
+      function isNewCharacter(){
+        const launched=Date.parse(ASSISTANT_CHARACTER.launched+'T00:00:00+08:00');
+        const fresh=!Number.isFinite(launched)||Date.now()-launched<NEW_DAYS*86400000;
+        return fresh&&!metSet().has(ASSISTANT_CHARACTER.id);
       }
-      function markAllSeen(){
+      function updateNew(){
+        const v=Boolean(loggedIn()&&assistantOn()&&!S.tired&&isNewCharacter());
+        if(v!==S.hasNew){S.hasNew=v;if(!S.open)render()}
+      }
+      function markMet(){
+        try{localStorage.setItem(metKey(),JSON.stringify([...metSet(),ASSISTANT_CHARACTER.id].slice(-20)))}catch(err){}
         S.hasNew=false;
-        loadTicker().then(t=>{topicCandidates(t).forEach(c=>c.id&&autoMark(c.id));S.hasNew=false;if(!S.open)render()}).catch(()=>{});
       }
       async function autoHello(){
         if(S.open||S.farewell||S.tired||document.hidden||!loggedIn()||!assistantOn())return;
@@ -4942,10 +4952,10 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(autoCount()>=AUTO_MAX)return;
         const t=await loadTicker(),seen=autoSeen(),pick=topicCandidates(t).find(c=>c.id&&!seen.has(c.id));if(!pick)return;
         if(S.open||document.hidden)return;/* 等新聞回來的期間使用者可能已經打開聊天視窗 */
-        autoMark(pick.id);autoBump();presentHello(pick,14000);refreshNew();
+        autoMark(pick.id);autoBump();presentHello(pick,14000);
       }
-      setTimeout(refreshNew,3500);setTimeout(autoHello,9000);
-      setInterval(()=>{if(Date.now()-(hello.tickerAt||0)>3600000)hello.tickerP=null;refreshNew();autoHello()},9*60*1000);
+      setTimeout(autoHello,9000);
+      setInterval(()=>{if(Date.now()-(hello.tickerAt||0)>3600000)hello.tickerP=null;autoHello()},9*60*1000);
       document.addEventListener('mouseover',e=>{
         const fab=e.target.closest&&e.target.closest('#asHelper .as-fab');if(!fab||!matchMedia('(hover:hover)').matches)return;
         clearTimeout(hello.showT);hello.showT=setTimeout(showHello,320);
@@ -4957,7 +4967,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const el=document.getElementById('asHelper');if(!el)return;
         el.classList.add('away');hideHello(0);clearTimeout(scrollT);scrollT=setTimeout(()=>el.classList.remove('away'),520);
       },{capture:true,passive:true});
-      window.__asRefresh=()=>{sync();render();refreshNew()};
+      window.__asRefresh=()=>{sync();updateNew();render()};
       setInterval(sync,2000);setTimeout(sync,800);
       return {send,state:S};
     })();

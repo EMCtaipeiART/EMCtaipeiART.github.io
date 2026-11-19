@@ -3295,3 +3295,10 @@
 - **修正**：斷言改為描述新設計——`start()` 先 `const refreshing=refreshWorkerDatabase()`（背景）、`await loadMetadata()`、再 `await refreshing` 並在失敗時丟出；版本變動（`latest!==appliedRevision`）才再 `loadMetadata()`；`<head>` 有指向 Worker 的 `preconnect`。
 - **驗證**：本機只重跑該測試由失敗變通過；整個 backend 測試前後比對，唯一差異就是這條由失敗變通過，沒有新增失敗（本機 Windows 仍有 34 個既有失敗，與 CRLF 等環境有關，GitHub 的 Linux 環境原本是綠的）。
 - **教訓**：改了後台（`json_database_admin.html`）或前台（`site.js`）的結構後，要跑 `node --test backend/test/*.test.mjs` 並**比對前後失敗清單**（不是只看總數）；這次我只比對了前端測試的失敗數與畫面，漏了這條對原始碼字串的斷言，直到你貼出 Actions 連結才發現。
+
+## 2026-11-20 NEW 標籤改成「新上架的角色」，角色名字不再寫死
+- 使用者指定：**NEW 標籤＝每次新上架的小幫手角色都要顯示**，而且小黃不是永久常駐的名字。取代 11/19 版「有沒看過的新聞／公告」的 NEW 規則。
+- **規則**：前台 `ASSISTANT_CHARACTER` 有 `id` 與 `launched`（上架日）；上架後 `NEW_DAYS=14` 天內，而且這位同事還沒點開過聊天視窗，就在頭像旁顯示 NEW（時不時閃動）；點開聊天視窗就記下「認識過了」（本機 `assistantMetV1:<帳號>`，每位同事各自計算）；**換一個新的 `id` 所有人就會再看到一次**；超過 14 天不再顯示；電量用完、關閉小幫手時不顯示。程式在 `site.js` 的 `isNewCharacter／updateNew／markMet`。
+- **名字不再寫死**：新增 `worker/src/assistant-character.ts`（id、name、look、backstory、launched、newDays），提示詞（怎麼關閉的說明）、知識庫（`assistant` 主題等）、更新紀錄過濾（`ADMIN_ONLY` 會加上目前角色的名字）都從這裡取名字；前台個人設定的開關文字、聊天視窗標題也用 `ASSISTANT_CHARACTER.name`；後台頁面的「小黃」字樣改成通用的「小幫手」（小幫手（機器人）、教小幫手、試問小幫手…），換角色後不用改。NEW 標籤的說明（提示詞、知識庫）也改成「新上架的角色，約兩週內」。
+- **新角色上架 checklist**：①`worker/src/assistant-character.ts` 與 `site.js` 的 `ASSISTANT_CHARACTER` 同步改：新 `id`、`launched`（上架日）、`name`、`look`／`backstory`（Worker）、`sub`／`intro`／`img`／`vars`（前台）；②換 `assets/` 頭像（透明背景）；③部署 Worker；④推前台（`node tools/stamp.cjs`）；⑤用後台「試問」問「你是誰」「可以把你關閉嗎」確認新角色答得出來。
+- 驗證（本機模擬）：新上架且沒點開過→顯示 NEW；點開聊天視窗後→消失，重新整理仍消失；換成新角色（新 id、新名字）→每位同事再次顯示，標題變成新名字；上架超過 14 天→不再顯示；電量用完→不顯示。Worker 測試 56 個全過，backend 測試失敗清單與基準相同。
