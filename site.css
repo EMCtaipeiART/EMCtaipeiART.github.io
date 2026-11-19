@@ -1681,3 +1681,4 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
       .as-fab{width:44px;height:44px}
       .as-panel{width:min(320px,calc(100vw - 20px));height:min(380px,calc(100vh - 190px))}
     }
+    .as-usage{height:26px;padding:0 10px;border:1px solid currentColor;border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:12px;font-weight:800;cursor:pointer}

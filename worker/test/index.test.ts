@@ -5907,6 +5907,14 @@ describe('assistant actions', () => {
     }
   });
 
+  it('only lets managers read the usage report', async () => {
+    expect(await api({ action: 'assistantUsage' })).toMatchObject({ ok: false });
+    const manager = await seedSession('machi.chen@emctaipei.com', 'Machi');
+    expect(await api({ action: 'assistantUsage', days: 3 }, manager)).toMatchObject({ ok: true, days: expect.any(Array) });
+    const other = await seedSession('test.user@emctaipei.com', '測試使用者');
+    expect(await api({ action: 'assistantUsage' }, other)).toMatchObject({ ok: false });
+  });
+
   it('answers 還在準備中 when ANTHROPIC_API_KEY is not set, and does not write the JSON snapshot', async () => {
     const token = await seedSession('machi.chen@emctaipei.com', 'Machi');
     expect(await api({ action: 'assistantToday' }, token)).toMatchObject({ ok: true, quota: { tired: false } });

@@ -4726,7 +4726,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
        對話只留在頁面記憶體；問答紀錄與額度由後端存在 Durable Object，不寫進 JSON 快照。
        造型之後要換，只要改 .as-avatar 的背景圖（CSS 變數 --as-avatar-img），元件不用動。 */
     const asHelper=(()=>{
-      const S={acct:'',open:false,min:false,msgs:[],busy:false,tired:false,ann:null,today:null,day:'',farewell:false,loadedFor:''};
+      const S={canUsage:false,acct:'',open:false,min:false,msgs:[],busy:false,tired:false,ann:null,today:null,day:'',farewell:false,loadedFor:''};
       const tpDay=()=>{const p=taipeiParts();return `${p.year}-${p.month}-${p.day}`};
       const kGreet=()=>'assistantGreetedV1:'+S.acct,kClose=()=>'assistantClosedV1:'+S.acct;
       const lsGet=k=>{try{return localStorage.getItem(k)||''}catch(err){return ''}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(err){}};
@@ -4760,7 +4760,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         }
         const annHtml=S.ann?`<div class="as-ann"><b>新功能公告</b><span>${esc(S.ann.title||S.ann.version)}</span><div class="as-ann-acts"><button type="button" class="as-btn primary" data-as="ann-go">帶我去看</button><button type="button" class="as-btn" data-as="ann-ok">知道了</button></div></div>`:'';
         const body=S.farewell?`<div class="as-msg as-bot"><div class="as-bubble">好喔，那我晚點再回來～</div></div>`:S.msgs.map(msgHtml).join('')+(S.busy?'<div class="as-msg as-bot"><div class="as-bubble as-think">思考中<i></i><i></i><i></i></div></div>':'');
-        el.innerHTML=`<section class="as-panel" role="dialog" aria-label="設計部小幫手"><header class="as-head"><span class="as-avatar sm">${SVG_FACE}</span><b>設計部小幫手</b><button type="button" class="as-x" data-as="close" aria-label="關閉小幫手">${SVG_X}</button></header>
+        el.innerHTML=`<section class="as-panel" role="dialog" aria-label="設計部小幫手"><header class="as-head"><span class="as-avatar sm">${SVG_FACE}</span><b>設計部小幫手</b>${S.canUsage?'<button type="button" class="as-usage" data-as="usage">用量</button>':''}<button type="button" class="as-x" data-as="close" aria-label="關閉小幫手">${SVG_X}</button></header>
           <div class="as-body" id="asBody">${annHtml}${body}</div>
           <form class="as-form"><input id="asInput" type="text" maxlength="500" autocomplete="off" placeholder="${S.tired?'明天再來找我':'問我案量、找案件…'}" ${S.tired||S.busy||S.farewell?'disabled':''}><button type="submit" class="as-send" aria-label="送出" ${S.tired||S.busy||S.farewell?'disabled':''}>${SVG_SEND}</button></form></section>`;
         const b=document.getElementById('asBody');if(b)b.scrollTop=b.scrollHeight;
@@ -4775,7 +4775,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         S.loadedFor=S.acct;
         try{
           const r=await api('assistantToday');
-          S.today=r.today||null;S.ann=r.announcement||null;S.tired=Boolean(r.quota&&r.quota.tired);S.day=r.day||tpDay();
+          S.canUsage=Boolean(isAdminUser()||isMachiUser());S.today=r.today||null;S.ann=r.announcement||null;S.tired=Boolean(r.quota&&r.quota.tired);S.day=r.day||tpDay();
         }catch(err){render();return}/* 後端還沒部署或暫時連不上：不招呼、不顯示 */
         const day=tpDay();
         if(lsGet(kGreet())!==day){
@@ -4798,6 +4798,20 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         S.busy=false;render();
         setTimeout(()=>document.getElementById('asInput')?.focus(),30);
       }
+      async function showUsage(){
+        if(S.busy)return;S.busy=true;render();
+        try{
+          const r=await api('assistantUsage',{days:7}),fmt=v=>Number(v).toLocaleString('zh-TW');
+          const lines=['近 7 天用量（每人每天上限 '+fmt(r.dailyLimit)+' tokens）'];
+          for(const d of r.days){
+            if(!d.questions){lines.push(d.day+'：沒有提問');continue}
+            lines.push(d.day+'：'+d.questions+' 題、'+fmt(d.tokens)+' tokens'+(d.tired?'、累了 '+d.tired+' 次':'')+(d.helpful||d.unhelpful?'、有幫助 '+d.helpful+'／沒幫助 '+d.unhelpful:'')+(d.notFound?'、查不到 '+d.notFound:''));
+            for(const a of d.accounts.slice(0,5))lines.push('　'+(a.user||a.account)+'：'+a.questions+' 題、'+fmt(a.tokens)+' tokens');
+          }
+          S.msgs.push({role:'assistant',content:lines.join('\n')});
+        }catch(err){S.msgs.push({role:'assistant',content:'讀取用量失敗：'+(err.message||'請稍後再試')})}
+        S.busy=false;render();
+      }
       function annRowFor(ver){const rows=state.annRows||[];return rows.find(r=>String(r['公告版本']||'').trim()===String(ver||'').trim())||annLatest()}
       function onClick(e){
         const a=e.target.closest('[data-as]');
@@ -4805,6 +4819,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
           const k=a.dataset.as;
           if(k==='open'){openPanel(true);return}
           if(k==='close'){closePanel();return}
+          if(k==='usage'){showUsage();return}
           if(k==='ann-go'||k==='ann-ok'){
             const ann=S.ann;S.ann=null;
             const row=ann?annRowFor(ann.version):null;

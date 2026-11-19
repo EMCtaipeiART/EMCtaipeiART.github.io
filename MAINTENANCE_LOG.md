@@ -3138,3 +3138,7 @@
 - 刻意的行為決定：小幫手不主動提起紀錄，也不提管理者；但被問「會不會記錄」會如實回答「會記錄下來，用來改善系統」。
 - 順手修：`index.html` 的 `site.js?v=fullscreen1` 不是 16 進位，`tools/stamp.cjs` 一直認不得、site.js 沒有帶雜湊版本；改成 `?v=0` 後由 stamp 換成內容雜湊。
 - 測試：`worker/test/assistant.test.ts`（額度、80% 只提醒一次、權限過濾、skipped、紀錄與回饋、清理）與 `index.test.ts` 的 assistant actions（未登入被拒、無金鑰 skipped、不動快照）。Worker 全套仍有 Pixel Office 的時間相關測試不穩定（改動前就有，每次失敗數不同）；`npm test` 失敗清單與改動前相同。
+
+## 2026-11-19 小幫手：管理者用量查看
+- 新增 action `assistantUsage`（需 `database.manage` 權限，非管理者被拒）：回傳近 N 天（預設 7、最多 30）每天的提問數、tokens、累了次數、有幫助／沒幫助、查不到次數，以及每人的題數與 tokens；**不含問題與回答內容**。資料讀自 DO storage 的 `assistantLog:*`。
+- 前台：只有管理者與 Machi 在小幫手標題列看得到「用量」按鈕，點了把報表以對話泡泡顯示。一般使用者的介面與回答不提及管理功能。

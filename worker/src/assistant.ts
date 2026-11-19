@@ -358,3 +358,36 @@ export async function assistantChat(
   await appendLog(store, day, entry);
   return { ok: true, action: 'assistantChat', reply, logId: entry.id, quota: { usedRatio: Math.min(1, after / ASSISTANT_DAILY_TOKENS), tired: after >= ASSISTANT_DAILY_TOKENS } };
 }
+
+/* ---------------------------------------------------------------- 管理者用量報表（不含問題與回答內容） */
+
+export interface AssistantUsageDay {
+  day: string; questions: number; tokens: number; tired: number; helpful: number; unhelpful: number; notFound: number;
+  accounts: Array<{ account: string; user: string; questions: number; tokens: number }>;
+}
+
+export async function assistantUsageReport(store: AssistantStore, days: number, nowMs: number): Promise<Row & { ok: boolean }> {
+  const span = Math.min(30, Math.max(1, Math.floor(days) || 7));
+  const out: AssistantUsageDay[] = [];
+  for (let i = 0; i < span; i += 1) {
+    const day = taipeiDay(nowMs - i * DAY_MS);
+    const entries: AssistantLogEntry[] = [];
+    for (const [key, value] of await store.list<AssistantLogEntry[]>({ prefix: `assistantLog:${day}` })) {
+      if ((key === logKey(day) || key.startsWith(`assistantLog:${day}:`)) && Array.isArray(value)) entries.push(...value);
+    }
+    if (!entries.length) { out.push({ day, questions: 0, tokens: 0, tired: 0, helpful: 0, unhelpful: 0, notFound: 0, accounts: [] }); continue; }
+    const byAccount = new Map<string, { account: string; user: string; questions: number; tokens: number }>();
+    for (const e of entries) {
+      const row = byAccount.get(e.account) || { account: e.account, user: e.user, questions: 0, tokens: 0 };
+      row.questions += 1; row.tokens += Number(e.tokens) || 0;
+      byAccount.set(e.account, row);
+    }
+    out.push({
+      day, questions: entries.length, tokens: entries.reduce((sum, e) => sum + (Number(e.tokens) || 0), 0),
+      tired: entries.filter(e => e.tired).length, helpful: entries.filter(e => e.helpful === true).length,
+      unhelpful: entries.filter(e => e.helpful === false).length, notFound: entries.filter(e => e.tools.length && !e.found).length,
+      accounts: [...byAccount.values()].sort((a, b) => b.tokens - a.tokens)
+    });
+  }
+  return { ok: true, action: 'assistantUsage', dailyLimit: ASSISTANT_DAILY_TOKENS, days: out };
+}

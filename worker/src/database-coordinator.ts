@@ -1,6 +1,6 @@
 import { PIXEL_MOVE_MIN_GAP_MS, parseMove, sessionMatchesName } from './pixel-ws';
 import { DurableObject } from 'cloudflare:workers';
-import { assistantChat, assistantToday, cleanupAssistantStorage, recordFeedback } from './assistant';
+import { assistantChat, assistantToday, assistantUsageReport, cleanupAssistantStorage, recordFeedback } from './assistant';
 import { DEFAULT_CUSTOMER_CC_EMAILS, latestSystemAnnouncement, publicSystemAnnouncement, systemAnnouncementReadRecords, TABLE_SCHEMAS } from '../../backend/schema.mjs';
 import { normalizeDesignType, splitDetailValues } from '../../backend/weighting.mjs';
 import {
@@ -5734,6 +5734,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'assistantChat') {
         const current = this.requireSession(session);
         return await assistantChat(payload, database, current, this.ctx.storage, { apiKey: (this.env as { ANTHROPIC_API_KEY?: string }).ANTHROPIC_API_KEY });
+      }
+      if (action === 'assistantUsage') {
+        this.requireAccess(database, session, 'database.manage');
+        return await assistantUsageReport(this.ctx.storage, Number(payload.days) || 7, Date.now());
       }
       if (action === 'assistantFeedback') {
         const current = this.requireSession(session);

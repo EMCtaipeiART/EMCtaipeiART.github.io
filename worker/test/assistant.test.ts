@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { emptyDatabase } from '../../backend/schema.mjs';
 import {
   ASSISTANT_DAILY_TOKENS, LOW_BATTERY_LINE, NOT_READY_LINE, TIRED_LINES, assistantChat, cleanupAssistantStorage,
-  findCase, getCaseCounts, logKey, recordFeedback, taipeiDay, usageKey, type AssistantLogEntry, type AssistantStore
+  assistantUsageReport, findCase, getCaseCounts, logKey, recordFeedback, taipeiDay, usageKey, type AssistantLogEntry, type AssistantStore
 } from '../src/assistant';
 import type { DatabaseSnapshot, SessionRecord } from '../src/types';
 
@@ -116,5 +116,20 @@ describe('cleanup', () => {
     expect(await cleanupAssistantStorage(store, NOW)).toBe(2);
     expect([...store.data.keys()].sort()).toEqual(['assistantLog:2026-11-17', 'assistantLogCleanupDate']);
     expect(await cleanupAssistantStorage(store, NOW)).toBe(0);
+  });
+});
+
+describe('usage report', () => {
+  it('sums questions and tokens per day and per account without exposing question text', async () => {
+    const store = memoryStore();
+    const deps = { apiKey: 'k', now: () => NOW, fetchImpl: (async () => reply('好', 400)) as typeof fetch };
+    await assistantChat({ message: '祕密問題' }, db(), anna, store, deps);
+    await assistantChat({ message: 'b' }, db(), anna, store, deps);
+    await assistantChat({ message: 'c' }, db(), pm, store, deps);
+    const report = await assistantUsageReport(store, 2, NOW) as unknown as { days: Array<{ day: string; questions: number; tokens: number; accounts: Array<{ account: string; questions: number; tokens: number }> }> };
+    expect(report.days[0]).toMatchObject({ day: '2026-11-18', questions: 3, tokens: 1200 });
+    expect(report.days[0].accounts[0]).toMatchObject({ account: 'anna@emctaipei.com', questions: 2, tokens: 800 });
+    expect(report.days[1]).toMatchObject({ questions: 0, tokens: 0 });
+    expect(JSON.stringify(report)).not.toContain('祕密問題');
   });
 });
