@@ -1,6 +1,7 @@
 import { PIXEL_MOVE_MIN_GAP_MS, parseMove, sessionMatchesName } from './pixel-ws';
 import { DurableObject } from 'cloudflare:workers';
 import { getNewsTicker } from './assistant-news';
+import { getChangeLog } from './assistant-changes';
 import { FEATURE_TIPS } from './assistant-knowledge';
 import { assistantChat, assistantToday, assistantLogsReport, assistantUsageReport, cleanupAssistantStorage, recordFeedback } from './assistant';
 import { DEFAULT_CUSTOMER_CC_EMAILS, latestSystemAnnouncement, publicSystemAnnouncement, systemAnnouncementReadRecords, TABLE_SCHEMAS } from '../../backend/schema.mjs';
@@ -5335,6 +5336,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   private auditFlushing = false;
   /** Cron 每分鐘呼叫：佇列有 50 筆以上、或最舊的一筆超過 5 分鐘才寫入，避免頻繁 commit */
   /** 一次性資料遷移：把案件表裡還留著的「已取消」改成「暫停中」（之後任何寫入也會順手修正）。每分鐘排程呼叫，沒有殘留就什麼都不做。 */
+  /** 小黃讀 GitHub 更新紀錄用的 repo 設定（公開 repo，GITHUB_TOKEN 只用來提高 API 額度）。 */
+  private githubSource(): { owner: string; repo: string; branch: string; token?: string } {
+    const env = this.env as unknown as Record<string, string | undefined>;
+    return { owner: text(env.GITHUB_OWNER) || 'EMCtaipeiART', repo: text(env.GITHUB_REPO) || 'EMCtaipeiART.github.io', branch: text(env.GITHUB_BRANCH) || 'main', token: text(env.GITHUB_TOKEN) || undefined };
+  }
+
   /** 小幫手紀錄與額度的保留期限清理；每分鐘 Cron 會呼叫，函式內自己記日期，一天只真正跑一次。 */
   async runAssistantCleanup(): Promise<number> { return cleanupAssistantStorage(this.ctx.storage, Date.now()); }
 
@@ -5735,7 +5742,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       }
       if (action === 'assistantChat') {
         const current = this.requireSession(session);
-        return await assistantChat(payload, database, current, this.ctx.storage, { apiKey: (this.env as { ANTHROPIC_API_KEY?: string }).ANTHROPIC_API_KEY });
+        return await assistantChat(payload, database, current, this.ctx.storage, { apiKey: (this.env as { ANTHROPIC_API_KEY?: string }).ANTHROPIC_API_KEY, github: this.githubSource() });
       }
       if (action === 'assistantUsage') {
         this.requireAccess(database, session, 'database.manage');
@@ -5743,7 +5750,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       }
       if (action === 'assistantTicker') {
         this.requireSession(session);
-        return { ok: true, action, items: await getNewsTicker(this.ctx.storage, Date.now()), tips: FEATURE_TIPS };
+        const changes = await getChangeLog(this.ctx.storage, Date.now(), this.githubSource()).catch(() => ({ sections: [], commits: [] }));
+        return { ok: true, action, items: await getNewsTicker(this.ctx.storage, Date.now()), tips: FEATURE_TIPS, updates: changes.sections.slice(0, 3).map(section => section.title) };
       }
       if (action === 'assistantLogs') {
         this.requireAccess(database, session, 'database.manage');

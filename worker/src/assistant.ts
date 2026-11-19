@@ -6,6 +6,7 @@
 import type { DatabaseSnapshot, Row, SessionRecord } from './types';
 import { canonicalAccount, isManager, settingsRow, text } from './model';
 import { knowledgeIndex, lookupKnowledge } from './assistant-knowledge';
+import { getChangeLog, type GithubSource } from './assistant-changes';
 import { recentSystemAnnouncements } from '../../backend/schema.mjs';
 
 export const ASSISTANT_MODEL = 'claude-haiku-5-5';
@@ -49,7 +50,7 @@ export const ASSISTANT_SYSTEM_PROMPT = [
   '- 如果使用者問「你會不會記錄／記得我問的問題」，如實回答「會記錄下來，用來改善系統」，不否認也不轉移話題；不要主動提起紀錄，也不要提到管理者、管理功能或任何人看得到紀錄。',
   '系統知識目錄（細節請用 getSystemHelp 查，不要憑印象回答）：',
   knowledgeIndex(),
-  '可用工具：getCaseCounts（案量統計）、findCase（找案件）、getMyToday（登入者今天的待辦）、getSystemHelp（系統功能說明，問功能、操作、規則、哪裡找什麼時先呼叫它，再用查到的內容回答）、getRecentUpdates（最近的系統公告；問最近有什麼更新、新功能、改了什麼，或 getSystemHelp 的說明可能過時時呼叫，公告比說明新，兩者衝突以公告為準）。'
+  '可用工具：getCaseCounts（案量統計）、findCase（找案件）、getMyToday（登入者今天的待辦）、getSystemHelp（系統功能說明，問功能、操作、規則、哪裡找什麼時先呼叫它，再用查到的內容回答）、getRecentChanges（GitHub 上的最新更新紀錄，最即時；回答時用同仁看得懂的話概述「改了什麼、對他有什麼影響」，不要講程式檔名、內部細節或金鑰）、getRecentUpdates（最近的系統公告；問最近有什麼更新、新功能、改了什麼，或 getSystemHelp 的說明可能過時時呼叫，公告比說明新，兩者衝突以公告為準）。'
 ].join('\n');
 
 export const ASSISTANT_TOOLS = [
@@ -73,6 +74,11 @@ export const ASSISTANT_TOOLS = [
   {
     name: 'getRecentUpdates',
     description: '讀取最近的系統公告（新功能、改版、修正說明），知道系統最近改了什麼。問「最近有什麼更新／新功能／改了什麼」時使用。',
+    input_schema: { type: 'object', properties: { limit: { type: 'number' } } }
+  },
+  {
+    name: 'getRecentChanges',
+    description: '自動讀取 GitHub 上的系統更新紀錄（最近改了哪些功能、修了什麼），不必等公告。問「最近改了什麼／有什麼新功能／什麼時候改的」時使用；比系統公告更即時。',
     input_schema: { type: 'object', properties: { limit: { type: 'number' } } }
   },
   {
@@ -230,6 +236,14 @@ export function getRecentUpdates(database: DatabaseSnapshot, args: Row): Row {
   return { found: items.length, updates: items, hint: items.length ? undefined : '目前沒有公開的系統公告' };
 }
 
+/** 自動讀 GitHub 的更新紀錄（MAINTENANCE_LOG.md 檔尾＋最近 commit 標題），不必等管理者發公告。 */
+export async function recentChangesTool(args: Row, store: AssistantStore, nowMs: number, deps: AssistantDeps): Promise<Row> {
+  if (!deps.github) return { found: 0, hint: '目前讀不到更新紀錄' };
+  const log = await getChangeLog(store, nowMs, deps.github, deps.fetchImpl);
+  const limit = Math.min(8, Math.max(1, Math.floor(Number(args.limit)) || 4));
+  return { found: log.sections.length + log.commits.length, 更新紀錄: log.sections.slice(0, limit), 最近commit: log.commits.slice(0, 10) };
+}
+
 export function runAssistantTool(name: string, args: Row, database: DatabaseSnapshot, session: SessionRecord, nowMs: number): Row {
   if (name === 'getCaseCounts') return getCaseCounts(database, args, nowMs);
   if (name === 'findCase') return findCase(database, session, args, nowMs);
@@ -315,6 +329,7 @@ export interface AssistantDeps {
   fetchImpl?: typeof fetch;
   now?: () => number;
   random?: () => number;
+  github?: GithubSource;
 }
 
 export function cleanHistory(history: unknown): ChatMessage[] {
@@ -374,13 +389,15 @@ export async function assistantChat(
     const uses = blocks.filter(b => b.type === 'tool_use');
     if (data.stop_reason === 'tool_use' && uses.length) {
       messages.push({ role: 'assistant', content: blocks });
-      const results = uses.map(use => {
+      const results = await Promise.all(uses.map(async use => {
         const name = text(use.name);
         entry.tools.push(name);
-        const out = runAssistantTool(name, (use.input || {}) as Row, database, session, nowMs);
+        const out = name === 'getRecentChanges'
+          ? await recentChangesTool((use.input || {}) as Row, store, nowMs, deps)
+          : runAssistantTool(name, (use.input || {}) as Row, database, session, nowMs);
         if ((typeof out.found === 'number' ? out.found > 0 : !out.error)) entry.found = true;
         return { type: 'tool_result', tool_use_id: use.id, content: JSON.stringify(out) };
-      });
+      }));
       messages.push({ role: 'user', content: results });
       continue;
     }

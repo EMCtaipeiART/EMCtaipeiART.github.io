@@ -80,3 +80,7 @@
 ## 系統改動要讓小黃第一時間知道（2026-11-19）
 - 小黃有兩個知識來源：①**系統公告欄**（工具 `getRecentUpdates`，管理者發公告即生效、不必部署）②**內建知識庫** `worker/src/assistant-knowledge.ts`（工具 `getSystemHelp`，要改程式並 `wrangler deploy`）。
 - 改了使用者看得到的功能時：請使用者（或 Machi）在後台發一則系統公告；若是長期成立的規則／入口／玩法，**同時更新 `assistant-knowledge.ts` 對應主題並部署 Worker**，並在 `MAINTENANCE_LOG.md` 記一筆。兩者衝突時小黃以公告為準。
+
+## 小黃完整手冊（2026-11-19）
+- 小黃（設計部代班小幫手）的全套機制、檔案地圖、部署與換角色步驟都在 **`ASSISTANT.md`**，改小黃之前先讀。
+- 小黃會自動讀 GitHub 的 `MAINTENANCE_LOG.md` 檔尾與最近 commit（30 分鐘內生效），所以**每次修改都要在 `MAINTENANCE_LOG.md` 檔尾記一段，寫給人看得懂的話**；長期成立的規則再補 `assistant-knowledge.ts` 並部署 Worker。

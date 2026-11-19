@@ -5911,6 +5911,8 @@ describe('assistant actions', () => {
     expect(await api({ action: 'assistantTicker' })).toMatchObject({ ok: false });
     const token = await seedSession('machi.chen@emctaipei.com', 'Machi');
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      if (String(input).includes('raw.githubusercontent.com')) return new Response('## 2026-11-19 小黃讀取更新' + String.fromCharCode(10) + '- 內容');
+      if (String(input).includes('api.github.com')) return Response.json([]);
       if (String(input).startsWith('https://news.google.com/')) return new Response('<rss><channel><item><title>品牌設計新作 - 誌</title><link>https://news.example/x</link><source url="x">誌</source></item></channel></rss>');
       throw new Error('unexpected fetch ' + String(input));
     });
@@ -5918,6 +5920,7 @@ describe('assistant actions', () => {
     expect(result.ok).toBe(true);
     expect(result.items[0].title).toBe('品牌設計新作');
     expect(result.tips.length).toBeGreaterThan(3);
+    expect((result as unknown as { updates: string[] }).updates).toEqual(['2026-11-19 小黃讀取更新']);
   });
 
   it('only lets managers read the full question log', async () => {

@@ -3179,3 +3179,11 @@
 ## 2026-11-19 小黃：系統改動第一時間同步
 - 新工具 `getRecentUpdates`：讀取「系統公告欄」最近 5 則已啟用的公告（版本、標題、發布時間、內容前 700 字），問「最近有什麼更新／新功能」時使用；公告與內建知識庫衝突時以公告為準。管理者在後台發公告後立即生效，不必部署。後端新增 `recentSystemAnnouncements`（`backend/schema.mjs`，排序規則與 `latestSystemAnnouncement` 相同）。
 - 內建知識庫（`assistant-knowledge.ts`）仍要靠改程式＋部署更新；CLAUDE.md 新增規則：改了使用者看得到的功能時，同時發公告並更新知識庫。
+
+## 2026-11-19 小黃：自動讀取 GitHub 更動＋完整維護手冊
+- **自動讀 GitHub**：新工具 `getRecentChanges`（`worker/src/assistant-changes.ts`）讀 repo 的 `MAINTENANCE_LOG.md` 檔尾最新 8 段＋ main 分支最近 commit 標題（略過 `data:` 與 merge），快取 30 分鐘在 DO storage `assistantChanges`；抓不到沿用舊資料並 10 分鐘後重試。不必再等管理者發公告，小黃就能回答「最近改了什麼」，並要求用同仁看得懂的話概述、不講程式細節或金鑰。公告（`getRecentUpdates`）仍保留，兩者衝突以公告為準。
+- **滑過氣泡**新增「系統更新」卡：`assistantTicker` 多回傳 `updates`（最近 3 段更新紀錄標題），前台輪播顯示。
+- Worker 新增 `githubSource()`（讀 `GITHUB_OWNER／GITHUB_REPO／GITHUB_BRANCH` 變數，`GITHUB_TOKEN` 只放在 GitHub API 的請求標頭、不送 raw 檔案，用來提高額度）。
+- **完整維護手冊**：新增根目錄 `ASSISTANT.md`（小黃是誰、檔案地圖、所有 action 與工具、DO storage key、四種讓小黃知道系統改動的方法、換角色步驟、部署驗證、踩過的坑、待辦），在別台電腦或公司可無縫接手；`CLAUDE.md` 已加指向。
+- **規矩**：因為小黃靠 `MAINTENANCE_LOG.md` 知道更動，之後每次修改都要在檔尾記一段「日期＋標題＋做了什麼」，寫給人看得懂的話。
+- 測試：`worker/test/assistant-changes.test.ts`（解析、token 只給 GitHub API、30 分鐘快取與失敗沿用舊資料、工具流程）與 `index.test.ts` ticker 測試補上 updates。

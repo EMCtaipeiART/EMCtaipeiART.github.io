@@ -4861,10 +4861,11 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         el.addEventListener('mouseenter',()=>clearTimeout(hello.hideT));el.addEventListener('mouseleave',()=>hideHello(500));
         el.addEventListener('click',e=>{const a=e.target.closest('[data-hello]');if(!a)return;const k=a.dataset.hello;if(k==='chat'){hideHello(0);openPanel(true)}else if(k==='ann'){const row=annLatest();hideHello(0);if(row)annOpen(row)}})}return el};
       function hideHello(ms){clearTimeout(hello.hideT);hello.hideT=setTimeout(()=>{const el=document.getElementById('asHello');if(el)el.classList.remove('show')},ms)}
-      function loadTicker(){if(!hello.tickerP)hello.tickerP=api('assistantTicker').then(r=>({items:Array.isArray(r.items)?r.items:[],tips:Array.isArray(r.tips)&&r.tips.length?r.tips:HELLO_TIPS})).catch(()=>({items:[],tips:HELLO_TIPS}));return hello.tickerP}
+      function loadTicker(){if(!hello.tickerP)hello.tickerP=api('assistantTicker').then(r=>({items:Array.isArray(r.items)?r.items:[],tips:Array.isArray(r.tips)&&r.tips.length?r.tips:HELLO_TIPS,updates:Array.isArray(r.updates)?r.updates:[]})).catch(()=>({items:[],tips:HELLO_TIPS,updates:[]}));return hello.tickerP}
       function buildDeck(t){
         const d=[],row=annLatest(),design=t.items.filter(i=>i.topic==='design'),tech=t.items.filter(i=>i.topic!=='design'),tips=[...t.tips].sort(()=>Math.random()-.5);
         if(row)d.push({tag:'最新公告',text:String(row['公告標題']||row['公告版本']||'').slice(0,60),act:'ann'});
+        (t.updates||[]).slice(0,2).forEach(u=>d.push({tag:'系統更新',text:String(u).slice(0,70),act:'chat'}));
         const n=Math.max(design.length,tech.length,tips.length);
         for(let i=0;i<n;i++){
           if(design[i])d.push({tag:'設計新聞',text:design[i].title,src:design[i].source,link:design[i].link});
