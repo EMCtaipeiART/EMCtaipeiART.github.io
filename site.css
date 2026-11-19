@@ -1638,16 +1638,14 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
     /* ---------- 小幫手（右下角對話）：毛玻璃卡片＋綠色漸層標題；浮動按鈕捲動時往上收、停下來後從上方滑回 ---------- */
     .as-root{position:fixed;right:20px;bottom:76px;z-index:1400;font-family:inherit;color:var(--ink);--as-ease:cubic-bezier(.22,1,.36,1)}
     .as-root *{box-sizing:border-box}
-    .as-avatar{position:relative;display:block;width:100%;height:100%;border-radius:50%;overflow:hidden;background:#fff}
-    .as-avatar.sm{width:40px;height:40px;flex:none;box-shadow:0 0 0 2px rgba(255,255,255,.85),0 4px 12px rgba(0,0,0,.18)}
-    .as-fab{position:relative;display:block;width:54px;height:54px;padding:0;border:0;border-radius:50%;background:#fff;box-shadow:0 0 0 3px #fff,0 10px 28px rgba(15,127,39,.32),0 2px 6px rgba(0,0,0,.12);cursor:pointer;transition:transform .7s var(--as-ease),opacity .45s ease,box-shadow .25s ease}
-    .as-fab:hover{transform:translateY(-3px) scale(1.06);box-shadow:0 0 0 3px #fff,0 16px 34px rgba(15,127,39,.4),0 2px 6px rgba(0,0,0,.12)}
+    .as-avatar{position:relative;display:block;width:100%;height:100%;background:transparent}
+    .as-avatar.sm{width:46px;height:46px;flex:none;margin:-4px 0 -4px -2px}
+    .as-fab{position:relative;display:block;width:58px;height:58px;padding:0;border:0;background:transparent;box-shadow:none;cursor:pointer;transition:transform .7s var(--as-ease),opacity .45s ease}
+    .as-fab:hover{transform:translateY(-3px) scale(1.07)}
     .as-fab:active{transform:scale(.96)}
-    .as-fab::after{content:"";position:absolute;inset:-7px;border-radius:50%;border:2px solid rgba(21,158,49,.35);animation:asPulse 3.2s ease-out infinite;pointer-events:none}
     .as-root.away .as-fab{transform:translateY(-120px) scale(.82);opacity:0}
     .as-drop{animation:asDrop .95s var(--as-ease) both}
     @keyframes asDrop{from{transform:translateY(-70vh) scale(.8);opacity:0}55%{opacity:1}to{transform:none;opacity:1}}
-    @keyframes asPulse{0%{transform:scale(.92);opacity:.9}70%,100%{transform:scale(1.35);opacity:0}}
     .as-fab:focus-visible,.as-x:focus-visible,.as-send:focus-visible,.as-btn:focus-visible,.as-chip:focus-visible,.as-usage:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
     .as-dot{position:absolute;top:-1px;right:-1px;width:15px;height:15px;border-radius:50%;background:#ef2d56;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(239,45,86,.5)}
     .as-panel{position:relative;display:flex;flex-direction:column;width:min(372px,calc(100vw - 24px));height:min(540px,calc(100vh - 128px));border-radius:26px;background:color-mix(in srgb,var(--panel) 86%,transparent);-webkit-backdrop-filter:blur(22px) saturate(1.5);backdrop-filter:blur(22px) saturate(1.5);border:1px solid color-mix(in srgb,var(--line) 70%,transparent);box-shadow:0 30px 70px rgba(10,40,22,.28),0 6px 18px rgba(10,40,22,.12),inset 0 1px 0 rgba(255,255,255,.55);overflow:hidden;transform-origin:100% 100%}
@@ -1699,11 +1697,10 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
     .as-send:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
     .as-send svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
     html[data-theme="dark"] .as-panel{background:color-mix(in srgb,#1d2321 82%,transparent);box-shadow:0 30px 70px rgba(0,0,0,.6),0 6px 18px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.08)}
-    html[data-theme="dark"] .as-fab{background:#2a322f;box-shadow:0 0 0 3px #2a322f,0 10px 28px rgba(0,0,0,.55)}
     html[data-theme="dark"] .as-chip{color:#8fe0a5}
     html[data-theme="dark"] .as-ann b{color:#8fe0a5}
     /* 小黃的臉：眼皮（眨眼）與嘴（說話、滑過）都是疊在頭像上的圖層，位置用百分比，跟著頭像縮放 */
-    .as-face{position:absolute;inset:0;transform:scale(1.22);transform-origin:50% 55%}
+    .as-face{position:absolute;inset:0;filter:drop-shadow(0 6px 8px rgba(0,0,0,.28)) drop-shadow(0 1px 1px rgba(0,0,0,.2))}
     .as-face-img{display:block;width:100%;height:100%;object-fit:cover;user-select:none;pointer-events:none}
     .as-lid{position:absolute;top:56.2%;height:8.2%;width:13.2%;border-radius:50% 50% 46% 46%/38% 38% 62% 62%;background:#f5b98f;border-bottom:max(1.5px,.5%) solid #3a2418;transform:scaleY(0);transform-origin:50% 0;transition:transform .07s ease-in;pointer-events:none}
     .as-lid.l{left:32.4%}.as-lid.r{left:54.6%}
@@ -1714,12 +1711,12 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
     @keyframes asTalk{0%,100%{transform:scaleY(.15)}35%{transform:scaleY(1)}65%{transform:scaleY(.45)}}
     @media (max-width:700px){
       .as-root{right:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px))}
-      .as-fab{width:46px;height:46px}
+      .as-fab{width:48px;height:48px}
       .as-panel{width:min(340px,calc(100vw - 20px));height:min(440px,calc(100vh - 190px));border-radius:22px}
       .as-head{padding:12px 12px 12px 14px}
     }
     @media (prefers-reduced-motion:reduce){
-      .as-fab::after,.as-drop,.as-enter,.as-in,.as-chip{animation:none}
+      .as-drop,.as-enter,.as-in,.as-chip{animation:none}
       .as-root.away .as-fab{transform:none;opacity:1}
       .as-root.talk .as-mouth{animation:none;transform:scaleY(.5)}
       .as-lid,.as-fab{transition:none}
