@@ -169,7 +169,10 @@ describe('system knowledge', () => {
     }) as typeof fetch;
     const out = await assistantChat({ message: '多元宇宙是什麼' }, db(), anna, memoryStore(), { apiKey: 'k', now: () => NOW, fetchImpl });
     expect(out.reply).toBe('是 3D 辦公室');
-    expect(seenSystem[0]).toEqual([{ type: 'text', text: ASSISTANT_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }]);
+    const blocks = seenSystem[0] as Array<{ type: string; text: string; cache_control?: unknown }>;
+    expect(blocks[0]).toEqual({ type: 'text', text: ASSISTANT_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } });
+    expect(blocks[1].cache_control).toBeUndefined();
+    expect(blocks[1].text).toContain('2026-11-18（週三）');
   });
 });
 

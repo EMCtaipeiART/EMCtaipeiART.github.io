@@ -40,10 +40,20 @@ export const ASSISTANT_CHARACTER = {
   backstory: '剛失業的臨時代班人員：最近剛失業，暫時代替設計部做系統解答；之後會因為熱門話題或時事換成別的角色'
 };
 
+/** 每次對話都帶的「今天是幾月幾號」：模型自己不知道今天日期，查行事曆、案量時會猜錯（例如把「這禮拜」當成今天起 7 天）。 */
+export function todayLine(nowMs: number): string {
+  const day = taipeiDay(nowMs);
+  const dow = new Date(day + 'T00:00:00Z').getUTCDay();
+  const monday = taipeiDay(Date.parse(day + 'T00:00:00Z') - ((dow + 6) % 7) * 86400000);
+  const sunday = taipeiDay(Date.parse(monday + 'T00:00:00Z') + 6 * 86400000);
+  return '現在是台灣時間 ' + day + '（週' + '日一二三四五六'[dow] + '）；「這週／本週／這禮拜」＝' + monday + ' 到 ' + sunday + '（週一到週日，包含已經過去的日子）；「今天」＝' + day + '。';
+}
+
 export const ASSISTANT_SYSTEM_PROMPT = [
   `你是 emc-art.com 設計部的解答小幫手，名字叫「${ASSISTANT_CHARACTER.name}」（${ASSISTANT_CHARACTER.look}）。你不是常駐的機器人，身分是${ASSISTANT_CHARACTER.backstory}。像懂設計圈、有點幽默的同事；全程使用繁體中文、台灣用語。`,
   '關於你的身分：被問到你是誰、為什麼是你、會不會被換掉時，用上面的設定輕鬆自嘲著回答（例如「剛失業，來設計部打工代班」「之後可能被熱門話題的新角色接班」），但不要影射真實人物或公司真實的人事狀況；回答完仍然正經幫忙，不要消極、不要一直聊自己。',
   '回答規則：',
+  '- 「這週／本週／這禮拜」的範圍是週一到週日（包含已經過去的日子），查行事曆請用 getCalendar 的 week=this；不要把它當成「今天起 7 天」。',
   '- 行事曆資料是公開的，可以回答任何設計師的行程與請假；只依工具結果回答時間與標題，沒有的行程不要猜；日期都是台灣時間。',
   '- 先給答案再開玩笑，一次不超過 4 行，數字放前面；介紹系統功能時最多 8 行，用短句分點。',
   '- 案量與找案件涵蓋歷史資料庫（2023 年起）：問去年、某一年或某月就用 getCaseCounts 的 year／month，不要說查不到歷史；數字、案名、狀態、日期只能來自工具結果；查不到就說查不到，請對方換關鍵字，絕不自己編。',
@@ -99,8 +109,8 @@ export const ASSISTANT_TOOLS = [
   },
   {
     name: 'getCalendar',
-    description: '查設計部五位設計師的行事曆（會議、請假、出差；Google 行事曆＋人資假單，內容是公開的，任何人都可以問）。預設今天起 7 天；可給 from、to（YYYY-MM-DD）或 days（最多 31）；who 填設計師名字，查自己填 me；kind 可填 leave（只看請假出差）或 meeting（只看會議行程）。問「今天有什麼會議」「某某這週有沒有請假」「誰明天休假」時使用。',
-    input_schema: { type: 'object', properties: { from: { type: 'string' }, to: { type: 'string' }, days: { type: 'number' }, who: { type: 'string' }, kind: { type: 'string', enum: ['leave', 'meeting'] } } }
+    description: '查設計部五位設計師的行事曆（會議、請假、出差；Google 行事曆＋人資假單，內容是公開的，任何人都可以問）。「這週／本週／這禮拜」一定要用 week=this（週一到週日，包含已經過去的日子），下週用 week=next、上週用 week=last；沒給任何日期時預設是「今天起 7 天」，不是這一週。也可給 from、to（YYYY-MM-DD）或 days（最多 31）；who 填設計師名字，查自己填 me；kind 可填 leave（只看請假出差）或 meeting（只看會議行程）。問「今天有什麼會議」「某某這週有沒有請假」「誰明天休假」時使用。',
+    input_schema: { type: 'object', properties: { week: { type: 'string', enum: ['this', 'next', 'last'] }, from: { type: 'string' }, to: { type: 'string' }, days: { type: 'number' }, who: { type: 'string' }, kind: { type: 'string', enum: ['leave', 'meeting'] } } }
   },
   {
     name: 'getSystemHelp',
@@ -580,7 +590,7 @@ export async function assistantChat(
     const response = await fetchImpl('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': deps.apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: ASSISTANT_MODEL, max_tokens: ASSISTANT_MAX_TOKENS, system: [{ type: 'text', text: ASSISTANT_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }], tools: ASSISTANT_TOOLS, messages })
+      body: JSON.stringify({ model: ASSISTANT_MODEL, max_tokens: ASSISTANT_MAX_TOKENS, system: [{ type: 'text', text: ASSISTANT_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }, { type: 'text', text: todayLine(nowMs) }], tools: ASSISTANT_TOOLS, messages })
     });
     if (!response.ok) { reply = '小幫手剛剛打了個盹，請再問一次！'; break; }
     const data = await response.json() as { content?: Array<Row>; stop_reason?: string; usage?: { input_tokens?: number; output_tokens?: number } };

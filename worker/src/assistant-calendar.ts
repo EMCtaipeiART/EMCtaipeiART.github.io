@@ -31,6 +31,14 @@ const hhmm = (ms: number): string => {
   return `${String(t.getUTCMonth() + 1).padStart(2, '0')}/${String(t.getUTCDate()).padStart(2, '0')} ${String(t.getUTCHours()).padStart(2, '0')}:${String(t.getUTCMinutes()).padStart(2, '0')}`;
 };
 const mdOnly = (ms: number): string => hhmm(ms).slice(0, 5);
+const WEEKDAY = ['日', '一', '二', '三', '四', '五', '六'];
+export const weekdayOf = (day: string): string => '週' + WEEKDAY[new Date(day + 'T00:00:00Z').getUTCDay()];
+/** 台灣時間「這週／下週／上週」的週一到週日（含已經過去的日子）。 */
+export function weekRange(today: string, which: 'this' | 'next' | 'last'): { from: string; to: string } {
+  const dow = new Date(today + 'T00:00:00Z').getUTCDay();
+  const monday = addDays(today, -((dow + 6) % 7) + (which === 'next' ? 7 : which === 'last' ? -7 : 0));
+  return { from: monday, to: addDays(monday, 6) };
+}
 
 /** getDuty：值日生輪值（預設從本月起 3 個月）與每月兩場雙週會日期。 */
 export async function getDutyTool(args: Row, deps: CalendarDeps, nowMs: number): Promise<Row> {
@@ -55,8 +63,9 @@ export async function getDutyTool(args: Row, deps: CalendarDeps, nowMs: number):
 export async function getCalendarTool(args: Row, deps: CalendarDeps, nowMs: number, me: string[]): Promise<Row> {
   if (!deps.calendar) return { found: 0, hint: '目前讀不到行事曆' };
   const today = taipeiDay(nowMs);
-  let from = ymd(args.from) || today;
-  let to = ymd(args.to) || addDays(from, Math.min(CALENDAR_MAX_DAYS, Math.max(1, Math.floor(Number(args.days)) || 7)) - 1);
+  const week = ['this', 'next', 'last'].includes(String(args.week)) ? weekRange(today, String(args.week) as 'this' | 'next' | 'last') : null;
+  let from = week ? week.from : (ymd(args.from) || today);
+  let to = week ? week.to : (ymd(args.to) || addDays(from, Math.min(CALENDAR_MAX_DAYS, Math.max(1, Math.floor(Number(args.days)) || 7)) - 1));
   if (to < from) [from, to] = [to, from];
   const span = (Date.parse(to + 'T00:00:00Z') - Date.parse(from + 'T00:00:00Z')) / DAY_MS + 1;
   if (span > CALENDAR_MAX_DAYS) to = addDays(from, CALENDAR_MAX_DAYS - 1);
@@ -85,7 +94,7 @@ export async function getCalendarTool(args: Row, deps: CalendarDeps, nowMs: numb
     會議室: e.room ? String(e.room) : undefined
   }));
   return {
-    found: picked.length, 範圍: `${from} ～ ${to}`, 查詢對象: who || '設計部五位設計師', events: list,
+    found: picked.length, 今天: `${today}（${weekdayOf(today)}）`, 範圍: `${from} ～ ${to}${week ? '（' + (args.week === 'next' ? '下週' : args.week === 'last' ? '上週' : '這週') + '，週一到週日，含已過去的日子）' : ''}`, 查詢對象: who || '設計部五位設計師', events: list,
     說明: picked.length > EVENT_LIMIT ? `共 ${picked.length} 筆，只列前 ${EVENT_LIMIT} 筆；可以縮小日期範圍或指定某位設計師。` : undefined,
     部分讀不到: unreadable.length ? `這幾位的 Google 行事曆暫時讀不到：${unreadable.join('、')}（只剩人資假單可用）` : undefined,
     hint: picked.length ? undefined : '這段期間沒有符合的行程'

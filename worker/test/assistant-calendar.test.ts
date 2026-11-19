@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { emptyDatabase } from '../../backend/schema.mjs';
-import { ASSISTANT_SYSTEM_PROMPT, assistantChat, type AssistantStore } from '../src/assistant';
-import { getCalendarTool, getDutyTool, type CalendarDeps } from '../src/assistant-calendar';
+import { ASSISTANT_SYSTEM_PROMPT, assistantChat, todayLine, type AssistantStore } from '../src/assistant';
+import { getCalendarTool, getDutyTool, weekRange, type CalendarDeps } from '../src/assistant-calendar';
 import type { DatabaseSnapshot, Row, SessionRecord } from '../src/types';
 
 function memoryStore(): AssistantStore {
@@ -106,5 +106,35 @@ describe('小黃讀行事曆：設計師行事曆', () => {
     expect(ASSISTANT_SYSTEM_PROMPT).toContain('getCalendar');
     expect(ASSISTANT_SYSTEM_PROMPT).toContain('getDuty');
     expect(ASSISTANT_SYSTEM_PROMPT).toContain('行事曆資料是公開的');
+  });
+});
+
+describe('「這禮拜」是週一到週日（含已經過去的日子）', () => {
+  const THU = Date.parse('2026-11-19T04:00:00Z'); // 台灣 2026-11-19（週四）
+  const past: Row[] = [{ who: 'Anna', title: '休假（人資系統）', start: tw('2026-11-17T09:00:00'), end: tw('2026-11-17T18:00:00'), allDay: false, kind: 'leave' }];
+  const withPast = (): CalendarDeps => ({ ...deps(), calendar: async (from, to) => ({ events: past.filter(e => Number(e.end) > tw(from + 'T00:00:00') && Number(e.start) < tw(to + 'T00:00:00') + 86400000), unreadable: [] }) });
+
+  it('computes Monday–Sunday for this, next and last week, including when today is Sunday', () => {
+    expect(weekRange('2026-11-19', 'this')).toEqual({ from: '2026-11-16', to: '2026-11-22' });
+    expect(weekRange('2026-11-19', 'next')).toEqual({ from: '2026-11-23', to: '2026-11-29' });
+    expect(weekRange('2026-11-19', 'last')).toEqual({ from: '2026-11-09', to: '2026-11-15' });
+    expect(weekRange('2026-11-22', 'this')).toEqual({ from: '2026-11-16', to: '2026-11-22' }); // 週日仍算這一週
+    expect(weekRange('2026-11-16', 'this')).toEqual({ from: '2026-11-16', to: '2026-11-22' }); // 週一
+  });
+
+  it('reproduces the reported bug: the default range misses Tuesday\'s leave, week=this finds it', async () => {
+    const byDefault = await getCalendarTool({ kind: 'leave' }, withPast(), THU, []) as { found: number };
+    expect(byDefault.found).toBe(0); // 今天起 7 天 → 11/19～11/25，看不到 11/17
+    const thisWeek = await getCalendarTool({ week: 'this', kind: 'leave' }, withPast(), THU, []) as { found: number; 今天: string; 範圍: string; events: Array<{ 誰: string; 開始: string }> };
+    expect(thisWeek.found).toBe(1);
+    expect(thisWeek.events[0]).toMatchObject({ 誰: 'Anna', 開始: '11/17 09:00' });
+    expect(thisWeek.今天).toBe('2026-11-19（週四）');
+    expect(thisWeek.範圍).toContain('2026-11-16 ～ 2026-11-22');
+    expect(thisWeek.範圍).toContain('含已過去的日子');
+  });
+
+  it('puts today and this week\'s range in the prompt and tells the model to use week=this', () => {
+    expect(todayLine(THU)).toBe('現在是台灣時間 2026-11-19（週四）；「這週／本週／這禮拜」＝2026-11-16 到 2026-11-22（週一到週日，包含已經過去的日子）；「今天」＝2026-11-19。');
+    expect(ASSISTANT_SYSTEM_PROMPT).toContain('week=this');
   });
 });
