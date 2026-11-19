@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 12155,
+  "revision": 12156,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-19T08:17:43.227Z",
+  "updatedAt": "2026-11-19T08:17:54.818Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1418,7 +1418,7 @@
         {"案件編號":"26110147","修改次數":"0","建立日期":"2026/11/19 12:45:14","修改日期":"2026/11/19 12:45:14","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/19 12:45:14","圖片連結":"[{\"fileName\":\"261119_王品_雙星熱年菜_PMAX.png\",\"url\":\"https://lh3.googleusercontent.com/d/1GWNitzhTjQpPkIaUAlZg01Ki0FhEXdVx=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/19 12:45:14"},
         {"案件編號":"26110151","修改次數":"0","建立日期":"2026/11/19 15:35:13","修改日期":"2026/11/19 15:35:13","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/19 15:35:13","圖片連結":"[{\"fileName\":\"261119_ANKER_A121D_pchome_包框影片.png\",\"url\":\"https://lh3.googleusercontent.com/d/10ChvIPLyrhpx3zz6tT5j9oTYlJR1i2rK=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/19 15:35:13"},
         {"案件編號":"26110146","修改次數":"0","建立日期":"2026/11/19 16:08:46","修改日期":"2026/11/19 16:08:46","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/19 16:08:46","圖片連結":"[{\"fileName\":\"261119_PChomeˍ雙12大促ˍCPAS_Liberty5ProMax_情境.png\",\"url\":\"https://lh3.googleusercontent.com/d/1bt28jiZHj7BT8f4okfJuxpNoW92c22oz=w1600\"},{\"fileName\":\"261119_PChomeˍ雙12大促ˍCPAS_Liberty5ProMax_電商01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Us__LlJCS4JPiw-CHisT-9bhIUn-V9Ms=w1600\"},{\"fileName\":\"261119_PChomeˍ雙12大促ˍCPAS_Liberty5ProMax_電商02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1NbBc6o5ZQCFbK79LxFsir3ZprWvE3NKF=w1600\"},{\"fileName\":\"261119_PChomeˍ雙12大促ˍCPAS_Liberty5Pro_情境.png\",\"url\":\"https://lh3.googleusercontent.com/d/1hHO7-rjPsBoZEog8sg7pEHMMsRgARBb6=w1600\"},{\"fileName\":\"261119_PChomeˍ雙12大促ˍCPAS_Liberty5Pro_電商01.png\",\"url\":\"https://lh3.googleusercontent.com/d/13mbcHZRzJopYDqQXThHQA2f-woytTx7W=w1600\"},{\"fileName\":\"261119_PChomeˍ雙12大促ˍCPAS_Liberty5Pro_電商02.png\",\"url\":\"https://lh3.googleusercontent.com/d/12jwrpQBe9xiD7hhH9iL7SzSQM2XJT6KV=w1600\"},{\"fileName\":\"261119_PChomeˍ雙12大促ˍCPAS_LibertyBuds_電商01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1cQgp64C9k9EXEY7cyIzFYkqwXPlMSE-x=w1600\"},{\"fileName\":\"261119_PChomeˍ雙12大促ˍCPAS_LibertyBuds_電商02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1iJ02Kj9Sgr-_6rZduvBuOVW7Z-h67X5V=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/19 16:08:46"},
-        {"案件編號":"26110125","修改次數":"0","建立日期":"2026/11/19 16:17:43","修改日期":"2026/11/19 16:17:43","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/19 16:17:43","圖片連結":"[{\"fileName\":\"261120_ANKER_A121D_蝦皮.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Y0W6g38NQDpN_4TBIGrs4w3kDuZkehsL=w1600\"},{\"fileName\":\"261120_ANKER_A1638_蝦皮.png\",\"url\":\"https://lh3.googleusercontent.com/d/1R2nBxMu74zHJLORdIR6GuCXdmJocbRYM=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/19 16:17:43"}
+        {"案件編號":"26110125","修改次數":"0","建立日期":"2026/11/19 16:17:43","修改日期":"2026/11/19 16:17:43","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/19 16:17:43","圖片連結":"[{\"fileName\":\"261120_ANKER_A121D_蝦皮.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Y0W6g38NQDpN_4TBIGrs4w3kDuZkehsL=w1600\"},{\"fileName\":\"261120_ANKER_A1638_蝦皮.png\",\"url\":\"https://lh3.googleusercontent.com/d/1R2nBxMu74zHJLORdIR6GuCXdmJocbRYM=w1600\"},{\"fileName\":\"261120_ANKER_A121A_pchome.png\",\"url\":\"https://lh3.googleusercontent.com/d/15yQv4w5h3QtvagPGkkcl2OOgksK_0Iew=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/19 16:17:54"}
       ]
     },
     "補充資料連結": {
