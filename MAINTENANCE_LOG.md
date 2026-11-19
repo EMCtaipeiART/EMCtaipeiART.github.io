@@ -3222,3 +3222,11 @@
 - 例外：「答不出來已回報給管理者」這句仍保留（使用者需要知道有人會接手）；後台本身的「教小黃」「待補問題」功能照常運作，只是小黃不會對一般同仁介紹它們。
 - 副作用：標題含上述關鍵字但同時有一般同仁看得到的功能時（例如「…、個人設定可關閉小黃」），那一段會整段被過濾；要讓它出現，請把「給同仁看的功能」寫成獨立標題的段落。
 - 測試：`worker/test/assistant-hide-admin.test.ts`。
+
+## 2026-11-19 資料庫後台啟動速度優化（5.3 秒 → 首次畫面約 1.8 秒）
+- **問題**：開啟 `json_database_admin.html` 很慢。實測（正式站，管理者瀏覽器，只讀）頁面本身 0.5 秒就載好，慢在 `start()` 依序呼叫後端四步：驗證登入 `verifyToken` 約 0.9 秒 → **`refreshDatabase`（強制後端重新從 GitHub 下載整份資料庫）約 2.5～2.8 秒** → `GET /api/tables` 約 0.8 秒 → `GET /api/table/<表>` 約 0.8 秒，合計約 5.3 秒；剛部署 Worker 後的第一次會碰到 Durable Object 冷啟動，前兩步各約 3 秒，總共約 8 秒。另外單純 `ping` 一次就要 0.5～0.85 秒（到 Worker 的基礎延遲），所以每多一個依序步驟就多半秒以上。
+- **改法（只動 `json_database_admin.html` 的 `start()` 與 `<head>`，Worker 沒動）**：①`refreshWorkerDatabase()` 改成在背景與 `loadMetadata()`（讀資料表清單＋第一張表）**同時**進行，先用後端目前的資料立刻畫出表格；②重新整理做完後，只有回傳的 `revision` 與已套用的 `appliedRevision` 不同時才再 `loadMetadata()` 一次並提示「已同步最新資料（修訂版 N）」；重新整理失敗（401／權限／登入失效）照原本的錯誤處理顯示登入畫面；③`<head>` 加 `<link rel="preconnect">` 指向 Worker，省 DNS／TLS 握手。
+- **效果（用 `tools/admin-startup-bench.mjs` 以正式站實測延遲模擬）**：表格第一次畫出來 4571 ms → 約 1770 ms；全部請求結束約 5.4 秒 → 約 3.8 秒（後端資料較舊時會多重畫一次，約 5.4 秒，與以前相同，但使用者早 2.8 秒就看到資料）。
+- **取捨**：首次畫面是「後端目前的快照」，若 GitHub 上的 `db.json` 剛被別處改過，前約 3 秒可能看到舊資料，之後自動更新並提示；以前是永遠先等最新再畫。
+- **重新量測**：①本機模擬（不碰真實後端）`node tools/admin-startup-bench.mjs`（可加 `--root=<另一份 worktree>` 做前後比較、`--stale` 模擬後端快照較舊、`--verify=… --refresh=… --tables=… --table=…` 自訂延遲，需要 puppeteer-core 與 Chrome，Chrome 路徑可用 `CHROME_PATH`）；②正式站實測：在已登入的後台頁開 DevTools Console 執行 `performance.getEntriesByType('resource').filter(r=>r.name.includes('workers.dev')).map(r=>Math.round(r.startTime)+'+'+Math.round(r.duration)).join(' | ')`（每段是「開始時間+耗時」毫秒）。
+- **還可以再快、這次沒做**：a) 驗證與讀資料表同時進行（伺服器對 `/tables` 本來就要求 `database.manage`，沒權限只會被擋，理論上安全，但渲染會用到權限資料，要小心順序）；b) 用輕量的 `publicRevision`（約 0.5 秒）判斷是否真的需要 `refreshDatabase`；c) 縮小 `verifyToken` 的回應（目前約 26 KB）；d) 減少部署次數以避開冷啟動；e) 評估 Worker／DO 的區域設定（基礎延遲約 0.5 秒）。

@@ -2,6 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
+  <link rel="preconnect" href="https://machi-design-api.machi-chen.workers.dev" crossorigin>
   <link rel="icon" type="image/svg+xml" href="assets/EMC_design_logo.svg">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="app-version" content="20260817-designer-row-select-consistency-1">
@@ -1984,7 +1985,7 @@
     const ADMIN_TABLE_KEY='databaseAdminLastTable';
     function rememberAdminTable(){try{localStorage.setItem(ADMIN_TABLE_KEY,tableName)}catch{}}
     function restoreAdminTable(){let saved='';try{saved=localStorage.getItem(ADMIN_TABLE_KEY)||''}catch{}if(!saved||saved==='database')return;tableName=saved;if(saved==='修改統計表'){sortKey='建立日期';sortOrder='desc'}else{sortKey='';sortOrder='asc'}}
-    async function start(){restoreAdminTable();populateDatabaseFilters();token=stored(FRONT_TOKEN_KEY)||token;if(!token){showLogin('管理者登入狀態不存在，請回前台重新登入。');return}await window.MachiAccess?.refresh({token,account:stored('designRequestEditorAccount'),user:stored(FRONT_USER_KEY),group:stored(FRONT_GROUP_KEY)});if(!validFrontAdmin()){showLogin('Cloudflare Worker 驗證失敗，或此帳號沒有資料庫管理權限。');return}sessionStorage.setItem(TOKEN_KEY,token);showApp();try{await refreshWorkerDatabase();await loadMetadata()}catch(error){if(/401|權限|TOKEN_EXPIRED|登入/.test(error.message)){showLogin('管理者登入狀態已失效，請回前台重新登入。');return}note(`後台讀取失敗：${error.message}`,'error')}}
+    async function start(){restoreAdminTable();populateDatabaseFilters();token=stored(FRONT_TOKEN_KEY)||token;if(!token){showLogin('管理者登入狀態不存在，請回前台重新登入。');return}await window.MachiAccess?.refresh({token,account:stored('designRequestEditorAccount'),user:stored(FRONT_USER_KEY),group:stored(FRONT_GROUP_KEY)});if(!validFrontAdmin()){showLogin('Cloudflare Worker 驗證失敗，或此帳號沒有資料庫管理權限。');return}sessionStorage.setItem(TOKEN_KEY,token);showApp();try{/* 速度優化（2026-11-19）：以前要等「強制從 GitHub 重新整理」（約 3 秒）做完才開始讀資料表；現在重新整理與讀資料表同時進行，先用後端目前的資料立刻畫出表格，重新整理做完若版本真的變了才再畫一次（見 tools/admin-startup-bench.mjs） */const refreshing=refreshWorkerDatabase().then(result=>({result}),failure=>({failure}));await loadMetadata();const refreshed=await refreshing;if(refreshed.failure)throw refreshed.failure;const latest=Number(refreshed.result&&refreshed.result.revision)||0;if(latest&&latest!==appliedRevision){await loadMetadata();note(`已同步最新資料（修訂版 ${latest}）`)}}catch(error){if(/401|權限|TOKEN_EXPIRED|登入/.test(error.message)){showLogin('管理者登入狀態已失效，請回前台重新登入。');return}note(`後台讀取失敗：${error.message}`,'error')}}
     start();
   </script>
 </body>

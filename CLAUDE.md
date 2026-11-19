@@ -94,3 +94,6 @@
 
 ## 小黃不講後台（2026-11-19）
 - 後台與管理者專屬的功能／更動，小黃不呈現也不說明（`assistant-changes.ts` 的 `ADMIN_ONLY` 過濾＋知識庫不收錄＋prompt 規則）。寫 `MAINTENANCE_LOG.md` 時，同仁看得到的功能請獨立成一段、標題避開「後台、管理者、部署、測試…」等字，否則不會出現在小黃的「系統更新」。
+
+## 後台啟動速度（2026-11-19）
+- `json_database_admin.html` 的 `start()` 已改成「強制重新整理在背景、先畫表格」；改啟動流程後請用 `node tools/admin-startup-bench.mjs`（可 `--root=` 與 origin/main 的乾淨 worktree 比較）量前後差異，細節與還能優化的方向見 `MAINTENANCE_LOG.md` 的「資料庫後台啟動速度優化」。
