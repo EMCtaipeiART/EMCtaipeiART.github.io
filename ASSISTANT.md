@@ -58,6 +58,8 @@
 | `reportUnanswered` | 寫進 DO storage `assistantGaps` | **答不出來、查不到或沒把握時呼叫**：把使用者原本的問題記錄下來（同一題合併計次）回報給管理者；小黃告訴使用者「這題我還不會，已經記下來回報給管理者，之後會補上」，**絕不叫人去問 Machi 或任何特定的人** |
 | `getRecentChanges` | **GitHub**：`MAINTENANCE_LOG.md` 檔尾 8 段＋最近 commit 標題（略過 `data:`／merge） | 不必發公告就知道最近改了什麼；公告與內建說明衝突時以公告為準，GitHub 紀錄最即時 |
 
+**日期規則**：每次請求的 system 第二段會帶「現在是台灣時間…、這週＝週一到週日」（`todayLine()`，不進快取區塊）；查行事曆的「這週／下週／上週」請用 `getCalendar` 的 `week`（含已過去的日子），不要靠模型自己算日期。
+
 可見範圍過濾（`canViewCase`）是把前台 `canViewCustomerCases`＋`ownerMatches` 移植到後端；**前台規則改了要一併改這份**。
 
 ## 5. 資料存哪（Durable Object storage，不是 JSON 快照）
