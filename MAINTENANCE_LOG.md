@@ -3288,3 +3288,10 @@
 - **修正**：①system prompt 新增「關於你自己的設定」段，直接寫明怎麼關閉（帳號選單 › 個人設定 › 勾掉「顯示右下角小幫手（小黃）」，隨時可重新勾選、跟著帳號）、聊天視窗 × 只是先收起來、隔天會再出現、NEW 標籤的意思，不用呼叫工具就答得出來；②收斂規則：後台／管理者專屬才不說明，**同仁自己就能做的事要具體回答、不要推給管理者**；③知識庫新增主題 `assistant`「關於小黃（右下角小幫手）」（能做什麼、怎麼關閉、NEW 標籤、氣泡、額度），關鍵字含關閉、關掉、隱藏、不要出現、機器人、NEW…。
 - **規矩（給之後的人）**：新增「同仁會用到、也可能被問到」的功能時，要同時更新知識庫（不要只放在一句話裡），並用後台「試問」問一次確認他答得出來；小黃自己的設定（怎麼關、怎麼開）要直接寫進 prompt。
 - 測試：`worker/test/assistant-self.test.ts`。
+
+## 2026-11-20 修正 GitHub「Test JSON backend」自 2026-11-19 後台啟動優化起一直失敗
+- **現象**：Actions 的 Test JSON backend（`test-json-backend.yml`）從 11/19 23:10（commit `8a07be0`「後台啟動優化」）起每次都失敗，步驟「Run backend tests」；在那之前（`3051605` 11/19 22:58）是成功的。使用者貼的失敗連結為 run 44561083060（commit `9239a3c`）。
+- **原因**：`backend/test/backend.test.mjs` 的測試「JSON database admin renders actions first and updates JSON optimistically」有一條斷言檢查 `start()` 必須是 `await refreshWorkerDatabase();await loadMetadata()`（依序），啟動優化把兩者改成並行，斷言就不成立。**不是功能壞掉，是測試描述的是舊設計。**
+- **修正**：斷言改為描述新設計——`start()` 先 `const refreshing=refreshWorkerDatabase()`（背景）、`await loadMetadata()`、再 `await refreshing` 並在失敗時丟出；版本變動（`latest!==appliedRevision`）才再 `loadMetadata()`；`<head>` 有指向 Worker 的 `preconnect`。
+- **驗證**：本機只重跑該測試由失敗變通過；整個 backend 測試前後比對，唯一差異就是這條由失敗變通過，沒有新增失敗（本機 Windows 仍有 34 個既有失敗，與 CRLF 等環境有關，GitHub 的 Linux 環境原本是綠的）。
+- **教訓**：改了後台（`json_database_admin.html`）或前台（`site.js`）的結構後，要跑 `node --test backend/test/*.test.mjs` 並**比對前後失敗清單**（不是只看總數）；這次我只比對了前端測試的失敗數與畫面，漏了這條對原始碼字串的斷言，直到你貼出 Actions 連結才發現。

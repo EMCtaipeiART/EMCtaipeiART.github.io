@@ -1432,7 +1432,10 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /function accountReactionNames\(value\)\{/);
   assert.match(html, /function databaseTableHtml\(table,data\)\{/);
   assert.match(html, /async function refreshWorkerDatabase\(\).*action:'refreshDatabase'/);
-  assert.match(html, /async function start\(\).*await refreshWorkerDatabase\(\);await loadMetadata\(\)/);
+  // 2026-11-19 啟動優化：強制重新整理（約 3 秒）改成在背景與 loadMetadata 同時進行，先畫表格；重新整理做完才比對版本、有變動再重畫一次。
+  assert.match(html, /async function start\(\).*const refreshing=refreshWorkerDatabase\(\).*await loadMetadata\(\);const refreshed=await refreshing;if\(refreshed\.failure\)throw refreshed\.failure;/);
+  assert.match(html, /async function start\(\).*latest!==appliedRevision\)\{await loadMetadata\(\)/);
+  assert.match(html, /<link rel="preconnect" href="https:\/\/machi-design-api\.machi-chen\.workers\.dev" crossorigin>/);
   assert.match(html, /class="database-link"[^>]+aria-label="開啟連結">前往連結<\/a>/);
   assert.match(html, /function isDatabaseDesignPathHeader\(header\).*設計圖資料/);
   assert.match(html, /isDatabaseDesignPathHeader\(header\).*databaseDesignPathCellHtml\(row\[header\]\)/);
