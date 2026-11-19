@@ -3216,3 +3216,9 @@
 - **試問框**：同一頁可以直接問小黃一題，看他現在會怎麼回答；走正常流程（含工具與補充），但**不寫問答紀錄、不計用量、不新增待補問題**，並顯示用到的工具與 tokens。
 - 後端新增 action（都需 `database.manage`，只有管理者）：`assistantNotes`、`assistantNoteSave`、`assistantNoteDelete`、`assistantTrial`。資料存 DO storage `assistantNotes`（最多 200 條，記錄建立／最後修改者與時間）。程式在 `worker/src/assistant.ts`（`saveNote`／`searchNotes`／`systemHelpTool`／`dryRun`）與 `json_database_admin.html`。
 - 測試：`worker/test/assistant-notes.test.ts`（存取與驗證、上限、回答待補問題自動結案、搜尋排序、工具流程帶入補充、試問不寫任何紀錄）與 `index.test.ts`（權限）。
+
+## 2026-11-19 小黃：不再呈現或說明後台與管理者專屬的內容
+- 規則（使用者指定）：**後台與管理者修改／專屬的內容，小黃不需要呈現或說明**。做法：①`worker/src/assistant-changes.ts` 新增 `ADMIN_ONLY` 過濾——更新紀錄與 commit 標題含「後台、管理者、教小黃、試問、用量、待補、稽核、備份、金鑰、部署、Worker、測試、知識庫、維護手冊…」的，不會出現在 `getRecentChanges`，也不會出現在滑過／主動氣泡的「系統更新」（先過濾再取最新 N 段）；②知識庫（`assistant-knowledge*.ts`）拿掉資料庫後台、公告發布流程、全員上班／下班與班長工具、管理者工具、修改全公司預設位置、角色工坊管理者檢查步驟等管理者專屬內容，主題目錄也不再出現「管理者」；③system prompt 新增規則：後台與管理者專屬的功能、設定與更動不呈現、不主動提、被問到只說那是管理者處理的部分；工具結果也註明已過濾、不要自行推測。
+- 例外：「答不出來已回報給管理者」這句仍保留（使用者需要知道有人會接手）；後台本身的「教小黃」「待補問題」功能照常運作，只是小黃不會對一般同仁介紹它們。
+- 副作用：標題含上述關鍵字但同時有一般同仁看得到的功能時（例如「…、個人設定可關閉小黃」），那一段會整段被過濾；要讓它出現，請把「給同仁看的功能」寫成獨立標題的段落。
+- 測試：`worker/test/assistant-hide-admin.test.ts`。

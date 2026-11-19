@@ -18,10 +18,14 @@ const SECTION_KEEP = 8;
 const BODY_MAX = 600;
 const COMMIT_KEEP = 12;
 
+/** 後台、管理者專屬、部署與內部維護相關的更動：小黃不需要向同仁呈現或說明，一律過濾掉。 */
+export const ADMIN_ONLY = /後台|管理者|管理員|教小黃|試問|用量|待補|稽核|備份|還原|金鑰|部署|Worker|DO storage|schema|測試|重構|知識庫|維護手冊|走訪|wrangler|ANTHROPIC|CLAUDE\.md|ASSISTANT\.md/i;
+export const isAdminOnly = (value: string): boolean => ADMIN_ONLY.test(value);
+
 /** 取檔尾最新的 N 段「## 標題」；回傳新到舊。 */
 export function parseChangeLog(markdown: string, keep = SECTION_KEEP): ChangeSection[] {
   const parts = markdown.replace(/\r\n/g, '\n').split(/^## /m).slice(1);
-  return parts.slice(-keep).reverse().map(part => {
+  return parts.filter(part => !isAdminOnly(part.split('\n')[0] || '')).slice(-keep).reverse().map(part => {
     const [title, ...rest] = part.split('\n');
     return { title: title.trim().slice(0, 120), body: rest.join('\n').trim().slice(0, BODY_MAX) };
   }).filter(section => section.title);
@@ -37,7 +41,7 @@ export function parseCommits(json: unknown): ChangeCommit[] {
   const out: ChangeCommit[] = [];
   for (const item of json as Array<{ commit?: { message?: string; committer?: { date?: string } } }>) {
     const subject = String(item?.commit?.message || '').split('\n')[0].trim();
-    if (!subject || /^data:/i.test(subject) || /^merge /i.test(subject)) continue;
+    if (!subject || /^data:/i.test(subject) || /^merge /i.test(subject) || isAdminOnly(subject)) continue;
     out.push({ date: taipeiDate(String(item?.commit?.committer?.date || '')), subject: subject.slice(0, 140) });
     if (out.length >= COMMIT_KEEP) break;
   }
