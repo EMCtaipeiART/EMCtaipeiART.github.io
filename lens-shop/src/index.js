@@ -4,7 +4,7 @@ import { ensureAccounts, signUser, getUser as getUserRaw, verifyGoogle } from '.
 import { parseNidin } from './nidin.js';
 import { checkLink, parseUberJoin, fetchGroups } from './ubereats.js';
 import { fillForms } from './xlsx.js';
-import { orderMail, SYSTEM_NOTE, lineLink } from './mail.js';
+import { arrivalMail, orderMail, SYSTEM_NOTE, lineLink } from './mail.js';
 import { D1Files } from './store.js';
 
 const json = (o, status = 200, h = {}) => new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...h } });
@@ -442,6 +442,21 @@ async function handle(req, env, ctx) {
     if (path === '/api/admin/fill/mail' && method === 'POST') {
       const f = (await getKV(env, fillKey(cid), null)) || {}; const mail = await mailDrinkSummary(env, req, cid, camps);
       await setKV(env, fillKey(cid), { ...f, status: 'manual', mailed: true, mail, at: Date.now() }); return json({ ok: true, mail });
+    }
+    if (path === '/api/admin/arrival' && method === 'GET') return json((await getKV(env, kk(cid, 'arrival'), null)) || {});
+    if (path === '/api/admin/arrival' && method === 'POST') {
+      const s = await getSettings(env, cid); const base = s.siteUrl || env.SITE_URL || new URL(req.url).origin;
+      const rs = (await env.DB.prepare("SELECT * FROM orders WHERE status='active' AND campaign=? ORDER BY created_at").bind(cid).all()).results;
+      const by = {}; for (const o of rs) (by[o.email] ||= []).push(o);
+      let sent = 0, failed = 0, skipped = 0;
+      for (const os of Object.values(by)) {
+        const m = arrivalMail({ orders: os.map(pubOrder), settings: s, links: os.map((o) => `${base}/order/${o.token}`) });
+        const r = await sendMail(env, os[0].email, m.subject, m.html, m.text);
+        if (r === 'sent') sent++; else if (r === 'skipped') skipped++; else failed++;
+      }
+      const info = { at: now(), sent, failed, skipped, people: Object.keys(by).length, orders: rs.length };
+      if (sent) await setKV(env, kk(cid, 'arrival'), info);
+      return json({ ok: true, ...info });
     }
     if (path === '/api/admin/settings') {
       if (method === 'GET') return json(await getSettings(env, cid));

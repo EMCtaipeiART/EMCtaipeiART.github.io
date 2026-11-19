@@ -50,3 +50,14 @@ export function orderMail({ order, settings, link, kind }) {
     cancelled ? '' : `截止日期：${fmtDeadline(settings.deadline)}`, cancelled ? '' : `修改訂單：${link}`, '', SYSTEM_NOTE].join('\n');
   return { subject, html, text };
 }
+
+// 到貨通知：團主一鍵通知下單者商品已到貨，請儘速領取（同一個 Email 的多筆訂單合併成一封）
+export function arrivalMail({ orders, settings, links }) {
+  const shop = settings.shopName;
+  const subject = `【${shop}】商品已到貨，請儘速領取`;
+  const who = orders[0].name;
+  const list = orders.map((o, i) => `<div style="margin:10px 0 4px"><b>訂單 ${o.id}</b>　${nt(o.total)}</div><ul style="margin:0;padding-left:20px;color:#444;font-size:14px">${o.items.map((l) => `<li>${esc(l.brand)} ${esc(l.name)}${powerText(l) ? '（' + esc(powerText(l)) + '）' : ''} × ${l.qty}</li>`).join('')}</ul><div style="margin:4px 0 0"><a href="${esc(links[i])}" style="color:#159E31">查看訂單</a></div>`).join('');
+  const html = `<div style="font-family:-apple-system,'Microsoft JhengHei',sans-serif;max-width:640px;margin:auto;color:#222"><h2 style="margin:0 0 8px">${esc(shop)}｜商品已到貨</h2><p>${esc(who)} 您好，您訂購的商品<b>已經到貨，請儘速領取</b>。</p><div style="background:#f4f7f5;border-radius:8px;padding:6px 14px">${list}</div><p style="color:#666;font-size:13px">如有疑問請洽團購負責人。</p><hr style="border:0;border-top:1px solid #eee;margin:18px 0 8px"><p style="color:#999;font-size:12px">${SYSTEM_NOTE}</p></div>`;
+  const text = [`${shop}｜商品已到貨`, `${who} 您好，您訂購的商品已經到貨，請儘速領取。`, '', ...orders.map((o, i) => `訂單 ${o.id}（${nt(o.total)}）：${links[i]}`), '', SYSTEM_NOTE].join('\n');
+  return { subject, html, text };
+}
