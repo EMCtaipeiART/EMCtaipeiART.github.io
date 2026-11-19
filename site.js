@@ -4730,7 +4730,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const tpDay=()=>{const p=taipeiParts();return `${p.year}-${p.month}-${p.day}`};
       const kGreet=()=>'assistantGreetedV1:'+S.acct,kClose=()=>'assistantClosedV1:'+S.acct;
       const lsGet=k=>{try{return localStorage.getItem(k)||''}catch(err){return ''}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(err){}};
-      const SVG_FACE='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="4"/><path d="M12 6V3.5"/><circle cx="9" cy="12" r="1.2"/><circle cx="15" cy="12" r="1.2"/><path d="M9.5 15.2c1.4.8 3.6.8 5 0"/></svg>';
+      const FACE='<span class="as-face"><img class="as-face-img" src="assets/xiaohuang.webp" alt="" draggable="false"><i class="as-lid l"></i><i class="as-lid r"></i><i class="as-mouth"></i></span>';
       const SVG_X='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
       const SVG_SEND='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 4l-5 16-3-6.5L4 12z"/></svg>';
       function root(){
@@ -4755,16 +4755,20 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(!loggedIn()){const el=document.getElementById('asHelper');if(el)el.remove();return}
         const el=root(),unread=Boolean(S.ann);
         if(!S.open){
-          el.innerHTML=`<button type="button" class="as-fab" data-as="open" aria-label="開啟小幫手" title="小幫手"><span class="as-avatar">${SVG_FACE}</span>${unread?'<i class="as-dot" aria-label="有新公告"></i>':''}</button>`;
+          el.innerHTML=`<button type="button" class="as-fab" data-as="open" aria-label="開啟小黃" title="小黃"><span class="as-avatar">${FACE}</span>${unread?'<i class="as-dot" aria-label="有新公告"></i>':''}</button>`;
           return;
         }
         const annHtml=S.ann?`<div class="as-ann"><b>新功能公告</b><span>${esc(S.ann.title||S.ann.version)}</span><div class="as-ann-acts"><button type="button" class="as-btn primary" data-as="ann-go">帶我去看</button><button type="button" class="as-btn" data-as="ann-ok">知道了</button></div></div>`:'';
         const body=S.farewell?`<div class="as-msg as-bot"><div class="as-bubble">好喔，那我晚點再回來～</div></div>`:S.msgs.map(msgHtml).join('')+(S.busy?'<div class="as-msg as-bot"><div class="as-bubble as-think">思考中<i></i><i></i><i></i></div></div>':'');
-        el.innerHTML=`<section class="as-panel" role="dialog" aria-label="設計部小幫手"><header class="as-head"><span class="as-avatar sm">${SVG_FACE}</span><b>設計部小幫手</b>${S.canUsage?'<button type="button" class="as-usage" data-as="usage">用量</button>':''}<button type="button" class="as-x" data-as="close" aria-label="關閉小幫手">${SVG_X}</button></header>
+        el.innerHTML=`<section class="as-panel" role="dialog" aria-label="小黃，設計部小幫手"><header class="as-head"><span class="as-avatar sm">${FACE}</span><div class="as-title"><b>小黃</b><small>設計部小幫手</small></div>${S.canUsage?'<button type="button" class="as-usage" data-as="usage">用量</button>':''}<button type="button" class="as-x" data-as="close" aria-label="關閉小幫手">${SVG_X}</button></header>
           <div class="as-body" id="asBody">${annHtml}${body}</div>
           <form class="as-form"><input id="asInput" type="text" maxlength="500" autocomplete="off" placeholder="${S.tired?'明天再來找我':'問我案量、找案件…'}" ${S.tired||S.busy||S.farewell?'disabled':''}><button type="submit" class="as-send" aria-label="送出" ${S.tired||S.busy||S.farewell?'disabled':''}>${SVG_SEND}</button></form></section>`;
         const b=document.getElementById('asBody');if(b)b.scrollTop=b.scrollHeight;
       }
+      /* 小黃的表情：眨眼與說話都是疊在頭像上的小圖層（.as-lid、.as-mouth），之後有 Codex 補的眼閉／張嘴圖，只要換 FACE 的內容 */
+      let talkT=0;
+      function talk(ms){const el=document.getElementById('asHelper');if(!el)return;el.classList.add('talk');clearTimeout(talkT);talkT=setTimeout(()=>el.classList.remove('talk'),Math.max(600,ms||1200))}
+      (function life(){const blink=()=>{const el=document.getElementById('asHelper');if(el){el.classList.add('blink');setTimeout(()=>el.classList.remove('blink'),160)}setTimeout(blink,2200+Math.random()*3800)};setTimeout(blink,1500)})();
       function openPanel(focus){S.open=true;render();if(focus)setTimeout(()=>document.getElementById('asInput')?.focus(),30)}
       function closePanel(){
         if(S.farewell)return;
@@ -4780,7 +4784,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const day=tpDay();
         if(lsGet(kGreet())!==day){
           lsSet(kGreet(),day);
-          S.msgs.push({role:'assistant',content:greetText()});
+          S.msgs.push({role:'assistant',content:greetText()});setTimeout(()=>talk(1800),400);
           if(S.tired)S.msgs.push({role:'assistant',content:'今天的電量用光了，明天充飽再見！'});
           if(lsGet(kClose())!==day)S.open=true;
         }else if(S.tired&&!S.msgs.length){S.msgs.push({role:'assistant',content:'今天的電量用光了，明天充飽再見！'})}
@@ -4792,7 +4796,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         S.msgs.push({role:'user',content:q});S.busy=true;render();
         try{
           const r=await api('assistantChat',{message:q,history});
-          S.msgs.push({role:'assistant',content:r.reply||'……',logId:r.logId||null,fb:null});
+          S.msgs.push({role:'assistant',content:r.reply||'……',logId:r.logId||null,fb:null});talk(400+String(r.reply||'').length*45);
           if(r.quota&&r.quota.tired)S.tired=true;
         }catch(err){S.msgs.push({role:'assistant',content:'小幫手剛剛打了個盹，請再問一次！'})}
         S.busy=false;render();
