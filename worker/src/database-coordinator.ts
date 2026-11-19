@@ -3,7 +3,7 @@ import { DurableObject } from 'cloudflare:workers';
 import { getNewsTicker } from './assistant-news';
 import { getChangeLog } from './assistant-changes';
 import { FEATURE_TIPS } from './assistant-knowledge';
-import { assistantChat, assistantToday, assistantLogsReport, assistantUsageReport, cleanupAssistantStorage, recordFeedback } from './assistant';
+import { assistantChat, assistantToday, assistantLogsReport, assistantUsageReport, cleanupAssistantStorage, listGaps, updateGap, recordFeedback } from './assistant';
 import { DEFAULT_CUSTOMER_CC_EMAILS, latestSystemAnnouncement, publicSystemAnnouncement, systemAnnouncementReadRecords, TABLE_SCHEMAS } from '../../backend/schema.mjs';
 import { normalizeDesignType, splitDetailValues } from '../../backend/weighting.mjs';
 import {
@@ -5756,6 +5756,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'assistantLogs') {
         this.requireAccess(database, session, 'database.manage');
         return await assistantLogsReport(this.ctx.storage, Number(payload.days) || 7, Number(payload.limit) || 300, Date.now());
+      }
+      if (action === 'assistantGaps') {
+        this.requireAccess(database, session, 'database.manage');
+        return await listGaps(this.ctx.storage, text(payload.status));
+      }
+      if (action === 'assistantGapUpdate') {
+        this.requireAccess(database, session, 'database.manage');
+        return await updateGap(this.ctx.storage, payload, Date.now());
       }
       if (action === 'assistantFeedback') {
         const current = this.requireSession(session);

@@ -19,6 +19,7 @@
 | `assets/xiaohuang.webp` | 小黃頭像（192px、透明背景） |
 | `worker/src/assistant.ts` | 核心：`ASSISTANT_CHARACTER`、system prompt、工具定義與執行、額度、問答紀錄、Claude API 呼叫、管理者報表 |
 | `worker/src/assistant-knowledge.ts` | **內建系統知識庫**（13 個主題）＋滑過氣泡用的 `FEATURE_TIPS` |
+| `worker/src/assistant-knowledge-pages.ts` | **實際走訪網站後補寫的功能說明**（午餐地圖、短網址、行事曆、作品牆、記事本、專案分配、進度、問題回報、專案看板、儀表板、角色工坊畫面、多元宇宙操作說明、團購站、選單總覽）；與 `assistant-knowledge.ts` 同 id 的主題取代內建內容 |
 | `worker/src/assistant-news.ts` | 新聞話題（Google News RSS，每 3 小時快取） |
 | `worker/src/assistant-changes.ts` | **自動讀 GitHub 更動**（`MAINTENANCE_LOG.md` 檔尾＋最近 commit，每 30 分鐘快取） |
 | `worker/src/database-coordinator.ts` | 只做分派：`assistantToday`／`assistantChat`／`assistantFeedback`／`assistantTicker`／`assistantUsage`／`assistantLogs`／`runAssistantCleanup`／`githubSource()` |
@@ -36,6 +37,8 @@
 | `assistantTicker` | 登入 | 滑過氣泡資料：新聞、功能小提示、最近更新標題（不花 token） |
 | `assistantUsage` | `database.manage` | 近 N 天用量（每日、每人、回饋次數）；**不含問答內容** |
 | `assistantLogs` | `database.manage` | 近 N 天完整問答（含問題與回答） |
+| `assistantGaps` | `database.manage` | 小黃答不出來、已記錄回報的問題清單（待補／已處理） |
+| `assistantGapUpdate` | `database.manage` | 把某筆待補問題標為已處理（可附備註）或重新開啟 |
 
 ## 4. Claude 的工具（模型只能透過這些拿資料）
 
@@ -46,6 +49,7 @@
 | `getMyToday` | 同上 | 待回信（專案負責人且過稿中）、3 天內截稿、今天新進 |
 | `getSystemHelp` | `assistant-knowledge.ts` | 系統功能說明（system prompt 只放主題目錄，細節按需取回以省 token） |
 | `getRecentUpdates` | 後台「系統公告欄」最近 5 則已啟用公告 | 管理者發公告即生效 |
+| `reportUnanswered` | 寫進 DO storage `assistantGaps` | **答不出來、查不到或沒把握時呼叫**：把使用者原本的問題記錄下來（同一題合併計次）回報給管理者；小黃告訴使用者「這題我還不會，已經記下來回報給管理者，之後會補上」，**絕不叫人去問 Machi 或任何特定的人** |
 | `getRecentChanges` | **GitHub**：`MAINTENANCE_LOG.md` 檔尾 8 段＋最近 commit 標題（略過 `data:`／merge） | 不必發公告就知道最近改了什麼；公告與內建說明衝突時以公告為準，GitHub 紀錄最即時 |
 
 可見範圍過濾（`canViewCase`）是把前台 `canViewCustomerCases`＋`ownerMatches` 移植到後端；**前台規則改了要一併改這份**。
@@ -60,9 +64,21 @@
 | `assistantLog:<台灣日期>`（超過 2000 筆分片 `…:<序號>`） | 問答紀錄：問題、回答、工具、是否查到、tokens、回饋、是否累了 | 180 天 |
 | `assistantNews` | 新聞標題快取（3 小時） | 覆寫 |
 | `assistantChanges` | GitHub 更動快取（30 分鐘） | 覆寫 |
+| `assistantGaps` | 答不出來的問題（最多 300 筆；同一題合併 `count`／`askers`；`status` open／done＋管理者備註） | 手動處理 |
 | `assistantLogCleanupDate` | 清理排程用，一天只跑一次 | — |
 
 額度：用完不呼叫 API，隨機回 4 句「累了」台詞並停用輸入框；用量跨過 80% 時回覆後附一次電量提醒。
+
+## 5.5 答不出來的問題 → 回報管理者
+
+- 小黃查不到、沒把握時呼叫 `reportUnanswered`，問題進 `assistantGaps`；後台「問題回報 › 小黃（機器人）」最上方有「待補的問題」卡與清單（待補／已處理／全部），補完按「標為已處理」並可留備註。
+- 管理者補資料的方式：發系統公告（立即）、或更新 `assistant-knowledge*.ts` 並部署（長期）。
+- 小黃對使用者不主動提紀錄，也不會提到管理者看得到什麼；但回答時會說「已經記下來回報給管理者」。
+
+## 5.6 個人設定：關閉小黃
+
+- 帳號選單 › 個人設定 › 「顯示右下角小幫手（小黃）」，預設開啟；關閉後右下角不再出現小黃與氣泡。
+- 存放：本機 `localStorage` `assistantEnabledV1:<帳號>`（立即生效）＋雲端個人設定（`設定` 表新欄位「小幫手」，空白＝開、「關」＝關；`getUserSettings` 回 `assistantEnabled`、`saveUserSettings` 接 `assistantEnabled`），換裝置也同步。
 
 ## 6. 讓小黃知道系統改了什麼（四條路，由即時到長期）
 

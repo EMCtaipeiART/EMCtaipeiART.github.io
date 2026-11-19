@@ -3187,3 +3187,10 @@
 - **完整維護手冊**：新增根目錄 `ASSISTANT.md`（小黃是誰、檔案地圖、所有 action 與工具、DO storage key、四種讓小黃知道系統改動的方法、換角色步驟、部署驗證、踩過的坑、待辦），在別台電腦或公司可無縫接手；`CLAUDE.md` 已加指向。
 - **規矩**：因為小黃靠 `MAINTENANCE_LOG.md` 知道更動，之後每次修改都要在檔尾記一段「日期＋標題＋做了什麼」，寫給人看得懂的話。
 - 測試：`worker/test/assistant-changes.test.ts`（解析、token 只給 GitHub API、30 分鐘快取與失敗沿用舊資料、工具流程）與 `index.test.ts` ticker 測試補上 updates。
+
+## 2026-11-19 小黃：實際走訪網站補強系統知識、答不出來回報管理者、個人設定可關閉
+- **實際走訪**：用管理者的瀏覽器逐頁開啟（只看不改：沒有送出表單、沒有抽籤、沒有寫入紀錄），走過午餐地圖（主畫面、篩選面板、店家小檔案、冒險日誌、我的紀錄三分頁、設定）、短網址、設計部行事曆（值日生、會議室預約、篩選）、作品牆、記事本、專案分配、您的案件進度、問題回報、專案看板、角色工坊（四張分頁卡與四步驟）、多元宇宙（選單、操作說明、角色頁面）、設計儀表板、團購站首頁，並重讀 AGENT／SYSTEM_OVERVIEW／COINS／pixel-plaza 等文件。結果寫成 `worker/src/assistant-knowledge-pages.ts`，知識庫由 13 個主題擴成 20 個（新增 lunchmap、shortlinks、calendar、wall、notebook、assign、progress、report、board、dashboard，並取代 pages、studio、metaverse、groupbuy 的舊內容）。不收錄同仁的個人留言、到訪紀錄、帳號密碼或記事本內容。更正：短網址的網址形式是 emc-art.com/<短碼>。
+- **答不出來就記錄並回報管理者**：新工具 `reportUnanswered`；問題連同提問者、部門、小黃缺的資訊存在 DO storage `assistantGaps`（同一題合併計次、最多 300 筆）；system prompt 規定「不要叫使用者去問 Machi 或任何特定的人，改說已記錄並回報給管理者」。後台「問題回報 › 小黃（機器人）」新增「待補的問題」卡與清單（待補／已處理／全部，標為已處理可留備註），新 action `assistantGaps`／`assistantGapUpdate`（需 `database.manage`）。
+- **個人設定可關閉小黃**：帳號選單 › 個人設定新增「顯示右下角小幫手（小黃）」開關，預設開啟；關閉後右下角小黃與氣泡不再出現。同時存本機（立即生效）與雲端個人設定（`設定` 表新增欄位「小幫手」，「關」＝關，其餘＝開），換裝置也同步。`getUserSettings` 回 `assistantEnabled`，`saveUserSettings` 接 `assistantEnabled`。
+- 測試：`assistant-gaps.test.ts`（合併計次、工具流程、後台關閉／重新開啟、用量報表待補數）、`index.test.ts`（assistantGaps 權限、assistantEnabled 開關）。
+- **之後新增或改版功能時**：請同樣實際走一遍再更新知識庫（`assistant-knowledge*.ts`），不要只憑文件。

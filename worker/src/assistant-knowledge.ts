@@ -5,6 +5,8 @@
  * 系統功能改版時請同步更新這份文字（它不會自動跟著文件更新）。
  */
 
+import { EXTRA_TOPICS } from './assistant-knowledge-pages';
+
 export interface KnowledgeTopic {
   id: string;
   title: string;
@@ -13,7 +15,7 @@ export interface KnowledgeTopic {
   body: string;
 }
 
-export const KNOWLEDGE_TOPICS: KnowledgeTopic[] = [
+const BASE_TOPICS: KnowledgeTopic[] = [
   {
     id: 'cases', title: '案件與填單', summary: '填寫設計需求、案件狀態、階段、加權、批次新增',
     keywords: ['案件', '填單', '需求', '新增', '批次', '狀態', '階段', '加權', '項目細節', '再製', '新製', 'ai判斷', '專案', '看板', '列表'],
@@ -141,6 +143,15 @@ export const KNOWLEDGE_TOPICS: KnowledgeTopic[] = [
     ].join('\n')
   }
 ];
+
+/** 走訪後補寫的主題（assistant-knowledge-pages.ts）：相同 id 取代內建、新 id 加在後面。 */
+function mergeTopics(base: KnowledgeTopic[], extra: KnowledgeTopic[]): KnowledgeTopic[] {
+  const byId = new Map(extra.map(topic => [topic.id, topic]));
+  const merged = base.map(topic => byId.get(topic.id) || topic);
+  const known = new Set(base.map(topic => topic.id));
+  return merged.concat(extra.filter(topic => !known.has(topic.id)));
+}
+export const KNOWLEDGE_TOPICS: KnowledgeTopic[] = mergeTopics(BASE_TOPICS, EXTRA_TOPICS);
 
 export function knowledgeIndex(): string {
   return KNOWLEDGE_TOPICS.map(t => `- ${t.id}｜${t.title}：${t.summary}`).join('\n');

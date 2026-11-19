@@ -203,6 +203,7 @@ export function settingsResponse(row: Row = {}): Row {
     signaturePresetDefault: normalizeSignaturePresetDefaultValue(row['預設簽名檔'], normalizeSignaturePresetsValue(row['簽名檔清單'])), visibleColumns: ordered,
     columnOrder: text(row['專案欄位順序']),
     heroBg: text(row['首頁背景']),
+    assistantEnabled: text(row['小幫手']) !== '關',
     nicknameMap: normalizeNicknameMapValue(row['稱呼對照']),
     filters: { year: text(row['篩選年份']), month: text(row['篩選月份']), status: text(row['篩選狀態']), designer: text(row['篩選姓名']) },
     projectFilters: { month: text(row['專案篩選月份']), status: text(row['專案篩選狀態']), designer: text(row['專案篩選姓名']) },
@@ -561,6 +562,7 @@ export function updateSettingsRow(row: Row, settings: ApiPayload = {}): void {
   }
   if ('selectEnabled' in settings || 'editEnabled' in settings) row['選擇'] = (settings.selectEnabled ?? settings.editEnabled) === false ? '' : 'v';
   if ('timelineEnabled' in settings) row['時間表'] = settings.timelineEnabled ? 'v' : '';
+  if ('assistantEnabled' in settings) row['小幫手'] = settings.assistantEnabled === false || settings.assistantEnabled === 'false' ? '關' : '';
   if (settings.theme || settings['深淺模式']) row['深淺模式'] = /dark|深色/i.test(text(settings.theme || settings['深淺模式'])) ? '深色' : '淺色';
   const collapse = settings.collapseSettings as ApiPayload | undefined;
   if (collapse) {

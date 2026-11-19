@@ -976,7 +976,7 @@
     async function pullFilters(force){
       if(!loggedIn())return;if(!force&&Date.now()-filtPulledAt<20000)return;filtPulledAt=Date.now();
       try{
-        const data=await api('getUserSettings',{account:selfAccount()}),st=data.settings||{};try{applyCloudColOrder(st.columnOrder||st['專案欄位順序'])}catch(err){}try{applyCloudTheme(String(st.theme||''))}catch(err){}
+        const data=await api('getUserSettings',{account:selfAccount()}),st=data.settings||{};try{applyCloudColOrder(st.columnOrder||st['專案欄位順序'])}catch(err){}try{applyCloudTheme(String(st.theme||''))}catch(err){}try{if(typeof st.assistantEnabled==='boolean'&&st.assistantEnabled!==assistantOn())setAssistantOn(st.assistantEnabled,false)}catch(err){}
         const sp=v=>String(v||'').split(/\s*,\s*/).map(x=>x.trim()).filter(Boolean);
         let applied=false,needPush=false;
         const monthsReset=Boolean(window.__monthsAllReset);
@@ -1929,6 +1929,13 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     const st2={loaded:false,loading:false,error:'',display:'',avatar:'',nicknames:[],templates:[],tplDefault:0,presets:[],presetDefault:0,custCurrent:'',custDrafts:new Map(),open:{profile:true,templates:false,nicknames:false,signatures:false,customers:false,groups:new Set()},busy:''};
     const selfAccount=()=>{const s=session();const a=String(s.account||s.user||'').trim().toLowerCase();return a.includes('@')?a:(a?`${a}@emctaipei.com`:'')};
     const canonAcc=v=>{const a=String(v||'').trim().toLowerCase();return !a||a.startsWith('local:')?a:(a.includes('@')?a:`${a}@emctaipei.com`)};
+    /* 右下角小幫手開關（個人設定）：預設開；本機先記一份讓切換立即生效，同時寫進雲端個人設定跨裝置同步 */
+    const assistantOn=()=>{try{return localStorage.getItem('assistantEnabledV1:'+selfAccount())!=='0'}catch(err){return true}};
+    function setAssistantOn(on,sync){
+      try{localStorage.setItem('assistantEnabledV1:'+selfAccount(),on?'1':'0')}catch(err){}
+      try{window.__asRefresh&&window.__asRefresh()}catch(err){}
+      if(sync!==false)api('saveUserSettings',{account:selfAccount(),settings:{assistantEnabled:on}}).catch(()=>{});
+    }
     const sessionDept=()=>sessionValue('designRequestEditorDepartment');
     const sessionRawGroup=()=>sessionValue('designRequestEditorRawGroup');
     function permissionRole(){const acc=selfAccount();const row=(state.permissions||[]).find(r=>canonAcc(r['帳號'])===acc);return String(row?.['角色範本']||'').trim()}
@@ -1996,6 +2003,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       pop.innerHTML=list.map(([l,v])=>`<button type="button" data-fmt-menu="${kind}:${esc(v)}"${kind==='font'&&v?` style="font-family:'${esc(v)}'"`:''}><b>${esc(l)}</b></button>`).join('');
       document.body.appendChild(pop);const r=btn.getBoundingClientRect();pop.style.left=Math.max(8,Math.min(innerWidth-pop.offsetWidth-8,r.left))+'px';pop.style.top=(r.bottom+6)+'px';
     }
+    document.addEventListener('change',e=>{const t=e.target;if(t&&t.id==='setAssistant'){setAssistantOn(t.checked);toast(t.checked?'右下角小幫手已開啟':'右下角小幫手已關閉')}});
     const sectionOpen=k=>st2.open[k]?' open':'';
     function profileHtml(){
       const own=ownDesignerName(),name=own||session().name||session().user,locked=nameLocked(),snapAv=own?'':(personaSnapAvatar(name)||personaSnapAvatar(session().user)||''),url=snapAv||(locked?(pixImg(name)||personAvatar(name)):(st2.avatar||personAvatar(name)));/* snapAv：已用「服裝」頁建立的個人形象快照當頭像，就不再提供上傳照片更換 */
@@ -2003,6 +2011,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         <div class="set-body"><div class="set-profile"><span class="set-avatar">${url?`<img src="${esc(url)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">`:esc(initial(name))}</span>
         <div class="set-fields"><label class="field"><span class="label">顯示名</span><input class="input${locked?' is-locked':''}" id="setDisplayName" maxlength="40" value="${esc(own||st2.display||name)}"${locked?' readonly disabled aria-disabled="true"':''}></label><small>${locked?'此名稱會顯示在帳號選單、案件與信件聯絡人中，已與像素辦公室綁定，不能自行修改。':'此名稱會顯示在帳號選單、案件與信件聯絡人中。'}</small></div></div>
         ${snapAv?'<p class="set-note">頭像使用你在「服裝」頁建立的個人形象快照，不能上傳照片更換。</p>':locked?'<p class="set-note">頭像固定使用像素辦公室的像素大頭，顯示名也已綁定，不能自行更換或修改。</p>':'<div class="set-actions"><button type="button" class="btn" data-avatar-upload>上傳／更換頭像</button></div>'}
+        <label class="set-switch" style="display:flex;gap:10px;align-items:center;margin:14px 0 4px;font-weight:800;cursor:pointer"><input type="checkbox" id="setAssistant"${assistantOn()?' checked':''}><span>顯示右下角小幫手（小黃）</span></label><small>預設開啟；關閉後右下角就不會再出現小黃，也不會彈出氣泡，隨時可以回來打開。</small>
         <div class="set-actions">${locked?'':`<button type="button" class="btn primary" data-set-save="profile"${st2.busy==='profile'?' disabled':''}>${st2.busy==='profile'?'儲存中…':'儲存'}</button>`}</div></div></details>`;
     }
     function templatesHtml(){
@@ -4757,7 +4766,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         return `<div class="as-msg ${m.role==='user'?'as-me':'as-bot'}${m.fresh?' as-in':''}"><div class="as-bubble">${esc(m.content).replace(/\n/g,'<br>')}</div>${fb}</div>`;
       }
       function render(){
-        if(!loggedIn()){const el=document.getElementById('asHelper');if(el)el.remove();return}
+        if(!loggedIn()||!assistantOn()){const el=document.getElementById('asHelper');if(el)el.remove();const h=document.getElementById('asHello');if(h)h.remove();S.fabShown=false;return}
         const el=root(),unread=Boolean(S.ann);
         if(!S.open){
           const drop=S.fabShown?'':' as-drop';S.fabShown=true;
@@ -4851,7 +4860,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       function sync(){
         const acct=loggedIn()?(selfAccount()||session().user):'';
         if(acct!==S.acct){Object.assign(S,{acct,open:false,msgs:[],busy:false,tired:false,ann:null,today:null,farewell:false,loadedFor:''});render()}
-        if(acct&&S.loadedFor!==acct&&state.loaded)load();
+        if(acct&&assistantOn()&&S.loadedFor!==acct&&state.loaded)load();
       }
       /* 滑鼠移到小黃身上：彈出自我介紹／新功能／新聞話題小氣泡（內容是現成的，不呼叫 AI、不花 token；新聞每 3 小時由後端更新） */
       const HELLO_INTRO=ASSISTANT_CHARACTER.intro;
@@ -4904,6 +4913,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const el=document.getElementById('asHelper');if(!el)return;
         el.classList.add('away');hideHello(0);clearTimeout(scrollT);scrollT=setTimeout(()=>el.classList.remove('away'),520);
       },{capture:true,passive:true});
+      window.__asRefresh=()=>{sync();render()};
       setInterval(sync,2000);setTimeout(sync,800);
       return {send,state:S};
     })();

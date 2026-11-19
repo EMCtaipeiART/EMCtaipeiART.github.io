@@ -3132,6 +3132,19 @@ describe('Machi Design API Worker', () => {
     expect(managerDelete).toMatchObject({ ok: true, id: '26080001' });
   });
 
+  it('stores the assistant on/off switch in personal settings (default on) and returns it from getUserSettings', async () => {
+    const token = await login();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => Response.json({ content: { sha: 'assistant-switch-sha' }, commit: { sha: 'assistant-switch-commit' } }));
+    const before = await api({ action: 'getUserSettings' }, token) as { settings: { assistantEnabled: boolean } };
+    expect(before.settings.assistantEnabled).toBe(true);
+    const off = await api({ action: 'saveUserSettings', settings: { assistantEnabled: false } }, token) as { settings: { assistantEnabled: boolean } };
+    expect(off.settings.assistantEnabled).toBe(false);
+    const read = await api({ action: 'getUserSettings' }, token) as { settings: { assistantEnabled: boolean } };
+    expect(read.settings.assistantEnabled).toBe(false);
+    const on = await api({ action: 'saveUserSettings', settings: { assistantEnabled: true } }, token) as { settings: { assistantEnabled: boolean } };
+    expect(on.settings.assistantEnabled).toBe(true);
+  });
+
   it('does not commit to GitHub when saveUserSettings would leave the settings row exactly as it was', async () => {
     const token = await login();
     let commits = 0;
@@ -5921,6 +5934,15 @@ describe('assistant actions', () => {
     expect(result.items[0].title).toBe('品牌設計新作');
     expect(result.tips.length).toBeGreaterThan(3);
     expect((result as unknown as { updates: string[] }).updates).toEqual(['2026-11-19 小黃讀取更新']);
+  });
+
+  it('only lets managers read and update the unanswered-question list', async () => {
+    expect(await api({ action: 'assistantGaps' })).toMatchObject({ ok: false });
+    const other = await seedSession('test.user@emctaipei.com', '測試使用者');
+    expect(await api({ action: 'assistantGaps' }, other)).toMatchObject({ ok: false });
+    expect(await api({ action: 'assistantGapUpdate', id: 'x', status: 'done' }, other)).toMatchObject({ ok: false });
+    const manager = await seedSession('machi.chen@emctaipei.com', 'Machi');
+    expect(await api({ action: 'assistantGaps' }, manager)).toMatchObject({ ok: true, gaps: [], open: 0 });
   });
 
   it('only lets managers read the full question log', async () => {

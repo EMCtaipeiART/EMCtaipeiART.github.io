@@ -46,11 +46,11 @@ export const ASSISTANT_SYSTEM_PROMPT = [
   '- 數字、案名、狀態、日期只能來自工具結果；查不到就說查不到，請對方換關鍵字，絕不自己編。',
   '- 不排名、不評價任何人的效率；不點名吐槽客戶；不轉述信件內文。',
   '- 跟系統功能無關的閒聊，用一句話幽默帶回系統；但問到下面「系統知識」裡的功能時，要認真回答，不要說不知道。',
-  '- 系統功能的回答只能依據 getSystemHelp 查到的內容；查不到就老實說「這部分我不確定」，建議問 Machi，不要編。',
+  '- 系統功能的回答只能依據 getSystemHelp、getRecentChanges、getRecentUpdates 查到的內容，不要編。查不到、或你沒把握時：呼叫 reportUnanswered 把這題記下來（note 簡述你缺什麼資訊），然後告訴使用者「這題我還不會，已經記下來回報給管理者，之後會補上」；絕對不要叫使用者去問 Machi 或任何特定的人。',
   '- 如果使用者問「你會不會記錄／記得我問的問題」，如實回答「會記錄下來，用來改善系統」，不否認也不轉移話題；不要主動提起紀錄，也不要提到管理者、管理功能或任何人看得到紀錄。',
   '系統知識目錄（細節請用 getSystemHelp 查，不要憑印象回答）：',
   knowledgeIndex(),
-  '可用工具：getCaseCounts（案量統計）、findCase（找案件）、getMyToday（登入者今天的待辦）、getSystemHelp（系統功能說明，問功能、操作、規則、哪裡找什麼時先呼叫它，再用查到的內容回答）、getRecentChanges（GitHub 上的最新更新紀錄，最即時；回答時用同仁看得懂的話概述「改了什麼、對他有什麼影響」，不要講程式檔名、內部細節或金鑰）、getRecentUpdates（最近的系統公告；問最近有什麼更新、新功能、改了什麼，或 getSystemHelp 的說明可能過時時呼叫，公告比說明新，兩者衝突以公告為準）。'
+  '可用工具：getCaseCounts（案量統計）、findCase（找案件）、getMyToday（登入者今天的待辦）、getSystemHelp（系統功能說明，問功能、操作、規則、哪裡找什麼時先呼叫它，再用查到的內容回答）、reportUnanswered（答不出來時記錄並回報管理者）、getRecentChanges（GitHub 上的最新更新紀錄，最即時；回答時用同仁看得懂的話概述「改了什麼、對他有什麼影響」，不要講程式檔名、內部細節或金鑰）、getRecentUpdates（最近的系統公告；問最近有什麼更新、新功能、改了什麼，或 getSystemHelp 的說明可能過時時呼叫，公告比說明新，兩者衝突以公告為準）。'
 ].join('\n');
 
 export const ASSISTANT_TOOLS = [
@@ -80,6 +80,11 @@ export const ASSISTANT_TOOLS = [
     name: 'getRecentChanges',
     description: '自動讀取 GitHub 上的系統更新紀錄（最近改了哪些功能、修了什麼），不必等公告。問「最近改了什麼／有什麼新功能／什麼時候改的」時使用；比系統公告更即時。',
     input_schema: { type: 'object', properties: { limit: { type: 'number' } } }
+  },
+  {
+    name: 'reportUnanswered',
+    description: '答不出來、查不到或沒把握時呼叫：把使用者這題記錄下來，回報到後台給管理者補資料。note 簡述缺什麼資訊。呼叫後請告訴使用者已記錄並回報給管理者。',
+    input_schema: { type: 'object', properties: { note: { type: 'string' } } }
   },
   {
     name: 'getSystemHelp',
@@ -236,6 +241,65 @@ export function getRecentUpdates(database: DatabaseSnapshot, args: Row): Row {
   return { found: items.length, updates: items, hint: items.length ? undefined : '目前沒有公開的系統公告' };
 }
 
+/* ---------------------------------------------------------------- 答不出來的問題（回報給管理者） */
+
+export const GAPS_KEY = 'assistantGaps';
+export const GAPS_MAX = 300;
+export interface AssistantGap {
+  id: string; key: string; ts: string; lastTs: string; account: string; user: string; department: string;
+  question: string; note: string; count: number; askers: string[]; status: 'open' | 'done'; adminNote: string; doneAt?: string;
+}
+
+/** 同一題換個標點／空白算同一題，合併計數而不是重複記。 */
+export function gapKey(question: string): string {
+  return question.toLowerCase().replace(/[\s\p{P}\p{S}]/gu, '').slice(0, 80);
+}
+
+export async function reportGap(store: AssistantStore, session: SessionRecord, department: string, question: string, note: string, nowMs: number): Promise<AssistantGap> {
+  const list = (await store.get<AssistantGap[]>(GAPS_KEY)) || [];
+  const key = gapKey(question);
+  const account = canonicalAccount(session.account || session.user);
+  const iso = new Date(nowMs).toISOString();
+  const found = key ? list.find(g => g.status === 'open' && g.key === key) : undefined;
+  if (found) {
+    found.count += 1; found.lastTs = iso;
+    if (!found.askers.includes(account)) found.askers = [...found.askers, account].slice(0, 20);
+    if (note && !found.note.includes(note)) found.note = (found.note ? found.note + '；' : '') + note.slice(0, 120);
+    await store.put(GAPS_KEY, list);
+    return found;
+  }
+  const gap: AssistantGap = {
+    id: nowMs.toString(36) + '-' + Math.floor(Math.random() * 1e6).toString(36), key, ts: iso, lastTs: iso, account, user: session.user, department,
+    question: question.slice(0, ASSISTANT_MAX_MESSAGE), note: note.slice(0, 200), count: 1, askers: [account], status: 'open', adminNote: ''
+  };
+  list.unshift(gap);
+  await store.put(GAPS_KEY, list.slice(0, GAPS_MAX));
+  return gap;
+}
+
+export async function reportUnansweredTool(args: Row, store: AssistantStore, session: SessionRecord, entry: AssistantLogEntry, nowMs: number): Promise<Row> {
+  await reportGap(store, session, entry.department, entry.question, text(args.note), nowMs);
+  entry.gap = true; entry.found = false;
+  return { recorded: true, message: '已記錄並回報給管理者；請告訴使用者這題你還不會、已經回報、之後會補上。' };
+}
+
+export async function listGaps(store: AssistantStore, status = ''): Promise<Row & { ok: boolean }> {
+  const list = ((await store.get<AssistantGap[]>(GAPS_KEY)) || []).filter(g => !status || g.status === status);
+  list.sort((a, b) => (a.status === b.status ? String(b.lastTs).localeCompare(String(a.lastTs)) : a.status === 'open' ? -1 : 1));
+  return { ok: true, action: 'assistantGaps', open: list.filter(g => g.status === 'open').length, gaps: list };
+}
+
+export async function updateGap(store: AssistantStore, payload: Row, nowMs: number): Promise<Row & { ok: boolean }> {
+  const list = (await store.get<AssistantGap[]>(GAPS_KEY)) || [];
+  const gap = list.find(g => g.id === text(payload.id));
+  if (!gap) throw new Error('找不到這筆問題');
+  gap.status = text(payload.status) === 'open' ? 'open' : 'done';
+  gap.adminNote = text(payload.adminNote).slice(0, 300);
+  gap.doneAt = gap.status === 'done' ? new Date(nowMs).toISOString() : undefined;
+  await store.put(GAPS_KEY, list);
+  return { ok: true, action: 'assistantGapUpdate', gap };
+}
+
 /** 自動讀 GitHub 的更新紀錄（MAINTENANCE_LOG.md 檔尾＋最近 commit 標題），不必等管理者發公告。 */
 export async function recentChangesTool(args: Row, store: AssistantStore, nowMs: number, deps: AssistantDeps): Promise<Row> {
   if (!deps.github) return { found: 0, hint: '目前讀不到更新紀錄' };
@@ -265,7 +329,7 @@ export interface AssistantStore {
 export interface AssistantLogEntry {
   id: string; ts: string; account: string; user: string; department: string;
   question: string; answer: string; tools: string[]; found: boolean; tokens: number;
-  helpful: boolean | null; tired: boolean;
+  helpful: boolean | null; tired: boolean; gap?: boolean;
 }
 
 export const usageKey = (day: string, account: string) => `assistantUsage:${day}:${account}`;
@@ -392,10 +456,12 @@ export async function assistantChat(
       const results = await Promise.all(uses.map(async use => {
         const name = text(use.name);
         entry.tools.push(name);
-        const out = name === 'getRecentChanges'
+        const out = name === 'reportUnanswered'
+          ? await reportUnansweredTool((use.input || {}) as Row, store, session, entry, nowMs)
+          : name === 'getRecentChanges'
           ? await recentChangesTool((use.input || {}) as Row, store, nowMs, deps)
           : runAssistantTool(name, (use.input || {}) as Row, database, session, nowMs);
-        if ((typeof out.found === 'number' ? out.found > 0 : !out.error)) entry.found = true;
+        if (!entry.gap && (typeof out.found === 'number' ? out.found > 0 : !out.error)) entry.found = true;
         return { type: 'tool_result', tool_use_id: use.id, content: JSON.stringify(out) };
       }));
       messages.push({ role: 'user', content: results });
@@ -445,7 +511,8 @@ export async function assistantUsageReport(store: AssistantStore, days: number, 
       accounts: [...byAccount.values()].sort((a, b) => b.tokens - a.tokens)
     });
   }
-  return { ok: true, action: 'assistantUsage', dailyLimit: ASSISTANT_DAILY_TOKENS, days: out };
+  const openGaps = ((await store.get<AssistantGap[]>(GAPS_KEY)) || []).filter(g => g.status === 'open').length;
+  return { ok: true, action: 'assistantUsage', dailyLimit: ASSISTANT_DAILY_TOKENS, openGaps, days: out };
 }
 
 /** 管理者用：近 N 天的完整問答紀錄（含問題與回答），最新在前。 */
