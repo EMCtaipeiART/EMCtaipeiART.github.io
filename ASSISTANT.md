@@ -48,8 +48,8 @@
 
 | 工具 | 資料來源 | 用途 |
 | --- | --- | --- |
-| `getCaseCounts` | 已載入的案件資料 | 案量（今日／本週／本月，可依客戶別或設計師分組）；團隊總數不過濾 |
-| `findCase` | 同上，**依登入者可見範圍過濾** | 找案件（最多 3 筆） |
+| `getCaseCounts` | 目前資料庫＋**歷史資料庫**（`data/database_archive.json`，2023 年起） | 案量（今日／本週／本月，或用 `year`／`month` 查任一年月，可依客戶別、設計師或月份分組）；團隊總數不過濾 |
+| `findCase` | 同上（含歷史），**依登入者可見範圍過濾** | 找案件（最多 3 筆，標註來源） |
 | `getMyToday` | 同上 | 待回信（專案負責人且過稿中）、3 天內截稿、今天新進 |
 | `getSystemHelp` | `assistant-knowledge.ts` | 系統功能說明（system prompt 只放主題目錄，細節按需取回以省 token） |
 | `getRecentUpdates` | 後台「系統公告欄」最近 5 則已啟用公告 | 管理者發公告即生效 |
@@ -68,6 +68,7 @@
 | `assistantLog:<台灣日期>`（超過 2000 筆分片 `…:<序號>`） | 問答紀錄：問題、回答、工具、是否查到、tokens、回饋、是否累了 | 180 天 |
 | `assistantNews` | 新聞標題快取（3 小時） | 覆寫 |
 | `assistantChanges` | GitHub 更動快取（30 分鐘） | 覆寫 |
+| （記憶體）歷史資料庫快取 | `assistant-history.ts` 的模組變數，1 小時；不存 storage | Worker／DO 重啟即清空 |
 | `assistantNotes` | **教小黃**的補充說明（最多 200 條：標題、答案、關鍵字、啟用、建立／修改者與時間、來源 gapId） | 手動管理 |
 | `assistantGaps` | 答不出來的問題（最多 300 筆；同一題合併 `count`／`askers`；`status` open／done＋管理者備註） | 手動處理 |
 | `assistantLogCleanupDate` | 清理排程用，一天只跑一次 | — |

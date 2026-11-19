@@ -3230,3 +3230,10 @@
 - **取捨**：首次畫面是「後端目前的快照」，若 GitHub 上的 `db.json` 剛被別處改過，前約 3 秒可能看到舊資料，之後自動更新並提示；以前是永遠先等最新再畫。
 - **重新量測**：①本機模擬（不碰真實後端）`node tools/admin-startup-bench.mjs`（可加 `--root=<另一份 worktree>` 做前後比較、`--stale` 模擬後端快照較舊、`--verify=… --refresh=… --tables=… --table=…` 自訂延遲，需要 puppeteer-core 與 Chrome，Chrome 路徑可用 `CHROME_PATH`）；②正式站實測：在已登入的後台頁開 DevTools Console 執行 `performance.getEntriesByType('resource').filter(r=>r.name.includes('workers.dev')).map(r=>Math.round(r.startTime)+'+'+Math.round(r.duration)).join(' | ')`（每段是「開始時間+耗時」毫秒）。
 - **還可以再快、這次沒做**：a) 驗證與讀資料表同時進行（伺服器對 `/tables` 本來就要求 `database.manage`，沒權限只會被擋，理論上安全，但渲染會用到權限資料，要小心順序）；b) 用輕量的 `publicRevision`（約 0.5 秒）判斷是否真的需要 `refreshDatabase`；c) 縮小 `verifyToken` 的回應（目前約 26 KB）；d) 減少部署次數以避開冷啟動；e) 評估 Worker／DO 的區域設定（基礎延遲約 0.5 秒）。
+
+## 2026-11-19 小黃：可以查詢歷史資料庫（2023 年起的案件）
+- **原因**：小黃原本只讀「目前資料庫」（`backend/data/db.json`，約只留近 3 個月；更早的案件由自動流程歸檔到歷史資料庫 `data/database_archive.json`，約 9 千筆、2023 年起），所以問「去年接了幾案」「某年某客戶的案子」會查不到。
+- **做法**：新增 `worker/src/assistant-history.ts`：從 GitHub 讀 `data/database_archive.json`（只讀、公開 repo），只保留查詢需要的 15 個欄位，**快取在 Worker 記憶體 1 小時**（約 5 MB 原始檔，不存進 storage、不產生 commit）；讀不到時沿用舊快取，完全沒有快取則 5 分鐘內不重試並退回只用目前資料庫，工具結果會註明「歷史資料庫暫時讀不到」，小黃會如實告知。目前資料庫與歷史資料庫依「案件編號」合併，同編號以目前資料庫為準，只存在於歷史的案件標 `__history`。
+- **工具變更**：`getCaseCounts` 新增 `year`、`month`（例如 year=2025、month=3），`groupBy` 新增 `month`（回整年十二個月）；指定年月時不回「進行中」（只有現在有意義），上一期＝去年同期（整年）或上個月。`findCase` 搜尋範圍含歷史，結果標註「來源：歷史資料庫／目前資料庫」。**客戶別可見範圍過濾（`canViewCase`）對歷史案件照樣生效**；團隊案量總數仍不過濾（與原規則一致）。`getMyToday` 仍只看目前資料庫。
+- **驗證**：單元測試（`worker/test/assistant-history.test.ts`：載入與瘦身、快取與失敗沿用舊快取、合併規則、任一年月與逐月統計、找案件權限過濾、工具流程與「讀不到」說明）；另用正式的歷史檔實測：載入約 1.9 秒，案件新進數 2023＝1769、2024＝1953、2025＝2930、2026（至今）＝2574，2025 年前三大客戶為金士頓、soundcore、DJI。
+- 歷史資料庫本身沒有改動；它由「Sync history database with current database」與 `archive-old-cases` 工作流程維護，小黃只讀。
