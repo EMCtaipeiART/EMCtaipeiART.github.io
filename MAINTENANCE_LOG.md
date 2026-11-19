@@ -3275,3 +3275,9 @@
 - **原因**：後台只把「上次看的資料表」記在 `localStorage.databaseAdminLastTable`，工具頁（小黃、操作紀錄、權限總覽、備份與還原、狀態與心跳診斷、平台幣帳本）不在記憶範圍內，重新整理後就回到最後看的資料表。
 - **修正**（`json_database_admin.html`）：新增 `localStorage.databaseAdminLastTool`（assistant／audit／perm／backup／diag／coin）：各工具頁開啟時 `rememberAdminTool()` 記下自己，選資料表時（`rememberAdminTable()`）清掉；`start()` 載入時若有記住的工具頁，先把 `auditMode／coinMode` 設好（避免先畫一次資料表再切換），載入完資料表清單後 `openAdminTool()` 直接回到那一頁。
 - **驗證**（本機模擬後端，修正前後對照）：修正前小黃、操作紀錄按瀏覽器重新整理都回到「資料庫」；修正後都留在原頁並重新讀取各自的資料；選了資料表再重新整理仍回到那張資料表。與上一則「重新讀取按鈕」的修正合起來，工具頁不會再被資料表蓋掉。
+
+## 2026-11-19 小黃頭像旁的 NEW 標籤（時不時閃動一下）
+- 小黃右下角按鈕的頭像左上角新增小小的 **NEW** 標籤（橘紅漸層、白邊）：平常靜止，每 7 秒閃動一下（放大、微晃、發光）；`prefers-reduced-motion` 時不動。
+- **什麼時候出現**：還有「沒看過」的內容時——未讀公告（首頁提示條沒顯示時）、設計新聞、系統更新、科技新聞（與主動彈出泡泡同一份候選清單 `topicCandidates()`，已看過的記在本機 `assistantTopicSeenV1`）。**使用者點開聊天視窗就算全部看過，標籤消失**；主動彈出的泡泡每彈一則也會標成看過。電量用完（充電中）、個人設定關閉小黃時不顯示。
+- 載入後約 3.5 秒算一次，之後每 9 分鐘重算；新聞資料超過 1 小時會重新取，所以有新新聞時標籤會再出現。程式在 `site.js` asHelper 的 `refreshNew／markAllSeen／topicCandidates`，樣式 `.as-new` 在 `site.css` 檔尾；頻率改 `asNewFlash 7s`。
+- 驗證（本機模擬）：載入後有 NEW → 點開聊天視窗後消失 → 重新整理不再出現 → 電量用完時不顯示；閃動的畫面用暫停動畫逐格截圖確認。

@@ -1759,3 +1759,9 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
     .as-head .as-batt-body{fill:rgba(255,255,255,.2);stroke:#fff}
     .as-head .as-batt-cap{fill:#fff;stroke:#fff}
     @media (prefers-reduced-motion:reduce){.as-batt-body,.as-batt-bolt{animation:none}.as-batt-cell{animation:none;opacity:.5}.as-batt-cell.c1{opacity:1}}
+    /* 頭像旁的 NEW 標籤：平常靜止，每 7 秒閃動一下（放大、微晃、發光） */
+    .as-new{position:absolute;top:-6px;left:-14px;padding:1px 6px;border-radius:999px;background:linear-gradient(135deg,#ff6a3d,#e11d48);color:#fff;border:2px solid #fff;font:900 9px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-style:normal;letter-spacing:.08em;box-shadow:0 2px 6px rgba(225,29,72,.45);pointer-events:none;animation:asNewFlash 7s ease-in-out infinite}
+    html[data-theme="dark"] .as-new{border-color:#2a322f}
+    @keyframes asNewFlash{0%,78%,100%{transform:scale(1) rotate(0);box-shadow:0 2px 6px rgba(225,29,72,.45)}82%{transform:scale(1.28) rotate(-7deg);box-shadow:0 0 0 4px rgba(225,29,72,.22),0 0 14px rgba(255,106,61,.85)}86%{transform:scale(1) rotate(0)}90%{transform:scale(1.18) rotate(6deg);box-shadow:0 0 0 3px rgba(225,29,72,.18),0 0 10px rgba(255,106,61,.7)}94%{transform:scale(1) rotate(0)}}
+    @media (max-width:700px){.as-new{top:-4px;left:-10px;font-size:8px}}
+    @media (prefers-reduced-motion:reduce){.as-new{animation:none}}

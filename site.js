@@ -4735,7 +4735,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
        對話只留在頁面記憶體；問答紀錄與額度由後端存在 Durable Object，不寫進 JSON 快照。
        造型之後要換，只要改 .as-avatar 的背景圖（CSS 變數 --as-avatar-img），元件不用動。 */
     const asHelper=(()=>{
-      const S={fabShown:false,enter:false,canUsage:false,acct:'',open:false,min:false,msgs:[],busy:false,tired:false,ann:null,today:null,day:'',farewell:false,loadedFor:''};
+      const S={hasNew:false,fabShown:false,enter:false,canUsage:false,acct:'',open:false,min:false,msgs:[],busy:false,tired:false,ann:null,today:null,day:'',farewell:false,loadedFor:''};
       const tpDay=()=>{const p=taipeiParts();return `${p.year}-${p.month}-${p.day}`};
       const kGreet=()=>'assistantGreetedV1:'+S.acct,kClose=()=>'assistantClosedV1:'+S.acct;
       const lsGet=k=>{try{return localStorage.getItem(k)||''}catch(err){return ''}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(err){}};
@@ -4773,7 +4773,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const el=root(),unread=Boolean(S.ann);
         if(!S.open){
           const drop=S.fabShown?'':' as-drop';S.fabShown=true;
-          el.innerHTML=`<button type="button" class="as-fab${drop}" data-as="open" aria-label="開啟${ASSISTANT_CHARACTER.name}" title="${ASSISTANT_CHARACTER.name}"><span class="as-avatar">${faceHtml()}</span>${unread?'<i class="as-dot" aria-label="有新公告"></i>':''}</button>`;
+          el.innerHTML=`<button type="button" class="as-fab${drop}" data-as="open" aria-label="開啟${ASSISTANT_CHARACTER.name}" title="${ASSISTANT_CHARACTER.name}"><span class="as-avatar">${faceHtml()}</span>${unread?'<i class="as-dot" aria-label="有新公告"></i>':''}${S.hasNew&&!S.tired?'<i class="as-new" aria-label="有新內容">NEW</i>':''}</button>`;
           return;
         }
         S.fabShown=false;const enter=S.enter?' as-enter':'';S.enter=false;
@@ -4790,7 +4790,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       let talkT=0;
       function talk(ms){const el=document.getElementById('asHelper');if(!el)return;el.classList.add('talk');clearTimeout(talkT);talkT=setTimeout(()=>el.classList.remove('talk'),Math.max(600,ms||1200))}
       (function life(){const blink=()=>{const el=document.getElementById('asHelper');if(el){el.classList.add('blink');setTimeout(()=>el.classList.remove('blink'),160)}setTimeout(blink,2200+Math.random()*3800)};setTimeout(blink,1500)})();
-      function openPanel(focus){S.open=true;S.enter=true;hideHello(0);render();if(focus)setTimeout(()=>document.getElementById('asInput')?.focus(),30)}
+      function openPanel(focus){S.open=true;S.enter=true;hideHello(0);markAllSeen();render();if(focus)setTimeout(()=>document.getElementById('asInput')?.focus(),30)}
       function closePanel(){
         if(S.farewell)return;
         S.farewell=true;render();
@@ -4873,7 +4873,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         el.addEventListener('mouseenter',()=>clearTimeout(hello.hideT));el.addEventListener('mouseleave',()=>hideHello(500));
         el.addEventListener('click',e=>{const a=e.target.closest('[data-hello]');if(!a)return;const k=a.dataset.hello;if(k==='close'){hideHello(0)}else if(k==='chat'){hideHello(0);openPanel(true)}else if(k==='ann'){const row=annLatest();hideHello(0);if(row)annOpen(row)}})}return el};
       function hideHello(ms){clearTimeout(hello.hideT);hello.hideT=setTimeout(()=>{const el=document.getElementById('asHello');if(el)el.classList.remove('show')},ms)}
-      function loadTicker(){if(!hello.tickerP)hello.tickerP=api('assistantTicker').then(r=>({items:Array.isArray(r.items)?r.items:[],tips:Array.isArray(r.tips)&&r.tips.length?r.tips:HELLO_TIPS,updates:Array.isArray(r.updates)?r.updates:[]})).catch(()=>({items:[],tips:HELLO_TIPS,updates:[]}));return hello.tickerP}
+      function loadTicker(){if(!hello.tickerP)hello.tickerAt=Date.now(),hello.tickerP=api('assistantTicker').then(r=>({items:Array.isArray(r.items)?r.items:[],tips:Array.isArray(r.tips)&&r.tips.length?r.tips:HELLO_TIPS,updates:Array.isArray(r.updates)?r.updates:[]})).catch(()=>({items:[],tips:HELLO_TIPS,updates:[]}));return hello.tickerP}
       function buildDeck(t){
         const d=[],row=annLatest(),design=t.items.filter(i=>i.topic==='design'),tech=t.items.filter(i=>i.topic!=='design'),tips=[...t.tips].sort(()=>Math.random()-.5);
         if(row)d.push({tag:'最新公告',text:String(row['公告標題']||row['公告版本']||'').slice(0,60),act:'ann'});
@@ -4917,21 +4917,35 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const autoMark=id=>{try{localStorage.setItem(AUTO_SEEN,JSON.stringify([...autoSeen(),id].slice(-80)))}catch(err){}};
       const autoCount=()=>{try{const o=JSON.parse(localStorage.getItem(AUTO_DAY)||'{}');return o.d===tpDay()?Number(o.n)||0:0}catch(err){return 0}};
       const autoBump=()=>{try{localStorage.setItem(AUTO_DAY,JSON.stringify({d:tpDay(),n:autoCount()+1}))}catch(err){}};
+      /* 候選主題（依優先順序）：未讀公告（首頁提示條沒顯示時）→ 設計新聞 → 系統更新 → 科技新聞 */
+      function topicCandidates(t){
+        const row=annLatest(),cands=[],annBar=document.getElementById('annBar');
+        if(row&&!annRead(row)&&(!annBar||annBar.hidden))cands.push({id:'ann:'+String(row['公告版本']||''),tag:'最新公告',text:String(row['公告標題']||row['公告版本']||'').slice(0,60),act:'ann'});
+        t.items.filter(i=>i.topic==='design').forEach(i=>cands.push({id:'n:'+(i.link||i.title),tag:'設計新聞',text:i.title,src:i.source,link:i.link}));
+        (t.updates||[]).slice(0,2).forEach(u=>cands.push({id:'u:'+u,tag:'系統更新',text:String(u).slice(0,70),act:'chat'}));
+        t.items.filter(i=>i.topic!=='design').forEach(i=>cands.push({id:'n:'+(i.link||i.title),tag:'科技新聞',text:i.title,src:i.source,link:i.link}));
+        return cands;
+      }
+      /* 頭像旁的 NEW 標籤：還有沒看過的主題就顯示（時不時閃動一下）；按開聊天視窗就算看過；電量用完、關閉小黃時不顯示 */
+      async function refreshNew(){
+        if(S.tired||!loggedIn()||!assistantOn()){if(S.hasNew){S.hasNew=false;if(!S.open)render()}return}
+        try{const t=await loadTicker(),seen=autoSeen(),has=topicCandidates(t).some(c=>c.id&&!seen.has(c.id));if(has!==S.hasNew){S.hasNew=has;if(!S.open)render()}}catch(err){}
+      }
+      function markAllSeen(){
+        S.hasNew=false;
+        loadTicker().then(t=>{topicCandidates(t).forEach(c=>c.id&&autoMark(c.id));S.hasNew=false;if(!S.open)render()}).catch(()=>{});
+      }
       async function autoHello(){
         if(S.open||S.farewell||S.tired||document.hidden||!loggedIn()||!assistantOn())return;
         const root=document.getElementById('asHelper');if(!root||root.classList.contains('away'))return;
         const shown=document.getElementById('asHello');if(shown&&shown.classList.contains('show'))return;
         if(autoCount()>=AUTO_MAX)return;
-        const t=await loadTicker(),seen=autoSeen(),row=annLatest(),cands=[];
-        const annBar=document.getElementById('annBar');if(row&&!annRead(row)&&(!annBar||annBar.hidden))cands.push({id:'ann:'+String(row['公告版本']||''),tag:'最新公告',text:String(row['公告標題']||row['公告版本']||'').slice(0,60),act:'ann'});
-        t.items.filter(i=>i.topic==='design').forEach(i=>cands.push({id:'n:'+(i.link||i.title),tag:'設計新聞',text:i.title,src:i.source,link:i.link}));
-        (t.updates||[]).slice(0,2).forEach(u=>cands.push({id:'u:'+u,tag:'系統更新',text:String(u).slice(0,70),act:'chat'}));
-        t.items.filter(i=>i.topic!=='design').forEach(i=>cands.push({id:'n:'+(i.link||i.title),tag:'科技新聞',text:i.title,src:i.source,link:i.link}));
-        const pick=cands.find(c=>c.id&&!seen.has(c.id));if(!pick)return;
+        const t=await loadTicker(),seen=autoSeen(),pick=topicCandidates(t).find(c=>c.id&&!seen.has(c.id));if(!pick)return;
         if(S.open||document.hidden)return;/* 等新聞回來的期間使用者可能已經打開聊天視窗 */
-        autoMark(pick.id);autoBump();presentHello(pick,14000);
+        autoMark(pick.id);autoBump();presentHello(pick,14000);refreshNew();
       }
-      setTimeout(autoHello,9000);setInterval(autoHello,9*60*1000);
+      setTimeout(refreshNew,3500);setTimeout(autoHello,9000);
+      setInterval(()=>{if(Date.now()-(hello.tickerAt||0)>3600000)hello.tickerP=null;refreshNew();autoHello()},9*60*1000);
       document.addEventListener('mouseover',e=>{
         const fab=e.target.closest&&e.target.closest('#asHelper .as-fab');if(!fab||!matchMedia('(hover:hover)').matches)return;
         clearTimeout(hello.showT);hello.showT=setTimeout(showHello,320);
@@ -4943,7 +4957,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const el=document.getElementById('asHelper');if(!el)return;
         el.classList.add('away');hideHello(0);clearTimeout(scrollT);scrollT=setTimeout(()=>el.classList.remove('away'),520);
       },{capture:true,passive:true});
-      window.__asRefresh=()=>{sync();render()};
+      window.__asRefresh=()=>{sync();render();refreshNew()};
       setInterval(sync,2000);setTimeout(sync,800);
       return {send,state:S};
     })();
