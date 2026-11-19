@@ -3198,3 +3198,8 @@
 ## 2026-11-19 小黃：電量用完時頭像變成充電中的電池
 - 今天的額度用完（`quota.tired`）時，右下角按鈕與聊天視窗標題列的頭像會換成「充電中的電池」：電池外框、三格電量由下往上依序充滿並循環、閃電跳動發光、外框微微發綠光；標題列副標改成「充電中…明天見」；滑過按鈕的氣泡改成「充電中」卡片，內容是「我今天的電量用完了，正在充電中……明天充飽再來幫你！」。深色模式、標題列（綠底）各有對應配色；`prefers-reduced-motion` 時停用動畫、改靜態半格電量。
 - 實作在 `site.js` asHelper 的 `BATTERY`／`faceHtml()`（`S.tired` 為真就用電池，否則用 `FACE`）與 `site.css` 檔尾 `.as-batt` 區塊；額度判斷與台詞仍在後端（`ASSISTANT_DAILY_TOKENS`）。隔天（台灣時間 0 點後）重新整理頁面就恢復成小黃。
+
+## 2026-11-19 小黃：管理者不受每日 30000 tokens 限制
+- 管理者（`isManager`：角色為管理者、Machi、管理員捷徑帳號）不再受 `ASSISTANT_DAILY_TOKENS` 每日額度限制：不會被擋下、不會顯示「累了」或電池充電畫面、也不會有 80% 電量提醒；`assistantToday` 與 `assistantChat` 回傳的額度固定是 `{usedRatio:0, tired:false}`。
+- 管理者的 tokens 仍照常累計進 `assistantUsage:<日期>:<帳號>` 與問答紀錄，後台「小黃（機器人）」的用量與每人統計照樣看得到。一般帳號的限制與提醒不變。
+- 測試：`worker/test/assistant-manager-quota.test.ts`。

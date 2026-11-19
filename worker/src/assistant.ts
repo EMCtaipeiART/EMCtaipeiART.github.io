@@ -335,7 +335,8 @@ export interface AssistantLogEntry {
 export const usageKey = (day: string, account: string) => `assistantUsage:${day}:${account}`;
 export const logKey = (day: string, shard = 0) => (shard ? `assistantLog:${day}:${shard}` : `assistantLog:${day}`);
 
-export async function quotaState(store: AssistantStore, session: SessionRecord, nowMs: number): Promise<{ usedRatio: number; tired: boolean }> {
+export async function quotaState(store: AssistantStore, session: SessionRecord, nowMs: number, exempt = false): Promise<{ usedRatio: number; tired: boolean }> {
+  if (exempt) return { usedRatio: 0, tired: false };
   const used = Number(await store.get<number>(usageKey(taipeiDay(nowMs), canonicalAccount(session.account || session.user)))) || 0;
   return { usedRatio: Math.min(1, used / ASSISTANT_DAILY_TOKENS), tired: used >= ASSISTANT_DAILY_TOKENS };
 }
@@ -407,7 +408,7 @@ export function cleanHistory(history: unknown): ChatMessage[] {
 export async function assistantToday(database: DatabaseSnapshot, session: SessionRecord, store: AssistantStore, announcement: Row | null, readAccounts: string[], nowMs: number): Promise<Row & { ok: boolean }> {
   const account = canonicalAccount(session.account || session.user);
   const unread = announcement && text(announcement.version) && !readAccounts.includes(account) ? announcement : null;
-  return { ok: true, action: 'assistantToday', today: getMyToday(database, session, nowMs), announcement: unread, quota: await quotaState(store, session, nowMs), day: taipeiDay(nowMs) };
+  return { ok: true, action: 'assistantToday', today: getMyToday(database, session, nowMs), announcement: unread, quota: await quotaState(store, session, nowMs, isManager(database, session)), day: taipeiDay(nowMs) };
 }
 
 export async function assistantChat(
@@ -416,7 +417,7 @@ export async function assistantChat(
   const nowMs = (deps.now || Date.now)();
   const message = text(payload.message).slice(0, ASSISTANT_MAX_MESSAGE);
   if (!message) throw new Error('請輸入想問的問題');
-  if (!deps.apiKey) return { ok: true, action: 'assistantChat', reply: NOT_READY_LINE, skipped: true, logId: null, quota: await quotaState(store, session, nowMs) };
+  if (!deps.apiKey) return { ok: true, action: 'assistantChat', reply: NOT_READY_LINE, skipped: true, logId: null, quota: await quotaState(store, session, nowMs, isManager(database, session)) };
 
   const day = taipeiDay(nowMs);
   const account = canonicalAccount(session.account || session.user);
@@ -429,7 +430,8 @@ export async function assistantChat(
   const usedKey = usageKey(day, account);
   const before = Number(await store.get<number>(usedKey)) || 0;
 
-  if (before >= ASSISTANT_DAILY_TOKENS) {
+  const exempt = isManager(database, session);
+  if (!exempt && before >= ASSISTANT_DAILY_TOKENS) {
     const pick = Math.floor((deps.random || Math.random)() * TIRED_LINES.length) % TIRED_LINES.length;
     entry.answer = TIRED_LINES[pick]; entry.tired = true;
     await appendLog(store, day, entry);
@@ -473,10 +475,10 @@ export async function assistantChat(
 
   const after = before + tokens;
   await store.put(usedKey, after);
-  if (before < ASSISTANT_DAILY_TOKENS * 0.8 && after >= ASSISTANT_DAILY_TOKENS * 0.8) reply = `${reply}\n${LOW_BATTERY_LINE}`;
+  if (!exempt && before < ASSISTANT_DAILY_TOKENS * 0.8 && after >= ASSISTANT_DAILY_TOKENS * 0.8) reply = `${reply}\n${LOW_BATTERY_LINE}`;
   entry.answer = reply; entry.tokens = tokens;
   await appendLog(store, day, entry);
-  return { ok: true, action: 'assistantChat', reply, logId: entry.id, quota: { usedRatio: Math.min(1, after / ASSISTANT_DAILY_TOKENS), tired: after >= ASSISTANT_DAILY_TOKENS } };
+  return { ok: true, action: 'assistantChat', reply, logId: entry.id, quota: exempt ? { usedRatio: 0, tired: false } : { usedRatio: Math.min(1, after / ASSISTANT_DAILY_TOKENS), tired: after >= ASSISTANT_DAILY_TOKENS } };
 }
 
 /* ---------------------------------------------------------------- 管理者用量報表（不含問題與回答內容） */
