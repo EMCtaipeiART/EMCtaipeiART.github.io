@@ -1,5 +1,7 @@
 import { PIXEL_MOVE_MIN_GAP_MS, parseMove, sessionMatchesName } from './pixel-ws';
 import { DurableObject } from 'cloudflare:workers';
+import { getNewsTicker } from './assistant-news';
+import { FEATURE_TIPS } from './assistant-knowledge';
 import { assistantChat, assistantToday, assistantUsageReport, cleanupAssistantStorage, recordFeedback } from './assistant';
 import { DEFAULT_CUSTOMER_CC_EMAILS, latestSystemAnnouncement, publicSystemAnnouncement, systemAnnouncementReadRecords, TABLE_SCHEMAS } from '../../backend/schema.mjs';
 import { normalizeDesignType, splitDetailValues } from '../../backend/weighting.mjs';
@@ -5738,6 +5740,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'assistantUsage') {
         this.requireAccess(database, session, 'database.manage');
         return await assistantUsageReport(this.ctx.storage, Number(payload.days) || 7, Date.now());
+      }
+      if (action === 'assistantTicker') {
+        this.requireSession(session);
+        return { ok: true, action, items: await getNewsTicker(this.ctx.storage, Date.now()), tips: FEATURE_TIPS };
       }
       if (action === 'assistantFeedback') {
         const current = this.requireSession(session);

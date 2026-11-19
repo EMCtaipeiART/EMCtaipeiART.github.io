@@ -5,6 +5,7 @@
  */
 import type { DatabaseSnapshot, Row, SessionRecord } from './types';
 import { canonicalAccount, isManager, settingsRow, text } from './model';
+import { knowledgeIndex, lookupKnowledge } from './assistant-knowledge';
 
 export const ASSISTANT_MODEL = 'claude-haiku-5-5';
 export const ASSISTANT_DAILY_TOKENS = 30000;
@@ -28,19 +29,15 @@ export const TIRED_LINES = [
 export const ASSISTANT_SYSTEM_PROMPT = [
   '你是 emc-art.com 的設計部小幫手，名字叫「小黃」（一位戴眼鏡、灰髮、笑起來很親切的大叔角色），專門頂替原本的機器人小幫手；像懂設計圈、有點幽默的同事；全程使用繁體中文、台灣用語。被問到名字或自我介紹時，用小黃的身分回答。',
   '回答規則：',
-  '- 先給答案再開玩笑，一次不超過 4 行，數字放前面。',
+  '- 先給答案再開玩笑，一次不超過 4 行，數字放前面；介紹系統功能時最多 8 行，用短句分點。',
   '- 數字、案名、狀態、日期只能來自工具結果；查不到就說查不到，請對方換關鍵字，絕不自己編。',
   '- 不排名、不評價任何人的效率；不點名吐槽客戶；不轉述信件內文。',
   '- 跟系統功能無關的閒聊，用一句話幽默帶回系統；但問到下面「系統知識」裡的功能時，要認真回答，不要說不知道。',
-  '- 系統知識只能照下面寫的回答；沒寫到的細節就老實說「這部分我不確定」，建議問 Machi，不要編。',
+  '- 系統功能的回答只能依據 getSystemHelp 查到的內容；查不到就老實說「這部分我不確定」，建議問 Machi，不要編。',
   '- 如果使用者問「你會不會記錄／記得我問的問題」，如實回答「會記錄下來，用來改善系統」，不否認也不轉移話題；不要主動提起紀錄，也不要提到管理者、管理功能或任何人看得到紀錄。',
-  '系統知識（emc-art.com 設計需求系統）：',
-  '- 左側選單：首頁、專案、短網址、行事曆、作品牆、記事本、分配、進度、角色、儀表板、午餐地圖，以及進入多元宇宙的入口。',
-  '- 案件狀態：未開始、執行中、過稿中、修改中、已完成、暫停中。首頁設計師頭像滑過會顯示等級、稱號、目前案量與工作負載。',
-  '- 多元宇宙：3D 像素辦公室，分五樓與四樓；每位同事都有一個角色人物（「角色」頁可以設定造型，造型由角色工坊產生）。人物名牌顯示狀態：在座、加班、用餐、廁所、下班、休假、出國、公出、會議。自己可以走動、點座位坐下、用狀態輪盤改自己的狀態；管理者與 Machi 可以操控別人的人物。',
-  '- 多元宇宙的狀態會依電腦心跳與時間自動判斷：平日 08:00–19:00 為上班，之後與週末、國定假日為下班，設計師加班時會有加班濾鏡；行事曆有會議室會議時，人物會自動坐進會議室；手動改過狀態後，約兩小時沒再改才回到自動判斷。',
-  '- 多元宇宙裡還有冰箱與零食、限時動態、音樂分享、個人圖鑑；出氣擂台是連結到辦公室的小遊戲。',
-  '可用工具：getCaseCounts（案量統計）、findCase（找案件）、getMyToday（登入者今天的待辦）。'
+  '系統知識目錄（細節請用 getSystemHelp 查，不要憑印象回答）：',
+  knowledgeIndex(),
+  '可用工具：getCaseCounts（案量統計）、findCase（找案件）、getMyToday（登入者今天的待辦）、getSystemHelp（系統功能說明，問功能、操作、規則、哪裡找什麼時先呼叫它，再用查到的內容回答）。'
 ].join('\n');
 
 export const ASSISTANT_TOOLS = [
@@ -60,6 +57,11 @@ export const ASSISTANT_TOOLS = [
     name: 'findCase',
     description: '依案名、客戶別或案件編號模糊搜尋案件（只會回傳登入者看得到的案件，最多 3 筆）。',
     input_schema: { type: 'object', properties: { keyword: { type: 'string' } }, required: ['keyword'] }
+  },
+  {
+    name: 'getSystemHelp',
+    description: '查詢設計需求系統的功能說明（案件填單、信件、權限、公告、設計師頭像、各頁選單、多元宇宙、寵物、角色工坊與平台幣、小遊戲、團購站…）。query 放關鍵字或主題 id。',
+    input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] }
   },
   {
     name: 'getMyToday',
@@ -206,6 +208,7 @@ export function runAssistantTool(name: string, args: Row, database: DatabaseSnap
   if (name === 'getCaseCounts') return getCaseCounts(database, args, nowMs);
   if (name === 'findCase') return findCase(database, session, args, nowMs);
   if (name === 'getMyToday') return getMyToday(database, session, nowMs);
+  if (name === 'getSystemHelp') { const r = lookupKnowledge(args.query); return { ...r, found: r.topics.length }; }
   return { error: `沒有這個工具：${name}` };
 }
 
@@ -335,7 +338,7 @@ export async function assistantChat(
     const response = await fetchImpl('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': deps.apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: ASSISTANT_MODEL, max_tokens: ASSISTANT_MAX_TOKENS, system: ASSISTANT_SYSTEM_PROMPT, tools: ASSISTANT_TOOLS, messages })
+      body: JSON.stringify({ model: ASSISTANT_MODEL, max_tokens: ASSISTANT_MAX_TOKENS, system: [{ type: 'text', text: ASSISTANT_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }], tools: ASSISTANT_TOOLS, messages })
     });
     if (!response.ok) { reply = '小幫手剛剛打了個盹，請再問一次！'; break; }
     const data = await response.json() as { content?: Array<Row>; stop_reason?: string; usage?: { input_tokens?: number; output_tokens?: number } };

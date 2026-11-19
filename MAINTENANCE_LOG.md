@@ -3159,3 +3159,9 @@
 ## 2026-11-19 小黃：去掉頭像後面的白色底框
 - `assets/xiaohuang.webp` 改成透明背景（從四邊洪水填色去掉相連的白底，邊緣一圈做半透明去白邊；頭髮裡的高光不受影響）。
 - 浮動按鈕不再有白色圓底、外環與脈動光環，改成角色輪廓的 drop-shadow；標題列頭像也去掉白色圓框。按鈕 58px（手機 48px）。
+
+## 2026-11-19 小黃：滑過氣泡、新聞話題、完整系統知識庫
+- **滑過氣泡**（桌機有 hover 才出現，手機不顯示）：滑鼠停在小黃按鈕 0.3 秒後彈出小氣泡，第一次是自我介紹，之後輪流顯示「最新公告」（可直接開公告彈窗）、「設計新聞」、「科技新聞」、「你知道嗎」（功能小提示）；一輪播完重新洗牌。內容全是現成的，**不呼叫 Claude、不花 token**。程式在 `site.js` asHelper 的 hello 區塊、`site.css` 檔尾。
+- **新聞來源**：後端新 action `assistantTicker`（需登入），由 `worker/src/assistant-news.ts` 每 3 小時從 Google News RSS 抓一次標題（設計相關關鍵字＋科技頭條；刻意不抓政治類），只存標題／來源／連結，快取在 DO storage `assistantNews`；抓不到沿用舊資料並 10 分鐘後重試，前端退回功能小提示。過濾：標題含政治、命案、災難等字眼的丟掉，設計新聞必須含設計相關字。Google News RSS 條款限個人非商業閱讀用途，內部提示用量小，若要長期使用建議改接正式新聞 API。
+- **系統知識庫**：整理 AGENT.md、SYSTEM_OVERVIEW.md、MAINTENANCE_LOG.md、COINS.md、pixel-plaza 三份文件、vent-arena、lens-shop 後寫成 `worker/src/assistant-knowledge.ts`（13 個主題：案件、信件、修改紀錄與 NAS、權限、公告、設計師、選單各頁、多元宇宙、寵物、角色工坊與平台幣、小遊戲、團購站）。system prompt 只放主題目錄，新工具 `getSystemHelp` 依關鍵字取回細節，問到功能時才花 token；prompt 加上 `cache_control` 讓固定內容走快取。**系統功能改版時要同步更新這份知識庫**（它不會自動跟著文件）。
+- 測試：`worker/test/assistant.test.ts` 新增知識查詢、getSystemHelp 工具流程與 system 區塊快取、RSS 解析與過濾、3 小時快取與失敗沿用舊資料；`index.test.ts` 新增 assistantTicker（未登入被拒、登入回新聞與小提示）。

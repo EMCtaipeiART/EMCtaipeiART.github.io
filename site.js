@@ -4773,7 +4773,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       let talkT=0;
       function talk(ms){const el=document.getElementById('asHelper');if(!el)return;el.classList.add('talk');clearTimeout(talkT);talkT=setTimeout(()=>el.classList.remove('talk'),Math.max(600,ms||1200))}
       (function life(){const blink=()=>{const el=document.getElementById('asHelper');if(el){el.classList.add('blink');setTimeout(()=>el.classList.remove('blink'),160)}setTimeout(blink,2200+Math.random()*3800)};setTimeout(blink,1500)})();
-      function openPanel(focus){S.open=true;S.enter=true;render();if(focus)setTimeout(()=>document.getElementById('asInput')?.focus(),30)}
+      function openPanel(focus){S.open=true;S.enter=true;hideHello(0);render();if(focus)setTimeout(()=>document.getElementById('asInput')?.focus(),30)}
       function closePanel(){
         if(S.farewell)return;
         S.farewell=true;render();
@@ -4848,11 +4848,55 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(acct!==S.acct){Object.assign(S,{acct,open:false,msgs:[],busy:false,tired:false,ann:null,today:null,farewell:false,loadedFor:''});render()}
         if(acct&&S.loadedFor!==acct&&state.loaded)load();
       }
+      /* 滑鼠移到小黃身上：彈出自我介紹／新功能／新聞話題小氣泡（內容是現成的，不呼叫 AI、不花 token；新聞每 3 小時由後端更新） */
+      const HELLO_INTRO='嗨，我是小黃，設計部的小幫手！我能幫你查案量、找案件、介紹系統功能；有新公告或設計圈新聞也會跟你說。點我就能問～';
+      const HELLO_TIPS=['多元宇宙裡有寵物貓和狗，可以摸摸貓、餵點心，也能丟球給狗撿喔。','走進元宇宙五樓影廳中央，就能玩「設計部遠征隊」小遊戲。','想換個心情？出氣擂台有 8 種道具可以打，連擊越多倍率越高。','角色工坊可以用 AI 生出自己的元宇宙人物，第一個人物免費。','案件寄信可以「排程」，選好時間按送出就會自動寄。','首頁設計師頭像滑過去，可以看到等級、稱號和工作負載。','午餐不知道吃什麼？左側選單有「午餐地圖」。','行事曆有會議時，元宇宙裡的人物會自己走進會議室。'];
+      const hello={deck:null,idx:-1,seen:false,tickerP:null,hideT:0,showT:0};
+      const helloEl=()=>{let el=document.getElementById('asHello');if(!el){el=document.createElement('div');el.id='asHello';el.className='as-hello';el.hidden=true;document.body.appendChild(el);
+        el.addEventListener('mouseenter',()=>clearTimeout(hello.hideT));el.addEventListener('mouseleave',()=>hideHello(500));
+        el.addEventListener('click',e=>{const a=e.target.closest('[data-hello]');if(!a)return;const k=a.dataset.hello;if(k==='chat'){hideHello(0);openPanel(true)}else if(k==='ann'){const row=annLatest();hideHello(0);if(row)annOpen(row)}})}return el};
+      function hideHello(ms){clearTimeout(hello.hideT);hello.hideT=setTimeout(()=>{const el=document.getElementById('asHello');if(el)el.classList.remove('show')},ms)}
+      function loadTicker(){if(!hello.tickerP)hello.tickerP=api('assistantTicker').then(r=>({items:Array.isArray(r.items)?r.items:[],tips:Array.isArray(r.tips)&&r.tips.length?r.tips:HELLO_TIPS})).catch(()=>({items:[],tips:HELLO_TIPS}));return hello.tickerP}
+      function buildDeck(t){
+        const d=[],row=annLatest(),design=t.items.filter(i=>i.topic==='design'),tech=t.items.filter(i=>i.topic!=='design'),tips=[...t.tips].sort(()=>Math.random()-.5);
+        if(row)d.push({tag:'最新公告',text:String(row['公告標題']||row['公告版本']||'').slice(0,60),act:'ann'});
+        const n=Math.max(design.length,tech.length,tips.length);
+        for(let i=0;i<n;i++){
+          if(design[i])d.push({tag:'設計新聞',text:design[i].title,src:design[i].source,link:design[i].link});
+          if(tips[i])d.push({tag:'你知道嗎',text:tips[i]});
+          if(tech[i])d.push({tag:'科技新聞',text:tech[i].title,src:tech[i].source,link:tech[i].link});
+        }
+        return d;
+      }
+      async function showHello(){
+        if(S.open||S.farewell||document.getElementById('asHelper')?.classList.contains('away'))return;
+        const fab=document.querySelector('#asHelper .as-fab');if(!fab)return;
+        let card;
+        if(!hello.seen){hello.seen=true;card={tag:'自我介紹',text:HELLO_INTRO,act:'chat'}}
+        else{
+          if(!hello.deck){hello.deck=buildDeck(await loadTicker());hello.idx=-1}
+          if(!hello.deck.length)hello.deck=buildDeck({items:[],tips:HELLO_TIPS});
+          hello.idx=(hello.idx+1)%hello.deck.length;card=hello.deck[hello.idx];
+          if(hello.idx===hello.deck.length-1)hello.deck=null;/* 一輪播完再重新洗牌（也會拿到新的新聞） */
+        }
+        if(!document.querySelector('#asHelper .as-fab:hover')&&!document.querySelector('#asHello:hover'))return;/* 等待新聞期間滑鼠已離開就不彈 */
+        const el=helloEl(),r=fab.getBoundingClientRect();
+        const cta=card.act==='ann'?'<button type="button" data-hello="ann">帶我去看</button>':card.link?`<a href="${esc(card.link)}" target="_blank" rel="noopener noreferrer">看全文</a>`:'';
+        el.innerHTML=`<span class="as-hello-tag">${esc(card.tag)}</span><p>${esc(card.text)}</p><div class="as-hello-foot">${card.src?`<small>${esc(card.src)}</small>`:'<small></small>'}<span>${cta}<button type="button" data-hello="chat">問問小黃</button></span></div>`;
+        el.style.right=Math.max(8,innerWidth-r.right)+'px';el.style.bottom=Math.max(8,innerHeight-r.top+12)+'px';
+        el.hidden=false;void el.offsetWidth;el.classList.add('show');
+        clearTimeout(hello.hideT);talk(1800);hideHello(card.link?7000:5500);
+      }
+      document.addEventListener('mouseover',e=>{
+        const fab=e.target.closest&&e.target.closest('#asHelper .as-fab');if(!fab||!matchMedia('(hover:hover)').matches)return;
+        clearTimeout(hello.showT);hello.showT=setTimeout(showHello,320);
+      });
+      document.addEventListener('mouseout',e=>{const fab=e.target.closest&&e.target.closest('#asHelper .as-fab');if(fab){clearTimeout(hello.showT);hideHello(900)}});
       let scrollT=0;
       addEventListener('scroll',e=>{
         if(S.open||(e.target&&e.target.closest&&e.target.closest('#asHelper')))return;
         const el=document.getElementById('asHelper');if(!el)return;
-        el.classList.add('away');clearTimeout(scrollT);scrollT=setTimeout(()=>el.classList.remove('away'),520);
+        el.classList.add('away');hideHello(0);clearTimeout(scrollT);scrollT=setTimeout(()=>el.classList.remove('away'),520);
       },{capture:true,passive:true});
       setInterval(sync,2000);setTimeout(sync,800);
       return {send,state:S};

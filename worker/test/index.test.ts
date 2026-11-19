@@ -5907,6 +5907,19 @@ describe('assistant actions', () => {
     }
   });
 
+  it('serves the hover ticker only to logged-in users, from a cached news fetch', async () => {
+    expect(await api({ action: 'assistantTicker' })).toMatchObject({ ok: false });
+    const token = await seedSession('machi.chen@emctaipei.com', 'Machi');
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      if (String(input).startsWith('https://news.google.com/')) return new Response('<rss><channel><item><title>品牌設計新作 - 誌</title><link>https://news.example/x</link><source url="x">誌</source></item></channel></rss>');
+      throw new Error('unexpected fetch ' + String(input));
+    });
+    const result = await api({ action: 'assistantTicker' }, token) as { ok: boolean; items: Array<{ title: string }>; tips: string[] };
+    expect(result.ok).toBe(true);
+    expect(result.items[0].title).toBe('品牌設計新作');
+    expect(result.tips.length).toBeGreaterThan(3);
+  });
+
   it('only lets managers read the usage report', async () => {
     expect(await api({ action: 'assistantUsage' })).toMatchObject({ ok: false });
     const manager = await seedSession('machi.chen@emctaipei.com', 'Machi');
