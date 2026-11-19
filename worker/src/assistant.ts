@@ -8,6 +8,7 @@ import { canonicalAccount, isManager, settingsRow, text } from './model';
 import { knowledgeIndex, lookupKnowledge } from './assistant-knowledge';
 import { getChangeLog, type GithubSource } from './assistant-changes';
 import { loadHistoryRows, mergeCaseRows } from './assistant-history';
+import { getCalendarTool, getDutyTool, type CalendarDeps } from './assistant-calendar';
 import { recentSystemAnnouncements } from '../../backend/schema.mjs';
 
 export const ASSISTANT_MODEL = 'claude-haiku-5-5';
@@ -43,6 +44,7 @@ export const ASSISTANT_SYSTEM_PROMPT = [
   `你是 emc-art.com 設計部的解答小幫手，名字叫「${ASSISTANT_CHARACTER.name}」（${ASSISTANT_CHARACTER.look}）。你不是常駐的機器人，身分是${ASSISTANT_CHARACTER.backstory}。像懂設計圈、有點幽默的同事；全程使用繁體中文、台灣用語。`,
   '關於你的身分：被問到你是誰、為什麼是你、會不會被換掉時，用上面的設定輕鬆自嘲著回答（例如「剛失業，來設計部打工代班」「之後可能被熱門話題的新角色接班」），但不要影射真實人物或公司真實的人事狀況；回答完仍然正經幫忙，不要消極、不要一直聊自己。',
   '回答規則：',
+  '- 行事曆資料是公開的，可以回答任何設計師的行程與請假；只依工具結果回答時間與標題，沒有的行程不要猜；日期都是台灣時間。',
   '- 先給答案再開玩笑，一次不超過 4 行，數字放前面；介紹系統功能時最多 8 行，用短句分點。',
   '- 案量與找案件涵蓋歷史資料庫（2023 年起）：問去年、某一年或某月就用 getCaseCounts 的 year／month，不要說查不到歷史；數字、案名、狀態、日期只能來自工具結果；查不到就說查不到，請對方換關鍵字，絕不自己編。',
   '- 不排名、不評價任何人的效率；不點名吐槽客戶；不轉述信件內文。',
@@ -52,7 +54,7 @@ export const ASSISTANT_SYSTEM_PROMPT = [
   '- 如果使用者問「你會不會記錄／記得我問的問題」，如實回答「會記錄下來，用來改善系統」，不否認也不轉移話題；不要主動提起紀錄，也不要提到管理者、管理功能或任何人看得到紀錄。',
   '系統知識目錄（細節請用 getSystemHelp 查，不要憑印象回答）：',
   knowledgeIndex(),
-  '可用工具：getCaseCounts（案量統計）、findCase（找案件）、getMyToday（登入者今天的待辦）、getSystemHelp（系統功能說明，問功能、操作、規則、哪裡找什麼時先呼叫它，再用查到的內容回答）、reportUnanswered（答不出來時記錄並回報管理者）、getRecentChanges（GitHub 上的最新更新紀錄，最即時；回答時用同仁看得懂的話概述「改了什麼、對他有什麼影響」，不要講程式檔名、內部細節或金鑰）、getRecentUpdates（最近的系統公告；問最近有什麼更新、新功能、改了什麼，或 getSystemHelp 的說明可能過時時呼叫，公告比說明新，兩者衝突以公告為準）。'
+  '可用工具：getCaseCounts（案量統計）、findCase（找案件）、getMyToday（登入者今天的待辦）、getDuty（值日生與雙週會）、getCalendar（設計師行事曆：會議、請假、出差，公開資料，任何人都能問，查自己的行程用 who=me）、getSystemHelp（系統功能說明，問功能、操作、規則、哪裡找什麼時先呼叫它，再用查到的內容回答）、reportUnanswered（答不出來時記錄並回報管理者）、getRecentChanges（GitHub 上的最新更新紀錄，最即時；回答時用同仁看得懂的話概述「改了什麼、對他有什麼影響」，不要講程式檔名、內部細節或金鑰）、getRecentUpdates（最近的系統公告；問最近有什麼更新、新功能、改了什麼，或 getSystemHelp 的說明可能過時時呼叫，公告比說明新，兩者衝突以公告為準）。'
 ].join('\n');
 
 export const ASSISTANT_TOOLS = [
@@ -89,6 +91,16 @@ export const ASSISTANT_TOOLS = [
     name: 'reportUnanswered',
     description: '答不出來、查不到或沒把握時呼叫：把使用者這題記錄下來，回報到後台給管理者補資料。note 簡述缺什麼資訊。呼叫後請告訴使用者已記錄並回報給管理者。',
     input_schema: { type: 'object', properties: { note: { type: 'string' } } }
+  },
+  {
+    name: 'getDuty',
+    description: '查值日生輪值與每月兩場雙週會的日期（14:00–15:00、會議室 H）。預設本月起 3 個月；可給 year、month、months。問「這個月誰值日」「下個月輪到誰」「雙週會哪天」時使用。',
+    input_schema: { type: 'object', properties: { year: { type: 'number' }, month: { type: 'number' }, months: { type: 'number' } } }
+  },
+  {
+    name: 'getCalendar',
+    description: '查設計部五位設計師的行事曆（會議、請假、出差；Google 行事曆＋人資假單，內容是公開的，任何人都可以問）。預設今天起 7 天；可給 from、to（YYYY-MM-DD）或 days（最多 31）；who 填設計師名字，查自己填 me；kind 可填 leave（只看請假出差）或 meeting（只看會議行程）。問「今天有什麼會議」「某某這週有沒有請假」「誰明天休假」時使用。',
+    input_schema: { type: 'object', properties: { from: { type: 'string' }, to: { type: 'string' }, days: { type: 'number' }, who: { type: 'string' }, kind: { type: 'string', enum: ['leave', 'meeting'] } } }
   },
   {
     name: 'getSystemHelp',
@@ -502,7 +514,7 @@ export async function cleanupAssistantStorage(store: AssistantStore, nowMs: numb
 /* ---------------------------------------------------------------- Claude API */
 
 type ChatMessage = { role: 'user' | 'assistant'; content: unknown };
-export interface AssistantDeps {
+export interface AssistantDeps extends CalendarDeps {
   apiKey?: string;
   fetchImpl?: typeof fetch;
   now?: () => number;
@@ -580,7 +592,11 @@ export async function assistantChat(
       const results = await Promise.all(uses.map(async use => {
         const name = text(use.name);
         entry.tools.push(name);
-        const out = name === 'getSystemHelp'
+        const out = name === 'getDuty'
+          ? await getDutyTool((use.input || {}) as Row, deps, nowMs)
+          : name === 'getCalendar'
+          ? await getCalendarTool((use.input || {}) as Row, deps, nowMs, [session.user, text(profile['名字']), text(profile['顯示名'])].filter(Boolean))
+          : name === 'getSystemHelp'
           ? await systemHelpTool((use.input || {}) as Row, store)
           : name === 'reportUnanswered'
           ? (deps.dryRun ? { recorded: false, message: '（試問模式：不會真的記錄）請告訴使用者這題你還不會、已經回報、之後會補上。' } : await reportUnansweredTool((use.input || {}) as Row, store, session, entry, nowMs))

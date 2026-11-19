@@ -51,6 +51,8 @@
 | `getCaseCounts` | 目前資料庫＋**歷史資料庫**（`data/database_archive.json`，2023 年起） | 案量（今日／本週／本月，或用 `year`／`month` 查任一年月，可依客戶別、設計師或月份分組）；團隊總數不過濾 |
 | `findCase` | 同上（含歷史），**依登入者可見範圍過濾** | 找案件（最多 3 筆，標註來源） |
 | `getMyToday` | 同上 | 待回信（專案負責人且過稿中）、3 天內截稿、今天新進 |
+| `getDuty` | `dutyWho`（輪值表＋手動替換）、`duty.ts` 的雙週會日期 | 值日生與雙週會 |
+| `getCalendar` | `designCalendarCore`（Google 行事曆＋人資假單，公開資料，**不做設計部限定的權限檢查**） | 設計師的會議、請假、出差；who=me 查自己 |
 | `getSystemHelp` | `assistant-knowledge.ts` | 系統功能說明（system prompt 只放主題目錄，細節按需取回以省 token） |
 | `getRecentUpdates` | 後台「系統公告欄」最近 5 則已啟用公告 | 管理者發公告即生效 |
 | `reportUnanswered` | 寫進 DO storage `assistantGaps` | **答不出來、查不到或沒把握時呼叫**：把使用者原本的問題記錄下來（同一題合併計次）回報給管理者；小黃告訴使用者「這題我還不會，已經記下來回報給管理者，之後會補上」，**絕不叫人去問 Machi 或任何特定的人** |

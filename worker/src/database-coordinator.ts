@@ -2640,7 +2640,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const current = this.requireSession(session);
     const department = text(settingsRow(database, current.account || current.user)?.['部門']);
     if (department !== '設計部' && !isManager(database, current)) throw new Error('行事曆僅限設計部人員使用');
-    const from = text(payload.from), to = text(payload.to);
+    return this.designCalendarCore(text(payload.from), text(payload.to));
+  }
+
+  /** 設計部行事曆核心（不含權限檢查，呼叫端自己負責）：給 designCalendar 與小黃共用。 */
+  private async designCalendarCore(from: string, to: string): Promise<ApiResult> {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) throw new Error('日期格式錯誤');
     const timeMin = `${from}T00:00:00+08:00`, timeMax = `${to}T23:59:59+08:00`;
     const minMs = Date.parse(timeMin), maxMs = Date.parse(timeMax);
@@ -5336,6 +5340,15 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   private auditFlushing = false;
   /** Cron 每分鐘呼叫：佇列有 50 筆以上、或最舊的一筆超過 5 分鐘才寫入，避免頻繁 commit */
   /** 一次性資料遷移：把案件表裡還留著的「已取消」改成「暫停中」（之後任何寫入也會順手修正）。每分鐘排程呼叫，沒有殘留就什麼都不做。 */
+  /** 小黃的行事曆與值日生資料來源（行事曆內容公開，不做設計部限定的權限檢查）。 */
+  private assistantCalendarDeps(): { calendar: (from: string, to: string) => Promise<{ events: Row[]; unreadable: string[] }>; dutyWho: (year: number, month0: number) => Promise<string>; calendarOwners: string[] } {
+    return {
+      calendar: async (from, to) => { const data = await this.designCalendarCore(from, to) as unknown as { events?: Row[]; unreadable?: string[] }; return { events: data.events || [], unreadable: data.unreadable || [] }; },
+      dutyWho: (year, month0) => this.dutyWho(year, month0),
+      calendarOwners: Object.keys(PIXEL_OFFICE_CALENDARS)
+    };
+  }
+
   /** 小黃讀 GitHub 更新紀錄用的 repo 設定（公開 repo，GITHUB_TOKEN 只用來提高 API 額度）。 */
   private githubSource(): { owner: string; repo: string; branch: string; token?: string } {
     const env = this.env as unknown as Record<string, string | undefined>;
@@ -5742,7 +5755,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       }
       if (action === 'assistantChat') {
         const current = this.requireSession(session);
-        return await assistantChat(payload, database, current, this.ctx.storage, { apiKey: (this.env as { ANTHROPIC_API_KEY?: string }).ANTHROPIC_API_KEY, github: this.githubSource() });
+        return await assistantChat(payload, database, current, this.ctx.storage, { apiKey: (this.env as { ANTHROPIC_API_KEY?: string }).ANTHROPIC_API_KEY, github: this.githubSource(), ...this.assistantCalendarDeps() });
       }
       if (action === 'assistantUsage') {
         this.requireAccess(database, session, 'database.manage');
@@ -5779,7 +5792,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       }
       if (action === 'assistantTrial') {
         const current = this.requireAccess(database, session, 'database.manage');
-        return await assistantChat({ message: payload.message }, database, current, this.ctx.storage, { apiKey: (this.env as { ANTHROPIC_API_KEY?: string }).ANTHROPIC_API_KEY, github: this.githubSource(), dryRun: true });
+        return await assistantChat({ message: payload.message }, database, current, this.ctx.storage, { apiKey: (this.env as { ANTHROPIC_API_KEY?: string }).ANTHROPIC_API_KEY, github: this.githubSource(), ...this.assistantCalendarDeps(), dryRun: true });
       }
       if (action === 'assistantFeedback') {
         const current = this.requireSession(session);

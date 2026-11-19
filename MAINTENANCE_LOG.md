@@ -3237,3 +3237,10 @@
 - **工具變更**：`getCaseCounts` 新增 `year`、`month`（例如 year=2025、month=3），`groupBy` 新增 `month`（回整年十二個月）；指定年月時不回「進行中」（只有現在有意義），上一期＝去年同期（整年）或上個月。`findCase` 搜尋範圍含歷史，結果標註「來源：歷史資料庫／目前資料庫」。**客戶別可見範圍過濾（`canViewCase`）對歷史案件照樣生效**；團隊案量總數仍不過濾（與原規則一致）。`getMyToday` 仍只看目前資料庫。
 - **驗證**：單元測試（`worker/test/assistant-history.test.ts`：載入與瘦身、快取與失敗沿用舊快取、合併規則、任一年月與逐月統計、找案件權限過濾、工具流程與「讀不到」說明）；另用正式的歷史檔實測：載入約 1.9 秒，案件新進數 2023＝1769、2024＝1953、2025＝2930、2026（至今）＝2574，2025 年前三大客戶為金士頓、soundcore、DJI。
 - 歷史資料庫本身沒有改動；它由「Sync history database with current database」與 `archive-old-cases` 工作流程維護，小黃只讀。
+
+## 2026-11-19 小黃可以查行事曆與值日生
+- **新工具**（`worker/src/assistant-calendar.ts`）：①`getDuty`：值日生輪值（Leona→Anna→Machi→Noise→Amber，已反映手動替換）與每月兩場雙週會日期（第 2、第 4 個星期三 14:00–15:00、會議室 H），預設從本月起 3 個月，可指定 year／month／months；②`getCalendar`：設計部五位設計師的行事曆（Google 行事曆＋人資假單的會議、請假、出差），預設今天起 7 天，可給 from／to／days（最多 31 天）、who（設計師名字，查自己填 me）、kind（leave 只看請假出差、meeting 只看會議行程）。時間一律台灣時間；回傳會議室、全天事件、「部分行事曆暫時讀不到」的提示。
+- **權限（使用者指定）**：行事曆內容是公開的，所以**任何登入者都可以問任何人的行程與請假**，不做設計部限定的檢查；活動標題照行事曆顯示（私人活動 Google 本來就只顯示「忙碌」）。原本 `designCalendar` action 仍只開放設計部與管理者，沒有改變。
+- **實作**：`database-coordinator.ts` 把 `designCalendar` 拆成「權限檢查」與 `designCalendarCore(from,to)`（含 2 分鐘快取），小黃透過 `assistantCalendarDeps()` 取得核心、`dutyWho`（值日生含替換）與有行事曆的名單，不經過權限檢查；system prompt 補上行事曆規則與工具說明。
+- **限制**：資料來自 Durable Object 內既有的 Google 連線（用 `PIXEL_OFFICE_CALENDAR_ACCOUNT` 的 token）與人資假單，連線失效時小黃會回報「暫時讀不到」；一般專案部同仁沒有自己的行事曆，問「我的行程」時會說明只能查設計師。這次單元測試用模擬行事曆驗證，**尚未用真實 Google 行事曆實測**。
+- 測試：`worker/test/assistant-calendar.test.ts`。
