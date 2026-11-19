@@ -3165,3 +3165,8 @@
 - **新聞來源**：後端新 action `assistantTicker`（需登入），由 `worker/src/assistant-news.ts` 每 3 小時從 Google News RSS 抓一次標題（設計相關關鍵字＋科技頭條；刻意不抓政治類），只存標題／來源／連結，快取在 DO storage `assistantNews`；抓不到沿用舊資料並 10 分鐘後重試，前端退回功能小提示。過濾：標題含政治、命案、災難等字眼的丟掉，設計新聞必須含設計相關字。Google News RSS 條款限個人非商業閱讀用途，內部提示用量小，若要長期使用建議改接正式新聞 API。
 - **系統知識庫**：整理 AGENT.md、SYSTEM_OVERVIEW.md、MAINTENANCE_LOG.md、COINS.md、pixel-plaza 三份文件、vent-arena、lens-shop 後寫成 `worker/src/assistant-knowledge.ts`（13 個主題：案件、信件、修改紀錄與 NAS、權限、公告、設計師、選單各頁、多元宇宙、寵物、角色工坊與平台幣、小遊戲、團購站）。system prompt 只放主題目錄，新工具 `getSystemHelp` 依關鍵字取回細節，問到功能時才花 token；prompt 加上 `cache_control` 讓固定內容走快取。**系統功能改版時要同步更新這份知識庫**（它不會自動跟著文件）。
 - 測試：`worker/test/assistant.test.ts` 新增知識查詢、getSystemHelp 工具流程與 system 區塊快取、RSS 解析與過濾、3 小時快取與失敗沿用舊資料；`index.test.ts` 新增 assistantTicker（未登入被拒、登入回新聞與小提示）。
+
+## 2026-11-19 後台新增「小黃（機器人）」追蹤頁
+- `json_database_admin.html` 左側選單「問題回報」群組底下新增「小黃（機器人）」：近 1／7／14／30 天的提問數、使用人數、總 tokens、有幫助率、查不到資料與累了次數，每日用量表、每人用量表（含有幫助／沒幫助），以及可展開看回答的完整問答紀錄；可依「沒幫助／有幫助／還沒回饋／查不到／累了」篩選，搜尋框可搜問題、回答與人名，可匯出問答 CSV。
+- 後端新增 action `assistantLogs`（需 `database.manage`）回傳最新 N 筆完整問答（含問題與回答）；`assistantUsage` 的每人統計補上部門與有幫助／沒幫助次數。資料仍存在 DO storage、保留 180 天。
+- 這是第一期「不做讀取紀錄的 API」之後經使用者要求新增的功能；問答內容只有管理者看得到。

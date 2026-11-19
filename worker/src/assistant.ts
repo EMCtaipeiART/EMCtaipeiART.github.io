@@ -373,7 +373,7 @@ export async function assistantChat(
 
 export interface AssistantUsageDay {
   day: string; questions: number; tokens: number; tired: number; helpful: number; unhelpful: number; notFound: number;
-  accounts: Array<{ account: string; user: string; questions: number; tokens: number }>;
+  accounts: Array<{ account: string; user: string; department: string; questions: number; tokens: number; helpful: number; unhelpful: number }>;
 }
 
 export async function assistantUsageReport(store: AssistantStore, days: number, nowMs: number): Promise<Row & { ok: boolean }> {
@@ -386,10 +386,12 @@ export async function assistantUsageReport(store: AssistantStore, days: number, 
       if ((key === logKey(day) || key.startsWith(`assistantLog:${day}:`)) && Array.isArray(value)) entries.push(...value);
     }
     if (!entries.length) { out.push({ day, questions: 0, tokens: 0, tired: 0, helpful: 0, unhelpful: 0, notFound: 0, accounts: [] }); continue; }
-    const byAccount = new Map<string, { account: string; user: string; questions: number; tokens: number }>();
+    const byAccount = new Map<string, { account: string; user: string; department: string; questions: number; tokens: number; helpful: number; unhelpful: number }>();
     for (const e of entries) {
-      const row = byAccount.get(e.account) || { account: e.account, user: e.user, questions: 0, tokens: 0 };
+      const row = byAccount.get(e.account) || { account: e.account, user: e.user, department: e.department, questions: 0, tokens: 0, helpful: 0, unhelpful: 0 };
       row.questions += 1; row.tokens += Number(e.tokens) || 0;
+      if (e.helpful === true) row.helpful += 1;
+      if (e.helpful === false) row.unhelpful += 1;
       byAccount.set(e.account, row);
     }
     out.push({
@@ -400,4 +402,19 @@ export async function assistantUsageReport(store: AssistantStore, days: number, 
     });
   }
   return { ok: true, action: 'assistantUsage', dailyLimit: ASSISTANT_DAILY_TOKENS, days: out };
+}
+
+/** 管理者用：近 N 天的完整問答紀錄（含問題與回答），最新在前。 */
+export async function assistantLogsReport(store: AssistantStore, days: number, limit: number, nowMs: number): Promise<Row & { ok: boolean }> {
+  const span = Math.min(30, Math.max(1, Math.floor(days) || 7));
+  const cap = Math.min(1000, Math.max(1, Math.floor(limit) || 300));
+  const all: AssistantLogEntry[] = [];
+  for (let i = 0; i < span; i += 1) {
+    const day = taipeiDay(nowMs - i * DAY_MS);
+    for (const [key, value] of await store.list<AssistantLogEntry[]>({ prefix: `assistantLog:${day}` })) {
+      if ((key === logKey(day) || key.startsWith(`assistantLog:${day}:`)) && Array.isArray(value)) all.push(...value);
+    }
+  }
+  all.sort((a, b) => String(b.ts).localeCompare(String(a.ts)));
+  return { ok: true, action: 'assistantLogs', total: all.length, entries: all.slice(0, cap) };
 }

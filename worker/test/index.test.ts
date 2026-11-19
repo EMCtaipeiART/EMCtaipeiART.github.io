@@ -5920,6 +5920,14 @@ describe('assistant actions', () => {
     expect(result.tips.length).toBeGreaterThan(3);
   });
 
+  it('only lets managers read the full question log', async () => {
+    expect(await api({ action: 'assistantLogs' })).toMatchObject({ ok: false });
+    const other = await seedSession('test.user@emctaipei.com', '測試使用者');
+    expect(await api({ action: 'assistantLogs' }, other)).toMatchObject({ ok: false });
+    const manager = await seedSession('machi.chen@emctaipei.com', 'Machi');
+    expect(await api({ action: 'assistantLogs', days: 3 }, manager)).toMatchObject({ ok: true, entries: expect.any(Array) });
+  });
+
   it('only lets managers read the usage report', async () => {
     expect(await api({ action: 'assistantUsage' })).toMatchObject({ ok: false });
     const manager = await seedSession('machi.chen@emctaipei.com', 'Machi');

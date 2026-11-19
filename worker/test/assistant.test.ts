@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { emptyDatabase } from '../../backend/schema.mjs';
 import {
   ASSISTANT_DAILY_TOKENS, LOW_BATTERY_LINE, NOT_READY_LINE, TIRED_LINES, assistantChat, cleanupAssistantStorage,
-  ASSISTANT_SYSTEM_PROMPT, assistantUsageReport, findCase, getCaseCounts, logKey, recordFeedback, taipeiDay, usageKey, type AssistantLogEntry, type AssistantStore
+  ASSISTANT_SYSTEM_PROMPT, assistantLogsReport, assistantUsageReport, findCase, getCaseCounts, logKey, recordFeedback, taipeiDay, usageKey, type AssistantLogEntry, type AssistantStore
 } from '../src/assistant';
 import { FEATURE_TIPS, KNOWLEDGE_TOPICS, lookupKnowledge } from '../src/assistant-knowledge';
 import { getNewsTicker, keepItem, parseRss } from '../src/assistant-news';
@@ -195,5 +195,22 @@ describe('news ticker', () => {
     expect(calls).toBe(callsAfterFirst);
     const failing = (async () => { throw new Error('offline'); }) as unknown as typeof fetch;
     expect(await getNewsTicker(store, NOW + 4 * 60 * 60 * 1000, failing)).toEqual(first);
+  });
+});
+
+describe('logs report', () => {
+  it('returns newest-first entries with question and answer, and per-account feedback counts', async () => {
+    const store = memoryStore();
+    let n = 0;
+    const deps = { apiKey: 'k', now: () => NOW + (n++) * 1000, fetchImpl: (async () => reply('回答', 50)) as typeof fetch };
+    const a = await assistantChat({ message: '第一題' }, db(), anna, store, deps);
+    await assistantChat({ message: '第二題' }, db(), pm, store, deps);
+    await recordFeedback(store, anna, { logId: a.logId, helpful: false }, NOW);
+    const logs = await assistantLogsReport(store, 3, 10, NOW + 10000) as unknown as { total: number; entries: AssistantLogEntry[] };
+    expect(logs.total).toBe(2);
+    expect(logs.entries.map(e => e.question)).toEqual(['第二題', '第一題']);
+    expect(logs.entries[1]).toMatchObject({ answer: '回答', helpful: false, user: 'Anna' });
+    const usage = await assistantUsageReport(store, 1, NOW) as unknown as { days: Array<{ accounts: Array<{ account: string; unhelpful: number; department: string }> }> };
+    expect(usage.days[0].accounts.find(x => x.account === 'anna@emctaipei.com')).toMatchObject({ unhelpful: 1, department: '設計部' });
   });
 });
