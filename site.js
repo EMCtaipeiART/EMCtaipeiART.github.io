@@ -4871,7 +4871,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const hello={deck:null,idx:-1,seen:false,tickerP:null,hideT:0,showT:0};
       const helloEl=()=>{let el=document.getElementById('asHello');if(!el){el=document.createElement('div');el.id='asHello';el.className='as-hello';el.hidden=true;document.body.appendChild(el);
         el.addEventListener('mouseenter',()=>clearTimeout(hello.hideT));el.addEventListener('mouseleave',()=>hideHello(500));
-        el.addEventListener('click',e=>{const a=e.target.closest('[data-hello]');if(!a)return;const k=a.dataset.hello;if(k==='chat'){hideHello(0);openPanel(true)}else if(k==='ann'){const row=annLatest();hideHello(0);if(row)annOpen(row)}})}return el};
+        el.addEventListener('click',e=>{const a=e.target.closest('[data-hello]');if(!a)return;const k=a.dataset.hello;if(k==='close'){hideHello(0)}else if(k==='chat'){hideHello(0);openPanel(true)}else if(k==='ann'){const row=annLatest();hideHello(0);if(row)annOpen(row)}})}return el};
       function hideHello(ms){clearTimeout(hello.hideT);hello.hideT=setTimeout(()=>{const el=document.getElementById('asHello');if(el)el.classList.remove('show')},ms)}
       function loadTicker(){if(!hello.tickerP)hello.tickerP=api('assistantTicker').then(r=>({items:Array.isArray(r.items)?r.items:[],tips:Array.isArray(r.tips)&&r.tips.length?r.tips:HELLO_TIPS,updates:Array.isArray(r.updates)?r.updates:[]})).catch(()=>({items:[],tips:HELLO_TIPS,updates:[]}));return hello.tickerP}
       function buildDeck(t){
@@ -4886,6 +4886,16 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         }
         return d;
       }
+      /* 把一張卡片畫成氣泡並彈出（滑過與主動彈出共用） */
+      function presentHello(card,ms){
+        const fab=document.querySelector('#asHelper .as-fab');if(!fab)return;
+        const el=helloEl(),r=fab.getBoundingClientRect();
+        const cta=card.act==='ann'?'<button type="button" data-hello="ann">帶我去看</button>':card.link?`<a href="${esc(card.link)}" target="_blank" rel="noopener noreferrer">看全文</a>`:'';
+        el.innerHTML=`<button type="button" class="as-hello-x" data-hello="close" aria-label="關閉">${SVG_X}</button><span class="as-hello-tag">${esc(card.tag)}</span><p>${esc(card.text)}</p><div class="as-hello-foot">${card.src?`<small>${esc(card.src)}</small>`:'<small></small>'}<span>${cta}<button type="button" data-hello="chat">問問${esc(ASSISTANT_CHARACTER.name)}</button></span></div>`;
+        el.style.right=Math.max(8,innerWidth-r.right)+'px';el.style.bottom=Math.max(8,innerHeight-r.top+12)+'px';
+        el.hidden=false;void el.offsetWidth;el.classList.add('show');
+        clearTimeout(hello.hideT);talk(1800);hideHello(ms);
+      }
       async function showHello(){
         if(S.open||S.farewell||document.getElementById('asHelper')?.classList.contains('away'))return;
         const fab=document.querySelector('#asHelper .as-fab');if(!fab)return;
@@ -4899,13 +4909,29 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
           if(hello.idx===hello.deck.length-1)hello.deck=null;/* 一輪播完再重新洗牌（也會拿到新的新聞） */
         }
         if(!document.querySelector('#asHelper .as-fab:hover')&&!document.querySelector('#asHello:hover'))return;/* 等待新聞期間滑鼠已離開就不彈 */
-        const el=helloEl(),r=fab.getBoundingClientRect();
-        const cta=card.act==='ann'?'<button type="button" data-hello="ann">帶我去看</button>':card.link?`<a href="${esc(card.link)}" target="_blank" rel="noopener noreferrer">看全文</a>`:'';
-        el.innerHTML=`<span class="as-hello-tag">${esc(card.tag)}</span><p>${esc(card.text)}</p><div class="as-hello-foot">${card.src?`<small>${esc(card.src)}</small>`:'<small></small>'}<span>${cta}<button type="button" data-hello="chat">問問${esc(ASSISTANT_CHARACTER.name)}</button></span></div>`;
-        el.style.right=Math.max(8,innerWidth-r.right)+'px';el.style.bottom=Math.max(8,innerHeight-r.top+12)+'px';
-        el.hidden=false;void el.offsetWidth;el.classList.add('show');
-        clearTimeout(hello.hideT);talk(1800);hideHello(card.link?7000:5500);
+        presentHello(card,card.link?7000:5500);
       }
+      /* 主動彈出：有新公告、系統更新、設計相關或時事新聞時，不必滑過去也會自己跳出來一下（同一則只彈一次；每天最多 6 次；聊天視窗開著、分頁在背景、正在捲動、電量用完時不彈） */
+      const AUTO_SEEN='assistantTopicSeenV1',AUTO_DAY='assistantAutoDayV1',AUTO_MAX=6;
+      const autoSeen=()=>{try{return new Set(JSON.parse(localStorage.getItem(AUTO_SEEN)||'[]'))}catch(err){return new Set()}};
+      const autoMark=id=>{try{localStorage.setItem(AUTO_SEEN,JSON.stringify([...autoSeen(),id].slice(-80)))}catch(err){}};
+      const autoCount=()=>{try{const o=JSON.parse(localStorage.getItem(AUTO_DAY)||'{}');return o.d===tpDay()?Number(o.n)||0:0}catch(err){return 0}};
+      const autoBump=()=>{try{localStorage.setItem(AUTO_DAY,JSON.stringify({d:tpDay(),n:autoCount()+1}))}catch(err){}};
+      async function autoHello(){
+        if(S.open||S.farewell||S.tired||document.hidden||!loggedIn()||!assistantOn())return;
+        const root=document.getElementById('asHelper');if(!root||root.classList.contains('away'))return;
+        const shown=document.getElementById('asHello');if(shown&&shown.classList.contains('show'))return;
+        if(autoCount()>=AUTO_MAX)return;
+        const t=await loadTicker(),seen=autoSeen(),row=annLatest(),cands=[];
+        const annBar=document.getElementById('annBar');if(row&&!annRead(row)&&(!annBar||annBar.hidden))cands.push({id:'ann:'+String(row['公告版本']||''),tag:'最新公告',text:String(row['公告標題']||row['公告版本']||'').slice(0,60),act:'ann'});
+        t.items.filter(i=>i.topic==='design').forEach(i=>cands.push({id:'n:'+(i.link||i.title),tag:'設計新聞',text:i.title,src:i.source,link:i.link}));
+        (t.updates||[]).slice(0,2).forEach(u=>cands.push({id:'u:'+u,tag:'系統更新',text:String(u).slice(0,70),act:'chat'}));
+        t.items.filter(i=>i.topic!=='design').forEach(i=>cands.push({id:'n:'+(i.link||i.title),tag:'科技新聞',text:i.title,src:i.source,link:i.link}));
+        const pick=cands.find(c=>c.id&&!seen.has(c.id));if(!pick)return;
+        if(S.open||document.hidden)return;/* 等新聞回來的期間使用者可能已經打開聊天視窗 */
+        autoMark(pick.id);autoBump();presentHello(pick,14000);
+      }
+      setTimeout(autoHello,9000);setInterval(autoHello,9*60*1000);
       document.addEventListener('mouseover',e=>{
         const fab=e.target.closest&&e.target.closest('#asHelper .as-fab');if(!fab||!matchMedia('(hover:hover)').matches)return;
         clearTimeout(hello.showT);hello.showT=setTimeout(showHello,320);

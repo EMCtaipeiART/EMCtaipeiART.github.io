@@ -3203,3 +3203,9 @@
 - 管理者（`isManager`：角色為管理者、Machi、管理員捷徑帳號）不再受 `ASSISTANT_DAILY_TOKENS` 每日額度限制：不會被擋下、不會顯示「累了」或電池充電畫面、也不會有 80% 電量提醒；`assistantToday` 與 `assistantChat` 回傳的額度固定是 `{usedRatio:0, tired:false}`。
 - 管理者的 tokens 仍照常累計進 `assistantUsage:<日期>:<帳號>` 與問答紀錄，後台「小黃（機器人）」的用量與每人統計照樣看得到。一般帳號的限制與提醒不變。
 - 測試：`worker/test/assistant-manager-quota.test.ts`。
+
+## 2026-11-19 小黃：新聞與設計議題主動彈出泡泡（不必滑過去）
+- 小黃現在會**主動**彈出氣泡：頁面載入約 9 秒後，之後每 9 分鐘檢查一次；有「最新公告（未讀且首頁提示條沒顯示時）→ 設計新聞 → 系統更新 → 科技新聞」就挑第一則還沒看過的彈出，約 14 秒後自動收起，氣泡右上有 × 可立刻關閉。內容與滑過氣泡同一份（不呼叫 Claude、不花 token）。
+- 防打擾：同一則只彈一次（本機 `assistantTopicSeenV1` 記最近 80 則）；每天最多 6 次（`assistantAutoDayV1`）；聊天視窗開著、分頁在背景、頁面正在捲動、電量用完、個人設定已關閉小黃時都不彈；沒有新的內容就不彈。
+- 手機沒有滑鼠，過去完全看不到氣泡；現在主動彈出也適用手機（寬度縮小）。滑過觸發維持只在有 hover 的裝置。
+- 程式在 `site.js` asHelper 的 `presentHello`／`autoHello`，樣式 `.as-hello-x` 與手機寬度在 `site.css` 檔尾；要調頻率改 `setTimeout(autoHello,9000);setInterval(autoHello,9*60*1000)` 與 `AUTO_MAX`。
