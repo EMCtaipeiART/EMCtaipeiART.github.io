@@ -4730,12 +4730,17 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const tpDay=()=>{const p=taipeiParts();return `${p.year}-${p.month}-${p.day}`};
       const kGreet=()=>'assistantGreetedV1:'+S.acct,kClose=()=>'assistantClosedV1:'+S.acct;
       const lsGet=k=>{try{return localStorage.getItem(k)||''}catch(err){return ''}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(err){}};
-      const FACE='<span class="as-face"><img class="as-face-img" src="assets/xiaohuang.webp" alt="" draggable="false"><i class="as-lid l"></i><i class="as-lid r"></i><i class="as-mouth"></i></span>';
+      /* 目前代班的角色。小黃不是常駐機器人（剛失業、暫時代班，之後會因熱門話題或時事換人）；換角色只要改這個物件：名字、頭像、自我介紹，
+         眼皮與嘴的位置用 vars（CSS 變數 --lid-top／--lid-h／--lid-w／--lid-l／--lid-r／--lid-color／--mouth-l／--mouth-t／--mouth-w／--mouth-h）調整。 */
+      const ASSISTANT_CHARACTER={name:'小黃',sub:'設計部代班解答',img:'assets/xiaohuang.webp',
+        intro:'嗨，我是小黃！前陣子剛失業，暫時來幫設計部代班解答。我能查案量、找案件、介紹系統功能，也會跟你分享新公告和設計圈新聞。點我就能問～',
+        vars:{}};
+      const FACE='<span class="as-face"><img class="as-face-img" src="'+ASSISTANT_CHARACTER.img+'" alt="" draggable="false"><i class="as-lid l"></i><i class="as-lid r"></i><i class="as-mouth"></i></span>';
       const SVG_X='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
       const SVG_SEND='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 4l-5 16-3-6.5L4 12z"/></svg>';
       function root(){
         let el=document.getElementById('asHelper');
-        if(!el){el=document.createElement('div');el.id='asHelper';el.className='as-root';document.body.appendChild(el);
+        if(!el){el=document.createElement('div');el.id='asHelper';el.className='as-root';Object.entries(ASSISTANT_CHARACTER.vars||{}).forEach(([k,v])=>el.style.setProperty(k,v));document.body.appendChild(el);
           el.addEventListener('click',onClick);el.addEventListener('submit',onSubmit)}
         return el;
       }
@@ -4756,14 +4761,14 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const el=root(),unread=Boolean(S.ann);
         if(!S.open){
           const drop=S.fabShown?'':' as-drop';S.fabShown=true;
-          el.innerHTML=`<button type="button" class="as-fab${drop}" data-as="open" aria-label="開啟小黃" title="小黃"><span class="as-avatar">${FACE}</span>${unread?'<i class="as-dot" aria-label="有新公告"></i>':''}</button>`;
+          el.innerHTML=`<button type="button" class="as-fab${drop}" data-as="open" aria-label="開啟${ASSISTANT_CHARACTER.name}" title="${ASSISTANT_CHARACTER.name}"><span class="as-avatar">${FACE}</span>${unread?'<i class="as-dot" aria-label="有新公告"></i>':''}</button>`;
           return;
         }
         S.fabShown=false;const enter=S.enter?' as-enter':'';S.enter=false;
         const chips=!S.tired&&!S.farewell&&!S.msgs.some(m=>m.role==='user')?`<div class="as-chips">${['這個月接了幾案','今天要做哪些事','多元宇宙是什麼'].map(t=>`<button type="button" class="as-chip" data-as-chip="${esc(t)}">${esc(t)}</button>`).join('')}</div>`:'';
         const annHtml=S.ann?`<div class="as-ann"><b>新功能公告</b><span>${esc(S.ann.title||S.ann.version)}</span><div class="as-ann-acts"><button type="button" class="as-btn primary" data-as="ann-go">帶我去看</button><button type="button" class="as-btn" data-as="ann-ok">知道了</button></div></div>`:'';
         const body=S.farewell?`<div class="as-msg as-bot"><div class="as-bubble">好喔，那我晚點再回來～</div></div>`:S.msgs.map(msgHtml).join('')+(S.busy?'<div class="as-msg as-bot"><div class="as-bubble as-think">思考中<i></i><i></i><i></i></div></div>':'');
-        el.innerHTML=`<section class="as-panel${enter}" role="dialog" aria-label="小黃，設計部小幫手"><header class="as-head"><span class="as-avatar sm">${FACE}</span><div class="as-title"><b>小黃</b><small>設計部小幫手</small></div>${S.canUsage?'<button type="button" class="as-usage" data-as="usage">用量</button>':''}<button type="button" class="as-x" data-as="close" aria-label="關閉小幫手">${SVG_X}</button></header>
+        el.innerHTML=`<section class="as-panel${enter}" role="dialog" aria-label="${ASSISTANT_CHARACTER.name}，${ASSISTANT_CHARACTER.sub}"><header class="as-head"><span class="as-avatar sm">${FACE}</span><div class="as-title"><b>${esc(ASSISTANT_CHARACTER.name)}</b><small>${esc(ASSISTANT_CHARACTER.sub)}</small></div>${S.canUsage?'<button type="button" class="as-usage" data-as="usage">用量</button>':''}<button type="button" class="as-x" data-as="close" aria-label="關閉小幫手">${SVG_X}</button></header>
           <div class="as-body" id="asBody">${annHtml}${body}${chips}</div>
           <form class="as-form"><input id="asInput" type="text" maxlength="500" autocomplete="off" placeholder="${S.tired?'明天再來找我':'問我案量、找案件…'}" ${S.tired||S.busy||S.farewell?'disabled':''}><button type="submit" class="as-send" aria-label="送出" ${S.tired||S.busy||S.farewell?'disabled':''}>${SVG_SEND}</button></form></section>`;
         S.msgs.forEach(m=>{m.fresh=false});
@@ -4849,7 +4854,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(acct&&S.loadedFor!==acct&&state.loaded)load();
       }
       /* 滑鼠移到小黃身上：彈出自我介紹／新功能／新聞話題小氣泡（內容是現成的，不呼叫 AI、不花 token；新聞每 3 小時由後端更新） */
-      const HELLO_INTRO='嗨，我是小黃，設計部的小幫手！我能幫你查案量、找案件、介紹系統功能；有新公告或設計圈新聞也會跟你說。點我就能問～';
+      const HELLO_INTRO=ASSISTANT_CHARACTER.intro;
       const HELLO_TIPS=['多元宇宙裡有寵物貓和狗，可以摸摸貓、餵點心，也能丟球給狗撿喔。','走進元宇宙五樓影廳中央，就能玩「設計部遠征隊」小遊戲。','想換個心情？出氣擂台有 8 種道具可以打，連擊越多倍率越高。','角色工坊可以用 AI 生出自己的元宇宙人物，第一個人物免費。','案件寄信可以「排程」，選好時間按送出就會自動寄。','首頁設計師頭像滑過去，可以看到等級、稱號和工作負載。','午餐不知道吃什麼？左側選單有「午餐地圖」。','行事曆有會議時，元宇宙裡的人物會自己走進會議室。'];
       const hello={deck:null,idx:-1,seen:false,tickerP:null,hideT:0,showT:0};
       const helloEl=()=>{let el=document.getElementById('asHello');if(!el){el=document.createElement('div');el.id='asHello';el.className='as-hello';el.hidden=true;document.body.appendChild(el);
@@ -4882,7 +4887,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(!document.querySelector('#asHelper .as-fab:hover')&&!document.querySelector('#asHello:hover'))return;/* 等待新聞期間滑鼠已離開就不彈 */
         const el=helloEl(),r=fab.getBoundingClientRect();
         const cta=card.act==='ann'?'<button type="button" data-hello="ann">帶我去看</button>':card.link?`<a href="${esc(card.link)}" target="_blank" rel="noopener noreferrer">看全文</a>`:'';
-        el.innerHTML=`<span class="as-hello-tag">${esc(card.tag)}</span><p>${esc(card.text)}</p><div class="as-hello-foot">${card.src?`<small>${esc(card.src)}</small>`:'<small></small>'}<span>${cta}<button type="button" data-hello="chat">問問小黃</button></span></div>`;
+        el.innerHTML=`<span class="as-hello-tag">${esc(card.tag)}</span><p>${esc(card.text)}</p><div class="as-hello-foot">${card.src?`<small>${esc(card.src)}</small>`:'<small></small>'}<span>${cta}<button type="button" data-hello="chat">問問${esc(ASSISTANT_CHARACTER.name)}</button></span></div>`;
         el.style.right=Math.max(8,innerWidth-r.right)+'px';el.style.bottom=Math.max(8,innerHeight-r.top+12)+'px';
         el.hidden=false;void el.offsetWidth;el.classList.add('show');
         clearTimeout(hello.hideT);talk(1800);hideHello(card.link?7000:5500);
