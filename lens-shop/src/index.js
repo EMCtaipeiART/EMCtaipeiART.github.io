@@ -112,6 +112,29 @@ async function sendMail(env, to, subject, html, text) {
   } catch (e) { console.log('mail exception', String(e)); return 'failed'; }
 }
 
+// 一次寄多人：Brevo 的 messageVersions（每人各自一封、互相看不到對方信箱，一次請求最多 100 人）；其他服務退回逐封寄
+async function sendMailBatch(env, items) {
+  const out = { sent: 0, failed: 0, skipped: 0, failedTo: [] };
+  if (!items.length) return out;
+  if (!env.BREVO_API_KEY) {
+    for (const it of items) { const r = await sendMail(env, it.to, it.subject, it.html, it.text); if (r === 'sent') out.sent++; else if (r === 'skipped') out.skipped++; else { out.failed++; out.failedTo.push(it.to); } }
+    return out;
+  }
+  const from = parseFrom(env.MAIL_FROM);
+  for (let i = 0; i < items.length; i += 100) {
+    const chunk = items.slice(i, i + 100);
+    try {
+      const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST', headers: { 'api-key': env.BREVO_API_KEY, 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({ sender: from.name ? from : { email: from.email }, replyTo: { email: env.REPLY_TO || from.email }, subject: chunk[0].subject, htmlContent: chunk[0].html, textContent: chunk[0].text,
+          messageVersions: chunk.map((it) => ({ to: [{ email: it.to }], subject: it.subject, htmlContent: it.html, textContent: it.text })) }),
+      });
+      if (!r.ok) { console.log('brevo batch error', r.status, await r.text()); out.failed += chunk.length; out.failedTo.push(...chunk.map((x) => x.to)); } else out.sent += chunk.length;
+    } catch (e) { console.log('brevo batch exception', String(e)); out.failed += chunk.length; out.failedTo.push(...chunk.map((x) => x.to)); }
+  }
+  return out;
+}
+
 // ── 餐飲團結單：寄訂單明細信給開團者（含可存成 PDF 的明細頁連結）──
 const sumToken = async (env, cid) => (await hmac(env, 'sum:' + cid)).slice(0, 24);
 async function summaryData(env, cid) {
@@ -448,15 +471,11 @@ async function handle(req, env, ctx) {
       const s = await getSettings(env, cid); const base = s.siteUrl || env.SITE_URL || new URL(req.url).origin;
       const rs = (await env.DB.prepare("SELECT * FROM orders WHERE status='active' AND campaign=? ORDER BY created_at").bind(cid).all()).results;
       const by = {}; for (const o of rs) (by[o.email] ||= []).push(o);
-      let sent = 0, failed = 0, skipped = 0;
-      for (const os of Object.values(by)) {
-        const m = arrivalMail({ orders: os.map(pubOrder), settings: s, links: os.map((o) => `${base}/order/${o.token}`) });
-        const r = await sendMail(env, os[0].email, m.subject, m.html, m.text);
-        if (r === 'sent') sent++; else if (r === 'skipped') skipped++; else failed++;
-      }
-      const info = { at: now(), sent, failed, skipped, people: Object.keys(by).length, orders: rs.length };
+      const items = Object.values(by).map((os) => { const m = arrivalMail({ orders: os.map(pubOrder), settings: s, links: os.map((o) => `${base}/order/${o.token}`) }); return { to: os[0].email, subject: m.subject, html: m.html, text: m.text }; });
+      const { sent, failed, skipped, failedTo } = await sendMailBatch(env, items);
+      const info = { at: now(), sent, failed, skipped, people: items.length, orders: rs.length };
       if (sent) await setKV(env, kk(cid, 'arrival'), info);
-      return json({ ok: true, ...info });
+      return json({ ok: true, ...info, failedTo });
     }
     if (path === '/api/admin/settings') {
       if (method === 'GET') return json(await getSettings(env, cid));
