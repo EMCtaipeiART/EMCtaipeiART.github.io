@@ -172,7 +172,7 @@ async function handle(req, env, ctx) {
   const cid = url.searchParams.get('c') || DEFAULT_CID;
   if (!CID_RE.test(cid)) return err('團購代號不正確');
   const camps = await getCamps(env);
-  if (!camps.some((c) => c.id === cid)) return err('找不到這個團購', 404);
+  if (!camps.some((c) => c.id === cid) && !path.startsWith('/api/admin/campaigns/')) return err('找不到這個團購', 404);
   const closedNow = (s, c = cid) => isClosed(s) || isEnded(camps, c);
 
   if (path === '/api/summary' && method === 'GET') {
@@ -468,6 +468,7 @@ async function handle(req, env, ctx) {
         if (!next.closed && cur.closed) await setKV(env, fillKey(cid), null);
         // 結單＝團購狀態自動改為已結束；重新開單則恢復進行中
         if (next.closed !== !!cur.closed) await setKV(env, 'campaigns', camps.map((c) => (c.id === cid ? { ...c, status: next.closed ? 'ended' : 'open', endedAt: next.closed ? now() : undefined } : c)));
+        await edgePurge(cid);
         return json(next);
       }
     }
@@ -491,6 +492,7 @@ async function handle(req, env, ctx) {
       const was = (camps.find((c) => c.id === m[1]) || {}).status;
       await setKV(env, 'campaigns', camps.map((c) => (c.id === m[1] ? { ...c, status: st, endedAt: st === 'ended' ? now() : undefined } : c)));
       if (st === 'open') { const cs0 = await getSettings(env, m[1]); if (cs0.closed) { await setKV(env, kk(m[1], 'settings'), { ...cs0, closed: false }); await setKV(env, fillKey(m[1]), null); } }
+      await edgePurge(m[1]);
       const mail = st === 'ended' && was !== 'ended' ? await closeNotify(env, req, m[1], camps) : 'skip';
       return json({ ok: true, mail });
     }
@@ -504,6 +506,7 @@ async function handle(req, env, ctx) {
       ]);
       for (const t of ['chat', 'chat_presence']) { try { await env.DB.prepare('DELETE FROM ' + t + ' WHERE campaign=?').bind(id).run(); } catch {} }
       await setKV(env, 'campaigns', camps.filter((c) => c.id !== id));
+      await edgePurge(id);
       return json({ ok: true });
     }
     if (path === '/api/admin/manual-items' && method === 'POST') { // 自訂團：開團者手動維護商品（品名、價格、選項；圖片另用 product-image）
