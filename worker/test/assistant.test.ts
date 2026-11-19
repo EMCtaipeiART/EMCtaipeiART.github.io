@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { emptyDatabase } from '../../backend/schema.mjs';
 import {
   ASSISTANT_DAILY_TOKENS, LOW_BATTERY_LINE, NOT_READY_LINE, TIRED_LINES, assistantChat, cleanupAssistantStorage,
-  assistantUsageReport, findCase, getCaseCounts, logKey, recordFeedback, taipeiDay, usageKey, type AssistantLogEntry, type AssistantStore
+  ASSISTANT_SYSTEM_PROMPT, assistantUsageReport, findCase, getCaseCounts, logKey, recordFeedback, taipeiDay, usageKey, type AssistantLogEntry, type AssistantStore
 } from '../src/assistant';
 import type { DatabaseSnapshot, SessionRecord } from '../src/types';
 
@@ -131,5 +131,12 @@ describe('usage report', () => {
     expect(report.days[0].accounts[0]).toMatchObject({ account: 'anna@emctaipei.com', questions: 2, tokens: 800 });
     expect(report.days[1]).toMatchObject({ questions: 0, tokens: 0 });
     expect(JSON.stringify(report)).not.toContain('祕密問題');
+  });
+});
+
+describe('system prompt', () => {
+  it('knows the main system features such as 多元宇宙', () => {
+    expect(ASSISTANT_SYSTEM_PROMPT).toContain('多元宇宙');
+    expect(ASSISTANT_SYSTEM_PROMPT).toContain('角色人物');
   });
 });
