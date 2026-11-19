@@ -676,6 +676,7 @@
       const key=row&&String(row['名字']||'').trim(),name=row&&((key&&RECIPIENT_NAMES[key])||String(row['顯示名']||'').trim()||key);
       return name?`${name} <${email}>`:e;
     }
+    const withNames=list=>String(list||'').split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(withName).filter(Boolean).join(', ');
     function ccFor(client,designer){
       const row=customerRow(client),raw=row?.['預設信箱'],unset=raw===undefined||raw===null||String(raw).trim()==='';
       const base=(unset?[...DEFAULT_CC]:parseList(raw)).map(entry=>emailOf(entry)?withName(entry):recipientFor(entry)).filter(Boolean);
@@ -2270,7 +2271,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       try{
         const sigs=[state.signature,state.gmailSignature,...st2.presets.map(p=>p.html)].filter(Boolean);
         const data=await api('getCaseMailThread',{caseId:id,signatureCandidates:sigs});
-        state.thread={id,loading:false,messages:data.messages||[],suggestedTo:data.suggestedTo||'',suggestedCc:data.suggestedCc||'',replyFrom:data.replyFrom||'',error:''};
+        state.thread={id,loading:false,messages:data.messages||[],suggestedTo:withNames(data.suggestedTo),suggestedCc:withNames(data.suggestedCc),replyFrom:data.replyFrom||'',error:''};
         if(applyReply&&state.mail){if(state.view==='mail')saveMailDraft();const d=state.mail.drafts[state.mail.index];if(d&&d.reply&&d.id===id){if(!d.to&&state.thread.suggestedTo)d.to=state.thread.suggestedTo;if(!d.cc&&state.thread.suggestedCc)d.cc=state.thread.suggestedCc;applied=true}}
       }catch(err){state.thread={id,loading:false,messages:[],error:err.message||'讀取失敗'}}
       if(state.view==='mail'&&state.mail){if(!applied)saveMailDraft();renderMail()}
