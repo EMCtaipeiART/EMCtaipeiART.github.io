@@ -4765,19 +4765,22 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const fb=m.role==='assistant'&&m.logId?(m.fb==null?`<span class="as-fb"><button type="button" data-as-fb="1" data-i="${i}">有幫助</button><button type="button" data-as-fb="0" data-i="${i}">沒幫助</button></span>`:`<span class="as-fb as-fb-done">${m.fb?'謝謝回饋':'收到，我會改進'}</span>`):'';
         return `<div class="as-msg ${m.role==='user'?'as-me':'as-bot'}${m.fresh?' as-in':''}"><div class="as-bubble">${esc(m.content).replace(/\n/g,'<br>')}</div>${fb}</div>`;
       }
+      /* 電量用完（今天額度用盡）時，頭像換成充電中的電池：外框、三格電量依序充滿、閃電跳動（動畫在 site.css 的 .as-batt） */
+      const BATTERY='<span class="as-batt" role="img" aria-label="充電中"><svg viewBox="0 0 64 64" aria-hidden="true"><rect class="as-batt-cap" x="25" y="4" width="14" height="6" rx="2"/><rect class="as-batt-body" x="16" y="9" width="32" height="50" rx="7"/><rect class="as-batt-cell c1" x="21" y="43" width="22" height="11" rx="2.5"/><rect class="as-batt-cell c2" x="21" y="30" width="22" height="11" rx="2.5"/><rect class="as-batt-cell c3" x="21" y="17" width="22" height="11" rx="2.5"/><path class="as-batt-bolt" d="M35 20 25 36h7l-3 12 11-18h-7z"/></svg></span>';
+      const faceHtml=()=>S.tired?BATTERY:FACE;
       function render(){
         if(!loggedIn()||!assistantOn()){const el=document.getElementById('asHelper');if(el)el.remove();const h=document.getElementById('asHello');if(h)h.remove();S.fabShown=false;return}
         const el=root(),unread=Boolean(S.ann);
         if(!S.open){
           const drop=S.fabShown?'':' as-drop';S.fabShown=true;
-          el.innerHTML=`<button type="button" class="as-fab${drop}" data-as="open" aria-label="開啟${ASSISTANT_CHARACTER.name}" title="${ASSISTANT_CHARACTER.name}"><span class="as-avatar">${FACE}</span>${unread?'<i class="as-dot" aria-label="有新公告"></i>':''}</button>`;
+          el.innerHTML=`<button type="button" class="as-fab${drop}" data-as="open" aria-label="開啟${ASSISTANT_CHARACTER.name}" title="${ASSISTANT_CHARACTER.name}"><span class="as-avatar">${faceHtml()}</span>${unread?'<i class="as-dot" aria-label="有新公告"></i>':''}</button>`;
           return;
         }
         S.fabShown=false;const enter=S.enter?' as-enter':'';S.enter=false;
         const chips=!S.tired&&!S.farewell&&!S.msgs.some(m=>m.role==='user')?`<div class="as-chips">${['這個月接了幾案','今天要做哪些事','多元宇宙是什麼'].map(t=>`<button type="button" class="as-chip" data-as-chip="${esc(t)}">${esc(t)}</button>`).join('')}</div>`:'';
         const annHtml=S.ann?`<div class="as-ann"><b>新功能公告</b><span>${esc(S.ann.title||S.ann.version)}</span><div class="as-ann-acts"><button type="button" class="as-btn primary" data-as="ann-go">帶我去看</button><button type="button" class="as-btn" data-as="ann-ok">知道了</button></div></div>`:'';
         const body=S.farewell?`<div class="as-msg as-bot"><div class="as-bubble">好喔，那我晚點再回來～</div></div>`:S.msgs.map(msgHtml).join('')+(S.busy?'<div class="as-msg as-bot"><div class="as-bubble as-think">思考中<i></i><i></i><i></i></div></div>':'');
-        el.innerHTML=`<section class="as-panel${enter}" role="dialog" aria-label="${ASSISTANT_CHARACTER.name}，${ASSISTANT_CHARACTER.sub}"><header class="as-head"><span class="as-avatar sm">${FACE}</span><div class="as-title"><b>${esc(ASSISTANT_CHARACTER.name)}</b><small>${esc(ASSISTANT_CHARACTER.sub)}</small></div>${S.canUsage?'<button type="button" class="as-usage" data-as="usage">用量</button>':''}<button type="button" class="as-x" data-as="close" aria-label="關閉小幫手">${SVG_X}</button></header>
+        el.innerHTML=`<section class="as-panel${enter}" role="dialog" aria-label="${ASSISTANT_CHARACTER.name}，${ASSISTANT_CHARACTER.sub}"><header class="as-head"><span class="as-avatar sm">${faceHtml()}</span><div class="as-title"><b>${esc(ASSISTANT_CHARACTER.name)}</b><small>${esc(S.tired?'充電中…明天見':ASSISTANT_CHARACTER.sub)}</small></div>${S.canUsage?'<button type="button" class="as-usage" data-as="usage">用量</button>':''}<button type="button" class="as-x" data-as="close" aria-label="關閉小幫手">${SVG_X}</button></header>
           <div class="as-body" id="asBody">${annHtml}${body}${chips}</div>
           <form class="as-form"><input id="asInput" type="text" maxlength="500" autocomplete="off" placeholder="${S.tired?'明天再來找我':'問我案量、找案件…'}" ${S.tired||S.busy||S.farewell?'disabled':''}><button type="submit" class="as-send" aria-label="送出" ${S.tired||S.busy||S.farewell?'disabled':''}>${SVG_SEND}</button></form></section>`;
         S.msgs.forEach(m=>{m.fresh=false});
@@ -4887,7 +4890,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(S.open||S.farewell||document.getElementById('asHelper')?.classList.contains('away'))return;
         const fab=document.querySelector('#asHelper .as-fab');if(!fab)return;
         let card;
-        if(!hello.seen){hello.seen=true;card={tag:'自我介紹',text:HELLO_INTRO,act:'chat'}}
+        if(S.tired){card={tag:'充電中',text:'我今天的電量用完了，正在充電中……明天充飽再來幫你！'}}
+        else if(!hello.seen){hello.seen=true;card={tag:'自我介紹',text:HELLO_INTRO,act:'chat'}}
         else{
           if(!hello.deck){hello.deck=buildDeck(await loadTicker());hello.idx=-1}
           if(!hello.deck.length)hello.deck=buildDeck({items:[],tips:HELLO_TIPS});

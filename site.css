@@ -1739,3 +1739,20 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
     html[data-theme="dark"] .as-hello-foot a,html[data-theme="dark"] .as-hello-foot button:not([data-hello="chat"]){color:#8fe0a5}
     @media (hover:none),(max-width:700px){.as-hello{display:none}}
     @media (prefers-reduced-motion:reduce){.as-hello{transition:opacity .2s}}
+    /* 電量用完：充電中的電池（三格由下往上依序充滿、閃電跳動、外框微微發光） */
+    .as-batt{display:grid;place-items:center;width:100%;height:100%}
+    .as-batt svg{width:78%;height:78%;overflow:visible}
+    .as-batt-cap,.as-batt-body{fill:#fff;stroke:#2b3a33;stroke-width:3.2}
+    .as-batt-cap{fill:#2b3a33}
+    .as-batt-body{animation:asBattGlow 2.4s ease-in-out infinite}
+    .as-batt-cell{fill:#22c55e;opacity:.12;animation:asBattCell 2.4s ease-in-out infinite}
+    .as-batt-cell.c1{animation-delay:0s}.as-batt-cell.c2{animation-delay:.45s}.as-batt-cell.c3{animation-delay:.9s}
+    .as-batt-bolt{fill:#facc15;stroke:#a16207;stroke-width:1.6;stroke-linejoin:round;transform-origin:32px 34px;animation:asBattBolt 1.2s ease-in-out infinite;filter:drop-shadow(0 0 3px rgba(250,204,21,.9))}
+    @keyframes asBattCell{0%,12%{opacity:.12}30%,78%{opacity:1}92%,100%{opacity:.12}}
+    @keyframes asBattBolt{0%,100%{transform:scale(.9);opacity:.85}50%{transform:scale(1.12);opacity:1}}
+    @keyframes asBattGlow{0%,100%{filter:drop-shadow(0 0 0 rgba(34,197,94,0))}50%{filter:drop-shadow(0 0 6px rgba(34,197,94,.65))}}
+    html[data-theme="dark"] .as-batt-body{fill:#2a322f;stroke:#cfe3d8}
+    html[data-theme="dark"] .as-batt-cap{fill:#cfe3d8;stroke:#cfe3d8}
+    .as-head .as-batt-body{fill:rgba(255,255,255,.2);stroke:#fff}
+    .as-head .as-batt-cap{fill:#fff;stroke:#fff}
+    @media (prefers-reduced-motion:reduce){.as-batt-body,.as-batt-bolt{animation:none}.as-batt-cell{animation:none;opacity:.5}.as-batt-cell.c1{opacity:1}}

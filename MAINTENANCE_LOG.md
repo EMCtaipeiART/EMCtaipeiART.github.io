@@ -3194,3 +3194,7 @@
 - **個人設定可關閉小黃**：帳號選單 › 個人設定新增「顯示右下角小幫手（小黃）」開關，預設開啟；關閉後右下角小黃與氣泡不再出現。同時存本機（立即生效）與雲端個人設定（`設定` 表新增欄位「小幫手」，「關」＝關，其餘＝開），換裝置也同步。`getUserSettings` 回 `assistantEnabled`，`saveUserSettings` 接 `assistantEnabled`。
 - 測試：`assistant-gaps.test.ts`（合併計次、工具流程、後台關閉／重新開啟、用量報表待補數）、`index.test.ts`（assistantGaps 權限、assistantEnabled 開關）。
 - **之後新增或改版功能時**：請同樣實際走一遍再更新知識庫（`assistant-knowledge*.ts`），不要只憑文件。
+
+## 2026-11-19 小黃：電量用完時頭像變成充電中的電池
+- 今天的額度用完（`quota.tired`）時，右下角按鈕與聊天視窗標題列的頭像會換成「充電中的電池」：電池外框、三格電量由下往上依序充滿並循環、閃電跳動發光、外框微微發綠光；標題列副標改成「充電中…明天見」；滑過按鈕的氣泡改成「充電中」卡片，內容是「我今天的電量用完了，正在充電中……明天充飽再來幫你！」。深色模式、標題列（綠底）各有對應配色；`prefers-reduced-motion` 時停用動畫、改靜態半格電量。
+- 實作在 `site.js` asHelper 的 `BATTERY`／`faceHtml()`（`S.tired` 為真就用電池，否則用 `FACE`）與 `site.css` 檔尾 `.as-batt` 區塊；額度判斷與台詞仍在後端（`ASSISTANT_DAILY_TOKENS`）。隔天（台灣時間 0 點後）重新整理頁面就恢復成小黃。
