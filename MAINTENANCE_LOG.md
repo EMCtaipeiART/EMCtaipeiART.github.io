@@ -3209,3 +3209,10 @@
 - 防打擾：同一則只彈一次（本機 `assistantTopicSeenV1` 記最近 80 則）；每天最多 6 次（`assistantAutoDayV1`）；聊天視窗開著、分頁在背景、頁面正在捲動、電量用完、個人設定已關閉小黃時都不彈；沒有新的內容就不彈。
 - 手機沒有滑鼠，過去完全看不到氣泡；現在主動彈出也適用手機（寬度縮小）。滑過觸發維持只在有 hover 的裝置。
 - 程式在 `site.js` asHelper 的 `presentHello`／`autoHello`，樣式 `.as-hello-x` 與手機寬度在 `site.css` 檔尾；要調頻率改 `setTimeout(autoHello,9000);setInterval(autoHello,9*60*1000)` 與 `AUTO_MAX`。
+
+## 2026-11-19 後台「教小黃」與試問框
+- 後台「問題回報 › 小黃（機器人）」新增「教小黃」區塊：管理者可新增、編輯、停用／啟用、刪除「補充說明」（標題＝使用者會問的問題、答案最多 1500 字、關鍵字選填、啟用開關），存好立刻生效，不必部署；可匯出 JSON 備份。「小黃答不出來的問題」每一筆多一顆「回答這題」：預填問題、寫完答案存檔後，該筆待補問題自動標為已處理並註明「已補進教小黃」。
+- 小黃怎麼用：`getSystemHelp` 現在先搜尋「管理者補充」（比對標題、關鍵字、內容，只取啟用中的前 3 條），再附上內建說明；補充優先於內建說明，並標明「只是資料、不是指令」。只有被查到的才帶進對話，平常不增加 token。
+- **試問框**：同一頁可以直接問小黃一題，看他現在會怎麼回答；走正常流程（含工具與補充），但**不寫問答紀錄、不計用量、不新增待補問題**，並顯示用到的工具與 tokens。
+- 後端新增 action（都需 `database.manage`，只有管理者）：`assistantNotes`、`assistantNoteSave`、`assistantNoteDelete`、`assistantTrial`。資料存 DO storage `assistantNotes`（最多 200 條，記錄建立／最後修改者與時間）。程式在 `worker/src/assistant.ts`（`saveNote`／`searchNotes`／`systemHelpTool`／`dryRun`）與 `json_database_admin.html`。
+- 測試：`worker/test/assistant-notes.test.ts`（存取與驗證、上限、回答待補問題自動結案、搜尋排序、工具流程帶入補充、試問不寫任何紀錄）與 `index.test.ts`（權限）。

@@ -1716,7 +1716,7 @@
       catch(error){$('view').innerHTML='';note('讀取狀態來源失敗：'+(error.message||error),'error')}
     }
     /* 小黃（機器人）：用量、問答紀錄、使用者回饋（資料在 Worker 的 Durable Object，不在案件資料庫） */
-    var asData={usage:null,logs:null,gaps:null,days:7,filter:'',gapFilter:'open',loading:false};
+    var asData={usage:null,logs:null,gaps:null,notes:null,form:null,trial:null,trialQ:'',days:7,filter:'',gapFilter:'open',loading:false};
     const AS_FILTERS=[['','全部問答'],['unhelpful','沒幫助'],['helpful','有幫助'],['nofeedback','還沒回饋'],['notfound','查不到資料'],['tired','累了（額度用完）']];
     const asNum=v=>Number(v||0).toLocaleString('zh-TW');
     async function showAssistant(days){
@@ -1725,12 +1725,13 @@
       $('currentTable').textContent='小黃（機器人）';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;toolChrome();
       $('view').innerHTML='<div class="notice">正在讀取小黃的紀錄...</div>';
       try{
-        const [usage,logs,gaps]=await Promise.all([
+        const [usage,logs,gaps,notes]=await Promise.all([
           request('',{method:'POST',body:JSON.stringify({action:'assistantUsage',days:asData.days})}),
           request('',{method:'POST',body:JSON.stringify({action:'assistantLogs',days:asData.days,limit:500})}),
-          request('',{method:'POST',body:JSON.stringify({action:'assistantGaps'})})
+          request('',{method:'POST',body:JSON.stringify({action:'assistantGaps'})}),
+          request('',{method:'POST',body:JSON.stringify({action:'assistantNotes'})})
         ]);
-        asData.usage=usage;asData.logs=logs;asData.gaps=gaps;note('已讀取小黃的紀錄');renderAssistant();
+        asData.usage=usage;asData.logs=logs;asData.gaps=gaps;asData.notes=notes;note('已讀取小黃的紀錄');renderAssistant();
       }catch(error){
         const unknown=/Unknown action/i.test(String(error.message||error));
         $('view').innerHTML='';note(unknown?'後端還沒部署小黃的紀錄功能（需要 wrangler deploy）':`讀取小黃紀錄失敗：${error.message||error}`,'error');
@@ -1769,24 +1770,72 @@
       const logRows=entries.slice(0,300).map(e=>`<details style="border-top:1px solid #e3e9e5;padding:9px 2px"><summary style="cursor:pointer;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><span style="color:#888;font-size:12px;white-space:nowrap">${esc(auditTime(e.ts))}</span><b>${esc(e.user||e.account)}</b><span style="color:#888;font-size:12px">${esc(e.department||'')}</span>${tag(e)}${e.tools&&e.tools.length&&!e.found?'<span class="audit-kind">查不到</span>':''}<span style="flex:1 1 220px">${esc(e.question)}</span><span style="color:#888;font-size:12px">${asNum(e.tokens)} tokens</span></summary><div style="margin:8px 0 2px 4px;padding:10px 12px;border-radius:10px;background:rgba(21,158,49,.07);white-space:pre-wrap;line-height:1.65">${esc(e.answer)}</div><div style="margin:4px 0 0 4px;color:#888;font-size:12px">工具：${esc((e.tools||[]).join('、')||'無')}｜帳號：${esc(e.account)}</div></details>`).join('')||'<div class="notice" style="display:block">沒有符合的問答</div>';
       $('count').textContent=`${asNum(entries.length)} 筆問答`;$('totalRows').textContent=asNum((l.entries||[]).length);
       const gapAll=(asData.gaps&&asData.gaps.gaps)||[],gapList=gapAll.filter(g=>!asData.gapFilter||g.status===asData.gapFilter);
-      const gapHtml=gapList.map(g=>`<div style="border-top:1px solid #e3e9e5;padding:10px 2px"><div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span class="audit-kind ${g.status==='open'?'k-登入失敗':'k-登入'}">${g.status==='open'?'待補':'已處理'}</span><b style="flex:1 1 240px">${esc(g.question)}</b>${g.count>1?`<span class="audit-kind">問過 ${g.count} 次</span>`:''}<span style="color:#888;font-size:12px">${esc(auditTime(g.lastTs))}</span></div><div style="color:#888;font-size:12px;margin:4px 0">提問：${esc(g.user||g.account)}${g.department?'（'+esc(g.department)+'）':''}${g.askers&&g.askers.length>1?'等 '+g.askers.length+' 人':''}${g.note?'｜小黃缺的資訊：'+esc(g.note):''}${g.adminNote?'｜處理備註：'+esc(g.adminNote):''}</div><div>${g.status==='open'?`<button type="button" class="btn primary" data-gap-done="${esc(g.id)}">標為已處理</button>`:`<button type="button" class="btn" data-gap-open="${esc(g.id)}">重新開啟</button>`}</div></div>`).join('')||'<div class="notice" style="display:block">'+(asData.gapFilter==='open'?'目前沒有待補的問題':'沒有符合的問題')+'</div>';
+      const gapHtml=gapList.map(g=>`<div style="border-top:1px solid #e3e9e5;padding:10px 2px"><div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span class="audit-kind ${g.status==='open'?'k-登入失敗':'k-登入'}">${g.status==='open'?'待補':'已處理'}</span><b style="flex:1 1 240px">${esc(g.question)}</b>${g.count>1?`<span class="audit-kind">問過 ${g.count} 次</span>`:''}<span style="color:#888;font-size:12px">${esc(auditTime(g.lastTs))}</span></div><div style="color:#888;font-size:12px;margin:4px 0">提問：${esc(g.user||g.account)}${g.department?'（'+esc(g.department)+'）':''}${g.askers&&g.askers.length>1?'等 '+g.askers.length+' 人':''}${g.note?'｜小黃缺的資訊：'+esc(g.note):''}${g.adminNote?'｜處理備註：'+esc(g.adminNote):''}</div><div>${g.status==='open'?`<button type="button" class="btn primary" data-gap-teach="${esc(g.id)}">回答這題</button> <button type="button" class="btn" data-gap-done="${esc(g.id)}">標為已處理</button>`:`<button type="button" class="btn" data-gap-open="${esc(g.id)}">重新開啟</button>`}</div></div>`).join('')||'<div class="notice" style="display:block">'+(asData.gapFilter==='open'?'目前沒有待補的問題':'沒有符合的問題')+'</div>';
+      const noteList=((asData.notes&&asData.notes.notes)||[]),f=asData.form;
+      const noteForm=f?`<div style="border:1px solid #cfe3d8;border-radius:12px;padding:12px;margin:8px 0;background:rgba(21,158,49,.05)"><div style="display:grid;gap:8px"><label>標題（使用者會問的問題）<input id="ntTitle" maxlength="80" value="${esc(f.title)}" style="width:100%;padding:8px;border:1px solid #cfd8d3;border-radius:8px"></label><label>答案（小黃會依這段回答，請寫清楚怎麼做；最多 1500 字）<textarea id="ntBody" rows="6" maxlength="1500" style="width:100%;padding:8px;border:1px solid #cfd8d3;border-radius:8px">${esc(f.body)}</textarea></label><label>關鍵字（選填，用逗號分隔，幫小黃更容易找到）<input id="ntKeys" value="${esc(f.keywords)}" style="width:100%;padding:8px;border:1px solid #cfd8d3;border-radius:8px"></label><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="ntActive"${f.active?' checked':''}>啟用（取消勾選＝先存草稿，小黃不會用）</label><div style="color:#b45309;font-size:12px">請不要寫密碼、金鑰或個人資料；小黃會把這段內容當成資料參考，所有同事問到相關問題時都可能引用。</div><div style="display:flex;gap:8px"><button type="button" class="btn primary" data-note-save>儲存</button><button type="button" class="btn" data-note-cancel>取消</button></div></div></div>`:'';
+      const noteRows=noteList.map(n=>`<div style="border-top:1px solid #e3e9e5;padding:10px 2px"><div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span class="audit-kind ${n.active?'k-登入':''}">${n.active?'啟用':'停用'}</span><b style="flex:1 1 240px">${esc(n.title)}</b><span style="color:#888;font-size:12px">${esc(n.updatedBy||'')}｜${esc(auditTime(n.updatedAt))}</span></div><div style="margin:6px 0;white-space:pre-wrap;line-height:1.6;color:#455">${esc(n.body.length>160?n.body.slice(0,160)+'…':n.body)}</div>${n.keywords&&n.keywords.length?`<div style="color:#888;font-size:12px;margin-bottom:6px">關鍵字：${esc(n.keywords.join('、'))}</div>`:''}<div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn" data-note-edit="${esc(n.id)}">編輯</button><button type="button" class="btn" data-note-toggle="${esc(n.id)}">${n.active?'停用':'啟用'}</button><button type="button" class="btn danger" data-note-del="${esc(n.id)}">刪除</button></div></div>`).join('')||'<div class="notice" style="display:block">還沒有補充。可以按「新增補充」，或在上方「待補的問題」按「回答這題」。</div>';
+      const tr=asData.trial;
+      const trialHtml=`<div style="border:1px dashed #9db8a8;border-radius:12px;padding:12px;margin:8px 0"><div style="font-weight:800;margin-bottom:6px">試問小黃（看看他現在會怎麼回答）</div><div style="display:flex;gap:8px"><input id="asTrialQ" value="${esc(asData.trialQ)}" placeholder="例如：怎麼申請換座位？" maxlength="500" style="flex:1;padding:8px;border:1px solid #cfd8d3;border-radius:8px"><button type="button" class="btn primary" data-trial-send${tr&&tr.busy?' disabled':''}>${tr&&tr.busy?'思考中…':'試問'}</button></div>${tr&&!tr.busy?(tr.error?'<div class="notice" style="display:block;margin-top:8px;color:#b91c1c">'+esc(tr.error)+'</div>':`<div style="margin-top:8px;padding:10px 12px;border-radius:10px;background:rgba(21,158,49,.07);white-space:pre-wrap;line-height:1.65">${esc(tr.reply)}</div><div style="color:#888;font-size:12px;margin-top:4px">用到的工具：${esc((tr.tools||[]).join('、')||'無')}｜${asNum(tr.tokens||0)} tokens${tr.skipped?'｜後端尚未設定金鑰':''}</div>`):''}<div style="color:#888;font-size:12px;margin-top:6px">試問不會被記錄、不計用量、也不會新增待補問題。</div></div>`;
       const th='style="text-align:left;padding:6px 10px"';
       $('view').innerHTML=`<div class="content-actions" style="gap:8px;flex-wrap:wrap"><select id="asDays" aria-label="期間">${[1,7,14,30].map(d=>`<option value="${d}"${d===asData.days?' selected':''}>近 ${d} 天</option>`).join('')}</select><select id="asFilter" aria-label="篩選問答">${AS_FILTERS.map(([v,t])=>`<option value="${v}"${v===asData.filter?' selected':''}>${t}</option>`).join('')}</select><button type="button" class="btn" id="asReload">重新整理</button><button type="button" class="btn" id="asCsv">匯出問答 CSV</button><span class="count">問答最多讀取最新 500 筆（共 ${asNum(l.total)} 筆）；搜尋框可搜問題、回答、人名</span></div>`
         +cards
-        +`<h3 style="margin:16px 0 6px">小黃答不出來的問題（請補進知識庫或發公告）</h3><div class="content-actions" style="gap:8px"><select id="asGapFilter" aria-label="篩選待補問題">${[['open','待補'],['done','已處理'],['','全部']].map(([v,t])=>`<option value="${v}"${v===asData.gapFilter?' selected':''}>${t}</option>`).join('')}</select><span class="count">小黃找不到答案時會自動記在這裡，同一題會合併計次；補完後按「標為已處理」</span></div><div>${gapHtml}</div>`
+        +`<h3 style="margin:16px 0 6px">小黃答不出來的問題（按「回答這題」直接教小黃）</h3><div class="content-actions" style="gap:8px"><select id="asGapFilter" aria-label="篩選待補問題">${[['open','待補'],['done','已處理'],['','全部']].map(([v,t])=>`<option value="${v}"${v===asData.gapFilter?' selected':''}>${t}</option>`).join('')}</select><span class="count">小黃找不到答案時會自動記在這裡，同一題會合併計次；補完後按「標為已處理」</span></div><div>${gapHtml}</div>`
+        +`<h3 style="margin:16px 0 6px">教小黃（管理者補充的說明，存好立刻生效）</h3><div class="content-actions" style="gap:8px"><button type="button" class="btn primary" data-note-new>新增補充</button><button type="button" class="btn" data-notes-export>匯出 JSON</button><span class="count">共 ${asNum(noteList.length)} 條；補充的優先於內建說明，只有管理者能編輯</span></div>${noteForm}${trialHtml}<div>${noteRows}</div>`
         +`<h3 style="margin:16px 0 6px">每日用量</h3><div class="table-wrap"><table><thead><tr><th ${th}>日期</th><th ${th}>提問</th><th ${th}>tokens</th><th ${th}>使用人數</th><th ${th}>有幫助</th><th ${th}>沒幫助</th><th ${th}>查不到</th><th ${th}>累了</th></tr></thead><tbody>${dayRows}</tbody></table></div>`
         +`<h3 style="margin:16px 0 6px">每人用量</h3><div class="table-wrap"><table><thead><tr><th ${th}>使用者</th><th ${th}>提問</th><th ${th}>tokens</th><th ${th}>有幫助</th><th ${th}>沒幫助</th></tr></thead><tbody>${personRows}</tbody></table></div>`
         +`<h3 style="margin:16px 0 6px">問答紀錄（點開看回答）</h3><div>${logRows}</div>`
         +`<p class="notice" style="margin-top:12px;display:block">問答內容只有管理者看得到；小黃本身不會主動提起紀錄，但被問到會如實說「會記錄下來，用來改善系統」。回饋來自使用者在對話下方按的「有幫助／沒幫助」。</p>`;
     }
+    $('view').addEventListener('input',event=>{
+      if(!(auditMode&&auditView==='assistant'))return;
+      const t=event.target;
+      if(t.id==='asTrialQ'){asData.trialQ=t.value;return}
+      if(!asData.form)return;
+      if(t.id==='ntTitle')asData.form.title=t.value;
+      else if(t.id==='ntBody')asData.form.body=t.value;
+      else if(t.id==='ntKeys')asData.form.keywords=t.value;
+    });
     $('view').addEventListener('change',event=>{
       if(!(auditMode&&auditView==='assistant'))return;
+      if(event.target.id==='ntActive'&&asData.form){asData.form.active=event.target.checked;return}
       if(event.target.id==='asDays')showAssistant(Number(event.target.value)||7);
       else if(event.target.id==='asFilter'){asData.filter=event.target.value;renderAssistant()}
       else if(event.target.id==='asGapFilter'){asData.gapFilter=event.target.value;renderAssistant()}
     });
     $('view').addEventListener('click',event=>{
       if(!(auditMode&&auditView==='assistant'))return;
+      const t=event.target;
+      const reloadNotes=()=>request('',{method:'POST',body:JSON.stringify({action:'assistantNotes'})}).then(r=>{asData.notes=r;renderAssistant()});
+      const fail=error=>note('操作失敗：'+(error.message||error),'error');
+      const gt=t.closest('[data-gap-teach]');
+      if(gt){const g=((asData.gaps&&asData.gaps.gaps)||[]).find(x=>x.id===gt.dataset.gapTeach);if(g){asData.form={id:'',title:g.question,body:'',keywords:'',active:true,gapId:g.id};renderAssistant();setTimeout(()=>{const el=document.getElementById('ntBody');if(el){el.scrollIntoView({block:'center'});el.focus()}},30)}return}
+      if(t.closest('[data-note-new]')){asData.form={id:'',title:'',body:'',keywords:'',active:true,gapId:''};renderAssistant();return}
+      if(t.closest('[data-note-cancel]')){asData.form=null;renderAssistant();return}
+      const ne=t.closest('[data-note-edit]');
+      if(ne){const n=((asData.notes&&asData.notes.notes)||[]).find(x=>x.id===ne.dataset.noteEdit);if(n){asData.form={id:n.id,title:n.title,body:n.body,keywords:(n.keywords||[]).join('、'),active:n.active,gapId:''};renderAssistant();document.getElementById('ntTitle')?.scrollIntoView({block:'center'})}return}
+      if(t.closest('[data-note-save]')){
+        const f=asData.form;if(!f)return;
+        request('',{method:'POST',body:JSON.stringify({action:'assistantNoteSave',id:f.id,title:f.title,body:f.body,keywords:f.keywords,active:f.active,gapId:f.gapId})})
+          .then(()=>{asData.form=null;note('已儲存，小黃立刻會用這段說明');return Promise.all([reloadNotes(),request('',{method:'POST',body:JSON.stringify({action:'assistantGaps'})}).then(r=>{asData.gaps=r;renderAssistant()})])})
+          .catch(fail);
+        return;
+      }
+      const nt=t.closest('[data-note-toggle]');
+      if(nt){const n=((asData.notes&&asData.notes.notes)||[]).find(x=>x.id===nt.dataset.noteToggle);if(n)request('',{method:'POST',body:JSON.stringify({action:'assistantNoteSave',id:n.id,title:n.title,body:n.body,keywords:(n.keywords||[]).join('、'),active:!n.active})}).then(()=>{note(n.active?'已停用':'已啟用');return reloadNotes()}).catch(fail);return}
+      const nd=t.closest('[data-note-del]');
+      if(nd){const n=((asData.notes&&asData.notes.notes)||[]).find(x=>x.id===nd.dataset.noteDel);if(n&&window.confirm('確定刪除「'+n.title+'」？刪除後無法復原（建議先「停用」）。'))request('',{method:'POST',body:JSON.stringify({action:'assistantNoteDelete',id:n.id})}).then(()=>{note('已刪除');return reloadNotes()}).catch(fail);return}
+      if(t.closest('[data-notes-export]')){
+        const data=JSON.stringify(((asData.notes&&asData.notes.notes)||[]),null,2);
+        const url=URL.createObjectURL(new Blob([data],{type:'application/json;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='教小黃補充.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);return;
+      }
+      if(t.closest('[data-trial-send]')){
+        const q=(asData.trialQ||'').trim();if(!q){note('請先輸入要試問的問題','error');return}
+        asData.trial={busy:true};renderAssistant();
+        request('',{method:'POST',body:JSON.stringify({action:'assistantTrial',message:q})})
+          .then(r=>{asData.trial={reply:r.reply,tools:r.tools||[],tokens:r.tokens||0,skipped:Boolean(r.skipped)};renderAssistant()})
+          .catch(error=>{asData.trial={error:'試問失敗：'+(error.message||error)};renderAssistant()});
+        return;
+      }
       const gd=event.target.closest('[data-gap-done]'),go=event.target.closest('[data-gap-open]');
       if(gd||go){
         const id=(gd||go).dataset.gapDone||(gd||go).dataset.gapOpen,done=Boolean(gd);

@@ -40,6 +40,8 @@
 | `assistantLogs` | `database.manage` | 近 N 天完整問答（含問題與回答） |
 | `assistantGaps` | `database.manage` | 小黃答不出來、已記錄回報的問題清單（待補／已處理） |
 | `assistantGapUpdate` | `database.manage` | 把某筆待補問題標為已處理（可附備註）或重新開啟 |
+| `assistantNotes`／`assistantNoteSave`／`assistantNoteDelete` | `database.manage` | **教小黃**：列出、新增或更新（帶 `gapId` 會順便結案）、刪除管理者補充的說明 |
+| `assistantTrial` | `database.manage` | **試問**：照正常流程回答，但不寫紀錄、不計用量、不新增待補問題；回傳用到的工具與 tokens |
 
 ## 4. Claude 的工具（模型只能透過這些拿資料）
 
@@ -65,6 +67,7 @@
 | `assistantLog:<台灣日期>`（超過 2000 筆分片 `…:<序號>`） | 問答紀錄：問題、回答、工具、是否查到、tokens、回饋、是否累了 | 180 天 |
 | `assistantNews` | 新聞標題快取（3 小時） | 覆寫 |
 | `assistantChanges` | GitHub 更動快取（30 分鐘） | 覆寫 |
+| `assistantNotes` | **教小黃**的補充說明（最多 200 條：標題、答案、關鍵字、啟用、建立／修改者與時間、來源 gapId） | 手動管理 |
 | `assistantGaps` | 答不出來的問題（最多 300 筆；同一題合併 `count`／`askers`；`status` open／done＋管理者備註） | 手動處理 |
 | `assistantLogCleanupDate` | 清理排程用，一天只跑一次 | — |
 
@@ -88,7 +91,7 @@
 1. **自動（不必做任何事）**：每次 push 到 `main` 後，只要 `MAINTENANCE_LOG.md` 有新段落或 commit 有新標題，30 分鐘內小黃就能透過 `getRecentChanges` 回答「最近改了什麼」，滑過氣泡也會輪流顯示「系統更新」。**所以每次修改都要照規矩在 `MAINTENANCE_LOG.md` 檔尾記一段，寫給人看得懂的話。**
 2. **系統公告**：管理者在後台發公告，立即生效（`getRecentUpdates`），也會出現在首頁提示條與氣泡。
 3. **內建知識庫**：長期成立的規則、入口、玩法，要改 `assistant-knowledge.ts` 並 `wrangler deploy`。
-4. **（未做）後台「教小黃」**：讓管理者在後台直接補說明條目，不用部署。需要再做。
+4. **後台「教小黃」**（已做）：後台「問題回報 › 小黃（機器人）› 教小黃」新增／編輯補充，存好立刻生效；`getSystemHelp` 會先查補充再查內建說明。同一頁有**試問框**可立刻看小黃現在怎麼回答。小黃答不出來的問題可按「回答這題」直接補。
 
 ## 7. 常見修改怎麼做
 
@@ -118,7 +121,6 @@
 
 ## 10. 還沒做、可以做的
 
-- 後台「教小黃」（見第 6 節第 4 條）。
 - 換成 Codex 畫的真正閉眼／張嘴圖。
 - 新聞改接正式 API；滑過氣泡針對手機（無 hover）的替代入口。
 - 小黃紀錄的自動備份（目前只存在 Durable Object）。

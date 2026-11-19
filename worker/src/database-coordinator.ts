@@ -3,7 +3,7 @@ import { DurableObject } from 'cloudflare:workers';
 import { getNewsTicker } from './assistant-news';
 import { getChangeLog } from './assistant-changes';
 import { FEATURE_TIPS } from './assistant-knowledge';
-import { assistantChat, assistantToday, assistantLogsReport, assistantUsageReport, cleanupAssistantStorage, listGaps, updateGap, recordFeedback } from './assistant';
+import { assistantChat, assistantToday, assistantLogsReport, assistantUsageReport, cleanupAssistantStorage, deleteNote, listGaps, listNotes, saveNote, updateGap, recordFeedback } from './assistant';
 import { DEFAULT_CUSTOMER_CC_EMAILS, latestSystemAnnouncement, publicSystemAnnouncement, systemAnnouncementReadRecords, TABLE_SCHEMAS } from '../../backend/schema.mjs';
 import { normalizeDesignType, splitDetailValues } from '../../backend/weighting.mjs';
 import {
@@ -5764,6 +5764,22 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'assistantGapUpdate') {
         this.requireAccess(database, session, 'database.manage');
         return await updateGap(this.ctx.storage, payload, Date.now());
+      }
+      if (action === 'assistantNotes') {
+        this.requireAccess(database, session, 'database.manage');
+        return await listNotes(this.ctx.storage);
+      }
+      if (action === 'assistantNoteSave') {
+        const current = this.requireAccess(database, session, 'database.manage');
+        return await saveNote(this.ctx.storage, payload, current.user || current.account, Date.now());
+      }
+      if (action === 'assistantNoteDelete') {
+        this.requireAccess(database, session, 'database.manage');
+        return await deleteNote(this.ctx.storage, text(payload.id));
+      }
+      if (action === 'assistantTrial') {
+        const current = this.requireAccess(database, session, 'database.manage');
+        return await assistantChat({ message: payload.message }, database, current, this.ctx.storage, { apiKey: (this.env as { ANTHROPIC_API_KEY?: string }).ANTHROPIC_API_KEY, github: this.githubSource(), dryRun: true });
       }
       if (action === 'assistantFeedback') {
         const current = this.requireSession(session);

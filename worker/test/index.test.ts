@@ -5936,6 +5936,22 @@ describe('assistant actions', () => {
     expect((result as unknown as { updates: string[] }).updates).toEqual(['2026-11-19 小黃讀取更新']);
   });
 
+  it('only lets managers teach, list, delete and trial the assistant', async () => {
+    for (const action of ['assistantNotes', 'assistantNoteSave', 'assistantNoteDelete', 'assistantTrial']) {
+      expect(await api({ action, title: 't', body: 'b', id: 'x', message: 'hi' })).toMatchObject({ ok: false });
+    }
+    const other = await seedSession('test.user@emctaipei.com', '測試使用者');
+    expect(await api({ action: 'assistantNoteSave', title: 't', body: 'b' }, other)).toMatchObject({ ok: false });
+    expect(await api({ action: 'assistantNotes' }, other)).toMatchObject({ ok: false });
+    const manager = await seedSession('machi.chen@emctaipei.com', 'Machi');
+    const saved = await api({ action: 'assistantNoteSave', title: '怎麼申請換座位？', body: '到角色頁', keywords: '座位' }, manager) as { ok: boolean; note: { id: string; createdBy: string } };
+    expect(saved).toMatchObject({ ok: true, note: { createdBy: 'Machi' } });
+    expect(await api({ action: 'assistantNotes' }, manager)).toMatchObject({ ok: true, notes: [{ title: '怎麼申請換座位？' }] });
+    expect(await api({ action: 'assistantTrial', message: '怎麼換座位' }, manager)).toMatchObject({ ok: true, skipped: true });
+    expect(await api({ action: 'assistantNoteDelete', id: saved.note.id }, manager)).toMatchObject({ ok: true });
+    expect(await api({ action: 'assistantNotes' }, manager)).toMatchObject({ ok: true, notes: [] });
+  });
+
   it('only lets managers read and update the unanswered-question list', async () => {
     expect(await api({ action: 'assistantGaps' })).toMatchObject({ ok: false });
     const other = await seedSession('test.user@emctaipei.com', '測試使用者');
