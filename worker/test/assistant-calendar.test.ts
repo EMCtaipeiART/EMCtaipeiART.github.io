@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { emptyDatabase } from '../../backend/schema.mjs';
 import { ASSISTANT_SYSTEM_PROMPT, assistantChat, todayLine, type AssistantStore } from '../src/assistant';
-import { getCalendarTool, getDutyTool, weekRange, type CalendarDeps } from '../src/assistant-calendar';
+import { classifyEvent, getCalendarTool, getDutyTool, weekRange, type CalendarDeps } from '../src/assistant-calendar';
 import type { DatabaseSnapshot, Row, SessionRecord } from '../src/types';
 
 function memoryStore(): AssistantStore {
@@ -136,5 +136,44 @@ describe('「這禮拜」是週一到週日（含已經過去的日子）', () =
   it('puts today and this week\'s range in the prompt and tells the model to use week=this', () => {
     expect(todayLine(THU)).toBe('現在是台灣時間 2026-11-19（週四）；「這週／本週／這禮拜」＝2026-11-16 到 2026-11-22（週一到週日，包含已經過去的日子）；「今天」＝2026-11-19。');
     expect(ASSISTANT_SYSTEM_PROMPT).toContain('week=this');
+  });
+});
+
+describe('「誰不在公司」：外出與「某某假」也要查到', () => {
+  const THU = Date.parse('2026-11-19T04:00:00Z');
+  // 這兩筆是 2026-11-19 在正式行事曆實際看到、卻被當成一般行程而漏掉的事件
+  const real: Row[] = [
+    { who: 'Noise', title: '(外出) KidZania品牌影片拍攝', start: tw('2026-11-20T09:00:00'), end: tw('2026-11-20T16:00:00'), allDay: false, kind: 'event' },
+    { who: 'Leona', title: 'Leona假', start: tw('2026-11-27T00:00:00'), end: tw('2026-12-02T00:00:00'), allDay: true, kind: 'event' },
+    { who: 'Anna', title: '晨會:創意課程與交流', start: tw('2026-11-24T09:30:00'), end: tw('2026-11-24T11:00:00'), allDay: false, kind: 'event' },
+    { who: 'Amber', title: '休假（人資系統）', start: tw('2026-11-23T09:00:00'), end: tw('2026-11-23T18:00:00'), allDay: false, kind: 'leave' }
+  ];
+  const withReal = (): CalendarDeps => ({ ...deps(), calendar: async (from, to) => ({ events: real.filter(e => Number(e.end) > tw(from + 'T00:00:00') && Number(e.start) < tw(to + 'T00:00:00') + 86400000), unreadable: [] }) });
+
+  it('classifies leave, outings and ordinary meetings by title, not only by the backend kind', () => {
+    expect(classifyEvent(real[0])).toBe('out');
+    expect(classifyEvent(real[1])).toBe('leave');
+    expect(classifyEvent(real[2])).toBe('event');
+    expect(classifyEvent(real[3])).toBe('leave');
+    expect(classifyEvent({ title: '（外出）新楓之谷＿咖啡廳場勘（台北）', kind: 'event' })).toBe('out');
+    expect(classifyEvent({ title: '特休', kind: 'event' })).toBe('leave');
+    expect(classifyEvent({ title: '春節連假', kind: 'event' })).toBe('event');
+    expect(classifyEvent({ title: '假設性討論會', kind: 'event' })).toBe('event');
+  });
+
+  it('kind=away returns leave and outings together; leave / out / meeting each return only their own', async () => {
+    const away = await getCalendarTool({ days: 31, kind: 'away' }, withReal(), THU, []) as { found: number; events: Array<{ 誰: string; 類型: string }> };
+    expect(away.found).toBe(3);
+    expect(away.events.map(e => e.誰 + ':' + e.類型).sort()).toEqual(['Amber:請假／出差', 'Leona:請假／出差', 'Noise:外出']);
+    const leave = await getCalendarTool({ days: 31, kind: 'leave' }, withReal(), THU, []) as { found: number };
+    expect(leave.found).toBe(2);
+    const out = await getCalendarTool({ days: 31, kind: 'out' }, withReal(), THU, []) as { found: number; events: Array<{ 誰: string }> };
+    expect(out.events.map(e => e.誰)).toEqual(['Noise']);
+    const meetings = await getCalendarTool({ days: 31, kind: 'meeting' }, withReal(), THU, []) as { events: Array<{ 誰: string }> };
+    expect(meetings.events.map(e => e.誰)).toEqual(['Anna']);
+  });
+
+  it('tells the model to use kind=away for "誰不在公司"', () => {
+    expect(ASSISTANT_SYSTEM_PROMPT).toContain('kind=away');
   });
 });

@@ -40,6 +40,22 @@ export function weekRange(today: string, which: 'this' | 'next' | 'last'): { fro
   return { from: monday, to: addDays(monday, 6) };
 }
 
+/**
+ * 行事曆事件分類。後端 kind 只把「休假／特休／請假…」字樣與人資假單認成請假，同事實際常寫「Leona假」「(外出) KidZania拍攝」，
+ * 所以小黃自己再判斷一次：請假／出差、外出、其他（會議、行程）。外出是依標題判斷（含「外出、公出、外勤、外訪」等字）。
+ */
+const OUT_RE = /外出|公出|外勤|外訪|出外|offsite|off-site/i;
+const LEAVE_RE = /休假|特休|請假|病假|事假|補休|婚假|喪假|產假|陪產|生理假|育嬰|出差|OOO|out of office/i;
+export type CalendarKind = 'leave' | 'out' | 'event';
+export function classifyEvent(e: Row): CalendarKind {
+  const title = String(e.title ?? '');
+  if (e.kind === 'leave' || LEAVE_RE.test(title)) return 'leave';
+  if (/假\s*[)）】]*\s*$/.test(title) && !/連假|國定|補班/.test(title)) return 'leave'; // 例如「Leona假」
+  if (OUT_RE.test(title)) return 'out';
+  return 'event';
+}
+const KIND_LABEL: Record<CalendarKind, string> = { leave: '請假／出差', out: '外出', event: '會議／行程' };
+
 /** getDuty：值日生輪值（預設從本月起 3 個月）與每月兩場雙週會日期。 */
 export async function getDutyTool(args: Row, deps: CalendarDeps, nowMs: number): Promise<Row> {
   if (!deps.dutyWho) return { found: 0, hint: '目前讀不到值日生資料' };
@@ -86,9 +102,12 @@ export async function getCalendarTool(args: Row, deps: CalendarDeps, nowMs: numb
   const { events, unreadable } = await deps.calendar(from, to);
   const picked = events
     .filter(e => !who || String(e.who) === who)
-    .filter(e => kind === 'leave' ? e.kind === 'leave' : kind === 'meeting' ? e.kind !== 'leave' : true);
+    .filter(e => {
+      const c = classifyEvent(e);
+      return kind === 'leave' ? c === 'leave' : kind === 'out' ? c === 'out' : kind === 'away' ? c !== 'event' : kind === 'meeting' ? c === 'event' : true;
+    });
   const list = picked.slice(0, EVENT_LIMIT).map(e => ({
-    誰: String(e.who ?? ''), 標題: String(e.title ?? ''), 類型: e.kind === 'leave' ? '請假／出差' : '會議／行程',
+    誰: String(e.who ?? ''), 標題: String(e.title ?? ''), 類型: KIND_LABEL[classifyEvent(e)],
     開始: e.allDay ? mdOnly(Number(e.start)) + '（全天）' : hhmm(Number(e.start)),
     結束: e.allDay ? mdOnly(Number(e.end) - 1) : hhmm(Number(e.end)),
     會議室: e.room ? String(e.room) : undefined
