@@ -4726,7 +4726,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
        對話只留在頁面記憶體；問答紀錄與額度由後端存在 Durable Object，不寫進 JSON 快照。
        造型之後要換，只要改 .as-avatar 的背景圖（CSS 變數 --as-avatar-img），元件不用動。 */
     const asHelper=(()=>{
-      const S={canUsage:false,acct:'',open:false,min:false,msgs:[],busy:false,tired:false,ann:null,today:null,day:'',farewell:false,loadedFor:''};
+      const S={fabShown:false,enter:false,canUsage:false,acct:'',open:false,min:false,msgs:[],busy:false,tired:false,ann:null,today:null,day:'',farewell:false,loadedFor:''};
       const tpDay=()=>{const p=taipeiParts();return `${p.year}-${p.month}-${p.day}`};
       const kGreet=()=>'assistantGreetedV1:'+S.acct,kClose=()=>'assistantClosedV1:'+S.acct;
       const lsGet=k=>{try{return localStorage.getItem(k)||''}catch(err){return ''}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(err){}};
@@ -4749,27 +4749,31 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       }
       function msgHtml(m,i){
         const fb=m.role==='assistant'&&m.logId?(m.fb==null?`<span class="as-fb"><button type="button" data-as-fb="1" data-i="${i}">有幫助</button><button type="button" data-as-fb="0" data-i="${i}">沒幫助</button></span>`:`<span class="as-fb as-fb-done">${m.fb?'謝謝回饋':'收到，我會改進'}</span>`):'';
-        return `<div class="as-msg ${m.role==='user'?'as-me':'as-bot'}"><div class="as-bubble">${esc(m.content).replace(/\n/g,'<br>')}</div>${fb}</div>`;
+        return `<div class="as-msg ${m.role==='user'?'as-me':'as-bot'}${m.fresh?' as-in':''}"><div class="as-bubble">${esc(m.content).replace(/\n/g,'<br>')}</div>${fb}</div>`;
       }
       function render(){
         if(!loggedIn()){const el=document.getElementById('asHelper');if(el)el.remove();return}
         const el=root(),unread=Boolean(S.ann);
         if(!S.open){
-          el.innerHTML=`<button type="button" class="as-fab" data-as="open" aria-label="開啟小黃" title="小黃"><span class="as-avatar">${FACE}</span>${unread?'<i class="as-dot" aria-label="有新公告"></i>':''}</button>`;
+          const drop=S.fabShown?'':' as-drop';S.fabShown=true;
+          el.innerHTML=`<button type="button" class="as-fab${drop}" data-as="open" aria-label="開啟小黃" title="小黃"><span class="as-avatar">${FACE}</span>${unread?'<i class="as-dot" aria-label="有新公告"></i>':''}</button>`;
           return;
         }
+        S.fabShown=false;const enter=S.enter?' as-enter':'';S.enter=false;
+        const chips=!S.tired&&!S.farewell&&!S.msgs.some(m=>m.role==='user')?`<div class="as-chips">${['這個月接了幾案','今天要做哪些事','多元宇宙是什麼'].map(t=>`<button type="button" class="as-chip" data-as-chip="${esc(t)}">${esc(t)}</button>`).join('')}</div>`:'';
         const annHtml=S.ann?`<div class="as-ann"><b>新功能公告</b><span>${esc(S.ann.title||S.ann.version)}</span><div class="as-ann-acts"><button type="button" class="as-btn primary" data-as="ann-go">帶我去看</button><button type="button" class="as-btn" data-as="ann-ok">知道了</button></div></div>`:'';
         const body=S.farewell?`<div class="as-msg as-bot"><div class="as-bubble">好喔，那我晚點再回來～</div></div>`:S.msgs.map(msgHtml).join('')+(S.busy?'<div class="as-msg as-bot"><div class="as-bubble as-think">思考中<i></i><i></i><i></i></div></div>':'');
-        el.innerHTML=`<section class="as-panel" role="dialog" aria-label="小黃，設計部小幫手"><header class="as-head"><span class="as-avatar sm">${FACE}</span><div class="as-title"><b>小黃</b><small>設計部小幫手</small></div>${S.canUsage?'<button type="button" class="as-usage" data-as="usage">用量</button>':''}<button type="button" class="as-x" data-as="close" aria-label="關閉小幫手">${SVG_X}</button></header>
-          <div class="as-body" id="asBody">${annHtml}${body}</div>
+        el.innerHTML=`<section class="as-panel${enter}" role="dialog" aria-label="小黃，設計部小幫手"><header class="as-head"><span class="as-avatar sm">${FACE}</span><div class="as-title"><b>小黃</b><small>設計部小幫手</small></div>${S.canUsage?'<button type="button" class="as-usage" data-as="usage">用量</button>':''}<button type="button" class="as-x" data-as="close" aria-label="關閉小幫手">${SVG_X}</button></header>
+          <div class="as-body" id="asBody">${annHtml}${body}${chips}</div>
           <form class="as-form"><input id="asInput" type="text" maxlength="500" autocomplete="off" placeholder="${S.tired?'明天再來找我':'問我案量、找案件…'}" ${S.tired||S.busy||S.farewell?'disabled':''}><button type="submit" class="as-send" aria-label="送出" ${S.tired||S.busy||S.farewell?'disabled':''}>${SVG_SEND}</button></form></section>`;
-        const b=document.getElementById('asBody');if(b)b.scrollTop=b.scrollHeight;
+        S.msgs.forEach(m=>{m.fresh=false});
+        const b=document.getElementById('asBody');if(b)b.scrollTo?b.scrollTo({top:b.scrollHeight,behavior:'smooth'}):(b.scrollTop=b.scrollHeight);
       }
       /* 小黃的表情：眨眼與說話都是疊在頭像上的小圖層（.as-lid、.as-mouth），之後有 Codex 補的眼閉／張嘴圖，只要換 FACE 的內容 */
       let talkT=0;
       function talk(ms){const el=document.getElementById('asHelper');if(!el)return;el.classList.add('talk');clearTimeout(talkT);talkT=setTimeout(()=>el.classList.remove('talk'),Math.max(600,ms||1200))}
       (function life(){const blink=()=>{const el=document.getElementById('asHelper');if(el){el.classList.add('blink');setTimeout(()=>el.classList.remove('blink'),160)}setTimeout(blink,2200+Math.random()*3800)};setTimeout(blink,1500)})();
-      function openPanel(focus){S.open=true;render();if(focus)setTimeout(()=>document.getElementById('asInput')?.focus(),30)}
+      function openPanel(focus){S.open=true;S.enter=true;render();if(focus)setTimeout(()=>document.getElementById('asInput')?.focus(),30)}
       function closePanel(){
         if(S.farewell)return;
         S.farewell=true;render();
@@ -4793,10 +4797,10 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       async function send(text){
         const q=String(text||'').trim().slice(0,500);if(!q||S.busy||S.tired)return;
         const history=S.msgs.filter(m=>m.content).slice(-6).map(m=>({role:m.role,content:m.content}));
-        S.msgs.push({role:'user',content:q});S.busy=true;render();
+        S.msgs.push({role:'user',content:q,fresh:true});S.busy=true;render();
         try{
           const r=await api('assistantChat',{message:q,history});
-          S.msgs.push({role:'assistant',content:r.reply||'……',logId:r.logId||null,fb:null});talk(400+String(r.reply||'').length*45);
+          S.msgs.push({role:'assistant',content:r.reply||'……',logId:r.logId||null,fb:null,fresh:true});talk(400+String(r.reply||'').length*45);
           if(r.quota&&r.quota.tired)S.tired=true;
         }catch(err){S.msgs.push({role:'assistant',content:'小幫手剛剛打了個盹，請再問一次！'})}
         S.busy=false;render();
@@ -4834,6 +4838,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
             render();return;
           }
         }
+        const chip=e.target.closest('[data-as-chip]');if(chip){send(chip.dataset.asChip);return}
         const f=e.target.closest('[data-as-fb]');
         if(f){const m=S.msgs[+f.dataset.i];if(!m||!m.logId||m.fb!=null)return;m.fb=f.dataset.asFb==='1';render();api('assistantFeedback',{logId:m.logId,helpful:m.fb}).catch(()=>{})}
       }
@@ -4843,6 +4848,12 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(acct!==S.acct){Object.assign(S,{acct,open:false,msgs:[],busy:false,tired:false,ann:null,today:null,farewell:false,loadedFor:''});render()}
         if(acct&&S.loadedFor!==acct&&state.loaded)load();
       }
+      let scrollT=0;
+      addEventListener('scroll',e=>{
+        if(S.open||(e.target&&e.target.closest&&e.target.closest('#asHelper')))return;
+        const el=document.getElementById('asHelper');if(!el)return;
+        el.classList.add('away');clearTimeout(scrollT);scrollT=setTimeout(()=>el.classList.remove('away'),520);
+      },{capture:true,passive:true});
       setInterval(sync,2000);setTimeout(sync,800);
       return {send,state:S};
     })();
