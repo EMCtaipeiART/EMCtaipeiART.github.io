@@ -368,10 +368,10 @@
     function updateRefreshButton(){const pending=Boolean(stagedDatabase),button=$('reload');button.textContent=pending?'套用新資料':'重新讀取';button.classList.toggle('primary',pending);button.title=pending?'背景已偵測到新資料；點擊後才更新目前畫面。':'立即重新讀取最新資料。'}
     function clearStagedRefresh(){stagedDatabase=null;stagedRefreshMessage=null;updateRefreshButton()}
     function discardStagedRefreshIfCurrent(){if(stagedDatabase&&databaseRevision(stagedDatabase)<=currentDatabaseRevision())clearStagedRefresh()}
-    async function applyMetadataSnapshot(data,{clearPending=true}={}){clearRequestCache();if(APPS_SCRIPT_MODE)directDatabase=data;if(data?.tables)MachiAccess.applyRoleTemplates(data);appliedRevision=databaseRevision(data);metadata=APPS_SCRIPT_MODE?metadataFromDatabase(data):(data.tables||{});if(!metadata[tableName]&&tableName!=='設計列表'){tableName='database';sortKey='案件編號';sortOrder='desc'}metadata['設計列表']={headers:metadata['設定']?.headers||[],primaryKey:'帳號',rowCount:metadata['設定']?.rowCount||0};$('revision').textContent=String(data.revision??'—');if(clearPending)clearStagedRefresh();renderTabs();await loadRows();return data}
-    async function loadMetadata({fresh=false,commitSha=''}={}){const data=APPS_SCRIPT_MODE?await loadDatabaseFile({fresh,commitSha}):await request('/tables');return applyMetadataSnapshot(data)}
+    async function applyMetadataSnapshot(data,{clearPending=true,reloadTool=false}={}){clearRequestCache();if(APPS_SCRIPT_MODE)directDatabase=data;if(data?.tables)MachiAccess.applyRoleTemplates(data);appliedRevision=databaseRevision(data);metadata=APPS_SCRIPT_MODE?metadataFromDatabase(data):(data.tables||{});if(!metadata[tableName]&&tableName!=='設計列表'){tableName='database';sortKey='案件編號';sortOrder='desc'}metadata['設計列表']={headers:metadata['設定']?.headers||[],primaryKey:'帳號',rowCount:metadata['設定']?.rowCount||0};$('revision').textContent=String(data.revision??'—');if(clearPending)clearStagedRefresh();renderTabs();/* 2026-11-19：目前在工具頁（小黃、操作紀錄…）時不能 loadRows()——那會把右邊內容換成資料表，看起來就像「跳到其他頁面」。背景更新只刷新左側選單；使用者按「重新讀取」時（reloadTool）才重新讀取該工具頁自己的資料。 */if(auditMode||coinMode){if(reloadTool)await refreshActiveTool()}else await loadRows();return data}
+    async function loadMetadata({fresh=false,commitSha='',reloadTool=false}={}){const data=APPS_SCRIPT_MODE?await loadDatabaseFile({fresh,commitSha}):await request('/tables');return applyMetadataSnapshot(data,{reloadTool})}
     function stageDatabaseSnapshot(data,message={}){const currentRevision=currentDatabaseRevision(),candidateRevision=databaseRevision(data),stagedRevision=databaseRevision(stagedDatabase);if(candidateRevision<=currentRevision||candidateRevision<=stagedRevision)return false;stagedDatabase=data;stagedRefreshMessage=message;updateRefreshButton();const tables=Array.isArray(message.tables)?message.tables.filter(Boolean):[];note(`偵測到新資料${tables.length?`：${tables.join('、')}`:''}。目前畫面與閱讀位置已保留；完成操作後請按「套用新資料」。`,'ok');return true}
-    async function manualReload(){const button=$('reload');button.disabled=true;try{if(stagedDatabase){const data=stagedDatabase;await applyMetadataSnapshot(data);note(`已套用 JSON 修訂版 ${data.revision??'—'}，目前頁籤與篩選條件保持不變。`,'ok')}else{await refreshWorkerDatabase();await loadMetadata({fresh:true});note(`已重新讀取 JSON 修訂版 ${appliedRevision||'—'}。`,'ok')}}catch(error){note(`重新讀取失敗：${error.message}`,'error')}finally{button.disabled=false;updateRefreshButton()}}
+    async function manualReload(){const button=$('reload');button.disabled=true;try{if(stagedDatabase){const data=stagedDatabase;await applyMetadataSnapshot(data,{reloadTool:true});note(`已套用 JSON 修訂版 ${data.revision??'—'}，目前頁籤與篩選條件保持不變。`,'ok')}else{await refreshWorkerDatabase();await loadMetadata({fresh:true,reloadTool:true});note(`已重新讀取 JSON 修訂版 ${appliedRevision||'—'}。`,'ok')}}catch(error){note(`重新讀取失敗：${error.message}`,'error')}finally{button.disabled=false;updateRefreshButton()}}
     function updateAddButton(){const hidden=tableName==='角色權限範本'||tableName==='客戶別'||tableName==='加權計分標準'||NO_INSERT_TABLES.includes(tableName);$('add').hidden=hidden;$('add').textContent=tableName==='系統公告欄'?'+ 新增公告':(tableName==='設計列表'?'+ 新增設計師':(tableName==='帳號權限'?'+ 新增帳號':(tableName==='加權計分標準'?'+ 新增項目':(tableName==='修改統計表'?'+ 新增修改紀錄':'+ 新增資料'))));$('databaseFilters').hidden=tableName!=='database';$('importAccounts').hidden=tableName!=='帳號權限'}
     function populateDatabaseFilters(){DATABASE_FILTER_FIELDS.forEach(([id,,options,placeholder])=>{const select=$(id);select.innerHTML=`<option value="">${placeholder}</option>`+options.map(value=>`<option value="${esc(value)}">${esc(value)}</option>`).join('')})}
     function updateFilterClearButton(){$('filterClear').hidden=!Object.values(databaseFilters).some(Boolean)}
@@ -1720,6 +1720,15 @@
     var asData={usage:null,logs:null,gaps:null,notes:null,form:null,trial:null,trialQ:'',days:7,filter:'',gapFilter:'open',loading:false};
     const AS_FILTERS=[['','全部問答'],['unhelpful','沒幫助'],['helpful','有幫助'],['nofeedback','還沒回饋'],['notfound','查不到資料'],['tired','累了（額度用完）']];
     const asNum=v=>Number(v||0).toLocaleString('zh-TW');
+    /* 目前在哪個工具頁就重新讀取哪一頁（不換頁）；平台幣帳本是嵌入的 iframe，不動 */
+    function refreshActiveTool(){
+      if(!auditMode)return;
+      if(auditView==='assistant')return showAssistant();
+      if(auditView==='audit')return showAudit();
+      if(auditView==='perm')return showPerm();
+      if(auditView==='backup')return showBackup();
+      if(auditView==='diag')return showDiag();
+    }
     async function showAssistant(days){
       leaveCoin();auditMode=true;auditView='assistant';if(days)asData.days=days;renderTabs();
       $('tableTitle').textContent='小黃（機器人）';$('tableSubtitle').textContent='用量、使用者問了什麼、回答得好不好；資料存在後端，保留 180 天';
