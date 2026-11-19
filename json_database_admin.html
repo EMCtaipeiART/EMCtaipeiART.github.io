@@ -1649,14 +1649,14 @@
     function toolChrome(){const m=document.querySelector('.metrics');if(m)m.hidden=true;$('importAccounts').hidden=true;$('add').hidden=true}
     function leaveCoin(){clearInterval(window.__diagTimer);const m0=document.querySelector('.metrics');if(m0)m0.hidden=false;$('search').hidden=false;if(!coinMode)return;coinMode=false;const m=document.querySelector('.metrics');if(m)m.hidden=false;$('search').hidden=false}
     function showCoin(){
-      auditMode=false;coinMode=true;renderTabs();
+      rememberAdminTool('coin');auditMode=false;coinMode=true;renderTabs();
       $('tableTitle').textContent='平台幣帳本';$('tableSubtitle').textContent='完成案件積分 1 點 = 平台幣 1 點（2026/10/01 起）；只新增、不修改，每筆帶簽章';
       $('currentTable').textContent='平台幣帳本';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;toolChrome();$('search').hidden=true;
       const m=document.querySelector('.metrics');if(m)m.hidden=true;
       $('view').innerHTML='<iframe class="coin-frame" title="平台幣帳本" src="coin_ledger_admin.html?embed=1&v=3"></iframe>';
     }
     $('tabs').addEventListener('click',event=>{if(event.target.closest('[data-coin]'))showCoin()});
-    async function showAudit(){auditView='audit';
+    async function showAudit(){auditView='audit';rememberAdminTool('audit');
       leaveCoin();auditMode=true;renderTabs();
       $('tableTitle').textContent='操作紀錄';$('tableSubtitle').textContent='案件狀態與欄位變更、權限變更、登入、寄信的稽核紀錄';
       $('currentTable').textContent='操作紀錄';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;toolChrome();
@@ -1709,7 +1709,7 @@
         +'<br><small>這裡不顯示行事曆活動的標題或內容，只能看出「是行事曆還是假單」造成目前狀態。</small></div>';
     }
     async function showDiag(){
-      leaveCoin();auditMode=true;auditView='diag';renderTabs();
+      rememberAdminTool('diag');leaveCoin();auditMode=true;auditView='diag';renderTabs();
       $('tableTitle').textContent='狀態與心跳診斷';$('tableSubtitle').textContent='頭像上的人物狀態是誰、依據什麼設定的，以及每位設計師電腦的心跳（每 30 秒自動更新）';
       $('currentTable').textContent='狀態來源診斷';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;toolChrome();
       $('view').innerHTML='<div class="notice">正在讀取狀態來源...</div>';
@@ -1730,7 +1730,7 @@
       if(auditView==='diag')return showDiag();
     }
     async function showAssistant(days){
-      leaveCoin();auditMode=true;auditView='assistant';if(days)asData.days=days;renderTabs();
+      rememberAdminTool('assistant');leaveCoin();auditMode=true;auditView='assistant';if(days)asData.days=days;renderTabs();
       $('tableTitle').textContent='小黃（機器人）';$('tableSubtitle').textContent='用量、使用者問了什麼、回答得好不好；資料存在後端，保留 180 天';
       $('currentTable').textContent='小黃（機器人）';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;toolChrome();
       $('view').innerHTML='<div class="notice">正在讀取小黃的紀錄...</div>';
@@ -1871,7 +1871,7 @@
         +'<div class="notice" style="margin-top:12px;display:block">還原會用備份裡的內容<b>覆蓋</b>目前的記事本、專案分配與值日生替換；還原之後這幾項在備份之後做的修改會消失。建議先按「立即備份」留一份目前的狀態，再還原舊的。（注意：立即備份會覆蓋 GitHub 上最近一次備份檔，之前的版本可以從 GitHub 的提交紀錄找回。）</div>';
     }
     async function showBackup(){
-      leaveCoin();auditMode=true;auditView='backup';renderTabs();
+      rememberAdminTool('backup');leaveCoin();auditMode=true;auditView='backup';renderTabs();
       $('tableTitle').textContent='備份與還原';$('tableSubtitle').textContent='記事本、專案分配、值日生替換的加密備份';
       $('currentTable').textContent='備份與還原';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;toolChrome();
       backupMsg='';renderBackup();
@@ -1895,7 +1895,7 @@
       finally{btn.disabled=false;if(auditView==='backup')renderBackup()}
     });
     async function showPerm(){
-      leaveCoin();auditMode=true;auditView='perm';renderTabs();
+      rememberAdminTool('perm');leaveCoin();auditMode=true;auditView='perm';renderTabs();
       $('tableTitle').textContent='權限總覽';$('tableSubtitle').textContent='每個帳號實際生效的頁面與功能權限';
       $('currentTable').textContent='權限總覽';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;toolChrome();
       $('view').innerHTML='<div class="notice">正在讀取權限總覽...</div>';
@@ -1992,9 +1992,14 @@
     $('first').addEventListener('click',()=>{page=1;loadRows()});$('prev').addEventListener('click',()=>{page=Math.max(1,page-1);loadRows()});$('next').addEventListener('click',()=>{page++;loadRows()});$('last').addEventListener('click',()=>{page=Math.max(1,Math.ceil(Number($('totalRows').textContent.replace(/,/g,''))/effectivePageSize()));loadRows()});
     // 重新整理頁面時回到上次所在的頁籤（不會每次都跳回「資料庫」）；存不到或頁籤已不存在就維持預設。
     const ADMIN_TABLE_KEY='databaseAdminLastTable';
-    function rememberAdminTable(){try{localStorage.setItem(ADMIN_TABLE_KEY,tableName)}catch{}}
+    /* 2026-11-19：工具頁（小黃、操作紀錄、權限總覽、備份與還原、狀態與心跳診斷、平台幣帳本）也要記住，瀏覽器重新整理才不會跳回資料表；選資料表時清掉 */
+    const ADMIN_TOOL_KEY='databaseAdminLastTool',ADMIN_TOOLS=['assistant','audit','perm','backup','diag','coin'];
+    function rememberAdminTool(name){try{localStorage.setItem(ADMIN_TOOL_KEY,name)}catch{}}
+    function savedAdminTool(){try{const value=localStorage.getItem(ADMIN_TOOL_KEY)||'';return ADMIN_TOOLS.includes(value)?value:''}catch{return ''}}
+    async function openAdminTool(name){const open={assistant:()=>showAssistant(),audit:()=>showAudit(),perm:()=>showPerm(),backup:()=>showBackup(),diag:()=>showDiag(),coin:()=>showCoin()}[name];try{if(open)await open()}catch(error){auditMode=false;coinMode=false;await loadRows()}}
+    function rememberAdminTable(){try{localStorage.setItem(ADMIN_TABLE_KEY,tableName);localStorage.removeItem(ADMIN_TOOL_KEY)}catch{}}
     function restoreAdminTable(){let saved='';try{saved=localStorage.getItem(ADMIN_TABLE_KEY)||''}catch{}if(!saved||saved==='database')return;tableName=saved;if(saved==='修改統計表'){sortKey='建立日期';sortOrder='desc'}else{sortKey='';sortOrder='asc'}}
-    async function start(){restoreAdminTable();populateDatabaseFilters();token=stored(FRONT_TOKEN_KEY)||token;if(!token){showLogin('管理者登入狀態不存在，請回前台重新登入。');return}await window.MachiAccess?.refresh({token,account:stored('designRequestEditorAccount'),user:stored(FRONT_USER_KEY),group:stored(FRONT_GROUP_KEY)});if(!validFrontAdmin()){showLogin('Cloudflare Worker 驗證失敗，或此帳號沒有資料庫管理權限。');return}sessionStorage.setItem(TOKEN_KEY,token);showApp();try{/* 速度優化（2026-11-19）：以前要等「強制從 GitHub 重新整理」（約 3 秒）做完才開始讀資料表；現在重新整理與讀資料表同時進行，先用後端目前的資料立刻畫出表格，重新整理做完若版本真的變了才再畫一次（見 tools/admin-startup-bench.mjs） */const refreshing=refreshWorkerDatabase().then(result=>({result}),failure=>({failure}));await loadMetadata();const refreshed=await refreshing;if(refreshed.failure)throw refreshed.failure;const latest=Number(refreshed.result&&refreshed.result.revision)||0;if(latest&&latest!==appliedRevision){await loadMetadata();note(`已同步最新資料（修訂版 ${latest}）`)}}catch(error){if(/401|權限|TOKEN_EXPIRED|登入/.test(error.message)){showLogin('管理者登入狀態已失效，請回前台重新登入。');return}note(`後台讀取失敗：${error.message}`,'error')}}
+    async function start(){restoreAdminTable();populateDatabaseFilters();token=stored(FRONT_TOKEN_KEY)||token;if(!token){showLogin('管理者登入狀態不存在，請回前台重新登入。');return}await window.MachiAccess?.refresh({token,account:stored('designRequestEditorAccount'),user:stored(FRONT_USER_KEY),group:stored(FRONT_GROUP_KEY)});if(!validFrontAdmin()){showLogin('Cloudflare Worker 驗證失敗，或此帳號沒有資料庫管理權限。');return}sessionStorage.setItem(TOKEN_KEY,token);showApp();const savedTool=savedAdminTool();if(savedTool){if(savedTool==='coin')coinMode=true;else{auditMode=true;auditView=savedTool}}try{/* 速度優化（2026-11-19）：以前要等「強制從 GitHub 重新整理」（約 3 秒）做完才開始讀資料表；現在重新整理與讀資料表同時進行，先用後端目前的資料立刻畫出表格，重新整理做完若版本真的變了才再畫一次（見 tools/admin-startup-bench.mjs） */const refreshing=refreshWorkerDatabase().then(result=>({result}),failure=>({failure}));await loadMetadata();const refreshed=await refreshing;if(refreshed.failure)throw refreshed.failure;const latest=Number(refreshed.result&&refreshed.result.revision)||0;if(latest&&latest!==appliedRevision){await loadMetadata();note(`已同步最新資料（修訂版 ${latest}）`)}if(savedTool)await openAdminTool(savedTool)}catch(error){if(/401|權限|TOKEN_EXPIRED|登入/.test(error.message)){showLogin('管理者登入狀態已失效，請回前台重新登入。');return}note(`後台讀取失敗：${error.message}`,'error')}}
     start();
   </script>
 </body>

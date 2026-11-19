@@ -3269,3 +3269,9 @@
 - **原因**：`manualReload()` → `loadMetadata()` → `applyMetadataSnapshot()` 最後一律 `await loadRows()`，而 `loadRows()` 會把目前選中的資料表畫進右邊內容區；工具頁（小黃、操作紀錄、權限總覽、備份與還原、狀態與心跳診斷）不是資料表，`auditMode` 仍是開著，結果右邊被覆蓋。**同樣的問題也影響其他工具頁**（以前就有，用本機模擬在修正前確認「操作紀錄」也會跳），背景更新（資料庫版本變動時自動重讀）理論上也會觸發。
 - **修正**（`json_database_admin.html`）：`applyMetadataSnapshot(data,{clearPending,reloadTool})` 在工具頁（`auditMode||coinMode`）時**不再** `loadRows()`，只刷新左側選單（資料筆數）；使用者手動按「重新讀取」／「套用新資料」時（`reloadTool:true`）才呼叫新的 `refreshActiveTool()`，重新讀取**目前這個工具頁自己的資料**（小黃→`showAssistant`、操作紀錄→`showAudit`、權限總覽→`showPerm`、備份→`showBackup`、診斷→`showDiag`）；平台幣帳本是嵌入的 iframe，不動。背景自動更新不重讀工具頁，避免操作紀錄（2000 筆）等頁被頻繁重載。
 - **驗證**（本機模擬後端，修正前後對照）：修正前小黃與操作紀錄按重新讀取後標題都變成「資料庫」；修正後兩頁都停留原處並重新讀取各自的資料（小黃→assistantUsage／Logs／Gaps／Notes、操作紀錄→listAuditLog）。一般資料表頁與啟動速度（首次畫面約 1.76 秒）不受影響。
+
+## 2026-11-19 後台：在小黃（與其他工具頁）按瀏覽器重新整理會跳到別頁
+- **現象**：停在「小黃（機器人）」頁，按瀏覽器重新整理（F5）後，畫面回到「資料庫」資料表。
+- **原因**：後台只把「上次看的資料表」記在 `localStorage.databaseAdminLastTable`，工具頁（小黃、操作紀錄、權限總覽、備份與還原、狀態與心跳診斷、平台幣帳本）不在記憶範圍內，重新整理後就回到最後看的資料表。
+- **修正**（`json_database_admin.html`）：新增 `localStorage.databaseAdminLastTool`（assistant／audit／perm／backup／diag／coin）：各工具頁開啟時 `rememberAdminTool()` 記下自己，選資料表時（`rememberAdminTable()`）清掉；`start()` 載入時若有記住的工具頁，先把 `auditMode／coinMode` 設好（避免先畫一次資料表再切換），載入完資料表清單後 `openAdminTool()` 直接回到那一頁。
+- **驗證**（本機模擬後端，修正前後對照）：修正前小黃、操作紀錄按瀏覽器重新整理都回到「資料庫」；修正後都留在原頁並重新讀取各自的資料；選了資料表再重新整理仍回到那張資料表。與上一則「重新讀取按鈕」的修正合起來，工具頁不會再被資料表蓋掉。
