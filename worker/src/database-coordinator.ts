@@ -6590,6 +6590,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       // 圖片還沒進來就想先補紀錄）原本永遠補不回來——既有流程一律是「目前最大輪次＋1」，第一次新增
       // 就會直接變成一修，案件因此永遠缺一筆初稿。這個旗標必須由呼叫端明確帶 true，不會被既有呼叫端誤觸。
       const wantsDraft = record.draft === true || payload.draft === true;
+      const wantsBackfill = record.backfill === true || payload.backfill === true;
       return this.mutate(action, session, draft => {
         const rows = draft.tables['修改統計表'].rows;
         if (wantsDraft) {
@@ -6615,7 +6616,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           };
         }
         const count = caseRows.reduce((max, row) => Math.max(max, Number(row['修改次數']) || 0), 0) + 1;
-        const row = { '案件編號': caseId, '修改次數': String(count), '建立日期': nowTaipei(), '修改日期': modifyDate, '修改內容': content, '修改內容連結': contentLinks, '修改人': modifier, '確認修正日': '', '待修改圖片': targetImages.length ? JSON.stringify(targetImages) : '' };
+        const row = { '案件編號': caseId, '修改次數': String(count), '建立日期': nowTaipei(), '修改日期': modifyDate, '修改內容': content, '修改內容連結': contentLinks, '修改人': modifier, '確認修正日': wantsBackfill ? nowTaipei() : '', '待修改圖片': targetImages.length ? JSON.stringify(targetImages) : '' };
         rows.push(row);
         recalculateDatabaseModificationCounts(draft);
         // 有新的修改需求（一修、二修…）時，案件狀態自動改成「修改中」，設計師回覆信寄出後會再改回過稿中。
@@ -6623,7 +6624,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         // 不因為一筆修改紀錄就被救回來，維持原狀。
         const caseRow = draft.tables.database.rows.find(item => text(item['案件編號']) === caseId);
         const previousStatus = text(caseRow?.['狀態']);
-        const statusChanged = Boolean(caseRow) && !['修改中', '暫停中'].includes(previousStatus);
+        // backfill:true＝補登過去漏記的修改需求：設計師早已處理過，所以直接標成已確認，也不動案件現在的狀態。
+        const statusChanged = !wantsBackfill && Boolean(caseRow) && !['修改中', '暫停中'].includes(previousStatus);
         if (caseRow && statusChanged) caseRow['狀態'] = '修改中';
         return {
           result: { ok: true, action, rowNumber: rows.length + 1, record: row, count, status: text(caseRow?.['狀態']), previousStatus, statusChanged },

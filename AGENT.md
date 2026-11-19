@@ -6535,3 +6535,4 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 2026-11-18 備份前檔案清單加上縮圖（picker 新增 /api/thumb，用 sips／qlmanage 產生並快取在系統暫存資料夾，失敗顯示文字佔位）。
 - 2026-11-19 寄需求信的預設副本只有信箱時，依設定表補上人名（withName），寄出的副本顯示「人名 <信箱>」。
 - 2026-11-19 回信的建議收件人／副本若原信標頭只有裸信箱，也依設定表補上人名（withNames）。
+- 2026-11-19 addModificationRecord 新增 backfill:true（補登過去漏記的修改需求：直接標已確認、不改案件狀態）。需 wrangler deploy。
