@@ -378,9 +378,9 @@
       g.classList.toggle('fade-b',clipped&&g.scrollTop+g.clientHeight<g.scrollHeight-2);
       g.classList.toggle('fade-t',clipped&&g.scrollTop>2);
       /* 還有幾張沒看到：欄底的小膠囊提示，點一下往下捲 */
-      let more=g.nextElementSibling;if(!more||!more.classList.contains('col-more')){more=document.createElement('div');more.className='col-more';more.innerHTML='<button type="button" class="col-more-btn" aria-label="往下看更多卡牌"></button>';g.after(more)}
+      let more=g.nextElementSibling;if(!more||!more.classList.contains('col-more')){more=document.createElement('div');more.className='col-more';more.innerHTML='<button type="button" class="col-more-btn" aria-label="往下看更多卡牌" title="往下還有卡牌"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6.5 9.5 5.5 5.5 5.5-5.5"/></svg></button>';g.after(more)}
       const hid=clipped?[...g.querySelectorAll(':scope > div.card')].filter(c=>c.offsetTop+c.offsetHeight>g.scrollTop+g.clientHeight+6).length:0;
-      more.hidden=!hid;if(hid)more.firstElementChild.textContent=`↓ 還有 ${hid} 張`;
+      more.hidden=!hid;
     }
     function fitBoardColumns(){
       document.querySelectorAll('.board.five .cards').forEach(g=>{
