@@ -1787,7 +1787,7 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
 .as-go{background:var(--brand,#159E31);color:#fff}
 .as-go:hover{background:var(--brand-deep,#0f7f27)}
 /* 專案頁卡牌進場：淡入＋上浮＋極輕微縮放，依序延遲；再掃過一道細細的光 */
-@keyframes cardEnter{from{opacity:0;transform:translateY(16px) scale(.975)}to{opacity:1;transform:none}}
+@keyframes cardEnter{from{opacity:0;transform:translateY(20px) scale(.88)}to{opacity:1;transform:none}}
 @keyframes cardSheen{from{transform:translateX(-130%) skewX(-18deg)}to{transform:translateX(230%) skewX(-18deg)}}
 .board.is-entering .card{animation:cardEnter .62s cubic-bezier(.22,.8,.24,1) both;animation-delay:calc(var(--ci,0)*55ms + 60ms)}
 .board.is-entering .card::after{content:"";position:absolute;top:0;bottom:0;left:0;width:42%;pointer-events:none;border-radius:inherit;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);opacity:.55;mix-blend-mode:soft-light;animation:cardSheen 1.05s ease-out both;animation-delay:calc(var(--ci,0)*55ms + 340ms)}
@@ -1797,7 +1797,7 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
 .board.five .col-more,.board.five .more-btn{display:none!important}
 /* 欄內卡牌的捲動進場：離開視窗的卡牌沉在原來那一側，靠近時滑回來——快進慢收；不用 perspective／will-change，並把進場中的卡牌壓在正常卡牌下面，陰影不會蓋到鄰居 */
 .board.five .card{z-index:1}
-.board.five .card.flip-wait{z-index:0;opacity:0;transform:translateY(64px) scale(.97);pointer-events:none}
-.board.five .card.flip-wait.from-top{transform:translateY(-64px) scale(.97)}
+.board.five .card.flip-wait{z-index:0;opacity:0;transform:translateY(56px) scale(.84);transform-origin:50% 60%;pointer-events:none}
+.board.five .card.flip-wait.from-top{transform:translateY(-56px) scale(.84)}
 .board.five .card.flip-wait.flip-in{opacity:1;transform:none;pointer-events:auto;transition:transform .95s cubic-bezier(.16,1,.3,1),opacity .6s cubic-bezier(.22,.8,.3,1)}
 @media(prefers-reduced-motion:reduce){.board.five .card.flip-wait{opacity:1;transform:none}}
