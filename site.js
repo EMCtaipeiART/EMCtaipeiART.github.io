@@ -211,7 +211,12 @@
     function parseDay(value){const m=String(value||'').match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);return m?Date.UTC(+m[1],+m[2]-1,+m[3]):NaN}
     /** 倒數與進度：最後一天 99%，第一天約 1/總天數，逾期維持 99% 並標紅。 */
     function schedule(row){
-      const start=parseDay(row['開始日期']),end=parseDay(row['結束日期']),today=taipeiToday();
+      let start=parseDay(row['開始日期']),end=parseDay(row['結束日期']);const today=taipeiToday();
+      if(String(row['狀態']||'').trim()==='修改中'){
+        /* 修改中：以最新一輪未確認的修改紀錄「預計收到日」當截止日，不再拿原本的結束日（早就過了）算逾期 */
+        const open=(state.mods&&state.mods.get&&state.mods.get(String(row['案件編號']))||[]).filter(m=>(+m['修改次數']||0)>0&&!String(m['確認修正日']||'').trim()&&!Number.isNaN(parseDay(m['修改日期']))).sort((a,b)=>(+b['修改次數']||0)-(+a['修改次數']||0))[0];
+        if(open){end=parseDay(open['修改日期']);const c=parseDay(open['建立日期']);start=Number.isNaN(c)?today:c}
+      }
       if(Number.isNaN(end))return {remaining:null,percent:0,late:false,total:null};
       const remaining=Math.round((end-today)/DAY);
       const total=Number.isNaN(start)?null:Math.max(1,Math.round((end-start)/DAY)+1);
@@ -1526,6 +1531,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     })();
     /* 修改紀錄：設計師在列表點「＋」或修改膠囊，新增下一輪修改紀錄（Worker addModificationRecord） */
     const todayInput=()=>{const p=taipeiParts();return `${p.year}-${p.month}-${p.day}`};
+    /** 修改需求信預設的「預計收到日」：下一個上班日（跳過週末與國定假日） */
+    function nextWorkdayInput(){let ms=taipeiToday()+DAY;for(let i=0;i<14;i++,ms+=DAY){const wd=new Date(ms).getUTCDay();if(wd!==0&&wd!==6&&!TL_HOLIDAYS.has(ymd(ms).replace(/\//g,'-')))break}return ymd(ms).replace(/\//g,'-')}
     function stripSig(text){const v=String(text||''),m=v.match(/(^|\n)[\s​]*--[\s​]*(\n|$)/);if(!m)return v.trim();const b=v.slice(0,m.index).trim();return b||v.trim()}
     function linkify(text,links){
       const src=String(text||''),c=[];let L=links;if(typeof L==='string'){try{L=JSON.parse(L||'[]')}catch{L=[]}}
@@ -2659,7 +2666,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const m=state.mail;if(!m)return '';const d=m.drafts[m.index],ed=$('mBody');if(!ed)return '';
       let bad='';
       for(const f of ['to','cc']){const input=document.querySelector(`[data-chip-input="${f}"]`);if(input&&input.value.trim()&&!commitChipInput(input))bad=`${f==='to'?'收件人':'副本'}「${input.value.trim()}」不是有效的信箱`}
-      d.to=readChips('to').join(', ');d.cc=readChips('cc').join(', ');d.subject=$('mSubject').value.trim();d.body=ed.innerHTML;
+      d.to=readChips('to').join(', ');d.cc=readChips('cc').join(', ');d.subject=$('mSubject').value.trim();{const md=$('mModDate');if(md)d.modDate=md.value}d.body=ed.innerHTML;
       d.sigInserted=Boolean(ed.querySelector('.v5-sig'));
       const sch=$('mSchedule');if(sch)d.scheduledAt=sch.value||d.scheduledAt||'';
       return bad;
@@ -2742,6 +2749,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
           <div class="mail-row has-pick"><span>收件人</span>${chipFieldHtml('to',splitEntries(d.to),'輸入信箱後按 Enter')}<button type="button" class="pick-btn" data-pick-contact="to">選擇聯絡人</button></div>
           <div class="mail-row has-pick"><span>副本</span>${chipFieldHtml('cc',splitEntries(d.cc),'可手動輸入信箱')}<button type="button" class="pick-btn" data-pick-contact="cc">選擇聯絡人</button></div>
           <div class="mail-row"><span>主旨</span><input id="mSubject" value="${esc(d.subject)}" autocomplete="off" aria-label="主旨"></div>
+          ${(d.reply&&d.mode==='modification')?`<div class="mail-row"><span>預計收到日</span><input id="mModDate" type="date" value="${esc(d.modDate||(d.modDate=nextWorkdayInput()))}" aria-label="預計收到日" style="max-width:190px"><small class="page-sub" style="margin:0 0 0 10px">設計師依這天倒數；沒填會被當成已逾期</small></div>`:''}
         </div>
         <div class="editor-tools rich" role="toolbar" aria-label="格式">
           ${barHtml('data-rc',{mail:true,sigOn:d.sigInserted})}
@@ -2777,9 +2785,9 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const div=document.createElement('div');div.innerHTML=bodyHtml;
       const links=[...div.querySelectorAll('a[href]')].map(a=>({text:(a.textContent||'').trim(),url:a.getAttribute('href')})).filter(l=>l.text&&/^https?:/i.test(l.url)&&content.includes(l.text));
       try{
-        const modifier=session().name||session().user,data=await api('addModificationRecord',{record:{caseId:d.id,modifyDate:todayInput(),content,links,modifier,targetImages:[]}});
+        const modifier=session().name||session().user,data=await api('addModificationRecord',{record:{caseId:d.id,modifyDate:d.modDate||nextWorkdayInput(),content,links,modifier,targetImages:[]}});
         const count=Number(data.count)||((state.mods.get(d.id)||[]).reduce((n,m)=>Math.max(n,+m['修改次數']||0),0)+1);
-        if(!data.deduplicated){const list=state.mods.get(d.id)||[];list.push({'案件編號':d.id,'修改次數':String(count),'修改日期':todayInput(),'修改內容':content,'修改人':modifier});state.mods.set(d.id,list);applyLocalEdit(d.id,{'修改次數':String(count)})}
+        if(!data.deduplicated){const list=state.mods.get(d.id)||[];list.push({'案件編號':d.id,'修改次數':String(count),'修改日期':d.modDate||nextWorkdayInput(),'修改內容':content,'修改人':modifier});state.mods.set(d.id,list);applyLocalEdit(d.id,{'修改次數':String(count)})}
         if(data.statusChanged&&data.status)applyLocalEdit(d.id,{'狀態':data.status});
         toast(`已記錄進修改紀錄（第 ${count} 輪）`);
       }catch(err){toast(`信已寄出，但寫入修改紀錄失敗：${err.message}`,true)}
@@ -2788,7 +2796,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const m=state.mail;if(!m||m.sending)return;
       const bad=saveMailDraft();if(bad){toast(bad,true);return}
       const d=m.drafts[m.index];
-      if(!d.to){toast('請填寫收件人',true);return}if(!d.subject){toast('請填寫主旨',true);return}
+      if(!d.to){toast('請填寫收件人',true);return}if(!d.subject){toast('請填寫主旨',true);return}if(d.reply&&d.mode==='modification'&&!d.modDate){toast('請填寫預計收到日',true);return}
       if(d.scheduleOpen&&!d.scheduledAt){toast('請選擇排程寄出時間',true);return}
       if(d.scheduleOpen&&schedSummary(d.scheduledAt).cls==='warn'){toast('排程時間已經過了或太近，請選 3 分鐘以後的時間',true);return}
       if(d.dr&&d.dr.pending){const t=document.createElement('div');t.innerHTML=d.body;t.querySelectorAll('.dr-up').forEach(x=>x.remove());d.body=t.innerHTML}
