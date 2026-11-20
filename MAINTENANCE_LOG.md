@@ -5,7 +5,7 @@
 ## 2026-10-30
 
 ### 網站連結預覽（LINE／社群）的說明文字
-- index.html 加 meta description 與 og:title／og:description／og:url，LINE 等貼連結時的小字改成系統介紹（原本沒設，LINE 抓頁面文字）。LINE 有快取，已貼過的連結要換個網址（例如加 ?v=2）才會看到新的。
+- index.html 加 meta description 與 og:title／og:description／og:url，LINE 等貼連結時的小字改成系統介紹（文案：EMC 設計部的需求系統…）（原本沒設，LINE 抓頁面文字）。LINE 有快取，已貼過的連結要換個網址（例如加 ?v=2）才會看到新的。
 
 ### 修改需求信加「預計收到日」，修改中改用它倒數
 - 填修改需求信（回覆案件）多一欄「預計收到日」（預設下一個上班日、必填），寄出後寫進這一輪修改紀錄的修改日期；以前一律寫成當天，所以每次都馬上算逾期。
