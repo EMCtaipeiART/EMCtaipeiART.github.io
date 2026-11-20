@@ -5844,7 +5844,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         if (access.status === '停用') return { ok: false, action, error: '帳號已停用', reason: 'ACCOUNT_DISABLED' };
         return { ok: true, action, user: session.user, account: session.account, email: session.account, expiresIn: Math.max(0, Math.floor((session.expiresAt - Date.now()) / 1000)), settings: settingsResponse(settingsRow(database, session.account || session.user) || {}), access };
       }
-      if (action === 'getAccessProfile') { this.requireSession(session); return { ok: true, action, access: accessProfile(database, session) }; }
+      if (action === 'getAccessProfile') { this.requireSession(session); return { ok: true, action, user: session!.user, access: accessProfile(database, session) }; }
       if (action === 'logout') { await this.deleteSession(payload); return { ok: true, action }; }
       if (action === 'gmailStatus') return this.gmailStatus(database, session);
       if (action === 'getGmailSignature') return await this.getGmailSignature(database, session);
