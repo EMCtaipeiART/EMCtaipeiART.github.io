@@ -14,6 +14,8 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #roster{position:fixed;left:0;right:0;bottom:0;display:flex;gap:6px;overflow-x:auto;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:#0008}
 #roster button{flex:none;border:2px solid #fff6;background:#0006;color:#fff;border-radius:6px;padding:6px 10px;font:inherit;font-size:13px;cursor:pointer}
 #roster button.on{background:#ffd23f;color:#222;border-color:#fff}
+.fxGlow{position:fixed;inset:0;pointer-events:none;z-index:1;background:radial-gradient(110% 80% at 18% 0%,rgba(255,238,170,.22),rgba(255,238,170,0) 60%),radial-gradient(ellipse at 50% 55%,rgba(0,0,0,0) 55%,rgba(40,70,110,.22) 100%)}
+[data-plaza-theme=dark] .fxGlow{background:radial-gradient(ellipse at 50% 55%,rgba(0,0,0,0) 50%,rgba(0,0,10,.4) 100%)}
 .lbl{position:fixed;left:0;top:0;pointer-events:none;background:#232b32;color:#fff;font:700 12px/1 system-ui,'Noto Sans TC',sans-serif;padding:4px 7px;border-radius:3px;white-space:nowrap;z-index:2}
 #proj{position:fixed;right:12px;top:12px;z-index:3;display:none;background:#0b0d10;border:3px solid #0b0d10;border-radius:6px;box-shadow:0 4px 14px #0004}
 #proj canvas{position:static;display:block;width:320px;height:180px}
@@ -555,15 +557,16 @@ const FLAT = /[?&]flat=1/.test(location.search);   // ?flat=1：關掉材質與�
 const renderer = new THREE.WebGLRenderer({antialias:HD});
 renderer.shadowMap.enabled = !FLAT; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.prepend(renderer.domElement);
+{ const fx = document.createElement('div'); fx.className = 'fxGlow'; renderer.domElement.after(fx); }   // 畫面光感：左上暖光＋四周微暗角
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xcfd9e0);
+scene.background = new THREE.Color(0xbfe8f6);
 const camera = new THREE.PerspectiveCamera(45, 1, .1, 120);
 
-const hemiLight = new THREE.HemisphereLight(0xffffff, 0xa9b6c2, FLAT ? 2 : 1.12); scene.add(hemiLight);
+const hemiLight = new THREE.HemisphereLight(0xe2f3ff, 0xf3cfa6, FLAT ? 2 : 1.02);   // 天空偏藍、地面暖色反光（動森感：亮面暖、暗面帶一點藍紫） scene.add(hemiLight);
 // 主光（左上前方的暖白光）：投柔邊陰影，位置跟著畫面中心走，陰影貼圖只涵蓋可視範圍
-const sun = new THREE.DirectionalLight(0xfff2e0, FLAT ? 0 : 1.4);
+const sun = new THREE.DirectionalLight(0xffecc8, FLAT ? 0 : 1.6);
 sun.castShadow = !FLAT; sun.shadow.mapSize.set(2048, 2048); sun.shadow.camera.left = sun.shadow.camera.bottom = -30; sun.shadow.camera.right = sun.shadow.camera.top = 30; sun.shadow.camera.near = 1; sun.shadow.camera.far = 80;
-sun.shadow.bias = -.0004; sun.shadow.normalBias = .04; sun.shadow.radius = 3.5; scene.add(sun, sun.target);
+sun.shadow.bias = -.0004; sun.shadow.normalBias = .04; sun.shadow.radius = 5; scene.add(sun, sun.target);
 if (!FLAT) {   // 環境反射：一個簡單的「明亮辦公室」環境（天花板燈、窗光、地板反光），讓桌面、金屬、黑色家具有高級的反光
   const pm = new THREE.PMREMGenerator(renderer), env = new THREE.Scene(), dome = new THREE.Mesh(new THREE.SphereGeometry(40, 32, 16), new THREE.MeshBasicMaterial({vertexColors:true, side:THREE.BackSide}));
   const pos = dome.geometry.attributes.position, col = []; for (let i = 0; i < pos.count; i++) { const t = (pos.getY(i) / 40 + 1) / 2, c = new THREE.Color().lerpColors(new THREE.Color(0xb8c2cb), new THREE.Color(0xf3f7fb), Math.pow(t, 1.4)); col.push(c.r, c.g, c.b); }
@@ -642,23 +645,54 @@ const SEATS = {Leona:[0,2,0,'top'],Amber:[0,2,1,'top'],Noise:[0,2,2,'top'],Anna:
   余采馨:['f4',0,0,'bottom'],吳冠賢:[1,2,0,'bottom'],廖秦葦:[1,2,0,'top'],李明庭:[1,2,1,'top'],鄭筱舢:['f4',0,0,'bottom'],黎子瑄:['f4',0,0,'bottom'],王藍庭:['f4',0,0,'bottom']};
 
 const FLOOR_X0 = -3, FLOOR_X1 = 1201 * U + 3, FLOOR_Z0 = -100 * U, FLOOR_Z1 = 1560 * U + 3;
-// 地板：淺灰藍方格（五樓、四樓各一塊）；深色模式換成深灰藍方格（見 applyTheme）
+// 動森風地板：奶油色／奶茶色交錯的大方磚，每塊有亮邊與暗邊（看起來微微鼓起）
+function paintFloor(g, dark){
+  const a = dark ? '#2f3542' : '#fdf8ea', b = dark ? '#394050' : '#f6ebcd', hi = dark ? 'rgba(255,255,255,.07)' : 'rgba(255,255,255,.75)', lo = dark ? 'rgba(0,0,0,.28)' : 'rgba(150,110,50,.11)';
+  for (let ty = 0; ty < 2; ty++) for (let tx = 0; tx < 2; tx++) { const x = tx * 32, y = ty * 32;
+    g.fillStyle = (tx + ty) % 2 ? b : a; g.fillRect(x, y, 32, 32);
+    g.fillStyle = hi; g.fillRect(x + 1, y + 1, 30, 2); g.fillRect(x + 1, y + 1, 2, 30);
+    g.fillStyle = lo; g.fillRect(x + 1, y + 29, 30, 2); g.fillRect(x + 29, y + 1, 2, 30); }
+}
+// 動森風草地：辦公室地板外圍的一大片草皮（三角草紋），讓場景像一座小島
+function paintGrass(g, dark){
+  const base = dark ? '#1f3d2c' : '#86d67c', d1 = dark ? '#19331f' : '#6fc866', l1 = dark ? '#2a5038' : '#a2e694';
+  g.fillStyle = base; g.fillRect(0, 0, 128, 128);
+  const tri = (x, y, s, c) => { g.fillStyle = c; g.beginPath(); g.moveTo(x, y + s); g.lineTo(x + s / 2, y); g.lineTo(x + s, y + s); g.closePath(); g.fill(); };
+  for (let r = 0; r < 4; r++) for (let q = 0; q < 4; q++) { const x = q * 32 + (r % 2 ? 16 : 0), y = r * 32; tri(x + 4, y + 8, 12, d1); tri(x + 20 - 128 * (x + 20 > 120), y + 18, 7, l1); }
+}
+const grassC = document.createElement('canvas'); grassC.width = grassC.height = 128; paintGrass(grassC.getContext('2d'), false);
+const grassT = new THREE.CanvasTexture(grassC); grassT.wrapS = grassT.wrapT = THREE.RepeatWrapping; grassT.colorSpace = THREE.SRGBColorSpace; grassT.repeat.set(110, 60);
+{ const gm = new THREE.Mesh(new THREE.PlaneGeometry(330, 180), new THREE.MeshLambertMaterial({map:grassT})); gm.rotation.x = -Math.PI / 2; gm.position.set(74, -.04, 24); gm.receiveShadow = true; gm.userData.noMask = true; gm.userData.noShift = true; scene.add(gm); }
+// 地板：動森風奶油方磚（五樓、四樓各一塊）；深色模式換成深色方磚（見 applyTheme）
 const floorTiles = [];
 for (const [FLOOR_X0, FLOOR_X1, FLOOR_Z0, FLOOR_Z1] of [[-3, 1201 * U + 3, -100 * U, 1560 * U + 3], [(FX4 + F4_X0) * U, (FX4 + F4_X1) * U, F4_Z0 * U, F4_Z1 * U]]) {
-  const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d');
-  g.fillStyle = '#f4f1ea'; g.fillRect(0, 0, 32, 32); g.fillStyle = '#f4f1ea'; g.fillRect(0, 0, 16, 16); g.fillRect(16, 16, 16, 16); g.strokeStyle = 'rgba(43,47,54,.10)'; g.lineWidth = .5; g.strokeRect(.25,.25,31.5,31.5); g.fillStyle='rgba(140,152,173,.16)';g.fillRect(15.5,0,1,32);g.fillRect(0,15.5,32,1);
-  const t = new THREE.CanvasTexture(c); floorTiles.push({c, t}); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.NearestFilter; t.colorSpace = THREE.SRGBColorSpace;
+  const c = document.createElement('canvas'); c.width = c.height = 64; paintFloor(c.getContext('2d'), false);
+  const t = new THREE.CanvasTexture(c); floorTiles.push({c, t}); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.LinearFilter; t.colorSpace = THREE.SRGBColorSpace;
   t.repeat.set((FLOOR_X1 - FLOOR_X0) / 2, (FLOOR_Z1 - FLOOR_Z0) / 2);
   const f = new THREE.Mesh(new THREE.PlaneGeometry(FLOOR_X1 - FLOOR_X0, FLOOR_Z1 - FLOOR_Z0), new THREE.MeshLambertMaterial({map:t}));
   f.rotation.x = -Math.PI / 2; f.position.set((FLOOR_X0 + FLOOR_X1) / 2, 0, (FLOOR_Z0 + FLOOR_Z1) / 2); scene.add(f); f.userData.noMask = true;
 }
+// 動森風圓地毯（平貼地面、不擋路）：茶水間前一張葉子紋、倉庫門口一張星星紋
+function rug3d(xpx, zpx, r, kind){
+  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'), ring = (rr, col) => { g.fillStyle = col; g.beginPath(); g.arc(128, 128, rr, 0, 7); g.fill(); };
+  const [c1, c2, c3] = kind === 'leaf' ? ['#3fae5a', '#f6f1dc', '#8fd98a'] : ['#f2a03d', '#fff4d6', '#f7c873'];
+  ring(126, '#3a2a22'); ring(118, c1); ring(100, c2); ring(92, c3);
+  g.fillStyle = c2; for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; g.beginPath(); g.arc(128 + Math.cos(a) * 109, 128 + Math.sin(a) * 109, 5, 0, 7); g.fill(); }
+  g.translate(128, 128); g.fillStyle = c1;
+  if (kind === 'leaf') { g.rotate(-.6); g.beginPath(); g.moveTo(0, -58); g.bezierCurveTo(50, -40, 50, 30, 0, 60); g.bezierCurveTo(-50, 30, -50, -40, 0, -58); g.fill(); g.strokeStyle = c3; g.lineWidth = 6; g.beginPath(); g.moveTo(0, -44); g.lineTo(0, 50); g.stroke(); }
+  else { g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? 26 : 62; g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } g.closePath(); g.fill(); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const m = new THREE.Mesh(new THREE.CircleGeometry(r, 40), new THREE.MeshLambertMaterial({map:t, transparent:true})); m.rotation.x = -Math.PI / 2; m.position.set(xpx * U, .012, zN(zpx) * U); m.receiveShadow = true; m.userData.noMask = true; scene.add(m);
+}
+rug3d(440, 1300, 1.7, 'leaf'); rug3d(330, 1120, 1.15, 'star');
 // 深色模式（跟著網站的深淺模式：localStorage designRequestThemeV1，網站切換時用 postMessage 通知）：地板、背景、燈光一起變暗
 function applyTheme(t){
-  const dark = t === 'dark', col = dark ? ['#2b2f36', '#3b3f47'] : ['#f4f1ea', '#f4f1ea'];
-  for (const {c, t: tex} of floorTiles) { const g = c.getContext('2d'); g.fillStyle = col[0]; g.fillRect(0, 0, 32, 32); g.fillStyle = col[1]; g.fillRect(0, 0, 16, 16); g.fillRect(16, 16, 16, 16); g.strokeStyle=dark?'rgba(140,152,173,.18)':'rgba(43,47,54,.1)';g.lineWidth=.5;g.strokeRect(.25,.25,31.5,31.5);tex.needsUpdate = true; }
-  scene.background.set(dark ? 0x141a20 : 0xcfd9e0);
-  hemiLight.color.set(dark ? 0xaab6c8 : 0xffffff); hemiLight.groundColor.set(dark ? 0x3a4350 : 0xa9b6c2); hemiLight.intensity = (FLAT ? 2 : 1.12) * (dark ? .62 : 1);
-  sun.intensity = (FLAT ? 0 : 1.4) * (dark ? .55 : 1); sun.color.set(dark ? 0xc8d4ff : 0xfff2e0);
+  const dark = t === 'dark';
+  for (const {c, t: tex} of floorTiles) { paintFloor(c.getContext('2d'), dark); tex.needsUpdate = true; }
+  paintGrass(grassC.getContext('2d'), dark); grassT.needsUpdate = true;
+  scene.background.set(dark ? 0x141a20 : 0xbfe8f6);
+  hemiLight.color.set(dark ? 0xaab6c8 : 0xe2f3ff); hemiLight.groundColor.set(dark ? 0x3a4350 : 0xf3cfa6); hemiLight.intensity = (FLAT ? 2 : 1.02) * (dark ? .62 : 1);
+  sun.intensity = (FLAT ? 0 : 1.6) * (dark ? .48 : 1); sun.color.set(dark ? 0xc8d4ff : 0xffecc8);
   document.documentElement.dataset.plazaTheme = dark ? 'dark' : 'light';
 }
 let themeNow = 'light'; try { themeNow = localStorage.getItem('designRequestThemeV1') === 'dark' ? 'dark' : 'light'; } catch (e) {}
@@ -1252,7 +1286,7 @@ function officeChair3d(x, z, face){   // 五爪基座與橫軸腳輪；每張椅
   g.add(wheels,edges);chairFabric(g,.5,.46,.98,-.246);add.finish();
 }
 // ---- 像素風 3D 物件 ----
-const OUT_T = .024, HULL_LAYER = 1, outlineMat = new THREE.MeshBasicMaterial({color:0x0b0d10, side:THREE.BackSide});   // 外框粗細（世界單位）；外框物件放在 layer 1
+const OUT_T = .024, HULL_LAYER = 1, outlineMat = new THREE.MeshBasicMaterial({color:0x3a2a22, side:THREE.BackSide});   // 外框粗細（世界單位）；外框物件放在 layer 1
 function hull(parent, w, h, d, px, py, pz, t = OUT_T){ const m = new THREE.Mesh(new THREE.BoxGeometry(w + 2 * t, h + 2 * t, d + 2 * t), outlineMat); m.position.set(px, py, pz); m.layers.set(HULL_LAYER); parent.add(m); return m; }
 const rbCache = new Map();
 function roundedGeo(w, h, d){   // 倒圓角的方塊（桌板、櫃體邊角有一點弧度，比較有質感）；太薄的零件維持方塊
