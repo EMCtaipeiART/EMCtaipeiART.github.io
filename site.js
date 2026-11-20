@@ -4924,6 +4924,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     const asHelper=(()=>{
       const S={hasNew:false,fabShown:false,enter:false,canUsage:false,acct:'',open:false,min:false,msgs:[],busy:false,tired:false,ann:null,today:null,day:'',farewell:false,loadedFor:''};
       const tpDay=()=>{const p=taipeiParts();return `${p.year}-${p.month}-${p.day}`};
+      const kAlert=()=>'assistantAlertV1:'+S.acct;
       const kGreet=()=>'assistantGreetedV1:'+S.acct,kClose=()=>'assistantClosedV1:'+S.acct;
       const lsGet=k=>{try{return localStorage.getItem(k)||''}catch(err){return ''}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(err){}};
       const FACE='<span class="as-face"><img class="as-face-img" src="'+ASSISTANT_CHARACTER.img+'" alt="" draggable="false"><i class="as-lid l"></i><i class="as-lid r"></i><i class="as-mouth"></i></span>';
@@ -4934,6 +4935,17 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(!el){el=document.createElement('div');el.id='asHelper';el.className='as-root';Object.entries(ASSISTANT_CHARACTER.vars||{}).forEach(([k,v])=>el.style.setProperty(k,v));document.body.appendChild(el);
           el.addEventListener('click',onClick);el.addEventListener('submit',onSubmit)}
         return el;
+      }
+      /* 今日截稿與急件的提醒文字；沒有就回傳 null */
+      function urgentAlertText(){
+        const t=S.today||{},due=Array.isArray(t.dueToday)?t.dueToday:[],urg=Array.isArray(t.urgent)?t.urgent:[];
+        if(!due.length&&!urg.length)return null;
+        const md=v=>String(v||'').replace(/^\d{4}[\/.-]0?(\d{1,2})[\/.-]0?(\d{1,2}).*$/,'$1/$2');
+        const line=c=>'・'+(c.案件編號||'')+' '+(c.專案名稱||'未填專案名稱');
+        const out=[];
+        if(due.length)out.push('⏰ 今天截稿（'+due.length+' 案）：\n'+due.map(line).join('\n'));
+        if(urg.length)out.push('🔥 急件（'+urg.length+' 案）：\n'+urg.map(c=>line(c)+'（'+md(c.開始日期)+'～'+md(c.結束日期)+(c.urgent2?'，急急件':'')+'）').join('\n'));
+        return {text:out.join('\n\n'),sig:[...due,...urg].map(c=>c.案件編號).join(',')};
       }
       function greetText(){
         const hr=+taipeiParts().hour,hello=hr<11?'早安':hr<18?'午安':'晚安',name=session().name||session().user||'';
@@ -4987,6 +4999,12 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
           S.canUsage=Boolean(isAdminUser()||isMachiUser());S.today=r.today||null;S.ann=r.announcement||null;S.tired=Boolean(r.quota&&r.quota.tired);S.day=r.day||tpDay();
         }catch(err){render();return}/* 後端還沒部署或暫時連不上：不招呼、不顯示 */
         const day=tpDay();
+        /* 今日截稿／急件：每天、每組案件只主動提醒一次，直接跳出對話框（就算今天已經關過） */
+        const alertMsg=urgentAlertText();
+        if(alertMsg){
+          const sig=day+'|'+alertMsg.sig;
+          if(lsGet(kAlert())!==sig){lsSet(kAlert(),sig);lsSet(kGreet(),day);S.msgs.push({role:'assistant',content:greetText()});S.msgs.push({role:'assistant',content:alertMsg.text,fresh:true});S.open=true;setTimeout(()=>talk(2200),400);render();return}
+        }
         if(lsGet(kGreet())!==day){
           lsSet(kGreet(),day);
           S.msgs.push({role:'assistant',content:greetText()});setTimeout(()=>talk(1800),400);

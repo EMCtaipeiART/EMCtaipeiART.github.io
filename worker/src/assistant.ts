@@ -287,6 +287,13 @@ export function findCase(database: DatabaseSnapshot, session: SessionRecord, arg
   return { found: hits.length, cases, hint: hits.length ? undefined : '查不到，請對方換關鍵字' };
 }
 
+/** 開始～結束（含）之間的週一到週五天數；與前台急件判斷同一套（國定假日這裡不扣，只會少算急件）。 */
+function workDays(startDay: number, endDay: number): number {
+  let n = 0;
+  for (let d = startDay; d <= endDay; d += 1) { const wd = new Date(d * DAY_MS).getUTCDay(); if (wd !== 0 && wd !== 6) n += 1; }
+  return n;
+}
+
 export function getMyToday(database: DatabaseSnapshot, session: SessionRecord, nowMs: number): Row {
   const today = dayNumber(taipeiDay(nowMs)) as number;
   const profile = settingsRow(database, session.account || session.user) || {};
@@ -301,7 +308,16 @@ export function getMyToday(database: DatabaseSnapshot, session: SessionRecord, n
     return d !== null && d >= today && d <= today + 3;
   }).map(r => ({ 案件編號: text(r['案件編號']), 專案名稱: text(r['專案名稱']), 結束日期: text(r['結束日期']) })).slice(0, 5);
   const created = mine.filter(r => (mineAsDesigner(r) || ownerMatches(session, r)) && submittedDay(r) === today).length;
-  return { pendingReply, dueSoon: due.length, dueCases: due, newToday: created };
+  /* 設計師自己的今日截稿與急件（只看還要製作的案件；過稿中、已完成、暫停都已交出，不算）→ 前台登入時主動跳出提醒 */
+  const WORKING = new Set(['未開始', '執行中', '修改中']);
+  const mineWork = mine.filter(r => WORKING.has(text(r['狀態'])) && mineAsDesigner(r));
+  const brief = (r: Row) => ({ 案件編號: text(r['案件編號']), 專案名稱: text(r['專案名稱']), 客戶別: text(r['客戶別']), 開始日期: text(r['開始日期']), 結束日期: text(r['結束日期']) });
+  const dueToday = mineWork.filter(r => dayNumber(r['結束日期']) === today).map(brief).slice(0, 8);
+  const urgent = mineWork.filter(r => {
+    const s = dayNumber(r['開始日期']), e = dayNumber(r['結束日期']);
+    return s !== null && e !== null && e >= s && s <= today && e >= today && dayNumber(r['結束日期']) !== today && workDays(s, e) < 3;
+  }).map(r => ({ ...brief(r), urgent2: workDays(dayNumber(r['開始日期']) as number, dayNumber(r['結束日期']) as number) <= 1 })).slice(0, 8);
+  return { pendingReply, dueSoon: due.length, dueCases: due, newToday: created, dueToday, urgent };
 }
 
 /** 設計師「今天要製作」的案件：只看自己負責的設計案，狀態為未開始／執行中／修改中；過稿中、已完成、已暫停（下架）都已交出圖片，不算。

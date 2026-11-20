@@ -269,3 +269,21 @@ __itW('getMyWork：今天要製作只含未開始／執行中／修改中，過�
   __exW(r.today.map(x => x.專案名稱)).not.toContain('別人的案');
   __exW(r.upcoming.map(x => x.專案名稱)).toEqual(['下週才開始']);
 });
+
+import { getMyToday as __getMyToday } from '../src/assistant';
+__itW('getMyToday：今日截稿與急件只含還在製作的自己的案件', () => {
+  const d = db();
+  d.tables.database.rows.push(
+    { 案件編號: '26110020', 客戶別: '公開客戶', 專案名稱: '今天截稿', 狀態: '執行中', 設計負責人: 'Anna', 開始日期: '2026/11/16', 結束日期: '2026/11/18' },
+    { 案件編號: '26110021', 客戶別: '公開客戶', 專案名稱: '急件兩天', 狀態: '修改中', 設計負責人: 'Anna', 開始日期: '2026/11/18', 結束日期: '2026/11/19' },
+    { 案件編號: '26110022', 客戶別: '公開客戶', 專案名稱: '已過稿今天截稿', 狀態: '過稿中', 設計負責人: 'Anna', 開始日期: '2026/11/17', 結束日期: '2026/11/18' },
+    { 案件編號: '26110023', 客戶別: '公開客戶', 專案名稱: '長天期', 狀態: '執行中', 設計負責人: 'Anna', 開始日期: '2026/11/10', 結束日期: '2026/11/30' },
+    { 案件編號: '26110024', 客戶別: '公開客戶', 專案名稱: '別人的今天截稿', 狀態: '執行中', 設計負責人: 'Leona', 開始日期: '2026/11/16', 結束日期: '2026/11/18' }
+  );
+  const r = __getMyToday(d, anna, NOW) as { dueToday: Array<{ 專案名稱: string }>; urgent: Array<{ 專案名稱: string; urgent2: boolean }> };
+  __exW(r.dueToday.map(x => x.專案名稱)).toContain('今天截稿');
+  __exW(r.dueToday.map(x => x.專案名稱)).not.toContain('已過稿今天截稿');
+  __exW(r.dueToday.map(x => x.專案名稱)).not.toContain('別人的今天截稿');
+  __exW(r.urgent.map(x => x.專案名稱)).toEqual(['急件兩天']);
+  __exW(r.urgent[0].urgent2).toBe(false);
+});
