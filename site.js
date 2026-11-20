@@ -4953,7 +4953,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(t.pendingReply>0)parts.push(`${t.pendingReply} 案等你回信`);
         if(t.dueSoon>0)parts.push(`${t.dueSoon} 案 3 天內截稿`);
         if(t.newToday>0)parts.push(`今天新進 ${t.newToday} 案`);
-        return `${hello}，${name}！`+(parts.length?`今天有 ${parts.join('、')}。`:'今天目前沒有急著處理的事，可以喘口氣～');
+        return `${hello}，${name}！`+(parts.length?`今天有 ${parts.join('、')}。`:(urgentAlertText()?'有幾件今天要留意的事：':'今天目前沒有急著處理的事，可以喘口氣～'));
       }
       function msgHtml(m,i){
         const fb=m.role==='assistant'&&m.logId?(m.fb==null?`<span class="as-fb"><button type="button" data-as-fb="1" data-i="${i}">有幫助</button><button type="button" data-as-fb="0" data-i="${i}">沒幫助</button></span>`:`<span class="as-fb as-fb-done">${m.fb?'謝謝回饋':'收到，我會改進'}</span>`):'';
