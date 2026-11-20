@@ -14,9 +14,11 @@ export interface ChangeLog { sections: ChangeSection[]; commits: ChangeCommit[] 
 export interface GithubSource { owner: string; repo: string; branch: string; token?: string }
 
 export const CHANGES_TTL_MS = 30 * 60 * 1000;
-export const CHANGES_KEY = 'assistantChanges:v3';
+export const CHANGES_KEY = 'assistantChanges:v4';
 /** 白名單：只有標題帶這個記號的修改紀錄，才會當成「系統更新」告訴同仁；沒標記的一律不說（寧可漏說、不可洩漏內部細節）。 */
 export const STAFF_MARK = '【同仁】';
+/** 記號必須在標題的「開頭」（日期或 feat: 之類前綴之後）；標題中間提到這幾個字不算，避免討論這個規則的紀錄自己被放行。 */
+const hasStaffMark = (head: string): boolean => /^(?:[\w-]+:\s*|[0-9-]+\s+)?【同仁】/.test(head.trim());
 const SECTION_KEEP = 8;
 const BODY_MAX = 600;
 const COMMIT_KEEP = 12;
@@ -31,7 +33,7 @@ export const isAdminOnly = (value: string): boolean => ADMIN_ONLY.test(value);
 /** 取檔尾最新的 N 段「## 標題」；回傳新到舊。 */
 export function parseChangeLog(markdown: string, keep = SECTION_KEEP): ChangeSection[] {
   const parts = markdown.replace(/\r\n/g, '\n').split(/^## /m).slice(1);
-  return parts.filter(part => { const head = part.split('\n')[0] || ''; return head.includes(STAFF_MARK) && !isAdminOnly(head.replace(STAFF_MARK, '')); }).slice(-keep).reverse().map(part => {
+  return parts.filter(part => { const head = part.split('\n')[0] || ''; return hasStaffMark(head) && !isAdminOnly(head.replace(STAFF_MARK, '')); }).slice(-keep).reverse().map(part => {
     const [title, ...rest] = part.split('\n');
     return { title: title.replace(STAFF_MARK, '').replace(/\s+/g, ' ').trim().slice(0, 120), body: rest.join('\n').trim().slice(0, BODY_MAX) };
   }).filter(section => section.title);
@@ -47,7 +49,7 @@ export function parseCommits(json: unknown): ChangeCommit[] {
   const out: ChangeCommit[] = [];
   for (const item of json as Array<{ commit?: { message?: string; committer?: { date?: string } } }>) {
     const subject = String(item?.commit?.message || '').split('\n')[0].trim();
-    if (!subject.includes(STAFF_MARK) || isAdminOnly(subject.replace(STAFF_MARK, ''))) continue; /* commit 標題多半是工程用語，一樣只收帶同仁記號的 */
+    if (!hasStaffMark(subject) || isAdminOnly(subject.replace(STAFF_MARK, ''))) continue; /* commit 標題多半是工程用語，一樣只收帶同仁記號的 */
     out.push({ date: taipeiDate(String(item?.commit?.committer?.date || '')), subject: subject.replace(STAFF_MARK, '').trim().slice(0, 140) });
     if (out.length >= COMMIT_KEEP) break;
   }

@@ -87,3 +87,12 @@ __itW('白名單：沒標【同仁】的修改紀錄與 commit 一律不說', ()
   __exW(__pcl(log, 5).map(s => s.title)).toEqual(['2026-11-20 全站導覽']);
   __exW(__pcm([{ commit: { message: 'feat: NEW 標籤改為新上架的角色', committer: { date: '2026-11-20T01:00:00Z' } } }])).toEqual([]);
 });
+
+import { parseChangeLog as __pcl2, parseCommits as __pcm2 } from '../src/assistant-changes';
+import { it as __it9, expect as __ex9 } from 'vitest';
+__it9('記號只在標題開頭才算，標題中間提到不放行', () => {
+  __ex9(__pcl2('## 2026-11-20 白名單改為只說標題帶【同仁】的紀錄\n- x\n', 5)).toEqual([]);
+  __ex9(__pcm2([{ commit: { message: 'assistant: 只說標題帶【同仁】的紀錄', committer: { date: '2026-11-20T01:00:00Z' } } }])).toEqual([]);
+  __ex9(__pcl2('## 2026-11-20 【同仁】全站導覽\n- x\n', 5).map(s => s.title)).toEqual(['2026-11-20 全站導覽']);
+  __ex9(__pcm2([{ commit: { message: 'feat: 【同仁】全站導覽', committer: { date: '2026-11-20T01:00:00Z' } } }]).map(c => c.subject)).toEqual(['feat: 全站導覽']);
+});
