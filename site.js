@@ -1494,7 +1494,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(hadFocus){const input=$('boardSearch');input.focus();input.setSelectionRange(input.value.length,input.value.length)}
       playCardEnter();setTimeout(setupFlipReveal,380);
     }
-    /** 欄內還沒捲到的卡牌先翻起來等著，捲到快出現時才像翻頁一樣翻開（每欄各一個 observer，重畫看板時重建）。 */
+    /** 欄內還沒捲到的卡牌先沉在下方等著，捲到快出現時才由下往上滑入（快進慢收，同時進來的依序延遲）（每欄各一個 observer，重畫看板時重建）。 */
     const flipObs=[];
     function setupFlipReveal(){
       flipObs.splice(0).forEach(o=>o.disconnect());
@@ -1503,7 +1503,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const hidden=[...g.querySelectorAll(':scope > div.card')].filter(c=>c.offsetTop>g.scrollTop+g.clientHeight-24);
         if(!hidden.length)return;
         const obs=new IntersectionObserver(es=>{
-          for(const e of es){if(!e.isIntersecting)continue;const c=e.target;obs.unobserve(c);c.classList.add('flip-in');setTimeout(()=>{c.classList.remove('flip-wait','flip-in')},900)}
+          es.filter(e=>e.isIntersecting).forEach((e,i)=>{const c=e.target;obs.unobserve(c);c.style.transitionDelay=(i*80)+'ms';c.classList.add('flip-in');setTimeout(()=>{c.classList.remove('flip-wait','flip-in');c.style.transitionDelay=''},1100+i*80)})
         },{root:g,rootMargin:'0px 0px -70px 0px',threshold:0});
         hidden.forEach((c,i)=>{c.classList.add('flip-wait');obs.observe(c)});
         flipObs.push(obs);

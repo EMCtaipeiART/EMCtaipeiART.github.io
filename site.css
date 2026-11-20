@@ -1795,8 +1795,8 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
 @media(prefers-reduced-motion:reduce){.board.is-entering .card,.board.is-entering .card::after{animation:none}}
 /* 專案頁網格：不顯示「還有幾張」，往下捲到底自動載入下一批，新卡牌淡入上浮；欄的內距加大，卡牌陰影不再被欄邊截斷 */
 .board.five .col-more,.board.five .more-btn{display:none!important}
-/* 欄內還沒捲到的卡牌：像一頁頁翻開——由上緣翻下來（rotateX），快捲到時才出現 */
-.board.five .cards{perspective:1100px;perspective-origin:50% 0}
-.board.five .card.flip-wait{opacity:0;transform:rotateX(-58deg) translateY(28px);transform-origin:50% 0;backface-visibility:hidden;pointer-events:none}
-.board.five .card.flip-wait.flip-in{opacity:1;transform:none;pointer-events:auto;transition:transform .75s cubic-bezier(.2,.85,.25,1),opacity .45s ease-out}
+/* 欄內還沒捲到的卡牌：沉在下方，捲到快出現時由下往上滑入——快進慢收（expo-out），同時進來的依序延遲 */
+.board.five .cards{perspective:1200px;perspective-origin:50% 100%}
+.board.five .card.flip-wait{opacity:0;transform:translateY(64px) rotateX(10deg) scale(.965);transform-origin:50% 100%;pointer-events:none;will-change:transform,opacity}
+.board.five .card.flip-wait.flip-in{opacity:1;transform:none;pointer-events:auto;transition:transform .95s cubic-bezier(.16,1,.3,1),opacity .6s cubic-bezier(.22,.8,.3,1)}
 @media(prefers-reduced-motion:reduce){.board.five .card.flip-wait{opacity:1;transform:none}}
