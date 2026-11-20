@@ -4083,7 +4083,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const box=$('railLogin');if(!box)return;
       const s=session(),on=loggedIn(),name=s.name||s.user,url=on?(pixImg(name)||pixImg(s.user)||personAvatar(name)||personAvatar(s.user)||personAvatar(s.account)):'';
       const face=on?(url?`<img src="${esc(url)}" alt="" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode('${esc(initial(name))}'))">`:esc(initial(name))):'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20c.9-3.6 3.8-5.5 7.5-5.5s6.6 1.9 7.5 5.5"/></svg>';
-      const menuHtml=state.loginMenu&&on?`<div class="login-menu" role="menu"><b>${esc(name)}</b><small>${esc(s.account||s.user||'')}</small>${acc('profile.edit',true)?'<button type="button" data-login="settings" role="menuitem">個人設定</button>':''}<button type="button" data-gmail-connect role="menuitem">串接 Gmail</button>${RAIL_EXT.filter(x=>x.menu&&x.ok()).map(x=>`<button type="button" data-login="ext" data-ext-key="${x.k}" role="menuitem">${x.title}</button>`).join('')}${isAdminAcct()?'<button type="button" data-login="reloadall" role="menuitem">全員重整</button>':''}<button type="button" data-login="logout" role="menuitem">登出</button></div>`:'',mobile=matchMedia('(max-width:720px)').matches;
+      const menuHtml=state.loginMenu&&on?`<div class="login-menu" role="menu"><b>${esc(name)}</b><small>${esc(s.account||s.user||'')}</small>${acc('profile.edit',true)?'<button type="button" data-login="settings" role="menuitem">個人設定</button>':''}<button type="button" data-login="tour" role="menuitem">全站導覽</button><button type="button" data-gmail-connect role="menuitem">串接 Gmail</button>${RAIL_EXT.filter(x=>x.menu&&x.ok()).map(x=>`<button type="button" data-login="ext" data-ext-key="${x.k}" role="menuitem">${x.title}</button>`).join('')}${isAdminAcct()?'<button type="button" data-login="reloadall" role="menuitem">全員重整</button>':''}<button type="button" data-login="logout" role="menuitem">登出</button></div>`:'',mobile=matchMedia('(max-width:720px)').matches;
       box.innerHTML=`<button type="button" class="login-avatar${on?' is-in':''}" data-login="toggle" aria-haspopup="true" aria-label="${on?`${esc(name)}，帳號選單`:'登入'}">${face}</button><span class="login-label">${on?esc(name):'登入'}</span>`;
       /* 手機：下方選單列是可橫向捲動的容器，裡面的選單會被它的堆疊層與裁切影響（登出按鈕被壓在下面點不到），所以改掛在 body 最外層、層級最高 */
       let host=document.getElementById('loginMenuHost');
@@ -4442,6 +4442,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const loginAct=t.closest('[data-login]')?.dataset.login;
       if(loginAct==='toggle'){if(loggedIn()){state.loginMenu=!state.loginMenu;renderLogin()}else startLogin();return}
       if(loginAct==='owner'){state.loginMenu=false;renderLogin();openOwner();return}
+      if(loginAct==='tour'){state.loginMenu=false;renderLogin();siteTour.start();return}
       if(loginAct==='settings'){state.loginMenu=false;renderLogin();state.form=null;state.mail=null;state.editing=false;closeCal();show('settings');return}
       if(loginAct==='ext'){const k=t.closest('[data-ext-key]')?.dataset.extKey;state.loginMenu=false;renderLogin();if(k)openExt(k);return}
       if(loginAct==='reloadall'){state.loginMenu=false;renderLogin();openExt('reloadall');return}
@@ -4736,6 +4737,77 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     window.addEventListener('load',()=>setTimeout(ensureArchive,200));/* 等級資料很小，進站就先讀，不等到滑過頭像才開始 */
     const AVATAR_BRIDGE_PAUSED=true;/* 頭像快照暫停掃描：首頁頭像依目前狀態用預設，不再載入隱藏的 2D 頭像橋接 iframe（要恢復就改成 false） */
     window.addEventListener('load',()=>setTimeout(function mk(){if(AVATAR_BRIDGE_PAUSED)return;if(document.getElementById('avatarBridge'))return;if(document.getElementById('uniLoading')){setTimeout(mk,800);return}/* 正在進入多元宇宙時先不開這個隱藏的第二份像素辦公室，免得跟主畫面搶頻寬 */const f=document.createElement('iframe');f.id='avatarBridge';f.title='設計師頭像';f.setAttribute('aria-hidden','true');f.tabIndex=-1;f.style.cssText='position:fixed;width:320px;height:120px;right:0;bottom:0;border:0;opacity:.01;pointer-events:none;z-index:-1';f.src='archive/EMC-ART-Pixel-Office-2D/dist/?avatars=1&v=33&t='+Math.floor(Date.now()/300000)+'';document.body.appendChild(f)},300));
+    /* ---------- 全站導覽（新手指引）：聚光燈逐步介紹左側選單與常用功能；只介紹「目前看得到」的項目 ---------- */
+    const siteTour=(()=>{
+      const STEPS=[
+        {sel:'#promptSlot',t:'從這裡開始填需求',d:'選客戶別，按「開始填寫」就能新增設計需求。首頁下方可以看設計師、案量與最新公告。'},
+        {sel:'[data-nav="board"]',t:'首頁',d:'隨時按這裡回到首頁：填需求、看設計師頭像與目前案量。'},
+        {sel:'[data-nav="projects"]',t:'專案',d:'所有案件的清單與看板，可以搜尋、篩選，點進案件看詳細內容、修改紀錄與信件。'},
+        {sel:'[data-ext="links"]',t:'短網址',d:'把很長的網址縮短，方便分享給客戶或同事。'},
+        {sel:'[data-ext="calendar"]',t:'設計部行事曆',d:'看設計師的會議、請假、出差與值日生。'},
+        {sel:'[data-ext="wall"]',t:'作品牆',d:'瀏覽設計部完成的作品。'},
+        {sel:'[data-ext="notes"]',t:'記事本',d:'設計部的共用資源與筆記。'},
+        {sel:'[data-ext="assign"]',t:'專案分配',d:'看每個客戶別由哪位設計師負責。'},
+        {sel:'[data-ext="owner"]',t:'您的案件進度',d:'追蹤自己的案件進度，並在這裡確認過稿。'},
+        {sel:'[data-ext="outfit"]',t:'建立角色',d:'用 AI 做出自己的像素分身，出現在多元宇宙的辦公室，也能選座位、看平台幣。'},
+        {sel:'[data-ext="dashboard"]',t:'設計儀表板',d:'設計部的案量與工作負載統計。'},
+        {sel:'[data-ext="lunch"]',t:'午餐地圖',d:'凱曜午餐探險隊：不知道吃什麼就來這裡。'},
+        {sel:'[data-ext="issues"]',t:'問題回報',d:'系統有問題或想要的功能，都可以在這裡告訴我們。'},
+        {sel:'#themeBtn',t:'深色／淺色',d:'切換整個網站的深淺模式，小遊戲也會跟著變。'},
+        {sel:'#railLogin',t:'帳號選單',d:'點頭像可以進個人設定（也能關掉小幫手）、串接 Gmail，或再次開啟這個導覽。'},
+        {sel:'#asHelper .as-fab',t:'有問題就問小幫手',d:'右下角的小幫手可以查案量、找案件、問系統怎麼用。'}
+      ];
+      const KEY=()=>{const s=session();return 'siteTourSeenV1:'+String(s.account||s.user||s.name||'guest')};
+      const markSeen=()=>{try{localStorage.setItem(KEY(),'1')}catch(e){}};
+      const seen=()=>{try{return localStorage.getItem(KEY())==='1'}catch(e){return true}};
+      const visible=el=>{if(!el)return false;const r=el.getBoundingClientRect(),cs=getComputedStyle(el);return r.width>4&&r.height>4&&cs.display!=='none'&&cs.visibility!=='hidden'};
+      let list=[],idx=0,root=null,hole=null,card=null;
+      const teardown=()=>{if(root){root.remove();root=null}document.removeEventListener('keydown',onKey,true);removeEventListener('resize',place);removeEventListener('scroll',place,true);document.getElementById('tourOffer')?.remove()};
+      const close=()=>{markSeen();teardown()};
+      function onKey(e){if(e.key==='Escape'){e.preventDefault();close()}else if(e.key==='ArrowRight'||e.key==='Enter'){e.preventDefault();go(1)}else if(e.key==='ArrowLeft'){e.preventDefault();go(-1)}}
+      function go(d){const n=idx+d;if(n<0)return;if(n>=list.length){close();return}idx=n;render()}
+      function place(){
+        if(!root)return;const st=list[idx],el=document.querySelector(st.sel);if(!visible(el)){return}
+        const r=el.getBoundingClientRect(),pad=6,vw=innerWidth,vh=innerHeight;
+        hole.style.cssText='left:'+(r.left-pad)+'px;top:'+(r.top-pad)+'px;width:'+(r.width+pad*2)+'px;height:'+(r.height+pad*2)+'px';
+        const cw=Math.min(320,vw-24),ch=card.offsetHeight||170;let left,top;
+        if(vw<=720){left=(vw-cw)/2;top=r.top>vh/2?Math.max(12,r.top-ch-18):Math.min(vh-ch-12,r.bottom+18)}
+        else if(r.left+r.width/2<vw*0.35){left=Math.min(vw-cw-12,r.right+pad+16);top=r.top+r.height/2-ch/2}
+        else{left=r.left+r.width/2-cw/2;top=r.top>vh/2?r.top-ch-18:r.bottom+18}
+        card.style.width=cw+'px';card.style.left=Math.max(12,Math.min(vw-cw-12,left))+'px';card.style.top=Math.max(12,Math.min(vh-ch-12,top))+'px';
+      }
+      function render(){
+        const st=list[idx],el=document.querySelector(st.sel);
+        if(!visible(el)){go(1);return}
+        el.scrollIntoView({block:'center',inline:'nearest'});
+        const last=idx===list.length-1;
+        card.innerHTML='<div class="tour-step">'+(idx+1)+' / '+list.length+'</div><h4>'+esc(st.t)+'</h4><p>'+esc(st.d)+'</p><div class="tour-btns"><button type="button" data-tour="skip" class="tour-skip">'+(last?'':'跳過')+'</button><span>'+(idx>0?'<button type="button" data-tour="prev">上一步</button>':'')+'<button type="button" data-tour="next" class="tour-next">'+(last?'完成':'下一步')+'</button></span></div>';
+        requestAnimationFrame(()=>{place();setTimeout(place,260)});
+      }
+      function start(){
+        teardown();
+        list=STEPS.filter(x=>visible(document.querySelector(x.sel)));
+        if(!list.length)return;
+        idx=0;root=document.createElement('div');root.className='tour-root';root.setAttribute('role','dialog');root.setAttribute('aria-label','全站導覽');
+        root.innerHTML='<div class="tour-block"></div><div class="tour-hole"></div><div class="tour-card" tabindex="-1"></div>';
+        document.body.appendChild(root);hole=root.querySelector('.tour-hole');card=root.querySelector('.tour-card');
+        root.addEventListener('click',e=>{const b=e.target.closest('[data-tour]');if(b){const a=b.dataset.tour;if(a==='next')go(1);else if(a==='prev')go(-1);else close();return}if(e.target.classList.contains('tour-block'))close()});
+        document.addEventListener('keydown',onKey,true);addEventListener('resize',place);addEventListener('scroll',place,true);
+        render();
+      }
+      /* 第一次登入：先問一聲，不強迫；按「不用了」或看完都不再打擾（localStorage，依帳號） */
+      function offer(){
+        if(seen()||document.getElementById('tourOffer')||root)return;
+        const o=document.createElement('div');o.id='tourOffer';o.className='tour-offer';
+        o.innerHTML='<b>第一次來嗎？</b><span>花 1 分鐘看看全站有什麼。</span><button type="button" data-o="go" class="tour-next">開始導覽</button><button type="button" data-o="no">不用了</button>';
+        o.addEventListener('click',e=>{const a=e.target.closest('[data-o]')?.dataset.o;if(!a)return;if(a==='go'){o.remove();start()}else{markSeen();o.remove()}});
+        document.body.appendChild(o);
+      }
+      let tries=0;
+      (function wait(){if(++tries>40)return;if(!loggedIn()||document.getElementById('uniLoading')||state.view!=='board'){setTimeout(wait,1500);return}setTimeout(offer,1500)})();
+      try{if(/[?&]tour=1/.test(location.search))addEventListener('load',()=>setTimeout(start,1800))}catch(e){}
+      return {start,offer};
+    })();
     /* ---------- 小幫手 ---------- */
     /* 登入後固定在右下角的對話小幫手（第一期：每日招呼、案量查詢、案件追蹤、新功能公告、問答紀錄）。
        對話只留在頁面記憶體；問答紀錄與額度由後端存在 Durable Object，不寫進 JSON 快照。

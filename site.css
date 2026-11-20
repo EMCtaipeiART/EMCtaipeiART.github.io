@@ -1765,3 +1765,19 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
     @keyframes asNewFlash{0%,78%,100%{transform:scale(1) rotate(0);box-shadow:0 2px 6px rgba(225,29,72,.45)}82%{transform:scale(1.28) rotate(-7deg);box-shadow:0 0 0 4px rgba(225,29,72,.22),0 0 14px rgba(255,106,61,.85)}86%{transform:scale(1) rotate(0)}90%{transform:scale(1.18) rotate(6deg);box-shadow:0 0 0 3px rgba(225,29,72,.18),0 0 10px rgba(255,106,61,.7)}94%{transform:scale(1) rotate(0)}}
     @media (max-width:700px){.as-new{top:-4px;left:-10px;font-size:8px}}
     @media (prefers-reduced-motion:reduce){.as-new{animation:none}}
+
+/* ---------- 全站導覽 ---------- */
+.tour-root{position:fixed;inset:0;z-index:10050}
+.tour-block{position:absolute;inset:0;background:transparent}
+.tour-hole{position:fixed;border-radius:12px;box-shadow:0 0 0 9999px rgba(8,16,12,.62);outline:2px solid var(--brand,#159E31);transition:left .25s,top .25s,width .25s,height .25s;pointer-events:none}
+.tour-card{position:fixed;background:var(--panel,#fff);color:var(--ink,#17211d);border:1px solid var(--line,#e3e9e5);border-radius:14px;padding:14px 16px;box-shadow:0 16px 40px rgba(0,0,0,.3);transition:left .25s,top .25s}
+.tour-card h4{margin:2px 0 6px;font-size:16px}
+.tour-card p{margin:0 0 12px;font-size:14px;line-height:1.55;color:var(--muted,#6b7772)}
+.tour-step{font-size:12px;font-weight:700;color:var(--brand,#159E31)}
+.tour-btns{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tour-btns span{display:flex;gap:8px}
+.tour-card button,.tour-offer button{font:inherit;font-size:13px;font-weight:700;padding:6px 12px;border-radius:10px;border:1px solid var(--line,#e3e9e5);background:transparent;color:var(--ink,#17211d);cursor:pointer}
+.tour-card .tour-skip{border:0;color:var(--faint,#98a39e);padding-left:0}
+.tour-card .tour-next,.tour-offer .tour-next{background:var(--brand,#159E31);border-color:var(--brand,#159E31);color:#fff}
+.tour-offer{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:2100;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 24px);background:var(--panel,#fff);color:var(--ink,#17211d);border:1px solid var(--line,#e3e9e5);border-radius:14px;padding:10px 14px;box-shadow:0 12px 30px rgba(0,0,0,.25);font-size:14px}
+@media (max-width:700px){.tour-card button,.tour-offer button{font-size:12px}}
