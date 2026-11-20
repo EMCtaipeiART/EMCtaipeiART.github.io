@@ -1781,7 +1781,8 @@ function applyStatus(c, force){
   else if (st === 'toilet') toiletIn(c);
   else if (st === 'meeting') {   // 依行事曆：後端 meetingRoom（A～D）指定會議室，就把人放進那間
     const R = ROOMS.find(r => r[0] === c.meetingRoom), inR = R ? (q => q.x / U > R[1] && q.x / U < R[3] && q.z / U > R[2] && q.z / U < R[4]) : isMeetSeat;
-    if (!seatIn(c, q => !q.kind && inR(q))) { if (R) { let h = 7; for (const ch of c.name) h = (h * 31 + ch.charCodeAt(0)) % 9973; const fx = (h % 100) / 100 - .5, fz = ((h * 7) % 100) / 100 - .5; c.holder.position.set(((R[1] + R[3]) / 2 + fx * (R[3] - R[1]) * .6) * U, 0, ((R[2] + R[4]) / 2 + fz * (R[4] - R[2]) * .5) * U); c.face = Math.PI; }   /* 座位不夠：依名字固定站位，不再每次隨機跳 */ else seatIn(c, isMeetSeat); }
+    const memo = c.meetSeat, okSeat = memo && !memo.by && !memo.hidden && !memo.kind && inR(memo);   // 會議室：記住上次坐的椅子，重新套用時坐回同一張，不再每次隨機換位
+    if (okSeat) { c.holder.position.set(memo.x, 0, memo.z); sitDown(c); } else if (seatIn(c, q => !q.kind && inR(q))) c.meetSeat = c.sitting; else { if (R) { let h = 7; for (const ch of c.name) h = (h * 31 + ch.charCodeAt(0)) % 9973; const fx = (h % 100) / 100 - .5, fz = ((h * 7) % 100) / 100 - .5; c.holder.position.set(((R[1] + R[3]) / 2 + fx * (R[3] - R[1]) * .6) * U, 0, ((R[2] + R[4]) / 2 + fz * (R[4] - R[2]) * .5) * U); c.face = Math.PI; c.meetSeat = null; }   /* 座位不夠：依名字固定站位，不再每次隨機跳 */ else seatIn(c, isMeetSeat); }
   }
   else if (c.home) { c.holder.position.set(c.home.x, 0, c.home.z); c.face = c.home.face; sitDown(c); }
 }
