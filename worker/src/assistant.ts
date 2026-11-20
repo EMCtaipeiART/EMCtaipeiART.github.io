@@ -82,9 +82,10 @@ export const ASSISTANT_SYSTEM_PROMPT = [
   '- 如果使用者問「你會不會記錄／記得我問的問題」，如實回答「會記錄下來，用來改善系統」，不否認也不轉移話題；不要主動提起紀錄，也不要提到管理者、管理功能或任何人看得到紀錄。',
   '- 介紹「某個功能在畫面哪裡」時，回答最後可另外加指引標記，前台會變成「帶我去看」按鈕、用聚光燈指給使用者看；格式 [[guide:代號]]，最多 2 個，只能用這些代號：form（首頁填需求區）、board（首頁）、projects（專案）、links（短網址）、calendar（行事曆）、wall（作品牆）、notes（記事本）、assign（專案分配）、owner（您的案件進度）、outfit（角色）、dashboard（儀表板）、lunch（午餐地圖）、issues（問題回報）、theme（深淺模式）、account（帳號選單）、helper（小幫手）。不是在說明位置就不要加，不要自己編代號，標記不算在行數內。',
   '- 絕對不要在回答裡貼任何本站網址（emc-art.com、github.io、pixel-plaza、map.emc-art.com…）。要帶使用者去某個頁面，改在回答最後加「前往」標記 [[go:代號]]（最多 2 個，前台會變成按鈕）：universe（多元宇宙，也是小遊戲的入口）、projects、links、calendar、wall、notes、assign、owner、outfit、dashboard、lunch（午餐地圖）、issues；文字只說「按下面的按鈕就能進去」，並簡短說明進去後怎麼做。標記不算在行數內。',
+  '- 設計師問「今天要製作／要做哪些內容」用 getMyWork：只說今天要製作的案件（案名與截稿日，一個一行）；過稿中、已完成、已暫停（下架）的案件代表圖片已經交出去，完全不要提。若有 upcoming（未來才開始）可在最後簡短補一句「之後還有：…」，沒有就省略，不要說「沒有未來案件」。',
   '系統知識目錄（細節請用 getSystemHelp 查，不要憑印象回答）：',
   knowledgeIndex(),
-  '可用工具：getCaseCounts（案量統計）、findCase（找案件）、getMyToday（登入者今天的待辦）、getDuty（值日生與雙週會）、getCalendar（設計師行事曆：會議、請假、出差，公開資料，任何人都能問，查自己的行程用 who=me）、getSystemHelp（系統功能說明，問功能、操作、規則、哪裡找什麼時先呼叫它，再用查到的內容回答）、reportUnanswered（答不出來時記錄並回報管理者）、getRecentChanges（GitHub 上的最新更新紀錄，最即時；回答時用同仁看得懂的話概述「改了什麼、對他有什麼影響」，不要講程式檔名、內部細節或金鑰）、getRecentUpdates（最近的系統公告；問最近有什麼更新、新功能、改了什麼，或 getSystemHelp 的說明可能過時時呼叫，公告比說明新，兩者衝突以公告為準）。'
+  '可用工具：getCaseCounts（案量統計）、findCase（找案件）、getMyToday（登入者今天的待辦）、getMyWork（設計師今天要製作的案件）、getDuty（值日生與雙週會）、getCalendar（設計師行事曆：會議、請假、出差，公開資料，任何人都能問，查自己的行程用 who=me）、getSystemHelp（系統功能說明，問功能、操作、規則、哪裡找什麼時先呼叫它，再用查到的內容回答）、reportUnanswered（答不出來時記錄並回報管理者）、getRecentChanges（GitHub 上的最新更新紀錄，最即時；回答時用同仁看得懂的話概述「改了什麼、對他有什麼影響」，不要講程式檔名、內部細節或金鑰）、getRecentUpdates（最近的系統公告；問最近有什麼更新、新功能、改了什麼，或 getSystemHelp 的說明可能過時時呼叫，公告比說明新，兩者衝突以公告為準）。'
 ].join('\n');
 
 export const ASSISTANT_TOOLS = [
@@ -136,6 +137,11 @@ export const ASSISTANT_TOOLS = [
     name: 'getSystemHelp',
     description: '查詢設計需求系統的功能說明（案件填單、信件、權限、公告、設計師頭像、各頁選單、多元宇宙、寵物、角色工坊與平台幣、小遊戲…）。query 放關鍵字或主題 id。',
     input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] }
+  },
+  {
+    name: 'getMyWork',
+    description: '設計師「今天要製作哪些內容」：登入者自己負責、狀態為未開始／執行中／修改中的案件（過稿中、已完成、已暫停都已交出圖片，已排除），並附上開始日在未來的案件。',
+    input_schema: { type: 'object', properties: {} }
   },
   {
     name: 'getMyToday',
@@ -296,6 +302,26 @@ export function getMyToday(database: DatabaseSnapshot, session: SessionRecord, n
   }).map(r => ({ 案件編號: text(r['案件編號']), 專案名稱: text(r['專案名稱']), 結束日期: text(r['結束日期']) })).slice(0, 5);
   const created = mine.filter(r => (mineAsDesigner(r) || ownerMatches(session, r)) && submittedDay(r) === today).length;
   return { pendingReply, dueSoon: due.length, dueCases: due, newToday: created };
+}
+
+/** 設計師「今天要製作」的案件：只看自己負責的設計案，狀態為未開始／執行中／修改中；過稿中、已完成、已暫停（下架）都已交出圖片，不算。
+ *  today＝已經到開始日（或沒填開始日）、還在做的；upcoming＝開始日在今天之後、還沒開始的。 */
+export function getMyWork(database: DatabaseSnapshot, session: SessionRecord, nowMs: number): Row {
+  const today = dayNumber(taipeiDay(nowMs)) as number;
+  const profile = settingsRow(database, session.account || session.user) || {};
+  const names = [session.user, text(profile['名字']), text(profile['顯示名'])].filter(Boolean);
+  const mine = caseRows(database).filter(r => canViewCase(database, session, r) && names.some(n => sameName(r['設計負責人'], n)));
+  const WORKING = new Set(['未開始', '執行中', '修改中']);
+  const pick = (r: Row) => ({ 案件編號: text(r['案件編號']), 專案名稱: text(r['專案名稱']), 客戶別: text(r['客戶別']), 狀態: text(r['狀態']), 開始日期: text(r['開始日期']), 結束日期: text(r['結束日期']) });
+  const byEnd = (x: Row, y: Row) => String(x['結束日期'] || '9999').localeCompare(String(y['結束日期'] || '9999'));
+  const todayList: Row[] = [], upcoming: Row[] = [];
+  for (const r of mine) {
+    if (!WORKING.has(text(r['狀態']))) continue;
+    const start = dayNumber(r['開始日期']);
+    (start !== null && start > today ? upcoming : todayList).push(pick(r));
+  }
+  todayList.sort(byEnd); upcoming.sort((x, y) => String(x['開始日期']).localeCompare(String(y['開始日期'])));
+  return { todayCount: todayList.length, today: todayList.slice(0, 10), upcomingCount: upcoming.length, upcoming: upcoming.slice(0, 8), hint: '只說今天要製作的；未來要做的只在有資料時簡短補一句，沒有就完全不提。不要提過稿中、已完成、已暫停的案件。' };
 }
 
 /** 最近的系統公告（新功能、改版說明）。內容截短，避免一次吃太多 token。 */
@@ -473,6 +499,7 @@ export function runAssistantTool(name: string, args: Row, database: DatabaseSnap
   if (name === 'getCaseCounts') return getCaseCounts(database, args, nowMs);
   if (name === 'findCase') return findCase(database, session, args, nowMs);
   if (name === 'getMyToday') return getMyToday(database, session, nowMs);
+  if (name === 'getMyWork') return getMyWork(database, session, nowMs);
   if (name === 'getRecentUpdates') return getRecentUpdates(database, args);
   if (name === 'getSystemHelp') { const r = lookupKnowledge(args.query); return { ...r, found: r.topics.length }; }
   return { error: `沒有這個工具：${name}` };

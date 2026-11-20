@@ -251,3 +251,21 @@ __itG('前往標記與自家網址：網址被拿掉並轉成按鈕代號', () =
   __exG(r.goto).toEqual(['lunch', 'universe']);
   __exG(__extractGuides('新聞 https://news.example.com/a').reply).toContain('https://news.example.com/a');
 });
+
+import { getMyWork as __getMyWork } from '../src/assistant';
+import { it as __itW, expect as __exW } from 'vitest';
+__itW('getMyWork：今天要製作只含未開始／執行中／修改中，過稿中與已完成排除，未來案件另列', () => {
+  const d = db();
+  d.tables.database.rows.push(
+    { 案件編號: '26110010', 客戶別: '公開客戶', 專案名稱: '修改中的案', 狀態: '修改中', 設計負責人: 'Anna', 開始日期: '2026/11/16', 結束日期: '2026/11/20' },
+    { 案件編號: '26110011', 客戶別: '公開客戶', 專案名稱: '下週才開始', 狀態: '未開始', 設計負責人: 'Anna', 開始日期: '2026/11/25', 結束日期: '2026/11/30' },
+    { 案件編號: '26110012', 客戶別: '公開客戶', 專案名稱: '已暫停的案', 狀態: '下架', 設計負責人: 'Anna', 開始日期: '2026/11/10', 結束日期: '2026/11/19' },
+    { 案件編號: '26110013', 客戶別: '公開客戶', 專案名稱: '別人的案', 狀態: '執行中', 設計負責人: 'Leona', 開始日期: '2026/11/10', 結束日期: '2026/11/19' }
+  );
+  const r = __getMyWork(d, anna, NOW) as { today: Array<{ 專案名稱: string }>; upcoming: Array<{ 專案名稱: string }> };
+  __exW(r.today.map(x => x.專案名稱)).toEqual(expect.arrayContaining(['修改中的案', '機密海報']));
+  __exW(r.today.map(x => x.專案名稱)).not.toContain('公開海報');
+  __exW(r.today.map(x => x.專案名稱)).not.toContain('已暫停的案');
+  __exW(r.today.map(x => x.專案名稱)).not.toContain('別人的案');
+  __exW(r.upcoming.map(x => x.專案名稱)).toEqual(['下週才開始']);
+});
