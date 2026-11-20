@@ -4959,7 +4959,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const fb=m.role==='assistant'&&m.logId?(m.fb==null?`<span class="as-fb"><button type="button" data-as-fb="1" data-i="${i}">有幫助</button><button type="button" data-as-fb="0" data-i="${i}">沒幫助</button></span>`:`<span class="as-fb as-fb-done">${m.fb?'謝謝回饋':'收到，我會改進'}</span>`):'';
         const gd=m.role==='assistant'&&Array.isArray(m.guides)?m.guides.filter(g=>siteTour.labelOf(g)).slice(0,2).map(g=>`<button type="button" class="as-guide" data-as-guide="${esc(g)}">帶我去看：${esc(siteTour.labelOf(g))}</button>`).join(''):'';
         const gt=m.role==='assistant'&&Array.isArray(m.goto)?m.goto.filter(g=>siteTour.goLabel(g)).slice(0,2).map(g=>`<button type="button" class="as-guide as-go" data-as-go="${esc(g)}">前往：${esc(siteTour.goLabel(g))}</button>`).join(''):'';
-        return `<div class="as-msg ${m.role==='user'?'as-me':'as-bot'}${m.fresh?' as-in':''}"><div class="as-bubble">${esc(m.content).replace(/\n/g,'<br>')}</div>${(gd||gt)?`<div class="as-guides">${gt}${gd}</div>`:''}${fb}</div>`;
+        return `<div class="as-msg ${m.role==='user'?'as-me':'as-bot'}${m.fresh?' as-in':''}"><div class="as-bubble">${m.html?m.html:esc(m.content).replace(/\n/g,'<br>')}</div>${(gd||gt)?`<div class="as-guides">${gt}${gd}</div>`:''}${fb}</div>`;
       }
       /* 電量用完（今天額度用盡）時，頭像換成充電中的電池：外框、三格電量依序充滿、閃電跳動（動畫在 site.css 的 .as-batt） */
       const BATTERY='<span class="as-batt" role="img" aria-label="充電中"><svg viewBox="0 0 64 64" aria-hidden="true"><rect class="as-batt-cap" x="25" y="4" width="14" height="6" rx="2"/><rect class="as-batt-body" x="16" y="9" width="32" height="50" rx="7"/><rect class="as-batt-cell c1" x="21" y="43" width="22" height="11" rx="2.5"/><rect class="as-batt-cell c2" x="21" y="30" width="22" height="11" rx="2.5"/><rect class="as-batt-cell c3" x="21" y="17" width="22" height="11" rx="2.5"/><path class="as-batt-bolt" d="M35 20 25 36h7l-3 12 11-18h-7z"/></svg></span>';
@@ -5029,15 +5029,16 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(S.busy)return;S.busy=true;render();
         try{
           const r=await api('assistantUsage',{days:7}),fmt=v=>Number(v).toLocaleString('zh-TW');
-          const lines=['近 7 天用量（每人每天上限 '+fmt(r.dailyLimit)+'）'];
-          for(const d of r.days){
-            if(!d.questions)continue;/* 沒有提問的日子、為 0 的項目都不顯示 */
-            const extra=[d.helpful?'有幫助 '+d.helpful:'',d.unhelpful?'沒幫助 '+d.unhelpful:'',d.notFound?'查不到 '+d.notFound:'',d.tired?'累了 '+d.tired:''].filter(Boolean);
-            lines.push('',d.day.slice(5)+'　'+d.questions+' 題・'+fmt(d.tokens)+(extra.length?'　（'+extra.join('、')+'）':''));
-            for(const a of d.accounts.slice(0,5))lines.push('　'+(a.user||a.account)+' '+a.questions+' 題・'+fmt(a.tokens));
+          const days=(r.days||[]).filter(d=>d.questions);
+          let h='<div class="as-usage"><div class="as-u-title">近 7 天用量<small>每人每天上限 '+fmt(r.dailyLimit)+'</small></div>';
+          if(!days.length)h+='<div class="as-u-empty">近 7 天都沒有人提問</div>';
+          for(const d of days){
+            const tags=[d.helpful?'<b class="u-ok">有幫助 '+d.helpful+'</b>':'',d.unhelpful?'<b class="u-bad">沒幫助 '+d.unhelpful+'</b>':'',d.notFound?'<b class="u-warn">查不到 '+d.notFound+'</b>':'',d.tired?'<b class="u-warn">累了 '+d.tired+'</b>':''].join('');
+            h+='<div class="as-u-day"><div class="as-u-head"><span>'+esc(d.day.slice(5))+'</span><span class="n">'+d.questions+' 題</span><span class="n">'+fmt(d.tokens)+'</span></div>'+(tags?'<div class="as-u-tags">'+tags+'</div>':'');
+            for(const x of d.accounts.slice(0,5))h+='<div class="as-u-row"><span class="nm">'+esc(x.user||x.account)+'</span><span class="n">'+x.questions+' 題</span><span class="n">'+fmt(x.tokens)+'</span></div>';
+            h+='</div>';
           }
-          if(lines.length===1)lines[0]='近 7 天都沒有人提問';
-          S.msgs.push({role:'assistant',content:lines.join('\n')});
+          S.msgs.push({role:'assistant',content:'近 7 天用量',html:h+'</div>'});
         }catch(err){S.msgs.push({role:'assistant',content:'讀取用量失敗：'+(err.message||'請稍後再試')})}
         S.busy=false;render();
       }

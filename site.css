@@ -1812,3 +1812,17 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
 .list-table tbody tr.lr-wait.from-top{transform:translateY(-34px) scale(.96)}
 .list-table tbody tr.lr-wait.lr-in{opacity:1;transform:none;pointer-events:auto;transition:transform .8s cubic-bezier(.16,1,.3,1),opacity .5s cubic-bezier(.22,.8,.3,1)}
 @media(prefers-reduced-motion:reduce){.list-table.is-entering tbody tr{animation:none}.list-table tbody tr.lr-wait{opacity:1;transform:none}}
+
+/* 小幫手用量表：數字右對齊、不斷行，標籤用顏色區分 */
+.as-usage{min-width:240px}
+.as-u-title{font-weight:800;margin-bottom:6px}.as-u-title small{display:block;font-size:12px;font-weight:600;color:var(--muted,#6b7f72)}
+.as-u-day{padding:8px 0;border-top:1px solid color-mix(in srgb,var(--line) 80%,transparent)}
+.as-u-head,.as-u-row{display:grid;grid-template-columns:1fr auto auto;gap:4px 14px;align-items:baseline;white-space:nowrap}
+.as-u-head{font-weight:800}.as-u-row{font-size:13px;padding:2px 0 0 10px;font-weight:600}
+.as-u-head .n,.as-u-row .n{text-align:right;font-variant-numeric:tabular-nums}
+.as-u-head .n:last-child,.as-u-row .n:last-child{min-width:64px;color:#0f8a2a}
+.as-u-row .nm{overflow:hidden;text-overflow:ellipsis}
+.as-u-tags{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 2px}
+.as-u-tags b{font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;white-space:nowrap}
+.u-ok{background:#dff5e5;color:#0f6a26}.u-bad{background:#fde3e1;color:#a4281e}.u-warn{background:#fff0d2;color:#8a5300}
+.as-u-empty{font-weight:600}
