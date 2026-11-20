@@ -3958,6 +3958,17 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (attempts > MAX_LOGIN_ATTEMPTS) throw new Error('登入嘗試次數過多，請稍後再試');
   }
 
+  /** 小幫手答不上來時，用提問者的名字在「問題回報」開一筆（狀態：回報中），不檢查回報權限（是系統代為回報）。 */
+  private async fileAssistantIssue(reporter: string, content: string, suggestion: string): Promise<void> {
+    await this.mutate('reportIssue', null, draft => {
+      const time = nowTaipei();
+      const row = Object.fromEntries(TABLE_SCHEMAS.bug_report.headers.map((header: string) => [header, ''])) as Row;
+      Object.assign(row, { '姓名': reporter || '未登入', '時間': time, '內容': content, '修改建議': suggestion, '狀態': '回報中', '狀態更改時間': time, '回報中': time });
+      draft.tables.bug_report.rows.push(row);
+      return { result: { ok: true, action: 'reportIssue' }, changedTables: ['bug_report'] };
+    });
+  }
+
   private async mutate(
     action: string,
     session: SessionRecord | null,
@@ -5755,7 +5766,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       }
       if (action === 'assistantChat') {
         const current = this.requireSession(session);
-        return await assistantChat(payload, database, current, this.ctx.storage, { apiKey: (this.env as { ANTHROPIC_API_KEY?: string }).ANTHROPIC_API_KEY, github: this.githubSource(), ...this.assistantCalendarDeps() });
+        return await assistantChat(payload, database, current, this.ctx.storage, { apiKey: (this.env as { ANTHROPIC_API_KEY?: string }).ANTHROPIC_API_KEY, github: this.githubSource(), ...this.assistantCalendarDeps(), fileIssue: (reporter, content, suggestion) => this.fileAssistantIssue(reporter, content, suggestion) });
       }
       if (action === 'assistantUsage') {
         this.requireAccess(database, session, 'database.manage');

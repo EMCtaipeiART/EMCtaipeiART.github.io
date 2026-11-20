@@ -67,3 +67,21 @@ describe('unanswered questions are reported to the admin', () => {
     await expect(updateGap(store, { id: 'nope', status: 'done' }, NOW)).rejects.toThrow('找不到');
   });
 });
+
+import { reportUnansweredTool as __ruTool } from '../src/assistant';
+describe('答不上來的問題同時寫進問題回報', () => {
+  it('第一次出現才開單，同一題再被問只累計次數；開單失敗不影響回答', async () => {
+    const store = memoryStore();
+    const issues: string[][] = [];
+    const file = async (reporter: string, content: string, suggestion: string) => { issues.push([reporter, content, suggestion]); };
+    const entry = (q: string) => ({ question: q, department: '設計部', found: true, gap: false } as unknown as AssistantLogEntry);
+    await __ruTool({ note: '缺座位申請流程' }, store, anna, entry('怎麼申請換座位？'), NOW, file);
+    await __ruTool({ note: '' }, store, pm, entry('怎麼申請換座位'), NOW + 1000, file);
+    expect(issues).toHaveLength(1);
+    expect(issues[0][0]).toBe('Anna');
+    expect(issues[0][1]).toContain('怎麼申請換座位');
+    expect(issues[0][1].length).toBeLessThanOrEqual(300);
+    const res = await __ruTool({}, store, anna, entry('另一題'), NOW + 2000, async () => { throw new Error('boom'); });
+    expect(res.recorded).toBe(true);
+  });
+});

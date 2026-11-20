@@ -343,8 +343,14 @@ export async function reportGap(store: AssistantStore, session: SessionRecord, d
   return gap;
 }
 
-export async function reportUnansweredTool(args: Row, store: AssistantStore, session: SessionRecord, entry: AssistantLogEntry, nowMs: number): Promise<Row> {
-  await reportGap(store, session, entry.department, entry.question, text(args.note), nowMs);
+export type FileIssue = (reporter: string, content: string, suggestion: string) => Promise<void>;
+
+export async function reportUnansweredTool(args: Row, store: AssistantStore, session: SessionRecord, entry: AssistantLogEntry, nowMs: number, fileIssue?: FileIssue): Promise<Row> {
+  const gap = await reportGap(store, session, entry.department, entry.question, text(args.note), nowMs);
+  /* 第一次出現的新問題，同時寫進系統「問題回報」（同一題之後再被問只累計次數，不重複開單） */
+  if (fileIssue && gap.count === 1) {
+    try { await fileIssue(session.user || session.account, ('【小幫手自動回報】使用者問：' + entry.question).slice(0, 300), ('小幫手答不上來' + (text(args.note) ? '，缺：' + text(args.note) : '') + '，請補上功能說明或調整。').slice(0, 300)); } catch { /* 開單失敗不影響回答 */ }
+  }
   entry.gap = true; entry.found = false;
   return { recorded: true, message: '已記錄並回報給管理者；請告訴使用者這題你還不會、已經回報、之後會補上。' };
 }
@@ -552,6 +558,8 @@ export interface AssistantDeps extends CalendarDeps {
   github?: GithubSource;
   /** 後台「試問」：照正常流程回答，但不寫問答紀錄、不計用量、不新增待補問題。 */
   dryRun?: boolean;
+  /** 答不上來時把問題寫進系統「問題回報」。 */
+  fileIssue?: FileIssue;
 }
 
 export function cleanHistory(history: unknown): ChatMessage[] {
@@ -631,7 +639,7 @@ export async function assistantChat(
           : name === 'getSystemHelp'
           ? await systemHelpTool((use.input || {}) as Row, store)
           : name === 'reportUnanswered'
-          ? (deps.dryRun ? { recorded: false, message: '（試問模式：不會真的記錄）請告訴使用者這題你還不會、已經回報、之後會補上。' } : await reportUnansweredTool((use.input || {}) as Row, store, session, entry, nowMs))
+          ? (deps.dryRun ? { recorded: false, message: '（試問模式：不會真的記錄）請告訴使用者這題你還不會、已經回報、之後會補上。' } : await reportUnansweredTool((use.input || {}) as Row, store, session, entry, nowMs, deps.fileIssue))
           : name === 'getCaseCounts'
           ? await mergedRows().then(m => withRange(getCaseCounts(database, (use.input || {}) as Row, nowMs, m.rows), m.ok))
           : name === 'findCase'
