@@ -73,3 +73,9 @@ __it2('內部實作細節（NEW 標籤、角色名字寫死等）不呈現給同
   for (const t of ['2026-11-20 NEW 標籤改成「新上架的角色」，角色名字不再寫死', 'feat: NEW 標籤改為新上架的角色才顯示', '提示詞改用常數', '快取改成 30 分鐘']) __ex2(__isAdmin2(t)).toBe(true);
   __ex2(__isAdmin2('專案標籤可以篩選')).toBe(false);
 });
+
+import { isAdminOnly as __isAdmin3 } from '../src/assistant-changes';
+import { it as __it3, expect as __ex3 } from 'vitest';
+__it3('其他公司的團購系統（lens-shop）更動不當成本系統更新', () => {
+  for (const t of ['2026-11-19 lens-shop：團主一鍵「通知到貨」', 'lens-shop：到貨通知改為一次多人寄送']) __ex3(__isAdmin3(t)).toBe(true);
+});
