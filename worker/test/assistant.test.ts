@@ -235,3 +235,12 @@ describe('recent updates', () => {
     expect(ASSISTANT_SYSTEM_PROMPT).toContain('getRecentUpdates');
   });
 });
+
+import { extractGuides as __extractGuides } from '../src/assistant';
+import { it as __itG, expect as __exG } from 'vitest';
+__itG('指引標記：只收白名單代號、去重、最多 2 個，並從文字中移除', () => {
+  const r = __extractGuides('短網址在左側選單。\n[[guide:links]] [[guide:links]] [[guide:calendar]] [[guide:wall]] [[guide:hack]]');
+  __exG(r.guides).toEqual(['links', 'calendar']);
+  __exG(r.reply).toBe('短網址在左側選單。');
+  __exG(__extractGuides('沒有標記').guides).toEqual([]);
+});

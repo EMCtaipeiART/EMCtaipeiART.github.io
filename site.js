@@ -4740,30 +4740,30 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     /* ---------- 全站導覽（新手指引）：聚光燈逐步介紹左側選單與常用功能；只介紹「目前看得到」的項目 ---------- */
     const siteTour=(()=>{
       const STEPS=[
-        {sel:'#promptSlot',t:'從這裡開始填需求',d:'選客戶別，按「開始填寫」就能新增設計需求。首頁下方可以看設計師、案量與最新公告。'},
-        {sel:'[data-nav="board"]',t:'首頁',d:'隨時按這裡回到首頁：填需求、看設計師頭像與目前案量。'},
-        {sel:'[data-nav="projects"]',t:'專案',d:'所有案件的清單與看板，可以搜尋、篩選，點進案件看詳細內容、修改紀錄與信件。'},
-        {sel:'[data-ext="links"]',t:'短網址',d:'把很長的網址縮短，方便分享給客戶或同事。'},
-        {sel:'[data-ext="calendar"]',t:'設計部行事曆',d:'看設計師的會議、請假、出差與值日生。'},
-        {sel:'[data-ext="wall"]',t:'作品牆',d:'瀏覽設計部完成的作品。'},
-        {sel:'[data-ext="notes"]',t:'記事本',d:'設計部的共用資源與筆記。'},
-        {sel:'[data-ext="assign"]',t:'專案分配',d:'看每個客戶別由哪位設計師負責。'},
-        {sel:'[data-ext="owner"]',t:'您的案件進度',d:'追蹤自己的案件進度，並在這裡確認過稿。'},
-        {sel:'[data-ext="outfit"]',t:'建立角色',d:'用 AI 做出自己的像素分身，出現在多元宇宙的辦公室，也能選座位、看平台幣。'},
-        {sel:'[data-ext="dashboard"]',t:'設計儀表板',d:'設計部的案量與工作負載統計。'},
-        {sel:'[data-ext="lunch"]',t:'午餐地圖',d:'凱曜午餐探險隊：不知道吃什麼就來這裡。'},
-        {sel:'[data-ext="issues"]',t:'問題回報',d:'系統有問題或想要的功能，都可以在這裡告訴我們。'},
-        {sel:'#themeBtn',t:'深色／淺色',d:'切換整個網站的深淺模式，小遊戲也會跟著變。'},
-        {sel:'#railLogin',t:'帳號選單',d:'點頭像可以進個人設定（也能關掉小幫手）、串接 Gmail，或再次開啟這個導覽。'},
-        {sel:'#asHelper .as-fab',t:'有問題就問小幫手',d:'右下角的小幫手可以查案量、找案件、問系統怎麼用。'}
+        {id:'form',sel:'#promptSlot',t:'從這裡開始填需求',d:'選客戶別，按「開始填寫」就能新增設計需求。首頁下方可以看設計師、案量與最新公告。'},
+        {id:'board',sel:'[data-nav="board"]',t:'首頁',d:'隨時按這裡回到首頁：填需求、看設計師頭像與目前案量。'},
+        {id:'projects',sel:'[data-nav="projects"]',t:'專案',d:'所有案件的清單與看板，可以搜尋、篩選，點進案件看詳細內容、修改紀錄與信件。'},
+        {id:'links',sel:'[data-ext="links"]',t:'短網址',d:'把很長的網址縮短，方便分享給客戶或同事。'},
+        {id:'calendar',sel:'[data-ext="calendar"]',t:'設計部行事曆',d:'看設計師的會議、請假、出差與值日生。'},
+        {id:'wall',sel:'[data-ext="wall"]',t:'作品牆',d:'瀏覽設計部完成的作品。'},
+        {id:'notes',sel:'[data-ext="notes"]',t:'記事本',d:'設計部的共用資源與筆記。'},
+        {id:'assign',sel:'[data-ext="assign"]',t:'專案分配',d:'看每個客戶別由哪位設計師負責。'},
+        {id:'owner',sel:'[data-ext="owner"]',t:'您的案件進度',d:'追蹤自己的案件進度，並在這裡確認過稿。'},
+        {id:'outfit',sel:'[data-ext="outfit"]',t:'建立角色',d:'用 AI 做出自己的像素分身，出現在多元宇宙的辦公室，也能選座位、看平台幣。'},
+        {id:'dashboard',sel:'[data-ext="dashboard"]',t:'設計儀表板',d:'設計部的案量與工作負載統計。'},
+        {id:'lunch',sel:'[data-ext="lunch"]',t:'午餐地圖',d:'凱曜午餐探險隊：不知道吃什麼就來這裡。'},
+        {id:'issues',sel:'[data-ext="issues"]',t:'問題回報',d:'系統有問題或想要的功能，都可以在這裡告訴我們。'},
+        {id:'theme',sel:'#themeBtn',t:'深色／淺色',d:'切換整個網站的深淺模式，小遊戲也會跟著變。'},
+        {id:'account',sel:'#railLogin',t:'帳號選單',d:'點頭像可以進個人設定（也能關掉小幫手）、串接 Gmail，或再次開啟這個導覽。'},
+        {id:'helper',sel:'#asHelper .as-fab',t:'有問題就問小幫手',d:'右下角的小幫手可以查案量、找案件、問系統怎麼用。'}
       ];
       const KEY=()=>{const s=session();return 'siteTourSeenV1:'+String(s.account||s.user||s.name||'guest')};
       const markSeen=()=>{try{localStorage.setItem(KEY(),'1')}catch(e){}};
       const seen=()=>{try{return localStorage.getItem(KEY())==='1'}catch(e){return true}};
       const visible=el=>{if(!el)return false;const r=el.getBoundingClientRect(),cs=getComputedStyle(el);return r.width>4&&r.height>4&&cs.display!=='none'&&cs.visibility!=='hidden'};
-      let list=[],idx=0,root=null,hole=null,card=null;
+      let list=[],idx=0,root=null,hole=null,card=null,single=false;
       const teardown=()=>{if(root){root.remove();root=null}document.removeEventListener('keydown',onKey,true);removeEventListener('resize',place);removeEventListener('scroll',place,true);document.getElementById('tourOffer')?.remove()};
-      const close=()=>{markSeen();teardown()};
+      const close=()=>{if(!single)markSeen();teardown()};
       function onKey(e){if(e.key==='Escape'){e.preventDefault();close()}else if(e.key==='ArrowRight'||e.key==='Enter'){e.preventDefault();go(1)}else if(e.key==='ArrowLeft'){e.preventDefault();go(-1)}}
       function go(d){const n=idx+d;if(n<0)return;if(n>=list.length){close();return}idx=n;render()}
       function place(){
@@ -4781,19 +4781,19 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(!visible(el)){go(1);return}
         el.scrollIntoView({block:'center',inline:'nearest'});
         const last=idx===list.length-1;
-        card.innerHTML='<div class="tour-step">'+(idx+1)+' / '+list.length+'</div><h4>'+esc(st.t)+'</h4><p>'+esc(st.d)+'</p><div class="tour-btns"><button type="button" data-tour="skip" class="tour-skip">'+(last?'':'跳過')+'</button><span>'+(idx>0?'<button type="button" data-tour="prev">上一步</button>':'')+'<button type="button" data-tour="next" class="tour-next">'+(last?'完成':'下一步')+'</button></span></div>';
+        card.innerHTML='<div class="tour-step">'+(idx+1)+' / '+list.length+'</div><h4>'+esc(st.t)+'</h4><p>'+esc(st.d)+'</p><div class="tour-btns"><button type="button" data-tour="skip" class="tour-skip">'+(last?'':'跳過')+'</button><span>'+(idx>0?'<button type="button" data-tour="prev">上一步</button>':'')+'<button type="button" data-tour="next" class="tour-next">'+(last?(single?'知道了':'完成'):'下一步')+'</button></span></div>';
         requestAnimationFrame(()=>{place();setTimeout(place,260)});
       }
-      function start(){
-        teardown();
-        list=STEPS.filter(x=>visible(document.querySelector(x.sel)));
-        if(!list.length)return;
+      function start(only){
+        teardown();single=Boolean(only);
+        list=STEPS.filter(x=>(!only||x.id===only)&&visible(document.querySelector(x.sel)));
+        if(!list.length)return false;
         idx=0;root=document.createElement('div');root.className='tour-root';root.setAttribute('role','dialog');root.setAttribute('aria-label','全站導覽');
         root.innerHTML='<div class="tour-block"></div><div class="tour-hole"></div><div class="tour-card" tabindex="-1"></div>';
         document.body.appendChild(root);hole=root.querySelector('.tour-hole');card=root.querySelector('.tour-card');
         root.addEventListener('click',e=>{const b=e.target.closest('[data-tour]');if(b){const a=b.dataset.tour;if(a==='next')go(1);else if(a==='prev')go(-1);else close();return}if(e.target.classList.contains('tour-block'))close()});
         document.addEventListener('keydown',onKey,true);addEventListener('resize',place);addEventListener('scroll',place,true);
-        render();
+        render();return true;
       }
       /* 第一次登入：先問一聲，不強迫；按「不用了」或看完都不再打擾（localStorage，依帳號） */
       function offer(){
@@ -4806,7 +4806,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       let tries=0;
       (function wait(){if(++tries>40)return;if(!loggedIn()||document.getElementById('uniLoading')||state.view!=='board'){setTimeout(wait,1500);return}setTimeout(offer,1500)})();
       try{if(/[?&]tour=1/.test(location.search))addEventListener('load',()=>setTimeout(start,1800))}catch(e){}
-      return {start,offer};
+      return {start,offer,labelOf:id=>{const x=STEPS.find(y=>y.id===id);return x?x.t:''}};
     })();
     /* ---------- 小幫手 ---------- */
     /* 登入後固定在右下角的對話小幫手（第一期：每日招呼、案量查詢、案件追蹤、新功能公告、問答紀錄）。
@@ -4836,7 +4836,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       }
       function msgHtml(m,i){
         const fb=m.role==='assistant'&&m.logId?(m.fb==null?`<span class="as-fb"><button type="button" data-as-fb="1" data-i="${i}">有幫助</button><button type="button" data-as-fb="0" data-i="${i}">沒幫助</button></span>`:`<span class="as-fb as-fb-done">${m.fb?'謝謝回饋':'收到，我會改進'}</span>`):'';
-        return `<div class="as-msg ${m.role==='user'?'as-me':'as-bot'}${m.fresh?' as-in':''}"><div class="as-bubble">${esc(m.content).replace(/\n/g,'<br>')}</div>${fb}</div>`;
+        const gd=m.role==='assistant'&&Array.isArray(m.guides)?m.guides.filter(g=>siteTour.labelOf(g)).slice(0,2).map(g=>`<button type="button" class="as-guide" data-as-guide="${esc(g)}">帶我去看：${esc(siteTour.labelOf(g))}</button>`).join(''):'';
+        return `<div class="as-msg ${m.role==='user'?'as-me':'as-bot'}${m.fresh?' as-in':''}"><div class="as-bubble">${esc(m.content).replace(/\n/g,'<br>')}</div>${gd?`<div class="as-guides">${gd}</div>`:''}${fb}</div>`;
       }
       /* 電量用完（今天額度用盡）時，頭像換成充電中的電池：外框、三格電量依序充滿、閃電跳動（動畫在 site.css 的 .as-batt） */
       const BATTERY='<span class="as-batt" role="img" aria-label="充電中"><svg viewBox="0 0 64 64" aria-hidden="true"><rect class="as-batt-cap" x="25" y="4" width="14" height="6" rx="2"/><rect class="as-batt-body" x="16" y="9" width="32" height="50" rx="7"/><rect class="as-batt-cell c1" x="21" y="43" width="22" height="11" rx="2.5"/><rect class="as-batt-cell c2" x="21" y="30" width="22" height="11" rx="2.5"/><rect class="as-batt-cell c3" x="21" y="17" width="22" height="11" rx="2.5"/><path class="as-batt-bolt" d="M35 20 25 36h7l-3 12 11-18h-7z"/></svg></span>';
@@ -4890,7 +4891,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         S.msgs.push({role:'user',content:q,fresh:true});S.busy=true;render();
         try{
           const r=await api('assistantChat',{message:q,history});
-          S.msgs.push({role:'assistant',content:r.reply||'……',logId:r.logId||null,fb:null,fresh:true});talk(400+String(r.reply||'').length*45);
+          S.msgs.push({role:'assistant',content:r.reply||'……',guides:Array.isArray(r.guides)?r.guides:[],logId:r.logId||null,fb:null,fresh:true});talk(400+String(r.reply||'').length*45);
           if(r.quota&&r.quota.tired)S.tired=true;
         }catch(err){S.msgs.push({role:'assistant',content:'小幫手剛剛打了個盹，請再問一次！'})}
         S.busy=false;render();
@@ -4929,6 +4930,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
           }
         }
         const chip=e.target.closest('[data-as-chip]');if(chip){send(chip.dataset.asChip);return}
+        const gb=e.target.closest('[data-as-guide]');
+        if(gb){if(matchMedia('(max-width:720px)').matches){S.min=true;render()}if(!siteTour.start(gb.dataset.asGuide)){S.min=false;S.msgs.push({role:'assistant',content:'這個項目你目前的畫面看不到喔（可能是權限或手機版沒有這個入口）。',fresh:true});render()}return}
         const f=e.target.closest('[data-as-fb]');
         if(f){const m=S.msgs[+f.dataset.i];if(!m||!m.logId||m.fb!=null)return;m.fb=f.dataset.asFb==='1';render();api('assistantFeedback',{logId:m.logId,helpful:m.fb}).catch(()=>{})}
       }
