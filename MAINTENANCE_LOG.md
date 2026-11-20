@@ -4,6 +4,9 @@
 
 ## 2026-10-30
 
+### 網站連結預覽加 1200×630 圖
+- 新增 assets/og-preview.png（綠底、logo、系統名稱與功能標籤），index.html 加 og:image／twitter:card，LINE、社群貼連結會帶大圖。圖要換就直接換同檔名，並換個網址測試（LINE 有快取）。
+
 ### 網站連結預覽（LINE／社群）的說明文字
 - index.html 加 meta description 與 og:title／og:description／og:url，LINE 等貼連結時的小字改成系統介紹（文案：EMC 設計部的需求系統…）（原本沒設，LINE 抓頁面文字）。LINE 有快取，已貼過的連結要換個網址（例如加 ?v=2）才會看到新的。
 
