@@ -4939,12 +4939,14 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(S.busy)return;S.busy=true;render();
         try{
           const r=await api('assistantUsage',{days:7}),fmt=v=>Number(v).toLocaleString('zh-TW');
-          const lines=['近 7 天用量（每人每天上限 '+fmt(r.dailyLimit)+' tokens）'];
+          const lines=['近 7 天用量（每人每天上限 '+fmt(r.dailyLimit)+'）'];
           for(const d of r.days){
-            if(!d.questions){lines.push(d.day+'：沒有提問');continue}
-            lines.push(d.day+'：'+d.questions+' 題、'+fmt(d.tokens)+' tokens'+(d.tired?'、累了 '+d.tired+' 次':'')+(d.helpful||d.unhelpful?'、有幫助 '+d.helpful+'／沒幫助 '+d.unhelpful:'')+(d.notFound?'、查不到 '+d.notFound:''));
-            for(const a of d.accounts.slice(0,5))lines.push('　'+(a.user||a.account)+'：'+a.questions+' 題、'+fmt(a.tokens)+' tokens');
+            if(!d.questions)continue;/* 沒有提問的日子、為 0 的項目都不顯示 */
+            const extra=[d.helpful?'有幫助 '+d.helpful:'',d.unhelpful?'沒幫助 '+d.unhelpful:'',d.notFound?'查不到 '+d.notFound:'',d.tired?'累了 '+d.tired:''].filter(Boolean);
+            lines.push('',d.day.slice(5)+'　'+d.questions+' 題・'+fmt(d.tokens)+(extra.length?'　（'+extra.join('、')+'）':''));
+            for(const a of d.accounts.slice(0,5))lines.push('　'+(a.user||a.account)+' '+a.questions+' 題・'+fmt(a.tokens));
           }
+          if(lines.length===1)lines[0]='近 7 天都沒有人提問';
           S.msgs.push({role:'assistant',content:lines.join('\n')});
         }catch(err){S.msgs.push({role:'assistant',content:'讀取用量失敗：'+(err.message||'請稍後再試')})}
         S.busy=false;render();
