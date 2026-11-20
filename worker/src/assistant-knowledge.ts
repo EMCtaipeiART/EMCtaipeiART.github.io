@@ -1,6 +1,6 @@
 /**
  * 小黃的系統知識庫：整理自 AGENT.md、SYSTEM_OVERVIEW.md、MAINTENANCE_LOG.md、COINS.md、
- * pixel-plaza/{MAINTENANCE,UI-SPEC,PET-SPEC}.md、vent-arena/README.md、lens-shop/README.md。
+ * pixel-plaza/{MAINTENANCE,UI-SPEC,PET-SPEC}.md、vent-arena/README.md。
  * 為了省 token，system prompt 只放「主題目錄」，細節由工具 getSystemHelp 依需要取回。
  * 系統功能改版時請同步更新這份文字（它不會自動跟著文件更新）。
  */
@@ -135,15 +135,6 @@ const BASE_TOPICS: KnowledgeTopic[] = [
       '元宇宙五樓的「倉庫」（以前叫影廳）有 7 個小遊戲入口，點一下就能進：桌上的魔界黑洞（裂縫）＝設計部遠征隊（第一章「最後一版，真的」，在戰損辦公室打插單便條、裝甲、意見分身、版本九頭蛇）；西牆白板＝截稿倒數 2；垃圾桶與紙團＝廢紙投籃；北牆拳擊手套衣架＝辦公室對決；東南的大顆健身球與球門＝大顆足球賽；賽車辦公椅＝辦公室賽車；紙靶與訂書機槍＝辦公室槍戰。遊戲內都有「離開」鈕，遊戲都有 Suno 配樂，可在遊戲設定開關／調音量。不再是走進倉庫中央自動進入。'
     ].join('\n')
   },
-  {
-    id: 'groupbuy', title: '團購站', summary: '隱形眼鏡團購、餐飲團、聊天室、結單',
-    keywords: ['團購', '隱形眼鏡', '隱眼', '餐飲團', '飲料', '開團', '結單', '訂單', '聊天室', '評論', '匯款', 'line pay'],
-    body: [
-      '凱曜團購站（lens-shop，emc-art.com 旗下）原本做隱形眼鏡團購，現在是多團購版本：同事用 Google 登入後可按首頁第一張「＋ 我要開團」自己開團，只能管理自己開的團。',
-      '團購類型有隱眼團、餐飲團（可貼 Uber Eats／你訂連結自動解析菜單）與自訂團；卡牌有倒數、達標金額、「團購中」標籤；結單後狀態自動改已結束，餐飲團結單會寄訂單明細信。',
-      '買家可下單、修改訂單、回報匯款（有 LINE Pay Money）、對商品留星級評論，團購頁有即時聊天室。寄件人是「EMC 團購小幫手」，用 Brevo 寄信。'
-    ].join('\n')
-  }
 ];
 
 /** 走訪後補寫的主題（assistant-knowledge-pages.ts）：相同 id 取代內建、新 id 加在後面。 */
@@ -185,6 +176,5 @@ export const FEATURE_TIPS: string[] = [
   '首頁設計師頭像滑過去，可以看到等級、稱號和工作負載。',
   '短網址可以批次建立，點擊數一目了然。',
   '午餐不知道吃什麼？左側選單有「午餐地圖」。',
-  '想團購？首頁團購站第一張卡「＋ 我要開團」，同事都能開團。',
   '行事曆有會議時，元宇宙裡的人物會自己走進會議室。'
 ];

@@ -112,7 +112,7 @@ export const ASSISTANT_TOOLS = [
   },
   {
     name: 'getSystemHelp',
-    description: '查詢設計需求系統的功能說明（案件填單、信件、權限、公告、設計師頭像、各頁選單、多元宇宙、寵物、角色工坊與平台幣、小遊戲、團購站…）。query 放關鍵字或主題 id。',
+    description: '查詢設計需求系統的功能說明（案件填單、信件、權限、公告、設計師頭像、各頁選單、多元宇宙、寵物、角色工坊與平台幣、小遊戲…）。query 放關鍵字或主題 id。',
     input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] }
   },
   {
