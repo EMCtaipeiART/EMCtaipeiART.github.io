@@ -17,11 +17,11 @@ function memoryStore(): AssistantStore & { data: Map<string, unknown> } {
 
 const NOW = Date.parse('2026-11-18T04:00:00Z');
 const anna: SessionRecord = { user: 'Anna', account: 'anna@emctaipei.com', provider: 'password', expiresAt: 0 };
-const LOG = ['# 修改紀錄', '', '## 2026-11-01 舊改動', '- 舊內容', '', '## 2026-11-18 新功能 A', '- 做了 A', '- 因為 B', '', '## 2026-11-19 修正 C', '- 修好 C', ''].join('\n');
+const LOG = ['# 修改紀錄', '', '## 2026-11-01 【同仁】舊改動', '- 舊內容', '', '## 2026-11-18 【同仁】新功能 A', '- 做了 A', '- 因為 B', '', '## 2026-11-19 【同仁】修正 C', '- 修好 C', ''].join('\n');
 const COMMITS = [
   { commit: { message: 'data: audit log +2', committer: { date: '2026-11-19T01:00:00Z' } } },
-  { commit: { message: 'feat: 專案頁新增匯出\n\nCo-Authored-By: x', committer: { date: '2026-11-19T17:30:00Z' } } },
-  { commit: { message: 'fix: 修正某頁', committer: { date: '2026-11-18T02:00:00Z' } } }
+  { commit: { message: 'feat: 【同仁】專案頁新增匯出\n\nCo-Authored-By: x', committer: { date: '2026-11-19T17:30:00Z' } } },
+  { commit: { message: 'fix: 【同仁】修正某頁', committer: { date: '2026-11-18T02:00:00Z' } } }
 ];
 const source = { owner: 'o', repo: 'r', branch: 'main', token: 'secret-token' };
 
