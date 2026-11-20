@@ -1549,8 +1549,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
           const c=e.target;
           if(e.isIntersecting){
             if(!c.classList.contains('flip-wait'))continue;
-            /* 同一排的卡牌依欄位順序 1、2、3… 一張接一張出現（每張晚 150ms） */
-            const top0=c.offsetTop,col=cards.filter(x=>x.offsetTop===top0&&cards.indexOf(x)<cards.indexOf(c)).length,dl=col*150+(n++>0&&col===0?0:0);
+            /* 同一排的卡牌一張接一張出現（每張晚 150ms）：往下捲 1、2、3，往上捲 3、2、1 */
+            const top0=c.offsetTop,mates=cards.filter(x=>x.offsetTop===top0),col=mates.indexOf(c),order=c.classList.contains('from-top')?mates.length-1-col:col,dl=order*150; /* 往下捲 1、2、3；往上捲（從上方進來）倒過來 3、2、1 */
             c.style.transitionDelay=dl+'ms';c.classList.add('flip-in');
             clearTimeout(c._fl);c._fl=setTimeout(()=>{c.classList.remove('flip-wait','flip-in','from-top');c.style.transitionDelay=''},1200+dl);
           }else{
