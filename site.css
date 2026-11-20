@@ -1805,3 +1805,10 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
 .board.five .col-more-btn{width:34px;height:34px;padding:0;display:grid;place-items:center;background:color-mix(in srgb,var(--panel) 88%,transparent);color:var(--brand);border:1px solid color-mix(in srgb,var(--brand) 35%,var(--line));box-shadow:0 6px 16px rgba(18,38,28,.16);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .board.five .col-more-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .board.five .col-more-btn:hover{background:var(--brand);color:#fff;filter:none}
+/* 列表模式的進場動態：與卡牌同一套（由小到大、快進慢收；離開視窗的列沉回原來那一側，靠近時滑回來） */
+@keyframes rowEnter{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+.list-table.is-entering tbody tr{animation:rowEnter .55s cubic-bezier(.22,.8,.24,1) both;animation-delay:calc(var(--ri,0)*40ms + 60ms)}
+.list-table tbody tr.lr-wait{opacity:0;transform:translateY(34px) scale(.96);pointer-events:none}
+.list-table tbody tr.lr-wait.from-top{transform:translateY(-34px) scale(.96)}
+.list-table tbody tr.lr-wait.lr-in{opacity:1;transform:none;pointer-events:auto;transition:transform .8s cubic-bezier(.16,1,.3,1),opacity .5s cubic-bezier(.22,.8,.3,1)}
+@media(prefers-reduced-motion:reduce){.list-table.is-entering tbody tr{animation:none}.list-table tbody tr.lr-wait{opacity:1;transform:none}}

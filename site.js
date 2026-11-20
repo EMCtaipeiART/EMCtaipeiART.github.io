@@ -1493,7 +1493,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         ${state.layout==='list'?'':`<p class="drag-note">${state.dragOn?'把卡牌拖到其他欄就能改狀態；拖到「執行中」會讓你選擇項目細節。':'只有設計師登入後才能拖移卡牌改狀態；點卡牌可查看詳情。'}</p>`}
         ${state.layout==='list'?plistHtml(rows):`<div class="board five bc${state.boardCols}">${cols||'<div class="empty" style="grid-column:1/-1">已隱藏所有狀態欄位，請從右上角的欄位按鈕勾選要顯示的欄位。</div>'}</div>`}`;
       if(hadFocus){const input=$('boardSearch');input.focus();input.setSelectionRange(input.value.length,input.value.length)}
-      playCardEnter();setTimeout(setupFlipReveal,380);
+      playCardEnter();setTimeout(setupFlipReveal,380);setTimeout(setupListReveal,160);
     }
     /** 欄內卡牌的捲動進場：離開視窗的卡牌先沉到原來的那一側（往下捲＝上方卡牌留在上面、往回捲＝下方留在下面），
      *  再次靠近時由那一側滑回來（快進慢收，同時進來的依序延遲）。每欄一個 observer，重畫看板時重建。 */
@@ -1532,6 +1532,34 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
       let i=0;board.querySelectorAll('.cards').forEach((col)=>col.querySelectorAll('.card').forEach((c,j)=>{c.style.setProperty('--ci',String(Math.min(j*4+i,18)))}),i++);
       board.classList.add('is-entering');setTimeout(()=>board.classList.remove('is-entering'),1700);
+    }
+    /** 列表（表格）模式的同一套動態：進頁時前幾列依序滑入；往下捲，離開視窗的列沉回原來那一側，靠近時由該側滑回來（由小到大、快進慢收）。 */
+    const listObs=[];
+    function setupListReveal(){
+      listObs.splice(0).forEach(o=>o.disconnect());
+      if(state.view!=='projects'||state.layout!=='list')return;
+      const table=document.querySelector('.list-table');if(!table)return;
+      if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+      const rows=[...table.querySelectorAll('tbody > tr')];if(!rows.length)return;
+      if(state.cardEnter){state.cardEnter=false;rows.slice(0,16).forEach((r,i)=>r.style.setProperty('--ri',String(i)));table.classList.add('is-entering');setTimeout(()=>table.classList.remove('is-entering'),1500)}
+      const wrap=$('listWrap'),root=wrap&&wrap.clientHeight<innerHeight-100&&wrap.scrollHeight>wrap.clientHeight+40?wrap:null; /* 列表自己有捲軸才用它當 root，否則跟著頁面捲 */
+      const obs=new IntersectionObserver(es=>{
+        let n=0;
+        for(const e of es){
+          const r=e.target;
+          if(e.isIntersecting){
+            if(!r.classList.contains('lr-wait'))continue;
+            r.style.transitionDelay=(n++*45)+'ms';r.classList.add('lr-in');
+            clearTimeout(r._fl);r._fl=setTimeout(()=>{r.classList.remove('lr-wait','lr-in','from-top');r.style.transitionDelay=''},1000+n*45);
+          }else{
+            const rb=e.rootBounds||{top:0};
+            clearTimeout(r._fl);r.style.transitionDelay='';r.classList.remove('lr-in');
+            r.classList.toggle('from-top',e.boundingClientRect.top<rb.top);
+            r.classList.add('lr-wait');
+          }
+        }
+      },{root,rootMargin:'-40px 0px -30px 0px',threshold:0});
+      rows.forEach(r=>obs.observe(r));listObs.push(obs);
     }
     function plistHtml(rows){const all=sortedLatest(rows),shown=all.slice(0,state.plistLimit);return shown.length?listTableHtml(shown)+(all.length>shown.length?`<button type="button" class="more-btn" data-more="plist">顯示更多（還有 ${all.length-shown.length} 筆）</button>`:''):'<div class="empty">沒有符合的案件</div>'}
     async function applyMove(id,status,details){
