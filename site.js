@@ -913,6 +913,7 @@
         </section>
         `;
       if(hadFocus){const input=$('boardSearch');input.focus();input.setSelectionRange(input.value.length,input.value.length)}
+      setTimeout(setupHomeReveal,160);setTimeout(setupListReveal,160);
     }
 
     /* ---------- 檢視切換 ---------- */
@@ -1404,7 +1405,7 @@
     function updateRail(){syncHeroEdit();renderRailExtra();try{updateProjBadge()}catch(e){}setTimeout(()=>{try{if(innerWidth<=720){const a=document.querySelector('.rail .is-active');if(a)a.scrollIntoView({inline:'center',block:'nearest'})}}catch(err){}},0);const active=state.view==='settings'?'settings':state.view==='projects'?'projects':(['board','form','mail','detail','universe','arena'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
     const KEEP_VIEWS=['universe','arena','projects','calendar','assign','notes','wall','issues','links'];
     function show(view){const pv=state.view;try{if(state.restored)sessionStorage.setItem('v5LastView',KEEP_VIEWS.includes(view)?view:'')}catch(err){}if(view==='universe')setTimeout(openPendingStory,0);state.tlLeft=null;if(view==='universe'||pv==='universe'||view==='form'||view==='mail'||view==='arena'||pv==='arena'){window.scrollTo(0,0)}if(view==='board'&&pv!=='board'){window.scrollTo(0,0);/* 回首頁：綠底收成只剩下拉列，畫面停在「最新案件列表」標題 */setTimeout(()=>{$('team')?.classList.add('is-collapsed');setTimeout(()=>{const h=document.querySelector('.section-head');if(h&&state.view==='board')window.scrollTo(0,Math.max(0,h.getBoundingClientRect().top+window.scrollY-86))},560)},0)}else if(view==='board'){$('team')?.classList.remove('is-collapsed')}
-      if(view==='projects'&&pv!=='projects')state.cardEnter=true;
+      if((view==='projects'||view==='board')&&pv!==view)state.cardEnter=true;
       state.view=view;
       document.body.classList.toggle('no-hero',view==='arena'||view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='links'||view==='wall'||view==='notes'||view==='assign'||view==='calendar'||view==='outfit'||(view==='detail'&&state.home==='projects')||(innerWidth<=720&&view!=='board'&&view!=='universe'));
       document.body.classList.toggle('uni-collapse',view==='universe'||view==='form'||view==='mail');document.body.classList.toggle('uni-on',view==='universe');document.body.classList.toggle('arena-on',view==='arena');$('stage').classList.toggle('wide',view==='arena'||view==='projects'||view==='wall'||view==='notes'||view==='assign'||view==='calendar');$('stage').classList.toggle('full',view==='outfit');$('stage').closest('.stage-wrap')?.classList.toggle('uni',view==='universe');
@@ -1533,11 +1534,37 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       let i=0;board.querySelectorAll('.cards').forEach((col)=>col.querySelectorAll('.card').forEach((c,j)=>{c.style.setProperty('--ci',String(Math.min(j*4+i,18)))}),i++);
       board.classList.add('is-entering');setTimeout(()=>board.classList.remove('is-entering'),1700);
     }
+    /** 首頁最新案件（卡牌網格）：進頁依序滑入；捲動時離開視窗的卡牌沉回原側、靠近再滑回來（跟專案頁同一套）。 */
+    const homeObs=[];
+    function setupHomeReveal(){
+      homeObs.splice(0).forEach(o=>o.disconnect());
+      if(state.view!=='board'||state.layout==='list')return;
+      const grid=document.querySelector('.latest-grid');if(!grid||grid.querySelector('.skeleton'))return;
+      if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+      const cards=[...grid.querySelectorAll(':scope > div.card')];if(!cards.length)return;
+      if(state.cardEnter){state.cardEnter=false;cards.slice(0,12).forEach((c,i)=>c.style.setProperty('--ci',String(i)));grid.classList.add('is-entering');setTimeout(()=>grid.classList.remove('is-entering'),1700)}
+      const obs=new IntersectionObserver(es=>{
+        let n=0;
+        for(const e of es){
+          const c=e.target;
+          if(e.isIntersecting){
+            if(!c.classList.contains('flip-wait'))continue;
+            c.style.transitionDelay=(n++*80)+'ms';c.classList.add('flip-in');
+            clearTimeout(c._fl);c._fl=setTimeout(()=>{c.classList.remove('flip-wait','flip-in','from-top');c.style.transitionDelay=''},1100+n*80);
+          }else{
+            const rb=e.rootBounds||{top:0};
+            clearTimeout(c._fl);c.style.transitionDelay='';c.classList.remove('flip-in');
+            c.classList.toggle('from-top',e.boundingClientRect.top<rb.top);c.classList.add('flip-wait');
+          }
+        }
+      },{root:null,rootMargin:'-20px 0px -60px 0px',threshold:0});
+      cards.forEach(c=>obs.observe(c));homeObs.push(obs);
+    }
     /** 列表（表格）模式的同一套動態：進頁時前幾列依序滑入；往下捲，離開視窗的列沉回原來那一側，靠近時由該側滑回來（由小到大、快進慢收）。 */
     const listObs=[];
     function setupListReveal(){
       listObs.splice(0).forEach(o=>o.disconnect());
-      if(state.view!=='projects'||state.layout!=='list')return;
+      if(!(state.view==='projects'||state.view==='board')||state.layout!=='list')return;
       const table=document.querySelector('.list-table');if(!table)return;
       if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
       const rows=[...table.querySelectorAll('tbody > tr')];if(!rows.length)return;
