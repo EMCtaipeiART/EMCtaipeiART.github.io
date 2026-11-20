@@ -20,7 +20,7 @@ const BODY_MAX = 600;
 const COMMIT_KEEP = 12;
 
 /** 後台、管理者專屬、部署與內部維護相關的更動，以及小黃自己的運作機制（泡泡、新聞、額度、電池…，屬管理者層面的設定）：小黃不需要向同仁呈現或說明，一律過濾掉。 */
-const ADMIN_ONLY_BASE = /後台|admin|password|密碼|source to repo|onkeydown|管理者|管理員|教小黃|試問|用量|待補|稽核|備份|還原|金鑰|部署|Worker|DO storage|schema|測試|重構|知識庫|維護手冊|走訪|wrangler|ANTHROPIC|CLAUDE\.md|ASSISTANT\.md|小幫手|機器人|泡泡|氣泡|彈出|額度|電池|充電|新聞/i;
+const ADMIN_ONLY_BASE = /後台|admin|password|密碼|source to repo|onkeydown|管理者|管理員|教小黃|試問|用量|待補|稽核|備份|還原|金鑰|部署|Worker|DO storage|schema|測試|重構|知識庫|維護手冊|走訪|wrangler|ANTHROPIC|CLAUDE\.md|ASSISTANT\.md|小幫手|機器人|泡泡|氣泡|彈出|額度|電池|充電|新聞|\bNEW\b|新上架|角色名字|寫死|常數|提示詞|prompt|tokens?|快取|集中設定/i;
 const escapeRe = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 /** 小幫手角色的名字會換，所以名字不寫死在正規表示式裡，從 assistant-character.ts 取。 */
 export const ADMIN_ONLY = new RegExp(ADMIN_ONLY_BASE.source + '|' + escapeRe(ASSISTANT_CHARACTER.name), 'i');

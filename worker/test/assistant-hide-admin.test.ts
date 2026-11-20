@@ -66,3 +66,10 @@ import { it as __it, expect as __expect } from 'vitest';
 __it('英文 admin／password 類 commit 也不會出現在泡泡', () => {
   __expect(__isAdminOnly('lens-shop: fix admin password input (onkeydown returned false), add Worker source to repo')).toBe(true);
 });
+
+import { isAdminOnly as __isAdmin2 } from '../src/assistant-changes';
+import { it as __it2, expect as __ex2 } from 'vitest';
+__it2('內部實作細節（NEW 標籤、角色名字寫死等）不呈現給同仁', () => {
+  for (const t of ['2026-11-20 NEW 標籤改成「新上架的角色」，角色名字不再寫死', 'feat: NEW 標籤改為新上架的角色才顯示', '提示詞改用常數', '快取改成 30 分鐘']) __ex2(__isAdmin2(t)).toBe(true);
+  __ex2(__isAdmin2('專案標籤可以篩選')).toBe(false);
+});

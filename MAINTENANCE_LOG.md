@@ -3308,3 +3308,7 @@
 - 影廳已改「倉庫」，有 7 個小遊戲入口（遠征隊、截稿倒數 2、廢紙投籃、辦公室對決、大顆足球賽、辦公室賽車、辦公室槍戰），不再走進中央自動進入。改 assistant-knowledge.ts（pets／games／FEATURE_TIPS／metaverse）、assistant-knowledge-pages.ts（metaverse）、site.js HELLO_TIPS。
 - 之後元宇宙有新改動，記得同步改這幾處。
 - 同日：泡泡跑出「lens-shop: fix admin password input…」這類英文後台修正 commit。ADMIN_ONLY 補 admin／password／密碼／source to repo／onkeydown，之後同類不再外露。
+
+## 2026-11-20 系統更新過濾：內部實作細節不再露出
+- 發現泡泡把「NEW 標籤改成新上架的角色、角色名字不再寫死」這類內部實作說明直接秀給同仁。過濾條件新增 NEW、新上架、角色名字、寫死、常數、提示詞、prompt、token、快取、集中設定等字眼，含這些字的更動標題與 commit 不再當成系統更新。
+- 之後寫修改紀錄：同仁看得到的功能用同仁看得懂的話寫標題，不要把程式做法（寫死、常數、快取…）放在標題。
