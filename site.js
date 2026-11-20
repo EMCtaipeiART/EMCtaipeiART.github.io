@@ -395,6 +395,8 @@
       });
       clearTimeout(window.__flipT);window.__flipT=setTimeout(()=>{try{setupFlipReveal()}catch(e){}},80); /* 欄高度定下來之後才建立捲動進場的 observer */
     }
+    document.addEventListener('click',e=>{const t=e.target.closest?.('[data-m-col]');if(!t)return;state.mCol=t.dataset.mCol;document.querySelectorAll('.m-col-tab').forEach(b=>{const on=b===t;b.classList.toggle('on',on);b.setAttribute('aria-selected',on)});applyMCol();try{playCardEnter()}catch(err){}});
+    function applyMCol(){document.querySelectorAll('.board.five .column').forEach(col=>col.classList.toggle('m-on',col.dataset.status===state.mCol))}
     document.addEventListener('click',e=>{const b=e.target.closest?.('.col-more-btn');if(!b)return;const g=b.closest('.col-more')?.previousElementSibling;if(g)g.scrollBy({top:Math.round(g.clientHeight*.75),behavior:'smooth'})});
     document.addEventListener('scroll',e=>{
       const g=e.target;if(!g||!g.classList||!g.classList.contains('cards')||!g.closest('.board.five'))return;
@@ -1474,10 +1476,12 @@
       if(!state.loaded){stage.innerHTML=`<div class="latest-grid">${'<div class="skeleton"></div>'.repeat(6)}</div>`;return}
       state.dragOn=isDesignerSession();
       const rows=allRows().filter(matches).filter(passFilters).filter(r=>!gridStatusHide().has(String(r['狀態']||'').trim())),n=filterCount();
+      const tabInfo=[];
       const cols=orderedColumns().filter(c=>state.layout==='list'||!gridStatusHide().has(c.status)).map(column=>{
         const list=rows.filter(r=>String(r['狀態']||'').trim()===column.status).sort((a,b)=>{if(column.status==='過稿中'){const P=v=>{const m=String(v||'').match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);return m?Date.UTC(+m[1],+m[2]-1,+m[3],+(m[4]||0),+(m[5]||0),+(m[6]||0)):NaN},t=r=>{let v=NaN;for(const m of (state.mods.get(idKey(r))||[]))for(const f of ['建立日期','圖片更新時間']){const w=P(m[f]);if(!Number.isNaN(w)&&(Number.isNaN(v)||w>v))v=w}if(Number.isNaN(v))v=P(r['繳交時間']);return Number.isNaN(v)?-Infinity:v},x=t(a),y=t(b);return x===y?byNewest(a,b):x>y?-1:1}/* 過稿中：依「最近一次修改」的時間（修改紀錄的建立／圖片更新時間，沒有紀錄才用繳交時間），最新的在最上面 */
 if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const e=r=>{const v=parseDay(r['結束日期']);return Number.isNaN(v)?Infinity:v},x=e(a),y=e(b);return x===y?byNewest(a,b):x<y?-1:1});
         const limit=(state.query||n)?list.length:state.limits[column.key],visible=list.slice(0,limit);
+        tabInfo.push({status:column.status,title:column.title,color:column.color,count:list.length});
         return `<section class="column" data-status="${column.status}" aria-label="${column.title}">
           <div class="column-head"${state.dragOn&&state.layout!=='list'?' draggable="true" title="拖曳可調整欄位順序"':''}><span class="column-dot" style="background:${column.color}"></span><span class="column-title">${column.title}</span><span class="column-count">${list.length} 筆</span></div>
           <div class="column-bar" style="background:${column.color}"></div>
@@ -1485,6 +1489,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
           ${list.length>visible.length?`<button type="button" class="more-btn" data-more="${column.key}">顯示更多（還有 ${list.length-visible.length} 筆）</button>`:''}
         </section>`;
       }).join('');
+      if(!tabInfo.some(t=>t.status===state.mCol))state.mCol=(tabInfo.find(t=>t.count)||tabInfo[0]||{}).status||'';
+      const mTabs=state.layout==='list'||!tabInfo.length?'':`<div class="m-col-tabs" role="tablist">${tabInfo.map(t=>`<button type="button" role="tab" class="m-col-tab${t.status===state.mCol?' on':''}" data-m-col="${esc(t.status)}" aria-selected="${t.status===state.mCol}"><i style="background:${t.color}"></i>${esc(t.title)}<b>${t.count}</b></button>`).join('')}</div>`;
       const hadFocus=document.activeElement?.id==='boardSearch';
       stage.innerHTML=`<div class="section-head"><div><h2>專案列表</h2></div><div class="section-tools">
           ${googleLinksHtml(true)}
@@ -1494,9 +1500,9 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
           
           <span class="board-sync">${esc(state.syncText)}</span></div></div>
         ${state.layout==='list'?'':`<p class="drag-note">${state.dragOn?'把卡牌拖到其他欄就能改狀態；拖到「執行中」會讓你選擇項目細節。':'只有設計師登入後才能拖移卡牌改狀態；點卡牌可查看詳情。'}</p>`}
-        ${state.layout==='list'?plistHtml(rows):`<div class="board five bc${state.boardCols}">${cols||'<div class="empty" style="grid-column:1/-1">已隱藏所有狀態欄位，請從右上角的欄位按鈕勾選要顯示的欄位。</div>'}</div>`}`;
+        ${mTabs}${state.layout==='list'?plistHtml(rows):`<div class="board five bc${state.boardCols}" data-mcol="${esc(state.mCol||'')}">${cols||'<div class="empty" style="grid-column:1/-1">已隱藏所有狀態欄位，請從右上角的欄位按鈕勾選要顯示的欄位。</div>'}</div>`}`;
       if(hadFocus){const input=$('boardSearch');input.focus();input.setSelectionRange(input.value.length,input.value.length)}
-      playCardEnter();setTimeout(setupFlipReveal,380);setTimeout(setupListReveal,160);
+      applyMCol();playCardEnter();setTimeout(setupFlipReveal,380);setTimeout(setupListReveal,160);
     }
     /** 欄內卡牌的捲動進場：離開視窗的卡牌先沉到原來的那一側（往下捲＝上方卡牌留在上面、往回捲＝下方留在下面），
      *  再次靠近時由那一側滑回來（快進慢收，同時進來的依序延遲）。每欄一個 observer，重畫看板時重建。 */

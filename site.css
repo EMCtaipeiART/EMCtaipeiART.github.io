@@ -1839,3 +1839,19 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
 .lb-close{top:calc(10px + env(safe-area-inset-top,0px));right:12px;font-size:30px}
 .lb-prev{left:10px;top:50%;transform:translateY(-50%)}
 .lb-next{right:10px;top:50%;transform:translateY(-50%)}
+
+/* 手機專案頁：狀態欄改成上方分頁，一次只顯示一欄；欄內不再自己捲動（避免整頁無法上下滑） */
+.m-col-tabs{display:none}
+@media (max-width:700px){
+  .m-col-tabs{display:flex;gap:8px;overflow-x:auto;margin:0 -16px 12px;padding:2px 16px 6px;scrollbar-width:none;position:sticky;top:0;z-index:20;background:var(--bg)}
+  .m-col-tabs::-webkit-scrollbar{display:none}
+  .m-col-tab{flex:none;display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--ink);font:inherit;font-size:13px;font-weight:800;cursor:pointer;touch-action:manipulation}
+  .m-col-tab i{width:8px;height:8px;border-radius:50%}
+  .m-col-tab b{font-size:11.5px;color:var(--muted);font-weight:800}
+  .m-col-tab.on{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-deep)}
+  .board.five .column{display:none}
+  .board.five .column.m-on{display:block}
+  .board.five .cards{max-height:none!important;overflow:visible!important;padding:0!important;margin:0!important;-webkit-mask-image:none!important;mask-image:none!important}
+  .board.five .col-more{display:none!important}
+  .board.five .column-head,.board.five .column-bar{display:none}
+}
