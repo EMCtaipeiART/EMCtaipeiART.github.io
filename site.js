@@ -4806,7 +4806,10 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       let tries=0;
       (function wait(){if(++tries>40)return;if(!loggedIn()||document.getElementById('uniLoading')||state.view!=='board'){setTimeout(wait,1500);return}setTimeout(offer,1500)})();
       try{if(/[?&]tour=1/.test(location.search))addEventListener('load',()=>setTimeout(start,1800))}catch(e){}
-      return {start,offer,labelOf:id=>{const x=STEPS.find(y=>y.id===id);return x?x.t:''}};
+      /* 小幫手「前往」按鈕：直接開啟頁面，不給網址 */
+      const GO={universe:{t:'多元宇宙'},projects:{t:'專案',sel:'[data-nav="projects"]'},links:{t:'短網址',sel:'[data-ext="links"]'},calendar:{t:'設計部行事曆',sel:'[data-ext="calendar"]'},wall:{t:'作品牆',sel:'[data-ext="wall"]'},notes:{t:'記事本',sel:'[data-ext="notes"]'},assign:{t:'專案分配',sel:'[data-ext="assign"]'},owner:{t:'您的案件進度',sel:'[data-ext="owner"]'},outfit:{t:'建立角色',sel:'[data-ext="outfit"]'},dashboard:{t:'設計儀表板',sel:'[data-ext="dashboard"]'},lunch:{t:'午餐地圖',sel:'[data-ext="lunch"]'},issues:{t:'問題回報',sel:'[data-ext="issues"]'}};
+      const goTo=id=>{if(id==='universe'){openUniverse();return true}const g=GO[id],el=g&&g.sel&&document.querySelector(g.sel);if(!el||!visible(el))return false;el.click();return true};
+      return {start,offer,goTo,goLabel:id=>GO[id]?GO[id].t:'',labelOf:id=>{const x=STEPS.find(y=>y.id===id);return x?x.t:''}};
     })();
     /* ---------- 小幫手 ---------- */
     /* 登入後固定在右下角的對話小幫手（第一期：每日招呼、案量查詢、案件追蹤、新功能公告、問答紀錄）。
@@ -4837,7 +4840,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       function msgHtml(m,i){
         const fb=m.role==='assistant'&&m.logId?(m.fb==null?`<span class="as-fb"><button type="button" data-as-fb="1" data-i="${i}">有幫助</button><button type="button" data-as-fb="0" data-i="${i}">沒幫助</button></span>`:`<span class="as-fb as-fb-done">${m.fb?'謝謝回饋':'收到，我會改進'}</span>`):'';
         const gd=m.role==='assistant'&&Array.isArray(m.guides)?m.guides.filter(g=>siteTour.labelOf(g)).slice(0,2).map(g=>`<button type="button" class="as-guide" data-as-guide="${esc(g)}">帶我去看：${esc(siteTour.labelOf(g))}</button>`).join(''):'';
-        return `<div class="as-msg ${m.role==='user'?'as-me':'as-bot'}${m.fresh?' as-in':''}"><div class="as-bubble">${esc(m.content).replace(/\n/g,'<br>')}</div>${gd?`<div class="as-guides">${gd}</div>`:''}${fb}</div>`;
+        const gt=m.role==='assistant'&&Array.isArray(m.goto)?m.goto.filter(g=>siteTour.goLabel(g)).slice(0,2).map(g=>`<button type="button" class="as-guide as-go" data-as-go="${esc(g)}">前往：${esc(siteTour.goLabel(g))}</button>`).join(''):'';
+        return `<div class="as-msg ${m.role==='user'?'as-me':'as-bot'}${m.fresh?' as-in':''}"><div class="as-bubble">${esc(m.content).replace(/\n/g,'<br>')}</div>${(gd||gt)?`<div class="as-guides">${gt}${gd}</div>`:''}${fb}</div>`;
       }
       /* 電量用完（今天額度用盡）時，頭像換成充電中的電池：外框、三格電量依序充滿、閃電跳動（動畫在 site.css 的 .as-batt） */
       const BATTERY='<span class="as-batt" role="img" aria-label="充電中"><svg viewBox="0 0 64 64" aria-hidden="true"><rect class="as-batt-cap" x="25" y="4" width="14" height="6" rx="2"/><rect class="as-batt-body" x="16" y="9" width="32" height="50" rx="7"/><rect class="as-batt-cell c1" x="21" y="43" width="22" height="11" rx="2.5"/><rect class="as-batt-cell c2" x="21" y="30" width="22" height="11" rx="2.5"/><rect class="as-batt-cell c3" x="21" y="17" width="22" height="11" rx="2.5"/><path class="as-batt-bolt" d="M35 20 25 36h7l-3 12 11-18h-7z"/></svg></span>';
@@ -4891,7 +4895,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         S.msgs.push({role:'user',content:q,fresh:true});S.busy=true;render();
         try{
           const r=await api('assistantChat',{message:q,history});
-          S.msgs.push({role:'assistant',content:r.reply||'……',guides:Array.isArray(r.guides)?r.guides:[],logId:r.logId||null,fb:null,fresh:true});talk(400+String(r.reply||'').length*45);
+          S.msgs.push({role:'assistant',content:r.reply||'……',guides:Array.isArray(r.guides)?r.guides:[],goto:Array.isArray(r.goto)?r.goto:[],logId:r.logId||null,fb:null,fresh:true});talk(400+String(r.reply||'').length*45);
           if(r.quota&&r.quota.tired)S.tired=true;
         }catch(err){S.msgs.push({role:'assistant',content:'小幫手剛剛打了個盹，請再問一次！'})}
         S.busy=false;render();
@@ -4930,6 +4934,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
           }
         }
         const chip=e.target.closest('[data-as-chip]');if(chip){send(chip.dataset.asChip);return}
+        const gg=e.target.closest('[data-as-go]');
+        if(gg){if(!siteTour.goTo(gg.dataset.asGo)){S.msgs.push({role:'assistant',content:'這個頁面你目前的畫面打不開喔（可能是權限或手機版沒有入口）。',fresh:true});render()}else if(matchMedia('(max-width:720px)').matches){S.min=true;render()}return}
         const gb=e.target.closest('[data-as-guide]');
         if(gb){if(matchMedia('(max-width:720px)').matches){S.min=true;render()}if(!siteTour.start(gb.dataset.asGuide)){S.min=false;S.msgs.push({role:'assistant',content:'這個項目你目前的畫面看不到喔（可能是權限或手機版沒有這個入口）。',fresh:true});render()}return}
         const f=e.target.closest('[data-as-fb]');

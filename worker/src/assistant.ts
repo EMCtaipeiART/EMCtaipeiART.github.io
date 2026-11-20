@@ -44,11 +44,22 @@ export function todayLine(nowMs: number): string {
 
 /** 前台「帶我去看」指引按鈕可用的位置代號（site.js 的 siteTour 要有同名 id）。 */
 export const GUIDE_IDS = ['form', 'board', 'projects', 'links', 'calendar', 'wall', 'notes', 'assign', 'owner', 'outfit', 'dashboard', 'lunch', 'issues', 'theme', 'account', 'helper'];
-/** 把回答裡的 [[guide:id]] 標記拆出來：回傳乾淨文字與（白名單內、去重、最多 2 個）的指引代號。 */
-export function extractGuides(reply: string): { reply: string; guides: string[] } {
-  const guides: string[] = [];
-  const clean = reply.replace(/\[\[guide:([a-z]+)\]\]/gi, (_m, id: string) => { const k = id.toLowerCase(); if (GUIDE_IDS.includes(k) && !guides.includes(k) && guides.length < 2) guides.push(k); return ''; }).replace(/[ \t]+\n/g, '\n').trim();
-  return { reply: clean || reply.trim(), guides };
+/** 前台「前往」按鈕可直接開啟的頁面代號（site.js 的 goTo 要有同名處理）。 */
+export const GO_IDS = ['universe', 'projects', 'links', 'calendar', 'wall', 'notes', 'assign', 'owner', 'outfit', 'dashboard', 'lunch', 'issues'];
+/** 自家網址一律不給使用者看：能對應到頁面的換成「前往」按鈕，其他自家網址直接拿掉。 */
+const OWN_URL = /https?:\/\/[^\s)）」]*(?:emc-art\.com|emctaipeiart\.github\.io|workers\.dev)[^\s)）」]*/gi;
+/** 把回答裡的 [[guide:id]]（聚光燈指位置）與 [[go:id]]（前往按鈕）標記拆出來：只收白名單、去重、各最多 2 個，並移除自家網址。 */
+export function extractGuides(reply: string): { reply: string; guides: string[]; goto: string[] } {
+  const guides: string[] = [], goto: string[] = [];
+  const addGo = (k: string) => { if (GO_IDS.includes(k) && !goto.includes(k) && goto.length < 2) goto.push(k); };
+  let clean = reply.replace(/\[\[(guide|go):([a-z]+)\]\]/gi, (_m, kind: string, id: string) => {
+    const k = id.toLowerCase();
+    if (kind.toLowerCase() === 'guide') { if (GUIDE_IDS.includes(k) && !guides.includes(k) && guides.length < 2) guides.push(k); } else addGo(k);
+    return '';
+  });
+  clean = clean.replace(OWN_URL, url => { if (/pixel-plaza/i.test(url)) addGo('universe'); else if (/map\.emc-art\.com/i.test(url)) addGo('lunch'); return ''; });
+  clean = clean.replace(/[ \t]+\n/g, '\n').replace(/[ \t]{2,}/g, ' ').trim();
+  return { reply: clean || reply.trim(), guides, goto };
 }
 
 export const ASSISTANT_SYSTEM_PROMPT = [
@@ -70,6 +81,7 @@ export const ASSISTANT_SYSTEM_PROMPT = [
   '- 後台（資料庫後台）與管理者專屬的功能、設定與更動，你不需要呈現或說明，也不要主動提到它們；被問到時只說那是管理者處理的部分，不細說。這條只適用於後台與管理者專屬的內容；同仁自己就能做的事（例如關閉小黃、個人設定、各頁功能）要正常、具體地回答，不要推給管理者。',
   '- 如果使用者問「你會不會記錄／記得我問的問題」，如實回答「會記錄下來，用來改善系統」，不否認也不轉移話題；不要主動提起紀錄，也不要提到管理者、管理功能或任何人看得到紀錄。',
   '- 介紹「某個功能在畫面哪裡」時，回答最後可另外加指引標記，前台會變成「帶我去看」按鈕、用聚光燈指給使用者看；格式 [[guide:代號]]，最多 2 個，只能用這些代號：form（首頁填需求區）、board（首頁）、projects（專案）、links（短網址）、calendar（行事曆）、wall（作品牆）、notes（記事本）、assign（專案分配）、owner（您的案件進度）、outfit（角色）、dashboard（儀表板）、lunch（午餐地圖）、issues（問題回報）、theme（深淺模式）、account（帳號選單）、helper（小幫手）。不是在說明位置就不要加，不要自己編代號，標記不算在行數內。',
+  '- 絕對不要在回答裡貼任何本站網址（emc-art.com、github.io、pixel-plaza、map.emc-art.com…）。要帶使用者去某個頁面，改在回答最後加「前往」標記 [[go:代號]]（最多 2 個，前台會變成按鈕）：universe（多元宇宙，也是小遊戲的入口）、projects、links、calendar、wall、notes、assign、owner、outfit、dashboard、lunch（午餐地圖）、issues；文字只說「按下面的按鈕就能進去」，並簡短說明進去後怎麼做。標記不算在行數內。',
   '系統知識目錄（細節請用 getSystemHelp 查，不要憑印象回答）：',
   knowledgeIndex(),
   '可用工具：getCaseCounts（案量統計）、findCase（找案件）、getMyToday（登入者今天的待辦）、getDuty（值日生與雙週會）、getCalendar（設計師行事曆：會議、請假、出差，公開資料，任何人都能問，查自己的行程用 who=me）、getSystemHelp（系統功能說明，問功能、操作、規則、哪裡找什麼時先呼叫它，再用查到的內容回答）、reportUnanswered（答不出來時記錄並回報管理者）、getRecentChanges（GitHub 上的最新更新紀錄，最即時；回答時用同仁看得懂的話概述「改了什麼、對他有什麼影響」，不要講程式檔名、內部細節或金鑰）、getRecentUpdates（最近的系統公告；問最近有什麼更新、新功能、改了什麼，或 getSystemHelp 的說明可能過時時呼叫，公告比說明新，兩者衝突以公告為準）。'
@@ -595,6 +607,7 @@ export async function assistantChat(
   let tokens = 0;
   let reply = TOO_HARD_LINE;
   let guides: string[] = [];
+  let goto: string[] = [];
   for (let round = 0; round < ASSISTANT_MAX_ROUNDS; round += 1) {
     const response = await fetchImpl('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -633,17 +646,17 @@ export async function assistantChat(
       continue;
     }
     const g = extractGuides(blocks.filter(b => b.type === 'text').map(b => text(b.text)).join('\n').trim() || TOO_HARD_LINE);
-    reply = g.reply; guides = g.guides;
+    reply = g.reply; guides = g.guides; goto = g.goto;
     break;
   }
 
-  if (deps.dryRun) return { ok: true, action: 'assistantTrial', reply, guides, tools: entry.tools, tokens, gap: Boolean(entry.gap) };
+  if (deps.dryRun) return { ok: true, action: 'assistantTrial', reply, guides, goto, tools: entry.tools, tokens, gap: Boolean(entry.gap) };
   const after = before + tokens;
   await store.put(usedKey, after);
   if (!exempt && before < ASSISTANT_DAILY_TOKENS * 0.8 && after >= ASSISTANT_DAILY_TOKENS * 0.8) reply = `${reply}\n${LOW_BATTERY_LINE}`;
   entry.answer = reply; entry.tokens = tokens;
   await appendLog(store, day, entry);
-  return { ok: true, action: 'assistantChat', reply, guides, logId: entry.id, quota: exempt ? { usedRatio: 0, tired: false } : { usedRatio: Math.min(1, after / ASSISTANT_DAILY_TOKENS), tired: after >= ASSISTANT_DAILY_TOKENS } };
+  return { ok: true, action: 'assistantChat', reply, guides, goto, logId: entry.id, quota: exempt ? { usedRatio: 0, tired: false } : { usedRatio: Math.min(1, after / ASSISTANT_DAILY_TOKENS), tired: after >= ASSISTANT_DAILY_TOKENS } };
 }
 
 /* ---------------------------------------------------------------- 管理者用量報表（不含問題與回答內容） */

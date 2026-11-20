@@ -244,3 +244,10 @@ __itG('指引標記：只收白名單代號、去重、最多 2 個，並從文�
   __exG(r.reply).toBe('短網址在左側選單。');
   __exG(__extractGuides('沒有標記').guides).toEqual([]);
 });
+
+__itG('前往標記與自家網址：網址被拿掉並轉成按鈕代號', () => {
+  const r = __extractGuides('進多元宇宙：https://emc-art.com/pixel-plaza/ 就可以了 [[go:lunch]] [[go:hack]]');
+  __exG(r.reply).not.toContain('http');
+  __exG(r.goto).toEqual(['lunch', 'universe']);
+  __exG(__extractGuides('新聞 https://news.example.com/a').reply).toContain('https://news.example.com/a');
+});

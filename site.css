@@ -1784,3 +1784,5 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
 .as-guides{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0}
 .as-guide{font:inherit;font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px;border:1px solid var(--brand,#159E31);background:transparent;color:var(--brand,#159E31);cursor:pointer}
 .as-guide:hover{background:var(--brand,#159E31);color:#fff}
+.as-go{background:var(--brand,#159E31);color:#fff}
+.as-go:hover{background:var(--brand-deep,#0f7f27)}
