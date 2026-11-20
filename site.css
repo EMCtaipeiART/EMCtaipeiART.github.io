@@ -1795,6 +1795,8 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
 @media(prefers-reduced-motion:reduce){.board.is-entering .card,.board.is-entering .card::after{animation:none}}
 /* 專案頁網格：不顯示「還有幾張」，往下捲到底自動載入下一批，新卡牌淡入上浮；欄的內距加大，卡牌陰影不再被欄邊截斷 */
 .board.five .col-more,.board.five .more-btn{display:none!important}
-@keyframes cardPageIn{from{opacity:0;transform:translateY(20px) scale(.98)}to{opacity:1;transform:none}}
-.board.five .card.card-new{animation:cardPageIn .55s cubic-bezier(.22,.8,.24,1) both;animation-delay:calc(var(--ni,0)*70ms)}
-@media(prefers-reduced-motion:reduce){.board.five .card.card-new{animation:none}}
+/* 欄內還沒捲到的卡牌：像一頁頁翻開——由上緣翻下來（rotateX），快捲到時才出現 */
+.board.five .cards{perspective:1100px;perspective-origin:50% 0}
+.board.five .card.flip-wait{opacity:0;transform:rotateX(-58deg) translateY(28px);transform-origin:50% 0;backface-visibility:hidden;pointer-events:none}
+.board.five .card.flip-wait.flip-in{opacity:1;transform:none;pointer-events:auto;transition:transform .75s cubic-bezier(.2,.85,.25,1),opacity .45s ease-out}
+@media(prefers-reduced-motion:reduce){.board.five .card.flip-wait{opacity:1;transform:none}}
