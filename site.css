@@ -404,7 +404,7 @@
     .column-bar{height:5px;border-radius:99px;margin:0 6px 12px}
     .cards{display:grid;gap:12px}
     /* 專案頁網格：每個狀態欄最多顯示約四張卡牌的高度，超過的往下藏起來（底部漸層消失），欄內可往上滑，捲過去的卡牌在標題線條下方漸層消失 */
-    .board.five .cards{position:relative;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none;overscroll-behavior:contain;padding:12px 22px 36px;margin:-12px -22px -12px}
+    .board.five .cards{position:relative;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none;overscroll-behavior:contain;padding:12px 22px 36px;margin:-12px -22px -34px}
     .board.five .cards::-webkit-scrollbar{display:none}
     .col-more{position:relative;height:0;z-index:4}.col-more[hidden]{display:none}
     .col-more-btn{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);height:32px;padding:0 16px;border:0;border-radius:999px;background:var(--brand);color:#fff;font:inherit;font-size:13px;font-weight:800;white-space:nowrap;cursor:pointer;box-shadow:0 8px 20px rgba(20,90,40,.4),inset 0 1px 0 rgba(255,255,255,.35);animation:colBob 1.6s ease-in-out infinite}
