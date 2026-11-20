@@ -393,6 +393,7 @@
         }
         boardFade(g);
       });
+      clearTimeout(window.__flipT);window.__flipT=setTimeout(()=>{try{setupFlipReveal()}catch(e){}},80); /* 欄高度定下來之後才建立捲動進場的 observer */
     }
     document.addEventListener('click',e=>{const b=e.target.closest?.('.col-more-btn');if(!b)return;const g=b.closest('.col-more')?.previousElementSibling;if(g)g.scrollBy({top:Math.round(g.clientHeight*.75),behavior:'smooth'})});
     document.addEventListener('scroll',e=>{
@@ -408,7 +409,7 @@
       document.querySelectorAll('.board.five .column[data-status]').forEach(c=>{const g=c.querySelector('.cards');if(g&&keep[c.dataset.status])g.scrollTop=keep[c.dataset.status]});
       return r;
     }
-    function scheduleEqualize(){setTimeout(equalizeCards,0);setTimeout(equalizeCards,250)}
+    function scheduleEqualize(){setTimeout(equalizeCards,0);setTimeout(equalizeCards,250);setTimeout(equalizeCards,900)}
     window.addEventListener('resize',()=>scheduleEqualize());
     function restoreOpenCards(){
       if(!state.openCases.size)return;
@@ -1494,18 +1495,32 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(hadFocus){const input=$('boardSearch');input.focus();input.setSelectionRange(input.value.length,input.value.length)}
       playCardEnter();setTimeout(setupFlipReveal,380);
     }
-    /** 欄內還沒捲到的卡牌先沉在下方等著，捲到快出現時才由下往上滑入（快進慢收，同時進來的依序延遲）（每欄各一個 observer，重畫看板時重建）。 */
+    /** 欄內卡牌的捲動進場：離開視窗的卡牌先沉到原來的那一側（往下捲＝上方卡牌留在上面、往回捲＝下方留在下面），
+     *  再次靠近時由那一側滑回來（快進慢收，同時進來的依序延遲）。每欄一個 observer，重畫看板時重建。 */
     const flipObs=[];
     function setupFlipReveal(){
       flipObs.splice(0).forEach(o=>o.disconnect());
       if(state.view!=='projects'||(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches))return;
       document.querySelectorAll('.board.five .cards').forEach(g=>{
-        const hidden=[...g.querySelectorAll(':scope > div.card')].filter(c=>c.offsetTop>g.scrollTop+g.clientHeight-24);
-        if(!hidden.length)return;
+        const cards=[...g.querySelectorAll(':scope > div.card')];if(cards.length<2)return;
         const obs=new IntersectionObserver(es=>{
-          es.filter(e=>e.isIntersecting).forEach((e,i)=>{const c=e.target;obs.unobserve(c);c.style.transitionDelay=(i*80)+'ms';c.classList.add('flip-in');setTimeout(()=>{c.classList.remove('flip-wait','flip-in');c.style.transitionDelay=''},1100+i*80)})
-        },{root:g,rootMargin:'0px 0px -70px 0px',threshold:0});
-        hidden.forEach((c,i)=>{c.classList.add('flip-wait');obs.observe(c)});
+          let n=0;
+          for(const e of es){
+            const c=e.target;
+            if(e.isIntersecting){
+              if(!c.classList.contains('flip-wait'))continue;
+              c.style.transitionDelay=(n++*80)+'ms';c.classList.add('flip-in');
+              clearTimeout(c._fl);c._fl=setTimeout(()=>{c.classList.remove('flip-wait','flip-in','from-top');c.style.transitionDelay=''},1100+n*80);
+            }else{
+              const root=e.rootBounds;if(!root)continue;
+              clearTimeout(c._fl);c.style.transitionDelay='';
+              c.classList.remove('flip-in');
+              c.classList.toggle('from-top',e.boundingClientRect.top<root.top);
+              c.classList.add('flip-wait');
+            }
+          }
+        },{root:g,rootMargin:'-36px 0px -70px 0px',threshold:0});
+        cards.forEach(c=>obs.observe(c));
         flipObs.push(obs);
       });
     }
