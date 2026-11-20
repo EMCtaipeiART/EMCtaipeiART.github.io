@@ -398,7 +398,7 @@
     document.addEventListener('scroll',e=>{
       const g=e.target;if(!g||!g.classList||!g.classList.contains('cards')||!g.closest('.board.five'))return;
       boardFade(g);
-      if(g.scrollTop+g.clientHeight>=g.scrollHeight-6){const more=g.closest('.column')?.querySelector('[data-more]');if(more&&!more.dataset.auto){more.dataset.auto='1';more.click()}}
+      if(g.scrollTop+g.clientHeight>=g.scrollHeight-140){const more=g.closest('.column')?.querySelector('[data-more]');if(more&&!more.dataset.auto){more.dataset.auto='1';more.click()}}
     },true);
     window.addEventListener('resize',()=>fitBoardColumns());
     /* 重畫看板前記下每欄捲到哪裡，重畫後還原（背景刷新、載入更多都不會讓欄位跳回最上面） */
@@ -4477,7 +4477,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(t.closest('[data-filter-toggle]')){state.filterOpen=!state.filterOpen;if(state.filterOpen)state.colsOpen=false;rerenderList();return}
       if(t.closest('[data-filter-clear]')){if(state.view==='projects'){gridStatusHide().clear();try{localStorage.setItem('v5GridStatus','[]')}catch(err){}}state.filters.months.clear();state.filters.statuses.clear();state.filters.designers.clear();{const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));state.filters.months.add(p.year+'/'+p.month)}state.latestLimit=LATEST_PAGE;rerenderList();return}
       const card=t.closest('[data-case]');if(card&&(state.view==='board'||state.view==='projects')){const sel=getSelection();if(sel&&!sel.isCollapsed&&String(sel).trim()&&card.contains(sel.anchorNode))return;/* 剛選取文字（拖曳反白、雙擊選字）放開滑鼠不要把卡牌展開／收合 */if(t.closest('.card-detail')&&t.closest('a,button,input,select,textarea,[data-lb],[data-edit]'))return;if(card.matches('div.card')){toggleCardOpen(card);return}state.detailId=card.dataset.case;state.editing=false;show('detail');return}
-      const more=t.closest('[data-more]');if(more){const k=more.dataset.more;if(k==='latest')state.latestLimit+=LATEST_PAGE;else if(k==='plist')state.plistLimit+=50;else state.limits[k]+=COLUMN_PAGE;rerenderList();setTimeout(autoMore,350);return}
+      const more=t.closest('[data-more]');if(more){const k=more.dataset.more;if(k==='latest')state.latestLimit+=LATEST_PAGE;else if(k==='plist')state.plistLimit+=50;else state.limits[k]+=COLUMN_PAGE;const col0=more.closest('.column'),st0=col0&&col0.dataset.status,prev0=col0?col0.querySelectorAll('.cards .card').length:0;rerenderList();if(st0&&prev0)document.querySelectorAll('.board.five .column[data-status]').forEach(c=>{if(c.dataset.status!==st0)return;c.querySelectorAll('.cards .card').forEach((card,i)=>{if(i>=prev0){card.classList.add('card-new');card.style.setProperty('--ni',String(Math.min(i-prev0,8)));setTimeout(()=>card.classList.remove('card-new'),1100)}})});setTimeout(autoMore,350);return}
       const act=t.closest('[data-act]')?.dataset.act;
       if(act==='back'){backToBoard();return}
       if(act==='edit'){startEdit();return}

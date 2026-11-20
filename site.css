@@ -404,7 +404,7 @@
     .column-bar{height:5px;border-radius:99px;margin:0 6px 12px}
     .cards{display:grid;gap:12px}
     /* 專案頁網格：每個狀態欄最多顯示約四張卡牌的高度，超過的往下藏起來（底部漸層消失），欄內可往上滑，捲過去的卡牌在標題線條下方漸層消失 */
-    .board.five .cards{position:relative;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none;overscroll-behavior:contain;padding:6px 6px 8px;margin:-6px -6px 0}
+    .board.five .cards{position:relative;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none;overscroll-behavior:contain;padding:12px 22px 36px;margin:-12px -22px -12px}
     .board.five .cards::-webkit-scrollbar{display:none}
     .col-more{position:relative;height:0;z-index:4}.col-more[hidden]{display:none}
     .col-more-btn{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);height:32px;padding:0 16px;border:0;border-radius:999px;background:var(--brand);color:#fff;font:inherit;font-size:13px;font-weight:800;white-space:nowrap;cursor:pointer;box-shadow:0 8px 20px rgba(20,90,40,.4),inset 0 1px 0 rgba(255,255,255,.35);animation:colBob 1.6s ease-in-out infinite}
@@ -1793,3 +1793,8 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
 .board.is-entering .card::after{content:"";position:absolute;top:0;bottom:0;left:0;width:42%;pointer-events:none;border-radius:inherit;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);opacity:.55;mix-blend-mode:soft-light;animation:cardSheen 1.05s ease-out both;animation-delay:calc(var(--ci,0)*55ms + 340ms)}
 .board.is-entering .card{overflow:hidden}
 @media(prefers-reduced-motion:reduce){.board.is-entering .card,.board.is-entering .card::after{animation:none}}
+/* 專案頁網格：不顯示「還有幾張」，往下捲到底自動載入下一批，新卡牌淡入上浮；欄的內距加大，卡牌陰影不再被欄邊截斷 */
+.board.five .col-more,.board.five .more-btn{display:none!important}
+@keyframes cardPageIn{from{opacity:0;transform:translateY(20px) scale(.98)}to{opacity:1;transform:none}}
+.board.five .card.card-new{animation:cardPageIn .55s cubic-bezier(.22,.8,.24,1) both;animation-delay:calc(var(--ni,0)*70ms)}
+@media(prefers-reduced-motion:reduce){.board.five .card.card-new{animation:none}}
