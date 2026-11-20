@@ -1814,7 +1814,7 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
 @media(prefers-reduced-motion:reduce){.list-table.is-entering tbody tr{animation:none}.list-table tbody tr.lr-wait{opacity:1;transform:none}}
 
 /* 小幫手用量表：數字右對齊、不斷行，標籤用顏色區分 */
-.as-usage{min-width:240px}
+.as-usage-box{min-width:240px}
 .as-u-title{font-weight:800;margin-bottom:6px}.as-u-title small{display:block;font-size:12px;font-weight:600;color:var(--muted,#6b7f72)}
 .as-u-day{padding:8px 0;border-top:1px solid color-mix(in srgb,var(--line) 80%,transparent)}
 .as-u-head,.as-u-row{display:grid;grid-template-columns:1fr auto auto;gap:4px 14px;align-items:baseline;white-space:nowrap}

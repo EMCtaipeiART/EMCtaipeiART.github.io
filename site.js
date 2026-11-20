@@ -5030,7 +5030,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         try{
           const r=await api('assistantUsage',{days:7}),fmt=v=>Number(v).toLocaleString('zh-TW');
           const days=(r.days||[]).filter(d=>d.questions);
-          let h='<div class="as-usage"><div class="as-u-title">近 7 天用量<small>每人每天上限 '+fmt(r.dailyLimit)+'</small></div>';
+          let h='<div class="as-usage-box"><div class="as-u-title">近 7 天用量<small>每人每天上限 '+fmt(r.dailyLimit)+'</small></div>';
           if(!days.length)h+='<div class="as-u-empty">近 7 天都沒有人提問</div>';
           for(const d of days){
             const tags=[d.helpful?'<b class="u-ok">有幫助 '+d.helpful+'</b>':'',d.unhelpful?'<b class="u-bad">沒幫助 '+d.unhelpful+'</b>':'',d.notFound?'<b class="u-warn">查不到 '+d.notFound+'</b>':'',d.tired?'<b class="u-warn">累了 '+d.tired+'</b>':''].join('');
