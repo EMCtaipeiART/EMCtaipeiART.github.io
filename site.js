@@ -4516,7 +4516,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(state.loginMenu&&!t.closest('.rail-login')&&!t.closest('.login-menu')){state.loginMenu=false;renderLogin()}
       if(state.filterOpen&&!t.closest('.filter-wrap:not(.cols-wrap)')){state.filterOpen=false;if(state.view==='board')renderBoard();if(state.view==='projects')renderProjects()}
       const lbA=t.closest('[data-lb-act]')?.dataset.lbAct;if(lbA){lbA==='close'?lbClose():lbStep(lbA==='next'?1:-1);return}
-      if(t.id==='lightbox'){lbClose();return}
+      if(t.id==='lightbox'||(!t.closest('#lbImg,a,button')&&t.closest('#lightbox'))){lbClose();return}
       const lbT=t.closest('[data-lb]');if(lbT){e.preventDefault();lbOpen(+lbT.dataset.lb,+lbT.dataset.i);return}
       if(window.__v5Grabbed){window.__v5Grabbed=false;e.preventDefault();e.stopPropagation();return}
       if(state.cellEdit&&!t.closest('#cellPop')&&!t.closest('[data-edit]'))closeCellPop();
