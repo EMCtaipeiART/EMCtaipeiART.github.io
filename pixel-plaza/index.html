@@ -657,19 +657,6 @@ for (const [FLOOR_X0, FLOOR_X1, FLOOR_Z0, FLOOR_Z1] of [[-3, 1201 * U + 3, -100 
   const f = new THREE.Mesh(new THREE.PlaneGeometry(FLOOR_X1 - FLOOR_X0, FLOOR_Z1 - FLOOR_Z0), FLAT ? new THREE.MeshLambertMaterial({map:t}) : new THREE.MeshStandardMaterial({map:t, roughness:.34, metalness:0, envMapIntensity:.35}));
   f.rotation.x = -Math.PI / 2; f.position.set((FLOOR_X0 + FLOOR_X1) / 2, 0, (FLOOR_Z0 + FLOOR_Z1) / 2); scene.add(f); f.userData.noMask = true; f.receiveShadow = !FLAT;
 }
-// 動森風圓地毯（平貼地面、不擋路）：茶水間前一張葉子紋、倉庫門口一張星星紋
-function rug3d(xpx, zpx, r, kind){
-  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'), ring = (rr, col) => { g.fillStyle = col; g.beginPath(); g.arc(128, 128, rr, 0, 7); g.fill(); };
-  const [c1, c2, c3] = kind === 'leaf' ? ['#3fae5a', '#f6f1dc', '#8fd98a'] : ['#f2a03d', '#fff4d6', '#f7c873'];
-  ring(126, '#3a2a22'); ring(118, c1); ring(100, c2); ring(92, c3);
-  g.fillStyle = c2; for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; g.beginPath(); g.arc(128 + Math.cos(a) * 109, 128 + Math.sin(a) * 109, 5, 0, 7); g.fill(); }
-  g.translate(128, 128); g.fillStyle = c1;
-  if (kind === 'leaf') { g.rotate(-.6); g.beginPath(); g.moveTo(0, -58); g.bezierCurveTo(50, -40, 50, 30, 0, 60); g.bezierCurveTo(-50, 30, -50, -40, 0, -58); g.fill(); g.strokeStyle = c3; g.lineWidth = 6; g.beginPath(); g.moveTo(0, -44); g.lineTo(0, 50); g.stroke(); }
-  else { g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? 26 : 62; g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } g.closePath(); g.fill(); }
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-  const m = new THREE.Mesh(new THREE.CircleGeometry(r, 40), new THREE.MeshLambertMaterial({map:t, transparent:true})); m.rotation.x = -Math.PI / 2; m.position.set(xpx * U, .012, zN(zpx) * U); m.receiveShadow = true; m.userData.noMask = true; scene.add(m);
-}
-rug3d(440, 1300, 1.7, 'leaf'); rug3d(330, 1120, 1.15, 'star');
 // 深色模式（跟著網站的深淺模式：localStorage designRequestThemeV1，網站切換時用 postMessage 通知）：地板、背景、燈光一起變暗
 function applyTheme(t){
   const dark = t === 'dark';
