@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 12312,
+  "revision": 12313,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-20T08:53:22.760Z",
+  "updatedAt": "2026-11-20T08:53:28.973Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1448,7 +1448,7 @@
         {"案件編號":"26110124","修改次數":"0","建立日期":"2026/11/20 15:27:59","修改日期":"2026/11/20 15:27:59","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/20 15:27:59","圖片連結":"[{\"fileName\":\"261120_ANKER_A1664_蝦皮.png\",\"url\":\"https://lh3.googleusercontent.com/d/1rTEv4olHN1UdcxtO5WX9jOr0XnK1Ss-3=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/20 15:27:59"},
         {"案件編號":"26110163","修改次數":"0","建立日期":"2026/11/20 15:43:37","修改日期":"2026/11/20 15:43:37","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/20 15:43:37","圖片連結":"[{\"fileName\":\"261103_金士頓_3D藝術家_JP-1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1_riTHP8DugCa10_aiPwfq87pttmbQn15=w1600\"},{\"fileName\":\"261103_金士頓_3D藝術家_JP-2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1PbWNT5gpoxEyTML1FDcQSMTHG68kL3RM=w1600\"},{\"fileName\":\"261103_金士頓_3D藝術家_JP-3.png\",\"url\":\"https://lh3.googleusercontent.com/d/1RXXFV_CKO1JrP2X2YVIH4rrBm5Z7umFM=w1600\"},{\"fileName\":\"261103_金士頓_3D藝術家_JP-4.png\",\"url\":\"https://lh3.googleusercontent.com/d/1kSxyIyVAKTs3byhXIAleuv_ZJoJvQyU7=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/20 15:43:37"},
         {"案件編號":"26110166","修改次數":"0","建立日期":"2026/11/20 15:45:50","修改日期":"2026/11/20 15:45:50","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/20 15:45:50","圖片連結":"[{\"fileName\":\"261118_金士頓_IPC.png\",\"url\":\"https://lh3.googleusercontent.com/d/1TC3egZwAwctAzxs-ZT1oK20q_y1jFQz1=w1600\"},{\"fileName\":\"261118_金士頓_IPC_無字.png\",\"url\":\"https://lh3.googleusercontent.com/d/1t49mO67RkC2x02JGEa9hvbK2Ekc656Xm=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/20 15:45:50"},
-        {"案件編號":"26110164","修改次數":"0","建立日期":"2026/11/20 16:53:04","修改日期":"2026/11/20 16:53:04","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/20 16:53:04","圖片連結":"[{\"fileName\":\"261021_金士頓_行車紀錄器_EN.png\",\"url\":\"https://lh3.googleusercontent.com/d/19QgyRP_trv3xPTiT3nZVZdAHF30wPYu4=w1600\"},{\"fileName\":\"261021_金士頓_行車紀錄器_JP.png\",\"url\":\"https://lh3.googleusercontent.com/d/1NwKU_0cgbwZj8I7uyCIt_7xaTG1yiAUL=w1600\"},{\"fileName\":\"261021_金士頓_行車紀錄器_v03.png\",\"url\":\"https://lh3.googleusercontent.com/d/12mr23--jmGxct85javhIMByA2RXPXtYG=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/20 16:53:04"}
+        {"案件編號":"26110164","修改次數":"0","建立日期":"2026/11/20 16:53:04","修改日期":"2026/11/20 16:53:04","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/20 16:53:04","圖片連結":"[{\"fileName\":\"261021_金士頓_行車紀錄器_EN.png\",\"url\":\"https://lh3.googleusercontent.com/d/19QgyRP_trv3xPTiT3nZVZdAHF30wPYu4=w1600\"},{\"fileName\":\"261021_金士頓_行車紀錄器_JP.png\",\"url\":\"https://lh3.googleusercontent.com/d/1NwKU_0cgbwZj8I7uyCIt_7xaTG1yiAUL=w1600\"},{\"fileName\":\"261021_金士頓_行車紀錄器_v03.png\",\"url\":\"https://lh3.googleusercontent.com/d/12mr23--jmGxct85javhIMByA2RXPXtYG=w1600\"},{\"fileName\":\"261021_金士頓_行車紀錄器_v04.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1wLbdSkDexypSU50G_ggkxuY6DC1ALuXw=w1600\"}]","圖片來源":"mail-inline-upload","圖片更新時間":"2026/11/20 16:53:28"}
       ]
     },
     "補充資料連結": {
