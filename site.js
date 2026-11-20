@@ -943,6 +943,8 @@
     document.addEventListener('pointerout',e=>{const a=e.target.closest?.('[data-design-image-hover-preview]');if(a&&!a.contains(e.relatedTarget))hpHide(a)});
     document.addEventListener('focusin',e=>{const a=e.target.closest?.('[data-design-image-hover-preview]');if(a){const r=a.getBoundingClientRect();hpShow(a,r.right,r.top)}});
     document.addEventListener('focusout',e=>{const a=e.target.closest?.('[data-design-image-hover-preview]');if(a)hpHide(a)});
+    /* 手機：點修改紀錄的設計圖改用頁內的大圖檢視（可左右切換、點關閉），不再另開新分頁；電腦維持點擊開啟原圖 */
+    document.addEventListener('click',e=>{const a=e.target.closest?.('a.design-image-preview-link');if(!a||e.button||e.metaKey||e.ctrlKey||e.shiftKey)return;if(!(matchMedia('(max-width:700px)').matches||matchMedia('(pointer:coarse)').matches))return;const box=a.closest('.thumbs')||a.parentElement,links=[...box.querySelectorAll('a.design-image-preview-link')],list=links.map(x=>({url:x.getAttribute('href'),fileName:x.dataset.previewLabel||''}));if(!list.length||!$('lightbox'))return;e.preventDefault();e.stopPropagation();state.lbList=list;state.lbIdx=Math.max(0,links.indexOf(a));$('lightbox').hidden=false;lbShow()},true);
     function closeCellPop(){const p=$('cellPop');if(p){p.hidden=true;p.innerHTML=''}state.cellEdit=null}
     function openCellPop(el){
       const tr=el.closest('[data-row-id]'),id=tr?tr.dataset.rowId:state.detailId,row=allRows().find(r=>idKey(r)===id),field=el.dataset.edit;if(!row)return;
