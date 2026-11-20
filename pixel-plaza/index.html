@@ -1786,7 +1786,8 @@ function applyStatus(c, force){
   else if (c.home) { c.holder.position.set(c.home.x, 0, c.home.z); c.face = c.home.face; sitDown(c); }
 }
 function setNet(){ const t = new Date().toLocaleTimeString('zh-TW', {hour12:false, timeZone:'Asia/Taipei'}); netEl.textContent = live.ok ? '● 即時連線：凱曜設計部後端（' + t + '）' : '○ 離線：依時間規則模擬（' + t + '）'; netEl.style.color = live.ok ? '#8dffb0' : '#ffd98a'; }
-let emptyOff = null;
+let emptyOff = null, staffMeetings = {}, staffBackAt = 0;
+function staffBackCheck(){ const me = player && player.name, r = staffMeetings[me]; if (!me || !r || Date.now() - staffBackAt < 60000) return; staffBackAt = Date.now(); fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify({action:'pixelOfficeStaffBack', name:me}), cache:'no-store'}).then(r => r.json()).then(d => { if (d && d.released) delete staffMeetings[me]; }).catch(() => {}); }   // 本人在操作元宇宙＝已散會回座位，通知後端解除（同一場只通知一次）
 function syncEmptyDesks(){   // 沒人坐的辦公桌：和大家一樣照上下班時間——下班時段（19:00 後、08:00 前、週末與國定假日）椅子收起、桌面變灰、放下班圖示
   const off = hoursForce === 'work' ? false : hoursForce === 'off' ? true : simStatus(true) === 'offwork';
   if (emptyOff === off || !deskCells.length) return; emptyOff = off;
@@ -1803,13 +1804,14 @@ const IDLE_LOCK_MS = 5 * 60 * 1000;   // 企劃／專案同仁：下班時段（
 const isStaffName = n => STAFF_NAMES.includes(n) || extraNames.includes(n);
 const STAFF_NAMES = ['廖秦葦', '李明庭', '鄭筱舢', '吳冠賢', '余采馨', '黎子瑄', '王藍庭'];   // 後端 pixelOfficeStaff 的同仁座位（企劃部／專案部）
 function syncExtraStatus(){   // 額外人物沒有後端狀態：依時間規則（平日 8–19 上班、午休、週末與國定假日下班），全員上班／下班按鈕也算
-  const st = hoursForce === 'work' ? 'present' : hoursForce === 'off' ? 'offwork' : simStatus(true);
-  for (const n of extraNames) { const c = chars[n]; if (!c) continue; if (c.localAwake) { if (Date.now() - (c.actAt || 0) < IDLE_LOCK_MS) continue; c.localAwake = false; c.rawStatus = 'present'; c.appliedStatus = null; } if ((c.remote && !remoteParked(c) && c !== player) || (c === player && Date.now() - (c.actAt || 0) < IDLE_LOCK_MS)) continue; if (!c.hasState && (c.status !== st || c.appliedStatus == null)) { c.status = st; applyStatus(c, c === player); } }   // 後端有狀態的同仁（c.hasState）由下面那段處理，不能在這裡被時間規則蓋掉
+  const st0 = hoursForce === 'work' ? 'present' : hoursForce === 'off' ? 'offwork' : simStatus(true);
+  for (const n of extraNames) { const c = chars[n]; if (!c) continue; const rm = staffMeetings[n] || '', st = rm && st0 !== 'offwork' ? 'meeting' : st0; if (rm !== (c.meetingRoom || '') && st === 'meeting') { c.meetingRoom = rm; c.appliedStatus = null; } else if (st !== 'meeting' && c.status === 'meeting' && c.statusSource !== 'calendar') c.meetingRoom = ''; if (c.localAwake) { if (Date.now() - (c.actAt || 0) < IDLE_LOCK_MS) continue; c.localAwake = false; c.rawStatus = 'present'; c.appliedStatus = null; } if ((c.remote && !remoteParked(c) && c !== player) || (c === player && Date.now() - (c.actAt || 0) < IDLE_LOCK_MS)) continue; if (!c.hasState && (c.status !== st || c.appliedStatus == null)) { c.status = st; applyStatus(c, c === player); } }   // 後端有狀態的同仁（c.hasState）由下面那段處理，不能在這裡被時間規則蓋掉
   // 企劃部／專案部同仁沒有電腦心跳，後端狀態一直是「在座」：照時間規則（午休用餐、下班後／假日下班）；手動指定、行事曆（會議／休假／公出）、本人在線上時不動
   for (const n of new Set([...STAFF_NAMES, ...extraNames])) {
     const c = chars[n]; if (!c || c === player || c.localAwake || c.entered || c.statusSource === 'manual' || (c.remote && !remoteParked(c))) continue;
     if (!['present', 'overtime', 'offwork', 'lunch'].includes(c.rawStatus || 'present')) continue;
-    const st = hoursForce === 'work' ? 'present' : hoursForce === 'off' ? 'offwork' : simStatus(true);
+    const rm = staffMeetings[n] || '', st0 = hoursForce === 'work' ? 'present' : hoursForce === 'off' ? 'offwork' : simStatus(true), st = rm && st0 !== 'offwork' ? 'meeting' : st0;
+    if ((c.meetingRoom || '') !== (st === 'meeting' ? rm : '')) { c.meetingRoom = st === 'meeting' ? rm : ''; c.appliedStatus = null; }
     if (c.status !== st || c.appliedStatus == null) { c.status = st; applyStatus(c); }
   }
   // 下班時段（假日、晚上）人在線上走動的企劃／專案同仁：一律顯示加班中（後端存的是舊的「在座」時不會自己變加班）
@@ -1831,6 +1833,7 @@ async function pollOnce(){
       live.version = d.version || live.version;
       if (d.hours) { srvHours = d.hours; const f = d.hours.force === 'work' || d.hours.force === 'off' ? d.hours.force : ''; if (f !== hoursForce && !window.__cinemaForce) { hoursForce = f; for (const c of Object.values(chars)) c.appliedStatus = null; } }
       for (const e of d.people || []) { const c = chars[e.name]; if (!c) continue; c.hasState = true; remoteFromState(c, e); const rs = typeof e.status === 'string' ? e.status : 'present'; if (c.autoPendingUntil > Date.now() && rs !== 'present') { c.rawStatus = c.rawStatus || 'present'; } else { c.autoPendingUntil = 0; c.rawStatus = rs; } c.status = forcedStatus(c.rawStatus, c); c.mood = e.mood || ''; c.message = e.message || ''; c.statusSource = e.statusSource || ''; c.meetingRoom = typeof e.meetingRoom === 'string' ? e.meetingRoom : ''; c.music = e.music && e.music.url ? {url:e.music.url, title:e.music.title || '', provider:e.music.provider || ''} : null; applyStatus(c); }
+      if (d.staffMeetings && typeof d.staffMeetings === 'object') staffMeetings = d.staffMeetings;   // 企劃／專案同仁今天在哪間會議室（後端依通訊錄信箱比對會議室行事曆）
       if (d.stories) applyStories(d.stories);
       if (d.funClaims) applyFunClaims(d.funClaims);
       if (entryRelease && player) { entryRelease = false; player.entered = true; player.actAt = Date.now(); if (player.status === 'offwork' || player.rawStatus === 'offwork') { setOwnStatus('present'); showQuote('', '歡迎進來，已解除下班狀態'); } }   // 登入後進入辦公室：解除下班（全員下班時除外）
@@ -3698,7 +3701,7 @@ function tick(){
       if (dir.length() < (routePts.length > 1 ? .3 : .2)) { if (routePts.length) routePts.shift(); if (!routePts.length) target = null; dir.set(0, 0, 0); }
       else if (performance.now() - routeStuck.t > 900) { const moved = Math.hypot(player.holder.position.x - routeStuck.x, player.holder.position.z - routeStuck.z); routeStuck = {t:performance.now(), x:player.holder.position.x, z:player.holder.position.z}; if (moved < .15) { routePts = findPath(player.holder.position, target, floorOf(player)); } }
     }
-    if (dir.lengthSq() > .01 || target) { player.actAt = Date.now(); if (AWAY.has(player.status)) releaseAway(player); }   // 有操作就解除「用餐／下班…」，不會卡住不能動
+    if (dir.lengthSq() > .01 || target) { player.actAt = Date.now(); staffBackCheck(); if (AWAY.has(player.status)) releaseAway(player); }   // 有操作就解除「用餐／下班…」，不會卡住不能動
     if (!radial.hidden || !$('sv').hidden || AWAY.has(player.status) || elevBusy || expBusy) { dir.set(0, 0, 0); target = null; }   // 角色頁面開著時人物不跟著走
     if (player.sitting && dir.lengthSq() > 1e-4) standUp(player);
     if (!player.sitting) { unstick(player); moveChar(player, dir, run ? 7 : 2.4, dt); }
