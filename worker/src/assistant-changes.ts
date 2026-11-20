@@ -14,7 +14,7 @@ export interface ChangeLog { sections: ChangeSection[]; commits: ChangeCommit[] 
 export interface GithubSource { owner: string; repo: string; branch: string; token?: string }
 
 export const CHANGES_TTL_MS = 30 * 60 * 1000;
-export const CHANGES_KEY = 'assistantChanges';
+export const CHANGES_KEY = 'assistantChanges:v2';
 const SECTION_KEEP = 8;
 const BODY_MAX = 600;
 const COMMIT_KEEP = 12;
