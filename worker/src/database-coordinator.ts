@@ -681,7 +681,16 @@ function parseCaseDesignImages_(row: Row): { fileName: string; url: string }[] {
   } catch { return []; }
 }
 
+/** 分段編碼，避免一次產生整串「二進位字串」＋ btoa 結果＋多次 replace 的複本（Durable Object 只有 128 MB 記憶體，
+ * 帶大附件寄信時曾因此爆掉）。純 ASCII 字串（MIME 本體全是 base64／標頭）可直接分段；含非 ASCII 才走 UTF-8 位元組。 */
 function utf8ToBase64Url(value: string): string {
+  // eslint-disable-next-line no-control-regex
+  if (!/[^\x00-\x7f]/.test(value)) {
+    const parts: string[] = [];
+    const step = 3 * 16384;
+    for (let at = 0; at < value.length; at += step) parts.push(btoa(value.slice(at, at + step)));
+    return parts.join('').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  }
   return bytesToBase64Url(new TextEncoder().encode(value));
 }
 
@@ -724,11 +733,18 @@ function htmlToPlainText(html: string): string {
 }
 
 function base64Encode(value: string): string {
-  return btoa(String.fromCharCode(...new TextEncoder().encode(value))).replace(/(.{76})/g, '$1\n');
+  const bytes = new TextEncoder().encode(value);
+  const parts: string[] = [];
+  for (let at = 0; at < bytes.length; at += 3 * 4096) parts.push(btoa(String.fromCharCode.apply(null, bytes.subarray(at, at + 3 * 4096) as unknown as number[])));
+  return parts.join('').replace(/(.{76})/g, '$1\n');
 }
 
+/** 呼叫端傳進來的 base64 都已去掉空白；分段切行比整串 regex 省記憶體。 */
 function wrapMimeBase64(value: string): string {
-  return value.replace(/\s+/g, '').replace(/(.{76})/g, '$1\r\n').replace(/\r\n$/, '');
+  const clean = /\s/.test(value) ? value.replace(/\s+/g, '') : value;
+  const lines: string[] = [];
+  for (let at = 0; at < clean.length; at += 76) lines.push(clean.slice(at, at + 76));
+  return lines.join('\r\n');
 }
 
 function escapeHtml(value: string): string {
@@ -898,8 +914,7 @@ function buildGmailRawMessage(options: { to: string; cc?: string; subject: strin
   const body = attachments.length
     ? `--${mixedBoundary}\r\nContent-Type: ${contentType}\r\n\r\n${contentBody}\r\n${attachmentParts}\r\n--${mixedBoundary}--`
     : contentBody;
-  const mime = `${headers.join('\r\n')}\r\n\r\n${body}`;
-  return utf8ToBase64Url(mime);
+  return utf8ToBase64Url(`${headers.join('\r\n')}\r\n\r\n${body}`);
 }
 
 type GmailMessagePart = {
