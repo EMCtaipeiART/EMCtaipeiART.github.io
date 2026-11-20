@@ -1403,6 +1403,7 @@
     function updateRail(){syncHeroEdit();renderRailExtra();try{updateProjBadge()}catch(e){}setTimeout(()=>{try{if(innerWidth<=720){const a=document.querySelector('.rail .is-active');if(a)a.scrollIntoView({inline:'center',block:'nearest'})}}catch(err){}},0);const active=state.view==='settings'?'settings':state.view==='projects'?'projects':(['board','form','mail','detail','universe','arena'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
     const KEEP_VIEWS=['universe','arena','projects','calendar','assign','notes','wall','issues','links'];
     function show(view){const pv=state.view;try{if(state.restored)sessionStorage.setItem('v5LastView',KEEP_VIEWS.includes(view)?view:'')}catch(err){}if(view==='universe')setTimeout(openPendingStory,0);state.tlLeft=null;if(view==='universe'||pv==='universe'||view==='form'||view==='mail'||view==='arena'||pv==='arena'){window.scrollTo(0,0)}if(view==='board'&&pv!=='board'){window.scrollTo(0,0);/* 回首頁：綠底收成只剩下拉列，畫面停在「最新案件列表」標題 */setTimeout(()=>{$('team')?.classList.add('is-collapsed');setTimeout(()=>{const h=document.querySelector('.section-head');if(h&&state.view==='board')window.scrollTo(0,Math.max(0,h.getBoundingClientRect().top+window.scrollY-86))},560)},0)}else if(view==='board'){$('team')?.classList.remove('is-collapsed')}
+      if(view==='projects'&&pv!=='projects')state.cardEnter=true;
       state.view=view;
       document.body.classList.toggle('no-hero',view==='arena'||view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='links'||view==='wall'||view==='notes'||view==='assign'||view==='calendar'||view==='outfit'||(view==='detail'&&state.home==='projects')||(innerWidth<=720&&view!=='board'&&view!=='universe'));
       document.body.classList.toggle('uni-collapse',view==='universe'||view==='form'||view==='mail');document.body.classList.toggle('uni-on',view==='universe');document.body.classList.toggle('arena-on',view==='arena');$('stage').classList.toggle('wide',view==='arena'||view==='projects'||view==='wall'||view==='notes'||view==='assign'||view==='calendar');$('stage').classList.toggle('full',view==='outfit');$('stage').closest('.stage-wrap')?.classList.toggle('uni',view==='universe');
@@ -1491,6 +1492,16 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         ${state.layout==='list'?'':`<p class="drag-note">${state.dragOn?'把卡牌拖到其他欄就能改狀態；拖到「執行中」會讓你選擇項目細節。':'只有設計師登入後才能拖移卡牌改狀態；點卡牌可查看詳情。'}</p>`}
         ${state.layout==='list'?plistHtml(rows):`<div class="board five bc${state.boardCols}">${cols||'<div class="empty" style="grid-column:1/-1">已隱藏所有狀態欄位，請從右上角的欄位按鈕勾選要顯示的欄位。</div>'}</div>`}`;
       if(hadFocus){const input=$('boardSearch');input.focus();input.setSelectionRange(input.value.length,input.value.length)}
+      playCardEnter();
+    }
+    /** 進入專案頁的卡牌進場：由上到下、由左到右依序淡入上浮，帶一道淡淡的掃光；只在「從別頁進來」播一次，篩選、拖移、背景更新不會重播。 */
+    function playCardEnter(){
+      if(!state.cardEnter||state.view!=='projects')return;
+      const board=document.querySelector('.board.five');if(!board)return;
+      state.cardEnter=false;
+      if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+      let i=0;board.querySelectorAll('.cards').forEach((col)=>col.querySelectorAll('.card').forEach((c,j)=>{c.style.setProperty('--ci',String(Math.min(j*4+i,18)))}),i++);
+      board.classList.add('is-entering');setTimeout(()=>board.classList.remove('is-entering'),1700);
     }
     function plistHtml(rows){const all=sortedLatest(rows),shown=all.slice(0,state.plistLimit);return shown.length?listTableHtml(shown)+(all.length>shown.length?`<button type="button" class="more-btn" data-more="plist">顯示更多（還有 ${all.length-shown.length} 筆）</button>`:''):'<div class="empty">沒有符合的案件</div>'}
     async function applyMove(id,status,details){
