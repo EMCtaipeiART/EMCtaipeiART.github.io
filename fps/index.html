@@ -164,7 +164,7 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
 #cast{position:absolute;left:50%;bottom:160px;transform:translateX(-50%);z-index:8;pointer-events:none;font-weight:900;font-size:clamp(24px,4.2vw,42px);letter-spacing:.14em;color:#fff;text-shadow:0 0 14px var(--amb),0 3px 0 #000;opacity:0;white-space:nowrap}
 #cast.on{animation:castIn 1.15s ease-out}#cast.q{color:#ffd24a;font-size:clamp(30px,5.4vw,56px)}
 @keyframes castIn{0%{opacity:0;transform:translateX(-50%) scale(1.7)}12%{opacity:1;transform:translateX(-50%) scale(1)}78%{opacity:1}100%{opacity:0;transform:translateX(-50%) translateY(-16px)}}
-#flashS{inset:0;background:radial-gradient(circle at 50% 50%,transparent 35%,rgba(255,176,0,.45));opacity:0}#flashS.on{animation:fsh .6s ease-out}@keyframes fsh{0%{opacity:.3}100%{opacity:0}}
+#flashS{inset:0;background:radial-gradient(circle at 50% 50%,transparent 35%,rgba(255,176,0,.45));opacity:0}#flashS{display:none}@keyframes fsh{0%{opacity:.3}100%{opacity:0}}
 .tbtn .sw{position:absolute;inset:0;border-radius:50%;background:conic-gradient(rgba(0,0,0,.8) calc(var(--p,0)*360deg),transparent 0);pointer-events:none}
 .tbtn .ct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:900 20px/1 system-ui;font-style:normal;color:#fff;text-shadow:0 0 5px #000,0 2px 0 #000;pointer-events:none}
 .tbtn.cd{filter:saturate(.5)}.tbtn.ready{border-color:var(--ok);box-shadow:0 0 14px rgba(94,240,164,.8)}.tbtn.on{border-color:var(--amb);background:rgba(255,176,0,.35)}
@@ -574,7 +574,7 @@ const HERO_BY = Object.fromEntries(HEROES.map(h => [h.id, h]));
 const POS = { machi: '重裝', noise: '輸出・突擊', anna: '輸出・狙擊', amber: '支援・補給', leona: '支援・治療' };
 for (const h of HEROES) h.pos = POS[h.id];
 HERO_BY.machi.r = { n: '吸收盾', ic: '🔰', d: '按住右鍵：身邊轉出三面小盾，受到的傷害降為個位數（不能開槍、移動變慢）。可以點放；用越久進度條越滿，滿了會過熱，要等條退回 0 才能再用', sm: '右鍵按住（手機：瞄準鈕）' };
-HERO_BY.leona.r = { n: '攻擊連線', ic: '🔥', d: '左鍵按住對準隊友＝牽補血線（每秒 100，對方血量低於 40% 時 150）；右鍵按住對準隊友＝牽攻擊線（對方傷害 +30%）', sm: '右鍵按住（手機：瞄準鈕）' };
+HERO_BY.leona.r = { n: '攻擊連線', ic: '🔥', d: '左鍵按住＝同時牽附近所有隊友（20 公尺內）的補血線（每秒 100，對方血量低於 40% 時 150）；右鍵按住＝牽攻擊線（對方傷害 +30%）', sm: '右鍵按住（手機：瞄準鈕）' };
 // ───────── 角色（12 角度公告板＋跑步圖集） ─────────
 const texCache = {};
 const walkCache = {};
@@ -903,14 +903,15 @@ function linkTarget(a) {   // 準心附近的隊友（手機沒瞄到時取最�
   if (!best && touch) { let bd = 30; for (const t of alliesOf(a)) { if (t === a) continue; const d = Math.hypot(t.x - a.x, t.z - a.z); if (d < bd && los(a, t, 1.55, t.y + 1.2)) { bd = d; best = t; } } }
   return best;
 }
-function linkStep(a, dt) {   // Leona：左鍵牽補血線（每秒回血）、右鍵牽攻擊線（隊友傷害 +30%）；電腦自動判斷
-  let mode = 0, t = null;
-  if (a.isMe) { mode = hold.fire ? 1 : healHold ? 2 : 0; if (mode) t = linkTarget(a); }
-  else { const al = alliesOf(a).filter(x => x !== a && Math.hypot(x.x - a.x, x.z - a.z) < 24 && los(a, x, 1.55, x.y + 1.2)); const hurt = al.filter(x => x.hp < x.maxHp * .85).sort((p, q) => p.hp / p.maxHp - q.hp / q.maxHp)[0]; if (hurt) { mode = 1; t = hurt; } else if (a.tgt && al.length) { mode = 2; t = al.sort((p, q) => Math.hypot(p.x - a.x, p.z - a.z) - Math.hypot(q.x - a.x, q.z - a.z))[0]; } }
-  if (!t || t.dead) return;
-  if (mode === 1) healTo(t, (t.hp < t.maxHp * .4 ? 150 : 100) * dt, a); else if (!t.remote) t.dmgT = Math.max(t.dmgT, .6); else if (net && t.rid < 10) { a.lkT = (a.lkT || 0) - dt; if (a.lkT <= 0) { a.lkT = .25; netSend({ t: 'lk', to: t.rid }); } }
-  a.lkTgt = t; a.lkMode = mode; a.lkT = .2;   // 連線視覺由 drawLinks 畫成一條穩定的線
-  if (net && (a.isMe || a.hb) && t.rid !== undefined) { a.lvT = (a.lvT || 0) - dt; if (a.lvT <= 0) { a.lvT = .25; netSend({ r: a.hb ? a.rid : undefined, t: 'lv', tg: t.rid, m: mode }); } }
+function linkStep(a, dt) {   // Leona：左鍵牽補血線（每秒回血）、右鍵牽攻擊線（傷害 +30%）；一次牽到附近所有隊友（20 公尺內、無遮擋、最多 4 位）
+  let mode = 0, ts = [];
+  const near = () => alliesOf(a).filter(x => x !== a && Math.hypot(x.x - a.x, x.z - a.z) < 20 && los(a, x, 1.55, x.y + 1.2)).sort((p, q) => Math.hypot(p.x - a.x, p.z - a.z) - Math.hypot(q.x - a.x, q.z - a.z)).slice(0, 4);
+  if (a.isMe) { mode = hold.fire ? 1 : healHold ? 2 : 0; if (mode) ts = near(); }
+  else { const al = near(); const hurt = al.filter(x => x.hp < x.maxHp * .85); if (hurt.length) { mode = 1; ts = hurt; } else if (a.tgt && al.length) { mode = 2; ts = al; } }
+  if (!ts.length) return;
+  for (const t of ts) { if (mode === 1) healTo(t, (t.hp < t.maxHp * .4 ? 150 : 100) * dt, a); else if (!t.remote) t.dmgT = Math.max(t.dmgT, .6); else if (net && t.rid < 10) { t.lkSend = (t.lkSend || 0) - dt; if (t.lkSend <= 0) { t.lkSend = .25; netSend({ t: 'lk', to: t.rid }); } } }
+  a.lkList = ts; a.lkMode = mode; a.lkT = .2;   // 連線視覺由 drawLinks 畫成穩定的線
+  if (net && (a.isMe || a.hb)) { a.lvT = (a.lvT || 0) - dt; if (a.lvT <= 0) { a.lvT = .25; netSend({ r: a.hb ? a.rid : undefined, t: 'lv', tg: ts.map(x => x.rid).filter(x => x !== undefined), m: mode }); } }
 }
 function statusOf(a) {   // 角色身上的狀態（敵我都顯示）
   const o = []; if (a.dmgT > 0 || a.rage > 0) o.push(['🔥', '傷害提升', '#ff8a3c', 0xff8a3c]); if (a.spd > 0 || a.buff > 0) o.push(['💨', '加速', '#7fe3ff', 0x7fe3ff]); if (a.mark > 0) o.push(['🎯', '被標記', '#ff5a4a', 0xff5a4a]);
@@ -946,13 +947,17 @@ function drawLinks(dt) { drawStatus(dt);
   { let el = document.getElementById('absBar'); if (!el) { el = document.createElement('div'); el.id = 'absBar'; el.style.cssText = 'position:fixed;left:50%;bottom:132px;transform:translateX(-50%);width:170px;height:10px;border:1px solid rgba(255,255,255,.6);border-radius:6px;background:rgba(0,0,0,.5);z-index:30;display:none;overflow:hidden;pointer-events:none'; el.innerHTML = '<i style="display:block;height:100%;width:0;background:#ffd066"></i>'; document.body.appendChild(el); }
     const on = me && me.hero.id === 'machi' && !me.dead && state === 'play'; el.style.display = on ? 'block' : 'none'; if (on) { const b = el.firstChild; b.style.width = Math.min(100, me.ab || 0) + '%'; b.style.background = me.abLock ? '#ff5a4a' : (me.ab > 70 ? '#ffa04a' : '#ffd066'); } }   // Leona 的連線：按住時一條穩定的線（綠＝補血、橘＝攻擊），其他玩家也看得到
   for (const a of actors) {
-    const on = a.lkT > 0 && a.lkTgt && !a.dead && !a.lkTgt.dead && a.hero.id === 'leona'; if (a.lkT > 0) a.lkT -= dt;
-    if (!on) { if (a.lkM) a.lkM.visible = false; continue; }
-    if (!a.lkM) { a.lkM = mk(new THREE.CylinderGeometry(.045, .045, 1, 6, 1, true), new THREE.MeshBasicMaterial({ color: 0x5ef0a4, transparent: true, opacity: .85, blending: THREE.AdditiveBlending, depthWrite: false })); a.lkM.frustumCulled = false; scene.add(a.lkM); }
-    const f = muzzleOf(a), t = a.lkTgt, dx = t.x - f[0], dy = t.y + 1.2 - f[1], dz = t.z - f[2], len = Math.hypot(dx, dy, dz) || 1;
-    a.lkM.visible = true; a.lkM.material.color.setHex(a.lkMode === 1 ? 0x5ef0a4 : 0xff8a3c); a.lkM.material.opacity = .7 + Math.sin(performance.now() * .012) * .15;
-    a.lkM.position.set(f[0] + dx / 2, f[1] + dy / 2, f[2] + dz / 2); a.lkM.scale.set(1, len, 1); a.lkM.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(dx / len, dy / len, dz / len));
-    if (Math.random() < dt * 20) addPart(sparkTex, a.lkMode === 1 ? 0x5ef0a4 : 0xff8a3c, f[0] + dx * Math.random(), f[1] + dy * Math.random(), f[2] + dz * Math.random(), 0, .4, 0, .4, .2, 0, true);
+    const list = (a.lkT > 0 && !a.dead && a.hero.id === 'leona' && a.lkList) ? a.lkList.filter(x => x && !x.dead) : []; if (a.lkT > 0) a.lkT -= dt;
+    a.lkMs = a.lkMs || [];
+    for (let i = 0; i < Math.max(list.length, a.lkMs.length); i++) {
+      let m = a.lkMs[i];
+      if (i >= list.length) { if (m) m.visible = false; continue; }
+      if (!m) { m = a.lkMs[i] = mk(new THREE.CylinderGeometry(.045, .045, 1, 6, 1, true), new THREE.MeshBasicMaterial({ color: 0x5ef0a4, transparent: true, opacity: .85, blending: THREE.AdditiveBlending, depthWrite: false })); m.frustumCulled = false; scene.add(m); }
+      const f = muzzleOf(a), t = list[i], dx = t.x - f[0], dy = t.y + 1.2 - f[1], dz = t.z - f[2], len = Math.hypot(dx, dy, dz) || 1, col = a.lkMode === 1 ? 0x5ef0a4 : 0xff8a3c;
+      m.visible = true; m.material.color.setHex(col); m.material.opacity = .7 + Math.sin(performance.now() * .012) * .15;
+      m.position.set(f[0] + dx / 2, f[1] + dy / 2, f[2] + dz / 2); m.scale.set(1, len, 1); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(dx / len, dy / len, dz / len));
+      if (Math.random() < dt * 20) addPart(sparkTex, col, f[0] + dx * Math.random(), f[1] + dy * Math.random(), f[2] + dz * Math.random(), 0, .4, 0, .4, .2, 0, true);
+    }
   }
 }
 function useE(a) {
@@ -1271,7 +1276,7 @@ function render(dt) {
   stepParts(dt); flashLight.intensity = Math.max(0, flashLight.intensity - dt * 40); boomL.intensity = Math.max(0, boomL.intensity - dt * 22);
   if (state === 'play' || state === 'count') {
     $('hpN').innerHTML = Math.max(0, Math.ceil(me.hp)) + (me.armor > 0 ? '<small style="color:#ffd066;font-size:20px;letter-spacing:0">+' + Math.ceil(me.armor) + '</small>' : ''); $('hpB').style.width = Math.max(0, me.hp / me.maxHp * 100) + '%'; $('hp').classList.toggle('low', me.hp < me.maxHp * .3 && !me.dead);
-    { const low = me.dead ? 0 : clamp(1 - me.hp / (me.maxHp * .4), 0, 1), el = $('lowhp'), tt = performance.now() * .001, rate = 5 + low * 4; el.style.opacity = low > 0 ? ((.3 + low * .7) * (.7 + .3 * Math.pow(Math.max(0, Math.sin(tt * rate)), 2))).toFixed(3) : 0; cv.style.filter = low > 0 ? 'saturate(' + (1 - low * .7).toFixed(2) + ') contrast(' + (1 + low * .1).toFixed(2) + ')' : ''; if (low > .15 && state === 'play') { hbT -= dt; if (hbT <= 0) { hbT = 1.05 - low * .5; SFX.heart(); shake = Math.max(shake, .1 + low * .12); } } } $('wpN').textContent = me.w.n; { const sp = $('spec'); if (me.dead && state === 'play') { sp.hidden = false; sp.innerHTML = (SP ? '觀戰　' + SP.hero.ic + ' <b>' + SP.name + '</b>（' + Math.ceil(SP.hp) + ' HP）' : '全隊陣亡') + '<small>重生 ' + Math.max(0, Math.ceil(me.respT)) + ' 秒　' + (touch ? '點畫面切換隊友' : '左鍵／空白鍵切換隊友') + '</small>'; } else sp.hidden = true; }
+    { const low = me.dead ? 0 : clamp(1 - me.hp / (me.maxHp * .4), 0, 1), el = $('lowhp'), tt = performance.now() * .001, rate = 5 + low * 4; el.style.opacity = low > 0 ? ((.3 + low * .7) * .85).toFixed(3) : 0; cv.style.filter = low > 0 ? 'saturate(' + (1 - low * .7).toFixed(2) + ') contrast(' + (1 + low * .1).toFixed(2) + ')' : ''; if (low > .15 && state === 'play') { hbT -= dt; if (hbT <= 0) { hbT = 1.05 - low * .5; SFX.heart(); shake = Math.max(shake, .1 + low * .12); } } } $('wpN').textContent = me.w.n; { const sp = $('spec'); if (me.dead && state === 'play') { sp.hidden = false; sp.innerHTML = (SP ? '觀戰　' + SP.hero.ic + ' <b>' + SP.name + '</b>（' + Math.ceil(SP.hp) + ' HP）' : '全隊陣亡') + '<small>重生 ' + Math.max(0, Math.ceil(me.respT)) + ' 秒　' + (touch ? '點畫面切換隊友' : '左鍵／空白鍵切換隊友') + '</small>'; } else sp.hidden = true; }
     const t = Math.max(0, Math.ceil(tLeft)); $('tm').textContent = Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
     // 目標列
     $('pA').textContent = Math.floor(prog[0]) + '%'; $('pB').textContent = Math.floor(prog[1]) + '%'; $('bA').style.width = prog[0] + '%'; $('bB').style.width = prog[1] + '%';
@@ -1415,7 +1420,7 @@ function netMsg(m) {
   } else if (m.t === 'sh') { if (P.dead) return; const ox = P.x, oy = P.y, oz = P.z; P.x = m.x; P.y = m.y; P.z = m.z; P.yaw = m.yw; P.pitch = m.pt; fireWeapon(P, P.w); P.x = ox; P.y = oy; P.z = oz; }
   else if (m.t === 'h') { if (m.to !== net.myId || me.dead) return; NETIN = true; dmgTo(me, +m.d || 0, m.sr !== undefined ? (actors.find(a => a.rid === +m.sr) || P) : P, !!m.hd, m.w || '', m.hx, m.hy, m.hz); NETIN = false; }
   else if (m.t === 'kb') { if (m.to !== net.myId || me.dead) return; me.vx += +m.vx || 0; me.vz += +m.vz || 0; me.dashT = 0; if (m.st) me.stun = Math.max(me.stun, +m.st); }
-  else if (m.t === 'lv') { P.lkTgt = actors.find(a => a.rid === +m.tg) || null; P.lkMode = +m.m === 2 ? 2 : 1; P.lkT = .7; }
+  else if (m.t === 'lv') { P.lkList = [].concat(m.tg).map(id => actors.find(a => a.rid === +id)).filter(Boolean); P.lkMode = +m.m === 2 ? 2 : 1; P.lkT = .7; }
   else if (m.t === 'lk') { if (m.to !== net.myId || me.dead) return; me.dmgT = Math.max(me.dmgT, .6); }
   else if (m.t === 'hl') { if (m.to !== net.myId) return; NETIN = true; healTo(me, +m.a || 0, P); NETIN = false; }
   else if (m.t === 'cast') { cast(P, m.k); if (m.k === 'e' && P.hero.id === 'machi') spawnBarrier(P); netAbilityOnMe(P, m.k); }
