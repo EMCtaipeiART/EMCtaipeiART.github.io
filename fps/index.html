@@ -549,10 +549,10 @@ function rayCyl(ox, oy, oz, dx, dy, dz, c, maxT) {   // 垂直圓柱：半徑 .4
 
 // ───────── 武器（每位英雄一把專屬主武器，彈藥無限） ─────────
 const WEAPONS = {
-  stapler: { n: '訂書機衝鋒槍', ic: '📌', kind: 'auto', rate: 12, dmg: 16, spread: .018, pellets: 1, range: 90, kick: .012, col: 0xffd24a },
+  stapler: { n: '訂書機衝鋒槍', ic: '📌', kind: 'auto', rate: 12, dmg: 14, spread: .018, pellets: 1, range: 90, kick: .012, col: 0xffd24a },
   keyboard: { n: '鍵盤霰彈', ic: '⌨️', kind: 'shotgun', rate: 1.2, dmg: 8, spread: .07, pellets: 10, range: 30, kick: .05, col: 0xffffff },
   mouse: { n: '滑鼠手槍（打敵人傷害、打隊友補血）', ic: '🖱️', kind: 'semi', rate: 5.5, dmg: 16, spread: .005, pellets: 1, range: 110, kick: .02, col: 0xbfe9ff },
-  ruler: { n: '直尺狙擊', ic: '📏', kind: 'sniper', rate: 1.1, dmg: 100, hm: 2, spread: .045, pellets: 1, range: 200, kick: .05, col: 0xffb000, zoom: 26 },
+  ruler: { n: '直尺狙擊', ic: '📏', kind: 'sniper', rate: 1.1, dmg: 90, hm: 2, spread: .045, pellets: 1, range: 200, kick: .05, col: 0xffb000, zoom: 26 },
   link: { n: '電話連線（左鍵牽補血線／右鍵牽攻擊線）', ic: '📞', kind: 'link', rate: 1, dmg: 0, spread: 0, pellets: 0, range: 40, kick: 0, col: 0x5ef0a4 },
   phone: { n: '電話訊號彈', ic: '☎️', kind: 'rocket', rate: 1.6, dmg: 32, heal: 26, spread: .006, pellets: 1, range: 60, kick: .035, col: 0x7fe3ff, splash: 3.0, speed: 26 }
 };
