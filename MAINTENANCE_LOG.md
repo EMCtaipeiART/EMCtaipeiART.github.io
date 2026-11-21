@@ -3479,3 +3479,8 @@
 ## 2026-11-20 後台小幫手「每人用量」補欄位
 - 每人用量原本只有提問／tokens／有幫助／沒幫助。新增：平均 tokens/題、今日用量、查不到、累了、最後提問時間。`assistantUsageReport` 的 accounts 每人多回 notFound／tired／last；前端 renderAssistant 彙整（今日＝days[0]）。
 - 同日：前台小黃視窗「用量」每天只列前 5 人（accounts.slice(0,5)），改成全部列出。
+
+## 2026-11-20 小黃依角色（部門）調整回答與提示
+- 新增 `worker/src/assistant-role.ts`：`roleOf` 依「設定」表部門／組別判斷 設計部／企劃部／專案部（含呈鈺顧問）／管理者／測試員／其他；`roleLine` 產生角色提示，放在 system 的**未快取**區塊（與 todayLine 同段，不破壞 prompt cache）；只影響口吻與優先順序，案件可見範圍仍由 canViewCase 決定。
+- 懸停泡泡（assistantTicker 的 tips）先顯示該角色專屬提示（ROLE_TIPS），再接通用 FEATURE_TIPS。
+- 要改各角色重點：編輯 assistant-role.ts 的 GUIDE／ROLE_TIPS。測試：worker/test/assistant-role.test.ts。

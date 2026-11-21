@@ -3,6 +3,7 @@ import { DurableObject } from 'cloudflare:workers';
 import { getNewsTicker } from './assistant-news';
 import { getChangeLog } from './assistant-changes';
 import { FEATURE_TIPS } from './assistant-knowledge';
+import { ROLE_TIPS, roleOf } from './assistant-role';
 import { assistantChat, assistantToday, assistantLogsReport, assistantUsageReport, cleanupAssistantStorage, deleteNote, listGaps, listNotes, saveNote, updateGap, recordFeedback } from './assistant';
 import { DEFAULT_CUSTOMER_CC_EMAILS, latestSystemAnnouncement, publicSystemAnnouncement, systemAnnouncementReadRecords, TABLE_SCHEMAS } from '../../backend/schema.mjs';
 import { normalizeDesignType, splitDetailValues } from '../../backend/weighting.mjs';
@@ -5790,7 +5791,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'assistantTicker') {
         this.requireSession(session);
         const changes = await getChangeLog(this.ctx.storage, Date.now(), this.githubSource()).catch(() => ({ sections: [], commits: [] }));
-        return { ok: true, action, items: await getNewsTicker(this.ctx.storage, Date.now()), tips: FEATURE_TIPS, updates: changes.sections.slice(0, 3).map(section => section.title) };
+        return { ok: true, action, items: await getNewsTicker(this.ctx.storage, Date.now()), tips: [...ROLE_TIPS[session ? roleOf(database, session).key : 'other'], ...FEATURE_TIPS], updates: changes.sections.slice(0, 3).map(section => section.title) };
       }
       if (action === 'assistantLogs') {
         this.requireAccess(database, session, 'database.manage');
