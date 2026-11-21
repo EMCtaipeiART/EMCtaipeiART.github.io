@@ -802,7 +802,12 @@ function dmgTo(t, d, src, head, wname, hx, hy, hz) {
   if (t.g && !t.dead) { const px = hx ?? t.x, py = hy ?? t.y + 1.2, pz = hz ?? t.z; paperBurst(px, py, pz, head ? 6 : 3); sparkBurst(px, py, pz, head ? 6 : 3, head ? 0xffd24a : 0xffffff, 2.5); }
   if (t.hp <= 0) kill(t, src, wname);
 }
-function healTo(t, amt, src) { if (t.dead || t.hp >= t.maxHp) return; if (src && src.remote && !NETIN) return; if (net && t.remote) { const a = Math.min(amt, t.maxHp - t.hp); t.nh = (t.nh || 0) + a; if (src) { src.heals += a; addUlt(src, a * ((src.hero && src.hero.id === 'leona') ? .75 : .3)); } return; } const a = Math.min(amt, t.maxHp - t.hp); t.hp += a; if (src) { src.heals += a; addUlt(src, a * ((src.hero && src.hero.id === 'leona') ? .75 : .3)); } if (t.isMe || (src && src.isMe)) { t.healAcc = (t.healAcc || 0) + a; if (t.healAcc >= 12) { floatNum(t.x, t.y + 2.1, t.z, '+' + Math.round(t.healAcc), '#5ef0a4', false); t.healAcc = 0; } } }
+function healFx(t) {   // 被補血的特效：腳下綠圈＋身上往上飄的綠色十字光點＋（自己）畫面邊緣泛綠
+  const now = performance.now(); if (now - (t.hfT || 0) < 220) return; t.hfT = now;
+  ringFx(t.x, t.y, t.z, 0x5ef0a4, 1.5, .5); for (let i = 0; i < 6; i++) addPart(sparkTex, 0x7dffb8, t.x + rand(-.45, .45), t.y + rand(.2, 1.3), t.z + rand(-.45, .45), 0, rand(1.4, 2.4), 0, .7, .34, 0, true); addPart(sparkTex, 0x5ef0a4, t.x, t.y + 1.1, t.z, 0, .3, 0, .35, 1.8, 0, true);
+  if (t.isMe) { let v = document.getElementById('healV'); if (!v) { v = document.createElement('div'); v.id = 'healV'; v.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:25;opacity:0;background:radial-gradient(circle at 50% 50%,transparent 45%,rgba(94,240,164,.5));transition:opacity .25s'; document.body.appendChild(v); } v.style.opacity = '1'; clearTimeout(v._t); v._t = setTimeout(() => { v.style.opacity = '0'; }, 260); }
+}
+function healTo(t, amt, src) { if (t.dead || t.hp >= t.maxHp) return; if (src && src.remote && !NETIN) return; healFx(t); if (net && t.remote) { const a = Math.min(amt, t.maxHp - t.hp); t.nh = (t.nh || 0) + a; if (src) { src.heals += a; addUlt(src, a * ((src.hero && src.hero.id === 'leona') ? .75 : .3)); } return; } const a = Math.min(amt, t.maxHp - t.hp); t.hp += a; if (src) { src.heals += a; addUlt(src, a * ((src.hero && src.hero.id === 'leona') ? .75 : .3)); } if (t.isMe || (src && src.isMe)) { t.healAcc = (t.healAcc || 0) + a; if (t.healAcc >= 12) { floatNum(t.x, t.y + 2.1, t.z, '+' + Math.round(t.healAcc), '#5ef0a4', false); t.healAcc = 0; } } }
 function dirHit(a) { const el = $('dir').firstElementChild; el.style.transform = 'rotate(' + (wrapA(a + yaw + Math.PI) * 180 / Math.PI) + 'deg)'; el.style.opacity = 1; clearTimeout(dirHit.t); dirHit.t = setTimeout(() => { el.style.opacity = 0; }, 700); }
 function hitMark(head, kill) { const el = $('hm'); el.classList.remove('on'); void el.offsetWidth; el.classList.toggle('hs', !!head); el.classList.toggle('kill', !!kill); el.classList.add('on'); clearTimeout(hitMark.t); hitMark.t = setTimeout(() => el.classList.remove('on'), 280); kill ? SFX.kill() : head ? SFX.head() : SFX.hit(); }
 function killIcon() { const el = $('killIc'); el.className = 'hud'; void el.getBoundingClientRect(); el.className = 'hud on'; clearTimeout(killIcon.t); killIcon.t = setTimeout(() => el.className = 'hud', 1000); }
@@ -868,15 +873,21 @@ function labelTex(txt, col) { const k = txt + col; let t = lblCache.get(k); if (
 function castLabel(a, txt, col) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex(txt, col), transparent: true, depthTest: false })); const k = clamp(Math.hypot(camera.position.x - a.x, camera.position.z - a.z) / 7, 1.1, 3.2); s.scale.set(4 * k, .76 * k, 1); s.position.set(a.x, a.y + 3.4, a.z); s.renderOrder = 40; scene.add(s); NUMS.push({ s, life: 1.4, vx: 0, ref: a, lift: 3.4 }); }
 function cast(a, k) { if (net && (a.isMe || a.hb)) netSend({ r: a.hb ? a.rid : undefined, t: 'cast', k });
   const H = a.hero; a.actT[k] = (CAST_DUR[H.id] || {})[k] || 0; castLabel(a, H[k].ic + ' ' + H[k].n, k === 'q' ? '#ffd24a' : a.team ? '#ff9a90' : '#8fd8ff');
+  { const cc = k === 'q' ? 0xffd24a : a.team ? 0xff8a7a : 0x7fd8ff; ringFx(a.x, a.y, a.z, cc, k === 'q' ? 5 : 2.6, .55); sparkBurst(a.x, a.y + 1.1, a.z, k === 'q' ? 28 : 14, cc, 4); if (k === 'q') ringFx(a.x, a.y, a.z, 0xffffff, 3, .7); }
   if (a.isMe) { SFX.cast(k); const el = $('cast'); el.textContent = H[k].ic + ' ' + H[k].n; el.className = ''; void el.offsetWidth; el.className = 'on ' + k; if (k === 'q') { const f = $('flashS'); f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); } }
   else if (Math.hypot(a.x - me.x, a.z - me.z) < 38) SFX.cast(k, .5);
 }
 const enemiesOf = a => actors.filter(t => t.team !== a.team && !t.dead), alliesOf = a => actors.filter(t => t.team === a.team && !t.dead);
 function fwd(a) { return [-Math.sin(a.yaw), -Math.cos(a.yaw)]; }
 function moveDir(a) { if (a.isMe) { const mx = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + joy.x, mz = (keys.KeyS ? 1 : 0) - (keys.KeyW ? 1 : 0) + joy.y, l = Math.hypot(mx, mz); if (l > .15) { const f = fwd(a), rx = -f[1], rz = f[0]; return [(f[0] * -mz + rx * mx) / l, (f[1] * -mz + rz * mx) / l]; } } return fwd(a); }
+function reviveFx(t) {   // 復活特效：光柱、三圈擴散、光點爆發、頭上「復活！」，自己畫面閃光
+  ringFx(t.x, t.y, t.z, 0x7fe3ff, 4.5, .9); ringFx(t.x, t.y, t.z, 0xffd066, 3, .7); ringFx(t.x, t.y, t.z, 0xffffff, 1.6, .5); sparkBurst(t.x, t.y + 1, t.z, 40, 0x9ae8ff, 7); sparkBurst(t.x, t.y + 1, t.z, 20, 0xffd066, 5);
+  beam([t.x, t.y + 9, t.z], [t.x, t.y, t.z], 0x7fe3ff, .35, 1.1); beam([t.x, t.y + 9, t.z], [t.x, t.y, t.z], 0xffffff, .12, .9); addPart(sparkTex, 0xffffff, t.x, t.y + 1.2, t.z, 0, 0, 0, .6, 4, 0, true); castLabel(t, '✨ 復活！', '#9ae8ff');
+  if (t.isMe) { const f = $('flashS'); f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); }
+}
 function reviveHere(t, by) {   // 原地復活（保留死亡位置），血量 60%、無敵 2.5 秒
   if (!t.dead) return; t.dead = false; t.respT = 0; t.hp = t.maxHp * .8; t.inv = 3; t.stun = t.mark = t.heal = t.volley = t.chargeT = t.buff = t.rage = t.dmgT = t.spd = 0; t.armor = t.armorT = 0; t.fall = 0; t.nextHero = null;
-  ringFx(t.x, t.y, t.z, 0x7fe3ff, 3, .8); ringFx(t.x, t.y, t.z, 0xffd066, 1.8, .6); sparkBurst(t.x, t.y + 1, t.z, 18, 0x7fe3ff, 5); beam([t.x, t.y + 6, t.z], [t.x, t.y, t.z], 0x7fe3ff, .09, .6);
+  reviveFx(t);
   if (t.isMe) { $('heroSel').hidden = true; $('spec').hidden = true; specT = null; $('banner').classList.remove('on'); sayLow('你被復活了'); banner('被復活', (by ? by.name + ' 把你拉了回來' : ''), 1800); yaw = t.yaw; pitch = 0; SFX.pick && SFX.pick(); }
 }
 function giveArmor(t, amt, dur) { t.armor = Math.max(t.armor || 0, amt); t.armorT = dur; ringFx(t.x, t.y, t.z, 0xffd066, 1.6, .5); }
@@ -1378,7 +1389,7 @@ function netMsg(m) {
     if (P.hero.id !== m.hr && HERO_BY[m.hr]) { applyHero(P, HERO_BY[m.hr]); rebuildLook(P); }
     P.nx = m.x; P.ny = m.y; P.nz = m.z; const dd = !!m.d; if (P.nx !== undefined && (P.ninit === undefined || (P.dead && !dd))) { P.x = m.x; P.y = m.y; P.z = m.z; P.ninit = 1; }
     P.yaw = m.yw; P.pitch = m.pt; P.hp = m.hp; P.maxHp = m.mh; P.vx = m.vx; P.vz = m.vz; P.ground = !!m.g; P.armor = m.ar ? 1 : 0; P.mark = m.mk ? .3 : 0; P.stun = m.st ? .3 : 0; P.heal = m.hl ? .3 : 0; P.down = !!m.dn; P.absOn = !!m.ab; P.kills = m.k; P.deaths = m.dd; P.dmg = m.dm; P.heals = m.he;
-    if (dd && !P.dead) { P.dead = true; P.respT = 5; P.hring.visible = false; } else if (!dd && P.dead) { P.dead = false; P.fall = 0; }
+    if (dd && !P.dead) { P.dead = true; P.respT = 5; P.hring.visible = false; } else if (!dd && P.dead) { const near = Math.hypot(P.x - m.x, P.z - m.z) < 3; P.dead = false; P.fall = 0; if (near) reviveFx(P); }
   } else if (m.t === 'sh') { if (P.dead) return; const ox = P.x, oy = P.y, oz = P.z; P.x = m.x; P.y = m.y; P.z = m.z; P.yaw = m.yw; P.pitch = m.pt; fireWeapon(P, P.w); P.x = ox; P.y = oy; P.z = oz; }
   else if (m.t === 'h') { if (m.to !== net.myId || me.dead) return; NETIN = true; dmgTo(me, +m.d || 0, m.sr !== undefined ? (actors.find(a => a.rid === +m.sr) || P) : P, !!m.hd, m.w || '', m.hx, m.hy, m.hz); NETIN = false; }
   else if (m.t === 'kb') { if (m.to !== net.myId || me.dead) return; me.vx += +m.vx || 0; me.vz += +m.vz || 0; me.dashT = 0; if (m.st) me.stun = Math.max(me.stun, +m.st); }
