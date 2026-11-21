@@ -910,9 +910,31 @@ function linkStep(a, dt) {   // Leona：左鍵牽補血線（每秒回血）、�
   if (!t || t.dead) return;
   if (mode === 1) healTo(t, (t.hp < t.maxHp * .4 ? 150 : 100) * dt, a); else if (!t.remote) t.dmgT = Math.max(t.dmgT, .6); else if (net && t.rid < 10) { a.lkT = (a.lkT || 0) - dt; if (a.lkT <= 0) { a.lkT = .25; netSend({ t: 'lk', to: t.rid }); } }
   a.lkTgt = t; a.lkMode = mode; a.lkT = .2;   // 連線視覺由 drawLinks 畫成一條穩定的線
-  if (net && (a.isMe || a.hb) && t.rid !== undefined) { a.lvT = (a.lvT || 0) - dt; if (a.lvT <= 0) { a.lvT = .25; netSend({ r: a.hb ? a.rid : undefined, t: 'lv', to: t.rid, m: mode }); } }
+  if (net && (a.isMe || a.hb) && t.rid !== undefined) { a.lvT = (a.lvT || 0) - dt; if (a.lvT <= 0) { a.lvT = .25; netSend({ r: a.hb ? a.rid : undefined, t: 'lv', tg: t.rid, m: mode }); } }
 }
-function drawLinks(dt) {
+function statusOf(a) {   // 角色身上的狀態（敵我都顯示）
+  const o = []; if (a.dmgT > 0 || a.rage > 0) o.push(['🔥', '傷害提升', '#ff8a3c', 0xff8a3c]); if (a.spd > 0 || a.buff > 0) o.push(['💨', '加速', '#7fe3ff', 0x7fe3ff]); if (a.mark > 0) o.push(['🎯', '被標記', '#ff5a4a', 0xff5a4a]);
+  if (a.armor > 0) o.push(['🛡️', '護甲', '#ffd066', 0xffd066]); if (a.stun > 0) o.push(['💫', '暈眩', '#ffe36b', 0xffe36b]); if (a.invV || a.inv > .3 || a.immT > 0) o.push(['✨', '無敵', '#ffffff', 0xffffff]); if (a.heal > 0) o.push(['💚', '治療中', '#5ef0a4', 0x5ef0a4]); if (a.absOn) o.push(['🔰', '吸收盾', '#ffd066', 0xffd066]);
+  return o;
+}
+function stTex(list) { return canvasTex(768, 72, (g, w, h) => { g.font = '900 30px "Noto Sans TC",sans-serif'; g.textBaseline = 'middle'; const ws = list.map(x => g.measureText(x[0] + ' ' + x[1]).width + 26), tot = ws.reduce((p, q) => p + q + 8, -8), k = Math.min(1, (w - 8) / tot); g.save(); g.translate(w / 2, h / 2); g.scale(k, k); let x = -tot / 2; list.forEach((it, i) => { g.fillStyle = 'rgba(8,10,16,.78)'; g.strokeStyle = it[2]; g.lineWidth = 4; g.beginPath(); g.roundRect(x, -22, ws[i], 44, 22); g.fill(); g.stroke(); g.fillStyle = it[2]; g.textAlign = 'left'; g.fillText(it[0] + ' ' + it[1], x + 13, 1); x += ws[i] + 8; }); g.restore(); }); }
+function drawStatus(dt) {
+  for (const a of actors) {
+    const list = a.dead ? [] : statusOf(a), key = list.map(x => x[1]).join('|');
+    if (!list.length) { if (a.stS) a.stS.visible = false; continue; }
+    if (!a.stS) { a.stS = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false })); a.stS.renderOrder = 30; scene.add(a.stS); }
+    if (a.stKey !== key) { a.stKey = key; if (a.stS.material.map) a.stS.material.map.dispose(); a.stS.material.map = stTex(list); a.stS.material.needsUpdate = true; }
+    const kk = clamp(Math.hypot(camera.position.x - a.x, camera.position.z - a.z) / 8, 1, 2.6); a.stS.visible = true; a.stS.scale.set(4.6 * kk, .44 * kk, 1); a.stS.position.set(a.x, a.y + 2.75 + .05 * kk, a.z);
+    a.stFxT = (a.stFxT || 0) - dt; if (a.stFxT <= 0) { a.stFxT = .28; for (const it of list) { const c = it[3], nm = it[1];
+      if (nm === '傷害提升') for (let i = 0; i < 3; i++) addPart(sparkTex, c, a.x + rand(-.4, .4), a.y + rand(.2, 1.4), a.z + rand(-.4, .4), 0, rand(1.2, 2.2), 0, .6, .3, 0, true);
+      else if (nm === '加速') for (let i = 0; i < 3; i++) addPart(sparkTex, c, a.x + rand(-.3, .3), a.y + rand(.1, 1.2), a.z + rand(-.3, .3), -a.vx * .4, 0, -a.vz * .4, .45, .3, 0, true);
+      else if (nm === '被標記') ringFx(a.x, a.y, a.z, c, 1.2, .5);
+      else if (nm === '護甲' || nm === '吸收盾') addPart(sparkTex, c, a.x, a.y + 1.1, a.z, 0, 0, 0, .3, 2.2, 0, true);
+      else if (nm === '暈眩') for (let i = 0; i < 2; i++) addPart(starTex, c, a.x + rand(-.3, .3), a.y + 1.9, a.z + rand(-.3, .3), 0, .3, 0, .5, .3, 0, true);
+      else if (nm === '無敵') addPart(sparkTex, c, a.x, a.y + 1.0, a.z, 0, 0, 0, .3, 2.6, 0, true); } }
+  }
+}
+function drawLinks(dt) { drawStatus(dt);
   const tt = performance.now() * .001;
   for (const a of actors) {   // Machi 吸收盾（三面小盾繞身旋轉）、倒地標記
     if (a.hero.id === 'machi' && a.absOn && !a.dead) {
@@ -1355,7 +1377,7 @@ function setupNetMatch() {   // 兩隊依加入順序輪流分：0、2 號一隊
   for (const a of actors) respawn(a);
   prog = [0, 0]; owner = -1; cap = 0; capTeam = -1; tLeft = 480; $('feed').innerHTML = ''; setViewmodel(); buildHud(); net.live = true; net.acc = 0; net.hlT = 0;
 }
-function netStateOut(a = me) { netSend({ r: a.hb ? a.rid : undefined, t: 's', x: +a.x.toFixed(2), y: +a.y.toFixed(2), z: +a.z.toFixed(2), yw: +a.yaw.toFixed(3), pt: +a.pitch.toFixed(3), hp: Math.round(a.hp), mh: a.maxHp, d: a.dead ? 1 : 0, hr: a.hero.id, vx: +a.vx.toFixed(1), vz: +a.vz.toFixed(1), g: a.ground ? 1 : 0, ar: a.armor > 0 ? 1 : 0, mk: a.mark > 0 ? 1 : 0, st: a.stun > 0 ? 1 : 0, hl: a.heal > 0 ? 1 : 0, k: a.kills, dd: a.deaths, dm: Math.round(a.dmg), he: Math.round(a.heals), dn: a.down ? 1 : 0, ab: a.absOn ? 1 : 0 }); }
+function netStateOut(a = me) { netSend({ r: a.hb ? a.rid : undefined, t: 's', x: +a.x.toFixed(2), y: +a.y.toFixed(2), z: +a.z.toFixed(2), yw: +a.yaw.toFixed(3), pt: +a.pitch.toFixed(3), hp: Math.round(a.hp), mh: a.maxHp, d: a.dead ? 1 : 0, hr: a.hero.id, vx: +a.vx.toFixed(1), vz: +a.vz.toFixed(1), g: a.ground ? 1 : 0, ar: a.armor > 0 ? 1 : 0, mk: a.mark > 0 ? 1 : 0, st: a.stun > 0 ? 1 : 0, hl: a.heal > 0 ? 1 : 0, k: a.kills, dd: a.deaths, dm: Math.round(a.dmg), he: Math.round(a.heals), dn: a.down ? 1 : 0, ab: a.absOn ? 1 : 0, bf: ((a.dmgT > 0 || a.rage > 0) ? 1 : 0) | ((a.spd > 0 || a.buff > 0) ? 2 : 0) | ((a.inv > .3 || a.immT > 0) ? 4 : 0) }); }
 function netTick(dt) {
   net.acc += dt; if (net.acc >= .05) { net.acc = 0; netStateOut(); for (const a of actors) if (a.hb) netStateOut(a); }
   net.hlT += dt; if (net.hlT >= .2) { net.hlT = 0; for (const a of actors) if (a.remote && a.rid < 10 && a.nh >= 1) { const n = Math.floor(a.nh); a.nh -= n; netSend({ t: 'hl', to: a.rid, a: n }); } if (net.role === 'host') netSend({ t: 'pt', pr: [+prog[0].toFixed(2), +prog[1].toFixed(2)], ow: owner, cp: +cap.toFixed(1), ct: capTeam, tl: Math.round(tLeft) }); }
@@ -1388,12 +1410,12 @@ function netMsg(m) {
   if (m.t === 's') {
     if (P.hero.id !== m.hr && HERO_BY[m.hr]) { applyHero(P, HERO_BY[m.hr]); rebuildLook(P); }
     P.nx = m.x; P.ny = m.y; P.nz = m.z; const dd = !!m.d; if (P.nx !== undefined && (P.ninit === undefined || (P.dead && !dd))) { P.x = m.x; P.y = m.y; P.z = m.z; P.ninit = 1; }
-    P.yaw = m.yw; P.pitch = m.pt; P.hp = m.hp; P.maxHp = m.mh; P.vx = m.vx; P.vz = m.vz; P.ground = !!m.g; P.armor = m.ar ? 1 : 0; P.mark = m.mk ? .3 : 0; P.stun = m.st ? .3 : 0; P.heal = m.hl ? .3 : 0; P.down = !!m.dn; P.absOn = !!m.ab; P.kills = m.k; P.deaths = m.dd; P.dmg = m.dm; P.heals = m.he;
+    P.yaw = m.yw; P.pitch = m.pt; P.hp = m.hp; P.maxHp = m.mh; P.vx = m.vx; P.vz = m.vz; P.ground = !!m.g; P.armor = m.ar ? 1 : 0; P.mark = m.mk ? .3 : 0; P.stun = m.st ? .3 : 0; P.heal = m.hl ? .3 : 0; P.down = !!m.dn; P.absOn = !!m.ab; { const bf = m.bf | 0; P.dmgT = bf & 1 ? .3 : 0; P.spd = bf & 2 ? .3 : 0; P.invV = !!(bf & 4); } P.kills = m.k; P.deaths = m.dd; P.dmg = m.dm; P.heals = m.he;
     if (dd && !P.dead) { P.dead = true; P.respT = 5; P.hring.visible = false; } else if (!dd && P.dead) { const near = Math.hypot(P.x - m.x, P.z - m.z) < 3; P.dead = false; P.fall = 0; if (near) reviveFx(P); }
   } else if (m.t === 'sh') { if (P.dead) return; const ox = P.x, oy = P.y, oz = P.z; P.x = m.x; P.y = m.y; P.z = m.z; P.yaw = m.yw; P.pitch = m.pt; fireWeapon(P, P.w); P.x = ox; P.y = oy; P.z = oz; }
   else if (m.t === 'h') { if (m.to !== net.myId || me.dead) return; NETIN = true; dmgTo(me, +m.d || 0, m.sr !== undefined ? (actors.find(a => a.rid === +m.sr) || P) : P, !!m.hd, m.w || '', m.hx, m.hy, m.hz); NETIN = false; }
   else if (m.t === 'kb') { if (m.to !== net.myId || me.dead) return; me.vx += +m.vx || 0; me.vz += +m.vz || 0; me.dashT = 0; if (m.st) me.stun = Math.max(me.stun, +m.st); }
-  else if (m.t === 'lv') { P.lkTgt = actors.find(a => a.rid === +m.to) || null; P.lkMode = +m.m === 2 ? 2 : 1; P.lkT = .7; }
+  else if (m.t === 'lv') { P.lkTgt = actors.find(a => a.rid === +m.tg) || null; P.lkMode = +m.m === 2 ? 2 : 1; P.lkT = .7; }
   else if (m.t === 'lk') { if (m.to !== net.myId || me.dead) return; me.dmgT = Math.max(me.dmgT, .6); }
   else if (m.t === 'hl') { if (m.to !== net.myId) return; NETIN = true; healTo(me, +m.a || 0, P); NETIN = false; }
   else if (m.t === 'cast') { cast(P, m.k); if (m.k === 'e' && P.hero.id === 'machi') spawnBarrier(P); netAbilityOnMe(P, m.k); }
