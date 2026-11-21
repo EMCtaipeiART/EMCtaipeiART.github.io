@@ -275,12 +275,12 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
         <div class="abil" id="habil"></div>
       </div>
       <div class="strip" id="heroes"></div>
+      <div class="nickrow" style="margin:12px 0 4px;padding:10px 14px;border:1px solid #ffb000;border-left-width:5px;background:rgba(255,176,0,.08);display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center"><label for="nickIn" style="font-size:15px;font-weight:800;color:#ffd166;letter-spacing:.1em;display:flex;align-items:center;gap:8px"><span style="font-size:18px">✎</span>玩家名稱</label><input id="nickIn" type="text" maxlength="12" autocomplete="off" placeholder="輸入你的名字（最多 12 字）" style="font:700 18px/1 inherit;color:#fff;background:#0b0f14;border:2px solid #ffb000;padding:11px 14px;width:min(260px,100%);box-shadow:0 0 0 3px rgba(255,176,0,.15)"><span id="nickHint" style="font-size:12px;color:#c9d3de"></span></div>
       <div class="stfoot">
         <div class="modebox"><span>難度</span><div id="gDiff"></div></div>
         <button class="go" id="startB" type="button">部　署</button>
         <div class="modebox right"><span>勝利條件</span><b>占領中央控制點，隊伍進度先到 100%</b></div>
       </div>
-      <div class="nickrow" style="display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin:8px 0 2px;font-size:12px;color:#8a97a6"><label style="display:flex;gap:8px;align-items:center;color:#c9d3de;font-weight:700">我的名字 <input id="nickIn" type="text" maxlength="12" autocomplete="off" placeholder="自己取名（選填）" style="font:700 14px/1 inherit;color:#fff;background:#10151b;border:1px solid #3a4654;padding:7px 10px;width:150px"></label><span id="nickHint"></span></div>
       <div class="netrow"><button class="exitbtn" id="netB" type="button">連線對戰（最多 4 人）</button><button class="exitbtn" id="recB" type="button" style="margin-left:10px">📊 戰績紀錄</button><button class="exitbtn" id="boardB" type="button" style="margin-left:10px">🏆 排行榜</button></div>
       <div class="netbox" id="netBox" hidden>
         <b class="nbt">連線對戰　真人對真人，依加入順序分兩隊（2 人＝1v1，3 人＝2v1，4 人＝2v2）</b>
