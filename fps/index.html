@@ -915,7 +915,7 @@ function linkStep(a, dt) {   // Leona：左鍵牽補血線（每秒回血）、�
 }
 function statusOf(a) {   // 角色身上的狀態（敵我都顯示）
   const o = []; if (a.dmgT > 0 || a.rage > 0) o.push(['🔥', '傷害提升', '#ff8a3c', 0xff8a3c]); if (a.spd > 0 || a.buff > 0) o.push(['💨', '加速', '#7fe3ff', 0x7fe3ff]); if (a.mark > 0) o.push(['🎯', '被標記', '#ff5a4a', 0xff5a4a]);
-  if (a.armor > 0) o.push(['🛡️', '護甲', '#ffd066', 0xffd066]); if (a.stun > 0) o.push(['💫', '暈眩', '#ffe36b', 0xffe36b]); if (a.invV || a.inv > .3 || a.immT > 0) o.push(['✨', '無敵', '#ffffff', 0xffffff]); if (a.heal > 0) o.push(['💚', '治療中', '#5ef0a4', 0x5ef0a4]); if (a.absOn) o.push(['🔰', '吸收盾', '#ffd066', 0xffd066]);
+  if (a.armor > 0) o.push(['🛡️', '護甲', '#ffd066', 0xffd066]); if (a.stun > 0) o.push(['💫', '暈眩', '#ffe36b', 0xffe36b]); if (a.invV || a.immT > 0) o.push(['✨', '無敵', '#ffffff', 0xffe9a0]); if (a.heal > 0) o.push(['💚', '治療中', '#5ef0a4', 0x5ef0a4]); if (a.absOn) o.push(['🔰', '吸收盾', '#ffd066', 0xffd066]);
   return o;
 }
 function stTex(list) { return canvasTex(768, 72, (g, w, h) => { g.font = '900 30px "Noto Sans TC",sans-serif'; g.textBaseline = 'middle'; const ws = list.map(x => g.measureText(x[0] + ' ' + x[1]).width + 26), tot = ws.reduce((p, q) => p + q + 8, -8), k = Math.min(1, (w - 8) / tot); g.save(); g.translate(w / 2, h / 2); g.scale(k, k); let x = -tot / 2; list.forEach((it, i) => { g.fillStyle = 'rgba(8,10,16,.78)'; g.strokeStyle = it[2]; g.lineWidth = 4; g.beginPath(); g.roundRect(x, -22, ws[i], 44, 22); g.fill(); g.stroke(); g.fillStyle = it[2]; g.textAlign = 'left'; g.fillText(it[0] + ' ' + it[1], x + 13, 1); x += ws[i] + 8; }); g.restore(); }); }
@@ -930,9 +930,9 @@ function drawStatus(dt) {
       if (nm === '傷害提升') for (let i = 0; i < 3; i++) addPart(sparkTex, c, a.x + rand(-.4, .4), a.y + rand(.2, 1.4), a.z + rand(-.4, .4), 0, rand(1.2, 2.2), 0, .6, .3, 0, true);
       else if (nm === '加速') for (let i = 0; i < 3; i++) addPart(sparkTex, c, a.x + rand(-.3, .3), a.y + rand(.1, 1.2), a.z + rand(-.3, .3), -a.vx * .4, 0, -a.vz * .4, .45, .3, 0, true);
       else if (nm === '被標記') ringFx(a.x, a.y, a.z, c, 1.2, .5);
-      else if (nm === '護甲' || nm === '吸收盾') addPart(sparkTex, c, a.x, a.y + 1.1, a.z, 0, 0, 0, .3, 2.2, 0, true);
+      else if (nm === '護甲' || nm === '吸收盾') addPart(sparkTex, c, a.x, a.y + 1.1, a.z, 0, 0, 0, .3, 1.1, 0, true);
       else if (nm === '暈眩') for (let i = 0; i < 2; i++) addPart(starTex, c, a.x + rand(-.3, .3), a.y + 1.9, a.z + rand(-.3, .3), 0, .3, 0, .5, .3, 0, true);
-      else if (nm === '無敵') addPart(sparkTex, c, a.x, a.y + 1.0, a.z, 0, 0, 0, .3, 2.6, 0, true); } }
+      else if (nm === '無敵') addPart(sparkTex, c, a.x, a.y + 1.0, a.z, 0, 0, 0, .3, 1.2, 0, true); } }
   }
 }
 function drawLinks(dt) { drawStatus(dt);
@@ -1382,7 +1382,7 @@ function setupNetMatch() {   // 兩隊依加入順序輪流分：0、2 號一隊
   for (const a of actors) respawn(a);
   prog = [0, 0]; owner = -1; cap = 0; capTeam = -1; tLeft = 480; $('feed').innerHTML = ''; setViewmodel(); buildHud(); net.live = true; net.acc = 0; net.hlT = 0;
 }
-function netStateOut(a = me) { netSend({ r: a.hb ? a.rid : undefined, t: 's', x: +a.x.toFixed(2), y: +a.y.toFixed(2), z: +a.z.toFixed(2), yw: +a.yaw.toFixed(3), pt: +a.pitch.toFixed(3), hp: Math.round(a.hp), mh: a.maxHp, d: a.dead ? 1 : 0, hr: a.hero.id, vx: +a.vx.toFixed(1), vz: +a.vz.toFixed(1), g: a.ground ? 1 : 0, ar: a.armor > 0 ? 1 : 0, mk: a.mark > 0 ? 1 : 0, st: a.stun > 0 ? 1 : 0, hl: a.heal > 0 ? 1 : 0, k: a.kills, dd: a.deaths, dm: Math.round(a.dmg), he: Math.round(a.heals), dn: a.down ? 1 : 0, ab: a.absOn ? 1 : 0, bf: ((a.dmgT > 0 || a.rage > 0) ? 1 : 0) | ((a.spd > 0 || a.buff > 0) ? 2 : 0) | ((a.inv > .3 || a.immT > 0) ? 4 : 0) }); }
+function netStateOut(a = me) { netSend({ r: a.hb ? a.rid : undefined, t: 's', x: +a.x.toFixed(2), y: +a.y.toFixed(2), z: +a.z.toFixed(2), yw: +a.yaw.toFixed(3), pt: +a.pitch.toFixed(3), hp: Math.round(a.hp), mh: a.maxHp, d: a.dead ? 1 : 0, hr: a.hero.id, vx: +a.vx.toFixed(1), vz: +a.vz.toFixed(1), g: a.ground ? 1 : 0, ar: a.armor > 0 ? 1 : 0, mk: a.mark > 0 ? 1 : 0, st: a.stun > 0 ? 1 : 0, hl: a.heal > 0 ? 1 : 0, k: a.kills, dd: a.deaths, dm: Math.round(a.dmg), he: Math.round(a.heals), dn: a.down ? 1 : 0, ab: a.absOn ? 1 : 0, bf: ((a.dmgT > 0 || a.rage > 0) ? 1 : 0) | ((a.spd > 0 || a.buff > 0) ? 2 : 0) | (a.immT > 0 ? 4 : 0) }); }
 function netTick(dt) {
   net.acc += dt; if (net.acc >= .05) { net.acc = 0; netStateOut(); for (const a of actors) if (a.hb) netStateOut(a); }
   net.hlT += dt; if (net.hlT >= .2) { net.hlT = 0; for (const a of actors) if (a.remote && a.rid < 10 && a.nh >= 1) { const n = Math.floor(a.nh); a.nh -= n; netSend({ t: 'hl', to: a.rid, a: n }); } if (net.role === 'host') netSend({ t: 'pt', pr: [+prog[0].toFixed(2), +prog[1].toFixed(2)], ow: owner, cp: +cap.toFixed(1), ct: capTeam, tl: Math.round(tLeft) }); }
