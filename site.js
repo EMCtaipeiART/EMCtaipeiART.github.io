@@ -5043,7 +5043,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
           for(const d of days){
             const tags=[d.helpful?'<b class="u-ok">有幫助 '+d.helpful+'</b>':'',d.unhelpful?'<b class="u-bad">沒幫助 '+d.unhelpful+'</b>':'',d.notFound?'<b class="u-warn">查不到 '+d.notFound+'</b>':'',d.tired?'<b class="u-warn">累了 '+d.tired+'</b>':''].join('');
             h+='<div class="as-u-day"><div class="as-u-head"><span>'+esc(d.day.slice(5))+'</span><span class="n">'+d.questions+' 題</span><span class="n">'+fmt(d.tokens)+'</span></div>'+(tags?'<div class="as-u-tags">'+tags+'</div>':'');
-            for(const x of d.accounts.slice(0,5))h+='<div class="as-u-row"><span class="nm">'+esc(x.user||x.account)+'</span><span class="n">'+x.questions+' 題</span><span class="n">'+fmt(x.tokens)+'</span></div>';
+            for(const x of d.accounts)h+='<div class="as-u-row"><span class="nm">'+esc(x.user||x.account)+'</span><span class="n">'+x.questions+' 題</span><span class="n">'+fmt(x.tokens)+'</span></div>';
             h+='</div>';
           }
           S.msgs.push({role:'assistant',content:'近 7 天用量',html:h+'</div>'});

@@ -3478,3 +3478,4 @@
 
 ## 2026-11-20 後台小幫手「每人用量」補欄位
 - 每人用量原本只有提問／tokens／有幫助／沒幫助。新增：平均 tokens/題、今日用量、查不到、累了、最後提問時間。`assistantUsageReport` 的 accounts 每人多回 notFound／tired／last；前端 renderAssistant 彙整（今日＝days[0]）。
+- 同日：前台小黃視窗「用量」每天只列前 5 人（accounts.slice(0,5)），改成全部列出。
