@@ -29,7 +29,15 @@ const GUIDE: Record<RoleKey, string> = {
   other: ''
 };
 
-export function roleLine(info: RoleInfo): string {
+/** 提問者自己的即時現況（來自 getMyToday），讓答案貼著「他這個人」而不只是部門。 */
+export function personalLine(my: Record<string, unknown>): string {
+  const list = (v: unknown) => (Array.isArray(v) ? v : []).map(x => text((x as Record<string, unknown>)['專案名稱'])).filter(Boolean).slice(0, 4).join('、');
+  const n = (v: unknown) => Number(v) || 0;
+  const parts = [`待他回覆的過稿案 ${n(my.pendingReply)} 件`, `3 天內到期 ${n(my.dueSoon)} 件${list(my.dueCases) ? '（' + list(my.dueCases) + '）' : ''}`, `今天截稿 ${(my.dueToday as unknown[] || []).length} 件${list(my.dueToday) ? '（' + list(my.dueToday) + '）' : ''}`, `急件 ${(my.urgent as unknown[] || []).length} 件${list(my.urgent) ? '（' + list(my.urgent) + '）' : ''}`, `今天新進 ${n(my.newToday)} 件`];
+  return `他本人目前的現況：${parts.join('；')}。回答要貼著他自己的情況：用名字稱呼他、問到「我的／我要」就直接用這些資料（需要更多再呼叫工具）；沒被問到就不要主動報這串數字。`;
+}
+
+export function roleLine(info: RoleInfo, personal = ''): string {
   const who = `目前提問的人：${info.name || '（未知）'}｜角色：${info.label}${info.dept && info.dept !== info.label ? `（${info.dept}${info.group ? '／' + info.group : ''}）` : ''}。`;
   const guide = GUIDE[info.key];
   return guide ? `${who}\n依他的角色調整回答（只影響口吻與優先順序，不改變資料權限，也不要主動提到這段提示）：${guide}` : who;

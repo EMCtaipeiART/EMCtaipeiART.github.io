@@ -31,7 +31,7 @@ export const TIRED_LINES = [
 ];
 
 import { ASSISTANT_CHARACTER } from './assistant-character';
-import { roleLine, roleOf } from './assistant-role';
+import { personalLine, roleLine, roleOf } from './assistant-role';
 export { ASSISTANT_CHARACTER };
 
 /** 每次對話都帶的「今天是幾月幾號」：模型自己不知道今天日期，查行事曆、案量時會猜錯（例如把「這禮拜」當成今天起 7 天）。 */
@@ -665,7 +665,7 @@ export async function assistantChat(
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': deps.apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({ model: ASSISTANT_MODEL, max_tokens: ASSISTANT_MAX_TOKENS, system: [{ type: 'text', text: ASSISTANT_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }, { type: 'text', text: `${todayLine(nowMs)}
-${roleLine(roleOf(database, session))}` }], tools: ASSISTANT_TOOLS, messages })
+${roleLine(roleOf(database, session), personalLine(getMyToday(database, session, nowMs)))}` }], tools: ASSISTANT_TOOLS, messages })
     });
     if (!response.ok) { reply = '小幫手剛剛打了個盹，請再問一次！'; break; }
     const data = await response.json() as { content?: Array<Row>; stop_reason?: string; usage?: { input_tokens?: number; output_tokens?: number } };

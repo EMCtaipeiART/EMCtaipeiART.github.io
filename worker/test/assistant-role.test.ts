@@ -20,3 +20,13 @@ describe('小黃依角色調整', () => {
     expect(ROLE_TIPS.design.length).toBeGreaterThan(0);
   });
 });
+
+import { personalLine } from '../src/assistant-role';
+describe('個人現況', () => {
+  it('帶出自己的案件數與案名', () => {
+    const t = personalLine({ pendingReply: 2, dueSoon: 1, dueCases: [{ 專案名稱: 'A案' }], dueToday: [{ 專案名稱: 'B案' }], urgent: [], newToday: 0 });
+    expect(t).toContain('待他回覆的過稿案 2 件');
+    expect(t).toContain('A案');
+    expect(t).toContain('今天截稿 1 件（B案）');
+  });
+});

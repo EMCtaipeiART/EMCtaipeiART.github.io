@@ -3484,3 +3484,4 @@
 - 新增 `worker/src/assistant-role.ts`：`roleOf` 依「設定」表部門／組別判斷 設計部／企劃部／專案部（含呈鈺顧問）／管理者／測試員／其他；`roleLine` 產生角色提示，放在 system 的**未快取**區塊（與 todayLine 同段，不破壞 prompt cache）；只影響口吻與優先順序，案件可見範圍仍由 canViewCase 決定。
 - 懸停泡泡（assistantTicker 的 tips）先顯示該角色專屬提示（ROLE_TIPS），再接通用 FEATURE_TIPS。
 - 要改各角色重點：編輯 assistant-role.ts 的 GUIDE／ROLE_TIPS。測試：worker/test/assistant-role.test.ts。
+- 同日（個人化）：小黃 system 未快取區塊再加「他本人目前的現況」（`personalLine`，來自 getMyToday：待回覆、3 天內到期、今天截稿、急件、今天新進，含案名）。要求用名字稱呼、問到「我的」直接用，沒被問不主動報數字。仍只用他看得到的案件。
