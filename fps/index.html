@@ -290,7 +290,7 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
         <div class="plist" id="lobPl" hidden></div><button class="exitbtn" id="botB" type="button" hidden>＋ 加入電腦</button><button class="exitbtn" id="tlockB" type="button" hidden>🔓 隊伍：自由選隊</button><button class="go" id="goB" type="button" hidden>開始對戰</button>
         <div class="netst" id="netSt"></div><button class="exitbtn" id="netCancel" type="button" hidden>取消</button>
       </div>
-      <div class="help"><b>電腦：</b>WASD 移動　空白 跳　滑鼠 瞄準／左鍵射擊　右鍵 瞄準鏡（直尺）　<b>E</b> 技能一　<b>Shift</b> 技能二　<b>Q</b> 大招　按住 <b>Tab</b> 看戰績　陣亡後可選其他英雄（1–5）、左鍵／空白切換觀戰。<br><b>手機：</b>左搖桿移動、右半邊滑動轉視角，右下 射擊／跳／瞄準／技能一／技能二／大招。咖啡杯可補血。</div>
+      <div class="help"><b>電腦：</b>WASD 移動　空白 跳　滑鼠 瞄準／左鍵射擊　右鍵 瞄準鏡（直尺）　<b>E</b> 技能一　<b>Shift</b> 技能二　<b>Q</b> 大招　按住 <b>Tab</b> 看戰績　陣亡後可選其他位置（1–5）、左鍵／空白切換觀戰。<br><b>手機：</b>左搖桿移動、右半邊滑動轉視角，右下 射擊／跳／瞄準／技能一／技能二／大招。咖啡杯可補血。</div>
     </div>
   </div>
 </div>
@@ -551,6 +551,9 @@ const HEROES = [
     e: { n: '療癒訊號', ic: '📞', cd: 6, d: '立即治療瞄準的隊友 100 點（沒瞄準就治療附近血最少的隊友，自己 50），接著自動發射 3 波追蹤補血球，每波追上附近血最少的隊友補 50 點' }, s: { n: '不再占線', ic: '🛡️', cd: 12, d: '附近隊友獲得 50 點護甲（6 秒）；自己 2 秒內無敵：不受傷害、不被暈眩' }, q: { n: '全頻道廣播', ic: '📢', d: '原地復活所有倒下的隊友（60% 血、無敵 2.5 秒）；沒有人倒下時全隊獲得 50 護甲並治療 30' } }
 ];
 const HERO_BY = Object.fromEntries(HEROES.map(h => [h.id, h]));
+// ───────── 位置與外觀：五個位置（1 重裝、2 輸出、2 支援）由玩家自由選，和「用哪個角色的外觀」完全分開 ─────────
+const POS = { machi: '重裝', noise: '輸出・突擊', anna: '輸出・狙擊', amber: '支援・補給', leona: '支援・治療' };
+for (const h of HEROES) h.pos = POS[h.id];
 // ───────── 角色（12 角度公告板＋跑步圖集） ─────────
 const texCache = {};
 const walkCache = {};
@@ -578,11 +581,16 @@ const labelOf = a => isHuman(a) ? (a.pname || a.hero.role) : a.hero.role;   // �
 function relabel(a) {
   a.name = labelOf(a); if (a.nm && a.nm.material) { a.nm.material.map = nameTexOf((a.team ? '敵 ' : '友 ') + a.hero.ic + ' ' + a.name, a.team ? '#ff8f84' : '#8fd8ff'); a.nm.material.needsUpdate = true; }
 }
-function makeActor(hero, team, isMe) {
+const SKIN_KEY = 'emcFpsSkin', SKIN_BASE = ['透明人', 'Machi', 'Anna', 'Leona', 'Amber', 'Noise', '余采馨', '吳冠賢', '廖秦葦', '李明庭', '王藍庭', '鄭筱舢', '黎子瑄'];
+const skinList = () => { const o = SKIN_BASE.slice(); for (const k of Object.keys(cloud)) if (k !== '設計測試組' && !o.includes(k)) o.push(k); return o; };
+const defaultSkin = () => (ACCOUNT_NAME && skinList().includes(ACCOUNT_NAME)) ? ACCOUNT_NAME : '透明人';   // 登入且有對應角色就用自己的，否則透明人
+const mySkin = () => { let c = ''; try { c = localStorage.getItem(SKIN_KEY) || ''; } catch (e) {} return skinList().includes(c) ? c : defaultSkin(); };
+const botSkin = seed => { const L = skinList().filter(k => k !== '透明人'); return L[Math.abs(seed | 0) % L.length]; };   // 電腦隨機穿一個角色外觀（連線時由編號決定，每個人看到的一致）
+function makeActor(hero, team, isMe, skin) {
   const o = { name: hero.name, team, isMe, x: 0, y: 0, z: 0, vx: 0, vz: 0, vy: 0, yaw: 0, pitch: 0, hp: 100, dead: false, respT: 0, inv: 0, fireT: 0, kills: 0, deaths: 0, dmg: 0, heals: 0, ult: 0, buff: 0, rage: 0, dmgT: 0, spd: 0, stun: 0, mark: 0, heal: 0, volley: 0, armor: 0, armorT: 0, actT: { e: 0, s: 0, q: 0 }, volT: 0, chargeT: 0, fl: 0, ground: true, bot: null, path: [], tgt: null, anim: 0, dashT: 0, wph: 0 };
-  applyHero(o, hero);
+  applyHero(o, hero); o.skin = skin || hero.char;
   if (!isMe) {
-    const name = hero.char, ks = CHAR_SCALE[name] || 1, spr = mk(new THREE.PlaneGeometry(2 * ks, 2 * ks), new THREE.MeshBasicMaterial({ map: uniqTex(name, false), transparent: true, alphaTest: .5, side: THREE.DoubleSide })); spr.geometry.translate(0, 1 * ks - .02, 0); spr.rotation.order = 'YXZ';
+    const name = o.skin, ks = CHAR_SCALE[name] || 1, spr = mk(new THREE.PlaneGeometry(2 * ks, 2 * ks), new THREE.MeshBasicMaterial({ map: uniqTex(name, false), transparent: true, alphaTest: .5, side: THREE.DoubleSide })); spr.geometry.translate(0, 1 * ks - .02, 0); spr.rotation.order = 'YXZ';
     const ring = new THREE.Group(); { const r1 = mk(new THREE.RingGeometry(.62, .95, 32), new THREE.MeshBasicMaterial({ color: team ? 0xff4b3e : 0x5ec8ff, side: THREE.DoubleSide, transparent: true, opacity: .95, depthWrite: false })), r2 = mk(new THREE.CircleGeometry(.62, 28), new THREE.MeshBasicMaterial({ color: team ? 0xff4b3e : 0x5ec8ff, side: THREE.DoubleSide, transparent: true, opacity: .22, depthWrite: false })); r1.rotation.x = r2.rotation.x = -Math.PI / 2; ring.add(r1, r2); }
     const nm = new THREE.Sprite(new THREE.SpriteMaterial({ map: nameTexOf((team ? '敵 ' : '友 ') + hero.ic + ' ' + hero.name, team ? '#ff8f84' : '#8fd8ff'), transparent: true, depthTest: false })); nm.scale.set(2.1, .52, 1); nm.position.y = 2.45 * ks;
     const hpC = document.createElement('canvas'); hpC.width = 192; hpC.height = 28; const hpT = new THREE.CanvasTexture(hpC); hpT.minFilter = THREE.LinearFilter; const hpb = new THREE.Sprite(new THREE.SpriteMaterial({ map: hpT, transparent: true, depthTest: false })); hpb.scale.set(1.7, .25, 1); hpb.position.y = 2.2 * ks; const hpbB = hpb; const tri = new THREE.Sprite(new THREE.SpriteMaterial({ map: triTex[team], transparent: true, depthTest: false })); tri.scale.set(.55, .55, 1); tri.position.y = 2.95 * ks;
@@ -625,11 +633,11 @@ function makeGunModel(wid) {
   else { box(.15, .12, .36, 0xdb2777, 0, 0, -.1); cyl(.05, .35, 0x555b6e, 0, .03, -.4); box(.07, .07, .26, 0x1b1b1b, 0, .1, -.05); }
   g.scale.setScalar(1.15); g.rotation.order = 'YXZ'; return g;
 }
-function rebuildLook(a) { if (!a.spr) { relabel(a); return; } const name = a.hero.char; a.stand = uniqTex(name, false); a.walk = uniqTex(name, true); a.spr.material.map = a.stand; a.spr.material.needsUpdate = true; relabel(a); if (a.gun) { scene.remove(a.gun); a.gun = null; } }
+function rebuildLook(a) { if (!a.spr) { relabel(a); return; } const name = a.skin || a.hero.char; a.stand = uniqTex(name, false); a.walk = uniqTex(name, true); a.spr.material.map = a.stand; a.spr.material.needsUpdate = true; relabel(a); if (a.gun) { scene.remove(a.gun); a.gun = null; } }
 function setupMatch() { if (net && net.order) { setupNetMatch(); return; }
   clearActors(); const mine = HERO_BY[CFG.hero], shuffle = arr => arr.slice().sort(() => Math.random() - .5);
   const teamA = [mine, ...shuffle(HEROES.filter(h => h.id !== mine.id))], teamB = shuffle(HEROES);
-  [teamA, teamB].forEach((t, ti) => t.forEach((h, i) => { const a = makeActor(h, ti, ti === 0 && i === 0); a.bot = a.isMe ? null : { react: 0, strafe: 1, strafeT: 0, think: 0, seen: 0, patrol: null, abT: rand(1, 3) }; actors.push(a); }));
+  [teamA, teamB].forEach((t, ti) => t.forEach((h, i) => { const a = makeActor(h, ti, ti === 0 && i === 0, ti === 0 && i === 0 ? mySkin() : botSkin(Math.floor(Math.random() * 997))); a.bot = a.isMe ? null : { react: 0, strafe: 1, strafeT: 0, think: 0, seen: 0, patrol: null, abT: rand(1, 3) }; actors.push(a); }));
   me = actors[0]; me.pname = meName(); for (const a of actors) { respawn(a); relabel(a); }
   prog = [0, 0]; owner = -1; cap = 0; capTeam = -1; tLeft = 480; $('feed').innerHTML = ''; setViewmodel(); buildHud();
 }
@@ -1006,7 +1014,7 @@ bindBtn('fire', () => { hold.fire = true; }, () => { hold.fire = false; });
 bindBtn('jump', () => { keys.Space = true; setTimeout(() => keys.Space = false, 120); }, null);
 bindBtn('aim', () => setZoom(!zoom), null); bindBtn('skE', () => useE(me), null); bindBtn('skS', () => useS(me), null); bindBtn('skR', () => useQ(me), null);
 // 陣亡時重選英雄
-function showHeroSel(on) { const box = $('heroSel'); box.hidden = !on; if (!on) return; box.innerHTML = '<small>重生中　選擇下一位英雄（1–5）</small><div>' + HEROES.map((h, i) => '<button type="button" class="' + (me.nextHero === h.id || (!me.nextHero && me.hero.id === h.id) ? 'on' : '') + '" data-id="' + h.id + '"><b>' + (i + 1) + '</b>' + h.ic + '<span>' + h.name + '</span><em>' + h.role + '</em></button>').join('') + '</div>'; box.querySelectorAll('button').forEach(b => { b.onclick = () => chooseHero(b.dataset.id); }); }
+function showHeroSel(on) { const box = $('heroSel'); box.hidden = !on; if (!on) return; box.innerHTML = '<small>重生中　選擇下一個位置（1–5）</small><div>' + HEROES.map((h, i) => '<button type="button" class="' + (me.nextHero === h.id || (!me.nextHero && me.hero.id === h.id) ? 'on' : '') + '" data-id="' + h.id + '"><b>' + (i + 1) + '</b>' + h.ic + '<span>' + h.pos + '</span><em>' + h.title + '</em></button>').join('') + '</div>'; box.querySelectorAll('button').forEach(b => { b.onclick = () => chooseHero(b.dataset.id); }); }
 function chooseHero(id) { const cur = me.nextHero || me.hero.id; if (id === cur) return; const mate = net ? null : actors.find(a => a.team === me.team && !a.isMe && (a.nextHero || a.hero.id) === id); if (mate) mate.nextHero = cur; me.nextHero = id; CFG.hero = id; saveCfg(); showHeroSel(true); }
 function buildHud() { $('wpN').textContent = me.w.n; }
 
@@ -1163,13 +1171,14 @@ function drawPort(c, name) {   // 取方形頭像區（不拉伸變形）
 }
 function drawHeroes() {
   const h = HERO_BY[CFG.hero], W = WEAPONS[h.w], fire = Math.min(1, W.dmg * W.pellets * W.rate / 115), bar = (n, v, col) => '<div class="sb2"><span>' + n + '</span><i><u style="width:' + Math.round(clamp(v, .05, 1) * 100) + '%;background:' + col + '"></u></i></div>';
-  drawPort($('hbig'), h.char); $('hrole').textContent = h.role; $('hrole').className = 'rl r' + h.role; $('hname').textContent = h.name; $('htitle').textContent = h.title;
+  drawPort($('hbig'), mySkin()); $('hrole').textContent = h.role; $('hrole').className = 'rl r' + h.role; $('hname').textContent = h.pos; $('htitle').textContent = h.title;
   $('hstats').innerHTML = bar('生命', h.hp / 500, 'linear-gradient(90deg,#5ec8ff,#bfe9ff)') + bar('速度', h.speed / 6.2, 'linear-gradient(90deg,#5ef0a4,#c6ffe0)') + bar('火力', fire, 'linear-gradient(90deg,#ff6a3d,#ffd24a)');
   $('hweap').innerHTML = '<span>主武器</span><b>' + W.ic + ' ' + W.n + '</b>';
   $('habil').innerHTML = [['E', h.e], ['SHIFT', h.s], ['Q', h.q]].map(([k, a]) => '<div class="ab2' + (k === 'Q' ? ' ult' : '') + '"><kbd>' + k + '</kbd><b class="ai">' + a.ic + '</b><div><strong>' + a.n + '</strong><p>' + a.d + '</p><small>' + (a.cd ? '冷卻 ' + a.cd + ' 秒' : '靠傷害、治療、占點充能') + '</small></div></div>').join('');
-  $('heroes').innerHTML = HEROES.map(x => '<button type="button" class="hc2' + (CFG.hero === x.id ? ' on' : '') + '" data-id="' + x.id + '"><canvas width="96" height="96" data-c="' + x.char + '"></canvas><b>' + x.ic + ' ' + x.name + '</b><em class="rl r' + x.role + '">' + x.role + '</em></button>').join('');
-  $('heroes').querySelectorAll('canvas').forEach(c => drawPort(c, c.dataset.c));
-  $('heroes').querySelectorAll('button').forEach(b => { b.onclick = () => { CFG.hero = b.dataset.id; saveCfg(); drawHeroes(); if (net && !net.order) { netHi(); netLobby(); } }; });
+  $('heroes').innerHTML = HEROES.map((x, i) => '<button type="button" class="hc2' + (CFG.hero === x.id ? ' on' : '') + '" data-id="' + x.id + '"><span style="font-size:34px;line-height:1.1">' + x.ic + '</span><b>' + x.pos + '</b><em class="rl r' + x.role + '">' + x.title + '</em></button>').join('') + '<div class="skinrow" style="flex-basis:100%;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:8px;font-size:13px;color:#c9d3de;font-weight:700">外觀 <button type="button" class="exitbtn" id="skPrev">◀</button><b id="skName" style="min-width:90px;text-align:center;color:#ffd166">' + mySkin() + '</b><button type="button" class="exitbtn" id="skNext">▶</button><span style="color:#8a97a6;font-size:11px;font-weight:600">（跟位置無關，任何位置都能穿任何外觀）</span></div>';
+  $('heroes').style.flexWrap = 'wrap';
+  { const L = skinList(), step = d => { const i = L.indexOf(mySkin()); try { localStorage.setItem(SKIN_KEY, L[(i + d + L.length) % L.length]); } catch (e) {} for (const k in portCache) delete portCache[k]; drawHeroes(); if (net && !net.order) { netHi(); netLobby(); } }; $('skPrev').onclick = () => step(-1); $('skNext').onclick = () => step(1); }
+  $('heroes').querySelectorAll('button.hc2').forEach(b => { b.onclick = () => { CFG.hero = b.dataset.id; saveCfg(); drawHeroes(); if (net && !net.order) { netHi(); netLobby(); } }; });
 }
 drawHeroes(); cloudReady.then(() => { for (const k in portCache) delete portCache[k]; drawHeroes(); });   // 雲端最新角色清單到了再重畫頭像
 // ───────── 連線對戰（沿用對決的中繼房間，最多 4 人真人；每人負責自己的位置與血量，傷害由攻擊方送給受擊方，房主當裁判算控制點）─────────
@@ -1196,8 +1205,8 @@ function netAdopt(ws, room, role, info) {
   ws.onclose = () => { if (net && net.ws === ws) netLost(); };
   return net;
 }
-const netHi = () => netSend({ t: 'hi', hero: CFG.hero, nm: meName() });
-const heroTag = id => { const h = HERO_BY[id]; return h ? h.ic + ' ' + h.name : '連線中…'; };
+const netHi = () => netSend({ t: 'hi', hero: CFG.hero, nm: meName(), sk: mySkin() });
+const heroTag = id => { const h = HERO_BY[id]; return h ? h.ic + ' ' + h.pos : '連線中…'; };   // 顯示位置（重裝／輸出／支援），不是角色名
 // ───────── 連線：自選隊伍（A 隊／B 隊）。房主是隊伍表的唯一來源；每位玩家點自己的名字換隊，房主可以替任何人（含電腦）換隊 ─────────
 const TM_MAX = 3;
 const tmCount = () => { const c = [0, 0]; for (const k in (net.tm || {})) if (net.tm[k] === 0 || net.tm[k] === 1) c[net.tm[k]]++; return c; };
@@ -1219,10 +1228,12 @@ function netLobby() {   // 等待室：誰在房裡、各在哪一隊、房主�
   const ids = Object.keys(net.peers).map(Number).sort((a, b) => a - b), bl = Object.keys(net.bots || {}).map(Number).sort((a, b) => a - b), n = ids.length + 1 + bl.length, host = net.role === 'host';
   const people = [{ id: net.myId, hero: CFG.hero, me: true, nm: meName() }].concat(ids.filter(id => id !== net.myId).map(id => ({ id, hero: net.peers[id].hero, hi: net.peers[id].hi, nm: net.peers[id].nm })), bl.map(id => ({ id, hero: net.bots[id], bot: true })));
   const grp = g => { const list = people.filter(p => teamOf(p.id, 0) === g); return '<div style="flex:1 1 210px;min-width:0;border:1px solid ' + (g ? '#ff8a5f' : '#5ec8ff') + ';padding:8px;display:flex;flex-direction:column;gap:6px;align-items:center"><b style="letter-spacing:.2em;color:' + (g ? '#ff8a5f' : '#5ec8ff') + '">' + (g ? 'B 隊' : 'A 隊') + '（' + list.length + '）</b>' + (list.map(p => '<span class="pl tmx" data-id="' + p.id + '" data-g="' + g + '" title="' + (host || (p.me && !net.tlock) ? '點一下換到另一隊' : '') + '" style="' + (host || (p.me && !net.tlock) ? 'cursor:pointer;' : '') + (p.me ? 'border-color:#5fe08a;' : '') + '">' + (p.bot ? '🤖 ' : '') + heroTag(p.hero) + (p.nm ? ' · ' + p.nm : '') + (p.me ? '（你）' : '') + (host ? ' <i style="font-style:normal;opacity:.7">⇄</i>' : '') + (p.bot && host ? ' <i class="rmb" data-b="' + p.id + '" title="移除這台電腦" style="font-style:normal;opacity:.8;margin-left:4px">✕</i>' : '') + '</span>').join('') || '<span style="color:#8a97a6;font-size:12px">（沒有人）</span>') + '</div>'; };
-  const c = tmCount(), both = !!net.tm && c[0] > 0 && c[1] > 0, anyOther = ids.some(id => net.peers[id].hi) || bl.length > 0, ok = both && anyOther;
+  const c = tmCount(), both = !!net.tm && c[0] > 0 && c[1] > 0, anyOther = ids.some(id => net.peers[id].hi) || bl.length > 0;
+  const seen = {}; let dup = false; for (const p of people) { const k = teamOf(p.id, 0) + ':' + p.hero; if (seen[k]) dup = true; seen[k] = 1; }   // 同一隊每個位置只能有一人
+  const ok = both && anyOther && !dup;
   $('lobPl').hidden = false; $('lobPl').style.cssText = 'display:flex;flex-wrap:wrap;gap:10px;width:100%;justify-content:center'; $('lobPl').innerHTML = grp(0) + grp(1) + '<em style="flex-basis:100%;text-align:center">' + n + ' / 6 人（每隊最多 ' + TM_MAX + '）</em>'; $('botB').hidden = !host; $('botB').disabled = n >= 6; $('tlockB').hidden = !host; $('tlockB').textContent = net.tlock ? '🔒 隊伍：房主分配' : '🔓 隊伍：自由選隊';
   $('goB').hidden = !host; $('goB').disabled = !ok; $('goB').textContent = '開始對戰（' + n + ' 人）';
-  netSt(host ? (anyOther ? (both ? '點名字可以換隊；A、B 隊都有人就能開始' + (net.quick ? '（15 秒後自動開始）' : '') : 'A、B 兩隊都要有人才能開始，點名字換隊') : '等待玩家加入…') : (net.tlock ? '隊伍由房主分配，等房主開始對戰…' : '已加入房間：點自己的名字可以選 A 隊或 B 隊，等房主開始對戰…'));
+  netSt(dup ? '同一隊每個位置只能有一個人：請讓其中一位改選別的位置（或換隊）' : host ? (anyOther ? (both ? '點名字可以換隊；A、B 隊都有人就能開始' + (net.quick ? '（15 秒後自動開始）' : '') : 'A、B 兩隊都要有人才能開始，點名字換隊') : '等待玩家加入…') : (net.tlock ? '隊伍由房主分配，等房主開始對戰…' : '已加入房間：點自己的名字可以選 A 隊或 B 隊，等房主開始對戰…'));
 }
 function netStart() {   // 房主開始：鎖定名單、通知大家
   if (!net || net.role !== 'host' || net.order) return;
@@ -1235,7 +1246,7 @@ function netAgain() { if (!net) return; net.myRm = true; const b = $('againB'); 
 function tryRematch() { if (net && net.role === 'host' && net.myRm && net.order.every(id => id === net.myId || id >= 10 || (net.peers[id] && net.peers[id].rm))) { netSend({ t: 'st', ids: net.order, bh: net.bots || {}, tm: net.tm }); netLaunch(); } }
 function setupNetMatch() {   // 兩隊依加入順序輪流分：0、2 號一隊，1、3 號一隊；每個人看自己這隊都是「我方」(藍)，出生側用全域隊伍
   clearActors(); const ord = net.order; net.myG = teamOf(net.myId, ord.indexOf(net.myId));
-  ord.forEach((id, i) => { const g = teamOf(id, i), isB = id >= 10, hero = HERO_BY[id === net.myId ? CFG.hero : isB ? (net.bots || {})[id] : (net.peers[id] || {}).hero] || HEROES[0], a = makeActor(hero, g === net.myG ? 0 : 1, id === net.myId); a.rid = id; a.gt = g; a.hb = isB && net.role === 'host'; a.remote = id !== net.myId && !a.hb; if (a.hb) a.bot = { react: 0, strafe: 1, strafeT: 0, think: 0, seen: 0, patrol: null, abT: rand(1, 3) }; if (id === net.myId) me = a; if (!isB) a.pname = id === net.myId ? meName() : ((net.peers[id] || {}).nm || ''); relabel(a); actors.push(a); });
+  ord.forEach((id, i) => { const g = teamOf(id, i), isB = id >= 10, hero = HERO_BY[id === net.myId ? CFG.hero : isB ? (net.bots || {})[id] : (net.peers[id] || {}).hero] || HEROES[0], a = makeActor(hero, g === net.myG ? 0 : 1, id === net.myId, id === net.myId ? mySkin() : isB ? botSkin(id * 7 + HEROES.indexOf(hero) * 3) : ((net.peers[id] || {}).sk || '透明人')); a.rid = id; a.gt = g; a.hb = isB && net.role === 'host'; a.remote = id !== net.myId && !a.hb; if (a.hb) a.bot = { react: 0, strafe: 1, strafeT: 0, think: 0, seen: 0, patrol: null, abT: rand(1, 3) }; if (id === net.myId) me = a; if (!isB) a.pname = id === net.myId ? meName() : ((net.peers[id] || {}).nm || ''); relabel(a); actors.push(a); });
   for (const a of actors) respawn(a);
   prog = [0, 0]; owner = -1; cap = 0; capTeam = -1; tLeft = 480; $('feed').innerHTML = ''; setViewmodel(); buildHud(); net.live = true; net.acc = 0; net.hlT = 0;
 }
@@ -1259,7 +1270,7 @@ function netAbilityOnMe(P, k) {   // 別人施放的技能，對我生效的部�
 function netMsg(m) {
   if (!net) return; const sid = m.r !== undefined ? m.r : m.i !== undefined ? m.i : (net.role === 'host' ? 1 : 0);
   if (m.t === 'ready' || m.t === 'join') { if (net.order) return; net.peers[sid] = net.peers[sid] || {}; netHi(); netLobby(); tmSync(); if (net.role === 'host' && net.quick && !net.autoT) { const nn = net; nn.autoT = setTimeout(() => { if (net === nn) netStart(); }, 15000); } return; }
-  if (m.t === 'hi') { const p = net.peers[sid] = net.peers[sid] || {}; p.hero = HERO_BY[m.hero] ? m.hero : 'machi'; p.nm = String(m.nm || '').replace(/[<>&"]/g, '').trim().slice(0, 12); p.hi = true; netLobby(); tmSync(); return; }
+  if (m.t === 'hi') { const p = net.peers[sid] = net.peers[sid] || {}; p.hero = HERO_BY[m.hero] ? m.hero : 'machi'; p.nm = String(m.nm || '').replace(/[<>&"]/g, '').trim().slice(0, 12); p.sk = skinList().includes(m.sk) ? m.sk : '透明人'; p.hi = true; netLobby(); tmSync(); return; }
   if (m.t === 'tm') { if (net.role === 'host' && !net.order && !net.tlock) tmSet(sid, Number(m.g)); return; }
   if (m.t === 'tms') { if (net.role !== 'host' && !net.order) { net.tm = {}; net.tlock = !!m.lk; for (const k in (m.m || {})) net.tm[Number(k)] = m.m[k]; netLobby(); } return; }
   if (m.t === 'st') { if (net.role === 'host') return; const ids = (m.ids || []).map(Number); net.bots = m.bh || {}; net.tm = {}; for (const k in (m.tm || {})) net.tm[Number(k)] = m.tm[k]; if (!ids.includes(net.myId)) { netClose(); netUi(false, '房主已經開始對戰了，你沒趕上，請再加入一次'); return; } net.order = ids; netLaunch(); return; }
