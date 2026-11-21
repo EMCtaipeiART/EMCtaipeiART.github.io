@@ -560,13 +560,13 @@ const WEAPONS = {
 const HEROES = [
   { id: 'machi', char: 'Machi', name: 'Machi', title: '責任壁壘', role: '重裝', ic: '🛡️', hp: 500, speed: 5.0, w: 'keyboard', pref: 6, sleeve: 0x2b2d3a,
     e: { n: '壁壘泡泡', ic: '🛡️', cd: 10, d: '在前方撐起大泡泡，約可罩住 3 個人，擋住外面射進來的子彈，裡面的我方輕微回血（900 血、5 秒）' }, s: { n: '衝鋒', ic: '🐂', cd: 8, d: '向前猛衝並把血量補滿，撞到的敵人受 60 傷害並被擊退' }, q: { n: '震地', ic: '💥', d: '半徑 8 公尺：70 傷害＋暈眩 1.2 秒' } },
-  { id: 'noise', char: 'Noise', name: 'Noise', title: '截稿狂熱', role: '輸出', ic: '⚡', hp: 260, speed: 6.0, w: 'stapler', pref: 9, sleeve: 0x1d4ed8,
+  { id: 'noise', char: 'Noise', name: 'Noise', title: '截稿狂熱', role: '輸出', ic: '⚡', hp: 320, speed: 6.0, w: 'stapler', pref: 9, sleeve: 0x1d4ed8,
     e: { n: '閃身步', ic: '💨', cd: 5, d: '向移動方向急衝一小段' }, s: { n: '咖啡因', ic: '☕', cd: 12, d: '5 秒內移速 +45%、射速 +20%' }, q: { n: '截稿狂暴', ic: '🔥', d: '6 秒內射速 ×1.6、傷害 ×1.35' } },
-  { id: 'anna', char: 'Anna', name: 'Anna', title: '精準標記', role: '輸出', ic: '🎯', hp: 260, speed: 5.4, w: 'ruler', pref: 18, sleeve: 0xf59e0b,
+  { id: 'anna', char: 'Anna', name: 'Anna', title: '精準標記', role: '輸出', ic: '🎯', hp: 320, speed: 5.4, w: 'ruler', pref: 18, sleeve: 0xf59e0b,
     e: { n: '彈跳', ic: '🦘', cd: 6, d: '朝你按的方向（前後左右，沒按就往前）彈跳一段，並回復 20 血' }, s: { n: '標記', ic: '🔍', cd: 12, d: '標記 40 公尺內的敵人 4 秒：他們受到的傷害 +25%（不會穿牆顯示）' }, q: { n: '鎖頭', ic: '🎯', d: '4 秒內自動鎖定最近敵人的頭部，每一槍都是爆頭' } },
-  { id: 'amber', char: 'Amber', name: 'Amber', title: '茶歇補給', role: '支援', ic: '☕', hp: 150, speed: 5.6, w: 'mouse', pref: 12, sleeve: 0x16a34a,
+  { id: 'amber', char: 'Amber', name: 'Amber', title: '茶歇補給', role: '支援', ic: '☕', hp: 220, speed: 5.6, w: 'mouse', pref: 12, sleeve: 0x16a34a,
     e: { n: '治療光環', ic: '💚', cd: 12, d: '4 秒內持續治療身邊 8 公尺內的隊友（含自己）' }, s: { n: '加油鼓舞', ic: '📣', cd: 10, d: '附近隊友 4 秒移速 +35%' }, q: { n: '茶歇回復', ic: '🫖', d: '全隊立刻回滿血' } },
-  { id: 'leona', char: 'Leona', name: 'Leona', title: '電話客服', role: '支援', ic: '☎️', hp: 150, speed: 5.5, w: 'link', pref: 14, sleeve: 0xdb2777,
+  { id: 'leona', char: 'Leona', name: 'Leona', title: '電話客服', role: '支援', ic: '☎️', hp: 220, speed: 5.5, w: 'link', pref: 14, sleeve: 0xdb2777,
     e: { n: '療癒訊號', ic: '📞', cd: 6, d: '對瞄準的敵人（沒瞄準就找最近的）造成 100 點傷害，接著自動發射 3 波追蹤彈，各追最近的敵人造成 40 點' }, s: { n: '不再占線', ic: '🛡️', cd: 5, d: '瞬間移動到瞄準（或最近）的隊友旁邊；2.5 秒內無敵（不受傷害、不被暈眩）並每秒回血' }, q: { n: '全頻道廣播', ic: '📢', d: '原地復活所有倒下的隊友（60% 血、無敵 2.5 秒）；沒有人倒下時全隊獲得 50 護甲並治療 30。治療越多充能越快，另有被動充能' } }
 ];
 const HERO_BY = Object.fromEntries(HEROES.map(h => [h.id, h]));
