@@ -566,12 +566,13 @@ const HEROES = [
   { id: 'amber', char: 'Amber', name: 'Amber', title: '茶歇補給', role: '支援', ic: '☕', hp: 150, speed: 5.6, w: 'mouse', pref: 12, sleeve: 0x16a34a,
     e: { n: '治療光環', ic: '💚', cd: 12, d: '4 秒內持續治療身邊 8 公尺內的隊友（含自己）' }, s: { n: '加油鼓舞', ic: '📣', cd: 10, d: '附近隊友 4 秒移速 +35%' }, q: { n: '茶歇回復', ic: '🫖', d: '全隊立刻回滿血' } },
   { id: 'leona', char: 'Leona', name: 'Leona', title: '電話客服', role: '支援', ic: '☎️', hp: 150, speed: 5.5, w: 'phone', pref: 14, sleeve: 0xdb2777,
-    e: { n: '療癒訊號', ic: '📞', cd: 6, d: '立即治療瞄準的隊友 100 點（沒瞄準就治療附近血最少的隊友，自己 50），接著自動發射 3 波追蹤補血球，每波追上附近血最少的隊友補 50 點' }, s: { n: '不再占線', ic: '🛡️', cd: 12, d: '附近隊友獲得 50 點護甲（6 秒）；自己 2 秒內無敵：不受傷害、不被暈眩' }, q: { n: '全頻道廣播', ic: '📢', d: '原地復活所有倒下的隊友（60% 血、無敵 2.5 秒）；沒有人倒下時全隊獲得 50 護甲並治療 30' } }
+    e: { n: '療癒訊號', ic: '📞', cd: 6, d: '立即治療瞄準的隊友 100 點（沒瞄準就治療附近血最少的隊友，自己 50），接著自動發射 3 波追蹤補血球，每波追上附近血最少的隊友補 50 點' }, s: { n: '不再占線', ic: '🛡️', cd: 12, d: '附近隊友獲得 50 點護甲（6 秒）；自己 2 秒內無敵：不受傷害、不被暈眩' }, q: { n: '全頻道廣播', ic: '📢', d: '原地復活所有倒下的隊友（60% 血、無敵 2.5 秒）；沒有人倒下時全隊獲得 50 護甲並治療 30。治療越多充能越快，另有被動充能' } }
 ];
 const HERO_BY = Object.fromEntries(HEROES.map(h => [h.id, h]));
 // ───────── 位置與外觀：五個位置（1 重裝、2 輸出、2 支援）由玩家自由選，和「用哪個角色的外觀」完全分開 ─────────
 const POS = { machi: '重裝', noise: '輸出・突擊', anna: '輸出・狙擊', amber: '支援・補給', leona: '支援・治療' };
 for (const h of HEROES) h.pos = POS[h.id];
+HERO_BY.amber.r = { n: '補給光束', ic: '💚', d: '按住滑鼠右鍵對準隊友，持續幫他補血（每秒 35 點、約 25 公尺內、中間不能有牆）', sm: '按住右鍵（手機：瞄準鈕）' };
 // ───────── 角色（12 角度公告板＋跑步圖集） ─────────
 const texCache = {};
 const walkCache = {};
@@ -797,7 +798,7 @@ function dmgTo(t, d, src, head, wname, hx, hy, hz) {
   if (t.g && !t.dead) { const px = hx ?? t.x, py = hy ?? t.y + 1.2, pz = hz ?? t.z; paperBurst(px, py, pz, head ? 6 : 3); sparkBurst(px, py, pz, head ? 6 : 3, head ? 0xffd24a : 0xffffff, 2.5); }
   if (t.hp <= 0) kill(t, src, wname);
 }
-function healTo(t, amt, src) { if (t.dead || t.hp >= t.maxHp) return; if (src && src.remote && !NETIN) return; if (net && t.remote) { const a = Math.min(amt, t.maxHp - t.hp); t.nh = (t.nh || 0) + a; if (src) { src.heals += a; addUlt(src, a * .3); } return; } const a = Math.min(amt, t.maxHp - t.hp); t.hp += a; if (src) { src.heals += a; addUlt(src, a * .3); } if (t.isMe || (src && src.isMe)) { t.healAcc = (t.healAcc || 0) + a; if (t.healAcc >= 12) { floatNum(t.x, t.y + 2.1, t.z, '+' + Math.round(t.healAcc), '#5ef0a4', false); t.healAcc = 0; } } }
+function healTo(t, amt, src) { if (t.dead || t.hp >= t.maxHp) return; if (src && src.remote && !NETIN) return; if (net && t.remote) { const a = Math.min(amt, t.maxHp - t.hp); t.nh = (t.nh || 0) + a; if (src) { src.heals += a; addUlt(src, a * ((src.hero && src.hero.id === 'leona') ? .75 : .3)); } return; } const a = Math.min(amt, t.maxHp - t.hp); t.hp += a; if (src) { src.heals += a; addUlt(src, a * ((src.hero && src.hero.id === 'leona') ? .75 : .3)); } if (t.isMe || (src && src.isMe)) { t.healAcc = (t.healAcc || 0) + a; if (t.healAcc >= 12) { floatNum(t.x, t.y + 2.1, t.z, '+' + Math.round(t.healAcc), '#5ef0a4', false); t.healAcc = 0; } } }
 function dirHit(a) { const el = $('dir').firstElementChild; el.style.transform = 'rotate(' + (wrapA(a + yaw + Math.PI) * 180 / Math.PI) + 'deg)'; el.style.opacity = 1; clearTimeout(dirHit.t); dirHit.t = setTimeout(() => { el.style.opacity = 0; }, 700); }
 function hitMark(head, kill) { const el = $('hm'); el.classList.remove('on'); void el.offsetWidth; el.classList.toggle('hs', !!head); el.classList.toggle('kill', !!kill); el.classList.add('on'); clearTimeout(hitMark.t); hitMark.t = setTimeout(() => el.classList.remove('on'), 280); kill ? SFX.kill() : head ? SFX.head() : SFX.hit(); }
 function killIcon() { const el = $('killIc'); el.className = 'hud'; void el.getBoundingClientRect(); el.className = 'hud on'; clearTimeout(killIcon.t); killIcon.t = setTimeout(() => el.className = 'hud', 1000); }
@@ -1012,7 +1013,7 @@ addEventListener('keydown', e => { if (e.code === 'Tab') { e.preventDefault(); c
   if (state !== 'play') return;
   if (e.code === 'Tab') { showSB(true); return; }
   if (me.dead) { if (/^Digit[1-5]$/.test(e.code)) chooseHero(HEROES[+e.code.slice(5) - 1].id); if (e.code === 'Space' || e.code === 'ArrowRight') nextSpec(1); if (e.code === 'ArrowLeft') nextSpec(-1); return; }
-  if (e.code === 'KeyE') useE(me); if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') useS(me); if (e.code === 'KeyQ' || e.code === 'KeyR') useQ(me); if (e.code === 'Tab') showSB(true); });
+  if (e.code === 'KeyE') useE(me); if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') useS(me); if (e.code === 'KeyQ') useQ(me); if (e.code === 'Tab') showSB(true); });
 addEventListener('keyup', e => { keys[e.code] = false; if (e.code === 'Tab') { e.preventDefault(); showSB(false); } });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; hold.fire = false; showSB(false); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { for (const k in keys) keys[k] = false; hold.fire = false; showSB(false); } });
@@ -1034,7 +1035,8 @@ function edgeTurn(dt) {   // 一般滑鼠模式才用：貼邊就持續轉
 }
 addEventListener('mousemove', e => { if ((!locked && !lockFail) || (state !== 'play' && state !== 'count')) return; yaw -= e.movementX * .0022 * (zoom ? .4 : 1); pitch = clamp(pitch - e.movementY * .0022 * (zoom ? .4 : 1), -1.45, 1.45); });
 $('lock').onclick = () => { unlock(); lockFail = false; askLock(); };
-function setZoom(v) { if (state !== 'play' || !me || me.dead || !me.w.zoom) { zoom = false; } else zoom = v; }
+let healHold = false;   // Amber 按住右鍵：補血光束
+function setZoom(v) { if (state !== 'play' || !me || me.dead) { zoom = false; healHold = false; return; } if (me.hero.id === 'amber') { healHold = !!v; zoom = false; return; } healHold = false; if (!me.w.zoom) { zoom = false; } else zoom = v; }
 const stick = $('stick'), knob = stick.firstElementChild;
 function joyMove(e) { const r = stick.getBoundingClientRect(), rad = Math.min(r.width, r.height); let sx = e.clientX - r.left - r.width / 2, sy = e.clientY - r.top - r.height / 2; if (isRot()) { const t = sx; sx = sy; sy = -t; } const k = rad / 110; let dx = sx / (45 * k), dy = sy / (45 * k); const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; } joy.x = dx; joy.y = dy; knob.style.transform = 'translate(' + dx * 32 * k + 'px,' + dy * 32 * k + 'px)'; }
 stick.addEventListener('pointerdown', e => { e.preventDefault(); unlock(); try { stick.setPointerCapture(e.pointerId); } catch (x) {} joyMove(e); });
@@ -1048,7 +1050,7 @@ function bindBtn(id, down, up) { const el = $(id); el.addEventListener('pointerd
 ['skE', 'skS', 'skR'].forEach(id => $(id).insertAdjacentHTML('beforeend', '<i class="sw"></i><em class="ct"></em>'));
 bindBtn('fire', () => { hold.fire = true; }, () => { hold.fire = false; });
 bindBtn('jump', () => { keys.Space = true; setTimeout(() => keys.Space = false, 120); }, null);
-bindBtn('aim', () => setZoom(!zoom), null); bindBtn('skE', () => useE(me), null); bindBtn('skS', () => useS(me), null); bindBtn('skR', () => useQ(me), null);
+bindBtn('aim', () => setZoom(me && me.hero.id === 'amber' ? !healHold : !zoom), null); bindBtn('skE', () => useE(me), null); bindBtn('skS', () => useS(me), null); bindBtn('skR', () => useQ(me), null);
 // 陣亡時重選英雄
 function showHeroSel(on) { const box = $('heroSel'); box.hidden = !on; if (!on) return; box.innerHTML = '<small>重生中　選擇下一個位置（1–5）</small><div>' + HEROES.map((h, i) => '<button type="button" class="' + (me.nextHero === h.id || (!me.nextHero && me.hero.id === h.id) ? 'on' : '') + '" data-id="' + h.id + '"><b>' + (i + 1) + '</b>' + h.ic + '<span>' + h.pos + '</span><em>' + h.title + '</em></button>').join('') + '</div>'; box.querySelectorAll('button').forEach(b => { b.onclick = () => chooseHero(b.dataset.id); }); }
 function chooseHero(id) { const cur = me.nextHero || me.hero.id; if (id === cur) return; const mate = net ? null : actors.find(a => a.team === me.team && !a.isMe && (a.nextHero || a.hero.id) === id); if (mate) mate.nextHero = cur; me.nextHero = id; CFG.hero = id; saveCfg(); showHeroSel(true); }
@@ -1064,6 +1066,7 @@ function stepActor(a, dt) {
   // 連環轟炸
   if (a.volley > 0) { a.volley -= dt; a.volT -= dt; if (a.volT <= 0) { a.volT = .4; fireWeapon(a, WEAPONS.phone); } }
   // 衝鋒撞人
+  if (a.hero.id === 'leona' && !a.dead && !a.remote && a.ult < 100 && state === 'play') a.ult = Math.min(100, a.ult + 1.2 * dt);   // Leona 大招被動充能
   if (a.seekW > 0) { a.seekT -= dt; if (a.seekT <= 0) { a.seekW--; a.seekT = 1.1; launchSeeker(a); } }   // Leona：三波自動追蹤補血球
   if (a.immT > 0) { a.immT -= dt; a.stun = 0; a.inv = Math.max(a.inv, .2); }   // Leona 小招：2 秒無敵＋免疫暈眩
   if (a.lockT > 0) a.lockT -= dt; if (!a.remote && !a.dead && a.hp < a.maxHp) { a.hurtT = (a.hurtT || 0) + dt; if (a.hurtT > 4) a.hp = Math.min(a.maxHp, a.hp + a.maxHp * .08 * dt); }   // 4 秒沒受傷開始自動回血（每秒 8% 血量）
@@ -1078,6 +1081,7 @@ function stepActor(a, dt) {
       for (const t of enemiesOf(a)) { if (t.dead) continue; const dx = t.x - a.x, dz = t.z - a.z, dy = t.y + 1.15 - (a.y + 1.55), h = Math.hypot(dx, dz); if (h < .5 || h > 45) continue; let dyaw = Math.atan2(-dx, -dz) - yaw; dyaw = Math.atan2(Math.sin(dyaw), Math.cos(dyaw)); const dp = Math.atan2(dy, h) - pitch, ang = Math.hypot(dyaw * Math.cos(pitch), dp); if (ang < cone && ang < bd && los(a, t, a.y + 1.55, t.y + 1.15)) { bd = ang; best = [dyaw, dp]; } }
       tAim = !!best; if (best) { const k = Math.min(1, dt * (8)) * (zoom ? .5 : 1); yaw += best[0] * k; pitch = clamp(pitch + best[1] * k, -1.45, 1.45); }
     }
+    if (healHold && a.hero.id === 'amber' && !a.dead && state === 'play') { const bt = leonaTarget(a); if (bt && bt !== a && !bt.dead && bt.hp < bt.maxHp) { healTo(bt, 35 * dt, a); a.rbT = (a.rbT || 0) - dt; if (a.rbT <= 0) { a.rbT = .1; beam(muzzleOf(a), [bt.x, bt.y + 1.2, bt.z], 0x5ef0a4, .05, .12); } } } else if (a.dead) healHold = false;
     a.yaw = yaw; a.pitch = pitch; if (keys.Space && a.ground && a.stun <= 0) { a.vy = 6.6; a.ground = false; }
     if ((hold.fire || tAim) && a.fireT <= 0 && state === 'play') { if (a.w.kind === 'auto' || (touch && !hold.fire) || !a.held) { fire(a); if (a.w.kind !== 'auto') a.held = true; } } if (!hold.fire) a.held = false;
   } else if (state === 'play') botThink(a, dt);
@@ -1210,7 +1214,7 @@ function drawHeroes() {
   drawPort($('hbig'), mySkin()); $('hrole').textContent = h.role; $('hrole').className = 'rl r' + h.role; $('hname').textContent = h.pos; $('htitle').textContent = h.title;
   $('hstats').innerHTML = bar('生命', h.hp / 500, 'linear-gradient(90deg,#5ec8ff,#bfe9ff)') + bar('速度', h.speed / 6.2, 'linear-gradient(90deg,#5ef0a4,#c6ffe0)') + bar('火力', fire, 'linear-gradient(90deg,#ff6a3d,#ffd24a)');
   $('hweap').innerHTML = '<span>主武器</span><b>' + W.ic + ' ' + W.n + '</b>';
-  $('habil').innerHTML = [['E', h.e], ['SHIFT', h.s], ['Q', h.q]].map(([k, a]) => '<div class="ab2' + (k === 'Q' ? ' ult' : '') + '"><kbd>' + k + '</kbd><b class="ai">' + a.ic + '</b><div><strong>' + a.n + '</strong><p>' + a.d + '</p><small>' + (a.cd ? '冷卻 ' + a.cd + ' 秒' : '靠傷害、治療、占點充能') + '</small></div></div>').join('');
+  $('habil').innerHTML = [['E', h.e], ['SHIFT', h.s], ['Q', h.q]].concat(h.r ? [['右鍵', h.r]] : []).map(([k, a]) => '<div class="ab2' + (k === 'Q' ? ' ult' : '') + '"><kbd>' + k + '</kbd><b class="ai">' + a.ic + '</b><div><strong>' + a.n + '</strong><p>' + a.d + '</p><small>' + (a.sm || (a.cd ? '冷卻 ' + a.cd + ' 秒' : '靠傷害、治療、占點充能')) + '</small></div></div>').join('');
   $('heroes').innerHTML = HEROES.map((x, i) => '<button type="button" class="hc2' + (CFG.hero === x.id ? ' on' : '') + '" data-id="' + x.id + '"><span style="font-size:34px;line-height:1.1">' + x.ic + '</span><b>' + x.pos + '</b><em class="rl r' + x.role + '">' + x.title + '</em></button>').join('') + '<div class="skinrow" style="flex-basis:100%;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:8px;font-size:13px;color:#c9d3de;font-weight:700">外觀 <button type="button" class="exitbtn" id="skPrev">◀</button><b id="skName" style="min-width:90px;text-align:center;color:#ffd166">' + mySkin() + '</b><button type="button" class="exitbtn" id="skNext">▶</button><span style="color:#8a97a6;font-size:11px;font-weight:600">（跟位置無關，任何位置都能穿任何外觀）</span></div>';
   $('heroes').style.flexWrap = 'wrap';
   { const L = skinList(), step = d => { const i = L.indexOf(mySkin()); try { localStorage.setItem(SKIN_KEY, L[(i + d + L.length) % L.length]); } catch (e) {} for (const k in portCache) delete portCache[k]; drawHeroes(); if (net && !net.order) { netHi(); netLobby(); } }; $('skPrev').onclick = () => step(-1); $('skNext').onclick = () => step(1); }
