@@ -304,10 +304,21 @@ const CHAR_SCALE = { Leona: 1.1, 廖秦葦: 1.18 };
 // ───────── 背景音樂（雙軌交叉淡入淡出循環；音量／靜音存在瀏覽器，三款遊戲共用設定）─────────
 // ───────── 語音播報（倒數、占領、勝負）：用瀏覽器內建的語音合成，找得到中文（台灣）語音就用，沒有就用預設；可在「設定」關閉 ─────────
 const VOICE_KEY = 'emcFpsVoice'; let voiceOn = true; try { voiceOn = localStorage.getItem(VOICE_KEY) !== '0'; } catch (e) {}
-function say(text) {
-  if (!voiceOn || !window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') return;
+const VOICE_DIR = (location.pathname.indexOf('/fps/') >= 0 ? '' : '../fps/') + 'voice/';   // 真人感的神經語音音檔（fps/voice/，三款遊戲共用）；沒有檔案或播放失敗才退回瀏覽器內建語音
+const VOICE_FILES = { '三': 'n3', '二': 'n2', '一': 'n1', '開戰': 'go', '出發': 'depart', '開球': 'kickoff', '我方占領控制點': 'cap_ours', '敵方占領控制點': 'cap_theirs', '勝利': 'win', '敗北': 'lose', '平手': 'draw', '你陣亡了': 'you_died', '隊友陣亡': 'ally_died', '語音播報已開啟': 'voice_on',
+  '第二圈': 'lap2', '第三圈': 'lap3', '第四圈': 'lap4', '第五圈': 'lap5', '最後一圈': 'lap_final', '完賽，第一名': 'finish1', '完賽，第二名': 'finish2', '完賽，第三名': 'finish3', '完賽，第四名': 'finish4', '完賽，第五名': 'finish5', '完賽，第六名': 'finish6', '完賽，第七名': 'finish7', '完賽，第八名': 'finish8',
+  '進球！我方得分': 'goal_ours', '對方進球': 'goal_theirs', '剩三十秒': 't30', '剩十秒': 't10', '延長賽，先進球者獲勝': 'ot', '比賽結束，我方獲勝': 'end_win', '比賽結束，對方獲勝': 'end_lose', '比賽結束，平手': 'end_draw' };
+const voiceCache = {}; let voiceCur = null;
+function sayTTS(text) {
+  if (!window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') return;
   try { const u = new SpeechSynthesisUtterance(text); u.lang = 'zh-TW'; u.rate = 1.05; u.pitch = 1; u.volume = 1; const vs = speechSynthesis.getVoices(), v = vs.find(x => /zh[-_]TW|cmn[-_]Hant|Taiwan|台灣/i.test(x.lang + ' ' + x.name)) || vs.find(x => /^zh/i.test(x.lang)); if (v) u.voice = v; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) {}
 }
+function say(text) {
+  if (!voiceOn) return; const f = VOICE_FILES[text];
+  if (!f) { sayTTS(text); return; }
+  try { let a = voiceCache[f]; if (!a) { a = voiceCache[f] = new Audio(VOICE_DIR + f + '.mp3'); a.preload = 'auto'; } if (voiceCur && voiceCur !== a) { try { voiceCur.pause(); } catch (e) {} } a.onerror = () => sayTTS(text); a.currentTime = 0; a.volume = 1; voiceCur = a; const p = a.play(); if (p && p.catch) p.catch(() => sayTTS(text)); } catch (e) { sayTTS(text); }
+}
+setTimeout(() => { try { for (const k in VOICE_FILES) { const f = VOICE_FILES[k]; if (!voiceCache[f]) { const a = voiceCache[f] = new Audio(VOICE_DIR + f + '.mp3'); a.preload = 'auto'; } } } catch (e) {} }, 2500);   // 閒置時先把音檔載好，播放才不會延遲
 let sayC = 0, sayLowT = 0;
 function sayLow(text) { const now = performance.now(); if (now - sayLowT < 1200) return; sayLowT = now; say(text); }
 function emcBgm(url, opts) {
