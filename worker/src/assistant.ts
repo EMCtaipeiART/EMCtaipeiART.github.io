@@ -727,9 +727,12 @@ export async function assistantUsageReport(store: AssistantStore, days: number, 
       if ((key === logKey(day) || key.startsWith(`assistantLog:${day}:`)) && Array.isArray(value)) entries.push(...value);
     }
     if (!entries.length) { out.push({ day, questions: 0, tokens: 0, tired: 0, helpful: 0, unhelpful: 0, notFound: 0, accounts: [] }); continue; }
-    const byAccount = new Map<string, { account: string; user: string; department: string; questions: number; tokens: number; helpful: number; unhelpful: number }>();
+    const byAccount = new Map<string, { account: string; user: string; department: string; questions: number; tokens: number; helpful: number; unhelpful: number; notFound: number; tired: number; last: string }>();
     for (const e of entries) {
-      const row = byAccount.get(e.account) || { account: e.account, user: e.user, department: e.department, questions: 0, tokens: 0, helpful: 0, unhelpful: 0 };
+      const row = byAccount.get(e.account) || { account: e.account, user: e.user, department: e.department, questions: 0, tokens: 0, helpful: 0, unhelpful: 0, notFound: 0, tired: 0, last: '' };
+      if (e.tired) row.tired += 1;
+      if (e.tools.length && !e.found) row.notFound += 1;
+      if (String(e.ts || '') > row.last) row.last = String(e.ts || '');
       row.questions += 1; row.tokens += Number(e.tokens) || 0;
       if (e.helpful === true) row.helpful += 1;
       if (e.helpful === false) row.unhelpful += 1;
