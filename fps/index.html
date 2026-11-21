@@ -63,7 +63,7 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
 #feed{right:14px;top:56px;text-align:right;font-size:13px;line-height:1.7;max-width:300px}
 #feed div{background:rgba(10,14,18,.7);border-right:3px solid var(--amb);padding:1px 8px;margin-bottom:2px;animation:fin .2s}@keyframes fin{from{transform:translateX(30px);opacity:0}}
 #feed .me{border-right-color:var(--ok)}#feed .die{border-right-color:var(--red)}
-#dmg{inset:0;background:radial-gradient(circle at 50% 50%,transparent 45%,rgba(255,40,30,.55));opacity:0;transition:opacity .25s}
+#dmg{inset:0;background:radial-gradient(circle at 50% 50%,transparent 45%,rgba(255,40,30,.3));opacity:0;transition:opacity .25s}
 #dmg.on{opacity:1;transition:none}
 #sh{inset:0;background:radial-gradient(circle at 50% 50%,transparent 30%,rgba(80,170,255,.45));opacity:0;transition:opacity .2s}#sh.on{opacity:1}
 #dir{left:50%;top:50%;width:0;height:0}#dir i{position:absolute;left:-60px;top:-120px;width:120px;height:90px;transform-origin:60px 120px;background:radial-gradient(ellipse at 50% 100%,rgba(255,60,40,.7),transparent 70%);opacity:0}
@@ -164,7 +164,7 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
 #cast{position:absolute;left:50%;bottom:160px;transform:translateX(-50%);z-index:8;pointer-events:none;font-weight:900;font-size:clamp(24px,4.2vw,42px);letter-spacing:.14em;color:#fff;text-shadow:0 0 14px var(--amb),0 3px 0 #000;opacity:0;white-space:nowrap}
 #cast.on{animation:castIn 1.15s ease-out}#cast.q{color:#ffd24a;font-size:clamp(30px,5.4vw,56px)}
 @keyframes castIn{0%{opacity:0;transform:translateX(-50%) scale(1.7)}12%{opacity:1;transform:translateX(-50%) scale(1)}78%{opacity:1}100%{opacity:0;transform:translateX(-50%) translateY(-16px)}}
-#flashS{inset:0;background:radial-gradient(circle at 50% 50%,transparent 35%,rgba(255,176,0,.45));opacity:0}#flashS.on{animation:fsh .6s ease-out}@keyframes fsh{0%{opacity:1}100%{opacity:0}}
+#flashS{inset:0;background:radial-gradient(circle at 50% 50%,transparent 35%,rgba(255,176,0,.45));opacity:0}#flashS.on{animation:fsh .6s ease-out}@keyframes fsh{0%{opacity:.3}100%{opacity:0}}
 .tbtn .sw{position:absolute;inset:0;border-radius:50%;background:conic-gradient(rgba(0,0,0,.8) calc(var(--p,0)*360deg),transparent 0);pointer-events:none}
 .tbtn .ct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:900 20px/1 system-ui;font-style:normal;color:#fff;text-shadow:0 0 5px #000,0 2px 0 #000;pointer-events:none}
 .tbtn.cd{filter:saturate(.5)}.tbtn.ready{border-color:var(--ok);box-shadow:0 0 14px rgba(94,240,164,.8)}.tbtn.on{border-color:var(--amb);background:rgba(255,176,0,.35)}
@@ -560,13 +560,13 @@ const WEAPONS = {
 const HEROES = [
   { id: 'machi', char: 'Machi', name: 'Machi', title: '責任壁壘', role: '重裝', ic: '🛡️', hp: 500, speed: 5.0, w: 'keyboard', pref: 6, sleeve: 0x2b2d3a,
     e: { n: '壁壘泡泡', ic: '🛡️', cd: 10, d: '在前方撐起大泡泡，約可罩住 3 個人，擋住外面射進來的子彈，裡面的我方輕微回血（900 血、5 秒）' }, s: { n: '衝鋒', ic: '🐂', cd: 8, d: '向前猛衝並把血量補滿，撞到的敵人受 60 傷害並被擊退' }, q: { n: '震地', ic: '💥', d: '半徑 8 公尺：70 傷害＋暈眩 1.2 秒' } },
-  { id: 'noise', char: 'Noise', name: 'Noise', title: '截稿狂熱', role: '輸出', ic: '⚡', hp: 320, speed: 6.0, w: 'stapler', pref: 9, sleeve: 0x1d4ed8,
+  { id: 'noise', char: 'Noise', name: 'Noise', title: '截稿狂熱', role: '輸出', ic: '⚡', hp: 400, speed: 6.0, w: 'stapler', pref: 9, sleeve: 0x1d4ed8,
     e: { n: '閃身步', ic: '💨', cd: 5, d: '向移動方向急衝一小段' }, s: { n: '咖啡因', ic: '☕', cd: 12, d: '5 秒內移速 +45%、射速 +20%' }, q: { n: '截稿狂暴', ic: '🔥', d: '6 秒內射速 ×1.6、傷害 ×1.35' } },
-  { id: 'anna', char: 'Anna', name: 'Anna', title: '精準標記', role: '輸出', ic: '🎯', hp: 320, speed: 5.4, w: 'ruler', pref: 18, sleeve: 0xf59e0b,
+  { id: 'anna', char: 'Anna', name: 'Anna', title: '精準標記', role: '輸出', ic: '🎯', hp: 400, speed: 5.4, w: 'ruler', pref: 18, sleeve: 0xf59e0b,
     e: { n: '彈跳', ic: '🦘', cd: 6, d: '朝你按的方向（前後左右，沒按就往前）彈跳一段，並回復 20 血' }, s: { n: '標記', ic: '🔍', cd: 12, d: '標記 40 公尺內的敵人 4 秒：他們受到的傷害 +25%（不會穿牆顯示）' }, q: { n: '鎖頭', ic: '🎯', d: '4 秒內自動鎖定最近敵人的頭部，每一槍都是爆頭' } },
-  { id: 'amber', char: 'Amber', name: 'Amber', title: '茶歇補給', role: '支援', ic: '☕', hp: 220, speed: 5.6, w: 'mouse', pref: 12, sleeve: 0x16a34a,
+  { id: 'amber', char: 'Amber', name: 'Amber', title: '茶歇補給', role: '支援', ic: '☕', hp: 350, speed: 5.6, w: 'mouse', pref: 12, sleeve: 0x16a34a,
     e: { n: '治療光環', ic: '💚', cd: 12, d: '4 秒內持續治療身邊 8 公尺內的隊友（含自己）' }, s: { n: '加油鼓舞', ic: '📣', cd: 10, d: '附近隊友 4 秒移速 +35%' }, q: { n: '茶歇回復', ic: '🫖', d: '全隊立刻回滿血' } },
-  { id: 'leona', char: 'Leona', name: 'Leona', title: '電話客服', role: '支援', ic: '☎️', hp: 220, speed: 5.5, w: 'link', pref: 14, sleeve: 0xdb2777,
+  { id: 'leona', char: 'Leona', name: 'Leona', title: '電話客服', role: '支援', ic: '☎️', hp: 350, speed: 5.5, w: 'link', pref: 14, sleeve: 0xdb2777,
     e: { n: '療癒訊號', ic: '📞', cd: 6, d: '對瞄準的敵人（沒瞄準就找最近的）造成 100 點傷害，接著自動發射 3 波追蹤彈，各追最近的敵人造成 40 點' }, s: { n: '不再占線', ic: '🛡️', cd: 5, d: '瞬間移動到瞄準（或最近）的隊友旁邊；2.5 秒內無敵（不受傷害、不被暈眩）並每秒回血' }, q: { n: '全頻道廣播', ic: '📢', d: '原地復活所有倒下的隊友（60% 血、無敵 2.5 秒）；沒有人倒下時全隊獲得 50 護甲並治療 30。治療越多充能越快，另有被動充能' } }
 ];
 const HERO_BY = Object.fromEntries(HEROES.map(h => [h.id, h]));
@@ -772,7 +772,7 @@ function beam(from, to, col, w = .03, dur = .1) {
 function ringFx(x, y, z, col, maxR, dur = .45) { const m = mk(new THREE.RingGeometry(.85, 1, 40), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: .9, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.position.set(x, y + .06, z); scene.add(m); FX.push({ s: m, t: 0, d: dur, ring: maxR }); }
 function sparkBurst(x, y, z, n, col, speed = 4) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, e = Math.random() * 1.2, v = speed * (.4 + Math.random()); addPart(sparkTex, col, x, y, z, Math.cos(a) * v * Math.cos(e), Math.sin(e) * v + 1, Math.sin(a) * v * Math.cos(e), .35 + Math.random() * .3, .18, 12, true); } }
 function paperBurst(x, y, z, n) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, v = 1.5 + Math.random() * 3; addPart(paperTex, Math.random() < .3 ? 0xfff1a8 : 0xffffff, x, y, z, Math.cos(a) * v, 1.5 + Math.random() * 2.5, Math.sin(a) * v, .9 + Math.random() * .5, .22, 7, false, (Math.random() - .5) * 8); } }
-function boomLight(x, y, z) { boomL.position.set(x, y + 1, z); boomL.intensity = 8; }
+function boomLight(x, y, z) { boomL.position.set(x, y + 1, z); boomL.intensity = 2.5; }
 const boomL = new THREE.PointLight(0xff9a3d, 0, 18); scene.add(boomL);
 function hitNormal(b, px, py, pz) { const d = [Math.abs(px - b.x0), Math.abs(px - b.x1), Math.abs(py - (b.y0 || 0)), Math.abs(py - b.h), Math.abs(pz - b.z0), Math.abs(pz - b.z1)], N = [[-1, 0, 0], [1, 0, 0], [0, -1, 0], [0, 1, 0], [0, 0, -1], [0, 0, 1]]; let bi = 0; for (let i = 1; i < 6; i++) if (d[i] < d[bi]) bi = i; return N[bi]; }
 function rayWorldN(ox, oy, oz, dx, dy, dz, maxT) {
@@ -805,7 +805,7 @@ function dmgTo(t, d, src, head, wname, hx, hy, hz) {
 function healFx(t) {   // 被補血的特效：腳下綠圈＋身上往上飄的綠色十字光點＋（自己）畫面邊緣泛綠
   const now = performance.now(); if (now - (t.hfT || 0) < 220) return; t.hfT = now;
   ringFx(t.x, t.y, t.z, 0x5ef0a4, 1.5, .5); for (let i = 0; i < 6; i++) addPart(sparkTex, 0x7dffb8, t.x + rand(-.45, .45), t.y + rand(.2, 1.3), t.z + rand(-.45, .45), 0, rand(1.4, 2.4), 0, .7, .34, 0, true); addPart(sparkTex, 0x5ef0a4, t.x, t.y + 1.1, t.z, 0, .3, 0, .35, 1.8, 0, true);
-  if (t.isMe) { let v = document.getElementById('healV'); if (!v) { v = document.createElement('div'); v.id = 'healV'; v.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:25;opacity:0;background:radial-gradient(circle at 50% 50%,transparent 45%,rgba(94,240,164,.5));transition:opacity .25s'; document.body.appendChild(v); } v.style.opacity = '1'; clearTimeout(v._t); v._t = setTimeout(() => { v.style.opacity = '0'; }, 260); }
+  if (t.isMe) { let v = document.getElementById('healV'); if (!v) { v = document.createElement('div'); v.id = 'healV'; v.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:25;opacity:0;background:radial-gradient(circle at 50% 50%,transparent 45%,rgba(94,240,164,.22));transition:opacity .4s'; document.body.appendChild(v); } v.style.opacity = '1'; clearTimeout(v._t); v._t = setTimeout(() => { v.style.opacity = '0'; }, 260); }
 }
 function healTo(t, amt, src) { if (t.dead || t.hp >= t.maxHp) return; if (src && src.remote && !NETIN) return; healFx(t); if (net && t.remote) { const a = Math.min(amt, t.maxHp - t.hp); t.nh = (t.nh || 0) + a; if (src) { src.heals += a; addUlt(src, a * ((src.hero && src.hero.id === 'leona') ? .75 : .3)); } return; } const a = Math.min(amt, t.maxHp - t.hp); t.hp += a; if (src) { src.heals += a; addUlt(src, a * ((src.hero && src.hero.id === 'leona') ? .75 : .3)); } if (t.isMe || (src && src.isMe)) { t.healAcc = (t.healAcc || 0) + a; if (t.healAcc >= 12) { floatNum(t.x, t.y + 2.1, t.z, '+' + Math.round(t.healAcc), '#5ef0a4', false); t.healAcc = 0; } } }
 function dirHit(a) { const el = $('dir').firstElementChild; el.style.transform = 'rotate(' + (wrapA(a + yaw + Math.PI) * 180 / Math.PI) + 'deg)'; el.style.opacity = 1; clearTimeout(dirHit.t); dirHit.t = setTimeout(() => { el.style.opacity = 0; }, 700); }
@@ -832,7 +832,7 @@ function muzzleOf(a) { if (a.isMe) { camera.updateMatrixWorld(true); flash.getWo
 function fireWeapon(a, w) {
   const dm = (a.rage > 0 ? 1.35 : 1) * (a.dmgT > 0 ? 1.3 : 1) * (a.bot && CFG.diff === 2 ? .9 : 1), eye = [a.x, a.y + 1.55, a.z], mz = muzzleOf(a);
   const baseSpread = a.isMe ? (w.spread * (w.kind === 'sniper' && (zoom || a.lockT > 0) ? 0 : 1) * (Math.hypot(a.vx, a.vz) > 2 ? 1.6 : 1) * (a.ground ? 1 : 2.2)) : ((w.kind === 'sniper' ? .012 : w.spread) + [.09, .065, .018][CFG.diff]);
-  if (a.isMe) { SFX.shot(w.kind); recoil = Math.min(1, recoil + w.kick * 8); vmKick = 1; pitch += w.kick * (w.kind === 'sniper' ? 1 : .5) * (.7 + Math.random() * .6); yaw += (Math.random() - .5) * w.kick * .5; flash.visible = true; flash.material.rotation = Math.random() * 6.28; const fs = w.kind === 'shotgun' || w.kind === 'rocket' ? .7 : w.kind === 'sniper' ? .6 : .4; flash.scale.set(fs * (.8 + Math.random() * .4), fs * (.8 + Math.random() * .4), 1); flashLight.intensity = 2.6; setTimeout(() => flash.visible = false, 50); }
+  if (a.isMe) { SFX.shot(w.kind); recoil = Math.min(1, recoil + w.kick * 8); vmKick = 1; pitch += w.kick * (w.kind === 'sniper' ? 1 : .5) * (.7 + Math.random() * .6); yaw += (Math.random() - .5) * w.kick * .5; flash.visible = true; flash.material.rotation = Math.random() * 6.28; const fs = w.kind === 'shotgun' || w.kind === 'rocket' ? .7 : w.kind === 'sniper' ? .6 : .4; flash.scale.set(fs * (.8 + Math.random() * .4), fs * (.8 + Math.random() * .4), 1); flashLight.intensity = 1.2; setTimeout(() => flash.visible = false, 50); }
   else { a.fireAnim = .12; if (Math.hypot(a.x - me.x, a.z - me.z) < 40) SFX.shot(w.kind); addPart(starTex, 0xffc060, mz[0], mz[1], mz[2], 0, 0, 0, .06, .7, 0, true); }
   if (w.kind !== 'sniper' && w.kind !== 'rocket') addPart(sparkTex, 0xffd24a, mz[0], mz[1], mz[2], rand(-1, 1) + (a.isMe ? 1.2 : 0), rand(1, 2.4), rand(-1, 1), .5, .08, 12, false);   // 彈殼／釘子
   if (w.kind === 'rocket') { const [dx, dy, dz] = aimDir(a, baseSpread); const g = new THREE.Group(), core = mk(new THREE.BoxGeometry(.12, .12, .3), lam(0xdb2777)), glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTex, color: 0x7fe3ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); glow.scale.set(.7, .7, 1); g.add(core, glow); g.position.set(mz[0] + dx * .2, mz[1] + dy * .2, mz[2] + dz * .2); g.lookAt(g.position.x + dx, g.position.y + dy, g.position.z + dz); scene.add(g); PROJ.push({ m: g, x: g.position.x, y: g.position.y, z: g.position.z, vx: dx * w.speed, vy: dy * w.speed, vz: dz * w.speed, owner: a, w, life: 3, dm, trail: 0 }); return; }
@@ -853,7 +853,7 @@ function fireWeapon(a, w) {
 }
 function burst(x, y, z, col, size, d = .4, grow = 1) { addPart(sparkTex, col, x, y, z, 0, 0, 0, d, size, 0, true, 0, grow * 1.2); }
 function explode(x, y, z, owner, w, dm) {
-  SFX.boom(); burst(x, y, z, 0xffffff, w.splash * .9, .18, 1.5); burst(x, y, z, 0x7fe3ff, w.splash * 1.9, .5, 1.1); ringFx(x, y, z, 0x7fe3ff, w.splash * 1.1, .4); boomLight(x, y, z); sparkBurst(x, y, z, 14, 0x9ae8ff, 6);
+  SFX.boom(); burst(x, y, z, 0xbfe9ff, w.splash * .6, .18, 1.2); burst(x, y, z, 0x7fe3ff, w.splash * 1.9, .5, 1.1); ringFx(x, y, z, 0x7fe3ff, w.splash * 1.1, .4); boomLight(x, y, z); sparkBurst(x, y, z, 14, 0x9ae8ff, 6);
   for (let i = 0; i < 5; i++) addPart(smokeTex, 0xcfd4dc, x + rand(-.5, .5), y, z + rand(-.5, .5), rand(-.6, .6), rand(.4, 1.2), rand(-.6, .6), 1 + Math.random() * .6, 1 + Math.random(), 0, false, 0, 1.6);
   shake = Math.min(1, shake + Math.max(0, .6 - Math.hypot(me.x - x, me.z - z) / 12)); if (owner.remote) return;
   for (const t of actors) { if (t.dead) continue; const d = Math.hypot(t.x - x, (t.y + .9) - y, t.z - z); if (d < w.splash) { const k = 1 - d / w.splash; if (t.team === owner.team) { healTo(t, w.heal * (.4 + .6 * k), owner); continue; } dmgTo(t, w.dmg * dm * (.3 + .7 * k), owner, false, w.ic, t.x, t.y + 1.4, t.z); const a = Math.atan2(t.x - x, t.z - z); t.vx += Math.sin(a) * 5 * k; t.vz += Math.cos(a) * 5 * k; if (t.remote) netKb(t, Math.sin(a) * 5 * k, Math.cos(a) * 5 * k, 0); } }
@@ -882,7 +882,7 @@ function fwd(a) { return [-Math.sin(a.yaw), -Math.cos(a.yaw)]; }
 function moveDir(a) { if (a.isMe) { const mx = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + joy.x, mz = (keys.KeyS ? 1 : 0) - (keys.KeyW ? 1 : 0) + joy.y, l = Math.hypot(mx, mz); if (l > .15) { const f = fwd(a), rx = -f[1], rz = f[0]; return [(f[0] * -mz + rx * mx) / l, (f[1] * -mz + rz * mx) / l]; } } return fwd(a); }
 function reviveFx(t) {   // 復活特效：光柱、三圈擴散、光點爆發、頭上「復活！」，自己畫面閃光
   ringFx(t.x, t.y, t.z, 0x7fe3ff, 4.5, .9); ringFx(t.x, t.y, t.z, 0xffd066, 3, .7); ringFx(t.x, t.y, t.z, 0xffffff, 1.6, .5); sparkBurst(t.x, t.y + 1, t.z, 40, 0x9ae8ff, 7); sparkBurst(t.x, t.y + 1, t.z, 20, 0xffd066, 5);
-  beam([t.x, t.y + 9, t.z], [t.x, t.y, t.z], 0x7fe3ff, .35, 1.1); beam([t.x, t.y + 9, t.z], [t.x, t.y, t.z], 0xffffff, .12, .9); addPart(sparkTex, 0xffffff, t.x, t.y + 1.2, t.z, 0, 0, 0, .6, 4, 0, true); castLabel(t, '✨ 復活！', '#9ae8ff');
+  beam([t.x, t.y + 9, t.z], [t.x, t.y, t.z], 0x7fe3ff, .35, 1.1);  castLabel(t, '✨ 復活！', '#9ae8ff');
   if (t.isMe) { const f = $('flashS'); f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); }
 }
 function reviveHere(t, by) {   // 原地復活（保留死亡位置），血量 60%、無敵 2.5 秒
