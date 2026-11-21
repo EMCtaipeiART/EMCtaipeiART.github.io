@@ -895,7 +895,19 @@ function linkStep(a, dt) {   // Leona：左鍵牽補血線（每秒回血）、�
   else { const al = alliesOf(a).filter(x => x !== a && Math.hypot(x.x - a.x, x.z - a.z) < 24 && los(a, x, 1.55, x.y + 1.2)); const hurt = al.filter(x => x.hp < x.maxHp * .85).sort((p, q) => p.hp / p.maxHp - q.hp / q.maxHp)[0]; if (hurt) { mode = 1; t = hurt; } else if (a.tgt && al.length) { mode = 2; t = al.sort((p, q) => Math.hypot(p.x - a.x, p.z - a.z) - Math.hypot(q.x - a.x, q.z - a.z))[0]; } }
   if (!t || t.dead) return;
   if (mode === 1) healTo(t, 40 * dt, a); else if (!t.remote) t.dmgT = Math.max(t.dmgT, .6); else if (net && t.rid < 10) { a.lkT = (a.lkT || 0) - dt; if (a.lkT <= 0) { a.lkT = .25; netSend({ t: 'lk', to: t.rid }); } }
-  a.rbT = (a.rbT || 0) - dt; if (a.rbT <= 0) { a.rbT = .1; beam(muzzleOf(a), [t.x, t.y + 1.2, t.z], mode === 1 ? 0x5ef0a4 : 0xff8a3c, .05, .12); }
+  a.lkTgt = t; a.lkMode = mode; a.lkT = .2;   // 連線視覺由 drawLinks 畫成一條穩定的線
+  if (net && (a.isMe || a.hb) && t.rid !== undefined) { a.lvT = (a.lvT || 0) - dt; if (a.lvT <= 0) { a.lvT = .25; netSend({ r: a.hb ? a.rid : undefined, t: 'lv', to: t.rid, m: mode }); } }
+}
+function drawLinks(dt) {   // Leona 的連線：按住時一條穩定的線（綠＝補血、橘＝攻擊），其他玩家也看得到
+  for (const a of actors) {
+    const on = a.lkT > 0 && a.lkTgt && !a.dead && !a.lkTgt.dead && a.hero.id === 'leona'; if (a.lkT > 0) a.lkT -= dt;
+    if (!on) { if (a.lkM) a.lkM.visible = false; continue; }
+    if (!a.lkM) { a.lkM = mk(new THREE.CylinderGeometry(.045, .045, 1, 6, 1, true), new THREE.MeshBasicMaterial({ color: 0x5ef0a4, transparent: true, opacity: .85, blending: THREE.AdditiveBlending, depthWrite: false })); a.lkM.frustumCulled = false; scene.add(a.lkM); }
+    const f = muzzleOf(a), t = a.lkTgt, dx = t.x - f[0], dy = t.y + 1.2 - f[1], dz = t.z - f[2], len = Math.hypot(dx, dy, dz) || 1;
+    a.lkM.visible = true; a.lkM.material.color.setHex(a.lkMode === 1 ? 0x5ef0a4 : 0xff8a3c); a.lkM.material.opacity = .7 + Math.sin(performance.now() * .012) * .15;
+    a.lkM.position.set(f[0] + dx / 2, f[1] + dy / 2, f[2] + dz / 2); a.lkM.scale.set(1, len, 1); a.lkM.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(dx / len, dy / len, dz / len));
+    if (Math.random() < dt * 20) addPart(sparkTex, a.lkMode === 1 ? 0x5ef0a4 : 0xff8a3c, f[0] + dx * Math.random(), f[1] + dy * Math.random(), f[2] + dz * Math.random(), 0, .4, 0, .4, .2, 0, true);
+  }
 }
 function useE(a) {
   if (state !== 'play' || a.dead || a.stun > 0 || a.cd.e > 0 || a.chargeT > 0) return; a.cd.e = a.hero.e.cd; cast(a, 'e');
@@ -1118,7 +1130,7 @@ function sim(dt) {
   if (state === 'menu' || state === 'over') return;
   if (state === 'count') { edgeTurn(dt); if (keys.ArrowLeft) yaw += 2.2 * dt; if (keys.ArrowRight) yaw -= 2.2 * dt; if (keys.ArrowUp) pitch = clamp(pitch + 1.6 * dt, -1.45, 1.45); if (keys.ArrowDown) pitch = clamp(pitch - 1.6 * dt, -1.45, 1.45); stT -= dt; const c = Math.ceil(stT); if (stT > 0) { banner(String(c), '占領中央的控制點', 0); if (c !== sayC) { sayC = c; if (c <= 3) say(['', '一', '二', '三'][c]); } } else { state = 'play'; sayC = 0; banner('開戰', '', 700); SFX.beep(); say('開戰'); } for (const a of actors) { if (a.remote) netStepRemote(a, dt); else a.vx = a.vz = 0; } if (net) netTick(dt); return; }
   tLeft -= dt; for (const a of actors) stepActor(a, dt); if (net) netTick(dt);
-  stepProj(dt); stepBarriers(dt); stepSeekers(dt); updPoint(dt); ptSounds(); voiceWatch(); for (let i = 0; i < PICKS.length; i++) { const p = PICKS[i]; if (p.t > 0) p.t -= dt; pickMeshes[i].visible = p.t <= 0; }
+  stepProj(dt); stepBarriers(dt); stepSeekers(dt); drawLinks(dt); updPoint(dt); ptSounds(); voiceWatch(); for (let i = 0; i < PICKS.length; i++) { const p = PICKS[i]; if (p.t > 0) p.t -= dt; pickMeshes[i].visible = p.t <= 0; }
   if ((!net || net.role === 'host') && (prog[0] >= 100 || prog[1] >= 100 || tLeft <= 0)) { if (net) netSend({ t: 'end', pr: [+prog[0].toFixed(1), +prog[1].toFixed(1)] }); endMatch(); }
 }
 function teamTable(team, win, compact) {   // 一隊一張表：標題、勝負、各英雄的擊殺／死亡／傷害／治療與合計
@@ -1352,6 +1364,7 @@ function netMsg(m) {
   } else if (m.t === 'sh') { if (P.dead) return; const ox = P.x, oy = P.y, oz = P.z; P.x = m.x; P.y = m.y; P.z = m.z; P.yaw = m.yw; P.pitch = m.pt; fireWeapon(P, P.w); P.x = ox; P.y = oy; P.z = oz; }
   else if (m.t === 'h') { if (m.to !== net.myId || me.dead) return; NETIN = true; dmgTo(me, +m.d || 0, m.sr !== undefined ? (actors.find(a => a.rid === +m.sr) || P) : P, !!m.hd, m.w || '', m.hx, m.hy, m.hz); NETIN = false; }
   else if (m.t === 'kb') { if (m.to !== net.myId || me.dead) return; me.vx += +m.vx || 0; me.vz += +m.vz || 0; me.dashT = 0; if (m.st) me.stun = Math.max(me.stun, +m.st); }
+  else if (m.t === 'lv') { P.lkTgt = actors.find(a => a.rid === +m.to) || null; P.lkMode = +m.m === 2 ? 2 : 1; P.lkT = .7; }
   else if (m.t === 'lk') { if (m.to !== net.myId || me.dead) return; me.dmgT = Math.max(me.dmgT, .6); }
   else if (m.t === 'hl') { if (m.to !== net.myId) return; NETIN = true; healTo(me, +m.a || 0, P); NETIN = false; }
   else if (m.t === 'cast') { cast(P, m.k); if (m.k === 'e' && P.hero.id === 'machi') spawnBarrier(P); netAbilityOnMe(P, m.k); }
