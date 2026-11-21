@@ -151,7 +151,7 @@ function texFromAtlas(n, walk, rx, ry, fail) { const t = new THREE.Texture(); t.
 // ───────── 語音播報（倒數、占領、勝負）：用瀏覽器內建的語音合成，找得到中文（台灣）語音就用，沒有就用預設；可在「設定」關閉 ─────────
 const VOICE_KEY = 'emcFpsVoice'; let voiceOn = true; try { voiceOn = localStorage.getItem(VOICE_KEY) !== '0'; } catch (e) {}
 const VOICE_DIR = (location.pathname.indexOf('/fps/') >= 0 ? '' : '../fps/') + 'voice/';   // 真人感的神經語音音檔（fps/voice/，三款遊戲共用）；沒有檔案或播放失敗才退回瀏覽器內建語音
-const VOICE_FILES = { '三': 'n3', '二': 'n2', '一': 'n1', '開戰': 'go', '出發': 'depart', '開球': 'kickoff', '我方占領控制點': 'cap_ours', '敵方占領控制點': 'cap_theirs', '勝利': 'win', '敗北': 'lose', '平手': 'draw', '你陣亡了': 'you_died', '隊友陣亡': 'ally_died', '語音播報已開啟': 'voice_on',
+const VOICE_FILES = { '擊倒': 'kill', '雙殺': 'k2', '三殺': 'k3', '四殺': 'k4', '五殺': 'k5', '大招準備好了': 'ult_ready', '你被復活了': 'revived', '血量過低': 'low_hp', '敵人正在占領站點': 'enemy_capping', '我方即將獲勝': 'near_ours', '敵方即將獲勝': 'near_theirs', '剩一分鐘': 'min1', '領先': 'lead', '被超車了': 'overtaken', '獲得道具': 'item', '三': 'n3', '二': 'n2', '一': 'n1', '開戰': 'go', '出發': 'depart', '開球': 'kickoff', '我方占領控制點': 'cap_ours', '敵方占領控制點': 'cap_theirs', '勝利': 'win', '敗北': 'lose', '平手': 'draw', '你陣亡了': 'you_died', '隊友陣亡': 'ally_died', '語音播報已開啟': 'voice_on',
   '第二圈': 'lap2', '第三圈': 'lap3', '第四圈': 'lap4', '第五圈': 'lap5', '最後一圈': 'lap_final', '完賽，第一名': 'finish1', '完賽，第二名': 'finish2', '完賽，第三名': 'finish3', '完賽，第四名': 'finish4', '完賽，第五名': 'finish5', '完賽，第六名': 'finish6', '完賽，第七名': 'finish7', '完賽，第八名': 'finish8',
   '進球！我方得分': 'goal_ours', '對方進球': 'goal_theirs', '剩三十秒': 't30', '剩十秒': 't10', '延長賽，先進球者獲勝': 'ot', '比賽結束，我方獲勝': 'end_win', '比賽結束，對方獲勝': 'end_lose', '比賽結束，平手': 'end_draw' };
 const voiceCache = {}; let voiceCur = null;
@@ -465,7 +465,7 @@ function stepKart(k, inp, dt) {
   for (const p of PADS) if (Math.hypot(k.x - p.x, k.z - p.z) < p.r && k.boost < .9) { k.boost = 1.1; if (k === me) { SFX.boost(); toast('BOOST!'); } }
   // 道具箱
   if (!k.item && k.roll <= 0) for (const b of BOXES) if (b.t <= 0 && Math.hypot(k.x - b.x, k.z - b.z) < 2.2) { b.t = 5; b.m.visible = false; k.roll = 1.0; k.itemPick = null; if (k === me) SFX.item(); }
-  if (k.roll > 0) { k.roll -= dt; if (k.roll <= 0) { k.item = rollItem(k); k.itemT = 0; } }
+  if (k.roll > 0) { k.roll -= dt; if (k.roll <= 0) { k.item = rollItem(k); k.itemT = 0; if (k === me && state === 'race') sayLow('獲得道具'); } }
   // 碎紙屑／彈
   for (const d of DROP) if (d.alive && (d.owner !== k.name || d.age > 1.2) && Math.hypot(k.x - d.x, k.z - d.z) < 1.6 && k.inv <= 0 && k.spin <= 0) hitKart(k, d);
 }
@@ -533,7 +533,9 @@ function setupRace() {
   for (const b of BOXES) { b.t = 0; b.m.visible = true; }
   raceT = 0; finT = 0; camShake = 0; camH = me.h; $('banner').classList.remove('on');
 }
-function updRanks() { const s = [...karts].sort((a, b) => (b.fin ? 1e9 - b.tFin : b.prog) - (a.fin ? 1e9 - a.tFin : a.prog)); s.forEach((k, i) => k.rank = i + 1); }
+let rankPrev = 0, rankSayT = 0;
+function updRanks() { const s = [...karts].sort((a, b) => (b.fin ? 1e9 - b.tFin : b.prog) - (a.fin ? 1e9 - a.tFin : a.prog)); s.forEach((k, i) => k.rank = i + 1);
+  if (me && state === 'race') { const now = performance.now(); if (rankPrev && me.rank !== rankPrev && now - rankSayT > 4000) { if (me.rank === 1) { sayLow('領先'); rankSayT = now; } else if (rankPrev === 1) { sayLow('被超車了'); rankSayT = now; } } rankPrev = me.rank; } else rankPrev = 0; }
 function startRace() { if (!cloudDone) { cloudReady.then(startRace); return; } unlock(); $('menu').hidden = true; $('endO').hidden = true; setupRace(); document.documentElement.classList.add('playing'); resize(); for (const id of ['pos', 'lapb', 'mini', 'spd', 'itembox', 'sys']) $(id).hidden = false; $('stick').hidden = !touch; $('drift').hidden = $('brake').hidden = !touch; state = 'countdown'; stT = 3.9; gasEarly = 99; paused = false; updRanks(); say('三'); }
 function finishKart(k) { if (k.fin) return; k.fin = true; k.tFin = raceT; if (k === me) { SFX.fin(); banner('FINISH!', '第 ' + k.rank + ' 名', 2400); say('完賽，第' + ['零', '一', '二', '三', '四', '五', '六', '七', '八'][Math.min(8, k.rank)] + '名'); finT = 3.5; state = 'finishing'; } }
 function fmt(t) { const m = Math.floor(t / 60), s = t - m * 60; return m + ':' + s.toFixed(2).padStart(5, '0'); }

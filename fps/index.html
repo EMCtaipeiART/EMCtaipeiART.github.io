@@ -305,7 +305,7 @@ const CHAR_SCALE = { Leona: 1.1, 廖秦葦: 1.18 };
 // ───────── 語音播報（倒數、占領、勝負）：用瀏覽器內建的語音合成，找得到中文（台灣）語音就用，沒有就用預設；可在「設定」關閉 ─────────
 const VOICE_KEY = 'emcFpsVoice'; let voiceOn = true; try { voiceOn = localStorage.getItem(VOICE_KEY) !== '0'; } catch (e) {}
 const VOICE_DIR = (location.pathname.indexOf('/fps/') >= 0 ? '' : '../fps/') + 'voice/';   // 真人感的神經語音音檔（fps/voice/，三款遊戲共用）；沒有檔案或播放失敗才退回瀏覽器內建語音
-const VOICE_FILES = { '三': 'n3', '二': 'n2', '一': 'n1', '開戰': 'go', '出發': 'depart', '開球': 'kickoff', '我方占領控制點': 'cap_ours', '敵方占領控制點': 'cap_theirs', '勝利': 'win', '敗北': 'lose', '平手': 'draw', '你陣亡了': 'you_died', '隊友陣亡': 'ally_died', '語音播報已開啟': 'voice_on',
+const VOICE_FILES = { '擊倒': 'kill', '雙殺': 'k2', '三殺': 'k3', '四殺': 'k4', '五殺': 'k5', '大招準備好了': 'ult_ready', '你被復活了': 'revived', '血量過低': 'low_hp', '敵人正在占領站點': 'enemy_capping', '我方即將獲勝': 'near_ours', '敵方即將獲勝': 'near_theirs', '剩一分鐘': 'min1', '領先': 'lead', '被超車了': 'overtaken', '獲得道具': 'item', '三': 'n3', '二': 'n2', '一': 'n1', '開戰': 'go', '出發': 'depart', '開球': 'kickoff', '我方占領控制點': 'cap_ours', '敵方占領控制點': 'cap_theirs', '勝利': 'win', '敗北': 'lose', '平手': 'draw', '你陣亡了': 'you_died', '隊友陣亡': 'ally_died', '語音播報已開啟': 'voice_on',
   '第二圈': 'lap2', '第三圈': 'lap3', '第四圈': 'lap4', '第五圈': 'lap5', '最後一圈': 'lap_final', '完賽，第一名': 'finish1', '完賽，第二名': 'finish2', '完賽，第三名': 'finish3', '完賽，第四名': 'finish4', '完賽，第五名': 'finish5', '完賽，第六名': 'finish6', '完賽，第七名': 'finish7', '完賽，第八名': 'finish8',
   '進球！我方得分': 'goal_ours', '對方進球': 'goal_theirs', '剩三十秒': 't30', '剩十秒': 't10', '延長賽，先進球者獲勝': 'ot', '比賽結束，我方獲勝': 'end_win', '比賽結束，對方獲勝': 'end_lose', '比賽結束，平手': 'end_draw' };
 const voiceCache = {}; let voiceCur = null;
@@ -319,7 +319,7 @@ function say(text) {
   try { let a = voiceCache[f]; if (!a) { a = voiceCache[f] = new Audio(VOICE_DIR + f + '.mp3'); a.preload = 'auto'; } if (voiceCur && voiceCur !== a) { try { voiceCur.pause(); } catch (e) {} } a.onerror = () => sayTTS(text); a.currentTime = 0; a.volume = 1; voiceCur = a; const p = a.play(); if (p && p.catch) p.catch(() => sayTTS(text)); } catch (e) { sayTTS(text); }
 }
 setTimeout(() => { try { for (const k in VOICE_FILES) { const f = VOICE_FILES[k]; if (!voiceCache[f]) { const a = voiceCache[f] = new Audio(VOICE_DIR + f + '.mp3'); a.preload = 'auto'; } } } catch (e) {} }, 2500);   // 閒置時先把音檔載好，播放才不會延遲
-let sayC = 0, sayLowT = 0;
+let sayC = 0, sayLowT = 0, killStreak = 0, lastKillAt = 0;
 function sayLow(text) { const now = performance.now(); if (now - sayLowT < 1200) return; sayLowT = now; say(text); }
 function emcBgm(url, opts) {
   const KEY = 'emcBgmV1'; let st = {}; try { st = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
@@ -810,7 +810,7 @@ function kill(t, src, wname) { if (net && (t.isMe || t.hb)) netSend({ r: t.hb ? 
   deathCue(t, src); t.dead = true; t.respT = 5; t.deaths++; t.vx = t.vz = 0; t.heal = 0; t.chargeT = 0; t.hring.visible = false; t.armor = 0; sparkBurst(t.x, t.y + 1, t.z, 14, 0xffffff, 5); paperBurst(t.x, t.y + 1.2, t.z, 12);
   if (src && src !== t) { src.kills++; addUlt(src, 12); }
   feed((src ? src.hero.ic + src.name : '自爆') + ' ' + (wname || '💥') + ' ' + t.hero.ic + t.name, src && src.isMe ? 'me' : t.isMe ? 'die' : '');
-  if (t.isMe) { SFX.die(); sayLow('你陣亡了'); banner('陣亡', (src ? '被 ' + src.name + ' 擊倒' : ''), 2800); zoom = false; showHeroSel(true); } else if (src && src.isMe) { killIcon(); killBanner(t); floatNum(t.x, t.y + 2.6, t.z, '擊倒', '#ff6a5a', true); }
+  if (t.isMe) { SFX.die(); sayLow('你陣亡了'); banner('陣亡', (src ? '被 ' + src.name + ' 擊倒' : ''), 2800); zoom = false; showHeroSel(true); } else if (src && src.isMe) { { const now = performance.now(); killStreak = now - lastKillAt < 5000 ? killStreak + 1 : 1; lastKillAt = now; if (killStreak >= 2) say(['', '', '雙殺', '三殺', '四殺', '五殺'][Math.min(5, killStreak)]); else sayLow('擊倒'); } killIcon(); killBanner(t); floatNum(t.x, t.y + 2.6, t.z, '擊倒', '#ff6a5a', true); }
 }
 function aimDir(a, spread) { const cp = Math.cos(a.pitch), sx = Math.sin(a.yaw) * cp, sz = Math.cos(a.yaw) * cp, sy = Math.sin(a.pitch); let dx = -sx, dy = sy, dz = -sz; if (spread) { dx += (Math.random() - .5) * spread * 2; dy += (Math.random() - .5) * spread * 2; dz += (Math.random() - .5) * spread * 2; } const l = Math.hypot(dx, dy, dz); return [dx / l, dy / l, dz / l]; }
 function fire(a) {
@@ -869,7 +869,7 @@ function moveDir(a) { if (a.isMe) { const mx = (keys.KeyD ? 1 : 0) - (keys.KeyA 
 function reviveHere(t, by) {   // 原地復活（保留死亡位置），血量 60%、無敵 2.5 秒
   if (!t.dead) return; t.dead = false; t.respT = 0; t.hp = t.maxHp * .6; t.inv = 2.5; t.stun = t.mark = t.heal = t.volley = t.chargeT = t.buff = t.rage = t.dmgT = t.spd = 0; t.armor = t.armorT = 0; t.fall = 0; t.nextHero = null;
   ringFx(t.x, t.y, t.z, 0x7fe3ff, 3, .8); ringFx(t.x, t.y, t.z, 0xffd066, 1.8, .6); sparkBurst(t.x, t.y + 1, t.z, 18, 0x7fe3ff, 5); beam([t.x, t.y + 6, t.z], [t.x, t.y, t.z], 0x7fe3ff, .09, .6);
-  if (t.isMe) { $('heroSel').hidden = true; $('spec').hidden = true; specT = null; $('banner').classList.remove('on'); banner('被復活', (by ? by.name + ' 把你拉了回來' : ''), 1800); yaw = t.yaw; pitch = 0; SFX.pick && SFX.pick(); }
+  if (t.isMe) { $('heroSel').hidden = true; $('spec').hidden = true; specT = null; $('banner').classList.remove('on'); sayLow('你被復活了'); banner('被復活', (by ? by.name + ' 把你拉了回來' : ''), 1800); yaw = t.yaw; pitch = 0; SFX.pick && SFX.pick(); }
 }
 function giveArmor(t, amt, dur) { t.armor = Math.max(t.armor || 0, amt); t.armorT = dur; ringFx(t.x, t.y, t.z, 0xffd066, 1.6, .5); }
 function leonaTarget(a) {
@@ -913,6 +913,15 @@ function useQ(a) {
 // ───────── 控制點結算 ─────────
 // ───────── 站點提示音（所有玩家端各自偵測狀態變化：占領成功、進度、爭奪、踏上／離開）─────────
 const ptPrev = { owner: -1, step: 0, contested: false, meIn: false };
+const vw = { low: false, ult: false, m1: false, s30: false, s10: false, nearO: false, nearT: false, capE: false };
+function voiceWatch() {   // 狀態型語音：血量過低、大招就緒、剩餘時間、進度快贏了、敵人正在占領站點
+  if (state === 'count') { for (const k in vw) vw[k] = false; return; } if (!me || state !== 'play') return;
+  if (!me.dead && me.hp < me.maxHp * .3) { if (!vw.low) { vw.low = true; sayLow('血量過低'); } } else if (me.hp > me.maxHp * .5) vw.low = false;
+  if (!me.dead && me.ult >= 100) { if (!vw.ult) { vw.ult = true; sayLow('大招準備好了'); } } else if (me.ult < 100) vw.ult = false;
+  if (tLeft <= 60 && !vw.m1) { vw.m1 = true; sayLow('剩一分鐘'); } if (tLeft <= 30 && !vw.s30) { vw.s30 = true; sayLow('剩三十秒'); } if (tLeft <= 10 && !vw.s10) { vw.s10 = true; sayLow('剩十秒'); }
+  if (prog[0] >= 80 && !vw.nearO) { vw.nearO = true; sayLow('我方即將獲勝'); } if (prog[1] >= 80 && !vw.nearT) { vw.nearT = true; sayLow('敵方即將獲勝'); }
+  if (capTeam === 1 && cap >= 30 && owner !== 1) { if (!vw.capE) { vw.capE = true; sayLow('敵人正在占領站點'); } } else if (cap < 5 || capTeam !== 1) vw.capE = false;
+}
 function ptSounds() {
   if (!me || state !== 'play') { ptPrev.owner = owner; ptPrev.step = 0; return; }
   if (owner !== ptPrev.owner) { if (owner >= 0) { const ours = owner === 0, txt = ours ? '我方占領控制點' : '敵方占領控制點'; (ours ? SFX.ptOurs : SFX.ptTheirs)(); banner(txt, '', 1600); say(txt); } ptPrev.owner = owner; ptPrev.step = 0; }
@@ -1081,7 +1090,7 @@ function sim(dt) {
   if (state === 'menu' || state === 'over') return;
   if (state === 'count') { edgeTurn(dt); if (keys.ArrowLeft) yaw += 2.2 * dt; if (keys.ArrowRight) yaw -= 2.2 * dt; if (keys.ArrowUp) pitch = clamp(pitch + 1.6 * dt, -1.45, 1.45); if (keys.ArrowDown) pitch = clamp(pitch - 1.6 * dt, -1.45, 1.45); stT -= dt; const c = Math.ceil(stT); if (stT > 0) { banner(String(c), '占領中央的控制點', 0); if (c !== sayC) { sayC = c; if (c <= 3) say(['', '一', '二', '三'][c]); } } else { state = 'play'; sayC = 0; banner('開戰', '', 700); SFX.beep(); say('開戰'); } for (const a of actors) { if (a.remote) netStepRemote(a, dt); else a.vx = a.vz = 0; } if (net) netTick(dt); return; }
   tLeft -= dt; for (const a of actors) stepActor(a, dt); if (net) netTick(dt);
-  stepProj(dt); stepBarriers(dt); stepSeekers(dt); updPoint(dt); ptSounds(); for (let i = 0; i < PICKS.length; i++) { const p = PICKS[i]; if (p.t > 0) p.t -= dt; pickMeshes[i].visible = p.t <= 0; }
+  stepProj(dt); stepBarriers(dt); stepSeekers(dt); updPoint(dt); ptSounds(); voiceWatch(); for (let i = 0; i < PICKS.length; i++) { const p = PICKS[i]; if (p.t > 0) p.t -= dt; pickMeshes[i].visible = p.t <= 0; }
   if ((!net || net.role === 'host') && (prog[0] >= 100 || prog[1] >= 100 || tLeft <= 0)) { if (net) netSend({ t: 'end', pr: [+prog[0].toFixed(1), +prog[1].toFixed(1)] }); endMatch(); }
 }
 function teamTable(team, win, compact) {   // 一隊一張表：標題、勝負、各英雄的擊殺／死亡／傷害／治療與合計
