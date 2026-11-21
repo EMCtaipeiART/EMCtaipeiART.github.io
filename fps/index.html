@@ -574,7 +574,7 @@ const HERO_BY = Object.fromEntries(HEROES.map(h => [h.id, h]));
 const POS = { machi: '重裝', noise: '輸出・突擊', anna: '輸出・狙擊', amber: '支援・補給', leona: '支援・治療' };
 for (const h of HEROES) h.pos = POS[h.id];
 HERO_BY.machi.r = { n: '吸收盾', ic: '🔰', d: '按住右鍵：身邊轉出三面小盾，受到的傷害降為個位數（不能開槍、移動變慢）。可以點放；用越久進度條越滿，滿了會過熱，要等條退回 0 才能再用', sm: '右鍵按住（手機：瞄準鈕）' };
-HERO_BY.leona.r = { n: '攻擊連線', ic: '🔥', d: '左鍵按住對準隊友＝牽補血線（每秒 60，對方血量低於 40% 時 90）；右鍵按住對準隊友＝牽攻擊線（對方傷害 +30%）', sm: '右鍵按住（手機：瞄準鈕）' };
+HERO_BY.leona.r = { n: '攻擊連線', ic: '🔥', d: '左鍵按住對準隊友＝牽補血線（每秒 100，對方血量低於 40% 時 150）；右鍵按住對準隊友＝牽攻擊線（對方傷害 +30%）', sm: '右鍵按住（手機：瞄準鈕）' };
 // ───────── 角色（12 角度公告板＋跑步圖集） ─────────
 const texCache = {};
 const walkCache = {};
@@ -800,14 +800,8 @@ function dmgTo(t, d, src, head, wname, hx, hy, hz) {
   if (t.isMe) { SFX.hurt(); $('dmg').classList.add('on'); setTimeout(() => $('dmg').classList.remove('on'), 60); shake = Math.min(1, shake + d / 60); if (src) dirHit(Math.atan2(src.x - t.x, src.z - t.z)); }
   if (src && src.isMe && src !== t) { const kl = t.hp <= 0; hitMark(head, kl); floatNum(hx ?? t.x, (hy ?? t.y + 1.8) + .2, hz ?? t.z, String(Math.round(d)), kl ? '#ff5a4a' : head ? '#ffd24a' : '#ffffff', head || kl); }
   if (t.g && !t.dead) { const px = hx ?? t.x, py = hy ?? t.y + 1.2, pz = hz ?? t.z; paperBurst(px, py, pz, head ? 6 : 3); sparkBurst(px, py, pz, head ? 6 : 3, head ? 0xffd24a : 0xffffff, 2.5); }
-  if (t.hp <= 0) { if (!t.down && !t.dead && !t.absOn && state === 'play') goDown(t, src, wname); else kill(t, src, wname); }
+  if (t.hp <= 0) kill(t, src, wname);
 }
-function goDown(t, src, wname) {   // 倒地：不會馬上陣亡，7 秒內被隊友扶起（靠近 2 秒）或被補血到半血即可站起
-  t.down = true; t.downT = 7; t.downBy = src; t.downW = wname; t.hp = 30; t.rescue = 0; t.vx = t.vz = 0; t.chargeT = 0; t.armor = 0; t.heal = 0; t.volley = 0; if (t.hring) t.hring.visible = false;
-  ringFx(t.x, t.y, t.z, 0xff4a4a, 2, .6); castLabel(t, '倒地！', '#ff6a5a');
-  if (t.isMe) { SFX.hurt(); zoom = false; healHold = false; absHold = false; banner('倒地', '隊友靠近扶起你，或讓支援補血', 2200); }
-}
-function standUp(t, why) { t.down = false; t.rescue = 0; t.hp = Math.max(t.hp, t.maxHp * .4); t.inv = Math.max(t.inv, 1.5); ringFx(t.x, t.y, t.z, 0x5ef0a4, 2.4, .6); sparkBurst(t.x, t.y + 1, t.z, 12, 0x5ef0a4, 4); if (t.isMe) { banner('站起來了', '', 1200); SFX.pick && SFX.pick(); } }
 function healTo(t, amt, src) { if (t.dead || t.hp >= t.maxHp) return; if (src && src.remote && !NETIN) return; if (net && t.remote) { const a = Math.min(amt, t.maxHp - t.hp); t.nh = (t.nh || 0) + a; if (src) { src.heals += a; addUlt(src, a * ((src.hero && src.hero.id === 'leona') ? .75 : .3)); } return; } const a = Math.min(amt, t.maxHp - t.hp); t.hp += a; if (src) { src.heals += a; addUlt(src, a * ((src.hero && src.hero.id === 'leona') ? .75 : .3)); } if (t.isMe || (src && src.isMe)) { t.healAcc = (t.healAcc || 0) + a; if (t.healAcc >= 12) { floatNum(t.x, t.y + 2.1, t.z, '+' + Math.round(t.healAcc), '#5ef0a4', false); t.healAcc = 0; } } }
 function dirHit(a) { const el = $('dir').firstElementChild; el.style.transform = 'rotate(' + (wrapA(a + yaw + Math.PI) * 180 / Math.PI) + 'deg)'; el.style.opacity = 1; clearTimeout(dirHit.t); dirHit.t = setTimeout(() => { el.style.opacity = 0; }, 700); }
 function hitMark(head, kill) { const el = $('hm'); el.classList.remove('on'); void el.offsetWidth; el.classList.toggle('hs', !!head); el.classList.toggle('kill', !!kill); el.classList.add('on'); clearTimeout(hitMark.t); hitMark.t = setTimeout(() => el.classList.remove('on'), 280); kill ? SFX.kill() : head ? SFX.head() : SFX.hit(); }
@@ -847,7 +841,7 @@ function fireWeapon(a, w) {
     const ex = eye[0] + dx * bestT, ey = eye[1] + dy * bestT, ez = eye[2] + dz * bestT;
     if (a.isMe || Math.hypot(a.x - me.x, a.z - me.z) < 38) beam(mz, [ex, ey, ez], w.col, w.kind === 'sniper' ? .035 : w.kind === 'shotgun' ? .018 : .026, w.kind === 'sniper' ? .18 : .09);
     if (bar) { bar.hp -= w.dmg * dm; if (a.isMe) hitMark(false); burst(ex, ey, ez, 0x7fd0ff, 1.3, .3, 1); sparkBurst(ex, ey, ez, 3, 0x7fd0ff, 2); }
-    else if (ally) { healTo(ally, w.dmg * .8, a); ringFx(ally.x, ally.y, ally.z, 0x5ef0a4, 1.4, .35); sparkBurst(ex, ey, ez, 5, 0x5ef0a4, 2); if (a.isMe) hitMark(false); }
+    else if (ally) { healTo(ally, w.dmg * 1.5, a); ringFx(ally.x, ally.y, ally.z, 0x5ef0a4, 1.4, .35); sparkBurst(ex, ey, ez, 5, 0x5ef0a4, 2); if (a.isMe) hitMark(false); }
     else if (who) { const fall = w.kind === 'shotgun' ? clamp(1.1 - bestT / 40, .25, 1) : 1; dmgTo(who, w.dmg * dm * fall * (head ? (w.hm || 1.7) : 1) * (thru ? .5 : 1) * unsc, a, head, w.ic, ex, ey, ez); }
     else wallHit(ex, ey, ez, nrm, w.col);
   }
@@ -903,7 +897,7 @@ function linkStep(a, dt) {   // Leona：左鍵牽補血線（每秒回血）、�
   if (a.isMe) { mode = hold.fire ? 1 : healHold ? 2 : 0; if (mode) t = linkTarget(a); }
   else { const al = alliesOf(a).filter(x => x !== a && Math.hypot(x.x - a.x, x.z - a.z) < 24 && los(a, x, 1.55, x.y + 1.2)); const hurt = al.filter(x => x.hp < x.maxHp * .85).sort((p, q) => p.hp / p.maxHp - q.hp / q.maxHp)[0]; if (hurt) { mode = 1; t = hurt; } else if (a.tgt && al.length) { mode = 2; t = al.sort((p, q) => Math.hypot(p.x - a.x, p.z - a.z) - Math.hypot(q.x - a.x, q.z - a.z))[0]; } }
   if (!t || t.dead) return;
-  if (mode === 1) healTo(t, (t.hp < t.maxHp * .4 ? 90 : 60) * dt, a); else if (!t.remote) t.dmgT = Math.max(t.dmgT, .6); else if (net && t.rid < 10) { a.lkT = (a.lkT || 0) - dt; if (a.lkT <= 0) { a.lkT = .25; netSend({ t: 'lk', to: t.rid }); } }
+  if (mode === 1) healTo(t, (t.hp < t.maxHp * .4 ? 150 : 100) * dt, a); else if (!t.remote) t.dmgT = Math.max(t.dmgT, .6); else if (net && t.rid < 10) { a.lkT = (a.lkT || 0) - dt; if (a.lkT <= 0) { a.lkT = .25; netSend({ t: 'lk', to: t.rid }); } }
   a.lkTgt = t; a.lkMode = mode; a.lkT = .2;   // 連線視覺由 drawLinks 畫成一條穩定的線
   if (net && (a.isMe || a.hb) && t.rid !== undefined) { a.lvT = (a.lvT || 0) - dt; if (a.lvT <= 0) { a.lvT = .25; netSend({ r: a.hb ? a.rid : undefined, t: 'lv', to: t.rid, m: mode }); } }
 }
@@ -1116,17 +1110,13 @@ function stepActor(a, dt) {
   if (a.remote) { netStepRemote(a, dt); return; } if (a.dead) { a.respT -= dt; if (a.respT <= 0 && state === 'play') { respawn(a); if (a.isMe) { $('banner').classList.remove('on'); } } return; }
   a.inv = Math.max(0, a.inv - dt); a.fireT = Math.max(0, a.fireT - dt); a.cd.e = Math.max(0, a.cd.e - dt); a.cd.s = Math.max(0, a.cd.s - dt); a.buff = Math.max(0, a.buff - dt); a.rage = Math.max(0, a.rage - dt); a.dmgT = Math.max(0, a.dmgT - dt); a.spd = Math.max(0, a.spd - dt); a.stun = Math.max(0, a.stun - dt); a.mark = Math.max(0, a.mark - dt); a.fl = Math.max(0, a.fl - dt); if (a.armorT > 0) { a.armorT -= dt; if (a.armorT <= 0) a.armor = 0; } a.actT.e = Math.max(0, a.actT.e - dt); a.actT.s = Math.max(0, a.actT.s - dt); a.actT.q = Math.max(0, a.actT.q - dt);
   a.gr = Math.max(0, (a.gr || 0) - dt); a.grc = Math.max(0, (a.grc || 0) - dt);
-  if (a.down) {   // 倒地：爬行、流血倒數、等人扶或補血
-    a.downT -= dt; a.vx *= .9; a.vz *= .9; let near = false; for (const t of alliesOf(a)) if (t !== a && !t.down && Math.hypot(t.x - a.x, t.z - a.z) < 2.6) near = true;
-    a.rescue = near ? a.rescue + dt : Math.max(0, a.rescue - dt * .5); if (a.rescue >= 2 || a.hp >= a.maxHp * .5) standUp(a); else if (a.downT <= 0) kill(a, a.downBy, a.downW);
-  }
   if (a.hero.id === 'machi') {   // 右鍵吸收盾：按住吸收、進度條滿了就過熱，要等條退回 0 才能再用（退條期間仍可使用）
     const want = a.isMe ? absHold : (a.bot && a.tgt && (a.hurtT || 9) < 1.2); a.absOn = !!want && !a.abLock && !a.down && state === 'play';
     a.ab = a.absOn ? Math.min(100, (a.ab || 0) + 30 * dt) : Math.max(0, (a.ab || 0) - 18 * dt); if (a.ab >= 100) a.abLock = true; if (a.abLock && a.ab <= 0) a.abLock = false;
   } else a.absOn = false;
   if (state === 'play') addUlt(a, dt * .9);
   // 治療光環
-  if (a.heal > 0) { a.heal -= dt; for (const t of alliesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 8) healTo(t, 35 * dt, a); } a.hring.visible = a.heal > 0; if (a.heal > 0) { a.hring.position.set(a.x, a.y + .08, a.z); a.hring.scale.setScalar(.92 + Math.sin(performance.now() * .008) * .08); if (Math.random() < dt * 40) { const an = Math.random() * 6.283, rr = Math.random() * 7.5; addPart(sparkTex, 0x5ef0a4, a.x + Math.cos(an) * rr, a.y + .1, a.z + Math.sin(an) * rr, 0, 1.6, 0, .9, .35, 0, true); } }
+  if (a.heal > 0) { a.heal -= dt; for (const t of alliesOf(a)) if (Math.hypot(t.x - a.x, t.z - a.z) < 8) healTo(t, 70 * dt, a); } a.hring.visible = a.heal > 0; if (a.heal > 0) { a.hring.position.set(a.x, a.y + .08, a.z); a.hring.scale.setScalar(.92 + Math.sin(performance.now() * .008) * .08); if (Math.random() < dt * 40) { const an = Math.random() * 6.283, rr = Math.random() * 7.5; addPart(sparkTex, 0x5ef0a4, a.x + Math.cos(an) * rr, a.y + .1, a.z + Math.sin(an) * rr, 0, 1.6, 0, .9, .35, 0, true); } }
   // 連環轟炸
   if (a.volley > 0) { a.volley -= dt; a.volT -= dt; if (a.volT <= 0) { a.volT = .4; fireWeapon(a, WEAPONS.phone); } }
   // 衝鋒撞人
