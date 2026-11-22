@@ -148,6 +148,22 @@ h3{margin:16px 0 0;font-size:17px}
 }
 
 #stage:not(.live) #party,#stage:not(.live) #topbar{display:none}
+#castV{position:absolute;inset:0;z-index:3;pointer-events:none;box-shadow:inset 0 0 70px 14px rgba(255,50,50,.5);animation:castp .8s ease-in-out infinite}
+@keyframes castp{50%{opacity:.35}}
+#tapZ{position:absolute;left:50%;top:56%;width:clamp(130px,28%,220px);aspect-ratio:1;transform:translate(-50%,-50%);z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;border-radius:50%;background:radial-gradient(circle,rgba(255,60,60,.55),rgba(120,10,10,.55) 70%);border:5px solid #ffd166;box-shadow:0 0 28px rgba(255,90,60,.75);cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;animation:tzp .5s ease-in-out infinite}
+@keyframes tzp{50%{box-shadow:0 0 46px rgba(255,120,60,.95);filter:brightness(1.12)}}
+#tapZ.hit{animation:tzh .12s ease-out}
+@keyframes tzh{0%{transform:translate(-50%,-50%) scale(.9)}100%{transform:translate(-50%,-50%) scale(1)}}
+#tapZ b{font-size:clamp(15px,3.4vw,26px);color:#fff;text-shadow:0 2px 6px #000,0 0 12px #f33;letter-spacing:.04em;line-height:1.15;pointer-events:none}
+#tapZ em{font-style:normal;font:800 clamp(18px,4vw,30px)/1 var(--mono);color:#ffd166;text-shadow:0 2px 4px #000;pointer-events:none}
+#tapZ i{display:block;width:72%;height:10px;border:2px solid #000;border-radius:6px;background:rgba(0,0,0,.55);overflow:hidden;pointer-events:none}
+#tapZ i u{display:block;height:100%;width:0;background:linear-gradient(#ff8a6a,#ff3b2f)}
+#tapZ .tzr{position:absolute;inset:-8px;border-radius:50%;border:4px solid rgba(255,209,102,.85);pointer-events:none;animation:tzring .9s ease-out infinite}
+#tapZ .tzr.r2{animation-delay:.45s}
+@keyframes tzring{from{transform:scale(1);opacity:.9}to{transform:scale(1.45);opacity:0}}
+.tzs{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:3px solid #ffd166;pointer-events:none;animation:tzs .45s ease-out forwards}
+@keyframes tzs{from{transform:scale(.4);opacity:1}to{transform:scale(2.2);opacity:0}}
+html.fsm #tapZ{width:clamp(110px,22%,170px);top:54%;border-width:3px} html.fsm #tapZ b{font-size:13px} html.fsm #tapZ em{font-size:16px}
 #stage.cine::before,#stage.cine::after{content:'';position:absolute;left:0;right:0;height:8%;background:#000;z-index:4;pointer-events:none;animation:cbar .7s ease-out}
 #stage.cine::before{top:0} #stage.cine::after{bottom:0}
 #stage.cine #dialog{z-index:6;bottom:calc(8% + 10px)} #stage.cine #dFace{z-index:5;bottom:calc(8% + 76px)} #stage.cine #dFace.ex{bottom:calc(8% + 66px)}
@@ -279,7 +295,9 @@ html.fsm #endO .lb{max-height:30vh;overflow:auto}
     <div id="skillPop" hidden><i></i><b></b></div>
     <button class="pk big" id="deliver" type="button" hidden>準時交付</button>
     <section id="party"></section>
+    <div id="castV" hidden></div>
     <div id="alert" hidden><b id="alertT"></b><i><u id="alertB"></u></i></div>
+    <div id="tapZ" hidden><div class="tzr"></div><div class="tzr r2"></div><b>瘋狂連點畫面！</b><em id="tzN">0／16</em><i><u id="tzB"></u></i></div>
     <div id="dFace" hidden></div>
     <div id="dialog" hidden><small>點一下繼續</small><b id="dWho"></b><p id="dTxt"></p></div>
     <div class="overlay" id="startO">
@@ -427,10 +445,7 @@ function spawn(S, kind) {
     if (opt.crit && S.rand() < opt.crit) { opt.wasCrit = true; a *= dst.st.mark ? 2.2 : 1.6; }
     if (src && src.id === 'noise') a *= 1 + .04 * src.rage;
     if (dst.st.broken) a *= 1.4;
-    if (opt.ult && dst.boss && S.boss && S.boss.cast && (S.boss.cast.kind === 'revert' || S.boss.cast.kind === 'budget')) {
-      S.boss.cast = null; S.stats.interrupts++;
-      ev(S, { type: 'interrupt', by: src.uid });
-    }
+    if (opt.ult && dst.boss && S.boss && S.boss.cast) addTaps(S, 8);   // 必殺打在讀條的 Boss 身上＝一次加 8 下連點
     if (dst.side === 'hero' && dst.id !== 'machi' && !opt.true) {
       const m = hero(S, 'machi');
       let share = 0;
@@ -518,6 +533,7 @@ function spawn(S, kind) {
   }
 
   function castUlt(S, id) {
+    if (id === 'tap') return tap(S);   // 自動模式幫你連點
     const h = hero(S, id);
     if (S.phase !== 'fight' || !h || !h.alive || h.st.away || h.energy < 100) return false;
     h.energy = 0;
@@ -563,6 +579,15 @@ function spawn(S, kind) {
     return true;
   }
 
+  // 玩家連點畫面斷招：Boss 讀條時累積點擊數，達標就打斷
+  function addTaps(S, k) {
+    const B = S.boss, c = B && B.cast; if (!c) return false;
+    c.taps += k;
+    if (c.taps >= c.need) { B.cast = null; S.stats.interrupts++; ev(S, { type: 'interrupt' }); return true; }
+    return false;
+  }
+  function tap(S) { return S.phase === 'fight' ? addTaps(S, 1) : false; }
+
   function bossStep(S, e) {
     const B = S.boss;
     if (!B.enraged && S.waveT > ENRAGE_AT) { B.enraged = true; e.atk *= 2; ev(S, { type: 'boss', kind: 'enrage', name: '加班到天亮' }); }
@@ -582,11 +607,11 @@ function spawn(S, kind) {
     const sq = BOSS[S.bossKind].seq, k = sq[B.seq++ % sq.length], nm = BOSS[S.bossKind].nm[k];
     ev(S, { type: 'boss', kind: k, name: nm });
     if (k === 'minor') { for (let i = 0; i < 3; i++) spawn(S, 'note'); const n = hero(S, 'noise'); if (n.alive) n.rage = Math.min(10, n.rage + 3); }
-    if (k === 'revert') B.cast = { kind: k, t: 4, max: 4, name: nm };
+    if (k === 'revert') B.cast = { kind: k, t: 4, max: 4, name: nm, need: 16, taps: 0 };
     if (k === 'confuse') alive(S.heroes).forEach(h => { if (h.id !== 'leona' && !h.st.immune) h.st.confuse = 10; });
-    if (k === 'deadline') B.cast = { kind: k, t: 5, max: 5, name: nm };
+    if (k === 'deadline') B.cast = { kind: k, t: 5, max: 5, name: nm, need: 30, taps: 0 };
     if (k === 'everything') { spawn(S, 'armor'); spawn(S, 'note'); spawn(S, 'note'); }
-    if (k === 'budget') B.cast = { kind: k, t: 4, max: 4, name: nm };
+    if (k === 'budget') B.cast = { kind: k, t: 4, max: 4, name: nm, need: 16, taps: 0 };
     if (k === 'midnight') { const hs = alive(S.heroes); hs.forEach(h => { if (h.id !== 'leona' && !h.st.immune) h.st.delay = 8; }); const v = hs.filter(h => h.id !== 'leona' && !h.st.immune); if (v.length) v[Math.floor(S.rand() * v.length)].st.confuse = 8; }
   }
 
@@ -684,11 +709,12 @@ function spawn(S, kind) {
     else if (!bossWave) R.forEach(id => { if (en.length) out.push(id); });
     else if (R.length >= 2) out.push(R[0]);
     if (ready('leona') && (hs.filter(h => h.st.confuse).length >= 2 || hs.reduce((a, h) => a + h.hp / h.max, 0) / hs.length < .55)) out.push('leona');
+    if (B && B.cast) { B.cast.auto = (B.cast.auto || 0) + 4.4 * DT; while (B.cast.auto >= 1) { B.cast.auto--; out.push('tap'); } }   // 自動模式約每秒 4.4 下
     if (gaugeReady(S)) { const b = en.find(e => e.boss); if (b && b.hp / b.max <= .25) out.push('deliver'); }
     return out;
   }
 
-  return { DT, dist, ORDER, HERO, EN, BOSS, FLAGS, newGame, step, castUlt, deliver, gaugeReady, auto, alive, hero };
+  return { DT, dist, ORDER, HERO, EN, BOSS, FLAGS, newGame, step, castUlt, tap, deliver, gaugeReady, auto, alive, hero };
 })();
 if (typeof module !== 'undefined') module.exports = Core;
 
@@ -952,7 +978,7 @@ function heroTex(id, cb) {
   t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; t.anisotropy = 4; t.repeat.set(1 / 12, 1); t.offset.set(3 / 12, 0); return t;
 }
 function refreshSprites() {
-  document.querySelectorAll('[data-spr]').forEach(el => { el.style.backgroundImage = `url(${sprUrl(el.dataset.spr)})`; });
+  document.querySelectorAll('[data-spr]').forEach(el => { if (!el.dataset.nx) el.style.backgroundImage = `url(${sprUrl(el.dataset.spr)})`; });
   Core.ORDER.forEach(id => { const sp = U[id]; if (!sp || !CL[Core.HERO[id].name]) return; const old = sp.material.map, nt = heroTex(id, () => { nt.offset.copy(old.offset); sp.material.map = nt; sp.material.needsUpdate = true; old.dispose(); }); });
 }
 try { fetch(CHAR_API, { cache: 'no-store' }).then(r => r.json()).then(j => { const c = (j && j.characters) || {}; Core.ORDER.forEach(id => { const n = Core.HERO[id].name; if (c[n]) CL[n] = c[n]; }); refreshSprites(); }).catch(() => {}); } catch (e) {}
@@ -1508,6 +1534,7 @@ function hud() {
   $('deliver').hidden = !gr; $('stage').classList.toggle('live', running);
   const m = Math.floor(S.t / 60), s = Math.floor(S.t % 60); $('timeP').textContent = $('timeT').textContent = m + ':' + String(s).padStart(2, '0');
   const B = S.boss, cast = B && B.cast, al = $('alert');
+  { const on = !!cast && running; $('tapZ').hidden = !on; $('castV').hidden = !on; if (on) { const k = Math.min(1, cast.taps / cast.need); $('tzN').textContent = Math.min(cast.taps, cast.need) + '／' + cast.need; $('tzB').style.width = (k * 100) + '%'; } }
   al.hidden = !cast;
   if (cast) { al.className = cast.kind; $('alertT').textContent = ((cast.name || '') + '　') + cast.t.toFixed(1); $('alertB').style.width = (cast.t / cast.max * 100) + '%'; }
   let tip = WAVE_TIP[S.wave] || '投影機自己亮了起來…', hot = false;
@@ -1515,9 +1542,9 @@ function hud() {
   const boss = S.enemies.find(e => e.boss && e.alive);
   const conf = S.heroes.filter(h => h.alive && h.st.confuse).length;
   if (S.phase === 'between' && S.wave) tip = '清場完成，隊伍回復中。必殺能量會保留到下一波。';
-  if (cast && cast.kind === 'revert') { tip = Core.BOSS[S.bossKind].tag + '想回到舊版！現在放 Noise、Anna 或 Amber 的必殺打斷它。'; hot = true; }
-  else if (cast && cast.kind === 'budget') { tip = '「' + cast.name + '」要是沒打斷，全隊必殺能量會被砍掉。現在放 Noise、Anna 或 Amber 的必殺打斷它。'; hot = true; }
-  else if (cast && cast.kind === 'deadline') { tip = '「' + cast.name + '」倒數中，讓 Machi 開「交付防線」保護全隊。'; hot = true; }
+  if (cast && cast.kind === 'revert') { tip = Core.BOSS[S.bossKind].tag + '想回到舊版！快速連點畫面斷招（打必殺也能加 8 下）。'; hot = true; }
+  else if (cast && cast.kind === 'budget') { tip = '「' + cast.name + '」要是沒打斷，全隊必殺能量會被砍掉。快速連點畫面斷招！'; hot = true; }
+  else if (cast && cast.kind === 'deadline') { tip = '「' + cast.name + '」倒數中！快速連點畫面斷招，或讓 Machi 開「交付防線」保護全隊。'; hot = true; }
   else if (conf >= 2) { tip = '全隊混亂，能量與技能停擺。Leona 的「重新對齊」可以一次清掉。'; hot = true; }
   else if (gr) { tip = boss ? (boss.hp / boss.max <= .25 ? boss.name + '剩不到 25%，按「準時交付」直接定稿！' : '協作條已滿。Boss 血量低於 25% 時交付可以直接終結，也可以現在先打一發。') : '協作條已滿，可以按「準時交付」清場，或留給九頭蛇。'; hot = true; }
   $('tip').textContent = tip; $('tip').classList.toggle('hot', hot);
@@ -1538,10 +1565,13 @@ function loop(ts) {
   requestAnimationFrame(loop);
 }
 // 劇情表情立繪（story/<角色>_<表情>.webp，載入失敗就用原本的立繪）與動作音效（sfx/*.wav，沒有檔案就不出聲）
-const EXN = ['happy', 'surprised', 'angry', 'tired', 'thinking'], EX_CUE = { happy: 'cheer', surprised: 'gasp', angry: 'thud', tired: 'sigh', thinking: 'think' };
-const EXIMG = {}; Core.ORDER.forEach(id => { const nm = Core.HERO[id].name; EXN.forEach(x => { const im = new Image(); im.onload = () => { EXIMG[nm + '_' + x] = im.src; }; im.src = 'story/' + nm + '_' + x + '.webp'; }); });
+const EXN = ['neutral', 'happy', 'surprised', 'angry', 'tired', 'thinking'], EX_CUE = { happy: 'cheer', surprised: 'gasp', angry: 'thud', tired: 'sigh', thinking: 'think' };
+const EXIMG = {}; Core.ORDER.forEach(id => { const nm = Core.HERO[id].name; EXN.forEach(x => { const im = new Image(); im.onload = () => { EXIMG[nm + '_' + x] = im.src; if (x === 'neutral') applyPortraits(); }; im.src = 'story/' + nm + '_' + x + '.webp'; }); });
 const CUE = {}; ['gasp', 'cheer', 'thud', 'sigh', 'think', 'whoosh', 'crack', 'step', 'choice'].forEach(nm => { const a = new Audio(); a.preload = 'auto'; a.addEventListener('canplaythrough', () => { CUE[nm] = a; }, { once: true }); a.src = 'sfx/' + nm + '.wav'; });
 function cue(nm) { if (!nm || SFX.muted || !CUE[nm]) return; try { const b = CUE[nm].cloneNode(); b.volume = .85; b.play().catch(() => {}); } catch (e) {} }
+function applyPortraits() {   // 角色卡與職業介紹的頭像：改用新生成的正面立繪（沒有載入成功的角色維持原樣）
+  document.querySelectorAll('[data-spr]').forEach(el => { const u = EXIMG[el.dataset.spr + '_neutral']; if (!u) return; el.dataset.nx = '1'; el.style.backgroundImage = 'url(' + u + ')'; el.style.backgroundSize = 'cover'; el.style.backgroundPosition = '50% 8%'; });
+}
 function exprOf(l) {   // 對白第 4 欄可明寫表情；沒寫就依內容猜
   if (l[3]) return l[3]; const t = l[1];
   if (/針對|先聲明|氣死|不會做/.test(t)) return 'angry';
@@ -1553,7 +1583,7 @@ function exprOf(l) {   // 對白第 4 欄可明寫表情；沒寫就依內容猜
 }
 function showLine() {
   const l = INTRO[dIdx]; $('dWho').textContent = l[0]; $('dWho').style.color = l[2]; $('dTxt').textContent = l[1];
-  const hero = Core.ORDER.find(id => Core.HERO[id].name === l[0]), f = $('dFace'), ex = hero ? exprOf(l) : null, img = ex && EXIMG[l[0] + '_' + ex];
+  const hero = Core.ORDER.find(id => Core.HERO[id].name === l[0]), f = $('dFace'), ex = hero ? (exprOf(l) || 'neutral') : null, img = hero && (EXIMG[l[0] + '_' + ex] || EXIMG[l[0] + '_neutral']);
   if (hero && !$('dialog').hidden) { f.className = img ? 'ex ' + ex : ''; f.style.backgroundImage = img ? `url(${img})` : `url(${sprUrl(l[0])})`; f.hidden = false; f.style.animation = 'none'; void f.offsetWidth; f.style.animation = ''; } else f.hidden = true;
   if (!$('dialog').hidden) cue(l[4] || (hero && ex && EX_CUE[ex]));
 }
@@ -1699,6 +1729,13 @@ function finish(won) {
 }
 $('dialog').addEventListener('click', nextLine);
 $('deliver').addEventListener('click', doDeliver);
+// 連點斷招：Boss 讀條時，點畫面任何地方都算一下（卡片、按鈕除外）
+$('stage').addEventListener('pointerdown', e => {
+  if (!running || paused || !S || !S.boss || !S.boss.cast) return; if (e.target.closest && e.target.closest('.card,button,#dialog,.overlay')) return;
+  e.preventDefault(); const done = Core.tap(S); shake = Math.max(shake, .06); SFX.hit && SFX.hit(false, false);
+  const z = $('tapZ'); z.classList.remove('hit'); void z.offsetWidth; z.classList.add('hit');
+  const sp = document.createElement('div'); sp.className = 'tzs'; sp.style.left = (20 + Math.random() * 60) + '%'; sp.style.top = (20 + Math.random() * 60) + '%'; z.appendChild(sp); setTimeout(() => sp.remove(), 480);
+});
 $('autoB').addEventListener('click', e => { autoOn = !autoOn; e.currentTarget.textContent = '自動必殺：' + (autoOn ? '開' : '關'); e.currentTarget.classList.toggle('off', !autoOn); });
 $('spdB').addEventListener('click', e => { speed = speed === 1 ? 2 : 1; e.currentTarget.textContent = '速度 ' + speed + '×'; e.currentTarget.classList.toggle('off', speed === 1); });
 { const xb = $('musicB'), xs = () => { xb.textContent = SFX.musicOn ? '音樂：開' : '音樂：關'; xb.classList.toggle('off', !SFX.musicOn); }; xs(); xb.addEventListener('click', () => { SFX.unlock(); SFX.setMusic(!SFX.musicOn); xs(); SFX.click(); }); }
