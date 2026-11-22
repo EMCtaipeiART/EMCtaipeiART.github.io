@@ -1671,8 +1671,8 @@ function showChoice() {
 function campEnding() {
   camp.done = true; const total = Math.round(camp.score), secs = camp.secs, st = camp.b >= 3 ? 'brave' : camp.c >= 3 ? 'careful' : 'balanced'; saveCamp(); try { localStorage.removeItem(CAMP_KEY); } catch (e) {}
   playLines(ENDING.common.concat(ENDING[st], ENDING.tail), () => {
-    const el = $('endC'); el.innerHTML = '<span class="badge">第一章 完</span><h2>即將進入第二章</h2><video id="ch2v" src="chapter2.mp4" controls playsinline preload="metadata"></video><p id="ch2n" hidden>第二章預告片製作中，敬請期待。</p><div class="sys">劇情總分　' + total + '</div><div class="stats">' + collHtml() + '</div><div class="lb" id="lbBox"></div><div class="row"><button class="pk big" id="againCamp" type="button">再走一次劇情</button><button class="pk" id="backMenu" type="button">回選單</button></div>';
-    el.hidden = false; const v = $('ch2v'); v.addEventListener('error', () => { v.hidden = true; $('ch2n').hidden = false; });
+    const el = $('endC'); el.innerHTML = '<span class="badge">第一章 完</span><h2>即將進入第二章</h2><video id="ch2v" controls playsinline preload="metadata"><source src="chapter2.webm" type="video/webm"><source src="chapter2.mp4" type="video/mp4"></video><p id="ch2n" hidden>第二章預告片製作中，敬請期待。</p><div class="sys">劇情總分　' + total + '</div><div class="stats">' + collHtml() + '</div><div class="lb" id="lbBox"></div><div class="row"><button class="pk big" id="againCamp" type="button">再走一次劇情</button><button class="pk" id="backMenu" type="button">回選單</button></div>';
+    el.hidden = false; const v = $('ch2v'); v.querySelector('source:last-child').addEventListener('error', () => { v.hidden = true; $('ch2n').hidden = false; });
     $('againCamp').addEventListener('click', () => { el.hidden = true; startCamp(true); });
     $('backMenu').addEventListener('click', () => { el.hidden = true; $('startO').hidden = false; fillColl(); });
     setupBoard(total, secs);
