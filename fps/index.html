@@ -185,7 +185,9 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
 .sthead{display:flex;align-items:flex-end;gap:18px}
 .logo2 small{display:block;font-size:10px;letter-spacing:.55em;color:#ffb000;margin-bottom:4px}.logo2 b{display:block;font-size:clamp(34px,5.5vw,58px);font-weight:900;font-style:italic;letter-spacing:.12em;line-height:1;color:#fff;text-shadow:0 0 18px rgba(255,176,0,.55),3px 3px 0 #000;transform:skewX(-8deg)}
 .tabs{display:flex;gap:6px;margin:4px 0 10px;flex-wrap:wrap}.tab{font:700 13px/1 inherit;color:#c9d3de;background:rgba(255,255,255,.06);border:1px solid #3a4654;padding:8px 16px;cursor:pointer;letter-spacing:.08em}.tab.on{color:#111;background:#ffb000;border-color:#ffb000}
-#pveHud{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:5;min-width:min(86vw,300px);text-align:center;color:#fff;font-weight:800;font-size:16px;text-shadow:0 2px 4px #000;pointer-events:none}#pveHud i{display:block;height:8px;border:2px solid #000;background:rgba(0,0,0,.55);margin-top:4px}#pveHud u{display:block;height:100%;width:0;background:linear-gradient(#ffd24a,#ff9a1a)}
+#pveHud{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:5;min-width:min(86vw,300px);text-align:center;color:#fff;font-weight:800;font-size:16px;text-shadow:0 2px 4px #000;pointer-events:none}#pveHud i{display:block;height:8px;border:2px solid #000;background:rgba(0,0,0,.55);margin-top:4px}#pveHud u{display:block;height:100%;width:0;background:linear-gradient(#ffd24a,#ff9a1a)}#pveHud em{display:flex;align-items:center;gap:6px;font-style:normal;font-size:12px;margin-top:5px}#pveHud em i{flex:1;margin:0}#pveHud em u{background:linear-gradient(#5ef0a4,#18b87a)}#pveHud small{display:block;font-size:12px;color:#ffd166;margin-top:3px}
+#soloHint{position:absolute;left:50%;bottom:126px;transform:translateX(-50%);z-index:5;max-width:min(92vw,640px);padding:8px 14px;border-left:4px solid #ffb000;background:rgba(8,10,14,.82);color:#fff;font-size:14px;line-height:1.6;pointer-events:none}#soloHint b{color:#ffd166}
+@media (pointer:coarse){#pveHud{top:4px;font-size:13px;min-width:180px;max-width:56vw}#pveHud small{font-size:11px}#soloHint{bottom:auto;top:62px;font-size:12px;line-height:1.5}}
 .stmode{margin-left:auto;text-align:right;border-right:3px solid #ffb000;padding-right:12px}.stmode span{display:block;font-size:12px;letter-spacing:.3em;color:#8a97a6}.stmode b{font-size:24px;font-style:italic;color:#fff}
 .exitbtn{font:800 13px/1 inherit;color:#fff;background:rgba(255,75,62,.18);border:1px solid #ff4b3e;padding:10px 16px;cursor:pointer;letter-spacing:.15em;clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}.exitbtn:hover{background:#ff4b3e}
 .stmain{display:grid;grid-template-columns:1.05fr 1fr;gap:18px;margin-top:14px}
@@ -234,7 +236,8 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
   <div class="hud" id="dmg"></div><div class="hud" id="sh"></div><div class="hud" id="dir"><i></i></div>
   <div class="hud" id="obj" hidden><div class="tm a"><b class="mono" id="pA">0%</b><i><u id="bA"></u></i></div><div class="pt" id="pt"><div class="rg" id="rg"></div><b>●</b><small id="ptS">中立</small></div><div class="tm b"><i><u id="bB"></u></i><b class="mono" id="pB">0%</b></div><div class="clk mono" id="tm">8:00</div></div>
   <div class="hud" id="allies" hidden></div>
-  <div id="pveHud" hidden><b id="pveT"></b><i><u id="pveB"></u></i></div>
+  <div id="pveHud" hidden><b id="pveT"></b><i><u id="pveB"></u></i><em id="pveM" hidden><span>推進力</span><i><u></u></i></em><small id="pveH"></small></div>
+  <div id="soloHint" hidden></div>
   <div class="hud" id="feed"></div>
   <div class="hud" id="hp" hidden><div class="n mono"><span id="hpN">100</span><small>HP</small></div><div class="bar"><i id="hpB"></i></div></div>
   <div class="hud" id="wp" hidden><div class="nm" id="wpN">訂書機</div><div class="am mono">∞<small>彈藥無限</small></div></div>
@@ -663,7 +666,7 @@ function rebuildLook(a) { if (!a.spr) { relabel(a); return; } const name = a.ski
 CFG.mode = 'solo';   // 預設單人模式（5V5／連線對戰由選單上方的分頁切換，不存檔）
 WEAPONS.claw = { n: '爪擊', ic: '🐾', kind: 'melee', rate: 1, dmg: 10, spread: 0, pellets: 0, range: 2, kick: 0, col: 0xff6a5a };
 const SOLO = {
-  machi: { type: 'tank', title: '重裝・突破重圍', short: '突破三道關卡，衝到終點', goal: '帶著兩位支援（只補血、不攻擊）沿著道路往前衝。每道關卡都要先擊退迎面而來的怪物才會打開，通過三道關卡、抵達終點線過關' },
+  machi: { type: 'tank', title: '重裝・推進防線', short: '往前推進，突破三道關卡', goal: '重裝要往前頂：帶兩位只補血的支援沿道路推進。往前衝進怪物群會累積「推進力」（受傷最多減半、隊友補血加倍），停下來或後退會掉；停太久怪物會增援。擊退每道關卡的怪物才會打開，抵達終點線過關' },
   noise: { type: 'rush', title: '突襲・四面楚歌', short: '擊倒 50 隻怪物', total: 50, goal: '怪物會從四面八方朝你衝來，擊倒 50 隻怪物過關' },
   anna: { type: 'sniper', title: '狙擊・定點守備', short: '擊倒 50 隻怪物', total: 50, goal: '站在原地不能移動，按右鍵打開狙擊鏡，擊倒 50 隻怪物過關' },
   amber: { type: 'escort', title: '補給・護送重裝', short: '護送重裝抵達終點', goal: '護送一位重裝隊友沿著道路前進。對他開槍就能補血，別讓他倒下，抵達終點線過關' },
@@ -698,11 +701,12 @@ function monThink(a, dt) {
   const d0 = a.hero; a.thk = (a.thk || 0) - dt;
   if (a.stun > 0) { a.vx *= .9; a.vz *= .9; return; }
   if (a.thk <= 0) { a.thk = .3 + Math.random() * .2; let best = null, bd = 1e9; for (const t of actors) { if (t.team === a.team || t.dead) continue; let d = Math.hypot(t.x - a.x, t.z - a.z); if (t.pveTank) d *= .55; if (d < bd) { bd = d; best = t; } }
+    if (pve && pve.type === 'tank' && me && !me.dead && Math.hypot(me.x - a.x, me.z - a.z) < 7) best = me;   // 重裝關：靠近重裝的怪物都會被他吸住
     a.tgt = best; a.direct = !best || clearLine(a.x, a.z, best.x, best.z, a.y); if (best && !a.direct) { a.path = astar(a.x, a.z, best.x, best.z); a.direct = !a.path.length; } else a.path = []; }
   let mx = 0, mz = 0; const t = a.tgt;
   if (t && !t.dead) { const dx = t.x - a.x, dz = t.z - a.z, d = Math.hypot(dx, dz) || 1; a.yaw = Math.atan2(-dx, -dz);
     if (d > 1.7) { if (a.direct) { mx = dx / d; mz = dz / d; } else { const ps = pathStep(a); mx = ps[0]; mz = ps[1]; if (!mx && !mz) { mx = dx / d; mz = dz / d; } } }
-    else if (a.fireT <= 0) { a.fireT = d0.cd; a.fireAnim = .25; dmgTo(t, d0.dmg * (t.pveTank ? 2.2 : t.isMe && pve.type !== 'tank' ? .6 : 1), a, false, '🐾'); } }
+    else if (a.fireT <= 0) { a.fireT = d0.cd; a.fireAnim = .25; dmgTo(t, d0.dmg * (t.pveTank ? 2.2 : t.isMe ? (pve.type === 'tank' ? 1 - .55 * pve.mom / 100 : .6) : 1), a, false, '🐾'); } }
   for (const o of actors) { if (o === a || !o.mon || o.dead) continue; const ox = a.x - o.x, oz = a.z - o.z, od = Math.hypot(ox, oz); if (od < 1.1 && od > .01) { mx += ox / od * .9; mz += oz / od * .9; } }   // 怪物之間互相推開，不要疊成一團
   const sp = d0.speed * (a.spd > 0 ? 1.35 : 1) * ((pve && pve.speedK) || 1); a.vx += (mx * sp - a.vx) * Math.min(1, dt * 8); a.vz += (mz * sp - a.vz) * Math.min(1, dt * 8);
 }
@@ -711,6 +715,7 @@ function allyThink(a, dt) {   // 支援隊友：跟在你身後，只補血、�
   if (a.thk <= 0) { a.thk = .5; a.path = d > 2.5 ? astar(a.x, a.z, gx, gz) : []; }
   let mx = 0, mz = 0; if (d > 2.5) { if (a.path.length) { const ps = pathStep(a); mx = ps[0]; mz = ps[1]; } else { mx = (gx - a.x) / d; mz = (gz - a.z) / d; } }
   a.yaw = m.yaw; const sp = a.hero.speed * (d > 8 ? 1.6 : 1); a.vx += (mx * sp - a.vx) * Math.min(1, dt * 8); a.vz += (mz * sp - a.vz) * Math.min(1, dt * 8);
+  if (pve && pve.type === 'tank' && pve.mom > 0 && !m.dead) healTo(m, 45 * dt * pve.mom / 100, a);   // 推進力越高，補血越快
   if (a.hero.id === 'amber') { const hurt = alliesOf(a).some(t => t.hp < t.maxHp * .95 && Math.hypot(t.x - a.x, t.z - a.z) < 8); if (hurt) a.heal = Math.max(a.heal, .3); }
 }
 function tankThink(a, dt) {   // 護送關的重裝隊友：沿著道路慢慢往前，遇到怪物就停下來打
@@ -742,7 +747,7 @@ function freeSpot(x0, x1, z0, z1) { for (let k = 0; k < 12; k++) { const x = ran
 function pickKind(mix) { let r = Math.random() * (mix.grunt + mix.runner + mix.brute); return (r -= mix.grunt) < 0 ? 'grunt' : (r -= mix.runner) < 0 ? 'runner' : 'brute'; }
 function setupPve() {
   clearActors(); clearPveObjs(); pve = null; const cfg = SOLO[CFG.hero] || SOLO.noise, mine = HERO_BY[CFG.hero] || HERO_BY.noise;
-  pve = { type: cfg.type, title: cfg.title, short: cfg.short, goal: cfg.goal, total: cfg.total || 0, kills: 0, t: 0, objs: [], spawnT: 1, spawned: 0, lock: cfg.type === 'sniper', speedK: cfg.type === 'sniper' ? .55 : cfg.type === 'rush' ? .8 : 1, gates: [], failWhy: '' };
+  pve = { type: cfg.type, title: cfg.title, short: cfg.short, goal: cfg.goal, total: cfg.total || 0, kills: 0, t: 0, objs: [], spawnT: 1, spawned: 0, lock: cfg.type === 'sniper', speedK: cfg.type === 'sniper' ? .55 : cfg.type === 'rush' ? .8 : 1, mom: 0, press: 0, gates: [], failWhy: '' };
   ptRing.visible = ptDisc.visible = ptBeam.visible = false;
   me = makeActor(mine, 0, true, mySkin()); me.pname = meName(); actors.push(me); respawn(me);
   const place = (a, x, z) => { a.x = x; a.z = z; a.y = 0; a.yaw = -Math.PI / 2; a.vx = a.vz = 0; a.inv = 0; a.path = []; };
@@ -757,8 +762,22 @@ function setupPve() {
   yaw = me.yaw = pve.type === 'rush' ? 0 : -Math.PI / 2; pitch = me.pitch = 0;
   prog = [0, 0]; owner = -1; cap = 0; capTeam = -1; tLeft = 0; $('feed').innerHTML = ''; setViewmodel(); buildHud(); relabel(me);
 }
+const SOLO_HINT = {
+  machi: ['往前衝進怪物群累積<b>推進力</b>，受傷更少、隊友補血更快', 'E 壁壘泡泡擋怪　Shift 衝鋒　右鍵 吸收盾', '左搖桿往前走；準心靠近怪物會自動開火；◎＝吸收盾'],
+  noise: ['怪物從四面八方來：邊跑邊打，別被包圍', 'Shift 咖啡因加速　Q 截稿狂暴', '左搖桿邊跑邊轉視角；準心靠近怪物會自動開火'],
+  anna: ['站在定點狙擊，<b>爆頭傷害加倍</b>', '右鍵 開狙擊鏡　Q 鎖頭（自動鎖定頭部）', '點右下 ◎ 開狙擊鏡，滑動畫面右半邊微調準心'],
+  amber: ['對重裝隊友<b>射擊就能補血</b>，跟緊他', 'E 治療光環　Q 全隊回滿血', '左搖桿跟著重裝走；準心對著他射擊補血'],
+  leona: ['<b>左鍵按住</b>牽補血線替重裝回血', 'E 對怪物 100 傷害　Shift 瞬移到隊友旁', '左搖桿跟著重裝走；按住射擊鈕牽補血線'],
+};
+let hintT = 0;
+function soloUi() {   // 單人模式的畫面調整：操作提示、手機按鈕（狙擊關不能移動，隱藏搖桿與跳）
+  const h = $('soloHint'); clearTimeout(hintT);
+  if (pve) { const t = SOLO_HINT[CFG.hero] || SOLO_HINT.noise; h.innerHTML = '<b>' + SOLO[CFG.hero].title + '</b><br>' + t[0] + '<br>' + (touch ? '左搖桿移動・右半邊滑動轉視角<br>' + t[2] : 'WASD 移動・滑鼠瞄準・左鍵射擊<br>' + t[1]); h.hidden = false; hintT = setTimeout(() => { h.hidden = true; }, 8000); } else h.hidden = true;
+  if (touch) { const sn = !!(pve && pve.lock); $('fire').hidden = !pve; $('stick').hidden = sn; $('jump').hidden = sn; $('skE').hidden = sn; const lab = pve ? ({ machi: '吸收盾', anna: '狙擊鏡', leona: '攻擊線' })[CFG.hero] : ''; $('aim').lastElementChild.textContent = lab || '瞄準'; }
+}
 function pveHud() {
   const P = pve; let txt = '', f = 0; const tm = Math.floor(P.t / 60) + ':' + String(Math.floor(P.t % 60)).padStart(2, '0');
+  $('pveM').hidden = P.type !== 'tank'; if (P.type === 'tank') { $('pveM').lastElementChild.firstElementChild.style.width = P.mom + '%'; $('pveH').textContent = P.press > 4 ? '再不前進，怪物就要增援了！' : P.mom < 25 ? '往前衝進怪物群！推進力越高越耐打' : P.mom < 70 ? '保持前進，推進力上升中' : '推進力全開！受傷減半、隊友補血加倍'; } else $('pveH').textContent = '';
   if (P.type === 'tank') { const done = P.gates.filter(g => g.st === 2).length, act = P.gates.find(g => g.st === 1), left = act ? act.left + actors.filter(a => a.mon && !a.dead).length : 0; txt = '關卡 ' + done + '／3　' + (act ? '剩餘怪物 ' + left : '前進！') + '　' + tm; f = clamp((me.x + 26) / 50.5, 0, 1); }
   else if (P.type === 'escort') { const t = P.tank; f = clamp((t.x + 24) / 48.5, 0, 1); txt = '護送進度 ' + Math.round(f * 100) + '%　重裝血量 ' + Math.max(0, Math.round(t.hp / t.maxHp * 100)) + '%　' + tm; }
   else { f = clamp(P.kills / P.total, 0, 1); txt = '擊倒 ' + Math.min(P.kills, P.total) + '／' + P.total + '　' + tm; }
@@ -769,6 +788,9 @@ function pveStep(dt) {
   for (let i = actors.length - 1; i >= 0; i--) { const a = actors[i]; if (a.mon && a.dead) { a.rmT = (a.rmT || 0) + dt; if (a.rmT > 2.5) removeActorAt(i); } }
   const mons = actors.filter(a => a.mon && !a.dead), diff = [.8, 1, 1.25][CFG.diff];
   if (P.type === 'tank') {
+    { const adv = me.vx > 1.5, back = me.vx < -1.2, eng = mons.some(a => a.x > me.x - 1 && Math.hypot(a.x - me.x, a.z - me.z) < 12);   // 往前走（有怪在前面更快）累積推進力，停下或後退會掉
+      P.mom = clamp(P.mom + (back ? -40 : adv ? (eng ? 28 : 8) : -16) * dt, 0, 100); P.press = P.mom < 20 ? P.press + dt : Math.max(0, P.press - dt * 2);
+      if (P.press > 7 && mons.length < 12) { P.press = 3.5; const lim = (P.gates.find(g => g.st !== 2) || { x: 27 }).x - 2; for (let i = 0; i < 2; i++) { const p = freeSpot(Math.min(me.x + 8, lim - 1), lim, ROAD_Z - 1, ROAD_Z + 1); spawnMon('grunt', p[0], p[1]); } banner('停太久了，怪物增援！', '往前推進', 1200); } }
     for (let gi = 0; gi < P.gates.length; gi++) { const g = P.gates[gi], prev = gi === 0 || P.gates[gi - 1].st === 2;
       if (g.st === 0 && prev && me.x > g.x - 24) { g.st = 1; g.spT = 0; banner('關卡 ' + g.i, '擊退迎面而來的怪物，關卡才會打開', 1800); SFX.beep(); }
       if (g.st === 1) { g.spT -= dt; if (g.left > 0 && g.spT <= 0 && mons.length < 14) { g.spT = .5; g.left--; const p = freeSpot(Math.max(g.x - 16, me.x + 10), g.x - 2, ROAD_Z - 1, ROAD_Z + 1); spawnMon(pickKind(g.mix), p[0], p[1]); }
@@ -793,7 +815,7 @@ function pveEnd(win) {
   if (state === 'over' || !pve) return; state = 'over'; try { document.exitPointerLock(); } catch (e) {} document.documentElement.classList.remove('playing'); $('banner').classList.remove('on'); showHeroSel(false); showSB(false);
   say(win ? '勝利' : '敗北'); const P = pve, tm = Math.floor(P.t / 60) + ':' + String(Math.floor(P.t % 60)).padStart(2, '0'), o = $('menu'); o.hidden = false;
   o.firstElementChild.innerHTML = '<div class="logo"><small>' + (win ? 'MISSION CLEAR' : 'MISSION FAILED') + '</small>' + (win ? '過關' : '失敗') + '</div><div style="text-align:center;font-size:20px;font-weight:800;margin:6px 0 2px">' + P.title + '</div><div style="text-align:center;color:#c9d3de;font-size:14px">' + (win ? P.short + ' ✓' : (P.failWhy || '再試一次吧')) + '</div><div class="mono" style="text-align:center;font-size:30px;margin:14px 0">擊倒 ' + P.kills + '　時間 ' + tm + '</div><div style="display:flex;gap:14px;align-items:center;justify-content:center;margin-top:16px;flex-wrap:wrap"><button class="go" id="againB" type="button">' + (win ? '再玩一次' : '重新挑戰') + '</button><button class="exitbtn" id="toMenu" type="button">🏠 選其他職業</button><button class="exitbtn" id="endExit" type="button">⏏ 離開</button></div>';
-  for (const id of ['xh', 'obj', 'hp', 'wp', 'sk', 'allies', 'stick', 'fire', 'jump', 'aim', 'skE', 'skS', 'skR', 'pveHud']) $(id).hidden = true; $('scope').classList.remove('on');
+  for (const id of ['xh', 'obj', 'hp', 'wp', 'sk', 'allies', 'stick', 'fire', 'jump', 'aim', 'skE', 'skS', 'skR', 'pveHud', 'soloHint']) $(id).hidden = true; $('scope').classList.remove('on');
   $('againB').onclick = () => startMatch(); $('toMenu').onclick = () => location.reload(); $('endExit').onclick = () => goBack();
 }
 // 選單：分頁（單人模式／5V5 對戰／連線對戰）
@@ -1319,7 +1341,7 @@ function stepActor(a, dt) {
   if (a.chargeT > 0) { a.chargeT -= dt; for (const t of enemiesOf(a)) if (!a.chHit.has(t) && Math.hypot(t.x - a.x, t.z - a.z) < 1.5) { a.chHit.add(t); dmgTo(t, 60, a, false, '🐂'); const f = fwd(a); t.vx += f[0] * 12; t.vz += f[1] * 12; t.stun = Math.max(t.stun, .4); if (t.remote) netKb(t, f[0] * 12, f[1] * 12, .4); } }
   if (a.isMe) {
     edgeTurn(dt); if (keys.ArrowLeft) yaw += 2.2 * dt; if (keys.ArrowRight) yaw -= 2.2 * dt; if (keys.ArrowUp) pitch = clamp(pitch + 1.6 * dt, -1.45, 1.45); if (keys.ArrowDown) pitch = clamp(pitch - 1.6 * dt, -1.45, 1.45);
-    const mx = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + joy.x, mz = (keys.KeyS ? 1 : 0) - (keys.KeyW ? 1 : 0) + joy.y, l = Math.hypot(mx, mz), sp = a.hero.speed * (a.buff > 0 ? 1.45 : 1) * (a.spd > 0 ? 1.35 : 1) * (zoom ? .6 : 1) * (a.down ? .25 : 1) * (a.absOn ? .6 : 1) * (pve && pve.lock ? 0 : 1), fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = -fz, rz = fx;
+    const mx = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + joy.x, mz = (keys.KeyS ? 1 : 0) - (keys.KeyW ? 1 : 0) + joy.y, l = Math.hypot(mx, mz), sp = a.hero.speed * (a.buff > 0 ? 1.45 : 1) * (a.spd > 0 ? 1.35 : 1) * (zoom ? .6 : 1) * (a.down ? .25 : 1) * (a.absOn ? .6 : 1) * (pve && pve.lock ? 0 : 1) * (pve && pve.mom ? 1 + pve.mom * .0012 : 1), fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = -fz, rz = fx;
     if (a.dashT > 0) a.dashT -= dt; else if (a.stun > 0) { a.vx *= .9; a.vz *= .9; } else { const k = l > 1 ? 1 / l : 1, tx = (fx * -mz + rx * mx) * k * sp, tz = (fz * -mz + rz * mx) * k * sp, ac = a.ground ? 14 : 3; a.vx += (tx - a.vx) * Math.min(1, dt * ac); a.vz += (tz - a.vz) * Math.min(1, dt * ac); }
     if (a.lockT > 0) { let bt = null, bd = 1e9; for (const t of enemiesOf(a)) { const dd = Math.hypot(t.x - a.x, t.z - a.z); if (dd < 90 && dd < bd && los(a, t, a.y + 1.55, t.y + 1.62)) { bd = dd; bt = t; } } if (bt) { const dx = bt.x - a.x, dz = bt.z - a.z, dy = bt.y + 1.62 - (a.y + 1.55), hh = Math.hypot(dx, dz); let dyw = Math.atan2(-dx, -dz) - yaw; dyw = Math.atan2(Math.sin(dyw), Math.cos(dyw)); const kk = Math.min(1, dt * 16); yaw += dyw * kk; pitch = clamp(pitch + (Math.atan2(dy, hh) - pitch) * kk, -1.45, 1.45); } }   // Anna 大招：鎖頭
     let tAim = false; if (touch && state === 'play' && !a.dead) {   // 手機半自瞄：準心接近敵人時輕輕吸附（開火時更強），只修正小角度，不會自己轉去找人
@@ -1402,7 +1424,7 @@ function endMatch() { if (state === 'over') return; state = 'over'; try { docume
   for (const id of ['xh', 'obj', 'hp', 'wp', 'sk', 'allies', 'stick', 'fire', 'jump', 'aim', 'skE', 'skS', 'skR']) $(id).hidden = true; $('scope').classList.remove('on');
   $('againB').onclick = () => { if (net) netAgain(); else startMatch(); }; $('toMenu').onclick = () => { if (net) { try { netClose(); } catch (e) {} } location.reload(); }; $('endRec').onclick = showRecords; $('endBoard').onclick = () => showBoard(); $('endExit').onclick = () => goBack(); cloudSubmit(win); }
 function startMatch() { if (!cloudDone) { cloudReady.then(startMatch); return; } window.__matchT0 = Date.now(); unlock(); $('menu').hidden = true; setupMatch(); document.documentElement.classList.add('playing'); resize(); for (const id of ['xh', 'obj', 'hp', 'wp', 'sk', 'allies']) $(id).hidden = false; $('obj').hidden = !!pve; $('pveHud').hidden = !pve; if (touch) for (const id of ['stick', 'jump', 'aim', 'skE', 'skS', 'skR']) $(id).hidden = false; $('exitB2').hidden = false;
-  state = 'count'; stT = 3.6; paused = false; if (!touch) { lockFail = false; askLock(); $('lock').hidden = false; } }
+  soloUi(); state = 'count'; stT = 3.6; paused = false; if (!touch) { lockFail = false; askLock(); $('lock').hidden = false; } }
 const lerp = (a, b, t) => a + (b - a) * t;
 let last = performance.now();
 function render(dt) {
