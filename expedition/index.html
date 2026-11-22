@@ -175,12 +175,14 @@ html.fsm #stage.cine #dFace{bottom:calc(8% + 54px)}
 .opt{font:inherit;text-align:left;color:#eafff2;background:#163a2a;border:3px solid #000;border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:4px}
 .opt b{font-size:16px;color:#eafff2} .opt small{color:#b9dcc9;font-size:12px;line-height:1.4} .opt em{font-style:normal;color:#ffd166;font-size:12px}
 .opt:active{filter:brightness(.92)}
-#ch2v{width:min(100%,560px);max-height:44vh;border:3px solid #000;border-radius:12px;background:#000}
+#vidO{position:absolute;inset:0;z-index:9;background:#000;display:flex;align-items:center;justify-content:center}
+#vidO video{width:100%;height:100%;object-fit:contain;background:#000}
+#skipV{position:absolute;right:14px;top:12px;z-index:2;opacity:.85}
 #stageList{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;width:min(100%,640px)}
 .stg{font:inherit;text-align:left;color:#eafff2;background:#163a2a;border:3px solid #000;border-radius:12px;padding:8px 12px;cursor:pointer;display:flex;flex-direction:column;gap:2px}
 .stg b{font-size:14px;color:#eafff2} .stg i{font-style:normal;color:#ffd166;font-size:12px;letter-spacing:.1em} .stg small{color:#b9dcc9;font-size:11px;line-height:1.35}
 .stg:active{filter:brightness(.92)}
-html.fsm .opt{padding:6px 10px;border-width:2px;border-radius:10px} html.fsm .opt b{font-size:12px} html.fsm .opt small,html.fsm .opt em{font-size:10px} html.fsm #optList{gap:6px} html.fsm #ch2v{max-height:46vh}
+html.fsm .opt{padding:6px 10px;border-width:2px;border-radius:10px} html.fsm .opt b{font-size:12px} html.fsm .opt small,html.fsm .opt em{font-size:10px} html.fsm #optList{gap:6px}
 html.fsm #stageList{grid-template-columns:repeat(3,1fr);gap:5px} html.fsm .stg{padding:4px 8px;border-width:2px;border-radius:9px} html.fsm .stg b{font-size:11px} html.fsm .stg small{font-size:9px}
 #deliver{position:absolute;left:12px;bottom:12px;z-index:3;font-size:17px;padding:8px 20px;background:linear-gradient(#ffe39a,#f0b429);animation:dpop .9s infinite}
 @keyframes dpop{50%{transform:scale(1.07)}}
@@ -311,6 +313,7 @@ html.fsm #endO .lb{max-height:30vh;overflow:auto}
     <div class="overlay" id="endO" hidden></div>
     <div class="overlay" id="choiceO" hidden></div>
     <div class="overlay" id="endC" hidden></div>
+    <div id="vidO" hidden></div>
   </section>
 
   <div id="tip">三波敵人：插單便條、意見分身、客戶 Boss（每次隨機）。全程約兩分半。</div>
@@ -1115,7 +1118,7 @@ function emcBgm(url, opts) {
   const ctl = {
     start() { if (started || trying) return; trying = true; const x = A[cur]; try { x.currentTime = 0; } catch (e) {} let p; try { p = x.play(); } catch (e) { trying = false; return; } const ok = () => { trying = false; if (started) return; started = true; clearInterval(timer); timer = setInterval(tick, 100); ['pointerdown', 'mousedown', 'touchstart', 'click', 'keydown'].forEach(ev => removeEventListener(ev, once, true)); }; if (p && p.then) p.then(ok).catch(() => { trying = false; }); else ok(); },
     pause() { paused = true; A.forEach(a => a.pause()); },
-    resume() { if (!started) return; paused = false; A[cur].play().catch(() => {}); },
+    resume() { paused = false; if (!started) return; A[cur].play().catch(() => {}); },
     get vol() { return vol; }, get muted() { return muted; }, get on() { return started; }, get playing() { return started && !paused; }, get t() { return A[cur].currentTime; }, get d() { return A[cur].duration; }, get level() { return A.map(x => +x.volume.toFixed(2)); },
     setVol(v) { vol = Math.max(0, Math.min(1, v)); if (vol > 0) muted = false; save(); apply(); },
     setMuted(m) { muted = !!m; save(); apply(); },
@@ -1661,7 +1664,7 @@ function campWin(score) {   // 劇情模式：這一關通過 → 結束動畫 �
   const kind = S.bossKind, n = camp.order.length;
   try { Core.ORDER.forEach(id => fxBeam(rpos(Core.hero(S, id)), COL[id], false)); } catch (e) {}
   banner('第 ' + n + ' 關完成', Core.BOSS[kind].title, '#5fe08a'); cue('whoosh');
-  setTimeout(() => playLines(OUTRO[kind] || [], () => { if (n >= 5) campEnding(); else showChoice(); }), 1400);
+  setTimeout(() => { if (n >= 5) campEnding(); else playLines(OUTRO[kind] || [], showChoice); }, 1400);
 }
 function showChoice() {
   const left = ['client', 'rush', 'upload', 'meeting'].filter(k => !camp.order.includes(k)), el = $('choiceO');
@@ -1673,15 +1676,23 @@ function showChoice() {
     camp.bridge = [SYS('你的選擇：' + o.label + '。')].concat(TARGET[o.kind].bridge); saveCamp(); begin(o.kind, { camp: true });
   }));
 }
-function campEnding() {
-  camp.done = true; const total = Math.round(camp.score), secs = camp.secs, st = camp.b >= 3 ? 'brave' : camp.c >= 3 ? 'careful' : 'balanced'; saveCamp(); try { localStorage.removeItem(CAMP_KEY); } catch (e) {}
-  playLines(ENDING.common.concat(ENDING[st], ENDING.tail), () => {
-    const el = $('endC'); el.innerHTML = '<span class="badge">第一章 完</span><h2>即將進入第二章</h2><video id="ch2v" controls playsinline preload="metadata"><source src="chapter2.webm" type="video/webm"><source src="chapter2.mp4" type="video/mp4"></video><p id="ch2n" hidden>第二章預告片製作中，敬請期待。</p><div class="sys">劇情總分　' + total + '</div><div class="stats">' + collHtml() + '</div><div class="lb" id="lbBox"></div><div class="row"><button class="pk big" id="againCamp" type="button">再走一次劇情</button><button class="pk" id="backMenu" type="button">回選單</button></div>';
-    el.hidden = false; const v = $('ch2v'); v.querySelector('source:last-child').addEventListener('error', () => { v.hidden = true; $('ch2n').hidden = false; });
-    $('againCamp').addEventListener('click', () => { el.hidden = true; startCamp(true); });
-    $('backMenu').addEventListener('click', () => { el.hidden = true; $('startO').hidden = false; fillColl(); });
-    setupBoard(total, secs);
-  });
+function campEnding() {   // 最後一關通關：直接播預告片（不用再點對白），播完（或按跳過）才出現成績畫面
+  camp.done = true; const total = Math.round(camp.score), secs = camp.secs; saveCamp(); try { localStorage.removeItem(CAMP_KEY); } catch (e) {}
+  playVideo(() => showEnd(total, secs));
+}
+function playVideo(cb) {
+  const el = $('vidO'); el.innerHTML = '<video id="ch2v" playsinline preload="auto"><source src="chapter2.webm" type="video/webm"><source src="chapter2.mp4" type="video/mp4"></video><button class="pk" id="skipV" type="button">跳過</button>'; el.hidden = false;
+  const v = $('ch2v'); let done = false; const end = () => { if (done) return; done = true; try { v.pause(); } catch (e) {} el.hidden = true; el.innerHTML = ''; cb(); };
+  v.addEventListener('ended', end); $('skipV').addEventListener('click', end); v.querySelector('source:last-child').addEventListener('error', end);
+  const p = v.play(); if (p && p.catch) p.catch(() => { v.controls = true; });   // 瀏覽器擋自動播放時，顯示播放鍵讓玩家點一下
+}
+function showEnd(total, secs) {
+  const el = $('endC'); el.innerHTML = '<span class="badge">第一章 完</span><h2>即將進入第二章</h2><div class="sys">劇情總分　' + total + '</div><div class="stats">' + collHtml() + '</div><div class="lb" id="lbBox"></div><div class="row"><button class="pk big" id="againCamp" type="button">再走一次劇情</button><button class="pk" id="replayV" type="button">重看預告片</button><button class="pk" id="backMenu" type="button">回選單</button></div>';
+  el.hidden = false;
+  $('againCamp').addEventListener('click', () => { el.hidden = true; startCamp(true); });
+  $('replayV').addEventListener('click', () => playVideo(() => {}));
+  $('backMenu').addEventListener('click', () => { el.hidden = true; $('startO').hidden = false; fillColl(); });
+  setupBoard(total, secs);
 }
 function begin(kind, opt) {
   inCamp = !!(opt && opt.camp); onLinesDone = null; $('stage').classList.remove('cine'); $('choiceO').hidden = true; $('endC').hidden = true;
