@@ -666,16 +666,17 @@ function rebuildLook(a) { if (!a.spr) { relabel(a); return; } const name = a.ski
 CFG.mode = 'solo';   // 預設單人模式（5V5／連線對戰由選單上方的分頁切換，不存檔）
 WEAPONS.claw = { n: '爪擊', ic: '🐾', kind: 'melee', rate: 1, dmg: 10, spread: 0, pellets: 0, range: 2, kick: 0, col: 0xff6a5a };
 const SOLO = {
-  machi: { type: 'rescue', title: '重裝・營救隊友', short: '擊退三波怪物，守住兩位隊友', goal: '你的兩位隊友是輸出（Noise、Anna），怪物會從四面八方衝向他們。隊友被打倒後 12 秒內沒人救就會陣亡：衝過去擋在他們前面（Q 震地、Shift 衝鋒），靠近倒地的隊友停留 1.6 秒就能救起來。擊退三波怪物過關' },
+  machi: { type: 'tank', title: '重裝・堅守反彈', short: '撐過三波，打倒大魔王', goal: '站穩當坦克：兩位支援圍著你一直補血，所有怪物都只會打你。怪物會越打越快（狂怒），而且打得越快，反彈給他們的傷害就越痛！撐過兩波，打倒第三波的大魔王過關' },
   noise: { type: 'rush', title: '突襲・四面楚歌', short: '擊倒 50 隻怪物', total: 50, goal: '怪物會從四面八方朝你衝來，擊倒 50 隻怪物過關' },
   anna: { type: 'sniper', title: '狙擊・定點守備', short: '擊倒 50 隻怪物', total: 50, goal: '在西北角一塊圓形空地內可以走動、跳躍，北側有小平台（沿階梯走上去，視野更好）。怪物從很遠的東邊走道走過來，進空地後會先左右遊走，再衝向你。按右鍵開狙擊鏡，擊倒 50 隻過關' },
-  amber: { type: 'escort', title: '補給・護送重裝', short: '護送重裝走到終點', goal: '在地圖角落一大塊沒有隔板的空地，護送一位重裝隊友蛇行走到終點。怪物從四面八方來，對他開槍就能補血，別讓他倒下' },
-  leona: { type: 'escort', title: '治療・護送重裝', short: '護送重裝走到終點', goal: '在地圖角落一大塊沒有隔板的空地，護送一位重裝隊友蛇行走到終點。怪物從四面八方來，左鍵牽補血線替他回血，別讓他倒下' },
+  amber: { type: 'escort', title: '補給・推桌三階段', short: '幫重裝把桌子推到終點', goal: '重裝隊友要把一張辦公桌推到終點，分三個階段。每個階段會出現一波怪物：幫他清怪、對他射擊補血，別讓他倒下，三個階段全部完成過關' },
+  leona: { type: 'escort', title: '治療・推桌三階段', short: '幫重裝把桌子推到終點', goal: '重裝隊友要把一張辦公桌推到終點，分三個階段。每個階段會出現一波怪物：幫他清怪、左鍵牽補血線替他回血，別讓他倒下，三個階段全部完成過關' },
 };
 let pve = null;
 const MONS = {
   grunt: { name: '小怪', ic: '👾', hp: 90, speed: 3.4, dmg: 4, cd: 1.2, sc: 1, files: ['note', 'client_note', 'rush_note', 'upload_note', 'meeting_note'] },
   runner: { name: '快腿怪', ic: '💨', hp: 60, speed: 4.8, dmg: 3, cd: 1.0, sc: .9, files: ['clone', 'client_clone', 'rush_clone', 'upload_clone', 'meeting_clone'] },
+  boss: { name: '大魔王', ic: '👹', hp: 9000, speed: 2.1, dmg: 22, cd: 1.5, sc: 2.6, files: ['hydra'] },
   brute: { name: '大怪', ic: '💀', hp: 260, speed: 2.5, dmg: 10, cd: 1.5, sc: 1.45, files: ['armor', 'client_armor', 'rush_armor', 'upload_armor', 'meeting_armor'] },
 };
 const monImgs = {}; for (const k in MONS) for (const f of MONS[k].files) if (!monImgs[f]) { const im = new Image(); im.src = '../expedition/monsters/' + f + '.webp'; monImgs[f] = im; }
@@ -691,7 +692,7 @@ const monHeroCache = {};
 function monHero(kind) { const k = kind + CFG.diff; if (monHeroCache[k]) return monHeroCache[k]; const d = MONS[kind], f = [.8, 1, 1.3][CFG.diff]; return monHeroCache[k] = { id: 'mon_' + kind, char: 'Noise', name: d.name, title: '怪物', role: '怪物', ic: d.ic, hp: Math.round(d.hp * f), speed: d.speed, w: 'claw', pref: 2, sleeve: 0x444444, dmg: Math.round(d.dmg * f), cd: d.cd, e: { n: '', ic: '', cd: 99, d: '' }, s: { n: '', ic: '', cd: 99, d: '' }, q: { n: '', d: '' } }; }
 function spawnMon(kind, x, z) {
   const d = MONS[kind], hero = monHero(kind), a = makeActor(hero, 1, false, 'Noise');
-  a.mon = kind; a.bot = null; if (pve && pve.type === 'rescue') a.maxHp = Math.round(a.maxHp * 1.8); a.hp = a.maxHp; a.dead = false; a.inv = 0; a.x = x; a.z = z; a.y = 0; a.yaw = 0; a.fireT = .6 + Math.random() * .5; a.hring.visible = false; a.g.scale.setScalar(d.sc);
+  a.mon = kind; a.bot = null; if (pve && pve.type === 'rescue') a.maxHp = Math.round(a.maxHp * 1.8); else if (pve && pve.type === 'tank' && kind !== 'boss') a.maxHp = Math.round(a.maxHp * 7); a.hp = a.maxHp; a.dead = false; a.inv = 0; a.x = x; a.z = z; a.y = 0; a.yaw = 0; a.fireT = .6 + Math.random() * .5; a.hring.visible = false; a.g.scale.setScalar(d.sc);
   const f = d.files[Math.floor(Math.random() * d.files.length)], tx = monTex(f); if (tx) { a.stand = tx.stand; a.walk = tx.walk; a.spr.material.map = tx.stand; a.spr.material.needsUpdate = true; }
   actors.push(a); return a;
 }
@@ -712,31 +713,33 @@ function monThink(a, dt) {
       const dx = a.wp[0] - a.x, dz = a.wp[1] - a.z, d = Math.hypot(dx, dz) || 1, sp = d0.speed * .75 * pve.speedK; a.yaw = Math.atan2(-dx, -dz); a.vx += (dx / d * sp - a.vx) * Math.min(1, dt * 8); a.vz += (dz / d * sp - a.vz) * Math.min(1, dt * 8); return; } }
   if (a.thk <= 0) { a.thk = .3 + Math.random() * .2; let best = null, bd = 1e9; for (const t of actors) { if (t.team === a.team || t.dead || t.down) continue; let d = Math.hypot(t.x - a.x, t.z - a.z); if (t.pveTank) d *= .55; if (pve && pve.type === 'rescue' && t.isMe) d *= 1.5; if (d < bd) { bd = d; best = t; } }
     if (pve && pve.type === 'rescue' && me && !me.dead && Math.hypot(me.x - a.x, me.z - a.z) < 6) best = me;   // 營救關：靠近重裝的怪物都會被他吸住
+    if (pve && pve.type === 'tank' && me && !me.dead) best = me;   // 重裝關：所有怪物只打重裝
     a.tgt = best; a.direct = !best || clearLine(a.x, a.z, best.x, best.z, a.y); if (best && !a.direct) { a.path = astar(a.x, a.z, best.x, best.z); a.direct = !a.path.length; } else a.path = []; }
   let mx = 0, mz = 0; const t = a.tgt;
   if (t && !t.dead) { const dx = t.x - a.x, dz = t.z - a.z, d = Math.hypot(dx, dz) || 1; a.yaw = Math.atan2(-dx, -dz);
     const reach = pve && pve.type === 'sniper' && t.isMe && t.y > .8 ? 2.9 : 1.7;
     if (d > reach) { if (a.direct) { mx = dx / d; mz = dz / d; } else { const ps = pathStep(a); mx = ps[0]; mz = ps[1]; if (!mx && !mz) { mx = dx / d; mz = dz / d; } } }
-    else if (a.fireT <= 0) { a.fireT = d0.cd; a.fireAnim = .25; dmgTo(t, d0.dmg * (t.pveTank ? 3.2 : t.pveBuddy ? 5 : t.isMe ? .6 : 1), a, false, '🐾'); } }
+    else if (a.fireT <= 0) { const rg = pve && pve.type === 'tank' ? pve.rage : 0; a.fireT = d0.cd / (1 + rg); a.fireAnim = .25; const hit = d0.dmg * (t.pveTank ? 3.2 : t.pveBuddy ? 5 : t.isMe ? (pve.type === 'tank' ? 5 : .6) : 1); dmgTo(t, hit, a, false, '🐾');
+      if (pve && pve.type === 'tank' && t.isMe && !a.dead) { dmgTo(a, hit * (1 + 3.5 * rg) * (a.mon === 'boss' ? .35 : 1), t, false, '↩'); } } }   // 怪打越快（狂怒）反彈越痛
   for (const o of actors) { if (o === a || !o.mon || o.dead) continue; const ox = a.x - o.x, oz = a.z - o.z, od = Math.hypot(ox, oz); if (od < 1.1 && od > .01) { mx += ox / od * .9; mz += oz / od * .9; } }   // 怪物之間互相推開，不要疊成一團
   const sp = d0.speed * (a.spd > 0 ? 1.35 : 1) * ((pve && pve.speedK) || 1); a.vx += (mx * sp - a.vx) * Math.min(1, dt * 8); a.vz += (mz * sp - a.vz) * Math.min(1, dt * 8);
 }
 function allyThink(a, dt) {   // 支援隊友：跟在你身後，只補血、不攻擊
-  a.thk = (a.thk || 0) - dt; const m = me; if (!m || m.dead) return; const off = a.pveOff || [-3, 0], gx = m.x + off[0], gz = m.z + off[1], d = Math.hypot(gx - a.x, gz - a.z);
-  if (a.thk <= 0) { a.thk = .5; a.path = d > 2.5 ? astar(a.x, a.z, gx, gz) : []; }
-  let mx = 0, mz = 0; if (d > 2.5) { if (a.path.length) { const ps = pathStep(a); mx = ps[0]; mz = ps[1]; } else { mx = (gx - a.x) / d; mz = (gz - a.z) / d; } }
+  a.thk = (a.thk || 0) - dt; const m = me; if (!m || m.dead) return; const orb = a.pveOrbit !== undefined, an = orb ? a.pveOrbit + pve.t * .7 : 0, off = a.pveOff || [-3, 0], gx = orb ? m.x + Math.cos(an) * 1.9 : m.x + off[0], gz = orb ? m.z + Math.sin(an) * 1.9 : m.z + off[1], d = Math.hypot(gx - a.x, gz - a.z), th = orb ? .3 : 2.5;
+  if (a.thk <= 0) { a.thk = .5; a.path = d > th ? astar(a.x, a.z, gx, gz) : []; }
+  let mx = 0, mz = 0; if (d > th) { if (a.path.length) { const ps = pathStep(a); mx = ps[0]; mz = ps[1]; } else { mx = (gx - a.x) / d; mz = (gz - a.z) / d; } }
   a.yaw = m.yaw; const sp = a.hero.speed * (d > 8 ? 1.6 : 1); a.vx += (mx * sp - a.vx) * Math.min(1, dt * 8); a.vz += (mz * sp - a.vz) * Math.min(1, dt * 8);
-  if (pve && pve.type === 'tank' && pve.mom > 0 && !m.dead) healTo(m, 45 * dt * pve.mom / 100, a);   // 推進力越高，補血越快
+  if (pve && pve.type === 'tank' && !m.dead) healTo(m, 25 * dt, a);   // 重裝關：兩位支援一直補血
   if (a.hero.id === 'amber') { const hurt = alliesOf(a).some(t => t.hp < t.maxHp * .95 && Math.hypot(t.x - a.x, t.z - a.z) < 8); if (hurt) a.heal = Math.max(a.heal, .3); }
 }
 function tankThink(a, dt) {   // 護送關的重裝隊友：沿著道路慢慢往前，遇到怪物就停下來打
   a.thk = (a.thk || 0) - dt; if (a.stun > 0) { a.vx *= .9; a.vz *= .9; return; }
   let near = null, nd = 1e9; for (const t of actors) { if (!t.mon || t.dead) continue; const d = Math.hypot(t.x - a.x, t.z - a.z); if (d < nd) { nd = d; near = t; } }
-  if (near && nd < 3) { a.yaw = Math.atan2(-(near.x - a.x), -(near.z - a.z)); if (a.fireT <= 0) { a.fireT = .85; a.fireAnim = .25; for (const t of actors) if (t.mon && !t.dead && Math.hypot(t.x - a.x, t.z - a.z) < 3.2) dmgTo(t, 34, a, false, '🛡️'); } }
-  const wait = (near && nd < 3.2) || (me && !me.dead && Math.hypot(me.x - a.x, me.z - a.z) > 22); let mx = 0, mz = 0;
+  if (near && nd < 3.2) { a.yaw = Math.atan2(-(near.x - a.x), -(near.z - a.z)); if (a.fireT <= 0) { a.fireT = .85; a.fireAnim = .25; for (const t of actors) if (t.mon && !t.dead && Math.hypot(t.x - a.x, t.z - a.z) < 3.2) dmgTo(t, 34, a, false, '🛡️'); } }
+  const wait = (near && nd < 3.2) || (me && !me.dead && Math.hypot(me.x - a.x, me.z - a.z) > 22) || !pve.stOn || pve.ri > pve.ends[pve.stage]; let mx = 0, mz = 0;
   const RT = pve.route; for (let j = RT.length - 1; j >= pve.ri; j--) if (Math.hypot(RT[j][0] - a.x, RT[j][1] - a.z) < 1.8) { pve.ri = Math.min(RT.length - 1, j + 1); break; }
   if (!wait) { if (a.thk <= 0) { a.thk = .6; const tg = RT[pve.ri]; a.path = astar(a.x, a.z, tg[0], tg[1]); } if (a.path.length) { const ps = pathStep(a); mx = ps[0]; mz = ps[1]; } else { const tg = RT[pve.ri], dx = tg[0] - a.x, dz = tg[1] - a.z, dd = Math.hypot(dx, dz) || 1; mx = dx / dd; mz = dz / dd; } if (mx || mz) a.yaw = Math.atan2(-mx, -mz); }
-  const sp = a.hero.speed * .34; a.vx += (mx * sp - a.vx) * Math.min(1, dt * 8); a.vz += (mz * sp - a.vz) * Math.min(1, dt * 8);
+  const sp = a.hero.speed * .27; a.vx += (mx * sp - a.vx) * Math.min(1, dt * 8); a.vz += (mz * sp - a.vz) * Math.min(1, dt * 8);
 }
 // 道路、關卡、終點
 function clearPveObjs() { if (pve && pve.nestBoxes) for (const b of pve.nestBoxes) { const i = BOXES.indexOf(b); if (i >= 0) BOXES.splice(i, 1); } if (pve && pve.objs) { for (const o of pve.objs) { scene.remove(o); } for (const g of (pve.gates || [])) { const i = BOXES.indexOf(g.box); if (i >= 0) BOXES.splice(i, 1); } } ptRing.visible = ptDisc.visible = ptBeam.visible = !pve; }
@@ -772,25 +775,26 @@ function setupPve() {
   me = makeActor(mine, 0, true, mySkin()); me.pname = meName(); actors.push(me); respawn(me);
   const place = (a, x, z) => { a.x = x; a.z = z; a.y = 0; a.yaw = -Math.PI / 2; a.vx = a.vz = 0; a.inv = 0; a.path = []; };
   if (pve.type === 'tank') {
-    pve.gates = [{ i: 1, x: -8, n: 10, left: 10, st: 0, mix: { grunt: 1, runner: 0, brute: 0 } }, { i: 2, x: 6, n: 14, left: 14, st: 0, mix: { grunt: .6, runner: .25, brute: .15 } }, { i: 3, x: 18, n: 20, left: 20, st: 0, mix: { grunt: .5, runner: .25, brute: .25 } }]; buildRoad(true);
-    place(me, -25, ROAD_Z); [['amber', -3, -.7], ['leona', -3.6, .7]].forEach(([id, ox, oz], i) => { const a = makeActor(HERO_BY[id], 0, false, HERO_BY[id].char); a.pveAlly = true; a.bot = null; a.pveOff = [ox, oz]; actors.push(a); respawn(a); place(a, -25 + ox, ROAD_Z + oz); });
+    pve.waves = [{ n: 18, mix: { grunt: .7, runner: .3, brute: 0 } }, { n: 26, mix: { grunt: .5, runner: .3, brute: .2 } }, { n: 10, mix: { grunt: .6, runner: .4, brute: 0 }, boss: true }]; pve.wi = -1; pve.waveT = 2; pve.left = 0; pve.rage = 0; pve.waveS = 0; buildArenaMark();
+    place(me, -10.5, -21.5); [['amber', 0], ['leona', Math.PI]].forEach(([id, ph]) => { const a = makeActor(HERO_BY[id], 0, false, HERO_BY[id].char); a.pveAlly = true; a.bot = null; a.pveOrbit = ph; actors.push(a); respawn(a); place(a, me.x + Math.cos(ph) * 1.9, me.z + Math.sin(ph) * 1.9); });
   } else if (pve.type === 'rescue') {
     pve.waves = [{ n: 12, mix: { grunt: .75, runner: .25, brute: 0 } }, { n: 18, mix: { grunt: .55, runner: .25, brute: .2 } }, { n: 24, mix: { grunt: .45, runner: .25, brute: .3 } }]; pve.wi = -1; pve.waveT = 2; pve.left = 0;
     [['noise', -5, -3], ['anna', 5, 3]].forEach(([id, bx, bz]) => { const a = makeActor(HERO_BY[id], 0, false, HERO_BY[id].char); a.pveBuddy = true; a.bot = { react: 0, strafe: 1, strafeT: 0, think: 0, seen: 0, patrol: null, abT: rand(1, 3) }; actors.push(a); respawn(a); const p = nearestFree(bx, bz); place(a, p[0], p[1]); a.yaw = 0; });
     { const p = nearestFree(0, 7.5); place(me, p[0], p[1]); }
   } else if (pve.type === 'escort') {
-    buildLoop(); { const p0 = pve.route[0]; place(me, p0[0] + 1.6, p0[1] + 1.8); const t = makeActor(HERO_BY.machi, 0, false, 'Machi'); t.pveTank = true; t.bot = null; t.name = '重裝隊友'; t.maxHp = 700; actors.push(t); respawn(t); t.maxHp = 700; t.hp = 700; place(t, p0[0], p0[1]); pve.tank = t; }
+    buildLoop(); pve.ends = [5, 10, pve.route.length - 1]; pve.stage = 0; pve.left = 0; pve.stT = 2; pve.stOn = false; buildDesk();
+    { const p0 = pve.route[0]; place(me, p0[0] + 1.6, p0[1] + 1.8); const t = makeActor(HERO_BY.machi, 0, false, 'Machi'); t.pveTank = true; t.bot = null; t.name = '重裝隊友'; t.maxHp = 700; actors.push(t); respawn(t); t.maxHp = 700; t.hp = 700; place(t, p0[0], p0[1]); pve.tank = t; }
   } else if (pve.type === 'sniper') { buildNest(); place(me, NEST.x + 2, NEST.z + .5); }
   else { place(me, 0, 0); }
   yaw = me.yaw = pve.type === 'rush' ? 0 : pve.type === 'rescue' ? Math.PI : pve.type === 'escort' ? Math.PI / 2 : -Math.PI / 2; pitch = me.pitch = 0;
   prog = [0, 0]; owner = -1; cap = 0; capTeam = -1; tLeft = 0; $('feed').innerHTML = ''; setViewmodel(); buildHud(); relabel(me);
 }
 const SOLO_HINT = {
-  machi: ['隊友倒地了就<b>衝過去營救</b>：靠近他停留 1.6 秒；怪物靠近你會被你吸住', 'Q 震地（暈眩）　Shift 衝鋒　E 壁壘泡泡　右鍵 吸收盾', '左搖桿衝向隊友；準心靠近怪物會自動開火；◎＝吸收盾'],
+  machi: ['兩位支援一直補血，怪物都只打你：怪打越快，<b>反彈傷害越痛</b>', 'Q 震地　Shift 衝鋒　E 壁壘泡泡　右鍵 吸收盾', '左搖桿站穩位置；準心靠近怪物會自動開火；◎＝吸收盾'],
   noise: ['怪物從四面八方來：邊跑邊打，別被包圍', 'Shift 咖啡因加速　Q 截稿狂暴', '左搖桿邊跑邊轉視角；準心靠近怪物會自動開火'],
   anna: ['圓圈內可走動跳躍、可爬上小平台；怪物從遠方走來：<b>爆頭傷害加倍</b>', '右鍵 開狙擊鏡　Q 鎖頭（自動鎖定頭部）', '點右下 ◎ 開狙擊鏡，滑動畫面右半邊微調準心'],
-  amber: ['對重裝隊友<b>射擊就能補血</b>，跟緊他', 'E 治療光環　Q 全隊回滿血', '左搖桿跟著重裝走；準心對著他射擊補血'],
-  leona: ['<b>左鍵按住</b>牽補血線替重裝回血', 'E 對怪物 100 傷害　Shift 瞬移到隊友旁', '左搖桿跟著重裝走；按住射擊鈕牽補血線'],
+  amber: ['重裝在推桌子：幫他<b>清怪、射擊補血</b>', 'E 治療光環　Q 全隊回滿血', '左搖桿跟著重裝走；準心對著他射擊補血'],
+  leona: ['重裝在推桌子：<b>左鍵按住</b>牽補血線，並用 E 清怪', 'E 對怪物 100 傷害　Shift 瞬移到隊友旁', '左搖桿跟著重裝走；按住射擊鈕牽補血線'],
 };
 let hintT = 0;
 function soloUi() {   // 單人模式的畫面調整：操作提示、手機按鈕（狙擊關不能移動，隱藏搖桿與跳）
@@ -799,6 +803,14 @@ function soloUi() {   // 單人模式的畫面調整：操作提示、手機按�
   if (touch) { const sn = !!(pve && pve.lock); $('fire').hidden = !pve; $('stick').hidden = sn; $('jump').hidden = sn; $('skE').hidden = sn; const lab = pve ? ({ machi: '吸收盾', anna: '狙擊鏡', leona: '攻擊線' })[CFG.hero] : ''; $('aim').lastElementChild.textContent = lab || '瞄準'; }
 }
 // 護送關：中央空地繞一圈（半徑 8 公尺、330 度），營救關：中央空地
+function buildArenaMark() {   // 重裝關：中央一圈橘色圓圈
+  const ring = mk(new THREE.RingGeometry(1.2, 1.5, 48), new THREE.MeshBasicMaterial({ color: 0xffb000, transparent: true, opacity: .7, side: THREE.DoubleSide, depthWrite: false })); ring.rotation.x = -Math.PI / 2; ring.position.set(-10.5, .05, -21.5); addPveObj(ring);
+}
+function buildDesk() {   // 重裝推的辦公桌
+  const g = new THREE.Group(), box = (w, h, d, c, x, y, z) => { const m = mk(new THREE.BoxGeometry(w, h, d), lam(c)); m.position.set(x, y, z); g.add(m); const e = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(w + .01, h + .01, d + .01)), new THREE.LineBasicMaterial({ color: 0x000000 })); e.position.set(x, y, z); g.add(e); };
+  box(2.4, .14, 1.1, 0xc98f4e, 0, .78, 0); for (const [x, z] of [[-1.05, -.4], [1.05, -.4], [-1.05, .4], [1.05, .4]]) box(.12, .72, .12, 0x555b6e, x, .36, z); box(.7, .5, .06, 0x23262f, 0, 1.1, -.2);
+  addPveObj(g); pve.desk = g;
+}
 function nearestFree(x, z) { if (!blocked(x, z, 0)) return [x, z]; for (let rr = 1; rr < 6; rr += .5) for (let a = 0; a < 360; a += 30) { const px = x + rr * Math.cos(a * Math.PI / 180), pz = z + rr * Math.sin(a * Math.PI / 180); if (!blocked(px, pz, 0)) return [px, pz]; } return [x, z]; }
 function buildLoop() {
   const corners = [[-16.5, -25.5], [-4.5, -25.5], [-4.5, -21], [-16.5, -21], [-16.5, -16.8], [-4.5, -16.8]], route = [corners[0]]; for (let i = 0; i < corners.length - 1; i++) { const a = corners[i], b = corners[i + 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]), k = Math.max(1, Math.round(L / 3)); for (let j = 1; j <= k; j++) route.push([a[0] + (b[0] - a[0]) * j / k, a[1] + (b[1] - a[1]) * j / k]); } pve.route = route; pve.ri = 1;   // 地圖西北角一塊 13×10 公尺、沒有任何隔板的空地：蛇行走三排
@@ -810,10 +822,10 @@ function buildLoop() {
 const mons0 = () => actors.filter(a => a.mon && !a.dead);
 function pveHud() {
   const P = pve; let txt = '', f = 0; const tm = Math.floor(P.t / 60) + ':' + String(Math.floor(P.t % 60)).padStart(2, '0');
-  $('pveM').hidden = P.type !== 'tank'; if (P.type === 'tank') { $('pveM').lastElementChild.firstElementChild.style.width = P.mom + '%'; $('pveH').textContent = P.press > 4 ? '再不前進，怪物就要增援了！' : P.mom < 25 ? '往前衝進怪物群！推進力越高越耐打' : P.mom < 70 ? '保持前進，推進力上升中' : '推進力全開！受傷減半、隊友補血加倍'; } else $('pveH').textContent = '';
+  $('pveM').hidden = true; $('pveH').textContent = '';
   if (P.type === 'rescue') { const bd = actors.filter(a => a.pveBuddy && a.down), left = P.left + mons0().length; txt = '第 ' + Math.max(1, P.wi + 1) + '／3 波　剩餘怪物 ' + left + '　' + tm; f = clamp(P.kills / 54, 0, 1); $('pveH').textContent = bd.length ? bd.map(a => '⚠ ' + a.name + ' 倒地 ' + Math.max(0, Math.ceil(a.downT)) + ' 秒（距離 ' + Math.round(Math.hypot(a.x - me.x, a.z - me.z)) + ' 公尺）').join('　') : '保護兩位輸出隊友：靠近他們把怪物吸過來'; }
-  else if (P.type === 'tank') { const done = P.gates.filter(g => g.st === 2).length, act = P.gates.find(g => g.st === 1), left = act ? act.left + actors.filter(a => a.mon && !a.dead).length : 0; txt = '關卡 ' + done + '／3　' + (act ? '剩餘怪物 ' + left : '前進！') + '　' + tm; f = clamp((me.x + 26) / 50.5, 0, 1); }
-  else if (P.type === 'escort') { const t = P.tank; f = clamp((P.ri - 1) / (P.route.length - 2), 0, 1); txt = '護送進度 ' + Math.round(f * 100) + '%　重裝血量 ' + Math.max(0, Math.round(t.hp / t.maxHp * 100)) + '%　' + tm; }
+  else if (P.type === 'tank') { const boss = actors.find(a => a.mon === 'boss' && !a.dead), left = P.left + mons0().length; txt = '第 ' + Math.max(1, P.wi + 1) + '／3 波　剩餘怪物 ' + left + '　' + tm; f = boss ? clamp(1 - boss.hp / boss.maxHp, 0, 1) : clamp(P.kills / 42, 0, 1); $('pveH').textContent = '怪物攻速 ×' + (1 + P.rage).toFixed(1) + '　反彈傷害 ×' + (1 + 3.5 * P.rage).toFixed(1) + (boss ? '　大魔王血量 ' + Math.max(0, Math.round(boss.hp / boss.maxHp * 100)) + '%' : ''); }
+  else if (P.type === 'escort') { const t = P.tank; f = clamp((P.ri - 1) / (P.route.length - 2), 0, 1); txt = '階段 ' + (P.stage + 1) + '／3　' + (P.stOn ? '剩餘怪物 ' + (P.left + mons0().length) : '準備中') + '　重裝血量 ' + Math.max(0, Math.round(t.hp / t.maxHp * 100)) + '%　' + tm; }
   else { f = clamp(P.kills / P.total, 0, 1); txt = '擊倒 ' + Math.min(P.kills, P.total) + '／' + P.total + '　' + tm; }
   $('pveT').textContent = txt; $('pveB').style.width = (f * 100) + '%';
 }
@@ -822,14 +834,9 @@ function pveStep(dt) {
   for (let i = actors.length - 1; i >= 0; i--) { const a = actors[i]; if (a.mon && a.dead) { a.rmT = (a.rmT || 0) + dt; if (a.rmT > 2.5) removeActorAt(i); } }
   const mons = actors.filter(a => a.mon && !a.dead), diff = [.8, 1, 1.25][CFG.diff];
   if (P.type === 'tank') {
-    { const adv = me.vx > 1.5, back = me.vx < -1.2, eng = mons.some(a => a.x > me.x - 1 && Math.hypot(a.x - me.x, a.z - me.z) < 12);   // 往前走（有怪在前面更快）累積推進力，停下或後退會掉
-      P.mom = clamp(P.mom + (back ? -40 : adv ? (eng ? 28 : 8) : -16) * dt, 0, 100); P.press = P.mom < 20 ? P.press + dt : Math.max(0, P.press - dt * 2);
-      if (P.press > 7 && mons.length < 12) { P.press = 3.5; const lim = (P.gates.find(g => g.st !== 2) || { x: 27 }).x - 2; for (let i = 0; i < 2; i++) { const p = freeSpot(Math.min(me.x + 8, lim - 1), lim, ROAD_Z - 1, ROAD_Z + 1); spawnMon('grunt', p[0], p[1]); } banner('停太久了，怪物增援！', '往前推進', 1200); } }
-    for (let gi = 0; gi < P.gates.length; gi++) { const g = P.gates[gi], prev = gi === 0 || P.gates[gi - 1].st === 2;
-      if (g.st === 0 && prev && me.x > g.x - 24) { g.st = 1; g.spT = 0; banner('關卡 ' + g.i, '擊退迎面而來的怪物，關卡才會打開', 1800); SFX.beep(); }
-      if (g.st === 1) { g.spT -= dt; if (g.left > 0 && g.spT <= 0 && mons.length < 14) { g.spT = .5; g.left--; const p = freeSpot(Math.max(g.x - 16, me.x + 10), g.x - 2, ROAD_Z - 1, ROAD_Z + 1); spawnMon(pickKind(g.mix), p[0], p[1]); }
-        if (g.left <= 0 && mons.length === 0) { g.st = 2; const i = BOXES.indexOf(g.box); if (i >= 0) BOXES.splice(i, 1); g.mesh.visible = false; g.lbl.visible = false; banner('關卡 ' + g.i + ' 通過', '繼續前進！', 1500); SFX.beep(); say('擊倒'); } } }
-    if (me.x >= FIN_X && P.gates.every(g => g.st === 2)) pveEnd(true);
+    P.spawnT -= dt; const wv = P.waves[P.wi]; P.rage = Math.min(2.5, Math.max(0, P.t - P.waveS) * .06);
+    if (wv && P.left > 0) { if (P.spawnT <= 0 && mons.length < 18) { P.spawnT = .4; P.left--; let p = freeSpot(-17.5, -4.5, -26.5, -16); for (let k = 0; k < 8 && Math.hypot(p[0] - me.x, p[1] - me.z) < 7; k++) p = freeSpot(-17.5, -4.5, -26.5, -16); spawnMon(wv.boss && P.left === 0 ? 'boss' : pickKind(wv.mix), p[0], p[1]); if (wv.boss && P.left === 0) { banner('大魔王登場！', '它被你反彈越痛、也越暴躁', 2000); SFX.beep(); } } }
+    else if (mons.length === 0) { P.waveT -= dt; if (P.waveT <= 0) { if (P.wi >= 2) pveEnd(true); else { P.wi++; P.left = P.waves[P.wi].n; P.waveT = 4; P.waveS = P.t; banner('第 ' + (P.wi + 1) + ' 波', P.wi === 2 ? '大魔王在最後' : '怪物會越打越快', 1600); SFX.beep(); } } }
   } else if (P.type === 'rush') {
     P.spawnT -= dt; const cap = Math.min(8, Math.round((4 + P.kills / 12) * diff));
     if (P.spawnT <= 0 && mons.length < cap) { P.spawnT = Math.max(.6, 1.1 - P.kills * .01); const an = Math.random() * 6.283, rr = rand(17, 25); let x = clamp(me.x + Math.cos(an) * rr, -27, 27), z = clamp(me.z + Math.sin(an) * rr, -27, 27); if (blocked(x, z, 0)) { const p = freeSpot(-27, 27, -27, 27); x = p[0]; z = p[1]; } spawnMon(pickKind({ grunt: .7, runner: .2, brute: P.kills > 12 ? .1 : 0 }), x, z); }
@@ -841,8 +848,10 @@ function pveStep(dt) {
     if (P.kills >= P.total) pveEnd(true);
   } else if (P.type === 'escort') {
     const t = P.tank; P.spawnT -= dt;
-    if (P.spawnT <= 0 && mons.length < Math.round(10 * diff)) { P.spawnT = rand(3.5, 5) / diff; const n = 4 + (Math.random() < .5 ? 1 : 0); for (let i = 0; i < n; i++) { let p = freeSpot(-17.5, -3.5, -26.5, -16); for (let k = 0; k < 8 && Math.hypot(p[0] - t.x, p[1] - t.z) < 9; k++) p = freeSpot(-17.5, -3.5, -26.5, -16); spawnMon(pickKind({ grunt: .65, runner: .2, brute: P.ri > 8 ? .15 : 0 }), p[0], p[1]); } }
-    if (P.ri >= P.route.length - 1 && Math.hypot(P.route[P.route.length - 1][0] - t.x, P.route[P.route.length - 1][1] - t.z) < 2) pveEnd(true);
+    if (!P.stOn) { P.stT -= dt; if (P.stT <= 0) { P.stOn = true; P.left = [12, 18, 24][P.stage]; banner('階段 ' + (P.stage + 1) + '／3', '幫重裝清怪、補血，他會把桌子往前推', 1800); SFX.beep(); } }
+    else { if (P.left > 0 && P.spawnT <= 0 && mons.length < Math.round(10 * diff)) { P.spawnT = .7 / diff; P.left--; let p = freeSpot(-17.5, -3.5, -26.5, -16); for (let k = 0; k < 8 && Math.hypot(p[0] - t.x, p[1] - t.z) < 9; k++) p = freeSpot(-17.5, -3.5, -26.5, -16); spawnMon(pickKind({ grunt: .65, runner: .2, brute: P.stage > 0 ? .15 : 0 }), p[0], p[1]); }
+      if (P.left === 0 && mons.length === 0 && Math.hypot(P.route[P.ends[P.stage]][0] - t.x, P.route[P.ends[P.stage]][1] - t.z) < 2.2) { if (P.stage >= 2) pveEnd(true); else { banner('階段 ' + (P.stage + 1) + ' 完成', '準備下一個階段', 1500); P.stage++; P.stOn = false; P.stT = 3; } } }
+    if (P.desk) { const f = fwd(t); P.desk.position.set(t.x + f[0] * 1.7, 0, t.z + f[1] * 1.7); P.desk.rotation.y = t.yaw; }
   } else if (P.type === 'rescue') {
     P.spawnT -= dt; const wv = P.waves[P.wi];
     if (wv && P.left > 0) { if (P.spawnT <= 0 && mons.length < 16) { P.spawnT = .35; P.left--; const an = Math.random() * 6.283, rr = rand(8, 14); const bud = actors.filter(a => a.pveBuddy && !a.dead), cb = bud.length ? bud[Math.floor(Math.random() * bud.length)] : { x: 0, z: 0 }; let p = [clamp(cb.x + Math.cos(an) * rr, -27, 27), clamp(cb.z + Math.sin(an) * rr, -27, 27)]; if (blocked(p[0], p[1], 0)) p = freeSpot(-27, 27, -27, 27); spawnMon(pickKind(wv.mix), p[0], p[1]); } }
