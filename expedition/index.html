@@ -148,6 +148,11 @@ h3{margin:16px 0 0;font-size:17px}
 }
 
 #stage:not(.live) #party,#stage:not(.live) #topbar{display:none}
+#tutP{position:absolute;left:10px;top:48px;z-index:7;max-width:42%;display:flex;flex-direction:column;align-items:flex-start;gap:4px;background:rgba(8,24,16,.9);border:2px solid #ffd166;border-radius:10px;padding:6px 10px;color:#eafff2;font-size:12px;line-height:1.4}
+#tutS{color:#ffd166;font-size:12px} #tutT{font-size:13px;font-weight:700} #tutSkip{font-size:11px;padding:2px 8px;border-width:2px}
+.card.tut-hl{box-shadow:0 0 0 4px #ffd166,0 0 22px 6px rgba(255,209,102,.9);animation:tzp .7s ease-in-out infinite;position:relative;z-index:4}
+#deliver.tut-hl{box-shadow:0 0 0 4px #fff,0 0 24px 8px rgba(255,209,102,.95)}
+html.fsm #tutP{top:52px;max-width:34%;padding:4px 8px;font-size:10px} html.fsm #tutT{font-size:11px}
 #castV{position:absolute;inset:0;z-index:3;pointer-events:none;box-shadow:inset 0 0 70px 14px rgba(255,50,50,.5);animation:castp .8s ease-in-out infinite}
 @keyframes castp{50%{opacity:.35}}
 #tapZ{position:absolute;left:50%;top:56%;width:clamp(130px,28%,220px);aspect-ratio:1;transform:translate(-50%,-50%);z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;border-radius:50%;background:radial-gradient(circle,rgba(255,60,60,.55),rgba(120,10,10,.55) 70%);border:5px solid #ffd166;box-shadow:0 0 28px rgba(255,90,60,.75);cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;animation:tzp .5s ease-in-out infinite}
@@ -306,7 +311,7 @@ html.fsm #endO .lb{max-height:30vh;overflow:auto}
       <span class="sys">17:50，設計部</span>
       <h2>選擇關卡</h2>
       <p>隊伍會自動戰鬥。你只要在對的時機放必殺，湊滿協作條就能「準時交付」。每關開場有一段劇情，部分關卡有特殊規則。</p>
-      <div class="row"><button class="pk big" id="campB" type="button">劇情模式</button><button class="pk" id="newCampB" type="button" hidden>重新開始劇情</button><button class="pk" id="freeB" type="button">自由選關</button></div>
+      <div class="row"><button class="pk" id="tutB" type="button">新手教學</button><button class="pk big" id="campB" type="button">劇情模式</button><button class="pk" id="newCampB" type="button" hidden>重新開始劇情</button><button class="pk" id="freeB" type="button">自由選關</button></div>
       <small id="campInfo"></small>
       <div id="stageList" hidden></div>
     </div>
@@ -314,6 +319,7 @@ html.fsm #endO .lb{max-height:30vh;overflow:auto}
     <div class="overlay" id="choiceO" hidden></div>
     <div class="overlay" id="endC" hidden></div>
     <div id="vidO" hidden></div>
+    <div id="tutP" hidden><b id="tutS"></b><span id="tutT"></span><button class="pk off" id="tutSkip" type="button">跳過教學</button></div>
   </section>
 
   <div id="tip">三波敵人：插單便條、意見分身、客戶 Boss（每次隨機）。全程約兩分半。</div>
@@ -351,10 +357,15 @@ const Core = (() => {
     client: { name: '預算只有三千的客戶', hp: 60000, atk: 130, def: .1, spd: 1.8, row: 'back', boss: true, range: 40, mv: 0, rad: 1.8 },
     rush: { name: '連假前的特急件', hp: 42000, atk: 120, def: .1, spd: 1.8, row: 'back', boss: true, range: 40, mv: 0, rad: 1.9 },
     upload: { name: '卡在 99% 的上傳', hp: 92000, atk: 115, def: .1, spd: 1.8, row: 'back', boss: true, range: 40, mv: 0, rad: 1.8 },
+    dummy: { name: '訓練假人', hp: 90000, atk: 0, def: 0, spd: 9, row: 'front', range: 1.5, mv: 0, rad: .6 },
+    tarmor: { name: '訓練裝甲', hp: 14000, atk: 0, def: 0, armor: .75, spd: 9, row: 'front', range: 1.5, mv: 0, rad: .7 },
+    tback: { name: '訓練標靶', hp: 90000, atk: 0, def: 0, spd: 9, row: 'back', range: 4, mv: 0, rad: .6 },
+    tboss: { name: '訓練魔王', hp: 40000, atk: 0, def: 0, spd: 9, row: 'back', boss: true, range: 40, mv: 0, rad: 1.6 },
     meeting: { name: '開不完的晨會', hp: 46000, atk: 110, def: .1, spd: 1.8, row: 'back', boss: true, range: 40, mv: 0, rad: 2 },
   };
   // 每一關：Boss 招式順序與招式名、結案作品、關卡規則（mod）、難度（1～5 顆星）
   const BOSS = {
+    tutorial: { name: '新手教學', tag: '教學', stage: '教學', title: '新手教學', work: '', diff: 1, mod: null, open: '', die: '', seq: [], nm: {} },
     hydra: { name: '版本九頭蛇', tag: '九頭蛇', stage: '第一關', title: '最後一版，真的', work: '《最後一版，真的》', diff: 2, mod: null, open: '', die: '', seq: ['minor', 'revert', 'confuse', 'deadline'], nm: { minor: '再小改一下', revert: '剛剛那版比較好', confuse: '意見還沒整合', deadline: '今天能出嗎？' } },
     client: { name: '預算只有三千的客戶', tag: '客戶', stage: '第二關', title: '三千元的品牌識別', work: '《三千元的品牌識別》', diff: 3, mod: null, open: '「預算只有三千，但我要五千的質感。」', die: '「……那就照你們的版本吧。」', seq: ['everything', 'budget', 'midnight', 'deadline'], nm: { everything: '全部都要，但要簡約', budget: '預算只有三千', midnight: '凌晨三點：在嗎？現在方便嗎？', deadline: '明天一早要，今晚能給嗎？' } },
     rush: { name: '連假前的特急件', tag: '特急件', stage: '第三關', title: '連假前一天', work: '《連假前一天》', diff: 3, mod: { id: 'leave', name: '輪流休假', desc: '每 22 秒有一位同事（Machi 除外）休假 8 秒：無法行動，也不會受傷' }, open: '「今天一定要出！收假前我要看到！」', die: '「……好吧，收假再說。」', seq: ['everything', 'midnight', 'budget', 'deadline'], nm: { everything: '再加三個急件', midnight: '大家都休假了，誰來做？', budget: '今天一定要出', deadline: '收假前一定要看到' } },
@@ -388,8 +399,8 @@ function go(u, tx, tz, stop, k = 1) { const dx = tx - u.x, dz = tz - u.z, d = Ma
     return S;
   }
 
-  const spawnX = (k, s) => k === 'note' ? 7.6 + (s % 2) * .8 : k === 'armor' ? 7 : k === 'clone' ? 7.2 : 4.7;
-const spawnZ = (k, s) => k === 'note' ? -2 + (s >> 1) * .75 : k === 'armor' ? -1.6 + s * 1.2 : k === 'clone' ? -.8 : -.5;
+  const spawnX = (k, s) => k === 'dummy' ? 5.6 : k === 'tarmor' ? 6.6 : k === 'tback' ? 7.6 : k === 'note' ? 7.6 + (s % 2) * .8 : k === 'armor' ? 7 : k === 'clone' ? 7.2 : 4.7;
+const spawnZ = (k, s) => k === 'dummy' ? -1.5 + s * 1.5 : k === 'tarmor' ? -.2 : k === 'tback' ? .9 : k === 'note' ? -2 + (s >> 1) * .75 : k === 'armor' ? -1.6 + s * 1.2 : k === 'clone' ? -.8 : -.5;
 function spawn(S, kind) {
     const d = EN[kind];
     let slot = 0;
@@ -404,8 +415,9 @@ function spawn(S, kind) {
 
   function startWave(S) {
     S.wave++; S.phase = 'fight'; S.waveT = 0; S.queue = [];
-    S.eTot = [12 * EN.note.hp, 2 * EN.armor.hp + EN.clone.hp + 2 * EN.note.hp, EN[S.bossKind].hp][S.wave - 1] || 1;
+    S.eTot = [12 * EN.note.hp, 2 * EN.armor.hp + EN.clone.hp + 2 * EN.note.hp, (EN[S.bossKind] || EN.dummy).hp][S.wave - 1] || 1;
     S.enemies = S.enemies.filter(e => e.alive);
+    if (S.bossKind === 'tutorial') { S.eTot = 1; spawn(S, 'dummy'); spawn(S, 'dummy'); spawn(S, 'tarmor'); spawn(S, 'tback'); ev(S, { type: 'wave', n: 1 }); return; }
     if (S.wave === 1) { for (let i = 0; i < 4; i++) spawn(S, 'note'); S.queue.push({ t: 7, kind: 'note', n: 4 }, { t: 15, kind: 'note', n: 4 }); }
     if (S.wave === 2) { spawn(S, 'armor'); spawn(S, 'armor'); spawn(S, 'clone'); spawn(S, 'note'); spawn(S, 'note'); }
     if (S.wave === 3) { const b = spawn(S, S.bossKind); S.boss = { kind: S.bossKind, uid: b.uid, skillT: 7, seq: 0, cast: null, enraged: false }; }
@@ -674,6 +686,7 @@ function spawn(S, kind) {
       } else { e.fx = t.x - e.x; e.fz = t.z - e.z; }
       e.timer = Math.max(0, e.timer - DT * (e.st.slow ? .7 : 1));
       if (e.timer > 0 || dd > e.range * 1.1) continue;
+      if (e.atk <= 0) { e.timer = e.spd; continue; }
       e.timer = e.spd;
       ev(S, { type: 'basic', src: e.uid, dst: t.uid });
       hurt(S, e, t, e.atk, {});
@@ -717,7 +730,11 @@ function spawn(S, kind) {
     return out;
   }
 
-  return { DT, dist, ORDER, HERO, EN, BOSS, FLAGS, newGame, step, castUlt, tap, deliver, gaugeReady, auto, alive, hero };
+  const STAGES = Object.keys(BOSS).filter(k => k !== 'tutorial');
+  // 新手教學用：叫出練習用的假魔王並讓它開始讀條（需要連點斷招）
+  function tutCast(S) { const B = S.boss; if (B && !B.cast) B.cast = { kind: 'revert', t: 8, max: 8, name: '剛剛那版比較好（練習）', need: 12, taps: 0 }; }
+  function tutBoss(S) { if (!S.boss) { const b = spawn(S, 'tboss'); S.boss = { kind: 'tutorial', uid: b.uid, skillT: 9999, seq: 0, cast: null, enraged: false }; } tutCast(S); }
+  return { STAGES, tutBoss, tutCast, DT, dist, ORDER, HERO, EN, BOSS, FLAGS, newGame, step, castUlt, tap, deliver, gaugeReady, auto, alive, hero };
 })();
 if (typeof module !== 'undefined') module.exports = Core;
 
@@ -822,7 +839,8 @@ function fit() { const d = Math.min(2, window.devicePixelRatio || 1); cv.width =
 addEventListener('resize', fit);
 
 // 單位座標由戰鬥核心給（世界單位，x 向右、z 朝向鏡頭）；畫面位置再平滑追過去
-const MH = { note: 1.8, armor: 2.9, clone: 3.1, hydra: 5.6, client: 5.2, rush: 6.6, upload: 6.4, meeting: 6.4 };
+const MH = { note: 1.8, armor: 2.9, clone: 3.1, hydra: 5.6, client: 5.2, rush: 6.6, upload: 6.4, meeting: 6.4, dummy: 1.8, tarmor: 2.9, tback: 3.1, tboss: 5.2 };
+const TUTMAP = { dummy: 'note', tarmor: 'armor', tback: 'clone', tboss: 'client' };   // 教學用的練習敵人借用現有造型
 const TINT = { client: '#ffe39a', rush: '#ffb0a0', upload: '#a8d8ff', meeting: '#d8c0a0' };   // 還沒有專屬素材時，借用意見分身的圖加色
 const tall = u => u.side === 'hero' ? 2.3 : MH[u.kind];
 function rs(u) {
@@ -990,7 +1008,7 @@ function heroUnit(id) {
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, alphaTest: .2 }));
   sp.center.set(.5, 6 / 240); sp.scale.set(2.3, 2.3, 1); scene.add(sp); return sp;
 }
-const SPEC = { note: { w: 70, h: 70, ox: 35, oy: 35, foot: 66, f: .026 }, armor: { w: 100, h: 112, ox: 50, oy: 58, foot: 106, f: .027 }, clone: { w: 100, h: 110, ox: 50, oy: 52, foot: 100, f: .027 }, hydra: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, client: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, rush: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, upload: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, meeting: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 } };
+const SPEC = { note: { w: 70, h: 70, ox: 35, oy: 35, foot: 66, f: .026 }, armor: { w: 100, h: 112, ox: 50, oy: 58, foot: 106, f: .027 }, clone: { w: 100, h: 110, ox: 50, oy: 52, foot: 100, f: .027 }, hydra: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, client: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, rush: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, upload: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, meeting: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, dummy: { w: 70, h: 70, ox: 35, oy: 35, foot: 66, f: .026 }, tarmor: { w: 100, h: 112, ox: 50, oy: 58, foot: 106, f: .027 }, tback: { w: 100, h: 110, ox: 50, oy: 52, foot: 100, f: .027 }, tboss: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 } };
 function enemyUnit(e) {
   const s = SPEC[e.kind], c = document.createElement('canvas'); c.width = s.w * 2; c.height = s.h * 2;
   const t = new THREE.CanvasTexture(c); t.generateMipmaps = false; t.minFilter = THREE.LinearFilter;
@@ -1258,6 +1276,7 @@ function sfxEvent(e) {
 }
 function handle(e) {
   sfxEvent(e);
+  if (tut && tut.wait && tut.wait.test(e)) { const w = tut.wait; tut.wait = null; w.res(true); }
   if (e.type === 'hit') {
     const d = find(e.dst); if (!d) return; const s = e.src && find(e.src);
     { const r = rs(d); r.flash = .18; r.hitAt = T; r.hitDir = s ? (Math.sign(d.x - s.x) || 1) : 1; r.hitPow = (d.boss ? .22 : 1) * Math.max(.55, Math.min(1.5, .55 + 4 * e.amt / d.max)); }
@@ -1298,7 +1317,7 @@ function handle(e) {
   if (e.type === 'debuff') { const d = find(e.dst); if (d) float(d, e.name, '#c7c7c7', 13, .4); }
   if (e.type === 'cleanse') { const d = find(e.dst); if (d) { float(d, '已整理', '#3fd0b4', 14, .4); fxRing(rpos(d), COL.leona, .3, 1.6, .6); } }
   if (e.type === 'die') { const d = find(e.uid); if (d && d.side === 'enemy') { fxPoof(mid(d), d.kind === 'note' ? '#ffe27a' : '#b48cff'); if (d.boss) { const B = Core.BOSS[S.bossKind]; if (B.die) banner(B.name, B.die, '#ffd166'); } } }
-  if (e.type === 'wave') { banner(`第 ${e.n} 波｜${['', (MOBS[S.bossKind] || {}).note || '插單小怪', (MOBS[S.bossKind] || {}).clone || '意見分身', Core.BOSS[S.bossKind].name][e.n]}`, e.n === 3 ? Core.BOSS[S.bossKind].open : '', '#5fe08a'); $('waveP').textContent = `第 ${e.n}／3 波`; }
+  if (e.type === 'wave' && !tut) { banner(`第 ${e.n} 波｜${['', (MOBS[S.bossKind] || {}).note || '插單小怪', (MOBS[S.bossKind] || {}).clone || '意見分身', Core.BOSS[S.bossKind].name][e.n]}`, e.n === 3 ? Core.BOSS[S.bossKind].open : '', '#5fe08a'); $('waveP').textContent = `第 ${e.n}／3 波`; }
   if (e.type === 'clear') banner('清場', '', '#5fe08a');
   if (e.type === 'deliver') {
     banner('五人連攜｜準時交付', '', '#ffd166'); flashA = .8; shake = .4; slowT = .6;
@@ -1454,7 +1473,7 @@ function sync(dt) {
     if (!e.alive) { dropUnit(e.uid); continue; }
     const sp = U[e.uid] || (U[e.uid] = enemyUnit(e)), d = sp.userData, r = rs(e), k = Math.min(1, dt * 10);
     r.x += (e.x - r.x) * k; r.z += (e.z - r.z) * k;
-    const mon = MON[S.bossKind + '_' + e.kind] || MON[e.kind];
+    const mon = MON[S.bossKind + '_' + e.kind] || MON[e.kind] || MON[TUTMAP[e.kind]];
     if (mon && !d.img) { d.img = true; sp.material.map = mon.t; sp.material.needsUpdate = true; sp.center.set(.5, .03); }
     if (!d.img) { const key = e.boss ? T : e.kind === 'armor' ? !!e.st.broken : 0; if (d.key !== key) { d.key = key; paintTo(d.c, 2, d.s.ox, d.s.oy, () => art(e)); d.t.needsUpdate = true; } }
     const age = Math.min(1, (T - r.born) / .3);
@@ -1555,6 +1574,7 @@ function hud() {
   else if (cast && cast.kind === 'deadline') { tip = '「' + cast.name + '」倒數中！快速連點畫面斷招，或讓 Machi 開「交付防線」保護全隊。'; hot = true; }
   else if (conf >= 2) { tip = '全隊混亂，能量與技能停擺。Leona 的「重新對齊」可以一次清掉。'; hot = true; }
   else if (gr) { tip = boss ? (boss.hp / boss.max <= .25 ? boss.name + '剩不到 25%，按「準時交付」直接定稿！' : '協作條已滿。Boss 血量低於 25% 時交付可以直接終結，也可以現在先打一發。') : '協作條已滿，可以按「準時交付」清場，或留給九頭蛇。'; hot = true; }
+  if (tut) { tip = tut.tip || tip; hot = true; }
   $('tip').textContent = tip; $('tip').classList.toggle('hot', hot);
 }
 
@@ -1599,15 +1619,15 @@ function showLine() {
 const COLL_KEY = 'expCollV1';
 function getColl() { try { return JSON.parse(localStorage.getItem(COLL_KEY) || '{}') || {}; } catch (e) { return {}; } }
 function saveColl(c) { try { localStorage.setItem(COLL_KEY, JSON.stringify(c)); } catch (e) {} }
-function collHtml() { const c = getColl(); return Object.keys(Core.BOSS).map(k => { const b = Core.BOSS[k], g = c[k]; return '<div><span>' + (g ? b.work : '？？？（還沒結案）') + '</span><b>' + (g ? '已收藏' + (g.n > 1 ? ' ×' + g.n : '') : '—') + '</b></div>'; }).join(''); }
+function collHtml() { const c = getColl(); return Core.STAGES.map(k => { const b = Core.BOSS[k], g = c[k]; return '<div><span>' + (g ? b.work : '？？？（還沒結案）') + '</span><b>' + (g ? '已收藏' + (g.n > 1 ? ' ×' + g.n : '') : '—') + '</b></div>'; }).join(''); }
 function fillColl() {   // 選關畫面：每一關一顆按鈕，顯示作品是否已收藏、難度、關卡規則
   const el = $('stageList'); if (!el) return; const c = getColl();
-  el.innerHTML = Object.keys(Core.BOSS).map(k => { const b = Core.BOSS[k], g = c[k]; return '<button class="stg" type="button" data-k="' + k + '"><b>' + b.stage + '｜' + b.title + (g ? ' ✓' : '') + '</b><i>難度 ' + '★'.repeat(b.diff) + '☆'.repeat(5 - b.diff) + '</i><small>' + (b.mod ? '【' + b.mod.name + '】' + b.mod.desc : '對手：' + b.name) + '</small></button>'; }).join('');
+  el.innerHTML = Core.STAGES.map(k => { const b = Core.BOSS[k], g = c[k]; return '<button class="stg" type="button" data-k="' + k + '"><b>' + b.stage + '｜' + b.title + (g ? ' ✓' : '') + '</b><i>難度 ' + '★'.repeat(b.diff) + '☆'.repeat(5 - b.diff) + '</i><small>' + (b.mod ? '【' + b.mod.name + '】' + b.mod.desc : '對手：' + b.name) + '</small></button>'; }).join('');
   el.querySelectorAll('.stg').forEach(x => x.addEventListener('click', () => begin(x.dataset.k)));
-  camp = loadCamp(); const has = !!camp; $('campB').textContent = has ? '繼續劇情（第 ' + camp.order.length + '／5 關）' : '劇情模式'; $('newCampB').hidden = !has;
+  camp = loadCamp(); const has = !!camp; $('tutB').textContent = tutDone() ? '新手教學 ✓' : '新手教學'; $('campB').textContent = has ? '繼續劇情（第 ' + camp.order.length + '／5 關）' : '劇情模式'; $('newCampB').hidden = !has;
   $('campInfo').textContent = has ? '已有進度，會從目前這一關重新開始' : '五關串聯，每關結束有動畫與二選一分支';
 }
-function pickBoss() { const c = getColl(), ks = Object.keys(Core.BOSS), left = ks.filter(k => !c[k]), pool = left.length ? left : ks; return pool[Math.floor(Math.random() * pool.length)]; }
+function pickBoss() { const c = getColl(), ks = Core.STAGES, left = ks.filter(k => !c[k]), pool = left.length ? left : ks; return pool[Math.floor(Math.random() * pool.length)]; }
 // 手機：全螢幕＋鎖定橫式（沒有全螢幕 API 的瀏覽器，例如 iPhone Safari，只套用橫式版面；直拿時蓋住畫面並暫停）
 const FSM = (() => { try { return matchMedia('(pointer:coarse)').matches && Math.min(screen.width, screen.height) <= 900; } catch (e) { return false; } })();
 if (FSM) document.documentElement.classList.add('fsm');
@@ -1652,8 +1672,8 @@ let camp = null, inCamp = false, onLinesDone = null;
 function loadCamp() { try { const c = JSON.parse(localStorage.getItem(CAMP_KEY) || 'null'); return c && Array.isArray(c.order) && c.order.length && !c.done ? c : null; } catch (e) { return null; } }
 function saveCamp() { try { if (camp) localStorage.setItem(CAMP_KEY, JSON.stringify(camp)); else localStorage.removeItem(CAMP_KEY); } catch (e) {} }
 function campOpts() { return inCamp && camp ? { atk: 1 + Math.min(.16, .04 * camp.b), hp: 1 + Math.min(.2, .05 * camp.c) } : null; }
-function playLines(lines, cb) {   // 動畫：電影黑邊、角色立繪滑入、逐句對白
-  INTRO = lines; dIdx = 0; onLinesDone = cb || null; $('dialog').hidden = false; $('stage').classList.add('cine'); showLine();
+function playLines(lines, cb, plain) {   // 動畫：電影黑邊、角色立繪滑入、逐句對白
+  INTRO = lines; dIdx = 0; onLinesDone = cb || null; $('dialog').hidden = false; if (!plain) $('stage').classList.add('cine'); showLine();
 }
 function startCamp(fresh) {
   if (fresh || !camp) { camp = { order: ['hydra'], b: 0, c: 0, score: 0, secs: 0, bridge: null, done: false }; saveCamp(); }
@@ -1694,6 +1714,80 @@ function showEnd(total, secs) {
   $('backMenu').addEventListener('click', () => { el.hidden = true; $('startO').hidden = false; fillColl(); });
   setupBoard(total, secs);
 }
+// ---------- 新手教學：一個關卡帶你認識五位同事的技能、協作條與連點斷招 ----------
+const TUT_KEY = 'expTutV1';
+const tutDone = () => { try { return localStorage.getItem(TUT_KEY) === '1'; } catch (e) { return false; } };
+let tut = null;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function tutSay(lines) { return new Promise(res => { if (!tut || tut.aborted) return res(); running = false; playLines(lines, () => { if (tut && !tut.aborted) running = true; res(); }, true); }); }
+function tutWaitEv(test, ms) { return new Promise(res => { if (!tut || tut.aborted) return res(false); const w = { test, res }; tut.wait = w; if (ms) setTimeout(() => { if (tut && tut.wait === w) { tut.wait = null; res(false); } }, ms); }); }
+function tutWaitCond(fn, ms) { return new Promise(res => { const t0 = Date.now(), iv = setInterval(() => { if (!tut || tut.aborted) { clearInterval(iv); res(false); } else if (fn()) { clearInterval(iv); res(true); } else if (ms && Date.now() - t0 > ms) { clearInterval(iv); res(false); } }, 200); }); }
+function tutTask(step, text) { if (!tut) return; $('tutS').textContent = step; tut.tip = text; $('tutT').textContent = text; }
+function tutHl(id) { Object.keys(cards).forEach(k => cards[k].el.classList.toggle('tut-hl', k === id)); $('deliver').classList.toggle('tut-hl', id === 'deliver'); }
+const T_INTRO = [
+  SYS('歡迎來到設計部遠征隊！這是新手教學，帶你認識五位同事的技能。（隨時可以按左上角「跳過教學」）'),
+  ['Machi', '隊伍會自動戰鬥，普攻和「主動技」大家會自己放。你要做的是：在對的時機，點卡片放出「必殺」。', M_],
+  ['Leona', '每位同事的必殺會慢慢充能，充滿的卡片會亮起金色框；卡片底下的細條是主動技的冷卻。', L_],
+  SYS('我們從 Machi 開始。這裡的敵人都是練習用的假人，不會反擊，放心練習。'),
+];
+const TUT_HERO = {
+  machi: { lines: [['Machi', '我是 Machi，隊伍的坦克。我的工作是站在最前面扛傷害，讓大家安心輸出。', M_], ['Machi', '被動「這件我負責」：隊友血量低於 35% 時，我會代扛 30% 的傷害。主動「統一窗口」會自動嘲諷全場 5 秒，把敵人的攻擊都拉到我身上。', M_], SYS('必殺「交付防線」：全隊獲得護盾 6 秒，Machi 再代扛 40% 傷害。適合在敵人爆發前、或全隊血量很低時使用。')],
+    after: [['Machi', '看到大家身上的藍色護盾圈了嗎？這一格「保護」也點亮了協作條。', M_]] },
+  noise: { lines: [['Noise', '我是 Noise，近戰戰士！被打、被改稿都會累積怒氣，每層讓我傷害 +4%。', N_], ['Noise', '主動「直接重做」會打出傷害並「破防」6 秒，專門對付帶護甲的敵人。護甲沒破防前，傷害只剩 25%！', N_], SYS('必殺「最後一版了！」：6 秒高速連斬；打在讀條中的 Boss 身上還會幫忙打斷（最後一課會練習）。先讓 Noise 放一次主動技，看看破防的效果。')],
+    prep: h => { h.cd = 0; }, wait: () => S.gauge.brk, waitTask: 'Noise 正在放主動技「直接重做」（會自動施放）…', waitAfter: [['Noise', '破防成功！被破防的敵人會吃更多傷害，協作條的「破防」也亮起來了。', N_]],
+    after: [['Noise', '爽！連斬的時候怒氣越高越痛。', N_]] },
+  anna: { lines: [['Anna', '我是 Anna，後排刺客。被動「一眼看穿」每 6 秒標記一個弱點，打弱點的傷害加倍。', A_], ['Anna', '主動「直達源頭」會越過前排，優先打後排的召喚者。', A_], SYS('必殺「一刀定稿」：對被標記的弱點造成高額傷害，擊倒還能返還一半能量。')],
+    prep: h => { h.pas = 0; }, wait: () => S.enemies.some(e => e.alive && e.st.mark), waitTask: '等 Anna 標記弱點（敵人頭上會出現紅色準星）…', waitAfter: [['Anna', '標好了。紅色準星就是弱點，現在放必殺。', A_]],
+    after: [['Anna', '這一刀正中弱點，「弱點擊破」也亮了。', A_]] },
+  amber: { lines: [['Amber', '我是 Amber，法師。普攻疊滿 4 層靈感後，主動「視覺重構」會變強：全體傷害並讓敵人緩速 4 秒。', B_], SYS('必殺「全案展開」：連續五段全體攻擊，是範圍控制的好幫手，也能打斷 Boss 讀條。')],
+    after: [['Amber', '範圍很大吧？「範圍控制」這一格也亮了。', B_]] },
+  leona: { lines: [['Leona', '我是 Leona，補師。被動「有人接住」每 7 秒給血量最低的人一個小護盾；主動「資訊整理」會治療一人並解除一項負面狀態。', L_], ['Leona', '敵人有時會讓隊友「混亂」或「拖延」：混亂時不能累積必殺能量、也不能放技能，卡片會變紫色。', L_], SYS('現在讓其他四位陷入混亂（卡片變紫色），再用 Leona 的必殺救大家。')],
+    prep: () => { Core.alive(S.heroes).forEach(x => { if (x.id !== 'leona') x.st.confuse = 40; }); },
+    after: [['Leona', '「重新對齊」：全隊回血 35%、清除混亂和拖延，之後 6 秒內免疫。淨化這一格也亮了。', L_]] },
+};
+const T_GAUGE = [SYS('看，上方的協作條五格都亮了：保護、破防、弱點擊破、範圍控制、淨化。這是五位同事各自的技能湊出來的。'), ['Machi', '集滿五格，「準時交付」就會亮起：對全場造成大量真實傷害，全隊回 25% 血；Boss 血量低於 25% 時還能直接終結它。', M_], SYS('現在協作條已滿，按「準時交付」（或空白鍵）試試看。')];
+const T_BOSS = [SYS('最後一課：Boss 讀條。'), ['Anna', 'Boss 偶爾會開始「讀條」：畫面出現紅色邊框和倒數，放著不管就會發動很痛的大招。', A_], ['Noise', '要打斷它，就快速連點畫面任何地方！點滿就斷招。', N_], ['Amber', '我們三個的必殺打在讀條中的 Boss 身上，也算 8 下連點喔。', B_]];
+async function runTutorial(thenCamp) {
+  tut = { thenCamp, aborted: false, wait: null, tip: '' }; autoOn = false; { const b = $('autoB'); b.textContent = '自動必殺：關'; b.classList.add('off'); }
+  $('tutP').hidden = false; tutTask('新手教學', '');
+  const ok = () => !!tut && !tut.aborted;
+  await tutSay(T_INTRO); if (ok()) await tutWaitCond(() => S.phase === 'fight', 8000);
+  const ids = ['machi', 'noise', 'anna', 'amber', 'leona'];
+  for (let i = 0; i < ids.length && ok(); i++) {
+    const id = ids[i], L = TUT_HERO[id], h = Core.hero(S, id), step = '教學 ' + (i + 1) + '／7｜' + h.name;
+    tutTask(step, '先聽 ' + h.name + ' 的說明'); await tutSay(L.lines); if (!ok()) break;
+    if (L.prep) L.prep(h);
+    if (L.wait) { tutTask(step, L.waitTask); await tutWaitCond(L.wait, 14000); if (ok() && L.waitAfter) await tutSay(L.waitAfter); }
+    if (!ok()) break;
+    h.energy = 100; tutHl(id); tutTask(step, '點下方 ' + (i + 1) + ' 號卡片（或按鍵盤 ' + (i + 1) + '），放出必殺「' + Core.HERO[id].ult + '」');
+    await tutWaitEv(e => e.type === 'cast' && e.ult && e.src === id, 0); tutHl(null);
+    if (ok()) { await sleep(1800); await tutSay(L.after); }
+  }
+  if (ok()) {
+    for (const k of Core.FLAGS) S.gauge[k] = true;   // 保險：就算中間少做了什麼，協作條也補滿
+    const step = '教學 6／7｜協作條'; tutTask(step, '聽 Machi 說明協作條'); await tutSay(T_GAUGE);
+    if (ok()) { tutHl('deliver'); tutTask(step, '點「準時交付」按鈕（或按空白鍵）'); await tutWaitEv(e => e.type === 'deliver', 0); tutHl(null); }
+    if (ok()) { await sleep(1800); await tutSay([['Machi', '交付完成！整場的壓力都清空了。真正的戰鬥裡，記得把它留給最關鍵的時刻。', M_]]); }
+  }
+  if (ok()) {
+    const step = '教學 7／7｜Boss 讀條'; tutTask(step, '聽說明'); await tutSay(T_BOSS);
+    if (ok()) {
+      Core.tutBoss(S); tutTask(step, '紅色圓圈出現了！快速連點畫面任何地方，在倒數結束前把讀條打斷'); let broke = false;
+      const iv = setInterval(() => { if (!ok() || broke) clearInterval(iv); else Core.tutCast(S); }, 700);   // 時間到沒打斷就重新開始
+      await tutWaitEv(e => { if (e.type === 'interrupt') { broke = true; return true; } return false; }, 0); clearInterval(iv);
+    }
+    if (ok()) { await sleep(1500); await tutSay([SYS('斷招成功！'), ['Machi', '你學會所有基本功了。' + (tut.thenCamp ? '接下來，第一章正式開始。' : '隨時可以回選單，開始劇情模式。'), M_]]); }
+  }
+  if (ok()) finishTutorial(true);
+}
+function finishTutorial(done) {
+  const t = tut; tut = null; $('tutP').hidden = true; tutHl(null); running = false; onLinesDone = null; $('stage').classList.remove('cine'); $('dialog').hidden = true; $('dFace').hidden = true;
+  if (t && t.wait) t.wait.res(false);
+  try { if (done) localStorage.setItem(TUT_KEY, '1'); } catch (e) {}
+  SFX.music(false); SFX.ambient(false);
+  if (t && t.thenCamp) startCamp(true); else { $('startO').hidden = false; fillColl(); }
+}
+$('tutSkip').addEventListener('click', () => { if (tut) { tut.aborted = true; finishTutorial(true); } });
 function begin(kind, opt) {
   inCamp = !!(opt && opt.camp); onLinesDone = null; $('stage').classList.remove('cine'); $('choiceO').hidden = true; $('endC').hidden = true;
   kind = typeof kind === 'string' && Core.BOSS[kind] ? kind : pickBoss(); INTRO = STORY[kind] || STORY_HYDRA;
@@ -1702,6 +1796,7 @@ function begin(kind, opt) {
   $('startO').hidden = true; $('endO').hidden = true;
   S = Core.newGame((Date.now() & 0xfffffff) || 1, kind, campOpts()); R = {}; fx = []; banners = []; resetUnits(); acc = 0; running = false;
   $('waveP').textContent = '倉庫';
+  if (kind === 'tutorial') { $('waveP').textContent = '教學'; runTutorial(!!(opt && opt.thenCamp)); return; }
   dIdx = 0; $('dialog').hidden = false; showLine();
 }
 function nextLine() {
@@ -1768,7 +1863,7 @@ addEventListener('message', e => { if (e.origin === location.origin && e.data &&
 addEventListener('pointerdown', () => { try { window.focus(); } catch (e) {} });
 window.__game = { get S() { return S; }, Core, ult, doDeliver, get gl3d() { return { renderer, scene, camera, THREE }; } };
 if (/[?&]embed=1/.test(location.search)) { $('exitB').hidden = false; $('exitB').onclick = () => { try { parent.postMessage({ type: 'expeditionExit' }, location.origin); } catch (e) {} }; }
-$('campB').addEventListener('click', () => startCamp(false)); $('newCampB').addEventListener('click', () => startCamp(true)); $('freeB').addEventListener('click', () => { const e = $('stageList'); e.hidden = !e.hidden; });
+$('tutB').addEventListener('click', () => begin('tutorial', { thenCamp: false})); $('campB').addEventListener('click', () => (!tutDone() && !loadCamp()) ? begin('tutorial', { thenCamp: true }) : startCamp(false)); $('newCampB').addEventListener('click', () => startCamp(true)); $('freeB').addEventListener('click', () => { const e = $('stageList'); e.hidden = !e.hidden; });
 fillColl();
 try { init3d(); requestAnimationFrame(loop); } catch (err) { $('tip').textContent = '這個瀏覽器無法啟動 3D 繪圖（WebGL），請換一個瀏覽器開啟。'; console.error(err); }
 })();
