@@ -1561,10 +1561,10 @@ const OUTRO = {
 };
 // 每個下一關對應的選項文字、風格（brave：我方攻擊 +4%／careful：我方生命 +5%）與銜接劇情
 const TARGET = {
-  client: { label: '去見那位只有三千預算的客戶', stance: 'brave', bridge: [['Machi', '客戶在線上等很久了，與其拖著，不如直接去談。', M_], ['Noise', '三千……我先聲明，我不會做五千的質感。', N_], ['Leona', '我會幫你們記下他每一次改口的時間。', L_]] },
-  rush: { label: '先接下連假前的急件', stance: 'careful', bridge: [['Leona', '急件快堆不下了，先清掉，大家才放得下心。', L_], ['Amber', '我把輪休表畫好了，輪流休息才不會一起倒。', B_], ['Machi', '好，大家輪流，我留守窗口。', M_]] },
-  upload: { label: '修好卡住的網路', stance: 'careful', bridge: [['Anna', '我的檔案還卡在 99%，什麼都做不了。', A_], ['Leona', '網路不穩，所有人的工具都在變慢。', L_], ['Machi', '先處理它，不然連回信都慢半拍。', M_]] },
-  meeting: { label: '衝進晨會，把結論開出來', stance: 'brave', bridge: [['Amber', '晨會已經開了兩個小時，咖啡機還壞了。', B_], ['Noise', '我進去，直接把結論講出來！', N_], ['Machi', '好，把這場會議開成「結論」。', M_]] },
+  client: { label: '正面談判：直接去把話說清楚', stance: 'brave', bridge: [['Machi', '客戶在線上等很久了，與其拖著，不如直接去談。', M_], ['Noise', '三千……我先聲明，我不會做五千的質感。', N_], ['Leona', '我會幫你們記下他每一次改口的時間。', L_]] },
+  rush: { label: '先清急件：一件一件收掉', stance: 'careful', bridge: [['Leona', '急件快堆不下了，先清掉，大家才放得下心。', L_], ['Amber', '我把輪休表畫好了，輪流休息才不會一起倒。', B_], ['Machi', '好，大家輪流，我留守窗口。', M_]] },
+  upload: { label: '先修網路：找出卡住的那條線', stance: 'careful', bridge: [['Anna', '我的檔案還卡在 99%，什麼都做不了。', A_], ['Leona', '網路不穩，所有人的工具都在變慢。', L_], ['Machi', '先處理它，不然連回信都慢半拍。', M_]] },
+  meeting: { label: '直闖會議：當面把結論講出來', stance: 'brave', bridge: [['Amber', '晨會已經開了兩個小時，咖啡機還壞了。', B_], ['Noise', '我進去，直接把結論講出來！', N_], ['Machi', '好，把這場會議開成「結論」。', M_]] },
 };
 const LAST_OPT = [{ label: '全員衝上去，一鼓作氣', stance: 'brave' }, { label: '分頭佈局，穩穩收尾', stance: 'careful' }];
 const STANCE_TXT = { brave: '風格：正面迎戰（下一關我方攻擊 +4%）', careful: '風格：穩紮穩打（下一關我方生命 +5%）' };
@@ -1596,7 +1596,7 @@ function campWin(score) {   // 劇情模式：這一關通過 → 結束動畫 �
 function showChoice() {
   const left = ['client', 'rush', 'upload', 'meeting'].filter(k => !camp.order.includes(k)), el = $('choiceO');
   const opts = left.length >= 2 ? left.slice(0, 2).map(k => ({ kind: k, label: TARGET[k].label, stance: TARGET[k].stance })) : LAST_OPT.map(o => ({ kind: left[0], label: o.label, stance: o.stance }));
-  el.innerHTML = '<span class="sys">第 ' + camp.order.length + ' 關完成</span><h2>接下來怎麼走？</h2><div id="optList">' + opts.map((o, i) => { const b = Core.BOSS[o.kind]; return '<button class="opt" type="button" data-i="' + i + '"><b>' + o.label + '</b><small>前往 ' + b.stage + '「' + b.title + '」' + (b.mod ? '<br>規則：' + b.mod.name : '') + '</small><em>' + STANCE_TXT[o.stance] + '</em></button>'; }).join('') + '</div>';
+  el.innerHTML = '<span class="sys">第 ' + camp.order.length + ' 關完成</span><h2>接下來怎麼走？</h2><div id="optList">' + opts.map((o, i) => { const b = Core.BOSS[o.kind]; return '<button class="opt" type="button" data-i="' + i + '"><b>' + o.label + '</b><em>' + STANCE_TXT[o.stance] + '</em></button>'; }).join('') + '</div>';
   el.hidden = false;
   el.querySelectorAll('.opt').forEach(x => x.addEventListener('click', () => {
     const o = opts[+x.dataset.i]; el.hidden = true; camp.order.push(o.kind); camp[o.stance === 'brave' ? 'b' : 'c']++;
