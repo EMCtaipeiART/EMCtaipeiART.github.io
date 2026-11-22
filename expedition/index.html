@@ -137,10 +137,21 @@ h3{margin:16px 0 0;font-size:17px}
 }
 
 #stage:not(.live) #party,#stage:not(.live) #topbar{display:none}
+#stage.cine::before,#stage.cine::after{content:'';position:absolute;left:0;right:0;height:9%;background:#000;z-index:4;pointer-events:none;animation:cbar .7s ease-out}
+#stage.cine::before{top:0} #stage.cine::after{bottom:0}
+@keyframes cbar{from{height:0}}
+.row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+#campInfo{color:var(--dim);font-size:12px}
+#optList{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;width:min(100%,640px)}
+.opt{font:inherit;text-align:left;color:var(--ink);background:var(--panel);border:3px solid #000;border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.opt b{font-size:16px} .opt small{color:var(--dim);font-size:12px;line-height:1.4} .opt em{font-style:normal;color:var(--gold);font-size:12px}
+.opt:active{filter:brightness(.92)}
+#ch2v{width:min(100%,560px);max-height:44vh;border:3px solid #000;border-radius:12px;background:#000}
 #stageList{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;width:min(100%,640px)}
 .stg{font:inherit;text-align:left;color:var(--ink);background:var(--panel);border:3px solid #000;border-radius:12px;padding:8px 12px;cursor:pointer;display:flex;flex-direction:column;gap:2px}
 .stg b{font-size:14px} .stg i{font-style:normal;color:var(--gold);font-size:12px;letter-spacing:.1em} .stg small{color:var(--dim);font-size:11px;line-height:1.35}
 .stg:active{filter:brightness(.92)}
+html.fsm .opt{padding:6px 10px;border-width:2px;border-radius:10px} html.fsm .opt b{font-size:12px} html.fsm .opt small,html.fsm .opt em{font-size:10px} html.fsm #optList{gap:6px} html.fsm #ch2v{max-height:46vh}
 html.fsm #stageList{grid-template-columns:repeat(3,1fr);gap:5px} html.fsm .stg{padding:4px 8px;border-width:2px;border-radius:9px} html.fsm .stg b{font-size:11px} html.fsm .stg small{font-size:9px}
 #deliver{position:absolute;left:12px;bottom:12px;z-index:3;font-size:17px;padding:8px 20px;background:linear-gradient(#ffe39a,#f0b429);animation:dpop .9s infinite}
 @keyframes dpop{50%{transform:scale(1.07)}}
@@ -261,9 +272,13 @@ html.fsm #endO .lb{max-height:30vh;overflow:auto}
       <span class="sys">17:50，設計部</span>
       <h2>選擇關卡</h2>
       <p>隊伍會自動戰鬥。你只要在對的時機放必殺，湊滿協作條就能「準時交付」。每關開場有一段劇情，部分關卡有特殊規則。</p>
-      <div id="stageList"></div>
+      <div class="row"><button class="pk big" id="campB" type="button">劇情模式</button><button class="pk" id="newCampB" type="button" hidden>重新開始劇情</button><button class="pk" id="freeB" type="button">自由選關</button></div>
+      <small id="campInfo"></small>
+      <div id="stageList" hidden></div>
     </div>
     <div class="overlay" id="endO" hidden></div>
+    <div class="overlay" id="choiceO" hidden></div>
+    <div class="overlay" id="endC" hidden></div>
   </section>
 
   <div id="tip">三波敵人：插單便條、意見分身、客戶 Boss（每次隨機）。全程約兩分半。</div>
@@ -322,7 +337,7 @@ const Core = (() => {
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 function go(u, tx, tz, stop, k = 1) { const dx = tx - u.x, dz = tz - u.z, d = Math.hypot(dx, dz); if (d > 1e-6) { u.fx = dx / d; u.fz = dz / d; } if (d > stop && u.mv > 0) { const st = Math.min(u.mv * k * DT, d - stop); u.x += dx / d * st; u.z += dz / d * st; u.mvg = true; } }
 
-  function newGame(seed, bossKind) {
+  function newGame(seed, bossKind, opts) {
     const S = {
       bossKind: BOSS[bossKind] ? bossKind : 'hydra', mod: (BOSS[bossKind] && BOSS[bossKind].mod && BOSS[bossKind].mod.id) || null, leaveT: 16, t: 0, seed, rand: mk(seed), wave: 0, eTot: 1, phase: 'between', betweenT: 1.2, waveT: 0,
       heroes: [], enemies: [], events: [], queue: [], n: 0, boss: null,
@@ -334,6 +349,7 @@ function go(u, tx, tz, stop, k = 1) { const dx = tx - u.x, dz = tz - u.z, d = Ma
       S.heroes.push(unit({ uid: id, id, side: 'hero', name: d.name, hp: d.hp, max: d.hp, atk: d.atk, def: d.def, spd: d.spd, x: d.home[0], z: d.home[1], range: d.range, mv: d.mv, lane: d.lane, home: d.home, rad: .5, energy: 0, cd: d.cdMax * .5, cdMax: d.cdMax, timer: d.spd * S.rand(), rage: 0, stacks: 0, pas: 4, barrage: 0, barrageT: 0 }));
       S.stats.dmg[id] = 0;
     }
+    if (opts) S.heroes.forEach(h => { h.atk *= opts.atk || 1; h.max = Math.round(h.max * (opts.hp || 1)); h.hp = h.max; });   // 劇情模式：路線風格加成
     return S;
   }
 
@@ -1519,6 +1535,8 @@ function fillColl() {   // 選關畫面：每一關一顆按鈕，顯示作品�
   const el = $('stageList'); if (!el) return; const c = getColl();
   el.innerHTML = Object.keys(Core.BOSS).map(k => { const b = Core.BOSS[k], g = c[k]; return '<button class="stg" type="button" data-k="' + k + '"><b>' + b.stage + '｜' + b.title + (g ? ' ✓' : '') + '</b><i>難度 ' + '★'.repeat(b.diff) + '☆'.repeat(5 - b.diff) + '</i><small>' + (b.mod ? '【' + b.mod.name + '】' + b.mod.desc : '對手：' + b.name) + '</small></button>'; }).join('');
   el.querySelectorAll('.stg').forEach(x => x.addEventListener('click', () => begin(x.dataset.k)));
+  camp = loadCamp(); const has = !!camp; $('campB').textContent = has ? '繼續劇情（第 ' + camp.order.length + '／5 關）' : '劇情模式'; $('newCampB').hidden = !has;
+  $('campInfo').textContent = has ? '已有進度，會從目前這一關重新開始' : '五關串聯，每關結束有動畫與二選一分支';
 }
 function pickBoss() { const c = getColl(), ks = Object.keys(Core.BOSS), left = ks.filter(k => !c[k]), pool = left.length ? left : ks; return pool[Math.floor(Math.random() * pool.length)]; }
 // 手機：全螢幕＋鎖定橫式（沒有全螢幕 API 的瀏覽器，例如 iPhone Safari，只套用橫式版面；直拿時蓋住畫面並暫停）
@@ -1530,18 +1548,83 @@ function goFull() {
   try { const el = document.documentElement, p = el.requestFullscreen ? el.requestFullscreen({ navigationUI: 'hide' }) : el.webkitRequestFullscreen ? el.webkitRequestFullscreen() : null; Promise.resolve(p).then(() => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }).catch(() => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }); } catch (e) {}
 }
 { const mb = $('fsMenu'); mb.addEventListener('click', () => { document.documentElement.classList.toggle('menu'); mb.textContent = document.documentElement.classList.contains('menu') ? '收起' : '選單'; }); }
-function begin(kind) {
+// ---------- 劇情模式：五關串聯、每關結束後動畫＋二選一分支 ----------
+const CAMP_KEY = 'expCampV1', M_ = COL.machi, N_ = COL.noise, A_ = COL.anna, B_ = COL.amber, L_ = COL.leona;
+const OUTRO = {
+  hydra: [SYS('九頭蛇縮成一份檔案，檔名只剩一行：「最後一版」。'), ['Machi', '終於有一版是真的了。', M_], ['Anna', '先別高興，我聽到倉庫深處還有別的聲音。', A_], ['Leona', '需求還沒收完。下一個正在靠近。', L_]],
+  client: [SYS('客戶留下一張三千元的支票，頭也不回地走了。'), ['Noise', '他居然真的付錢了！', N_], ['Machi', '三千元的品牌識別，但是是我們想要的那一版。', M_], ['Leona', '倉庫的門牌又變了。有東西在更新。', L_]],
+  rush: [SYS('特急件被歸檔，日曆上的「連假」小旗終於飄了起來。'), ['Amber', '我們真的可以放假了？', B_], ['Machi', '我只輪休一半，我是窗口。', M_], ['Anna', '你的「一半」，總是三百六十天。', A_]],
+  upload: [SYS('進度條跳到 100%。「上傳成功」的提示音響起。'), ['Anna', '我的檔案終於傳過去了。', A_], ['Noise', '我的怒氣值也終於過去了。', N_], ['Leona', '網路恢復了，但訊號的源頭還在倉庫更深處。', L_]],
+  meeting: [SYS('會議結束，投影片一張張熄滅，咖啡機自己冒起了熱氣。'), ['Amber', '終於有咖啡了……', B_], ['Machi', '散會。大家辛苦了。', M_], ['Leona', '但這場會議的主持人，似乎一直沒現身。', L_]],
+};
+// 每個下一關對應的選項文字、風格（brave：我方攻擊 +4%／careful：我方生命 +5%）與銜接劇情
+const TARGET = {
+  client: { label: '去見那位只有三千預算的客戶', stance: 'brave', bridge: [['Machi', '客戶在線上等很久了，與其拖著，不如直接去談。', M_], ['Noise', '三千……我先聲明，我不會做五千的質感。', N_], ['Leona', '我會幫你們記下他每一次改口的時間。', L_]] },
+  rush: { label: '先接下連假前的急件', stance: 'careful', bridge: [['Leona', '急件快堆不下了，先清掉，大家才放得下心。', L_], ['Amber', '我把輪休表畫好了，輪流休息才不會一起倒。', B_], ['Machi', '好，大家輪流，我留守窗口。', M_]] },
+  upload: { label: '修好卡住的網路', stance: 'careful', bridge: [['Anna', '我的檔案還卡在 99%，什麼都做不了。', A_], ['Leona', '網路不穩，所有人的工具都在變慢。', L_], ['Machi', '先處理它，不然連回信都慢半拍。', M_]] },
+  meeting: { label: '衝進晨會，把結論開出來', stance: 'brave', bridge: [['Amber', '晨會已經開了兩個小時，咖啡機還壞了。', B_], ['Noise', '我進去，直接把結論講出來！', N_], ['Machi', '好，把這場會議開成「結論」。', M_]] },
+};
+const LAST_OPT = [{ label: '全員衝上去，一鼓作氣', stance: 'brave' }, { label: '分頭佈局，穩穩收尾', stance: 'careful' }];
+const STANCE_TXT = { brave: '風格：正面迎戰（下一關我方攻擊 +4%）', careful: '風格：穩紮穩打（下一關我方生命 +5%）' };
+const ENDING = {
+  common: [SYS('第五道需求結案。倉庫裡的紙張安靜地落下，空氣裡有咖啡香。')],
+  brave: [['Machi', '一路往前打，需求只好跟著讓路。', M_], ['Noise', '這才叫最後一版！', N_]],
+  careful: [['Leona', '每一步都先整理好才走下一步，所以沒有人倒下。', L_], ['Anna', '我承認，穩，確實有用。', A_]],
+  balanced: [['Amber', '有時衝、有時穩，反正我們都走到了。', B_], ['Machi', '設計部，本來就是這樣。', M_]],
+  tail: [SYS('倉庫深處的牆壁無聲地裂開，另一邊是一層沒有人見過的樓層。'), ['Leona', '座標對不上……這不在大樓圖上。', L_], ['Machi', '下一章，我們去看看吧。', M_], SYS('第一章　完。即將進入第二章。')],
+};
+let camp = null, inCamp = false, onLinesDone = null;
+function loadCamp() { try { const c = JSON.parse(localStorage.getItem(CAMP_KEY) || 'null'); return c && Array.isArray(c.order) && c.order.length && !c.done ? c : null; } catch (e) { return null; } }
+function saveCamp() { try { if (camp) localStorage.setItem(CAMP_KEY, JSON.stringify(camp)); else localStorage.removeItem(CAMP_KEY); } catch (e) {} }
+function campOpts() { return inCamp && camp ? { atk: 1 + Math.min(.16, .04 * camp.b), hp: 1 + Math.min(.2, .05 * camp.c) } : null; }
+function playLines(lines, cb) {   // 動畫：電影黑邊、角色立繪滑入、逐句對白
+  INTRO = lines; dIdx = 0; onLinesDone = cb || null; $('dialog').hidden = false; $('stage').classList.add('cine'); showLine();
+}
+function startCamp(fresh) {
+  if (fresh || !camp) { camp = { order: ['hydra'], b: 0, c: 0, score: 0, secs: 0, bridge: null, done: false }; saveCamp(); }
+  inCamp = true; begin(camp.order[camp.order.length - 1], { camp: true });
+}
+function campWin(score) {   // 劇情模式：這一關通過 → 結束動畫 → 二選一
+  camp.score += score; camp.secs += S.t; saveCamp();
+  const kind = S.bossKind, n = camp.order.length;
+  try { Core.ORDER.forEach(id => fxBeam(rpos(Core.hero(S, id)), COL[id], false)); } catch (e) {}
+  banner('第 ' + n + ' 關完成', Core.BOSS[kind].title, '#5fe08a');
+  setTimeout(() => playLines(OUTRO[kind] || [], () => { if (n >= 5) campEnding(); else showChoice(); }), 1400);
+}
+function showChoice() {
+  const left = ['client', 'rush', 'upload', 'meeting'].filter(k => !camp.order.includes(k)), el = $('choiceO');
+  const opts = left.length >= 2 ? left.slice(0, 2).map(k => ({ kind: k, label: TARGET[k].label, stance: TARGET[k].stance })) : LAST_OPT.map(o => ({ kind: left[0], label: o.label, stance: o.stance }));
+  el.innerHTML = '<span class="sys">第 ' + camp.order.length + ' 關完成</span><h2>接下來怎麼走？</h2><div id="optList">' + opts.map((o, i) => { const b = Core.BOSS[o.kind]; return '<button class="opt" type="button" data-i="' + i + '"><b>' + o.label + '</b><small>前往 ' + b.stage + '「' + b.title + '」' + (b.mod ? '<br>規則：' + b.mod.name : '') + '</small><em>' + STANCE_TXT[o.stance] + '</em></button>'; }).join('') + '</div>';
+  el.hidden = false;
+  el.querySelectorAll('.opt').forEach(x => x.addEventListener('click', () => {
+    const o = opts[+x.dataset.i]; el.hidden = true; camp.order.push(o.kind); camp[o.stance === 'brave' ? 'b' : 'c']++;
+    camp.bridge = [SYS('你的選擇：' + o.label + '。')].concat(TARGET[o.kind].bridge); saveCamp(); begin(o.kind, { camp: true });
+  }));
+}
+function campEnding() {
+  camp.done = true; const total = Math.round(camp.score), secs = camp.secs, st = camp.b >= 3 ? 'brave' : camp.c >= 3 ? 'careful' : 'balanced'; saveCamp(); try { localStorage.removeItem(CAMP_KEY); } catch (e) {}
+  playLines(ENDING.common.concat(ENDING[st], ENDING.tail), () => {
+    const el = $('endC'); el.innerHTML = '<span class="badge">第一章 完</span><h2>即將進入第二章</h2><video id="ch2v" src="chapter2.mp4" controls playsinline preload="metadata"></video><p id="ch2n" hidden>第二章預告片製作中，敬請期待。</p><div class="sys">劇情總分　' + total + '</div><div class="stats">' + collHtml() + '</div><div class="lb" id="lbBox"></div><div class="row"><button class="pk big" id="againCamp" type="button">再走一次劇情</button><button class="pk" id="backMenu" type="button">回選單</button></div>';
+    el.hidden = false; const v = $('ch2v'); v.addEventListener('error', () => { v.hidden = true; $('ch2n').hidden = false; });
+    $('againCamp').addEventListener('click', () => { el.hidden = true; startCamp(true); });
+    $('backMenu').addEventListener('click', () => { el.hidden = true; $('startO').hidden = false; fillColl(); });
+    setupBoard(total, secs);
+  });
+}
+function begin(kind, opt) {
+  inCamp = !!(opt && opt.camp); onLinesDone = null; $('stage').classList.remove('cine'); $('choiceO').hidden = true; $('endC').hidden = true;
   kind = typeof kind === 'string' && Core.BOSS[kind] ? kind : pickBoss(); INTRO = STORY[kind] || STORY_HYDRA;
+  if (inCamp && camp) { const pro = camp.order.length === 1 ? [SYS('第一章｜五道需求，一條路。你的每個選擇，會決定倉庫的走向。')] : []; INTRO = pro.concat(camp.bridge || [], INTRO); }
   goFull(); SFX.unlock(); SFX.click(); SFX.ambient(true); SFX.level(0); SFX.music(false); SFX.music(true);
   $('startO').hidden = true; $('endO').hidden = true;
-  S = Core.newGame((Date.now() & 0xfffffff) || 1, kind); R = {}; fx = []; banners = []; resetUnits(); acc = 0; running = false;
+  S = Core.newGame((Date.now() & 0xfffffff) || 1, kind, campOpts()); R = {}; fx = []; banners = []; resetUnits(); acc = 0; running = false;
   $('waveP').textContent = '倉庫';
   dIdx = 0; $('dialog').hidden = false; showLine();
 }
 function nextLine() {
   SFX.next();
   dIdx++;
-  if (dIdx >= INTRO.length) { $('dialog').hidden = true; $('dFace').hidden = true; running = true; return; }
+  if (dIdx >= INTRO.length) { $('dialog').hidden = true; $('dFace').hidden = true; $('stage').classList.remove('cine'); const cb = onLinesDone; onLinesDone = null; if (cb) cb(); else running = true; return; }
   showLine();
 }
 const BOARD = 'https://machi-design-api.machi-chen.workers.dev/minigames/exp';
@@ -1563,6 +1646,7 @@ function finish(won) {
   const m = Math.floor(S.t / 60), s = Math.floor(S.t % 60);
   const score = won ? calcScore(st, S.t) : 0;
   let fresh = false; if (won) { const c = getColl(), k = S.bossKind; fresh = !c[k]; c[k] = { n: ((c[k] && c[k].n) || 0) + 1, best: Math.min((c[k] && c[k].best) || 1e9, Math.round(S.t)) }; saveColl(c); }
+  if (won && inCamp && camp) { campWin(score); return; }
   const rows = Core.ORDER.map(id => `<div><span>${Core.HERO[id].name} 輸出</span><b>${Math.round(st.dmg[id] / tot * 100)}%</b></div>`).join('');
   $('endO').innerHTML = won
     ? `<span class="badge">已確認</span><h2>任務完成</h2><p>新的需求會再來，但現在，先休息一下。</p>
@@ -1574,7 +1658,7 @@ function finish(won) {
        <button class="pk big" id="againB" type="button">再打一次</button> <button class="pk" id="menuB" type="button">選關</button>`
     : `<h2>需求淹沒了設計部</h2><p>${S.wave === 3 ? (S.bossKind === 'client' ? '客戶的「明天一早要」要用 Machi 的交付防線擋；「預算只有三千」要留一招攻擊必殺打斷。' : '九頭蛇的「今天能出嗎？」要用 Machi 的交付防線擋；「剛剛那版比較好」要留一招攻擊必殺打斷。') : '卡片亮起時就放必殺，Leona 的「重新對齊」能把全隊拉回來。'}</p>
        <button class="pk big" id="againB" type="button">重新挑戰</button> <button class="pk" id="menuB" type="button">選關</button>`;
-  $('endO').hidden = false; $('againB').addEventListener('click', () => begin(S.bossKind)); if ($('menuB')) $('menuB').addEventListener('click', () => { $('endO').hidden = true; $('startO').hidden = false; fillColl(); }); if (won) setupBoard(score, S.t);
+  $('endO').hidden = false; $('againB').addEventListener('click', () => begin(S.bossKind, { camp: inCamp })); if ($('menuB')) $('menuB').addEventListener('click', () => { $('endO').hidden = true; $('startO').hidden = false; fillColl(); }); if (won) setupBoard(score, S.t);
 }
 $('dialog').addEventListener('click', nextLine);
 $('deliver').addEventListener('click', doDeliver);
@@ -1594,6 +1678,7 @@ addEventListener('message', e => { if (e.origin === location.origin && e.data &&
 addEventListener('pointerdown', () => { try { window.focus(); } catch (e) {} });
 window.__game = { get S() { return S; }, Core, ult, doDeliver };
 if (/[?&]embed=1/.test(location.search)) { $('exitB').hidden = false; $('exitB').onclick = () => { try { parent.postMessage({ type: 'expeditionExit' }, location.origin); } catch (e) {} }; }
+$('campB').addEventListener('click', () => startCamp(false)); $('newCampB').addEventListener('click', () => startCamp(true)); $('freeB').addEventListener('click', () => { const e = $('stageList'); e.hidden = !e.hidden; });
 fillColl();
 try { init3d(); requestAnimationFrame(loop); } catch (err) { $('tip').textContent = '這個瀏覽器無法啟動 3D 繪圖（WebGL），請換一個瀏覽器開啟。'; console.error(err); }
 })();
