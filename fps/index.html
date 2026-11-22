@@ -719,6 +719,16 @@ function monThink(a, dt) {
     if (pve && pve.type === 'rescue' && me && !me.dead && Math.hypot(me.x - a.x, me.z - a.z) < 6) best = me;   // 營救關：靠近重裝的怪物都會被他吸住
     if (pve && pve.type === 'tank' && me && !me.dead) best = me;   // 重裝關：所有怪物只打重裝
     a.tgt = best; a.direct = !best || clearLine(a.x, a.z, best.x, best.z, a.y); if (best && !a.direct) { a.path = astar(a.x, a.z, best.x, best.z); a.direct = !a.path.length; } else a.path = []; }
+  if (pve && pve.type === 'escort') {   // 護送關：怪物沿著走道路線走向重裝（擋在辦公桌前面阻止他前進），不會被牆擋住亂撞
+    const R = pve.route, tk = pve.tank; a.rT = (a.rT === undefined ? 0 : a.rT) - dt;
+    if (a.rT <= 0 || a.mi === undefined) { a.rT = .25; const lo = a.mi === undefined ? 0 : Math.max(0, a.mi - 4), hi = a.mi === undefined ? R.length - 1 : Math.min(R.length - 1, a.mi + 4); let bi = lo, bd = 1e9; for (let i = lo; i <= hi; i++) { const dd = Math.hypot(R[i][0] - a.x, R[i][1] - a.z); if (dd < bd) { bd = dd; bi = i; } } a.mi = bi; }
+    const dT = Math.hypot(tk.x - a.x, tk.z - a.z); let gx, gz; if (Math.abs(a.mi - pve.ti) <= 1 || dT < 3) { gx = tk.x; gz = tk.z; } else { const nx = R[a.mi + (pve.ti > a.mi ? 1 : -1)]; gx = nx[0]; gz = nx[1]; }
+    const dx = gx - a.x, dz = gz - a.z, d = Math.hypot(dx, dz) || 1; a.yaw = Math.atan2(-dx, -dz);
+    const at = (a.tgt && !a.tgt.dead && Math.hypot(a.tgt.x - a.x, a.tgt.z - a.z) <= 1.7) ? a.tgt : (dT <= 1.9 ? tk : null); let mx = 0, mz = 0;
+    if (at) { a.yaw = Math.atan2(-(at.x - a.x), -(at.z - a.z)); if (a.fireT <= 0) { a.fireT = d0.cd; a.fireAnim = .25; dmgTo(at, d0.dmg * (at.pveTank ? 3.2 : at.isMe ? .6 : 1), a, false, '🐾'); } } else { mx = dx / d; mz = dz / d; }
+    for (const o of actors) { if (o === a || !o.mon || o.dead) continue; const ox = a.x - o.x, oz = a.z - o.z, od = Math.hypot(ox, oz); if (od < 1.1 && od > .01) { mx += ox / od * .6; mz += oz / od * .6; } }
+    const sp = d0.speed * (a.spd > 0 ? 1.35 : 1) * ((pve && pve.speedK) || 1); a.vx += (mx * sp - a.vx) * Math.min(1, dt * 8); a.vz += (mz * sp - a.vz) * Math.min(1, dt * 8); return;
+  }
   let mx = 0, mz = 0; const t = a.tgt;
   if (t && !t.dead) { const dx = t.x - a.x, dz = t.z - a.z, d = Math.hypot(dx, dz) || 1; a.yaw = Math.atan2(-dx, -dz);
     const reach = pve && pve.type === 'sniper' && t.isMe && t.y > .8 ? 2.9 : 1.7;
@@ -743,7 +753,7 @@ function tankThink(a, dt) {   // 護送關的重裝隊友：沿著道路慢慢�
   const wait = (near && nd < 3.2) || (me && !me.dead && Math.hypot(me.x - a.x, me.z - a.z) > 22) || !pve.stOn || pve.ri > pve.ends[pve.stage]; let mx = 0, mz = 0;
   const RT = pve.route; for (let j = RT.length - 1; j >= pve.ri; j--) if (Math.hypot(RT[j][0] - a.x, RT[j][1] - a.z) < 1.8) { pve.ri = Math.min(RT.length - 1, j + 1); break; }
   if (!wait) { if (a.thk <= 0) { a.thk = .6; const tg = RT[pve.ri]; a.path = astar(a.x, a.z, tg[0], tg[1]); } if (a.path.length) { const ps = pathStep(a); mx = ps[0]; mz = ps[1]; } else { const tg = RT[pve.ri], dx = tg[0] - a.x, dz = tg[1] - a.z, dd = Math.hypot(dx, dz) || 1; mx = dx / dd; mz = dz / dd; } if (mx || mz) a.yaw = Math.atan2(-mx, -mz); }
-  const sp = a.hero.speed * .15; a.vx += (mx * sp - a.vx) * Math.min(1, dt * 8); a.vz += (mz * sp - a.vz) * Math.min(1, dt * 8);
+  const sp = a.hero.speed * .17; a.vx += (mx * sp - a.vx) * Math.min(1, dt * 8); a.vz += (mz * sp - a.vz) * Math.min(1, dt * 8);
 }
 // 道路、關卡、終點
 function clearPveObjs() { if (pve && pve.mazeBoxes) for (const b of pve.mazeBoxes) { const i = BOXES.indexOf(b); if (i >= 0) BOXES.splice(i, 1); markGrid(b, 0); } if (pve && pve.nestBoxes) for (const b of pve.nestBoxes) { const i = BOXES.indexOf(b); if (i >= 0) BOXES.splice(i, 1); } if (pve && pve.objs) { for (const o of pve.objs) { scene.remove(o); } for (const g of (pve.gates || [])) { const i = BOXES.indexOf(g.box); if (i >= 0) BOXES.splice(i, 1); } } ptRing.visible = ptDisc.visible = ptBeam.visible = !pve; }
@@ -826,7 +836,7 @@ function buildMaze() {   // 護送關：西北角空地砌成三排蛇行走道�
   mazeBox(-17.6, -17.2, -27.7, -15.5, 1.3, 0x9aa6b8); mazeBox(-17.2, -6.6, -23.7, -23.3, 1.3, 0x7f93b8); mazeBox(-14.6, -3.5, -19.7, -19.3, 1.3, 0x7f93b8); mazeBox(-3.9, -3.5, -27.7, -19.7, 1.3, 0x9aa6b8); mazeBox(-17.2, -3.5, -15.9, -15.5, 1.3, 0x9aa6b8);
   const pts = [[-16.2, -25.5], [-4.9, -25.5], [-4.9, -21.5], [-16.2, -21.5], [-16.2, -17.5], [-3, -17.5], [16, -17.5]], route = [pts[0]], cum = [0]; let tot = 0;
   for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]), k = Math.max(1, Math.round(L / 2)); for (let j = 1; j <= k; j++) { const q = [a[0] + (b[0] - a[0]) * j / k, a[1] + (b[1] - a[1]) * j / k]; tot += L / k; route.push(q); cum.push(tot); } }
-  pve.route = route; pve.ri = 1; const idxAt = d => { let bi = 0; for (let i = 0; i < cum.length; i++) if (Math.abs(cum[i] - d) < Math.abs(cum[bi] - d)) bi = i; return bi; }; pve.ends = [idxAt(21), idxAt(tot * .67), route.length - 1]; pve.gates = [];
+  pve.route = route; pve.ri = 1; const idxAt = d => { let bi = 0; for (let i = 0; i < cum.length; i++) if (Math.abs(cum[i] - d) < Math.abs(cum[bi] - d)) bi = i; return bi; }; pve.ti = 1; pve.ends = [idxAt(21), idxAt(tot * .67), route.length - 1]; pve.gates = [];
   // 地板導引箭頭
   for (let i = 0; i < route.length - 1; i++) { const a = route[i], b = route[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], g = new THREE.Group(), pl = mk(new THREE.PlaneGeometry(.9, .45), new THREE.MeshBasicMaterial({ color: 0x5ef0a4, transparent: true, opacity: .6, depthWrite: false })); pl.rotation.x = -Math.PI / 2; g.add(pl); g.position.set((a[0] + b[0]) / 2, .04, (a[1] + b[1]) / 2); g.rotation.y = Math.atan2(-dz, dx); addPveObj(g); }
   // 三道閘門
@@ -873,10 +883,12 @@ function pveStep(dt) {
     if (P.kills >= P.total) pveEnd(true);
   } else if (P.type === 'escort') {
     const t = P.tank; P.spawnT -= dt;
-    if (!P.stOn) { P.stT -= dt; if (P.stT <= 0) { P.stOn = true; P.left = [20, 28, 38][P.stage]; banner('第 ' + (P.stage + 1) + ' 道閘門', '閘門前湧出怪物！幫重裝清怪、補血', 2000); SFX.beep(); } }
-    else { const g = P.gates[P.stage];
-      if (P.left > 0 && P.spawnT <= 0 && mons.length < Math.round(10 * diff)) { P.spawnT = .65 / diff; P.left--; const behind = Math.random() < .22, ri = behind ? Math.max(0, P.ri - 3 - Math.floor(Math.random() * 3)) : Math.min(g.ri - 1, P.ri + 3 + Math.floor(Math.random() * 6)), q = P.route[Math.max(0, ri)]; let p = [q[0] + rand(-.5, .5), q[1] + rand(-.7, .7)]; if (blocked(p[0], p[1], 0)) p = [q[0], q[1]]; spawnMon(pickKind({ grunt: .62, runner: .22, brute: P.stage > 0 ? (P.stage > 1 ? .24 : .14) : 0 }), p[0], p[1]); }
+    if (!P.stOn) { P.stT -= dt; if (P.stT <= 0) { P.stOn = true; P.stTime = 0; P.left = [20, 28, 38][P.stage]; banner('第 ' + (P.stage + 1) + ' 道閘門', '閘門前湧出怪物！幫重裝清怪、補血', 2000); SFX.beep(); } }
+    else { const g = P.gates[P.stage], tot = [20, 28, 38][P.stage], s0 = P.stage === 0 ? 1 : P.ends[P.stage - 1], prog = clamp((P.ri - s0) / Math.max(1, g.ri - 1 - s0), 0, 1); P.stTime = (P.stTime || 0) + dt;   // 依推進距離（加上時間）平均放出這一波的怪物，推到閘門前一直保持有怪
+      const allowed = Math.min(tot, Math.max(4 + Math.ceil(tot * .9 * prog), Math.floor(P.stTime * .8))), spawned = tot - P.left;
+      if (P.left > 0 && spawned < allowed && P.spawnT <= 0 && mons.length < Math.round(9 * diff)) { P.spawnT = .4 / diff; P.left--; const behind = Math.random() < .1, ri = behind ? Math.max(0, P.ri - 3 - Math.floor(Math.random() * 3)) : Math.min(g.ri - 1, P.ri + 3 + Math.floor(Math.random() * 6)), q = P.route[Math.max(0, ri)]; let p = [q[0] + rand(-.5, .5), q[1] + rand(-.7, .7)]; if (blocked(p[0], p[1], 0)) p = [q[0], q[1]]; spawnMon(pickKind({ grunt: .62, runner: .22, brute: P.stage > 0 ? (P.stage > 1 ? .24 : .14) : 0 }), p[0], p[1]); }
       if (P.left === 0 && mons.length === 0 && Math.hypot(P.route[g.ri][0] - t.x, P.route[g.ri][1] - t.z) < 2.4) { openGate(g); if (P.stage >= 2) pveEnd(true); else { banner('第 ' + (P.stage + 1) + ' 道閘門打開了', '繼續往前推', 1700); SFX.beep(); P.stage++; P.stOn = false; P.stT = 3.5; } } }
+    { let bi = 0, bd = 1e9; for (let i = 0; i < P.route.length; i++) { const dd = Math.hypot(P.route[i][0] - t.x, P.route[i][1] - t.z); if (dd < bd) { bd = dd; bi = i; } } P.ti = bi; }
     if (P.desk) { const f = fwd(t); P.desk.position.set(t.x + f[0] * 1.7, 0, t.z + f[1] * 1.7); P.desk.rotation.y = t.yaw; }
   } else if (P.type === 'rescue') {
     P.spawnT -= dt; const wv = P.waves[P.wi];
