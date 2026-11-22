@@ -153,6 +153,7 @@ h3{margin:16px 0 0;font-size:17px}
 .card.tut-hl{box-shadow:0 0 0 4px #ffd166,0 0 22px 6px rgba(255,209,102,.9);animation:tzp .7s ease-in-out infinite;position:relative;z-index:4}
 #deliver.tut-hl{box-shadow:0 0 0 4px #fff,0 0 24px 8px rgba(255,209,102,.95)}
 html.fsm #tutP{top:52px;max-width:34%;padding:4px 8px;font-size:10px} html.fsm #tutT{font-size:11px}
+#fadeO{position:absolute;inset:0;z-index:8;background:#000;opacity:0;transition:opacity .35s;pointer-events:none}
 #castV{position:absolute;inset:0;z-index:3;pointer-events:none;box-shadow:inset 0 0 70px 14px rgba(255,50,50,.5);animation:castp .8s ease-in-out infinite}
 @keyframes castp{50%{opacity:.35}}
 #tapZ{position:absolute;left:50%;top:56%;width:clamp(130px,28%,220px);aspect-ratio:1;transform:translate(-50%,-50%);z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;border-radius:50%;background:radial-gradient(circle,rgba(255,60,60,.55),rgba(120,10,10,.55) 70%);border:5px solid #ffd166;box-shadow:0 0 28px rgba(255,90,60,.75);cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;animation:tzp .5s ease-in-out infinite}
@@ -319,6 +320,7 @@ html.fsm #endO .lb{max-height:30vh;overflow:auto}
     <div class="overlay" id="choiceO" hidden></div>
     <div class="overlay" id="endC" hidden></div>
     <div id="vidO" hidden></div>
+    <div id="fadeO" hidden></div>
     <div id="tutP" hidden><b id="tutS"></b><span id="tutT"></span><button class="pk off" id="tutSkip" type="button">跳過教學</button></div>
   </section>
 
@@ -359,6 +361,7 @@ const Core = (() => {
     upload: { name: '卡在 99% 的上傳', hp: 92000, atk: 115, def: .1, spd: 1.8, row: 'back', boss: true, range: 40, mv: 0, rad: 1.8 },
     dummy: { name: '訓練假人', hp: 90000, atk: 0, def: 0, spd: 9, row: 'front', range: 1.5, mv: 0, rad: .6 },
     tarmor: { name: '訓練裝甲', hp: 14000, atk: 0, def: 0, armor: .75, spd: 9, row: 'front', range: 1.5, mv: 0, rad: .7 },
+    tdmg: { name: '練習敵人', hp: 90000, atk: 55, def: 0, spd: 1.6, row: 'front', range: 1.5, mv: 0, rad: .6 },
     tback: { name: '訓練標靶', hp: 90000, atk: 0, def: 0, spd: 9, row: 'back', range: 4, mv: 0, rad: .6 },
     tboss: { name: '訓練魔王', hp: 40000, atk: 0, def: 0, spd: 9, row: 'back', boss: true, range: 40, mv: 0, rad: 1.6 },
     meeting: { name: '開不完的晨會', hp: 46000, atk: 110, def: .1, spd: 1.8, row: 'back', boss: true, range: 40, mv: 0, rad: 2 },
@@ -399,8 +402,8 @@ function go(u, tx, tz, stop, k = 1) { const dx = tx - u.x, dz = tz - u.z, d = Ma
     return S;
   }
 
-  const spawnX = (k, s) => k === 'dummy' ? 5.6 : k === 'tarmor' ? 6.6 : k === 'tback' ? 7.6 : k === 'note' ? 7.6 + (s % 2) * .8 : k === 'armor' ? 7 : k === 'clone' ? 7.2 : 4.7;
-const spawnZ = (k, s) => k === 'dummy' ? -1.5 + s * 1.5 : k === 'tarmor' ? -.2 : k === 'tback' ? .9 : k === 'note' ? -2 + (s >> 1) * .75 : k === 'armor' ? -1.6 + s * 1.2 : k === 'clone' ? -.8 : -.5;
+  const spawnX = (k, s) => k === 'dummy' || k === 'tdmg' ? 5.6 : k === 'tarmor' ? 6.6 : k === 'tback' ? 7.6 : k === 'note' ? 7.6 + (s % 2) * .8 : k === 'armor' ? 7 : k === 'clone' ? 7.2 : 4.7;
+const spawnZ = (k, s) => k === 'dummy' || k === 'tdmg' ? -1.5 + s * 1.5 : k === 'tarmor' ? -.2 : k === 'tback' ? .9 : k === 'note' ? -2 + (s >> 1) * .75 : k === 'armor' ? -1.6 + s * 1.2 : k === 'clone' ? -.8 : -.5;
 function spawn(S, kind) {
     const d = EN[kind];
     let slot = 0;
@@ -443,7 +446,7 @@ function spawn(S, kind) {
     let sh = 0;
     if (dst.shield > 0) { sh = Math.min(dst.shield, a); dst.shield -= sh; }
     const real = a - sh;
-    dst.hp -= real;
+    dst.hp -= real; if (S.bossKind === 'tutorial' && dst.side === 'hero' && dst.hp < dst.max * .3) dst.hp = dst.max * .3;   // 教學中不會倒下
     if (src && src.side === 'hero') S.stats.dmg[src.id] += a;
     if (dst.side === 'hero') {
       dst.energy = Math.min(100, dst.energy + (dst.st.confuse ? 0 : (dst.id === 'machi' ? 4 : 2)));
@@ -732,9 +735,15 @@ function spawn(S, kind) {
 
   const STAGES = Object.keys(BOSS).filter(k => k !== 'tutorial');
   // 新手教學用：叫出練習用的假魔王並讓它開始讀條（需要連點斷招）
+  // 新手教學：換場景（只留指定的同事，換上指定的練習敵人）
+  function tutScene(S, heroIds, kinds) {
+    S.queue = []; S.boss = null; S.enemies = []; FLAGS.forEach(k => S.gauge[k] = false); S.phase = 'fight'; S.waveT = 0;
+    for (const h of S.heroes) { const on = heroIds.includes(h.id), d = HERO[h.id]; h.absent = !on; h.alive = on; h.hp = h.max; h.energy = 0; h.cd = h.cdMax * .5; h.st = {}; h.shield = 0; h.rage = 0; h.stacks = 0; h.barrage = 0; h.x = d.home[0]; h.z = d.home[1]; h.timer = h.spd * .5; h.pas = 4; h.mvg = false; }
+    kinds.forEach(k => spawn(S, k));
+  }
   function tutCast(S) { const B = S.boss; if (B && !B.cast) B.cast = { kind: 'revert', t: 8, max: 8, name: '剛剛那版比較好（練習）', need: 12, taps: 0 }; }
   function tutBoss(S) { if (!S.boss) { const b = spawn(S, 'tboss'); S.boss = { kind: 'tutorial', uid: b.uid, skillT: 9999, seq: 0, cast: null, enraged: false }; } tutCast(S); }
-  return { STAGES, tutBoss, tutCast, DT, dist, ORDER, HERO, EN, BOSS, FLAGS, newGame, step, castUlt, tap, deliver, gaugeReady, auto, alive, hero };
+  return { STAGES, tutScene, tutBoss, tutCast, DT, dist, ORDER, HERO, EN, BOSS, FLAGS, newGame, step, castUlt, tap, deliver, gaugeReady, auto, alive, hero };
 })();
 if (typeof module !== 'undefined') module.exports = Core;
 
@@ -839,8 +848,8 @@ function fit() { const d = Math.min(2, window.devicePixelRatio || 1); cv.width =
 addEventListener('resize', fit);
 
 // 單位座標由戰鬥核心給（世界單位，x 向右、z 朝向鏡頭）；畫面位置再平滑追過去
-const MH = { note: 1.8, armor: 2.9, clone: 3.1, hydra: 5.6, client: 5.2, rush: 6.6, upload: 6.4, meeting: 6.4, dummy: 1.8, tarmor: 2.9, tback: 3.1, tboss: 5.2 };
-const TUTMAP = { dummy: 'note', tarmor: 'armor', tback: 'clone', tboss: 'client' };   // 教學用的練習敵人借用現有造型
+const MH = { note: 1.8, armor: 2.9, clone: 3.1, hydra: 5.6, client: 5.2, rush: 6.6, upload: 6.4, meeting: 6.4, dummy: 1.8, tdmg: 1.8, tarmor: 2.9, tback: 3.1, tboss: 5.2 };
+const TUTMAP = { tdmg: 'note', dummy: 'note', tarmor: 'armor', tback: 'clone', tboss: 'client' };   // 教學用的練習敵人借用現有造型
 const TINT = { client: '#ffe39a', rush: '#ffb0a0', upload: '#a8d8ff', meeting: '#d8c0a0' };   // 還沒有專屬素材時，借用意見分身的圖加色
 const tall = u => u.side === 'hero' ? 2.3 : MH[u.kind];
 function rs(u) {
@@ -1008,7 +1017,7 @@ function heroUnit(id) {
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, alphaTest: .2 }));
   sp.center.set(.5, 6 / 240); sp.scale.set(2.3, 2.3, 1); scene.add(sp); return sp;
 }
-const SPEC = { note: { w: 70, h: 70, ox: 35, oy: 35, foot: 66, f: .026 }, armor: { w: 100, h: 112, ox: 50, oy: 58, foot: 106, f: .027 }, clone: { w: 100, h: 110, ox: 50, oy: 52, foot: 100, f: .027 }, hydra: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, client: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, rush: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, upload: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, meeting: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, dummy: { w: 70, h: 70, ox: 35, oy: 35, foot: 66, f: .026 }, tarmor: { w: 100, h: 112, ox: 50, oy: 58, foot: 106, f: .027 }, tback: { w: 100, h: 110, ox: 50, oy: 52, foot: 100, f: .027 }, tboss: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 } };
+const SPEC = { note: { w: 70, h: 70, ox: 35, oy: 35, foot: 66, f: .026 }, armor: { w: 100, h: 112, ox: 50, oy: 58, foot: 106, f: .027 }, clone: { w: 100, h: 110, ox: 50, oy: 52, foot: 100, f: .027 }, hydra: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, client: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, rush: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, upload: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, meeting: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, dummy: { w: 70, h: 70, ox: 35, oy: 35, foot: 66, f: .026 }, tdmg: { w: 70, h: 70, ox: 35, oy: 35, foot: 66, f: .026 }, tarmor: { w: 100, h: 112, ox: 50, oy: 58, foot: 106, f: .027 }, tback: { w: 100, h: 110, ox: 50, oy: 52, foot: 100, f: .027 }, tboss: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 } };
 function enemyUnit(e) {
   const s = SPEC[e.kind], c = document.createElement('canvas'); c.width = s.w * 2; c.height = s.h * 2;
   const t = new THREE.CanvasTexture(c); t.generateMipmaps = false; t.minFilter = THREE.LinearFilter;
@@ -1435,6 +1444,7 @@ function sync(dt) {
   dustT -= dt; const doDust = dustT <= 0; if (doDust) dustT = .13;
   for (const h of heroes) {
     const sp = U[h.uid], r = rs(h), k = Math.min(1, dt * 12);
+    { const vis = !h.absent; sp.visible = vis; P.shadow[h.id].visible = vis; P.ring[h.id].visible = vis; P.bub[h.id].visible = vis; if (!vis) continue; }
     r.x += (h.x - r.x) * k; r.z += (h.z - r.z) * k;
     const lx = r.lunge > 0 ? Math.sin(r.lunge / .22 * Math.PI) * .6 : 0;
     const q = springs(r), ca = castAnim(r, h.id, h), hf = Math.hypot(h.fx, h.fz) || 1;
@@ -1547,13 +1557,13 @@ function hud() {
   if (!S) return;
   for (const id of Core.ORDER) {
     const h = Core.hero(S, id), c = cards[id];
-    c.hp.style.width = (h.hp / h.max * 100) + '%'; c.en.style.width = h.energy + '%'; c.cd.style.width = Math.max(0, Math.min(100, (1 - h.cd / h.cdMax) * 100)) + '%';
+    c.el.style.display = h.absent ? 'none' : ''; c.hp.style.width = (h.hp / h.max * 100) + '%'; c.en.style.width = h.energy + '%'; c.cd.style.width = Math.max(0, Math.min(100, (1 - h.cd / h.cdMax) * 100)) + '%';
     const ready = h.alive && h.energy >= 100 && S.phase === 'fight';
     c.el.classList.toggle('ready', ready); c.el.classList.toggle('dead', !h.alive); c.el.classList.toggle('conf', !!h.st.confuse); c.el.classList.toggle('away', !!h.st.away);
     c.lbl.textContent = !h.alive ? '倒下' : h.st.away ? '休假中' : h.st.confuse ? '混亂' : ready ? '點擊必殺' : '自動中';
     c.el.setAttribute('aria-label', `${h.name} 必殺 ${Core.HERO[id].ult}${ready ? '，可施放' : ''}`);
   }
-  { const hs = S.heroes.reduce((a, h) => a + h.hp, 0), hm = S.heroes.reduce((a, h) => a + h.max, 0), es = Core.alive(S.enemies).reduce((a, e) => a + e.hp, 0), ep = Math.min(100, es / S.eTot * 100), hp = hs / hm * 100;
+  { const hs = S.heroes.reduce((a, h) => a + (h.absent ? 0 : h.hp), 0), hm = S.heroes.reduce((a, h) => a + (h.absent ? 0 : h.max), 0) || 1, es = Core.alive(S.enemies).reduce((a, e) => a + e.hp, 0), ep = Math.min(100, es / S.eTot * 100), hp = hs / hm * 100;
     $('allyB').style.width = $('allyL').style.width = hp + '%'; $('foeB').style.width = $('foeL').style.width = ep + '%';
     $('allyT').textContent = Math.round(hs); $('foeT').textContent = Math.round(es); }
   Core.FLAGS.forEach(k => pipEls[k].classList.toggle('on', S.gauge[k]));
@@ -1725,46 +1735,66 @@ function tutWaitCond(fn, ms) { return new Promise(res => { const t0 = Date.now()
 function tutTask(step, text) { if (!tut) return; $('tutS').textContent = step; tut.tip = text; $('tutT').textContent = text; }
 function tutHl(id) { Object.keys(cards).forEach(k => cards[k].el.classList.toggle('tut-hl', k === id)); $('deliver').classList.toggle('tut-hl', id === 'deliver'); }
 const T_INTRO = [
-  SYS('歡迎來到設計部遠征隊！這是新手教學，帶你認識五位同事的技能。（隨時可以按左上角「跳過教學」）'),
+  SYS('歡迎來到設計部遠征隊！這是新手教學。五位同事會各自在一個小場景裡示範，輔助型的同事會帶一位隊友搭配。（隨時可以按左上角「跳過教學」）'),
   ['Machi', '隊伍會自動戰鬥，普攻和「主動技」大家會自己放。你要做的是：在對的時機，點卡片放出「必殺」。', M_],
   ['Leona', '每位同事的必殺會慢慢充能，充滿的卡片會亮起金色框；卡片底下的細條是主動技的冷卻。', L_],
-  SYS('我們從 Machi 開始。這裡的敵人都是練習用的假人，不會反擊，放心練習。'),
+  SYS('先從 Machi 開始。練習用的敵人打不死人，放心練習。'),
 ];
 const TUT_HERO = {
-  machi: { lines: [['Machi', '我是 Machi，隊伍的坦克。我的工作是站在最前面扛傷害，讓大家安心輸出。', M_], ['Machi', '被動「這件我負責」：隊友血量低於 35% 時，我會代扛 30% 的傷害。主動「統一窗口」會自動嘲諷全場 5 秒，把敵人的攻擊都拉到我身上。', M_], SYS('必殺「交付防線」：全隊獲得護盾 6 秒，Machi 再代扛 40% 傷害。適合在敵人爆發前、或全隊血量很低時使用。')],
+  machi: { scene: [['machi', 'noise'], ['tdmg', 'tdmg']],
+    lines: [SYS('第 1 課：Machi。這個小場景只有 Machi 和一位隊友 Noise，對面是會打人的練習敵人。'), ['Machi', '我是 Machi，隊伍的坦克。我的工作是站在最前面扛傷害，讓大家安心輸出。', M_], ['Noise', '我負責輸出，Machi 負責被打。分工很清楚。', N_], ['Machi', '被動「這件我負責」：隊友血量低於 35% 時，我會代扛 30% 的傷害。主動「統一窗口」會自動嘲諷全場 5 秒，把敵人的攻擊都拉到我身上。', M_], SYS('先看 Machi 的主動技「統一窗口」（會自動施放）。')],
+    prep: h => { h.cd = 0; }, wait: () => S.enemies.some(e => e.alive && e.st.taunt), waitTask: 'Machi 正在放主動技「統一窗口」（會自動施放）…', waitAfter: [['Machi', '嘲諷生效了！敵人都轉向打我，Noise 就能安心輸出。', M_]],
+    ultLines: [SYS('必殺「交付防線」：全隊獲得護盾 6 秒，Machi 再代扛 40% 傷害。適合在敵人爆發前、或全隊血量很低時使用。')],
     after: [['Machi', '看到大家身上的藍色護盾圈了嗎？這一格「保護」也點亮了協作條。', M_]] },
-  noise: { lines: [['Noise', '我是 Noise，近戰戰士！被打、被改稿都會累積怒氣，每層讓我傷害 +4%。', N_], ['Noise', '主動「直接重做」會打出傷害並「破防」6 秒，專門對付帶護甲的敵人。護甲沒破防前，傷害只剩 25%！', N_], SYS('必殺「最後一版了！」：6 秒高速連斬；打在讀條中的 Boss 身上還會幫忙打斷（最後一課會練習）。先讓 Noise 放一次主動技，看看破防的效果。')],
+  noise: { scene: [['noise'], ['tarmor', 'dummy']],
+    lines: [SYS('第 2 課：Noise。這一關只有 Noise 一個人，單挑裝甲怪和假人。'), ['Noise', '我是 Noise，近戰戰士！被打、被改稿都會累積怒氣，每層讓我傷害 +4%。', N_], ['Noise', '主動「直接重做」會打出傷害並「破防」6 秒，專門對付帶護甲的敵人。護甲沒破防前，傷害只剩 25%！', N_], SYS('先讓 Noise 放一次主動技，看看破防的效果。')],
     prep: h => { h.cd = 0; }, wait: () => S.gauge.brk, waitTask: 'Noise 正在放主動技「直接重做」（會自動施放）…', waitAfter: [['Noise', '破防成功！被破防的敵人會吃更多傷害，協作條的「破防」也亮起來了。', N_]],
+    ultLines: [SYS('必殺「最後一版了！」：6 秒高速連斬；打在讀條中的 Boss 身上還會幫忙打斷（最後會練習）。')],
     after: [['Noise', '爽！連斬的時候怒氣越高越痛。', N_]] },
-  anna: { lines: [['Anna', '我是 Anna，後排刺客。被動「一眼看穿」每 6 秒標記一個弱點，打弱點的傷害加倍。', A_], ['Anna', '主動「直達源頭」會越過前排，優先打後排的召喚者。', A_], SYS('必殺「一刀定稿」：對被標記的弱點造成高額傷害，擊倒還能返還一半能量。')],
+  anna: { scene: [['anna'], ['dummy', 'tback']],
+    lines: [SYS('第 3 課：Anna。這一關只有 Anna 一個人，前面一隻假人、後排一個標靶。'), ['Anna', '我是 Anna，後排刺客。被動「一眼看穿」每 6 秒標記一個弱點，打弱點的傷害加倍。', A_], ['Anna', '主動「直達源頭」會越過前排，優先打後排的召喚者。', A_]],
     prep: h => { h.pas = 0; }, wait: () => S.enemies.some(e => e.alive && e.st.mark), waitTask: '等 Anna 標記弱點（敵人頭上會出現紅色準星）…', waitAfter: [['Anna', '標好了。紅色準星就是弱點，現在放必殺。', A_]],
+    ultLines: [SYS('必殺「一刀定稿」：對被標記的弱點造成高額傷害，擊倒還能返還一半能量。')],
     after: [['Anna', '這一刀正中弱點，「弱點擊破」也亮了。', A_]] },
-  amber: { lines: [['Amber', '我是 Amber，法師。普攻疊滿 4 層靈感後，主動「視覺重構」會變強：全體傷害並讓敵人緩速 4 秒。', B_], SYS('必殺「全案展開」：連續五段全體攻擊，是範圍控制的好幫手，也能打斷 Boss 讀條。')],
+  amber: { scene: [['amber'], ['dummy', 'dummy', 'dummy']],
+    lines: [SYS('第 4 課：Amber。這一關只有 Amber 一個人，面對一整排敵人。'), ['Amber', '我是 Amber，法師。普攻疊滿 4 層靈感後，主動「視覺重構」會變強：全體傷害並讓敵人緩速 4 秒。', B_]],
+    ultLines: [SYS('必殺「全案展開」：連續五段全體攻擊，是範圍控制的好幫手，也能打斷 Boss 讀條。')],
     after: [['Amber', '範圍很大吧？「範圍控制」這一格也亮了。', B_]] },
-  leona: { lines: [['Leona', '我是 Leona，補師。被動「有人接住」每 7 秒給血量最低的人一個小護盾；主動「資訊整理」會治療一人並解除一項負面狀態。', L_], ['Leona', '敵人有時會讓隊友「混亂」或「拖延」：混亂時不能累積必殺能量、也不能放技能，卡片會變紫色。', L_], SYS('現在讓其他四位陷入混亂（卡片變紫色），再用 Leona 的必殺救大家。')],
-    prep: () => { Core.alive(S.heroes).forEach(x => { if (x.id !== 'leona') x.st.confuse = 40; }); },
-    after: [['Leona', '「重新對齊」：全隊回血 35%、清除混亂和拖延，之後 6 秒內免疫。淨化這一格也亮了。', L_]] },
+  leona: { scene: [['leona', 'anna'], ['tdmg', 'tdmg']],
+    lines: [SYS('第 5 課：Leona。補師需要有人可以補，這個小場景帶一位隊友 Anna，對面是會打人的練習敵人。'), ['Leona', '我是 Leona，補師。被動「有人接住」每 7 秒給血量最低的人一個小護盾；主動「資訊整理」會治療一人並解除一項負面狀態。', L_], ['Anna', '我先被打一下，讓你有東西可以補。', A_], SYS('先看 Leona 的主動技「資訊整理」治療 Anna（會自動施放）。')],
+    prep: h => { const a = Core.hero(S, 'anna'); a.hp = a.max * .4; h.cd = 0; }, wait: () => Core.hero(S, 'anna').hp >= Core.hero(S, 'anna').max * .7, waitTask: 'Leona 正在放主動技「資訊整理」治療 Anna（會自動施放）…', waitAfter: [['Leona', '治療完成。血量低的隊友會優先被補。', L_]],
+    prep2: () => { Core.alive(S.heroes).forEach(x => { if (x.id !== 'leona') x.st.confuse = 40; }); },
+    ultLines: [['Leona', '敵人有時會讓隊友「混亂」或「拖延」：混亂時不能累積必殺能量、也不能放技能，卡片會變紫色。', L_], SYS('現在讓 Anna 陷入混亂（卡片變紫色），再用 Leona 的必殺救她。必殺「重新對齊」：全隊回血 35%、清除混亂和拖延，之後 6 秒內免疫。')],
+    after: [['Leona', '混亂解除了。淨化這一格也亮了。', L_]] },
 };
+const T_FINAL = [SYS('最後兩課：五位同事一起上場，學會協作條和 Boss 讀條。')];
 const T_GAUGE = [SYS('看，上方的協作條五格都亮了：保護、破防、弱點擊破、範圍控制、淨化。這是五位同事各自的技能湊出來的。'), ['Machi', '集滿五格，「準時交付」就會亮起：對全場造成大量真實傷害，全隊回 25% 血；Boss 血量低於 25% 時還能直接終結它。', M_], SYS('現在協作條已滿，按「準時交付」（或空白鍵）試試看。')];
 const T_BOSS = [SYS('最後一課：Boss 讀條。'), ['Anna', 'Boss 偶爾會開始「讀條」：畫面出現紅色邊框和倒數，放著不管就會發動很痛的大招。', A_], ['Noise', '要打斷它，就快速連點畫面任何地方！點滿就斷招。', N_], ['Amber', '我們三個的必殺打在讀條中的 Boss 身上，也算 8 下連點喔。', B_]];
+function tutFade(fn) { return new Promise(res => { const el = $('fadeO'); running = false; el.hidden = false; el.style.opacity = '0'; void el.offsetWidth; el.style.opacity = '1'; setTimeout(() => { if (tut && !tut.aborted) fn(); setTimeout(() => { el.style.opacity = '0'; setTimeout(() => { el.hidden = true; if (tut && !tut.aborted) running = true; res(); }, 350); }, 250); }, 380); }); }
+const tutScene = sc => tutFade(() => { Core.tutScene(S, sc[0], sc[1]); R = {}; });
 async function runTutorial(thenCamp) {
   tut = { thenCamp, aborted: false, wait: null, tip: '' }; autoOn = false; { const b = $('autoB'); b.textContent = '自動必殺：關'; b.classList.add('off'); }
   $('tutP').hidden = false; tutTask('新手教學', '');
   const ok = () => !!tut && !tut.aborted;
-  await tutSay(T_INTRO); if (ok()) await tutWaitCond(() => S.phase === 'fight', 8000);
+  await tutSay(T_INTRO);
   const ids = ['machi', 'noise', 'anna', 'amber', 'leona'];
   for (let i = 0; i < ids.length && ok(); i++) {
-    const id = ids[i], L = TUT_HERO[id], h = Core.hero(S, id), step = '教學 ' + (i + 1) + '／7｜' + h.name;
+    const id = ids[i], L = TUT_HERO[id], step = '教學 ' + (i + 1) + '／7｜' + Core.HERO[id].name;
+    tutTask(step, '換場景…'); await tutScene(L.scene); if (!ok()) break;
+    const h = Core.hero(S, id);
     tutTask(step, '先聽 ' + h.name + ' 的說明'); await tutSay(L.lines); if (!ok()) break;
     if (L.prep) L.prep(h);
     if (L.wait) { tutTask(step, L.waitTask); await tutWaitCond(L.wait, 14000); if (ok() && L.waitAfter) await tutSay(L.waitAfter); }
     if (!ok()) break;
+    if (L.prep2) L.prep2(h);
+    if (L.ultLines) { await tutSay(L.ultLines); if (!ok()) break; }
     h.energy = 100; tutHl(id); tutTask(step, '點下方 ' + (i + 1) + ' 號卡片（或按鍵盤 ' + (i + 1) + '），放出必殺「' + Core.HERO[id].ult + '」');
     await tutWaitEv(e => e.type === 'cast' && e.ult && e.src === id, 0); tutHl(null);
     if (ok()) { await sleep(1800); await tutSay(L.after); }
   }
+  if (ok()) { tutTask('教學 6／7', '換場景…'); await tutScene([ids, ['dummy', 'dummy', 'tarmor', 'tback']]); if (ok()) await tutSay(T_FINAL); }
   if (ok()) {
-    for (const k of Core.FLAGS) S.gauge[k] = true;   // 保險：就算中間少做了什麼，協作條也補滿
+    for (const k of Core.FLAGS) S.gauge[k] = true;   // 協作條補滿（每位同事的必殺各點亮一格）
     const step = '教學 6／7｜協作條'; tutTask(step, '聽 Machi 說明協作條'); await tutSay(T_GAUGE);
     if (ok()) { tutHl('deliver'); tutTask(step, '點「準時交付」按鈕（或按空白鍵）'); await tutWaitEv(e => e.type === 'deliver', 0); tutHl(null); }
     if (ok()) { await sleep(1800); await tutSay([['Machi', '交付完成！整場的壓力都清空了。真正的戰鬥裡，記得把它留給最關鍵的時刻。', M_]]); }
