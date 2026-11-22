@@ -1750,7 +1750,7 @@ function onKey(key, pd) {
 addEventListener('keydown', e => { if (e.target.closest && e.target.closest('input,textarea')) return; onKey(e.key, () => e.preventDefault()); });
 addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'expKey') onKey(String(e.data.key), () => {}); });   // 元宇宙外層轉進來的按鍵（iframe 沒有焦點時）
 addEventListener('pointerdown', () => { try { window.focus(); } catch (e) {} });
-window.__game = { get S() { return S; }, Core, ult, doDeliver };
+window.__game = { get S() { return S; }, Core, ult, doDeliver, get gl3d() { return { renderer, scene, camera, THREE }; } };
 if (/[?&]embed=1/.test(location.search)) { $('exitB').hidden = false; $('exitB').onclick = () => { try { parent.postMessage({ type: 'expeditionExit' }, location.origin); } catch (e) {} }; }
 $('campB').addEventListener('click', () => startCamp(false)); $('newCampB').addEventListener('click', () => startCamp(true)); $('freeB').addEventListener('click', () => { const e = $('stageList'); e.hidden = !e.hidden; });
 fillColl();
