@@ -125,7 +125,7 @@ h3{margin:16px 0 0;font-size:17px}
 .card .cdb{height:4px;border:0;background:#0a1620} .card .cdb u{display:block;height:100%;background:#9aa8ff}
 .card .lbl{font-size:11px;font-weight:700;text-align:center;color:#9fd4ff;line-height:1.2}
 .card.ready{border-color:var(--gold);background:linear-gradient(#5a4a1a,#2a2208)} .card.ready .lbl{color:var(--gold)}
-.card.dead .face{filter:grayscale(1)} .card.conf .lbl{color:var(--violet)}
+.card.away{opacity:.55;filter:grayscale(.6)} .card.dead .face{filter:grayscale(1)} .card.conf .lbl{color:var(--violet)}
 @media (max-width:700px){
   #party{position:static;justify-content:center;padding:8px 6px 8px;background:#0b1d15;gap:5px}
   .card{width:calc(20% - 4px);min-width:0}
@@ -137,6 +137,11 @@ h3{margin:16px 0 0;font-size:17px}
 }
 
 #stage:not(.live) #party,#stage:not(.live) #topbar{display:none}
+#stageList{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;width:min(100%,640px)}
+.stg{font:inherit;text-align:left;color:var(--ink);background:var(--panel);border:3px solid #000;border-radius:12px;padding:8px 12px;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.stg b{font-size:14px} .stg i{font-style:normal;color:var(--gold);font-size:12px;letter-spacing:.1em} .stg small{color:var(--dim);font-size:11px;line-height:1.35}
+.stg:active{filter:brightness(.92)}
+html.fsm #stageList{grid-template-columns:repeat(3,1fr);gap:5px} html.fsm .stg{padding:4px 8px;border-width:2px;border-radius:9px} html.fsm .stg b{font-size:11px} html.fsm .stg small{font-size:9px}
 #deliver{position:absolute;left:12px;bottom:12px;z-index:3;font-size:17px;padding:8px 20px;background:linear-gradient(#ffe39a,#f0b429);animation:dpop .9s infinite}
 @keyframes dpop{50%{transform:scale(1.07)}}
 @media (prefers-reduced-motion:reduce){#deliver{animation:none}}
@@ -253,10 +258,9 @@ html.fsm #endO .lb{max-height:30vh;overflow:auto}
     <div id="dialog" hidden><small>點一下繼續</small><b id="dWho"></b><p id="dTxt"></p></div>
     <div class="overlay" id="startO">
       <span class="sys">17:50，設計部</span>
-      <h2>《最後一版，真的》</h2>
-      <p>隊伍會自動戰鬥。你只要在對的時機按下方五張卡放必殺，湊滿協作條就能「準時交付」。</p>
-      <div class="stats" id="collO"></div>
-      <button class="pk big" id="startB" type="button">進入倉庫</button>
+      <h2>選擇關卡</h2>
+      <p>隊伍會自動戰鬥。你只要在對的時機放必殺，湊滿協作條就能「準時交付」。每關開場有一段劇情，部分關卡有特殊規則。</p>
+      <div id="stageList"></div>
     </div>
     <div class="overlay" id="endO" hidden></div>
   </section>
@@ -294,11 +298,17 @@ const Core = (() => {
     clone: { name: '意見分身', hp: 3200, atk: 40, def: .1, spd: 2.1, row: 'back', range: 4.6, mv: 1.3, rad: .65 },
     hydra: { name: '版本九頭蛇', hp: 95000, atk: 150, def: .1, spd: 1.7, row: 'back', boss: true, range: 40, mv: 0, rad: 2 },
     client: { name: '預算只有三千的客戶', hp: 60000, atk: 130, def: .1, spd: 1.8, row: 'back', boss: true, range: 40, mv: 0, rad: 1.8 },
+    rush: { name: '連假前的特急件', hp: 42000, atk: 120, def: .1, spd: 1.8, row: 'back', boss: true, range: 40, mv: 0, rad: 1.9 },
+    upload: { name: '卡在 99% 的上傳', hp: 92000, atk: 115, def: .1, spd: 1.8, row: 'back', boss: true, range: 40, mv: 0, rad: 1.8 },
+    meeting: { name: '開不完的晨會', hp: 46000, atk: 110, def: .1, spd: 1.8, row: 'back', boss: true, range: 40, mv: 0, rad: 2 },
   };
-  // 每位 Boss 的招式順序、結案作品與敗退台詞
+  // 每一關：Boss 招式順序與招式名、結案作品、關卡規則（mod）、難度（1～5 顆星）
   const BOSS = {
-    hydra: { name: '版本九頭蛇', seq: ['minor', 'revert', 'confuse', 'deadline'], work: '《最後一版，真的》', open: '', die: '' },
-    client: { name: '預算只有三千的客戶', seq: ['everything', 'budget', 'midnight', 'deadline'], work: '《三千元的品牌識別》', open: '「預算只有三千，但我要五千的質感。」', die: '「……那就照你們的版本吧。」' },
+    hydra: { name: '版本九頭蛇', tag: '九頭蛇', stage: '第一關', title: '最後一版，真的', work: '《最後一版，真的》', diff: 2, mod: null, open: '', die: '', seq: ['minor', 'revert', 'confuse', 'deadline'], nm: { minor: '再小改一下', revert: '剛剛那版比較好', confuse: '意見還沒整合', deadline: '今天能出嗎？' } },
+    client: { name: '預算只有三千的客戶', tag: '客戶', stage: '第二關', title: '三千元的品牌識別', work: '《三千元的品牌識別》', diff: 3, mod: null, open: '「預算只有三千，但我要五千的質感。」', die: '「……那就照你們的版本吧。」', seq: ['everything', 'budget', 'midnight', 'deadline'], nm: { everything: '全部都要，但要簡約', budget: '預算只有三千', midnight: '凌晨三點：在嗎？現在方便嗎？', deadline: '明天一早要，今晚能給嗎？' } },
+    rush: { name: '連假前的特急件', tag: '特急件', stage: '第三關', title: '連假前一天', work: '《連假前一天》', diff: 3, mod: { id: 'leave', name: '輪流休假', desc: '每 22 秒有一位同事（Machi 除外）休假 8 秒：無法行動，也不會受傷' }, open: '「今天一定要出！收假前我要看到！」', die: '「……好吧，收假再說。」', seq: ['everything', 'midnight', 'budget', 'deadline'], nm: { everything: '再加三個急件', midnight: '大家都休假了，誰來做？', budget: '今天一定要出', deadline: '收假前一定要看到' } },
+    upload: { name: '卡在 99% 的上傳', tag: '上傳', stage: '第四關', title: '網路癱瘓日', work: '《網路癱瘓日》', diff: 2, mod: { id: 'slow', name: '網路癱瘓', desc: '從第 2 波起，所有人的技能冷卻速度慢一半（必殺能量不受影響）' }, open: '「99%……99%……再等一下就好。」', die: '「上傳……成功了？」', seq: ['minor', 'revert', 'confuse', 'deadline'], nm: { minor: '進度條跳回 0%', revert: '99%…重新上傳', confuse: '找不到檔案', deadline: '連線逾時倒數' } },
+    meeting: { name: '開不完的晨會', tag: '晨會', stage: '第五關', title: '咖啡機壞了', work: '《咖啡機壞了》', diff: 3, mod: { id: 'coffee', name: '咖啡機壞了', desc: '所有治療效果減半，但全隊必殺能量累積快 30%' }, open: '「我們先花十分鐘對一下進度。」', die: '「散會……大家辛苦了。」', seq: ['everything', 'budget', 'midnight', 'deadline'], nm: { everything: '臨時加開一場會', budget: '會議冗長，精力被吸走', midnight: '請大家輪流發言', deadline: '十分鐘後要有結論' } },
   };
   const BLAST = 820, ENRAGE_AT = 200;
   const SEQ = ['minor', 'revert', 'confuse', 'deadline'];
@@ -313,7 +323,7 @@ function go(u, tx, tz, stop, k = 1) { const dx = tx - u.x, dz = tz - u.z, d = Ma
 
   function newGame(seed, bossKind) {
     const S = {
-      bossKind: BOSS[bossKind] ? bossKind : 'hydra', t: 0, seed, rand: mk(seed), wave: 0, eTot: 1, phase: 'between', betweenT: 1.2, waveT: 0,
+      bossKind: BOSS[bossKind] ? bossKind : 'hydra', mod: (BOSS[bossKind] && BOSS[bossKind].mod && BOSS[bossKind].mod.id) || null, leaveT: 16, t: 0, seed, rand: mk(seed), wave: 0, eTot: 1, phase: 'between', betweenT: 1.2, waveT: 0,
       heroes: [], enemies: [], events: [], queue: [], n: 0, boss: null,
       gauge: { protect: false, brk: false, weak: false, control: false, cleanse: false },
       stats: { dmg: {}, heal: 0, absorb: 0, interrupts: 0, reverts: 0, combos: 0, delivered: 0, downs: 0 },
@@ -348,6 +358,7 @@ function spawn(S, kind) {
     if (S.wave === 2) { spawn(S, 'armor'); spawn(S, 'armor'); spawn(S, 'clone'); spawn(S, 'note'); spawn(S, 'note'); }
     if (S.wave === 3) { const b = spawn(S, S.bossKind); S.boss = { kind: S.bossKind, uid: b.uid, skillT: 7, seq: 0, cast: null, enraged: false }; }
     ev(S, { type: 'wave', n: S.wave });
+    const md = BOSS[S.bossKind].mod; if (md && (S.wave === 1 || (md.id === 'slow' && S.wave === 2))) ev(S, { type: 'mod', name: md.name, desc: md.desc });
   }
 
   function kill(S, u) {
@@ -380,7 +391,7 @@ function spawn(S, kind) {
   }
 
   function hurt(S, src, dst, raw, opt = {}) {
-    if (!dst || !dst.alive) return 0;
+    if (!dst || !dst.alive || dst.st.away) return 0;
     let a = raw * (.92 + S.rand() * .16);
     if (opt.crit && S.rand() < opt.crit) { opt.wasCrit = true; a *= dst.st.mark ? 2.2 : 1.6; }
     if (src && src.id === 'noise') a *= 1 + .04 * src.rage;
@@ -400,6 +411,7 @@ function spawn(S, kind) {
 
   function heal(S, dst, amt) {
     if (!dst.alive) return;
+    if (S.mod === 'coffee' && dst.side === 'hero') amt *= .5;
     const v = Math.round(Math.min(dst.max - dst.hp, amt));
     dst.hp += v; S.stats.heal += v;
     ev(S, { type: 'heal', dst: dst.uid, amt: v });
@@ -476,7 +488,7 @@ function spawn(S, kind) {
 
   function castUlt(S, id) {
     const h = hero(S, id);
-    if (S.phase !== 'fight' || !h || !h.alive || h.energy < 100) return false;
+    if (S.phase !== 'fight' || !h || !h.alive || h.st.away || h.energy < 100) return false;
     h.energy = 0;
     ev(S, { type: 'cast', src: h.uid, name: HERO[id].ult, ult: true });
     if (id === 'machi') { alive(S.heroes).forEach(x => shield(S, x, 480, 6)); h.st.cover = 6; flag(S, 'protect'); }
@@ -536,14 +548,15 @@ function spawn(S, kind) {
     B.skillT -= DT;
     if (B.skillT > 0) return;
     B.skillT = 8;
-    const sq = BOSS[S.bossKind].seq, k = sq[B.seq++ % sq.length];
-    if (k === 'minor') { ev(S, { type: 'boss', kind: k, name: '再小改一下' }); for (let i = 0; i < 3; i++) spawn(S, 'note'); const n = hero(S, 'noise'); if (n.alive) n.rage = Math.min(10, n.rage + 3); }
-    if (k === 'revert') { ev(S, { type: 'boss', kind: k, name: '剛剛那版比較好' }); B.cast = { kind: k, t: 4, max: 4 }; }
-    if (k === 'confuse') { ev(S, { type: 'boss', kind: k, name: '意見還沒整合' }); alive(S.heroes).forEach(h => { if (h.id !== 'leona' && !h.st.immune) h.st.confuse = 10; }); }
-    if (k === 'deadline') { ev(S, { type: 'boss', kind: k, name: S.bossKind === 'client' ? '明天一早要，今晚能給嗎？' : '今天能出嗎？' }); B.cast = { kind: k, t: 5, max: 5 }; }
-    if (k === 'everything') { ev(S, { type: 'boss', kind: k, name: '全部都要，但要簡約' }); spawn(S, 'armor'); spawn(S, 'note'); spawn(S, 'note'); }
-    if (k === 'budget') { ev(S, { type: 'boss', kind: k, name: '預算只有三千' }); B.cast = { kind: k, t: 4, max: 4 }; }
-    if (k === 'midnight') { ev(S, { type: 'boss', kind: k, name: '凌晨三點：在嗎？現在方便嗎？' }); const hs = alive(S.heroes); hs.forEach(h => { if (h.id !== 'leona' && !h.st.immune) h.st.delay = 8; }); const v = hs.filter(h => h.id !== 'leona' && !h.st.immune); if (v.length) v[Math.floor(S.rand() * v.length)].st.confuse = 8; }
+    const sq = BOSS[S.bossKind].seq, k = sq[B.seq++ % sq.length], nm = BOSS[S.bossKind].nm[k];
+    ev(S, { type: 'boss', kind: k, name: nm });
+    if (k === 'minor') { for (let i = 0; i < 3; i++) spawn(S, 'note'); const n = hero(S, 'noise'); if (n.alive) n.rage = Math.min(10, n.rage + 3); }
+    if (k === 'revert') B.cast = { kind: k, t: 4, max: 4, name: nm };
+    if (k === 'confuse') alive(S.heroes).forEach(h => { if (h.id !== 'leona' && !h.st.immune) h.st.confuse = 10; });
+    if (k === 'deadline') B.cast = { kind: k, t: 5, max: 5, name: nm };
+    if (k === 'everything') { spawn(S, 'armor'); spawn(S, 'note'); spawn(S, 'note'); }
+    if (k === 'budget') B.cast = { kind: k, t: 4, max: 4, name: nm };
+    if (k === 'midnight') { const hs = alive(S.heroes); hs.forEach(h => { if (h.id !== 'leona' && !h.st.immune) h.st.delay = 8; }); const v = hs.filter(h => h.id !== 'leona' && !h.st.immune); if (v.length) v[Math.floor(S.rand() * v.length)].st.confuse = 8; }
   }
 
   function step(S) {
@@ -560,11 +573,12 @@ function spawn(S, kind) {
     }
 
     for (const u of S.heroes.concat(S.enemies)) u.mvg = false;
+    if (S.mod === 'leave') { S.leaveT -= DT; if (S.leaveT <= 0) { S.leaveT = 22; const c = alive(S.heroes).filter(h => h.id !== 'machi' && !h.st.away); if (c.length) { const h = c[Math.floor(S.rand() * c.length)]; h.st.away = 8; ev(S, { type: 'leave', uid: h.uid }); } } }
     for (const h of S.heroes) {
-      if (!h.alive) continue;
+      if (!h.alive || h.st.away) continue;
       const en = alive(S.enemies).length;
       const conf = !!h.st.confuse;
-      if (!conf) { h.energy = Math.min(100, h.energy + 1.5 * DT); h.cd -= DT; }
+      if (!conf) { h.energy = Math.min(100, h.energy + 1.5 * DT * (S.mod === 'coffee' ? 1.3 : 1)); h.cd -= DT * (S.mod === 'slow' && S.wave >= 2 ? .5 : 1); }
       h.pas -= DT;
       if (h.pas <= 0) {
         if (h.id === 'anna') { h.pas = 6; const t = back(S); if (t) { t.st.mark = 8; ev(S, { type: 'mark', dst: t.uid }); } }
@@ -587,7 +601,7 @@ function spawn(S, kind) {
       if (e.boss) bossStep(S, e);
       if (!e.alive) continue;
       if (e.kind === 'clone') { e.sum -= DT; if (e.sum <= 0) { e.sum = 5; if (alive(S.enemies).filter(x => x.kind === 'note').length < 6) { ev(S, { type: 'cast', src: e.uid, name: '再補一點意見' }); spawn(S, 'note'); } } }
-      const hs = alive(S.heroes); if (!hs.length) break;
+      const hs = alive(S.heroes).filter(h => !h.st.away); if (!hs.length) break;
       const m = hero(S, 'machi');
       let t = e.tgt && hs.find(h => h.uid === e.tgt);
       if (e.range < 2.5 && m.alive) t = m;
@@ -629,7 +643,7 @@ function spawn(S, kind) {
   function auto(S) {
     const out = []; if (S.phase !== 'fight') return out;
     const B = S.boss, en = alive(S.enemies), hs = alive(S.heroes), bossWave = S.wave === 3;
-    const ready = id => { const h = hero(S, id); return h.alive && h.energy >= 100; };
+    const ready = id => { const h = hero(S, id); return h.alive && !h.st.away && h.energy >= 100; };
     if (ready('machi')) {
       if (B && B.cast && B.cast.kind === 'deadline') { if (B.cast.t <= 1.2) out.push('machi'); }
       else if (!bossWave && hs.some(h => h.hp / h.max < .45)) out.push('machi');
@@ -671,7 +685,7 @@ const INFO = {
   leona: { job: '補師・秩序療癒者', q: '先整理一下，我們一個一個來。', role: '治療、淨化', sk: [['普攻', '重點標記', '輕量攻擊，能量累積較快'], ['被動', '有人接住', '每 7 秒給血量最低的隊友小護盾；自身不受混亂影響'], ['主動', '資訊整理', '治療一人並解除一項負面狀態'], ['必殺', '重新對齊', '全隊回血 35%、清除混亂與拖延，6 秒內免疫']] },
 };
 const PIPS = { protect: '保護', brk: '破防', weak: '弱點擊破', control: '範圍控制', cleanse: '淨化' };
-const INTRO = [
+const STORY_HYDRA = [
   ['系統廣播', '偵測到未收斂需求。倉庫 已淪為戰場，桌椅翻倒、火光四起。', '#ffd166'],
   ['Machi', '先確認一下，這次到底哪一版才是真的？', COL.machi],
   ['Noise', '檔名已經三個 final 了！', COL.noise],
@@ -679,6 +693,43 @@ const INTRO = [
   ['Amber', '它們開始自己長出新尺寸了。', COL.amber],
   ['Leona', '我把收到的意見排好了。先處理會一直生東西的那個。', COL.leona],
 ];
+let INTRO = STORY_HYDRA;
+const SYS = (t) => ['系統廣播', t, '#ffd166'];
+const STORY = {
+  hydra: STORY_HYDRA,
+  client: [
+    SYS('客戶來了。手上只有三千預算，卻要五千的質感。'),
+    ['Machi', '先確認一下，這次的預算上限到底是多少？', COL.machi],
+    ['Noise', '三千……我只能做 Logo 旁邊的那顆小圖。', COL.noise],
+    ['Anna', '他說要「簡約」，那重點是別全部都要。', COL.anna],
+    ['Leona', '我把需求排好了。他一直換方向，別被帶著跑。', COL.leona],
+    SYS('【客戶特調】Boss 會砍預算、深夜追訊息，看到讀條要打斷或擋下。'),
+  ],
+  rush: [
+    SYS('連假前的最後一個上班日。倉庫裡堆滿了「今天一定要」的急件。'),
+    ['Machi', '先講好：大家輪流休假，我會留守窗口。', COL.machi],
+    ['Noise', '輪流？那誰接我手上的稿？', COL.noise],
+    ['Leona', '我排了輪休表。每隔一陣子會有一個人離席，剩下的人撐住。', COL.leona],
+    ['Amber', '急件長出腳了，它在追著我們跑！', COL.amber],
+    SYS('【輪流休假】每 22 秒有一位同事（Machi 除外）休假 8 秒：無法行動，但也不會受傷。'),
+  ],
+  upload: [
+    SYS('倉庫的網路突然變得很慢，雲端硬碟的上傳條停在 99%。'),
+    ['Anna', '我的檔案傳了一個小時了。', COL.anna],
+    ['Noise', '這條進度條一定是在針對我！', COL.noise],
+    ['Leona', '網路卡住，整個團隊的技能都被拖慢了。', COL.leona],
+    ['Machi', '別急，穩住節奏。必殺還是照樣放得出來。', COL.machi],
+    SYS('【網路癱瘓】從第 2 波起，所有人的技能冷卻速度慢一半。必殺能量不受影響。'),
+  ],
+  meeting: [
+    SYS('早上十點，倉庫的咖啡機壞了。晨會卻還是要開。'),
+    ['Amber', '沒有咖啡……我連畫面都畫不動。', COL.amber],
+    ['Leona', '沒咖啡因，大家的恢復力都變差了。', COL.leona],
+    ['Noise', '不過我現在超急，只想快點開完！', COL.noise],
+    ['Machi', '撐住，把這場會議開成「結論」。', COL.machi],
+    SYS('【咖啡機壞了】所有治療效果減半，但全隊必殺能量累積快 30%。'),
+  ],
+};
 const WAVE_TIP = {
   1: '第一波｜插單便條：Machi 會嘲諷吸住攻擊，Amber 的範圍技負責清場。卡片亮起就能放必殺。',
   2: '第二波｜意見分身躲在後排一直生便條：Noise 破開舊版裝甲，Anna 的「一刀定稿」直取分身。',
@@ -711,7 +762,8 @@ function fit() { const d = Math.min(2, window.devicePixelRatio || 1); cv.width =
 addEventListener('resize', fit);
 
 // 單位座標由戰鬥核心給（世界單位，x 向右、z 朝向鏡頭）；畫面位置再平滑追過去
-const MH = { note: 1.8, armor: 2.9, clone: 3.1, hydra: 5.6, client: 5.2 };
+const MH = { note: 1.8, armor: 2.9, clone: 3.1, hydra: 5.6, client: 5.2, rush: 6.6, upload: 6.4, meeting: 6.4 };
+const TINT = { client: '#ffe39a', rush: '#ffb0a0', upload: '#a8d8ff', meeting: '#d8c0a0' };   // 還沒有專屬素材時，借用意見分身的圖加色
 const tall = u => u.side === 'hero' ? 2.3 : MH[u.kind];
 function rs(u) {
   let r = R[u.uid];
@@ -848,7 +900,7 @@ function init3d() {
   TX.grid = ctex(256, 256, g => { g.strokeStyle = '#fff'; g.lineWidth = 3; g.setLineDash([12, 8]); for (let i = 0; i <= 4; i++) { g.beginPath(); g.moveTo(i * 63 + 2, 0); g.lineTo(i * 63 + 2, 256); g.moveTo(0, i * 63 + 2); g.lineTo(256, i * 63 + 2); g.stroke(); } });
   TX.circle = ctex(256, 256, g => { g.translate(128, 128); g.strokeStyle = '#fff'; g.lineWidth = 5; [120, 100, 58].forEach(r => { g.beginPath(); g.arc(0, 0, r, 0, 7); g.stroke(); }); g.lineWidth = 3; for (let k = 0; k < 2; k++) { g.beginPath(); for (let i = 0; i < 3; i++) { const a = i * 2.094 + k * 1.047; g.lineTo(Math.cos(a) * 100, Math.sin(a) * 100); } g.closePath(); g.stroke(); } for (let i = 0; i < 12; i++) { const a = i * .5236; g.fillStyle = '#fff'; g.fillRect(Math.cos(a) * 110 - 4, Math.sin(a) * 110 - 4, 8, 8); } });
   buildWorld(); applySceneTheme();
-  ['note', 'armor', 'clone', 'hydra', 'client'].forEach(k => { const im = new Image(); im.onload = () => { const t = new THREE.Texture(im); t.needsUpdate = true; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; MON[k] = { t, ar: im.width / im.height }; }; im.src = 'monsters/' + (k === 'client' ? 'clone' : k) + '.webp'; });
+  ['note', 'armor', 'clone', 'hydra', 'client', 'rush', 'upload', 'meeting'].forEach(k => { const load = (f, fb) => { const im = new Image(); im.onload = () => { const t = new THREE.Texture(im); t.needsUpdate = true; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; MON[k] = { t, ar: im.width / im.height, fb }; }; im.onerror = () => { if (!fb) load('clone', true); }; im.src = 'monsters/' + f + '.webp'; }; load(k === 'client' ? 'clone' : k, k === 'client'); });
   for (const id of Core.ORDER) {
     const sh = flat(new THREE.Mesh(G.disc, new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .35, depthWrite: false })), .03); sh.scale.set(.62, .4, 1); scene.add(sh); P.shadow[id] = sh;
     const r = flat(M(G.ring, COL[id], { opacity: .7 }), .04); r.scale.setScalar(.78); scene.add(r); P.ring[id] = r;
@@ -877,7 +929,7 @@ function heroUnit(id) {
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, alphaTest: .2 }));
   sp.center.set(.5, 6 / 240); sp.scale.set(2.3, 2.3, 1); scene.add(sp); return sp;
 }
-const SPEC = { note: { w: 70, h: 70, ox: 35, oy: 35, foot: 66, f: .026 }, armor: { w: 100, h: 112, ox: 50, oy: 58, foot: 106, f: .027 }, clone: { w: 100, h: 110, ox: 50, oy: 52, foot: 100, f: .027 }, hydra: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, client: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 } };
+const SPEC = { note: { w: 70, h: 70, ox: 35, oy: 35, foot: 66, f: .026 }, armor: { w: 100, h: 112, ox: 50, oy: 58, foot: 106, f: .027 }, clone: { w: 100, h: 110, ox: 50, oy: 52, foot: 100, f: .027 }, hydra: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, client: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, rush: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, upload: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, meeting: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 } };
 function enemyUnit(e) {
   const s = SPEC[e.kind], c = document.createElement('canvas'); c.width = s.w * 2; c.height = s.h * 2;
   const t = new THREE.CanvasTexture(c); t.generateMipmaps = false; t.minFilter = THREE.LinearFilter;
@@ -1172,7 +1224,9 @@ function handle(e) {
   if (e.type === 'barrage') { shake = .12; Core.alive(S.enemies).forEach(x => fxBeam(rpos(x), COL.amber, false)); }
   if (e.type === 'align') fxAlign();
   if (e.type === 'combo') banner('連攜｜' + e.name, '', '#ffd166');
-  if (e.type === 'boss') { banner(Core.BOSS[S.bossKind].name.replace('預算只有三千的', '') + '｜' + e.name, '', '#ff6b5e'); if (e.kind === 'confuse') Core.alive(S.heroes).forEach(h => { if (h.st.confuse) fxImpact(mid(h), '#b79bff', 2.4); }); }
+  if (e.type === 'boss') { banner(Core.BOSS[S.bossKind].tag + '｜' + e.name, '', '#ff6b5e'); if (e.kind === 'confuse') Core.alive(S.heroes).forEach(h => { if (h.st.confuse) fxImpact(mid(h), '#b79bff', 2.4); }); }
+  if (e.type === 'mod') banner('【' + e.name + '】', e.desc, '#ffd166');
+  if (e.type === 'leave') { const h = Core.hero(S, e.uid); banner(h.name + ' 休假中', '8 秒後回來，休假期間不會受傷', '#7fe3ff'); const d = find(e.uid); if (d) float(d, '休假中', '#7fe3ff', 16, .5); }
   if (e.type === 'interrupt') { banner('打斷成功', '', '#7ff0a6'); const b = S.enemies.find(x => x.boss); if (b) fxRing(rpos(b), '#ffffff', 1, 4.5, .6); }
   if (e.type === 'blast') { shake = .5; flashA = .6; const b = S.enemies.find(x => x.boss); if (b) fxRing(rpos(b), '#ff3b2f', 1, 16, .7); Core.alive(S.heroes).forEach(h => fxImpact(mid(h), '#ff3b2f', 3.2)); }
   if (e.type === 'debuff') { const d = find(e.dst); if (d) float(d, e.name, '#c7c7c7', 13, .4); }
@@ -1348,7 +1402,7 @@ function sync(dt) {
     if (e.kind === 'clone') sp.material.rotation = q.tilt;
     sp.position.copy(v);
     if (d.img) sp.scale.set(MH[e.kind] * mon.ar * age * (1 + q.sx), MH[e.kind] * age * (1 + q.sy), 1); else sp.scale.set(d.s.w * d.s.f * age * (1 + q.sx), d.s.h * d.s.f * age * (1 + q.sy), 1);
-    sp.material.color.set(r.flash > 0 ? '#ffb0a6' : e.st.broken ? '#ffb89a' : e.kind === 'client' ? '#ffe39a' : '#fff');
+    sp.material.color.set(r.flash > 0 ? '#ffb0a6' : e.st.broken ? '#ffb89a' : mon && mon.fb && TINT[e.kind] ? TINT[e.kind] : '#fff');
     d.sh.position.x = r.x; d.sh.position.z = r.z; d.sh.scale.set(e.rad * 1.2, e.rad * .8, 1);
     if (e.mvg && doDust && e.kind !== 'clone') fxDust(new THREE.Vector3(r.x, 0, r.z));
     d.ret.position.copy(mid(e)); d.ret.scale.setScalar((e.boss ? 2.6 : 1.9) * (1 + Math.sin(T * 6) * .08)); d.ret.material.rotation = T * .8; d.ret.material.opacity = lerp(d.ret.material.opacity, e.st.mark ? .95 : 0, dt * 10);
@@ -1410,8 +1464,8 @@ function hud() {
     const h = Core.hero(S, id), c = cards[id];
     c.hp.style.width = (h.hp / h.max * 100) + '%'; c.en.style.width = h.energy + '%'; c.cd.style.width = Math.max(0, Math.min(100, (1 - h.cd / h.cdMax) * 100)) + '%';
     const ready = h.alive && h.energy >= 100 && S.phase === 'fight';
-    c.el.classList.toggle('ready', ready); c.el.classList.toggle('dead', !h.alive); c.el.classList.toggle('conf', !!h.st.confuse);
-    c.lbl.textContent = !h.alive ? '倒下' : h.st.confuse ? '混亂' : ready ? '點擊必殺' : '自動中';
+    c.el.classList.toggle('ready', ready); c.el.classList.toggle('dead', !h.alive); c.el.classList.toggle('conf', !!h.st.confuse); c.el.classList.toggle('away', !!h.st.away);
+    c.lbl.textContent = !h.alive ? '倒下' : h.st.away ? '休假中' : h.st.confuse ? '混亂' : ready ? '點擊必殺' : '自動中';
     c.el.setAttribute('aria-label', `${h.name} 必殺 ${Core.HERO[id].ult}${ready ? '，可施放' : ''}`);
   }
   { const hs = S.heroes.reduce((a, h) => a + h.hp, 0), hm = S.heroes.reduce((a, h) => a + h.max, 0), es = Core.alive(S.enemies).reduce((a, e) => a + e.hp, 0), ep = Math.min(100, es / S.eTot * 100), hp = hs / hm * 100;
@@ -1423,14 +1477,14 @@ function hud() {
   const m = Math.floor(S.t / 60), s = Math.floor(S.t % 60); $('timeP').textContent = $('timeT').textContent = m + ':' + String(s).padStart(2, '0');
   const B = S.boss, cast = B && B.cast, al = $('alert');
   al.hidden = !cast;
-  if (cast) { al.className = cast.kind; $('alertT').textContent = (cast.kind === 'revert' ? '剛剛那版比較好　' : cast.kind === 'budget' ? '預算只有三千　' : S.bossKind === 'client' ? '明天一早要　' : '今天能出嗎？　') + cast.t.toFixed(1); $('alertB').style.width = (cast.t / cast.max * 100) + '%'; }
+  if (cast) { al.className = cast.kind; $('alertT').textContent = ((cast.name || '') + '　') + cast.t.toFixed(1); $('alertB').style.width = (cast.t / cast.max * 100) + '%'; }
   let tip = WAVE_TIP[S.wave] || '投影機自己亮了起來…', hot = false;
   const boss = S.enemies.find(e => e.boss && e.alive);
   const conf = S.heroes.filter(h => h.alive && h.st.confuse).length;
   if (S.phase === 'between' && S.wave) tip = '清場完成，隊伍回復中。必殺能量會保留到下一波。';
-  if (cast && cast.kind === 'revert') { tip = '九頭蛇想回到舊版！現在放 Noise、Anna 或 Amber 的必殺打斷它。'; hot = true; }
-  else if (cast && cast.kind === 'budget') { tip = '客戶要砍預算！不打斷的話全隊必殺能量會被砍掉。現在放 Noise、Anna 或 Amber 的必殺打斷它。'; hot = true; }
-  else if (cast && cast.kind === 'deadline') { tip = '「' + (S.bossKind === 'client' ? '明天一早要' : '今天能出嗎？') + '」倒數中，讓 Machi 開「交付防線」保護全隊。'; hot = true; }
+  if (cast && cast.kind === 'revert') { tip = Core.BOSS[S.bossKind].tag + '想回到舊版！現在放 Noise、Anna 或 Amber 的必殺打斷它。'; hot = true; }
+  else if (cast && cast.kind === 'budget') { tip = '「' + cast.name + '」要是沒打斷，全隊必殺能量會被砍掉。現在放 Noise、Anna 或 Amber 的必殺打斷它。'; hot = true; }
+  else if (cast && cast.kind === 'deadline') { tip = '「' + cast.name + '」倒數中，讓 Machi 開「交付防線」保護全隊。'; hot = true; }
   else if (conf >= 2) { tip = '全隊混亂，能量與技能停擺。Leona 的「重新對齊」可以一次清掉。'; hot = true; }
   else if (gr) { tip = boss ? (boss.hp / boss.max <= .25 ? boss.name + '剩不到 25%，按「準時交付」直接定稿！' : '協作條已滿。Boss 血量低於 25% 時交付可以直接終結，也可以現在先打一發。') : '協作條已滿，可以按「準時交付」清場，或留給九頭蛇。'; hot = true; }
   $('tip').textContent = tip; $('tip').classList.toggle('hot', hot);
@@ -1460,7 +1514,11 @@ const COLL_KEY = 'expCollV1';
 function getColl() { try { return JSON.parse(localStorage.getItem(COLL_KEY) || '{}') || {}; } catch (e) { return {}; } }
 function saveColl(c) { try { localStorage.setItem(COLL_KEY, JSON.stringify(c)); } catch (e) {} }
 function collHtml() { const c = getColl(); return Object.keys(Core.BOSS).map(k => { const b = Core.BOSS[k], g = c[k]; return '<div><span>' + (g ? b.work : '？？？（還沒結案）') + '</span><b>' + (g ? '已收藏' + (g.n > 1 ? ' ×' + g.n : '') : '—') + '</b></div>'; }).join(''); }
-function fillColl() { const el = $('collO'); if (el) el.innerHTML = '<div style="grid-column:1/-1;color:var(--gold);font-size:12px">作品集</div>' + collHtml(); }
+function fillColl() {   // 選關畫面：每一關一顆按鈕，顯示作品是否已收藏、難度、關卡規則
+  const el = $('stageList'); if (!el) return; const c = getColl();
+  el.innerHTML = Object.keys(Core.BOSS).map(k => { const b = Core.BOSS[k], g = c[k]; return '<button class="stg" type="button" data-k="' + k + '"><b>' + b.stage + '｜' + b.title + (g ? ' ✓' : '') + '</b><i>難度 ' + '★'.repeat(b.diff) + '☆'.repeat(5 - b.diff) + '</i><small>' + (b.mod ? '【' + b.mod.name + '】' + b.mod.desc : '對手：' + b.name) + '</small></button>'; }).join('');
+  el.querySelectorAll('.stg').forEach(x => x.addEventListener('click', () => begin(x.dataset.k)));
+}
 function pickBoss() { const c = getColl(), ks = Object.keys(Core.BOSS), left = ks.filter(k => !c[k]), pool = left.length ? left : ks; return pool[Math.floor(Math.random() * pool.length)]; }
 // 手機：全螢幕＋鎖定橫式（沒有全螢幕 API 的瀏覽器，例如 iPhone Safari，只套用橫式版面；直拿時蓋住畫面並暫停）
 const FSM = (() => { try { return matchMedia('(pointer:coarse)').matches && Math.min(screen.width, screen.height) <= 900; } catch (e) { return false; } })();
@@ -1471,10 +1529,11 @@ function goFull() {
   try { const el = document.documentElement, p = el.requestFullscreen ? el.requestFullscreen({ navigationUI: 'hide' }) : el.webkitRequestFullscreen ? el.webkitRequestFullscreen() : null; Promise.resolve(p).then(() => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }).catch(() => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }); } catch (e) {}
 }
 { const mb = $('fsMenu'); mb.addEventListener('click', () => { document.documentElement.classList.toggle('menu'); mb.textContent = document.documentElement.classList.contains('menu') ? '收起' : '選單'; }); }
-function begin() {
+function begin(kind) {
+  kind = typeof kind === 'string' && Core.BOSS[kind] ? kind : pickBoss(); INTRO = STORY[kind] || STORY_HYDRA;
   goFull(); SFX.unlock(); SFX.click(); SFX.ambient(true); SFX.level(0); SFX.music(false); SFX.music(true);
   $('startO').hidden = true; $('endO').hidden = true;
-  S = Core.newGame((Date.now() & 0xfffffff) || 1, pickBoss()); R = {}; fx = []; banners = []; resetUnits(); acc = 0; running = false;
+  S = Core.newGame((Date.now() & 0xfffffff) || 1, kind); R = {}; fx = []; banners = []; resetUnits(); acc = 0; running = false;
   $('waveP').textContent = '倉庫';
   dIdx = 0; $('dialog').hidden = false; showLine();
 }
@@ -1511,12 +1570,11 @@ function finish(won) {
        <div class="stats">${collHtml()}</div>
        <div class="stats"><div><span>通關時間</span><b>${m}:${String(s).padStart(2, '0')}</b></div><div><span>打斷回復</span><b>${st.interrupts} 次</b></div><div><span>被回到舊版</span><b>${st.reverts} 次</b></div><div><span>Machi 代扛</span><b>${Math.round(st.absorb)}</b></div><div><span>總治療</span><b>${st.heal}</b></div><div><span>連攜觸發</span><b>${st.combos} 次</b></div><div><span>隊友倒下</span><b>${st.downs} 次</b></div>${rows}</div>
        <div class="lb" id="lbBox"></div>
-       <button class="pk big" id="againB" type="button">再打一次</button>`
+       <button class="pk big" id="againB" type="button">再打一次</button> <button class="pk" id="menuB" type="button">選關</button>`
     : `<h2>需求淹沒了設計部</h2><p>${S.wave === 3 ? (S.bossKind === 'client' ? '客戶的「明天一早要」要用 Machi 的交付防線擋；「預算只有三千」要留一招攻擊必殺打斷。' : '九頭蛇的「今天能出嗎？」要用 Machi 的交付防線擋；「剛剛那版比較好」要留一招攻擊必殺打斷。') : '卡片亮起時就放必殺，Leona 的「重新對齊」能把全隊拉回來。'}</p>
-       <button class="pk big" id="againB" type="button">重新挑戰</button>`;
-  $('endO').hidden = false; $('againB').addEventListener('click', begin); if (won) setupBoard(score, S.t);
+       <button class="pk big" id="againB" type="button">重新挑戰</button> <button class="pk" id="menuB" type="button">選關</button>`;
+  $('endO').hidden = false; $('againB').addEventListener('click', () => begin(S.bossKind)); if ($('menuB')) $('menuB').addEventListener('click', () => { $('endO').hidden = true; $('startO').hidden = false; fillColl(); }); if (won) setupBoard(score, S.t);
 }
-$('startB').addEventListener('click', begin);
 $('dialog').addEventListener('click', nextLine);
 $('deliver').addEventListener('click', doDeliver);
 $('autoB').addEventListener('click', e => { autoOn = !autoOn; e.currentTarget.textContent = '自動必殺：' + (autoOn ? '開' : '關'); e.currentTarget.classList.toggle('off', !autoOn); });
