@@ -210,12 +210,13 @@ h3{margin:16px 0 0;font-size:17px}
       <span class="sys">17:50，設計部</span>
       <h2>《最後一版，真的》</h2>
       <p>隊伍會自動戰鬥。你只要在對的時機按下方五張卡放必殺，湊滿協作條就能「準時交付」。</p>
+      <div class="stats" id="collO"></div>
       <button class="pk big" id="startB" type="button">進入倉庫</button>
     </div>
     <div class="overlay" id="endO" hidden></div>
   </section>
 
-  <div id="tip">三波敵人：插單便條、意見分身、版本九頭蛇。全程約兩分半。</div>
+  <div id="tip">三波敵人：插單便條、意見分身、客戶 Boss（每次隨機）。全程約兩分半。</div>
   <section id="gauge">
     <span class="lbl">團隊協作條</span>
     <div class="pips" id="pips"></div>
@@ -247,6 +248,12 @@ const Core = (() => {
     armor: { name: '舊版裝甲', hp: 2600, atk: 70, def: 0, armor: .75, spd: 2.2, row: 'front', range: 1.7, mv: 1.7, rad: .75 },
     clone: { name: '意見分身', hp: 3200, atk: 40, def: .1, spd: 2.1, row: 'back', range: 4.6, mv: 1.3, rad: .65 },
     hydra: { name: '版本九頭蛇', hp: 95000, atk: 150, def: .1, spd: 1.7, row: 'back', boss: true, range: 40, mv: 0, rad: 2 },
+    client: { name: '預算只有三千的客戶', hp: 60000, atk: 130, def: .1, spd: 1.8, row: 'back', boss: true, range: 40, mv: 0, rad: 1.8 },
+  };
+  // 每位 Boss 的招式順序、結案作品與敗退台詞
+  const BOSS = {
+    hydra: { name: '版本九頭蛇', seq: ['minor', 'revert', 'confuse', 'deadline'], work: '《最後一版，真的》', open: '', die: '' },
+    client: { name: '預算只有三千的客戶', seq: ['everything', 'budget', 'midnight', 'deadline'], work: '《三千元的品牌識別》', open: '「預算只有三千，但我要五千的質感。」', die: '「……那就照你們的版本吧。」' },
   };
   const BLAST = 820, ENRAGE_AT = 200;
   const SEQ = ['minor', 'revert', 'confuse', 'deadline'];
@@ -259,9 +266,9 @@ const Core = (() => {
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 function go(u, tx, tz, stop, k = 1) { const dx = tx - u.x, dz = tz - u.z, d = Math.hypot(dx, dz); if (d > 1e-6) { u.fx = dx / d; u.fz = dz / d; } if (d > stop && u.mv > 0) { const st = Math.min(u.mv * k * DT, d - stop); u.x += dx / d * st; u.z += dz / d * st; u.mvg = true; } }
 
-  function newGame(seed) {
+  function newGame(seed, bossKind) {
     const S = {
-      t: 0, seed, rand: mk(seed), wave: 0, eTot: 1, phase: 'between', betweenT: 1.2, waveT: 0,
+      bossKind: BOSS[bossKind] ? bossKind : 'hydra', t: 0, seed, rand: mk(seed), wave: 0, eTot: 1, phase: 'between', betweenT: 1.2, waveT: 0,
       heroes: [], enemies: [], events: [], queue: [], n: 0, boss: null,
       gauge: { protect: false, brk: false, weak: false, control: false, cleanse: false },
       stats: { dmg: {}, heal: 0, absorb: 0, interrupts: 0, reverts: 0, combos: 0, delivered: 0, downs: 0 },
@@ -290,11 +297,11 @@ function spawn(S, kind) {
 
   function startWave(S) {
     S.wave++; S.phase = 'fight'; S.waveT = 0; S.queue = [];
-    S.eTot = [12 * EN.note.hp, 2 * EN.armor.hp + EN.clone.hp + 2 * EN.note.hp, EN.hydra.hp][S.wave - 1] || 1;
+    S.eTot = [12 * EN.note.hp, 2 * EN.armor.hp + EN.clone.hp + 2 * EN.note.hp, EN[S.bossKind].hp][S.wave - 1] || 1;
     S.enemies = S.enemies.filter(e => e.alive);
     if (S.wave === 1) { for (let i = 0; i < 4; i++) spawn(S, 'note'); S.queue.push({ t: 7, kind: 'note', n: 4 }, { t: 15, kind: 'note', n: 4 }); }
     if (S.wave === 2) { spawn(S, 'armor'); spawn(S, 'armor'); spawn(S, 'clone'); spawn(S, 'note'); spawn(S, 'note'); }
-    if (S.wave === 3) { const b = spawn(S, 'hydra'); S.boss = { uid: b.uid, skillT: 7, seq: 0, cast: null, enraged: false }; }
+    if (S.wave === 3) { const b = spawn(S, S.bossKind); S.boss = { kind: S.bossKind, uid: b.uid, skillT: 7, seq: 0, cast: null, enraged: false }; }
     ev(S, { type: 'wave', n: S.wave });
   }
 
@@ -333,7 +340,7 @@ function spawn(S, kind) {
     if (opt.crit && S.rand() < opt.crit) { opt.wasCrit = true; a *= dst.st.mark ? 2.2 : 1.6; }
     if (src && src.id === 'noise') a *= 1 + .04 * src.rage;
     if (dst.st.broken) a *= 1.4;
-    if (opt.ult && dst.boss && S.boss && S.boss.cast && S.boss.cast.kind === 'revert') {
+    if (opt.ult && dst.boss && S.boss && S.boss.cast && (S.boss.cast.kind === 'revert' || S.boss.cast.kind === 'budget')) {
       S.boss.cast = null; S.stats.interrupts++;
       ev(S, { type: 'interrupt', by: src.uid });
     }
@@ -476,6 +483,7 @@ function spawn(S, kind) {
       if (B.cast.t <= 0) {
         const k = B.cast.kind; B.cast = null;
         if (k === 'revert') { S.stats.reverts++; const v = Math.round(e.max * .1); e.hp = Math.min(e.max, e.hp + v); ev(S, { type: 'heal', dst: e.uid, amt: v }); ev(S, { type: 'boss', kind: 'reverted', name: '回到舊版了…' }); }
+        if (k === 'budget') { alive(S.heroes).forEach(h => { h.energy = Math.max(0, h.energy - 60); h.cd += 4; }); ev(S, { type: 'boss', kind: 'budgeted', name: '預算被砍了…大家的必殺能量掉了一半以上' }); }
         if (k === 'deadline') { ev(S, { type: 'blast' }); alive(S.heroes).forEach(h => hurt(S, e, h, BLAST * (B.enraged ? 1.3 : 1), {})); }
       }
       return;
@@ -483,11 +491,14 @@ function spawn(S, kind) {
     B.skillT -= DT;
     if (B.skillT > 0) return;
     B.skillT = 8;
-    const k = SEQ[B.seq++ % 4];
+    const sq = BOSS[S.bossKind].seq, k = sq[B.seq++ % sq.length];
     if (k === 'minor') { ev(S, { type: 'boss', kind: k, name: '再小改一下' }); for (let i = 0; i < 3; i++) spawn(S, 'note'); const n = hero(S, 'noise'); if (n.alive) n.rage = Math.min(10, n.rage + 3); }
     if (k === 'revert') { ev(S, { type: 'boss', kind: k, name: '剛剛那版比較好' }); B.cast = { kind: k, t: 4, max: 4 }; }
     if (k === 'confuse') { ev(S, { type: 'boss', kind: k, name: '意見還沒整合' }); alive(S.heroes).forEach(h => { if (h.id !== 'leona' && !h.st.immune) h.st.confuse = 10; }); }
-    if (k === 'deadline') { ev(S, { type: 'boss', kind: k, name: '今天能出嗎？' }); B.cast = { kind: k, t: 5, max: 5 }; }
+    if (k === 'deadline') { ev(S, { type: 'boss', kind: k, name: S.bossKind === 'client' ? '明天一早要，今晚能給嗎？' : '今天能出嗎？' }); B.cast = { kind: k, t: 5, max: 5 }; }
+    if (k === 'everything') { ev(S, { type: 'boss', kind: k, name: '全部都要，但要簡約' }); spawn(S, 'armor'); spawn(S, 'note'); spawn(S, 'note'); }
+    if (k === 'budget') { ev(S, { type: 'boss', kind: k, name: '預算只有三千' }); B.cast = { kind: k, t: 4, max: 4 }; }
+    if (k === 'midnight') { ev(S, { type: 'boss', kind: k, name: '凌晨三點：在嗎？現在方便嗎？' }); const hs = alive(S.heroes); hs.forEach(h => { if (h.id !== 'leona' && !h.st.immune) h.st.delay = 8; }); const v = hs.filter(h => h.id !== 'leona' && !h.st.immune); if (v.length) v[Math.floor(S.rand() * v.length)].st.confuse = 8; }
   }
 
   function step(S) {
@@ -562,7 +573,7 @@ function spawn(S, kind) {
     for (const u of us) { u.z = u.side === 'hero' ? Math.max(.2, Math.min(3.1, u.z)) : Math.max(-2.7, Math.min(mA ? .2 : 3, u.z)); u.x = Math.max(-6.8, Math.min(9, u.x)); if (bs && u.side === 'hero') u.x = Math.min(u.x, bs.x - (u.range * .85 + bs.rad + u.rad) * .85); }
     if (!alive(S.heroes).length) { S.phase = 'lost'; ev(S, { type: 'lost' }); return; }
     if (!alive(S.enemies).length && S.queue.every(q => q.done)) {
-      if (S.wave >= 3) { S.phase = 'won'; ev(S, { type: 'won' }); return; }
+      if (S.wave >= 3) { S.phase = 'won'; ev(S, { type: 'won', boss: S.bossKind }); return; }
       S.phase = 'between'; S.betweenT = 3.5;
       S.heroes.forEach(h => { if (!h.alive) { h.alive = true; h.hp = h.max * .4; h.timer = h.spd; } else h.hp = Math.min(h.max, h.hp + h.max * .3); h.st = {}; h.barrage = 0; });
       ev(S, { type: 'clear', n: S.wave });
@@ -579,7 +590,7 @@ function spawn(S, kind) {
       else if (!bossWave && hs.some(h => h.hp / h.max < .45)) out.push('machi');
     }
     const R = ['anna', 'noise', 'amber'].filter(ready);
-    if (B && B.cast && B.cast.kind === 'revert') { if (R.length) out.push(R[0]); }
+    if (B && B.cast && (B.cast.kind === 'revert' || B.cast.kind === 'budget')) { if (R.length) out.push(R[0]); }
     else if (!bossWave) R.forEach(id => { if (en.length) out.push(id); });
     else if (R.length >= 2) out.push(R[0]);
     if (ready('leona') && (hs.filter(h => h.st.confuse).length >= 2 || hs.reduce((a, h) => a + h.hp / h.max, 0) / hs.length < .55)) out.push('leona');
@@ -587,7 +598,7 @@ function spawn(S, kind) {
     return out;
   }
 
-  return { DT, dist, ORDER, HERO, EN, FLAGS, newGame, step, castUlt, deliver, gaugeReady, auto, alive, hero };
+  return { DT, dist, ORDER, HERO, EN, BOSS, FLAGS, newGame, step, castUlt, deliver, gaugeReady, auto, alive, hero };
 })();
 if (typeof module !== 'undefined') module.exports = Core;
 
@@ -626,7 +637,7 @@ const INTRO = [
 const WAVE_TIP = {
   1: '第一波｜插單便條：Machi 會嘲諷吸住攻擊，Amber 的範圍技負責清場。卡片亮起就能放必殺。',
   2: '第二波｜意見分身躲在後排一直生便條：Noise 破開舊版裝甲，Anna 的「一刀定稿」直取分身。',
-  3: '第三波｜版本九頭蛇：注意畫面上方的讀條，把對應的必殺留給它。',
+  3: '第三波｜客戶 Boss：注意畫面上方的讀條，把對應的必殺留給它。',
 };
 const FINALE = { noise: '這次真的最後一版！', anna: '核心找到了。', amber: '畫面我收。', leona: '資訊已對齊。', machi: '好，交付。' };
 
@@ -655,7 +666,7 @@ function fit() { const d = Math.min(2, window.devicePixelRatio || 1); cv.width =
 addEventListener('resize', fit);
 
 // 單位座標由戰鬥核心給（世界單位，x 向右、z 朝向鏡頭）；畫面位置再平滑追過去
-const MH = { note: 1.8, armor: 2.9, clone: 3.1, hydra: 5.6 };
+const MH = { note: 1.8, armor: 2.9, clone: 3.1, hydra: 5.6, client: 5.2 };
 const tall = u => u.side === 'hero' ? 2.3 : MH[u.kind];
 function rs(u) {
   let r = R[u.uid];
@@ -792,7 +803,7 @@ function init3d() {
   TX.grid = ctex(256, 256, g => { g.strokeStyle = '#fff'; g.lineWidth = 3; g.setLineDash([12, 8]); for (let i = 0; i <= 4; i++) { g.beginPath(); g.moveTo(i * 63 + 2, 0); g.lineTo(i * 63 + 2, 256); g.moveTo(0, i * 63 + 2); g.lineTo(256, i * 63 + 2); g.stroke(); } });
   TX.circle = ctex(256, 256, g => { g.translate(128, 128); g.strokeStyle = '#fff'; g.lineWidth = 5; [120, 100, 58].forEach(r => { g.beginPath(); g.arc(0, 0, r, 0, 7); g.stroke(); }); g.lineWidth = 3; for (let k = 0; k < 2; k++) { g.beginPath(); for (let i = 0; i < 3; i++) { const a = i * 2.094 + k * 1.047; g.lineTo(Math.cos(a) * 100, Math.sin(a) * 100); } g.closePath(); g.stroke(); } for (let i = 0; i < 12; i++) { const a = i * .5236; g.fillStyle = '#fff'; g.fillRect(Math.cos(a) * 110 - 4, Math.sin(a) * 110 - 4, 8, 8); } });
   buildWorld(); applySceneTheme();
-  ['note', 'armor', 'clone', 'hydra'].forEach(k => { const im = new Image(); im.onload = () => { const t = new THREE.Texture(im); t.needsUpdate = true; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; MON[k] = { t, ar: im.width / im.height }; }; im.src = 'monsters/' + k + '.webp'; });
+  ['note', 'armor', 'clone', 'hydra', 'client'].forEach(k => { const im = new Image(); im.onload = () => { const t = new THREE.Texture(im); t.needsUpdate = true; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; MON[k] = { t, ar: im.width / im.height }; }; im.src = 'monsters/' + (k === 'client' ? 'clone' : k) + '.webp'; });
   for (const id of Core.ORDER) {
     const sh = flat(new THREE.Mesh(G.disc, new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .35, depthWrite: false })), .03); sh.scale.set(.62, .4, 1); scene.add(sh); P.shadow[id] = sh;
     const r = flat(M(G.ring, COL[id], { opacity: .7 }), .04); r.scale.setScalar(.78); scene.add(r); P.ring[id] = r;
@@ -821,7 +832,7 @@ function heroUnit(id) {
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, alphaTest: .2 }));
   sp.center.set(.5, 6 / 240); sp.scale.set(2.3, 2.3, 1); scene.add(sp); return sp;
 }
-const SPEC = { note: { w: 70, h: 70, ox: 35, oy: 35, foot: 66, f: .026 }, armor: { w: 100, h: 112, ox: 50, oy: 58, foot: 106, f: .027 }, clone: { w: 100, h: 110, ox: 50, oy: 52, foot: 100, f: .027 }, hydra: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 } };
+const SPEC = { note: { w: 70, h: 70, ox: 35, oy: 35, foot: 66, f: .026 }, armor: { w: 100, h: 112, ox: 50, oy: 58, foot: 106, f: .027 }, clone: { w: 100, h: 110, ox: 50, oy: 52, foot: 100, f: .027 }, hydra: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 }, client: { w: 340, h: 330, ox: 240, oy: 205, foot: 318, f: .0148 } };
 function enemyUnit(e) {
   const s = SPEC[e.kind], c = document.createElement('canvas'); c.width = s.w * 2; c.height = s.h * 2;
   const t = new THREE.CanvasTexture(c); t.generateMipmaps = false; t.minFilter = THREE.LinearFilter;
@@ -1116,13 +1127,13 @@ function handle(e) {
   if (e.type === 'barrage') { shake = .12; Core.alive(S.enemies).forEach(x => fxBeam(rpos(x), COL.amber, false)); }
   if (e.type === 'align') fxAlign();
   if (e.type === 'combo') banner('連攜｜' + e.name, '', '#ffd166');
-  if (e.type === 'boss') { banner('九頭蛇｜' + e.name, '', '#ff6b5e'); if (e.kind === 'confuse') Core.alive(S.heroes).forEach(h => { if (h.st.confuse) fxImpact(mid(h), '#b79bff', 2.4); }); }
+  if (e.type === 'boss') { banner(Core.BOSS[S.bossKind].name.replace('預算只有三千的', '') + '｜' + e.name, '', '#ff6b5e'); if (e.kind === 'confuse') Core.alive(S.heroes).forEach(h => { if (h.st.confuse) fxImpact(mid(h), '#b79bff', 2.4); }); }
   if (e.type === 'interrupt') { banner('打斷成功', '', '#7ff0a6'); const b = S.enemies.find(x => x.boss); if (b) fxRing(rpos(b), '#ffffff', 1, 4.5, .6); }
   if (e.type === 'blast') { shake = .5; flashA = .6; const b = S.enemies.find(x => x.boss); if (b) fxRing(rpos(b), '#ff3b2f', 1, 16, .7); Core.alive(S.heroes).forEach(h => fxImpact(mid(h), '#ff3b2f', 3.2)); }
   if (e.type === 'debuff') { const d = find(e.dst); if (d) float(d, e.name, '#c7c7c7', 13, .4); }
   if (e.type === 'cleanse') { const d = find(e.dst); if (d) { float(d, '已整理', '#3fd0b4', 14, .4); fxRing(rpos(d), COL.leona, .3, 1.6, .6); } }
-  if (e.type === 'die') { const d = find(e.uid); if (d && d.side === 'enemy') fxPoof(mid(d), d.kind === 'note' ? '#ffe27a' : '#b48cff'); }
-  if (e.type === 'wave') { banner(`第 ${e.n} 波｜${['', '插單小怪', '意見分身', '版本九頭蛇'][e.n]}`, '', '#5fe08a'); $('waveP').textContent = `第 ${e.n}／3 波`; }
+  if (e.type === 'die') { const d = find(e.uid); if (d && d.side === 'enemy') { fxPoof(mid(d), d.kind === 'note' ? '#ffe27a' : '#b48cff'); if (d.boss) { const B = Core.BOSS[S.bossKind]; if (B.die) banner(B.name, B.die, '#ffd166'); } } }
+  if (e.type === 'wave') { banner(`第 ${e.n} 波｜${['', '插單小怪', '意見分身', Core.BOSS[S.bossKind].name][e.n]}`, e.n === 3 ? Core.BOSS[S.bossKind].open : '', '#5fe08a'); $('waveP').textContent = `第 ${e.n}／3 波`; }
   if (e.type === 'clear') banner('清場', '', '#5fe08a');
   if (e.type === 'deliver') {
     banner('五人連攜｜準時交付', '', '#ffd166'); flashA = .8; shake = .4; slowT = .6;
@@ -1265,7 +1276,7 @@ function sync(dt) {
   const nz = heroes[1], nr = R.noise; P.aura.position.set(nr.x, 1.1, nr.z); P.aura.material.opacity = lerp(P.aura.material.opacity, nz.alive && nz.st.frenzy ? .55 + Math.sin(T * 14) * .15 : 0, dt * 8);
   const cast = S && S.boss && S.boss.cast, bossU = S && S.enemies.find(e => e.boss && e.alive);
   if (bossU) { const bp = rpos(bossU); P.revert.position.x = bp.x; P.revert.position.z = bp.z; }
-  P.revert.material.opacity = lerp(P.revert.material.opacity, cast && cast.kind === 'revert' ? .9 : 0, dt * 8); P.revert.scale.setScalar(3.4 + Math.sin(T * 8) * .25); P.revert.rotation.z = T * 2;
+  P.revert.material.opacity = lerp(P.revert.material.opacity, cast && (cast.kind === 'revert' || cast.kind === 'budget') ? .9 : 0, dt * 8); P.revert.scale.setScalar(3.4 + Math.sin(T * 8) * .25); P.revert.rotation.z = T * 2;
   P.dead.position.x = -2.5; P.dead.material.opacity = lerp(P.dead.material.opacity, cast && cast.kind === 'deadline' ? (.25 + (1 - cast.t / cast.max) * .5) * (.75 + Math.sin(T * 12) * .25) : 0, dt * 8);
   P.riftG.material.opacity = .25 + .3 * Math.max(0, Math.sin(T * 5)); const fl = Math.sin(T * 37) * Math.sin(T * 11) > .8 ? .35 : 0; P.amb.intensity = P.ambBase - fl;
   P.fires.forEach(f => { const k = .8 + .3 * Math.sin(T * 13 + f.p) + .15 * Math.sin(T * 29 + f.p); f.f1.scale.set(.9 * k, 1.4 * k, 1); f.f2.scale.set(.5 * k, .9 * k, 1); f.gl.material.opacity = .22 + .12 * Math.sin(T * 9 + f.p); });
@@ -1292,7 +1303,7 @@ function sync(dt) {
     if (e.kind === 'clone') sp.material.rotation = q.tilt;
     sp.position.copy(v);
     if (d.img) sp.scale.set(MH[e.kind] * mon.ar * age * (1 + q.sx), MH[e.kind] * age * (1 + q.sy), 1); else sp.scale.set(d.s.w * d.s.f * age * (1 + q.sx), d.s.h * d.s.f * age * (1 + q.sy), 1);
-    sp.material.color.set(r.flash > 0 ? '#ffb0a6' : e.st.broken ? '#ffb89a' : '#fff');
+    sp.material.color.set(r.flash > 0 ? '#ffb0a6' : e.st.broken ? '#ffb89a' : e.kind === 'client' ? '#ffe39a' : '#fff');
     d.sh.position.x = r.x; d.sh.position.z = r.z; d.sh.scale.set(e.rad * 1.2, e.rad * .8, 1);
     if (e.mvg && doDust && e.kind !== 'clone') fxDust(new THREE.Vector3(r.x, 0, r.z));
     d.ret.position.copy(mid(e)); d.ret.scale.setScalar((e.boss ? 2.6 : 1.9) * (1 + Math.sin(T * 6) * .08)); d.ret.material.rotation = T * .8; d.ret.material.opacity = lerp(d.ret.material.opacity, e.st.mark ? .95 : 0, dt * 10);
@@ -1367,15 +1378,16 @@ function hud() {
   const m = Math.floor(S.t / 60), s = Math.floor(S.t % 60); $('timeP').textContent = $('timeT').textContent = m + ':' + String(s).padStart(2, '0');
   const B = S.boss, cast = B && B.cast, al = $('alert');
   al.hidden = !cast;
-  if (cast) { al.className = cast.kind; $('alertT').textContent = (cast.kind === 'revert' ? '剛剛那版比較好　' : '今天能出嗎？　') + cast.t.toFixed(1); $('alertB').style.width = (cast.t / cast.max * 100) + '%'; }
+  if (cast) { al.className = cast.kind; $('alertT').textContent = (cast.kind === 'revert' ? '剛剛那版比較好　' : cast.kind === 'budget' ? '預算只有三千　' : S.bossKind === 'client' ? '明天一早要　' : '今天能出嗎？　') + cast.t.toFixed(1); $('alertB').style.width = (cast.t / cast.max * 100) + '%'; }
   let tip = WAVE_TIP[S.wave] || '投影機自己亮了起來…', hot = false;
   const boss = S.enemies.find(e => e.boss && e.alive);
   const conf = S.heroes.filter(h => h.alive && h.st.confuse).length;
   if (S.phase === 'between' && S.wave) tip = '清場完成，隊伍回復中。必殺能量會保留到下一波。';
   if (cast && cast.kind === 'revert') { tip = '九頭蛇想回到舊版！現在放 Noise、Anna 或 Amber 的必殺打斷它。'; hot = true; }
-  else if (cast && cast.kind === 'deadline') { tip = '「今天能出嗎？」倒數中，讓 Machi 開「交付防線」保護全隊。'; hot = true; }
+  else if (cast && cast.kind === 'budget') { tip = '客戶要砍預算！不打斷的話全隊必殺能量會被砍掉。現在放 Noise、Anna 或 Amber 的必殺打斷它。'; hot = true; }
+  else if (cast && cast.kind === 'deadline') { tip = '「' + (S.bossKind === 'client' ? '明天一早要' : '今天能出嗎？') + '」倒數中，讓 Machi 開「交付防線」保護全隊。'; hot = true; }
   else if (conf >= 2) { tip = '全隊混亂，能量與技能停擺。Leona 的「重新對齊」可以一次清掉。'; hot = true; }
-  else if (gr) { tip = boss ? (boss.hp / boss.max <= .25 ? '九頭蛇剩不到 25%，按「準時交付」直接定稿！' : '協作條已滿。九頭蛇血量低於 25% 時交付可以直接終結，也可以現在先打一發。') : '協作條已滿，可以按「準時交付」清場，或留給九頭蛇。'; hot = true; }
+  else if (gr) { tip = boss ? (boss.hp / boss.max <= .25 ? boss.name + '剩不到 25%，按「準時交付」直接定稿！' : '協作條已滿。Boss 血量低於 25% 時交付可以直接終結，也可以現在先打一發。') : '協作條已滿，可以按「準時交付」清場，或留給九頭蛇。'; hot = true; }
   $('tip').textContent = tip; $('tip').classList.toggle('hot', hot);
 }
 
@@ -1398,10 +1410,17 @@ function showLine() {
   const hero = Core.ORDER.find(id => Core.HERO[id].name === l[0]), f = $('dFace');
   if (hero && !$('dialog').hidden) { f.style.backgroundImage = `url(${sprUrl(l[0])})`; f.hidden = false; f.style.animation = 'none'; void f.offsetWidth; f.style.animation = ''; } else f.hidden = true;
 }
+// 作品集：打贏的客戶 Boss 會留下結案作品（存在這個瀏覽器）
+const COLL_KEY = 'expCollV1';
+function getColl() { try { return JSON.parse(localStorage.getItem(COLL_KEY) || '{}') || {}; } catch (e) { return {}; } }
+function saveColl(c) { try { localStorage.setItem(COLL_KEY, JSON.stringify(c)); } catch (e) {} }
+function collHtml() { const c = getColl(); return Object.keys(Core.BOSS).map(k => { const b = Core.BOSS[k], g = c[k]; return '<div><span>' + (g ? b.work : '？？？（還沒結案）') + '</span><b>' + (g ? '已收藏' + (g.n > 1 ? ' ×' + g.n : '') : '—') + '</b></div>'; }).join(''); }
+function fillColl() { const el = $('collO'); if (el) el.innerHTML = '<div style="grid-column:1/-1;color:var(--gold);font-size:12px">作品集</div>' + collHtml(); }
+function pickBoss() { const c = getColl(), ks = Object.keys(Core.BOSS), left = ks.filter(k => !c[k]), pool = left.length ? left : ks; return pool[Math.floor(Math.random() * pool.length)]; }
 function begin() {
   SFX.unlock(); SFX.click(); SFX.ambient(true); SFX.level(0); SFX.music(false); SFX.music(true);
   $('startO').hidden = true; $('endO').hidden = true;
-  S = Core.newGame((Date.now() & 0xfffffff) || 1); R = {}; fx = []; banners = []; resetUnits(); acc = 0; running = false;
+  S = Core.newGame((Date.now() & 0xfffffff) || 1, pickBoss()); R = {}; fx = []; banners = []; resetUnits(); acc = 0; running = false;
   $('waveP').textContent = '倉庫';
   dIdx = 0; $('dialog').hidden = false; showLine();
 }
@@ -1429,14 +1448,17 @@ function finish(won) {
   const st = S.stats, tot = Object.values(st.dmg).reduce((a, b) => a + b, 0) || 1;
   const m = Math.floor(S.t / 60), s = Math.floor(S.t % 60);
   const score = won ? calcScore(st, S.t) : 0;
+  let fresh = false; if (won) { const c = getColl(), k = S.bossKind; fresh = !c[k]; c[k] = { n: ((c[k] && c[k].n) || 0) + 1, best: Math.min((c[k] && c[k].best) || 1e9, Math.round(S.t)) }; saveColl(c); }
   const rows = Core.ORDER.map(id => `<div><span>${Core.HERO[id].name} 輸出</span><b>${Math.round(st.dmg[id] / tot * 100)}%</b></div>`).join('');
   $('endO').innerHTML = won
     ? `<span class="badge">已確認</span><h2>任務完成</h2><p>新的需求會再來，但現在，先休息一下。</p>
        <div class="sys">本局分數　${score}</div>
+       <div class="sys" style="color:var(--accent)">${fresh ? '獲得結案作品　' : '結案作品　'}${Core.BOSS[S.bossKind].work}</div>
+       <div class="stats">${collHtml()}</div>
        <div class="stats"><div><span>通關時間</span><b>${m}:${String(s).padStart(2, '0')}</b></div><div><span>打斷回復</span><b>${st.interrupts} 次</b></div><div><span>被回到舊版</span><b>${st.reverts} 次</b></div><div><span>Machi 代扛</span><b>${Math.round(st.absorb)}</b></div><div><span>總治療</span><b>${st.heal}</b></div><div><span>連攜觸發</span><b>${st.combos} 次</b></div><div><span>隊友倒下</span><b>${st.downs} 次</b></div>${rows}</div>
        <div class="lb" id="lbBox"></div>
        <button class="pk big" id="againB" type="button">再打一次</button>`
-    : `<h2>需求淹沒了設計部</h2><p>${S.wave === 3 ? '九頭蛇的「今天能出嗎？」要用 Machi 的交付防線擋；「剛剛那版比較好」要留一招攻擊必殺打斷。' : '卡片亮起時就放必殺，Leona 的「重新對齊」能把全隊拉回來。'}</p>
+    : `<h2>需求淹沒了設計部</h2><p>${S.wave === 3 ? (S.bossKind === 'client' ? '客戶的「明天一早要」要用 Machi 的交付防線擋；「預算只有三千」要留一招攻擊必殺打斷。' : '九頭蛇的「今天能出嗎？」要用 Machi 的交付防線擋；「剛剛那版比較好」要留一招攻擊必殺打斷。') : '卡片亮起時就放必殺，Leona 的「重新對齊」能把全隊拉回來。'}</p>
        <button class="pk big" id="againB" type="button">重新挑戰</button>`;
   $('endO').hidden = false; $('againB').addEventListener('click', begin); if (won) setupBoard(score, S.t);
 }
@@ -1459,6 +1481,7 @@ addEventListener('message', e => { if (e.origin === location.origin && e.data &&
 addEventListener('pointerdown', () => { try { window.focus(); } catch (e) {} });
 window.__game = { get S() { return S; }, Core, ult, doDeliver };
 if (/[?&]embed=1/.test(location.search)) { $('exitB').hidden = false; $('exitB').onclick = () => { try { parent.postMessage({ type: 'expeditionExit' }, location.origin); } catch (e) {} }; }
+fillColl();
 try { init3d(); requestAnimationFrame(loop); } catch (err) { $('tip').textContent = '這個瀏覽器無法啟動 3D 繪圖（WebGL），請換一個瀏覽器開啟。'; console.error(err); }
 })();
 </script>
