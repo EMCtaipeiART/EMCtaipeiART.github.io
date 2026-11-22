@@ -183,36 +183,37 @@ html.fsm #stageList{grid-template-columns:repeat(3,1fr);gap:5px} html.fsm .stg{p
 html.fsm,html.fsm body{height:100%;overflow:hidden;background:#000}
 html.fsm .wrap{max-width:none;padding:0;gap:0;width:100%;height:100%;container-type:size;display:flex;align-items:center;justify-content:center}
 html.fsm header>.brand,html.fsm h3,html.fsm .sub,html.fsm #roster{display:none}
-html.fsm header{position:fixed;z-index:60;left:6px;top:34px;display:block}
+html.fsm header{position:fixed;z-index:60;left:14px;top:48px;display:block}
 html.fsm .ctrl{display:none;flex-direction:column;align-items:flex-start;gap:4px;margin-top:4px}
 html.fsm.menu .ctrl{display:flex}html.fsm .ctrl .pill{display:none}html.fsm .ctrl .pk{font-size:11px;padding:2px 9px;border-width:2px;border-radius:9px}
 html.fsm #fsMenu{display:block}
 html.fsm #stage{flex:none;width:min(100cqw,calc(100cqh * 1.92));height:min(100cqh,calc(100cqw / 1.92));border:0;border-radius:0;min-height:0!important}
 html.fsm #gl,html.fsm #cv{width:100%;height:100%}
-html.fsm #party{position:absolute;left:auto;right:4px;bottom:3px;top:auto;padding:0;gap:4px;background:transparent}
+html.fsm #party{position:absolute;left:auto;right:16px;bottom:14px;top:auto;padding:0;gap:4px;background:transparent}
 html.fsm .card{width:60px;border-width:2px;border-radius:9px;padding-bottom:2px}
 html.fsm .card .face{height:42px;background-size:1260px 105px;background-position:-26px -4px;border-bottom-width:2px}
 html.fsm .card kbd{width:16px;height:16px;font-size:9px}
 html.fsm .card .lbl{font-size:9px}
 html.fsm .card .hpb,html.fsm .card .spb,html.fsm .card .cdb{height:5px;margin:0 4px}
-html.fsm #tip{display:none;position:fixed;z-index:30;left:6px;top:66px;max-width:30vw;min-height:0;padding:3px 8px;font-size:10px;line-height:1.35;border-radius:8px;background:rgba(8,24,16,.85);pointer-events:none}html.fsm #tip.hot{display:block}
-html.fsm #gauge{position:fixed;z-index:30;left:6px;bottom:6px;padding:3px 8px;gap:4px 6px;border-radius:10px;background:rgba(8,24,16,.78);max-width:46vw}
+html.fsm #tip{display:none;position:fixed;z-index:30;left:14px;top:78px;max-width:30vw;min-height:0;padding:3px 8px;font-size:10px;line-height:1.35;border-radius:8px;background:rgba(8,24,16,.85);pointer-events:none}html.fsm #tip.hot{display:block}
+html.fsm #stage:not(.live)~#gauge{display:none}
+html.fsm #gauge{position:fixed;z-index:30;left:14px;bottom:14px;padding:3px 8px;gap:4px 6px;border-radius:10px;background:rgba(8,24,16,.78);max-width:46vw}
 html.fsm #gauge .lbl{display:none}
 html.fsm .pip{font-size:10px;padding:0 6px;border-width:1px}
-html.fsm #deliver{top:auto;bottom:6px;left:auto;right:330px;font-size:13px;padding:4px 12px}
-html.fsm #topbar{padding:4px 8px 0}
+html.fsm #deliver{top:auto;bottom:14px;left:auto;right:344px;font-size:13px;padding:4px 12px}
+html.fsm #topbar{padding:12px 14px 0 74px}
 html.fsm #topbar .side{margin-top:4px;height:12px}
 html.fsm #topbar .mid{width:56px} html.fsm #topbar .mid em{width:30px;height:30px;font-size:10px}
-html.fsm #alert,html.fsm #skillPop{top:42px}
-html.fsm #dialog{left:8px;right:8px;bottom:8px;padding:6px 12px}
+html.fsm #alert,html.fsm #skillPop{top:50px}
+html.fsm #dialog{left:16px;right:16px;bottom:14px;padding:6px 12px}
 html.fsm #dialog p{font-size:13px}
 html.fsm #dFace{width:150px;height:98px;background-size:1800px 150px;bottom:54px}
-html.fsm .overlay{gap:6px;padding:8px;overflow:auto}
+html.fsm .overlay{gap:6px;padding:14px 18px;overflow:auto}
 html.fsm .overlay h2{font-size:18px}
 html.fsm .overlay p{font-size:12px;max-width:60ch}
 html.fsm .stats{font-size:11px;gap:2px 10px}
 html.fsm #endO .lb{max-height:30vh;overflow:auto}
-#fsMenu{display:none;position:fixed;z-index:61;left:6px;top:6px;font:inherit;font-weight:700;font-size:12px;color:#eafff2;background:rgba(8,24,16,.85);border:2px solid #000;border-radius:10px;padding:3px 10px;cursor:pointer}
+#fsMenu{display:none;position:fixed;z-index:61;left:14px;top:12px;font:inherit;font-weight:700;font-size:12px;color:#eafff2;background:rgba(8,24,16,.85);border:2px solid #000;border-radius:10px;padding:3px 10px;cursor:pointer}
 #rot{display:none;position:fixed;inset:0;z-index:999;background:#06160f;color:#eafff2;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;font-weight:700}
 #rot i{font-style:normal;font-size:54px;display:block;animation:rotp 1.6s ease-in-out infinite}
 @keyframes rotp{0%,30%{transform:rotate(0)}70%,100%{transform:rotate(-90deg)}}
