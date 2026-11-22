@@ -673,8 +673,8 @@ const SOLO = {
   machi: { type: 'tank', title: '重裝・堅守反彈', short: '撐過三波，打倒大魔王', goal: '站穩當坦克：兩位支援圍著你一直補血，所有怪物都只會打你。怪物會越打越快（狂怒），而且打得越快，反彈給他們的傷害就越痛！撐過兩波，打倒第三波的大魔王過關' },
   noise: { type: 'rush', title: '突襲・四面楚歌', short: '擊倒 50 隻怪物', total: 50, goal: '怪物會從四面八方朝你衝來，擊倒 50 隻怪物過關' },
   anna: { type: 'sniper', title: '狙擊・定點守備', short: '擊倒 50 隻怪物', total: 50, goal: '在西北角一塊圓形空地內可以走動、跳躍，北側有小平台（沿階梯走上去，視野更好）。怪物從兩道走來（東邊長走道、南邊直道），進空地後會先左右遊走，再衝向你。按右鍵開狙擊鏡，擊倒 50 隻過關' },
-  amber: { type: 'escort', title: '補給・推桌三階段', short: '幫重裝把桌子推到終點', goal: '重裝隊友要把一張辦公桌推到終點，分三個階段。每個階段會出現一波怪物：幫他清怪、對他射擊補血，別讓他倒下，三個階段全部完成過關' },
-  leona: { type: 'escort', title: '治療・推桌三階段', short: '幫重裝把桌子推到終點', goal: '重裝隊友要把一張辦公桌推到終點，分三個階段。每個階段會出現一波怪物：幫他清怪、左鍵牽補血線替他回血，別讓他倒下，三個階段全部完成過關' },
+  amber: { type: 'escort', title: '補給・推桌三階段', short: '護送重裝推桌穿過三道閘門', goal: '重裝隊友要把辦公桌推過一條蜿蜒的走道，沿途有三道閘門。每道閘門前會湧出一波怪物：幫他清怪、對他射擊補血，清完怪閘門才會打開，三道閘門都通過才過關' },
+  leona: { type: 'escort', title: '治療・推桌三階段', short: '護送重裝推桌穿過三道閘門', goal: '重裝隊友要把辦公桌推過一條蜿蜒的走道，沿途有三道閘門。每道閘門前會湧出一波怪物：幫他清怪、左鍵牽補血線替他回血，清完怪閘門才會打開，三道閘門都通過才過關' },
 };
 let pve = null;
 const MONS = {
@@ -743,10 +743,10 @@ function tankThink(a, dt) {   // 護送關的重裝隊友：沿著道路慢慢�
   const wait = (near && nd < 3.2) || (me && !me.dead && Math.hypot(me.x - a.x, me.z - a.z) > 22) || !pve.stOn || pve.ri > pve.ends[pve.stage]; let mx = 0, mz = 0;
   const RT = pve.route; for (let j = RT.length - 1; j >= pve.ri; j--) if (Math.hypot(RT[j][0] - a.x, RT[j][1] - a.z) < 1.8) { pve.ri = Math.min(RT.length - 1, j + 1); break; }
   if (!wait) { if (a.thk <= 0) { a.thk = .6; const tg = RT[pve.ri]; a.path = astar(a.x, a.z, tg[0], tg[1]); } if (a.path.length) { const ps = pathStep(a); mx = ps[0]; mz = ps[1]; } else { const tg = RT[pve.ri], dx = tg[0] - a.x, dz = tg[1] - a.z, dd = Math.hypot(dx, dz) || 1; mx = dx / dd; mz = dz / dd; } if (mx || mz) a.yaw = Math.atan2(-mx, -mz); }
-  const sp = a.hero.speed * .27; a.vx += (mx * sp - a.vx) * Math.min(1, dt * 8); a.vz += (mz * sp - a.vz) * Math.min(1, dt * 8);
+  const sp = a.hero.speed * .15; a.vx += (mx * sp - a.vx) * Math.min(1, dt * 8); a.vz += (mz * sp - a.vz) * Math.min(1, dt * 8);
 }
 // 道路、關卡、終點
-function clearPveObjs() { if (pve && pve.nestBoxes) for (const b of pve.nestBoxes) { const i = BOXES.indexOf(b); if (i >= 0) BOXES.splice(i, 1); } if (pve && pve.objs) { for (const o of pve.objs) { scene.remove(o); } for (const g of (pve.gates || [])) { const i = BOXES.indexOf(g.box); if (i >= 0) BOXES.splice(i, 1); } } ptRing.visible = ptDisc.visible = ptBeam.visible = !pve; }
+function clearPveObjs() { if (pve && pve.mazeBoxes) for (const b of pve.mazeBoxes) { const i = BOXES.indexOf(b); if (i >= 0) BOXES.splice(i, 1); markGrid(b, 0); } if (pve && pve.nestBoxes) for (const b of pve.nestBoxes) { const i = BOXES.indexOf(b); if (i >= 0) BOXES.splice(i, 1); } if (pve && pve.objs) { for (const o of pve.objs) { scene.remove(o); } for (const g of (pve.gates || [])) { const i = BOXES.indexOf(g.box); if (i >= 0) BOXES.splice(i, 1); } } ptRing.visible = ptDisc.visible = ptBeam.visible = !pve; }
 function addPveObj(o) { pve.objs.push(o); scene.add(o); return o; }
 function pveLabel(txt, col, x, y, z, sc) { const t = canvasTex(512, 128, (g, w, h) => { g.fillStyle = 'rgba(8,10,14,.8)'; g.fillRect(0, 0, w, h); g.strokeStyle = col; g.lineWidth = 6; g.strokeRect(3, 3, w - 6, h - 6); g.fillStyle = col; g.font = '900 64px "Noto Sans TC",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, w / 2, h / 2 + 4); }); const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false })); s.scale.set(sc * 4, sc, 1); s.position.set(x, y, z); return addPveObj(s); }
 function buildNest() {   // 狙擊關：西北角一塊完全沒有隔板的圓形空地（半徑 6），圓內可以走動、跳躍；北側有一座小平台（階梯 0.5／1.0 公尺，台面 1.5 公尺）
@@ -786,8 +786,8 @@ function setupPve() {
     [['noise', -5, -3], ['anna', 5, 3]].forEach(([id, bx, bz]) => { const a = makeActor(HERO_BY[id], 0, false, HERO_BY[id].char); a.pveBuddy = true; a.bot = { react: 0, strafe: 1, strafeT: 0, think: 0, seen: 0, patrol: null, abT: rand(1, 3) }; actors.push(a); respawn(a); const p = nearestFree(bx, bz); place(a, p[0], p[1]); a.yaw = 0; });
     { const p = nearestFree(0, 7.5); place(me, p[0], p[1]); }
   } else if (pve.type === 'escort') {
-    buildLoop(); pve.ends = [5, 10, pve.route.length - 1]; pve.stage = 0; pve.left = 0; pve.stT = 2; pve.stOn = false; buildDesk();
-    { const p0 = pve.route[0]; place(me, p0[0] + 1.6, p0[1] + 1.8); const t = makeActor(HERO_BY.machi, 0, false, 'Machi'); t.pveTank = true; t.bot = null; t.name = '重裝隊友'; t.maxHp = 700; actors.push(t); respawn(t); t.maxHp = 700; t.hp = 700; place(t, p0[0], p0[1]); pve.tank = t; }
+    buildMaze(); pve.stage = 0; pve.left = 0; pve.stT = 3; pve.stOn = false; buildDesk();
+    { const p0 = pve.route[0]; place(me, p0[0] + 1.6, p0[1] + .8); const t = makeActor(HERO_BY.machi, 0, false, 'Machi'); t.pveTank = true; t.bot = null; t.name = '重裝隊友'; t.maxHp = 700; actors.push(t); respawn(t); t.maxHp = 700; t.hp = 700; place(t, p0[0], p0[1]); pve.tank = t; }
   } else if (pve.type === 'sniper') { buildNest(); place(me, NEST.x + 2, NEST.z + .5); }
   else { place(me, 0, 0); }
   yaw = me.yaw = pve.type === 'rush' ? 0 : pve.type === 'rescue' ? Math.PI : pve.type === 'escort' ? Math.PI / 2 : -Math.PI / 2; pitch = me.pitch = 0;
@@ -815,6 +815,26 @@ function buildDesk() {   // 重裝推的辦公桌
   box(2.4, .14, 1.1, 0xc98f4e, 0, .78, 0); for (const [x, z] of [[-1.05, -.4], [1.05, -.4], [-1.05, .4], [1.05, .4]]) box(.12, .72, .12, 0x555b6e, x, .36, z); box(.7, .5, .06, 0x23262f, 0, 1.1, -.2);
   addPveObj(g); pve.desk = g;
 }
+function markGrid(b, v) { const pad = .45; for (let gx = Math.floor(b.x0 - pad + HALF); gx <= Math.floor(b.x1 + pad + HALF); gx++) for (let gz = Math.floor(b.z0 - pad + HALF); gz <= Math.floor(b.z1 + pad + HALF); gz++) if (gx >= 0 && gz >= 0 && gx < GN && gz < GN) grid[gz * GN + gx] = v; }
+function mazeBox(x0, x1, z0, z1, h, col) {   // 會擋人、擋路徑的牆
+  const b = { x0, x1, z0, z1, h, y0: 0 }; BOXES.push(b); pve.mazeBoxes.push(b); markGrid(b, 1);
+  const w = x1 - x0, d = z1 - z0, m = mk(new THREE.BoxGeometry(w, h, d), lam(col)); m.position.set((x0 + x1) / 2, h / 2, (z0 + z1) / 2); addPveObj(m);
+  const e = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(w + .02, h + .02, d + .02)), new THREE.LineBasicMaterial({ color: 0x000000 })); e.position.copy(m.position); addPveObj(e); return b;
+}
+function buildMaze() {   // 護送關：西北角空地砌成三排蛇行走道，出口接長走道，沿途三道閘門
+  pve.mazeBoxes = [];
+  mazeBox(-17.6, -17.2, -27.7, -15.5, 1.3, 0x9aa6b8); mazeBox(-17.2, -6.6, -23.7, -23.3, 1.3, 0x7f93b8); mazeBox(-14.6, -3.5, -19.7, -19.3, 1.3, 0x7f93b8); mazeBox(-3.9, -3.5, -27.7, -19.7, 1.3, 0x9aa6b8); mazeBox(-17.2, -3.5, -15.9, -15.5, 1.3, 0x9aa6b8);
+  const pts = [[-16.2, -25.5], [-4.9, -25.5], [-4.9, -21.5], [-16.2, -21.5], [-16.2, -17.5], [-3, -17.5], [16, -17.5]], route = [pts[0]], cum = [0]; let tot = 0;
+  for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]), k = Math.max(1, Math.round(L / 2)); for (let j = 1; j <= k; j++) { const q = [a[0] + (b[0] - a[0]) * j / k, a[1] + (b[1] - a[1]) * j / k]; tot += L / k; route.push(q); cum.push(tot); } }
+  pve.route = route; pve.ri = 1; const idxAt = d => { let bi = 0; for (let i = 0; i < cum.length; i++) if (Math.abs(cum[i] - d) < Math.abs(cum[bi] - d)) bi = i; return bi; }; pve.ends = [idxAt(21), idxAt(tot * .67), route.length - 1]; pve.gates = [];
+  // 地板導引箭頭
+  for (let i = 0; i < route.length - 1; i++) { const a = route[i], b = route[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], g = new THREE.Group(), pl = mk(new THREE.PlaneGeometry(.9, .45), new THREE.MeshBasicMaterial({ color: 0x5ef0a4, transparent: true, opacity: .6, depthWrite: false })); pl.rotation.x = -Math.PI / 2; g.add(pl); g.position.set((a[0] + b[0]) / 2, .04, (a[1] + b[1]) / 2); g.rotation.y = Math.atan2(-dz, dx); addPveObj(g); }
+  // 三道閘門
+  pve.ends.forEach((ri, gi) => { const p = route[ri], gx = p[0] + .7, gz = p[1], box = mazeBox(gx - .25, gx + .25, gz - 1.9, gz + 1.9, 3, 0xff4b3e); const mesh = pve.objs[pve.objs.length - 2]; mesh.material = new THREE.MeshBasicMaterial({ color: 0xff4b3e, transparent: true, opacity: .45, blending: THREE.AdditiveBlending, depthWrite: false });
+    const post = (zz) => { const m = mk(new THREE.BoxGeometry(.5, 3.4, .5), lam(0x444a58)); m.position.set(gx, 1.7, zz); addPveObj(m); return m; }; const pa = post(gz - 2), pb = post(gz + 2);
+    const lbl = pveLabel(['第一道閘門', '第二道閘門', '第三道閘門（終點）'][gi], '#ff8f84', gx, 4.3, gz, 1.0); pve.gates.push({ i: gi + 1, ri, box, mesh, pa, pb, lbl }); });
+}
+function openGate(g) { const i = BOXES.indexOf(g.box); if (i >= 0) BOXES.splice(i, 1); markGrid(g.box, 0); g.mesh.visible = false; g.lbl.visible = false; g.pa.material.color.setHex(0x5ef0a4); g.pb.material.color.setHex(0x5ef0a4); }
 function nearestFree(x, z) { if (!blocked(x, z, 0)) return [x, z]; for (let rr = 1; rr < 6; rr += .5) for (let a = 0; a < 360; a += 30) { const px = x + rr * Math.cos(a * Math.PI / 180), pz = z + rr * Math.sin(a * Math.PI / 180); if (!blocked(px, pz, 0)) return [px, pz]; } return [x, z]; }
 function buildLoop() {
   const corners = [[-16.5, -25.5], [-4.5, -25.5], [-4.5, -21], [-16.5, -21], [-16.5, -16.8], [-4.5, -16.8]], route = [corners[0]]; for (let i = 0; i < corners.length - 1; i++) { const a = corners[i], b = corners[i + 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]), k = Math.max(1, Math.round(L / 3)); for (let j = 1; j <= k; j++) route.push([a[0] + (b[0] - a[0]) * j / k, a[1] + (b[1] - a[1]) * j / k]); } pve.route = route; pve.ri = 1;   // 地圖西北角一塊 13×10 公尺、沒有任何隔板的空地：蛇行走三排
@@ -829,7 +849,7 @@ function pveHud() {
   $('pveM').hidden = true; $('pveH').textContent = '';
   if (P.type === 'rescue') { const bd = actors.filter(a => a.pveBuddy && a.down), left = P.left + mons0().length; txt = '第 ' + Math.max(1, P.wi + 1) + '／3 波　剩餘怪物 ' + left + '　' + tm; f = clamp(P.kills / 54, 0, 1); $('pveH').textContent = bd.length ? bd.map(a => '⚠ ' + a.name + ' 倒地 ' + Math.max(0, Math.ceil(a.downT)) + ' 秒（距離 ' + Math.round(Math.hypot(a.x - me.x, a.z - me.z)) + ' 公尺）').join('　') : '保護兩位輸出隊友：靠近他們把怪物吸過來'; }
   else if (P.type === 'tank') { const boss = actors.find(a => a.mon === 'boss' && !a.dead), left = P.left + mons0().length; txt = '第 ' + Math.max(1, P.wi + 1) + '／3 波　剩餘怪物 ' + left + '　' + tm; f = boss ? clamp(1 - boss.hp / boss.maxHp, 0, 1) : clamp(P.kills / 42, 0, 1); $('pveH').textContent = '怪物攻速 ×' + (1 + P.rage).toFixed(1) + '　反彈傷害 ×' + (1 + 3.5 * P.rage).toFixed(1) + (boss ? '　大魔王血量 ' + Math.max(0, Math.round(boss.hp / boss.maxHp * 100)) + '%' : ''); }
-  else if (P.type === 'escort') { const t = P.tank; f = clamp((P.ri - 1) / (P.route.length - 2), 0, 1); txt = '階段 ' + (P.stage + 1) + '／3　' + (P.stOn ? '剩餘怪物 ' + (P.left + mons0().length) : '準備中') + '　重裝血量 ' + Math.max(0, Math.round(t.hp / t.maxHp * 100)) + '%　' + tm; }
+  else if (P.type === 'escort') { const t = P.tank; f = clamp((P.ri - 1) / (P.route.length - 2), 0, 1); txt = '第 ' + (P.stage + 1) + ' 道閘門　' + (P.stOn ? '剩餘怪物 ' + (P.left + mons0().length) : '推進中') + '　重裝血量 ' + Math.max(0, Math.round(t.hp / t.maxHp * 100)) + '%　' + tm; }
   else { f = clamp(P.kills / P.total, 0, 1); txt = '擊倒 ' + Math.min(P.kills, P.total) + '／' + P.total + '　' + tm; }
   $('pveT').textContent = txt; $('pveB').style.width = (f * 100) + '%';
 }
@@ -853,9 +873,10 @@ function pveStep(dt) {
     if (P.kills >= P.total) pveEnd(true);
   } else if (P.type === 'escort') {
     const t = P.tank; P.spawnT -= dt;
-    if (!P.stOn) { P.stT -= dt; if (P.stT <= 0) { P.stOn = true; P.left = [12, 18, 24][P.stage]; banner('階段 ' + (P.stage + 1) + '／3', '幫重裝清怪、補血，他會把桌子往前推', 1800); SFX.beep(); } }
-    else { if (P.left > 0 && P.spawnT <= 0 && mons.length < Math.round(10 * diff)) { P.spawnT = .7 / diff; P.left--; let p = freeSpot(-17.5, -3.5, -26.5, -16); for (let k = 0; k < 8 && Math.hypot(p[0] - t.x, p[1] - t.z) < 9; k++) p = freeSpot(-17.5, -3.5, -26.5, -16); spawnMon(pickKind({ grunt: .65, runner: .2, brute: P.stage > 0 ? .15 : 0 }), p[0], p[1]); }
-      if (P.left === 0 && mons.length === 0 && Math.hypot(P.route[P.ends[P.stage]][0] - t.x, P.route[P.ends[P.stage]][1] - t.z) < 2.2) { if (P.stage >= 2) pveEnd(true); else { banner('階段 ' + (P.stage + 1) + ' 完成', '準備下一個階段', 1500); P.stage++; P.stOn = false; P.stT = 3; } } }
+    if (!P.stOn) { P.stT -= dt; if (P.stT <= 0) { P.stOn = true; P.left = [20, 28, 38][P.stage]; banner('第 ' + (P.stage + 1) + ' 道閘門', '閘門前湧出怪物！幫重裝清怪、補血', 2000); SFX.beep(); } }
+    else { const g = P.gates[P.stage];
+      if (P.left > 0 && P.spawnT <= 0 && mons.length < Math.round(10 * diff)) { P.spawnT = .65 / diff; P.left--; const behind = Math.random() < .22, ri = behind ? Math.max(0, P.ri - 3 - Math.floor(Math.random() * 3)) : Math.min(g.ri - 1, P.ri + 3 + Math.floor(Math.random() * 6)), q = P.route[Math.max(0, ri)]; let p = [q[0] + rand(-.5, .5), q[1] + rand(-.7, .7)]; if (blocked(p[0], p[1], 0)) p = [q[0], q[1]]; spawnMon(pickKind({ grunt: .62, runner: .22, brute: P.stage > 0 ? (P.stage > 1 ? .24 : .14) : 0 }), p[0], p[1]); }
+      if (P.left === 0 && mons.length === 0 && Math.hypot(P.route[g.ri][0] - t.x, P.route[g.ri][1] - t.z) < 2.4) { openGate(g); if (P.stage >= 2) pveEnd(true); else { banner('第 ' + (P.stage + 1) + ' 道閘門打開了', '繼續往前推', 1700); SFX.beep(); P.stage++; P.stOn = false; P.stT = 3.5; } } }
     if (P.desk) { const f = fwd(t); P.desk.position.set(t.x + f[0] * 1.7, 0, t.z + f[1] * 1.7); P.desk.rotation.y = t.yaw; }
   } else if (P.type === 'rescue') {
     P.spawnT -= dt; const wv = P.waves[P.wi];
