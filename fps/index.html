@@ -1324,8 +1324,8 @@ addEventListener('keydown', e => { if (e.code === 'Tab') { e.preventDefault(); c
 addEventListener('keyup', e => { keys[e.code] = false; if (e.code === 'Tab') { e.preventDefault(); showSB(false); } });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; hold.fire = false; showSB(false); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { for (const k in keys) keys[k] = false; hold.fire = false; showSB(false); } });
-cv.addEventListener('mousedown', e => { unlock(); if (state === 'play' && !locked && lockFail && !touch) { try { const p = cv.requestPointerLock && cv.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (x) {} } if (state === 'play' && me && me.dead && e.button === 0) nextSpec(1); if (state === 'play' && !locked && !lockFail && !touch) { askLock(); return; } if (e.button === 0) hold.fire = true; if (e.button === 2) setZoom(true); });
-addEventListener('mouseup', e => { if (e.button === 0) hold.fire = false; if (e.button === 2) setZoom(false); });
+cv.addEventListener('mousedown', e => { unlock(); if (state === 'play' && !locked && lockFail && !touch) { try { const p = cv.requestPointerLock && cv.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (x) {} } if (state === 'play' && me && me.dead && e.button === 0) nextSpec(1); if (state === 'play' && !locked && !lockFail && !touch) { askLock(); return; } if (e.button === 0) hold.fire = true; if (e.button === 2) setZoom(me && me.hero.id === 'anna' ? !zoom : true); });   // 狙擊（Anna）：右鍵按一下開鏡、再按一下關鏡
+addEventListener('mouseup', e => { if (e.button === 0) hold.fire = false; if (e.button === 2 && !(me && me.hero.id === 'anna')) setZoom(false); });
 cv.addEventListener('contextmenu', e => e.preventDefault());
 let lockFail = false;
 function askLock() { try { const p = cv.requestPointerLock && cv.requestPointerLock(); if (p && p.catch) p.catch(() => { setFail(); }); } catch (e) { setFail(); } clearTimeout(askLock.t); askLock.t = setTimeout(() => { if (!locked && state !== 'menu' && state !== 'over') setFail(); }, 900); }
