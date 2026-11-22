@@ -2998,6 +2998,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (message.length > 60) throw new Error('對話最多 60 個字');
       state.message = message;
     }
+    // 元宇宙等級與連續上線天數（只顯示用，由前端算好送來；限制範圍避免亂值）
+    if ('lv' in patch) { const lv = Math.floor(Number(patch.lv)); if (!Number.isFinite(lv) || lv < 1 || lv > 999) throw new Error('等級不正確'); state.lv = lv; }
+    if ('streak' in patch) { const streak = Math.floor(Number(patch.streak)); if (!Number.isFinite(streak) || streak < 0 || streak > 9999) throw new Error('連續天數不正確'); state.streak = streak; }
     if ('mood' in patch) {
       const mood = text(patch.mood);
       if (!['', 'happy', 'angry', 'sad', 'joy'].includes(mood)) throw new Error('心情不正確');

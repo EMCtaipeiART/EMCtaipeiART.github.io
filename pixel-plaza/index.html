@@ -440,7 +440,8 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 .hp-clock{margin-bottom:0!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.3),0 6px 12px rgba(0,0,0,.25)!important}   /* 時間欄不要厚度 */
 .hp-card::after,.hp-clock::after{content:'';position:absolute;left:14px;right:14px;top:4px;height:32%;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.35),rgba(255,255,255,0));pointer-events:none}
 .hp-card{position:absolute}
-.hp-av.fr1{background:linear-gradient(135deg,#9af5b4,#12917f)!important}.hp-av.fr2{background:linear-gradient(135deg,#fff0a8,#e8a21f)!important}.hp-av.fr3{background:conic-gradient(#ffd75e,#7af09b,#4fc3f7,#ffd75e)!important}.hp-av.fr4{background:conic-gradient(#fff6c8,#f2a93b,#fff,#f2a93b,#fff6c8)!important}.hp-av.hot{box-shadow:0 0 0 2px rgba(255,200,60,.9),0 0 12px rgba(255,170,40,.8)!important}
+.hp-av.fr1{background:linear-gradient(135deg,#9af5b4,#12917f)!important}.hp-av.fr2{background:linear-gradient(135deg,#fff0a8,#e8a21f)!important}.hp-av.fr3{background:conic-gradient(#ffd75e,#7af09b,#4fc3f7,#ffd75e)!important}.hp-av.fr4{background:conic-gradient(#fff6c8,#f2a93b,#fff,#f2a93b,#fff6c8)!important}.cui-lv{font-size:10px;font-weight:700;color:#0b6a2b;margin-left:2px}.cui-tag.fr1{border-color:#12917f}.cui-tag.fr2{border-color:#e8a21f}.cui-tag.fr3{border-color:#4fc3f7}.cui-tag.fr4{border-color:#f2a93b;background:#fff6d8}.cui-tag.hot{box-shadow:0 0 8px rgba(255,170,40,.8)}
+.hp-av.hot{box-shadow:0 0 0 2px rgba(255,200,60,.9),0 0 12px rgba(255,170,40,.8)!important}
 .hp-av{background:radial-gradient(circle at 32% 26%,#fff 0 6%,transparent 30%),linear-gradient(135deg,#ffd75e,#ffa61f)!important;box-shadow:0 3px 0 rgba(0,0,0,.2)}
 .hp-st{background:rgba(0,0,0,.2)!important}
 .hp-exp{border:0!important;background:rgba(0,0,0,.3)!important;box-shadow:inset 0 2px 0 rgba(0,0,0,.25)}
@@ -1890,6 +1891,7 @@ addEventListener('pagehide', () => { try { if (player && live.ok) { const l = la
     if (l && meName()) { try { localStorage.setItem('pixelLast' + progScope, JSON.stringify(l)); } catch (e) {} navigator.sendBeacon(API, JSON.stringify({action:'pixelOfficeProgress', name:meName(), op:'save', progress:{dex, stat, last:l}})); } } } catch (e) {} });
 function remoteFromState(c, e){
   if (c === player) return;
+  c.lv = Number.isFinite(e.lv) ? e.lv : 0; c.streak = Number.isFinite(e.streak) ? e.streak : 0;   // 同事的等級與連續上線天數（名牌顯示用）
   const stale = e.floor4At && Date.now() - e.floor4At >= REMOTE_STALE_MS, away = ['toilet', 'meeting'].includes(c.status) || ['toilet', 'meeting'].includes(e.status);   // 人已離線（久沒回報）但狀態是廁所／會議：不要再用舊位置把人放回座位，交給狀態安排
   const fresh = e.floor4At && Date.now() - e.floor4At < REMOTE_PARK_MS && Number.isFinite(e.f4x) && Number.isFinite(e.f4y) && !(stale && away);
   if (fresh) {
@@ -3000,7 +3002,8 @@ function updatePlate(){
   if (!c || !(c.holder.visible || AWAY.has(c.status))) { plate.style.display = 'none'; return; }
   const p = c.holder.position.clone(); p.y = .05; p.project(camera);
   if (p.z >= 1) { plate.style.display = 'none'; return; }
-  const st = STATUS[c.status] || STATUS.present, html = esc(c.name + '（' + statusLabel(c) + '）');
+  const st = STATUS[c.status] || STATUS.present, lvi = lvInfo(c), html = esc(c.name + '（' + statusLabel(c) + '）') + (lvi ? '<span class="cui-lv">Lv.' + lvi.lv + '・' + esc(lvi.title) + (lvi.streak >= 2 ? '・連續' + lvi.streak + '天' : '') + '</span>' : '');
+  plate.className = 'cui-tag' + (lvi ? ' fr' + lvi.frame + (lvi.streak >= 5 ? ' hot' : '') : '');
   if (plate.dataset.h !== html) { plate.innerHTML = html; plate.dataset.h = html; }
   plate.style.display = 'inline-flex'; plate.style.transform = 'translate(-50%,6px) translate(' + ((p.x * .5 + .5) * innerWidth) + 'px,' + ((-p.y * .5 + .5) * innerHeight) + 'px)';
 }
@@ -3169,6 +3172,15 @@ function streakTouch(){
   if (!o || !o.last) o = {last:day, n:1}; else if (o.last !== day) { const gap = Math.round((Date.parse(day) - Date.parse(o.last)) / 86400000); o = {last:day, n:gap === 1 ? (o.n || 0) + 1 : 1}; }
   try { localStorage.setItem(key, JSON.stringify(o)); } catch (e) {} streak = o.n;
 }
+const lvInfo = c => {   // 名牌用：自己從本機算，同事用後端同步來的 lv／streak
+  const lv = c === player ? 1 + Math.floor((stat.found + stat.notes + stat.flush) / 5) : c.lv, st = c === player ? streak : (c.streak || 0); if (!lv) return null;
+  return {lv, streak:st, frame:lvFrame(lv), title:(st >= 10 ? '全勤・' : '') + lvTitle(lv)};
+};
+let lvSent = '', lvSentAt = 0;
+function lvSync(lv){   // 等級或連續天數變了就同步到後端，讓同事看得到；失敗 1 分鐘後再試
+  if (!live.ok || !player || progCloud === null) return; const key = lv + ':' + streak; if (key === lvSent && Date.now() - lvSentAt < 3600000) return;
+  if (key !== lvSent || Date.now() - lvSentAt > 60000) { lvSent = key; lvSentAt = Date.now(); post({action:'pixelOfficeUpdate', name:player.name, patch:{lv, streak}}).catch(() => { lvSentAt = Date.now() - 3540000; }); }
+}
 let streakDone = false, lvSeen = null;   // 上一次看到的等級；登入後第一次讀到雲端進度時只記錄，不觸發特效
 function updateHud(){
   const c = player;
@@ -3178,6 +3190,7 @@ function updateHud(){
   $('pSt').innerHTML = iconImg(symOf[c.status] || 'person', 18) + ' ' + statusLabel(c) + (c.mood ? '　' + iconImg(moodSym[c.mood], 16) : '');
   if (progCloud !== null) { if (lvSeen == null) lvSeen = lv; else if (lv > lvSeen) { lvSeen = lv; levelUpFx(c); lvBroadcast(lv); } }
   $('pExp').style.width = ((total % 5) / 5 * 100) + '%'; if (progCloud !== null && !streakDone) { streakDone = true; streakTouch(); }
+  lvSync(lv);
   const ttl = (streak >= 10 ? '全勤・' : '') + lvTitle(lv), av = $('pAv'); av.className = 'hp-av fr' + lvFrame(lv) + (streak >= 5 ? ' hot' : '');
   $('pLv').innerHTML = 'Lv.' + lv + '・' + ttl + '<br>圖鑑 ' + (dex.d.length + dex.n.length) + '/' + (DROP_IDS.length + NOTE_IDS.length) + (streak >= 2 ? '・連續上線 ' + streak + ' 天' : '');
   $('pClock').textContent = '🕒 ' + fmtTime.format(new Date()).replace(/^(\S+)\s+(\S+)$/, '$2 $1') + '（台北）' + (player ? '・' + floorOf(player) + 'F' : ''); updateTitleNet();
