@@ -150,7 +150,7 @@ h3{margin:16px 0 0;font-size:17px}
 #stage:not(.live) #party,#stage:not(.live) #topbar{display:none}
 #tutP{position:absolute;left:10px;top:48px;z-index:7;max-width:42%;display:flex;flex-direction:column;align-items:flex-start;gap:4px;background:rgba(8,24,16,.9);border:2px solid #ffd166;border-radius:10px;padding:6px 10px;color:#eafff2;font-size:12px;line-height:1.4}
 #tutS{color:#ffd166;font-size:12px} #tutT{font-size:13px;font-weight:700} #tutSkip{font-size:11px;padding:2px 8px;border-width:2px}
-.pk.tut-hl,#gauge.tut-hl{box-shadow:0 0 0 3px #ffd166,0 0 18px 5px rgba(255,209,102,.95);animation:tzp .7s ease-in-out infinite;position:relative;z-index:70}
+.pk.tut-hl,#gauge.tut-hl,#fsMenu.tut-hl{box-shadow:0 0 0 3px #ffd166,0 0 18px 5px rgba(255,209,102,.95);animation:tzp .7s ease-in-out infinite;position:relative;z-index:70}
 .card.tut-hl{box-shadow:0 0 0 4px #ffd166,0 0 22px 6px rgba(255,209,102,.9);animation:tzp .7s ease-in-out infinite;position:relative;z-index:4}
 #deliver.tut-hl{box-shadow:0 0 0 4px #fff,0 0 24px 8px rgba(255,209,102,.95)}
 html.fsm #tutP{top:52px;max-width:34%;padding:4px 8px;font-size:10px} html.fsm #tutT{font-size:11px}
@@ -1734,7 +1734,7 @@ function tutSay(lines) { return new Promise(res => { if (!tut || tut.aborted) re
 function tutWaitEv(test, ms) { return new Promise(res => { if (!tut || tut.aborted) return res(false); const w = { test, res }; tut.wait = w; if (ms) setTimeout(() => { if (tut && tut.wait === w) { tut.wait = null; res(false); } }, ms); }); }
 function tutWaitCond(fn, ms) { return new Promise(res => { const t0 = Date.now(), iv = setInterval(() => { if (!tut || tut.aborted) { clearInterval(iv); res(false); } else if (fn()) { clearInterval(iv); res(true); } else if (ms && Date.now() - t0 > ms) { clearInterval(iv); res(false); } }, 200); }); }
 function tutTask(step, text) { if (!tut) return; $('tutS').textContent = step; tut.tip = text; $('tutT').textContent = text; }
-function tutHl(id) { Object.keys(cards).forEach(k => cards[k].el.classList.toggle('tut-hl', k === id)); $('deliver').classList.toggle('tut-hl', id === 'deliver'); $('gauge').classList.toggle('tut-hl', id === 'gauge'); ['spdB', 'autoB', 'pauseB', 'muteB', 'musicB'].forEach(b => $(b).classList.toggle('tut-hl', b === id)); }
+function tutHl(id) { Object.keys(cards).forEach(k => cards[k].el.classList.toggle('tut-hl', k === id)); $('deliver').classList.toggle('tut-hl', id === 'deliver'); $('gauge').classList.toggle('tut-hl', id === 'gauge'); $('fsMenu').classList.toggle('tut-hl', id === 'fsMenu'); ['spdB', 'autoB', 'pauseB', 'muteB', 'musicB'].forEach(b => $(b).classList.toggle('tut-hl', b === id)); }
 function tutWaitClick(id) { return new Promise(res => { const el = $(id), h = () => { el.removeEventListener('click', h); res(true); }; el.addEventListener('click', h); }); }
 const T_INTRO = [
   SYS('歡迎來到設計部遠征隊！這是新手教學。五位同事會各自在一個小場景裡示範，輔助型的同事會帶一位隊友搭配。（隨時可以按左上角「跳過教學」）'),
@@ -1769,6 +1769,8 @@ const TUT_HERO = {
     ultLines: [['Leona', '敵人有時會讓隊友「混亂」或「拖延」：混亂時不能累積必殺能量、也不能放技能，卡片會變紫色。', L_], SYS('現在讓 Anna 陷入混亂（卡片變紫色），再用 Leona 的必殺救她。必殺「重新對齊」：全隊回血 35%、清除混亂和拖延，之後 6 秒內免疫。')],
     after: [['Leona', '混亂解除了。淨化這一格也亮了。', L_]] },
 };
+const T_MOB = [SYS('手機操作說明：用手指點就可以玩，不需要鍵盤。'), ['Leona', '點畫面下方的角色卡片，就能放出那位同事的必殺。', L_], ['Machi', '直拿手機時畫面會自動轉成橫式，你也可以直接把手機橫放。左上角的「選單」可以展開速度、自動必殺、暫停和聲音按鈕。', M_], ['Noise', 'Boss 讀條的時候，要用手指快速連點畫面任何地方來斷招！', N_]];
+const T_PC = [['Leona', '電腦玩家也可以用鍵盤：1～5 對應下方五張角色卡片，空白鍵是「準時交付」；Boss 讀條時用滑鼠快速連點畫面。', L_]];
 const T_FINAL = [SYS('最後兩課：五位同事一起上場，學會協作條和 Boss 讀條。')];
 const T_GAUGE = [SYS('看畫面下方的「團隊協作條」：保護、破防、弱點擊破、範圍控制、淨化，五格都亮了。'), ['Machi', '每一格由一位同事點亮：保護＝我的必殺、破防＝Noise 的主動技、弱點擊破＝Anna 的必殺打中標記、範圍控制＝Amber 的必殺、淨化＝Leona 的必殺清除混亂。', M_], ['Machi', '集滿五格，「準時交付」就會亮起：對全場造成大量真實傷害，全隊回 25% 血；Boss 血量低於 25% 時還能直接終結它。', M_], SYS('現在協作條已滿，按「準時交付」（或空白鍵）試試看。')];
 const T_BTN = [SYS('最後補充：畫面上方的幾顆按鈕。'), ['Leona', '「自動必殺」：打開後，系統會幫你在適當的時機放必殺，也會自動幫忙連點斷招。想自己掌握時機就把它關掉。', L_], ['Machi', '「速度 1×／2×」：把戰鬥加速兩倍，熟練之後可以省時間。', M_], ['Noise', '「暫停」可以隨時停下來想一想；「音效」和「音樂」可以分別開關聲音。', N_], SYS('現在換你試試：先點「速度」，再點「自動必殺」。')];
@@ -1779,7 +1781,7 @@ async function runTutorial(thenCamp) {
   tut = { thenCamp, aborted: false, wait: null, tip: '' }; autoOn = false; { const b = $('autoB'); b.textContent = '自動必殺：關'; b.classList.add('off'); }
   $('tutP').hidden = false; tutTask('新手教學', '');
   const ok = () => !!tut && !tut.aborted;
-  await tutSay(T_INTRO);
+  await tutSay(T_INTRO.slice(0, 3).concat(FSM ? T_MOB : T_PC, T_INTRO.slice(3)));
   const ids = ['machi', 'noise', 'anna', 'amber', 'leona'];
   for (let i = 0; i < ids.length && ok(); i++) {
     const id = ids[i], L = TUT_HERO[id], step = '教學 ' + (i + 1) + '／8｜' + Core.HERO[id].name;
@@ -1791,29 +1793,30 @@ async function runTutorial(thenCamp) {
     if (!ok()) break;
     if (L.prep2) L.prep2(h);
     if (L.ultLines) { await tutSay(L.ultLines); if (!ok()) break; }
-    h.energy = 100; tutHl(id); tutTask(step, '點下方 ' + (i + 1) + ' 號卡片（或按鍵盤 ' + (i + 1) + '），放出必殺「' + Core.HERO[id].ult + '」');
+    h.energy = 100; tutHl(id); tutTask(step, '點下方 ' + (i + 1) + ' 號卡片' + (FSM ? '' : '（或按鍵盤 ' + (i + 1) + '）') + '，放出必殺「' + Core.HERO[id].ult + '」');
     await tutWaitEv(e => e.type === 'cast' && e.ult && e.src === id, 0); tutHl(null);
     if (ok()) { await sleep(1800); await tutSay(L.after); }
   }
   if (ok()) { tutTask('教學 6／8', '換場景…'); await tutScene([ids, ['dummy', 'dummy', 'tarmor', 'tback']]); if (ok()) await tutSay(T_FINAL); }
   if (ok()) {
     for (const k of Core.FLAGS) S.gauge[k] = true;   // 協作條補滿（每位同事的必殺各點亮一格）
-    const step = '教學 6／8｜協作條'; tutTask(step, '聽 Machi 說明下方的團隊協作條'); tutHl('gauge'); await tutSay(T_GAUGE); tutHl(null);
-    if (ok()) { tutHl('deliver'); tutTask(step, '點「準時交付」按鈕（或按空白鍵）'); await tutWaitEv(e => e.type === 'deliver', 0); tutHl(null); }
+    const step = '教學 6／8｜協作條'; tutTask(step, '聽 Machi 說明下方的團隊協作條'); tutHl('gauge'); await tutSay(FSM ? T_GAUGE.slice(0, -1).concat([SYS('現在協作條已滿，點一下「準時交付」按鈕試試看。')]) : T_GAUGE); tutHl(null);
+    if (ok()) { tutHl('deliver'); tutTask(step, FSM ? '點「準時交付」按鈕' : '點「準時交付」按鈕（或按空白鍵）'); await tutWaitEv(e => e.type === 'deliver', 0); tutHl(null); }
     if (ok()) { await sleep(1800); await tutSay([['Machi', '交付完成！整場的壓力都清空了。真正的戰鬥裡，記得把它留給最關鍵的時刻。', M_]]); }
   }
   if (ok()) {
     const step = '教學 7／8｜Boss 讀條'; tutTask(step, '聽說明'); await tutSay(T_BOSS);
     if (ok()) {
-      Core.tutBoss(S); tutTask(step, '紅色圓圈出現了！快速連點畫面任何地方，在倒數結束前把讀條打斷'); let broke = false;
+      Core.tutBoss(S); tutTask(step, '紅色圓圈出現了！' + (FSM ? '用手指' : '用滑鼠') + '快速連點畫面任何地方，在倒數結束前把讀條打斷'); let broke = false;
       const iv = setInterval(() => { if (!ok() || broke) clearInterval(iv); else Core.tutCast(S); }, 700);   // 時間到沒打斷就重新開始
       await tutWaitEv(e => { if (e.type === 'interrupt') { broke = true; return true; } return false; }, 0); clearInterval(iv);
     }
     if (ok()) { await sleep(1500); await tutSay([SYS('斷招成功！')]); }
   }
   if (ok()) {
-    const step = '教學 8／8｜上方按鈕'; document.documentElement.classList.add('menu'); tutTask(step, '聽說明'); await tutSay(T_BTN);
-    if (ok()) { tutHl('spdB'); tutTask(step, '點一下上方的「速度」按鈕，切換成 2×'); await tutWaitClick('spdB'); tutHl(null); }
+    const step = '教學 8／8｜上方按鈕'; if (!FSM) document.documentElement.classList.add('menu'); tutTask(step, '聽說明'); await tutSay(T_BTN);
+    if (ok() && FSM) { tutHl('fsMenu'); tutTask(step, '手機的按鈕收在左上角：點一下「選單」把它們展開'); await tutWaitClick('fsMenu'); tutHl(null); }
+    if (ok()) { tutHl('spdB'); tutTask(step, '點一下「速度」按鈕，切換成 2×'); await tutWaitClick('spdB'); tutHl(null); }
     if (ok()) { tutHl('autoB'); tutTask(step, '再點一下「自動必殺」，把它打開'); await tutWaitClick('autoB'); tutHl(null); }
     if (ok()) { await tutSay([['Machi', '很好！這兩個設定隨時都能切換。你學會所有基本功了。' + (tut.thenCamp ? '接下來，第一章正式開始。' : '隨時可以回選單，開始劇情模式。'), M_]]); }
     document.documentElement.classList.remove('menu');
