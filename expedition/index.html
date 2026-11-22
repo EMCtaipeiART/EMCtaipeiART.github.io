@@ -1102,7 +1102,7 @@ function fxAlign() { const ps = Core.ORDER.filter(id => Core.hero(S, id).alive).
 function emcBgm(url, opts) {
   const KEY = 'emcBgmV1'; let st = {}; try { st = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
   const o = Object.assign({ vol: .3, fade: 4 }, opts || {}); let vol = typeof st.vol === 'number' ? st.vol : o.vol, muted = !!st.muted, started = false, paused = false, timer = 0, trying = false, gapAt = 0;
-  const A = [new Audio(url), new Audio(url)]; A.forEach(a => { a.preload = 'auto'; a.volume = 0; }); let cur = 0;
+  let curUrl = url; const A = [new Audio(url), new Audio(url)]; A.forEach(a => { a.preload = 'auto'; a.volume = 0; }); let cur = 0;
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ vol, muted })); } catch (e) {} };
   const gainOf = a => { const d = Math.max(a.duration || 0, o.dur || 0), t = a.currentTime; if (!d) return 0; return Math.max(0, Math.min(1, t / 1.5, (d - t) / o.fade)); };
   function apply() { for (const a of A) { const g = a.paused ? 0 : gainOf(a); try { a.volume = muted ? 0 : Math.max(0, Math.min(1, vol * g)); } catch (e) {} a.muted = muted; } }
@@ -1118,7 +1118,10 @@ function emcBgm(url, opts) {
     resume() { if (!started) return; paused = false; A[cur].play().catch(() => {}); },
     get vol() { return vol; }, get muted() { return muted; }, get on() { return started; }, get playing() { return started && !paused; }, get t() { return A[cur].currentTime; }, get d() { return A[cur].duration; }, get level() { return A.map(x => +x.volume.toFixed(2)); },
     setVol(v) { vol = Math.max(0, Math.min(1, v)); if (vol > 0) muted = false; save(); apply(); },
-    setMuted(m) { muted = !!m; save(); apply(); }
+    setMuted(m) { muted = !!m; save(); apply(); },
+    setTrack(u, d) {   // 換歌（每一關各自的背景音樂）：同一首就不動，換了就從頭播
+      if (u === curUrl) return; curUrl = u; o.dur = d || o.dur; A.forEach(a => { a.pause(); a.src = u; try { a.load(); } catch (e) {} a.volume = 0; }); gapAt = 0; started = false; trying = false; clearInterval(timer); cur = 0;
+    }
   };
   function once() { ctl.start(); }
   ['pointerdown', 'mousedown', 'touchstart', 'click', 'keydown'].forEach(ev => addEventListener(ev, once, true));   // 瀏覽器規定要使用者操作後才能播放：先嘗試直接播，被擋就等第一次操作，成功才解除
@@ -1126,6 +1129,8 @@ function emcBgm(url, opts) {
   return ctl;
 }
 const bgm = emcBgm('bgm-expedition.m4a', { vol: .3, dur: 198.2 });
+// 每一關的背景音樂（曲長用來做淡入淡出與重播）
+const TRACKS = { hydra: ['bgm-expedition.m4a', 198.2], client: ['bgm-expedition.m4a', 198.2], rush: ['bgm-rush.m4a', 184.7], upload: ['bgm-upload.m4a', 197.5], meeting: ['bgm-meeting.m4a', 183.7] };
 // ---------- 音效（全部用 WebAudio 即時合成，不需要音檔） ----------
 const SFX = (() => {
   let ac = null, master = null, muted = false, last = {}, amb = null, out = null, bus = null, musicOn = true, mus = null, level = 0;
@@ -1682,7 +1687,7 @@ function begin(kind, opt) {
   inCamp = !!(opt && opt.camp); onLinesDone = null; $('stage').classList.remove('cine'); $('choiceO').hidden = true; $('endC').hidden = true;
   kind = typeof kind === 'string' && Core.BOSS[kind] ? kind : pickBoss(); INTRO = STORY[kind] || STORY_HYDRA;
   if (inCamp && camp) { const pro = camp.order.length === 1 ? [SYS('第一章｜五道需求，一條路。你的每個選擇，會決定倉庫的走向。')] : []; INTRO = pro.concat(camp.bridge || [], INTRO); }
-  goFull(); SFX.unlock(); SFX.click(); SFX.ambient(true); SFX.level(0); SFX.music(false); SFX.music(true);
+  goFull(); SFX.unlock(); SFX.click(); SFX.ambient(true); SFX.level(0); { const tk = TRACKS[kind] || TRACKS.hydra; bgm.setTrack(tk[0], tk[1]); } SFX.music(false); SFX.music(true);
   $('startO').hidden = true; $('endO').hidden = true;
   S = Core.newGame((Date.now() & 0xfffffff) || 1, kind, campOpts()); R = {}; fx = []; banners = []; resetUnits(); acc = 0; running = false;
   $('waveP').textContent = '倉庫';
