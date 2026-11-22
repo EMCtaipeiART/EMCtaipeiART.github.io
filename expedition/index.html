@@ -1568,9 +1568,9 @@ function loop(ts) {
 const EXN = ['neutral', 'happy', 'surprised', 'angry', 'tired', 'thinking'], EX_CUE = { happy: 'cheer', surprised: 'gasp', angry: 'thud', tired: 'sigh', thinking: 'think' };
 const EXIMG = {}; Core.ORDER.forEach(id => { const nm = Core.HERO[id].name; EXN.forEach(x => { const im = new Image(); im.onload = () => { EXIMG[nm + '_' + x] = im.src; if (x === 'neutral') applyPortraits(); }; im.src = 'story/' + nm + '_' + x + '.webp'; }); });
 const CUE = {}; ['gasp', 'cheer', 'thud', 'sigh', 'think', 'whoosh', 'crack', 'step', 'choice'].forEach(nm => { const a = new Audio(); a.preload = 'auto'; a.addEventListener('canplaythrough', () => { CUE[nm] = a; }, { once: true }); a.src = 'sfx/' + nm + '.wav'; });
-function cue(nm) { if (!nm || SFX.muted || !CUE[nm]) return; try { const b = CUE[nm].cloneNode(); b.volume = .85; b.play().catch(() => {}); } catch (e) {} }
+function cue(nm) { if (!nm || SFX.muted || !CUE[nm]) return; try { const b = CUE[nm].cloneNode(); b.volume = .5; b.play().catch(() => {}); } catch (e) {} }
 function applyPortraits() {   // 角色卡與職業介紹的頭像：改用新生成的正面立繪（沒有載入成功的角色維持原樣）
-  document.querySelectorAll('[data-spr]').forEach(el => { const u = EXIMG[el.dataset.spr + '_neutral']; if (!u) return; el.dataset.nx = '1'; el.style.backgroundImage = 'url(' + u + ')'; el.style.backgroundSize = 'cover'; el.style.backgroundPosition = '50% 8%'; });
+  document.querySelectorAll('[data-spr]').forEach(el => { const u = EXIMG[el.dataset.spr + '_neutral']; if (!u) return; el.dataset.nx = '1'; el.style.backgroundImage = 'url(' + u + ')'; el.style.backgroundSize = 'auto 150%'; el.style.backgroundPosition = '50% 0'; });
 }
 function exprOf(l) {   // 對白第 4 欄可明寫表情；沒寫就依內容猜
   if (l[3]) return l[3]; const t = l[1];
