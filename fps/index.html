@@ -186,6 +186,9 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
 .logo2 small{display:block;font-size:10px;letter-spacing:.55em;color:#ffb000;margin-bottom:4px}.logo2 b{display:block;font-size:clamp(34px,5.5vw,58px);font-weight:900;font-style:italic;letter-spacing:.12em;line-height:1;color:#fff;text-shadow:0 0 18px rgba(255,176,0,.55),3px 3px 0 #000;transform:skewX(-8deg)}
 .tabs{display:flex;gap:6px;margin:4px 0 10px;flex-wrap:wrap}.tab{font:700 13px/1 inherit;color:#c9d3de;background:rgba(255,255,255,.06);border:1px solid #3a4654;padding:8px 16px;cursor:pointer;letter-spacing:.08em}.tab.on{color:#111;background:#ffb000;border-color:#ffb000}
 #pveHud{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:5;min-width:min(86vw,300px);text-align:center;color:#fff;font-weight:800;font-size:16px;text-shadow:0 2px 4px #000;pointer-events:none}#pveHud i{display:block;height:8px;border:2px solid #000;background:rgba(0,0,0,.55);margin-top:4px}#pveHud u{display:block;height:100%;width:0;background:linear-gradient(#ffd24a,#ff9a1a)}#pveHud em{display:flex;align-items:center;gap:6px;font-style:normal;font-size:12px;margin-top:5px}#pveHud em i{flex:1;margin:0}#pveHud em u{background:linear-gradient(#5ef0a4,#18b87a)}#pveHud small{display:block;font-size:12px;color:#ffd166;margin-top:3px}
+#scopeHint{position:absolute;left:50%;bottom:270px;transform:translateX(-50%);z-index:6;padding:12px 22px;border:3px solid #ffb000;background:rgba(8,10,14,.88);color:#fff;font-size:20px;font-weight:800;letter-spacing:.05em;text-align:center;pointer-events:none;box-shadow:0 0 24px rgba(255,176,0,.6);animation:scopep .8s ease-in-out infinite}#scopeHint b{color:#ffd166}@keyframes scopep{50%{transform:translateX(-50%) scale(1.06);box-shadow:0 0 38px rgba(255,176,0,.95)}}
+#aim.pulse{animation:scopep2 .8s ease-in-out infinite}@keyframes scopep2{50%{box-shadow:0 0 0 6px rgba(255,176,0,.9),0 0 30px rgba(255,176,0,.9)}}
+@media (pointer:coarse){#scopeHint{font-size:15px;padding:8px 14px;bottom:auto;top:96px}}
 #soloHint{position:absolute;left:50%;bottom:126px;transform:translateX(-50%);z-index:5;max-width:min(92vw,640px);padding:8px 14px;border-left:4px solid #ffb000;background:rgba(8,10,14,.82);color:#fff;font-size:14px;line-height:1.6;pointer-events:none}#soloHint b{color:#ffd166}
 @media (pointer:coarse){#pveHud{top:4px;font-size:13px;min-width:180px;max-width:56vw}#pveHud small{font-size:11px}#soloHint{bottom:auto;top:62px;font-size:12px;line-height:1.5}}
 .stmode{margin-left:auto;text-align:right;border-right:3px solid #ffb000;padding-right:12px}.stmode span{display:block;font-size:12px;letter-spacing:.3em;color:#8a97a6}.stmode b{font-size:24px;font-style:italic;color:#fff}
@@ -238,6 +241,7 @@ canvas#c3{position:absolute;inset:0;width:100%;height:100%;display:block;touch-a
   <div class="hud" id="allies" hidden></div>
   <div id="pveHud" hidden><b id="pveT"></b><i><u id="pveB"></u></i><em id="pveM" hidden><span>推進力</span><i><u></u></i></em><small id="pveH"></small></div>
   <div id="soloHint" hidden></div>
+  <div id="scopeHint" hidden></div>
   <div class="hud" id="feed"></div>
   <div class="hud" id="hp" hidden><div class="n mono"><span id="hpN">100</span><small>HP</small></div><div class="bar"><i id="hpB"></i></div></div>
   <div class="hud" id="wp" hidden><div class="nm" id="wpN">訂書機</div><div class="am mono">∞<small>彈藥無限</small></div></div>
@@ -831,6 +835,7 @@ function pveHud() {
 }
 function pveStep(dt) {
   const P = pve; if (!P || state !== 'play') return; P.t += dt; tLeft = P.t;
+  if (P.type === 'sniper') { if (zoom) { P.scoped = true; P.noZ = 0; } else P.noZ = (P.noZ || 0) + dt; const show = !P.scoped || P.noZ > 25, h = $('scopeHint'); h.hidden = !show; if (show) h.innerHTML = touch ? '👆 點右下 <b>◎ 狙擊鏡</b> 鈕，開啟狙擊鏡' : '🖱️ 按一下 <b>滑鼠右鍵</b> 開啟狙擊鏡<br><small style="font-size:13px;color:#c9d3de">（再按一下右鍵關閉）</small>'; if (touch) $('aim').classList.toggle('pulse', show); }
   for (let i = actors.length - 1; i >= 0; i--) { const a = actors[i]; if (a.mon && a.dead) { a.rmT = (a.rmT || 0) + dt; if (a.rmT > 2.5) removeActorAt(i); } }
   const mons = actors.filter(a => a.mon && !a.dead), diff = [.8, 1, 1.25][CFG.diff];
   if (P.type === 'tank') {
@@ -868,7 +873,7 @@ function pveEnd(win) {
   if (state === 'over' || !pve) return; state = 'over'; try { document.exitPointerLock(); } catch (e) {} document.documentElement.classList.remove('playing'); $('banner').classList.remove('on'); showHeroSel(false); showSB(false);
   say(win ? '勝利' : '敗北'); const P = pve, tm = Math.floor(P.t / 60) + ':' + String(Math.floor(P.t % 60)).padStart(2, '0'), o = $('menu'); o.hidden = false;
   o.firstElementChild.innerHTML = '<div class="logo"><small>' + (win ? 'MISSION CLEAR' : 'MISSION FAILED') + '</small>' + (win ? '過關' : '失敗') + '</div><div style="text-align:center;font-size:20px;font-weight:800;margin:6px 0 2px">' + P.title + '</div><div style="text-align:center;color:#c9d3de;font-size:14px">' + (win ? P.short + ' ✓' : (P.failWhy || '再試一次吧')) + '</div><div class="mono" style="text-align:center;font-size:30px;margin:14px 0">擊倒 ' + P.kills + '　時間 ' + tm + '</div><div style="display:flex;gap:14px;align-items:center;justify-content:center;margin-top:16px;flex-wrap:wrap"><button class="go" id="againB" type="button">' + (win ? '再玩一次' : '重新挑戰') + '</button><button class="exitbtn" id="toMenu" type="button">🏠 選其他職業</button><button class="exitbtn" id="endExit" type="button">⏏ 離開</button></div>';
-  for (const id of ['xh', 'obj', 'hp', 'wp', 'sk', 'allies', 'stick', 'fire', 'jump', 'aim', 'skE', 'skS', 'skR', 'pveHud', 'soloHint']) $(id).hidden = true; $('scope').classList.remove('on');
+  for (const id of ['xh', 'obj', 'hp', 'wp', 'sk', 'allies', 'stick', 'fire', 'jump', 'aim', 'skE', 'skS', 'skR', 'pveHud', 'soloHint', 'scopeHint']) $(id).hidden = true; $('aim').classList.remove('pulse'); $('scope').classList.remove('on');
   $('againB').onclick = () => startMatch(); $('toMenu').onclick = () => location.reload(); $('endExit').onclick = () => goBack();
 }
 // 選單：分頁（單人模式／5V5 對戰／連線對戰）
