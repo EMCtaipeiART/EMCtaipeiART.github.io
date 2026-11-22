@@ -189,7 +189,7 @@ button{font-family:inherit}
 .dex-sec{margin:10px 0 4px;font-size:13px;font-weight:700;color:var(--yellow)}
 .dex-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px}
 .dex-it{display:grid;place-items:center;aspect-ratio:1;border-radius:14px;background:rgba(255,255,255,.08);border:2px solid var(--line);cursor:pointer;position:relative}
-.dex-it img{width:44px;height:44px;object-fit:contain;image-rendering:pixelated}
+.dex-it img{width:44px;height:44px;object-fit:contain}
 .dex-it.unk img{filter:brightness(0) opacity(.5)}
 .dex-it.unk::after{content:'?';position:absolute;inset:0;display:grid;place-items:center;font-weight:700;color:rgba(255,255,255,.55);font-size:20px}
 .help-list{display:grid;gap:8px;font-size:14px;font-weight:600;line-height:1.5}
@@ -793,9 +793,15 @@ const NOTES0=[['筆記本','📓 撿到一本筆記本，上面寫著「下週�
 const ITEMS=[['🪙','金幣','撿到一枚金幣，今天財運不錯'],['🍀','幸運草','四葉幸運草！今天會順順利利'],['🎁','小禮物','撿到一份小禮物，裡面是一顆糖'],['🎫','抽獎券','撿到一張抽獎券，記得下午開獎'],['🔑','小鑰匙','一把小鑰匙，不知道開哪個抽屜'],['⭐','星星','撿到一顆星星，心情 +10'],['🍬','糖果','地上有顆糖果，沒拆封的，賺到']];
 
 
-const NOTE_IDS = ['note_book', 'note_paper', 'note_sticky', 'note_sketch', 'note_pen']; FUN_PROPS.forEach(p => NOTE_IDS.push('prop_' + p[0]));
-const NOTES = NOTES0.concat(FUN_PROPS.map(p => [p[2], p[1] + ' ' + p[3]]));
-const DROP_IDS = ['drop_coin', 'drop_clover', 'drop_gift', 'drop_ticket', 'drop_key', 'drop_star', 'drop_candy']; FUN_PROPS.forEach(p => { DROP_IDS.push('prop_' + p[0]); ITEMS.push([p[1], p[2], p[3]]); });
+
+// ---- 圖鑑素材 100 款（地上 50＋會議室 50）：圖在 pixel-plaza/dex/floor|meeting/，編號＝清單順序，存檔用編號記錄，新款只能接在最後面 ----
+const DEX_FLOOR = [["🎟️","加班餐券","加班餐券一張，今晚的便當有著落了"],["🪴","迷你多肉盆栽","多肉盆栽：辦公室裡唯一不用加班還活得很好的"],["🎁","客戶伴手禮盒","客戶送的伴手禮，記得分給大家，不要偷吃光"],["🎫","尾牙抽獎券","尾牙抽獎券！號碼好像還不錯，先收好"],["🔑","置物櫃鑰匙","置物櫃鑰匙，不知道是誰的，編號被磨掉了"],["⭐","優良員工貼紙","優良員工貼紙，貼在螢幕上提醒自己很棒"],["🍬","辦公室零食糖","抽屜裡的零食糖，沒拆封，賺到"]].concat(FUN_PROPS.map(p => [p[1], p[2], p[3]]), [["🪪","員工證","員工證掉了，背面還貼著一張大頭貼"],["💳","悠遊卡","悠遊卡，餘額剛好夠買一杯手搖"],["🧾","發票","一張發票，中獎機率不明，先收著對獎"],["🔋","行動電源","行動電源只剩一格電，連它也在加班"],["🔌","充電線","充電線，永遠少一條的那種"],["🥤","隨行杯","隨行杯，環保又能續命"],["🍙","御飯糰","御飯糰，便利商店最後一個"],["🍰","蛋糕切片","下午茶蛋糕切片，草莓在上面最好吃"],["🍵","茶包","一包茶包，下午三點的救贖"],["🧴","保溫瓶","保溫瓶，熱水永遠剛好燙口"],["🏷️","識別證掛繩","識別證掛繩，掛脖子上才有上班的感覺"],["📇","名片","一張名片，上面的職稱超級長"],["👟","NB 運動鞋","運動鞋只有一隻，另一隻去哪了？"],["🚬","香菸盒","空的香菸盒，陽台那邊撿到的（吸菸有害健康）"],["🚁","空拍機","空拍機！今天的工地進度就靠它了"],["🎧","無線耳機","無線耳機只找到一邊，另一邊你在哪"],["📷","手持相機","手持相機，記得拍下每一個施工角度"],["🧹","小型洗地機","小型洗地機，地板一秒變閃亮"],["🟨","3M 貼紙","3M 貼紙，撕了又貼，貼了又撕"],["🪥","牙膏","一條牙膏，擠到最後一點的那種"],["🪵","木地板板材","木地板板材樣品，紋路超好看"],["🍿","可樂果","可樂果，辦公室零食榜永遠的前三名"],["🥜","堅果","一小碗堅果，下午茶補充能量"]]);
+[[19, ['🧽', '螢幕清潔布', '螢幕清潔布：擦完螢幕才發現問題不在螢幕上']], [24, ['🟠', '壓力球', '壓力球，捏一下，修改意見就少一點']], [25, ['📠', '傳真紙', '一張傳真紙，現在還有人在傳真，真稀有']], [26, ['🥪', '三明治', '半個三明治，今天的午餐還沒著落就先撿到了']]].forEach(([i, v]) => { DEX_FLOOR[i] = v; });
+const DEX_MEET = NOTES0.map((n, i) => [['📓', '✏️', '🗒️', '📒', '🖊️'][i], n[0], n[1].replace(/^S+s*/, '')]).concat(DEX_FLOOR.slice(7, 27), [["🖍️","白板筆","白板筆，墨水剩一點，字寫出來是淡淡的"],["🧽","板擦","板擦，擦完白板上還留著前一場的痕跡"],["🔴","雷射筆","雷射筆，貓咪最愛的簡報工具"],["📽️","簡報翻頁筆","簡報翻頁筆，按錯鍵就翻到最後一頁了"],["📺","遙控器","投影機遙控器，電池好像沒電了"],["🔌","HDMI 線","HDMI 線，每次開會都是它最難插"]], [DEX_FLOOR[43]], [["📋","會議紀錄夾","會議紀錄夾，結論欄是空的"],["🗂️","名片盒","名片盒，裡面全是客戶的名片"],["☕","馬克杯","馬克杯，杯底還有一點咖啡漬"]], [DEX_FLOOR[42]], [["🥛","保溫杯","保溫杯，開會開到忘記喝"],["📜","投影布捲","投影布捲，一拉就下來了"],["📎","迴紋針盒","迴紋針盒，一次只拿一根卻拿了一把"],["📏","膠帶台","膠帶台，找不到頭的那種"]], [DEX_FLOOR[45], DEX_FLOOR[41]], [["🎨","色票本","色票本，客戶說的「紅色」是哪一頁？"],["🪵","木地板板材樣品","木地板樣品，會議桌上最有質感的東西"],["🖊️","馬克筆組","馬克筆組，每一支都快沒水了"],["🖍️","螢光筆","螢光筆，重點畫太多就沒有重點了"],["📱","平板","平板，螢幕上還停在上一場簡報"],["⌨️","鍵盤","無線鍵盤，哪台電腦的？"],["🎤","無線麥克風","無線麥克風，喂喂喂，聽得到嗎？"],["🔕","「請勿打擾」小立牌","「請勿打擾」立牌，開會中請勿進入"]]);
+const pad2 = n => String(n + 1).padStart(2, '0');
+const NOTE_IDS = DEX_MEET.map((_, i) => 'dexm_' + pad2(i)), DROP_IDS = DEX_FLOOR.map((_, i) => 'dexf_' + pad2(i));
+ITEMS.length = 0; DEX_FLOOR.forEach(x => ITEMS.push(x));
+const NOTES = DEX_MEET.map(x => [x[1], x[0] + ' ' + x[2]]);
 const SLIDE_N = SLIDES.length, SLOT_J = 360000, SLOT_P = 300000, SLOT_N = 720000, SLOT_D = 480000;
 function rng(str){ let h = 1779033703 ^ str.length; for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
   let a = Math.imul(h ^ h >>> 16, 2246822507) ^ Math.imul(h ^ h >>> 13, 3266489909) >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -810,14 +816,16 @@ function applyFunClaims(m){ let ch = false; for (const id of Object.keys(m || {}
 const quoteBox = document.getElementById('quote'); let quoteTimer = 0;
 function showQuote(title, text){ const b = quoteBox.querySelector('b'); b.textContent = title; b.style.display = title ? 'block' : 'none'; quoteBox.querySelector('span').textContent = text; quoteBox.style.display = 'block'; clearTimeout(quoteTimer); quoteTimer = setTimeout(() => { quoteBox.style.display = 'none'; }, 5200); }
 const sheets = {}, funRects = {}, spriteCache = {};
-async function loadFunArt(){ await Promise.all(['v1', 'v2'].map(async v => { const [im, rc] = await Promise.all([loadImg(ASSET + 'office-fun-' + v + '.webp'), fetch(ASSET + 'office-fun-' + v + '.json').then(r => r.ok ? r.json() : null).catch(() => null)]); sheets[v] = im; funRects[v] = rc; })); }
+const dexImgs = {};
+async function loadFunArt(){ await Promise.all([...DROP_IDS.map((id, i) => [id, 'dex/floor/f' + pad2(i) + '.png']), ...NOTE_IDS.map((id, i) => [id, 'dex/meeting/m' + pad2(i) + '.png'])].map(async ([id, url]) => { dexImgs[id] = await loadImg(url).catch(() => null); })); await Promise.all(['v1', 'v2'].map(async v => { const [im, rc] = await Promise.all([loadImg(ASSET + 'office-fun-' + v + '.webp'), fetch(ASSET + 'office-fun-' + v + '.json').then(r => r.ok ? r.json() : null).catch(() => null)]); sheets[v] = im; funRects[v] = rc; })); }
 function spriteCanvas(id){
   if (spriteCache[id]) return spriteCache[id];
+  if (/^dex[fm]_/.test(id)) { const im = dexImgs[id]; if (!im) return null; const c = document.createElement('canvas'); c.width = c.height = 96; const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(im, 0, 0, 96, 96); c.hd = true; c.ks = 34 / 96; return spriteCache[id] = c; }   // 新版圖鑑圖（高解析、線性濾鏡），縮成和舊版相同的世界大小
   const v = /^prop_/.test(id) ? 'v2' : 'v1', r = funRects[v] && funRects[v][id], im = sheets[v]; if (!im || !r) return null;
   const c = document.createElement('canvas'); c.width = r.w; c.height = r.h; c.getContext('2d').drawImage(im, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h); return spriteCache[id] = c;
 }
 function pixelSprite(canvas, x, y, z, k){   // 原始像素圖：最近鄰放大，保留 2D 版的像素感
-  const dw = canvas.width * k, dh = canvas.height * k, tex = new THREE.CanvasTexture(canvas); tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false; tex.colorSpace = THREE.SRGBColorSpace;
+  const dw = canvas.width * k, dh = canvas.height * k, tex = new THREE.CanvasTexture(canvas); tex.magFilter = tex.minFilter = canvas.hd ? THREE.LinearFilter : THREE.NearestFilter; tex.generateMipmaps = false; tex.colorSpace = THREE.SRGBColorSpace;
   const m = new THREE.Mesh(new THREE.PlaneGeometry(dw, dh), new THREE.MeshBasicMaterial({map:tex, transparent:true, alphaTest:.5, side:THREE.DoubleSide})); m.geometry.translate(0, dh / 2, 0); m.position.set(x, y, z); scene.add(m); billboards.push(m); return m;
 }
 function removeMesh(m){ scene.remove(m); const i = billboards.indexOf(m); if (i >= 0) billboards.splice(i, 1); }
@@ -887,8 +895,8 @@ function syncFun(){
   for (const [id, w] of want) {
     if (floorMeshes.has(id)) continue;
     let mesh;
-    if (w.kind === 'drop') { const cv = spriteCanvas(DROP_IDS[w.d.k]) || emojiCanvas(ITEMS[w.d.k][0]); mesh = pixelSprite(cv, w.d.x, 0, w.d.z, .021); mesh.userData.pick = {kind:'drop', d:w.d}; }
-    else if (w.kind === 'note') { const cv = spriteCanvas(NOTE_IDS[w.n.k]) || emojiCanvas('📝'); mesh = pixelSprite(cv, w.n.x, .95, w.n.z, .012); mesh.userData.pick = {kind:'note', n:w.n}; }
+    if (w.kind === 'drop') { const cv = spriteCanvas(DROP_IDS[w.d.k]) || emojiCanvas(ITEMS[w.d.k][0]); mesh = pixelSprite(cv, w.d.x, 0, w.d.z, .021 * (cv.ks || 1)); mesh.userData.pick = {kind:'drop', d:w.d}; }
+    else if (w.kind === 'note') { const cv = spriteCanvas(NOTE_IDS[w.n.k]) || emojiCanvas('📝'); mesh = pixelSprite(cv, w.n.x, .95, w.n.z, .012 * (cv.ks || 1)); mesh.userData.pick = {kind:'note', n:w.n}; }
     else { mesh = makePoop(w.p.t, w.p.v); mesh.userData.pick = {kind:'poop', p:w.p}; }
     pickables.push(mesh); floorMeshes.set(id, {kind:w.kind, mesh, phase:Math.random() * 6});
   }
