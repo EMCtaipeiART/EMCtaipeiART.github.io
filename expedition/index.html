@@ -58,7 +58,18 @@ h1{margin:0;font-size:26px;line-height:1.15;letter-spacing:.02em}
 #dFace{position:absolute;right:10px;bottom:76px;width:300px;height:196px;background-repeat:no-repeat;background-size:3600px 300px;background-position:0 0;filter:drop-shadow(0 0 0 #000) drop-shadow(0 4px 6px rgba(0,0,0,.6));pointer-events:none;transform-origin:50% 100%;animation:dface .28s ease-out}
 @keyframes dface{from{opacity:0;transform:translateX(24px) scale(.92)}to{opacity:1;transform:none}}
 @media (max-width:720px){#dFace{width:210px;height:136px;background-size:2520px 210px;bottom:70px;right:2px}}
-@media (prefers-reduced-motion:reduce){#dFace{animation:none}}
+#dFace.ex{width:230px;height:270px;background-size:contain;background-position:center bottom;bottom:66px;transform-origin:50% 100%}
+#dFace.ex.happy{animation:dface .28s ease-out,exHappy .45s .28s ease-in-out 3}
+#dFace.ex.surprised{animation:dface .28s ease-out,exSurprised .5s .28s ease-out 1}
+#dFace.ex.angry{animation:dface .28s ease-out,exAngry .14s .28s linear 6}
+#dFace.ex.tired{animation:dface .28s ease-out,exTired 1.6s .28s ease-in-out 1 forwards}
+#dFace.ex.thinking{animation:dface .28s ease-out,exThink 1.2s .28s ease-in-out 2}
+@keyframes exHappy{50%{transform:translateY(-16px) rotate(2deg)}}
+@keyframes exSurprised{0%{transform:scale(1)}30%{transform:scale(1.12) translateY(-22px)}100%{transform:scale(1)}}
+@keyframes exAngry{25%{transform:translateX(-7px) rotate(-1.5deg)}75%{transform:translateX(7px) rotate(1.5deg)}}
+@keyframes exTired{to{transform:translateY(10px) rotate(-3deg)}}
+@keyframes exThink{50%{transform:rotate(-4deg) translateX(-5px)}}
+@media (prefers-reduced-motion:reduce){#dFace,#dFace.ex{animation:none}}
 #dialog small{position:absolute;right:12px;top:8px;color:var(--dim);font-size:11px}
 .lb{width:min(100%,560px);text-align:left;font-size:13px;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
 .lb h3{margin:0 0 6px;font-size:14px;color:var(--gold)} .lb .r{display:flex;gap:8px;padding:2px 0;border-bottom:1px dashed var(--line)} .lb .r i{width:26px;font-style:normal;color:var(--dim)} .lb .r span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .lb .r b{font-variant-numeric:tabular-nums} .lb .me{color:var(--gold)}
@@ -139,7 +150,7 @@ h3{margin:16px 0 0;font-size:17px}
 #stage:not(.live) #party,#stage:not(.live) #topbar{display:none}
 #stage.cine::before,#stage.cine::after{content:'';position:absolute;left:0;right:0;height:8%;background:#000;z-index:4;pointer-events:none;animation:cbar .7s ease-out}
 #stage.cine::before{top:0} #stage.cine::after{bottom:0}
-#stage.cine #dialog{z-index:6;bottom:calc(8% + 10px)} #stage.cine #dFace{z-index:5;bottom:calc(8% + 76px)}
+#stage.cine #dialog{z-index:6;bottom:calc(8% + 10px)} #stage.cine #dFace{z-index:5;bottom:calc(8% + 76px)} #stage.cine #dFace.ex{bottom:calc(8% + 66px)}
 html.fsm #stage.cine #dFace{bottom:calc(8% + 54px)}
 @keyframes cbar{from{height:0}}
 .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
@@ -221,6 +232,7 @@ html.fsm #alert,html.fsm #skillPop{top:50px}
 html.fsm #dialog{left:16px;right:16px;bottom:14px;padding:6px 12px}
 html.fsm #dialog p{font-size:13px}
 html.fsm #dFace{width:150px;height:98px;background-size:1800px 150px;bottom:54px}
+html.fsm #dFace.ex{width:130px;height:150px;background-size:contain}
 html.fsm .overlay{gap:6px;padding:14px 18px;overflow:auto}
 html.fsm .overlay h2{font-size:18px}
 html.fsm .overlay p{font-size:12px;max-width:60ch}
@@ -713,7 +725,7 @@ const STORY_HYDRA = [
   ['Leona', '我把收到的意見排好了。先處理會一直生東西的那個。', COL.leona],
 ];
 let INTRO = STORY_HYDRA;
-const SYS = (t) => ['系統廣播', t, '#ffd166'];
+const SYS = (t, cue) => ['系統廣播', t, '#ffd166', null, cue];
 const STORY = {
   hydra: STORY_HYDRA,
   client: [
@@ -920,6 +932,7 @@ function init3d() {
   TX.circle = ctex(256, 256, g => { g.translate(128, 128); g.strokeStyle = '#fff'; g.lineWidth = 5; [120, 100, 58].forEach(r => { g.beginPath(); g.arc(0, 0, r, 0, 7); g.stroke(); }); g.lineWidth = 3; for (let k = 0; k < 2; k++) { g.beginPath(); for (let i = 0; i < 3; i++) { const a = i * 2.094 + k * 1.047; g.lineTo(Math.cos(a) * 100, Math.sin(a) * 100); } g.closePath(); g.stroke(); } for (let i = 0; i < 12; i++) { const a = i * .5236; g.fillStyle = '#fff'; g.fillRect(Math.cos(a) * 110 - 4, Math.sin(a) * 110 - 4, 8, 8); } });
   buildWorld(); applySceneTheme();
   ['note', 'armor', 'clone', 'hydra', 'client', 'rush', 'upload', 'meeting'].forEach(k => { const load = (f, fb) => { const im = new Image(); im.onload = () => { const t = new THREE.Texture(im); t.needsUpdate = true; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; MON[k] = { t, ar: im.width / im.height, fb }; }; im.onerror = () => { if (!fb) load('clone', true); }; im.src = 'monsters/' + f + '.webp'; }; load(k === 'client' ? 'clone' : k, k === 'client'); });
+  Object.keys(MOBS).forEach(st => ['note', 'armor', 'clone'].forEach(kd => { const im = new Image(); im.onload = () => { const t = new THREE.Texture(im); t.needsUpdate = true; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; MON[st + '_' + kd] = { t, ar: im.width / im.height, fb: false }; }; im.src = 'monsters/' + st + '_' + kd + '.webp'; }));
   for (const id of Core.ORDER) {
     const sh = flat(new THREE.Mesh(G.disc, new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .35, depthWrite: false })), .03); sh.scale.set(.62, .4, 1); scene.add(sh); P.shadow[id] = sh;
     const r = flat(M(G.ring, COL[id], { opacity: .7 }), .04); r.scale.setScalar(.78); scene.add(r); P.ring[id] = r;
@@ -1251,7 +1264,7 @@ function handle(e) {
   if (e.type === 'debuff') { const d = find(e.dst); if (d) float(d, e.name, '#c7c7c7', 13, .4); }
   if (e.type === 'cleanse') { const d = find(e.dst); if (d) { float(d, '已整理', '#3fd0b4', 14, .4); fxRing(rpos(d), COL.leona, .3, 1.6, .6); } }
   if (e.type === 'die') { const d = find(e.uid); if (d && d.side === 'enemy') { fxPoof(mid(d), d.kind === 'note' ? '#ffe27a' : '#b48cff'); if (d.boss) { const B = Core.BOSS[S.bossKind]; if (B.die) banner(B.name, B.die, '#ffd166'); } } }
-  if (e.type === 'wave') { banner(`第 ${e.n} 波｜${['', '插單小怪', '意見分身', Core.BOSS[S.bossKind].name][e.n]}`, e.n === 3 ? Core.BOSS[S.bossKind].open : '', '#5fe08a'); $('waveP').textContent = `第 ${e.n}／3 波`; }
+  if (e.type === 'wave') { banner(`第 ${e.n} 波｜${['', (MOBS[S.bossKind] || {}).note || '插單小怪', (MOBS[S.bossKind] || {}).clone || '意見分身', Core.BOSS[S.bossKind].name][e.n]}`, e.n === 3 ? Core.BOSS[S.bossKind].open : '', '#5fe08a'); $('waveP').textContent = `第 ${e.n}／3 波`; }
   if (e.type === 'clear') banner('清場', '', '#5fe08a');
   if (e.type === 'deliver') {
     banner('五人連攜｜準時交付', '', '#ffd166'); flashA = .8; shake = .4; slowT = .6;
@@ -1407,7 +1420,7 @@ function sync(dt) {
     if (!e.alive) { dropUnit(e.uid); continue; }
     const sp = U[e.uid] || (U[e.uid] = enemyUnit(e)), d = sp.userData, r = rs(e), k = Math.min(1, dt * 10);
     r.x += (e.x - r.x) * k; r.z += (e.z - r.z) * k;
-    const mon = MON[e.kind];
+    const mon = MON[S.bossKind + '_' + e.kind] || MON[e.kind];
     if (mon && !d.img) { d.img = true; sp.material.map = mon.t; sp.material.needsUpdate = true; sp.center.set(.5, .03); }
     if (!d.img) { const key = e.boss ? T : e.kind === 'armor' ? !!e.st.broken : 0; if (d.key !== key) { d.key = key; paintTo(d.c, 2, d.s.ox, d.s.oy, () => art(e)); d.t.needsUpdate = true; } }
     const age = Math.min(1, (T - r.born) / .3);
@@ -1498,6 +1511,7 @@ function hud() {
   al.hidden = !cast;
   if (cast) { al.className = cast.kind; $('alertT').textContent = ((cast.name || '') + '　') + cast.t.toFixed(1); $('alertB').style.width = (cast.t / cast.max * 100) + '%'; }
   let tip = WAVE_TIP[S.wave] || '投影機自己亮了起來…', hot = false;
+  { const mb = MOBS[S.bossKind]; if (mb && S.wave === 1) tip = '第一波｜' + mb.note + '：Machi 會嘲諷吸住攻擊，Amber 的範圍技負責清場。卡片亮起就能放必殺。'; else if (mb && S.wave === 2) tip = '第二波｜' + mb.clone + '躲在後排一直生' + mb.note + '：Noise 破開' + mb.armor + '，Anna 的「一刀定稿」直取' + mb.clone + '。'; }
   const boss = S.enemies.find(e => e.boss && e.alive);
   const conf = S.heroes.filter(h => h.alive && h.st.confuse).length;
   if (S.phase === 'between' && S.wave) tip = '清場完成，隊伍回復中。必殺能量會保留到下一波。';
@@ -1523,10 +1537,25 @@ function loop(ts) {
   draw(paused ? 0 : dt * (running ? speed : 1) * (slowT > 0 ? .5 : 1)); hud();
   requestAnimationFrame(loop);
 }
+// 劇情表情立繪（story/<角色>_<表情>.webp，載入失敗就用原本的立繪）與動作音效（sfx/*.wav，沒有檔案就不出聲）
+const EXN = ['happy', 'surprised', 'angry', 'tired', 'thinking'], EX_CUE = { happy: 'cheer', surprised: 'gasp', angry: 'thud', tired: 'sigh', thinking: 'think' };
+const EXIMG = {}; Core.ORDER.forEach(id => { const nm = Core.HERO[id].name; EXN.forEach(x => { const im = new Image(); im.onload = () => { EXIMG[nm + '_' + x] = im.src; }; im.src = 'story/' + nm + '_' + x + '.webp'; }); });
+const CUE = {}; ['gasp', 'cheer', 'thud', 'sigh', 'think', 'whoosh', 'crack', 'step', 'choice'].forEach(nm => { const a = new Audio(); a.preload = 'auto'; a.addEventListener('canplaythrough', () => { CUE[nm] = a; }, { once: true }); a.src = 'sfx/' + nm + '.wav'; });
+function cue(nm) { if (!nm || SFX.muted || !CUE[nm]) return; try { const b = CUE[nm].cloneNode(); b.volume = .85; b.play().catch(() => {}); } catch (e) {} }
+function exprOf(l) {   // 對白第 4 欄可明寫表情；沒寫就依內容猜
+  if (l[3]) return l[3]; const t = l[1];
+  if (/針對|先聲明|氣死|不會做/.test(t)) return 'angry';
+  if (/居然|真的可以|不在大樓圖|什麼/.test(t) || /？$/.test(t)) return 'surprised';
+  if (/……|辛苦|累|嘆|沒睡/.test(t)) return 'tired';
+  if (/終於|好看|太棒|放假|成功|付錢|歡呼|這才叫/.test(t)) return 'happy';
+  if (/先確認|排好|記下|整理|座標|分析|想想/.test(t)) return 'thinking';
+  return null;
+}
 function showLine() {
   const l = INTRO[dIdx]; $('dWho').textContent = l[0]; $('dWho').style.color = l[2]; $('dTxt').textContent = l[1];
-  const hero = Core.ORDER.find(id => Core.HERO[id].name === l[0]), f = $('dFace');
-  if (hero && !$('dialog').hidden) { f.style.backgroundImage = `url(${sprUrl(l[0])})`; f.hidden = false; f.style.animation = 'none'; void f.offsetWidth; f.style.animation = ''; } else f.hidden = true;
+  const hero = Core.ORDER.find(id => Core.HERO[id].name === l[0]), f = $('dFace'), ex = hero ? exprOf(l) : null, img = ex && EXIMG[l[0] + '_' + ex];
+  if (hero && !$('dialog').hidden) { f.className = img ? 'ex ' + ex : ''; f.style.backgroundImage = img ? `url(${img})` : `url(${sprUrl(l[0])})`; f.hidden = false; f.style.animation = 'none'; void f.offsetWidth; f.style.animation = ''; } else f.hidden = true;
+  if (!$('dialog').hidden) cue(l[4] || (hero && ex && EX_CUE[ex]));
 }
 // 作品集：打贏的客戶 Boss 會留下結案作品（存在這個瀏覽器）
 const COLL_KEY = 'expCollV1';
@@ -1573,7 +1602,13 @@ const ENDING = {
   brave: [['Machi', '一路往前打，需求只好跟著讓路。', M_], ['Noise', '這才叫最後一版！', N_]],
   careful: [['Leona', '每一步都先整理好才走下一步，所以沒有人倒下。', L_], ['Anna', '我承認，穩，確實有用。', A_]],
   balanced: [['Amber', '有時衝、有時穩，反正我們都走到了。', B_], ['Machi', '設計部，本來就是這樣。', M_]],
-  tail: [SYS('倉庫深處的牆壁無聲地裂開，另一邊是一層沒有人見過的樓層。'), ['Leona', '座標對不上……這不在大樓圖上。', L_], ['Machi', '下一章，我們去看看吧。', M_], SYS('第一章　完。即將進入第二章。')],
+  tail: [SYS('倉庫深處的牆壁無聲地裂開，另一邊是一層沒有人見過的樓層。', 'crack'), ['Leona', '座標對不上……這不在大樓圖上。', L_], ['Machi', '下一章，我們去看看吧。', M_], SYS('第一章　完。即將進入第二章。')],
+};
+const MOBS = {   // 各關自己的小怪／中怪名稱（對應 monsters/<關>_note|armor|clone.webp，沒有圖就用原本的怪）
+  client: { note: '零錢小鬼', armor: '計算機裝甲', clone: '報價單分身' },
+  rush: { note: '日曆頁小鬼', armor: '行李箱裝甲', clone: '旅遊傳單分身' },
+  upload: { note: '網路線小蛇', armor: '路由器碉堡', clone: '彈出視窗分身' },
+  meeting: { note: '咖啡杯小鬼', armor: '投影機重裝兵', clone: '會議記錄本幽靈' },
 };
 let camp = null, inCamp = false, onLinesDone = null;
 function loadCamp() { try { const c = JSON.parse(localStorage.getItem(CAMP_KEY) || 'null'); return c && Array.isArray(c.order) && c.order.length && !c.done ? c : null; } catch (e) { return null; } }
@@ -1590,7 +1625,7 @@ function campWin(score) {   // 劇情模式：這一關通過 → 結束動畫 �
   camp.score += score; camp.secs += S.t; saveCamp();
   const kind = S.bossKind, n = camp.order.length;
   try { Core.ORDER.forEach(id => fxBeam(rpos(Core.hero(S, id)), COL[id], false)); } catch (e) {}
-  banner('第 ' + n + ' 關完成', Core.BOSS[kind].title, '#5fe08a');
+  banner('第 ' + n + ' 關完成', Core.BOSS[kind].title, '#5fe08a'); cue('whoosh');
   setTimeout(() => playLines(OUTRO[kind] || [], () => { if (n >= 5) campEnding(); else showChoice(); }), 1400);
 }
 function showChoice() {
@@ -1599,7 +1634,7 @@ function showChoice() {
   el.innerHTML = '<span class="sys">第 ' + camp.order.length + ' 關完成</span><h2>接下來怎麼走？</h2><div id="optList">' + opts.map((o, i) => { const b = Core.BOSS[o.kind]; return '<button class="opt" type="button" data-i="' + i + '"><b>' + o.label + '</b><em>' + STANCE_TXT[o.stance] + '</em></button>'; }).join('') + '</div>';
   el.hidden = false;
   el.querySelectorAll('.opt').forEach(x => x.addEventListener('click', () => {
-    const o = opts[+x.dataset.i]; el.hidden = true; camp.order.push(o.kind); camp[o.stance === 'brave' ? 'b' : 'c']++;
+    const o = opts[+x.dataset.i]; el.hidden = true; cue('choice'); camp.order.push(o.kind); camp[o.stance === 'brave' ? 'b' : 'c']++;
     camp.bridge = [SYS('你的選擇：' + o.label + '。')].concat(TARGET[o.kind].bridge); saveCamp(); begin(o.kind, { camp: true });
   }));
 }
