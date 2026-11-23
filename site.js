@@ -4959,7 +4959,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const hr=+taipeiParts().hour,hello=hr<11?'早安':hr<18?'午安':'晚安',name=session().name||session().user||'';
         const t=S.today||{},parts=[];
         if(t.pendingReply>0)parts.push(`${t.pendingReply} 案等你回信`);
-        if(t.dueSoon>0)parts.push(`${t.dueSoon} 案 3 天內截稿`);
+        if(t.dueSoon>0)parts.push(`你設計的 ${t.dueSoon} 案 3 天內截稿`);
+        if(t.dueSoonOwner>0)parts.push(`你提出的 ${t.dueSoonOwner} 案 3 天內交稿`);
         if(t.newToday>0)parts.push(`今天新進 ${t.newToday} 案`);
         return `${hello}，${name}！`+(parts.length?`今天有 ${parts.join('、')}。`:(urgentAlertText()?'有幾件今天要留意的事：':'今天目前沒有急著處理的事，可以喘口氣～'));
       }
