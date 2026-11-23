@@ -1887,3 +1887,7 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
 .detail-pick .dq-all-wrap input,.cell-pop .dq-all-wrap input.dq-all{position:static;opacity:1;pointer-events:auto;width:17px;height:17px;margin:2px 0 0;flex:none}
 
 .ann-video{display:block;width:100%;max-width:100%;border-radius:12px;margin:8px 0;background:#000;aspect-ratio:16/9}
+
+.as-case{color:#0f8a2a;font-weight:800;text-decoration:underline;text-underline-offset:2px;font-variant-numeric:tabular-nums}
+@keyframes asFlash{0%,100%{box-shadow:0 0 0 0 rgba(31,181,64,0)}30%{box-shadow:0 0 0 6px rgba(31,181,64,.55)}}
+.as-flash{animation:asFlash 1.3s ease 2;border-radius:inherit}
