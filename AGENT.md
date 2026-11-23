@@ -6540,3 +6540,4 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 2026-11-20 寄信 Durable Object 記憶體爆掉（isolate exceeded memory limit）：MIME 組裝與 base64url 編碼改分段處理（utf8ToBase64Url／base64Encode／wrapMimeBase64），減少大附件／長信件串時的記憶體複本；已部署 Worker。
 - 2026-11-23 寄信編輯器「預計收到日」欄位跑版：標籤不換行、日期框固定寬、說明文字同列顯示（手機換行）。
 - 2026-11-23 信件編輯器進入後數秒內因 Gmail 狀態／信件串載入而重畫跳動：新增 renderMailKeep，重畫時保留捲動位置、游標與焦點。
+- 2026-11-23 寄信編輯器「預計收到日」改版：常用日期一鍵選（今天／下一個上班日／再下一天／下週一）＋自選日期＋即時說明「11/24（週二）· 明天，設計師依這天倒數」，未填或過期以紅字提示。

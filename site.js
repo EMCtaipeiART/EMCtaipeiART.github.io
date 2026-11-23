@@ -2039,6 +2039,29 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       else if(fid){const el=$(fid);if(el){el.focus({preventScroll:true});try{el.setSelectionRange(fs,fe)}catch(e){}}}
       window.scrollTo(sx,sy);
     }
+    /* 預計收到日：一鍵選常用日期＋自選日期＋即時說明（設計師依這天倒數） */
+    const DUE_WEEK=['日','一','二','三','四','五','六'];
+    function dueIsWork(ms){const wd=new Date(ms).getUTCDay();return wd!==0&&wd!==6&&!TL_HOLIDAYS.has(ymd(ms).replace(/\//g,'-'))}
+    function dueQuick(){
+      const t=taipeiToday(),out=[],seen=new Set(),add=(label,ms)=>{const v=ymd(ms).replace(/\//g,'-');if(!seen.has(v)){seen.add(v);out.push([label,v])}};
+      if(dueIsWork(t))add('今天',t);
+      let ms=t+DAY,n=0;for(let k=0;k<14&&n<2;k++,ms+=DAY){if(dueIsWork(ms)){add(n===0?'下一個上班日':'再下一天',ms);n++}}
+      const dow=new Date(t).getUTCDay();let m=t+(((8-dow)%7)||7)*DAY;while(!dueIsWork(m))m+=DAY;add('下週一',m);
+      return out;
+    }
+    function dueSummary(v){
+      if(!v)return '<span class="due-sum warn">請選擇預計收到日，沒填會被當成已逾期</span>';
+      const ms=Date.parse(v+'T00:00:00Z'),days=Math.round((ms-taipeiToday())/DAY),w=DUE_WEEK[new Date(ms).getUTCDay()];
+      const when=days<0?'已過期 '+(-days)+' 天':days===0?'就是今天':days===1?'明天':days+' 天後';
+      return '<span class="due-sum'+(days<0?' warn':'')+'">'+esc(v.slice(5).replace('-','/'))+'（週'+w+'）· '+when+'，設計師依這天倒數</span>';
+    }
+    function dueBoxHtml(d){
+      const cur=d.modDate||(d.modDate=nextWorkdayInput());
+      return '<div class="due-box"><div class="due-title">預計收到日<small>希望設計師哪一天交出修改稿</small></div><div class="sch-chips">'+dueQuick().map(([l,v])=>'<button type="button" class="sch-chip'+(v===cur?' on':'')+'" data-due-chip="'+v+'">'+l+'<small>'+v.slice(5).replace('-','/')+'</small></button>').join('')+'<label class="due-other">其他日期 <input id="mModDate" type="date" value="'+esc(cur)+'" aria-label="預計收到日"></label></div><div id="dueSummary">'+dueSummary(cur)+'</div></div>';
+    }
+    function dueSet(v){const md=$('mModDate');if(md&&md.value!==v)md.value=v;document.querySelectorAll('[data-due-chip]').forEach(b=>b.classList.toggle('on',b.dataset.dueChip===v));const el=$('dueSummary');if(el)el.innerHTML=dueSummary(v)}
+    document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('[data-due-chip]');if(c&&state.view==='mail')dueSet(c.dataset.dueChip)});
+    document.addEventListener('input',e=>{if(e.target&&e.target.id==='mModDate'&&state.view==='mail')dueSet(e.target.value)});
     function startMail(drafts,{schedule=false}={}){
       state.mail={drafts:drafts.map(d=>({scheduleOpen:schedule,id:d.id,row:d.row,to:recipientFor(d.row['設計負責人']),cc:ccFor(d.row['客戶別'],d.row['設計負責人']).join(', '),subject:`【${d.id}】${mailSubjectTags(d.row)}${d.row['客戶別']}_${d.row['專案名稱']}`,body:mailBodyHtml(d.row),sent:false})),index:0,sending:false,sentCount:0,gmailChecked:false};
       state.form=null;show('mail');loadGmailContext();
@@ -2868,7 +2891,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
           <div class="mail-row has-pick"><span>收件人</span>${chipFieldHtml('to',splitEntries(d.to),'輸入信箱後按 Enter')}<button type="button" class="pick-btn" data-pick-contact="to">選擇聯絡人</button></div>
           <div class="mail-row has-pick"><span>副本</span>${chipFieldHtml('cc',splitEntries(d.cc),'可手動輸入信箱')}<button type="button" class="pick-btn" data-pick-contact="cc">選擇聯絡人</button></div>
           <div class="mail-row"><span>主旨</span><input id="mSubject" value="${esc(d.subject)}" autocomplete="off" aria-label="主旨"></div>
-          ${(d.reply&&d.mode==='modification')?`<div class="mail-row mail-row-due"><span>預計收到日</span><input id="mModDate" type="date" value="${esc(d.modDate||(d.modDate=nextWorkdayInput()))}" aria-label="預計收到日"><small class="page-sub">設計師依這天倒數；沒填會被當成已逾期</small></div>`:''}
+          ${(d.reply&&d.mode==='modification')?dueBoxHtml(d):''}
         </div>
         <div class="editor-tools rich" role="toolbar" aria-label="格式">
           ${barHtml('data-rc',{mail:true,sigOn:d.sigInserted})}

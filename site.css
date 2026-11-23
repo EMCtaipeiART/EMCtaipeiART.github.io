@@ -1860,3 +1860,10 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
 .mail-row-due>span{white-space:nowrap}
 .mail-row-due small.page-sub{margin:0 0 0 12px;padding-right:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:700px){.mail-row.mail-row-due{grid-template-columns:62px minmax(0,1fr)}.mail-row-due small.page-sub{grid-column:2;margin:0 0 8px;white-space:normal}}
+
+.due-box{display:grid;gap:10px;padding:14px;border-bottom:1px solid var(--line);background:var(--panel)}
+.due-title{font-size:13px;font-weight:900;color:var(--ink)}.due-title small{font-weight:600;color:var(--muted);margin-left:8px}
+.due-box .sch-chip small{font-weight:600;opacity:.75;margin-left:5px}
+.due-other{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:var(--muted)}
+.due-other input{height:36px;min-height:36px;width:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);padding:0 10px;font-weight:700}
+.due-sum{font-size:15px;font-weight:900;color:var(--ink)}.due-sum.warn{color:#b91c1c}
