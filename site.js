@@ -963,7 +963,7 @@
       else if(field==='designer')html=`<h3>修改設計負責人</h3><div class="option-list">${designerNames().map(n=>opt('data-cp-designer',n,n===cur('設計負責人'))).join('')}</div>`;
       else if(field==='type')html=`<h3>修改設計類型</h3><div class="option-list">${designTypes().map(n=>opt('data-cp-type',n,n===(cur('設計種類')||cur('設計類型')))).join('')}</div>`;
       else if(field==='stage'){const type=cur('設計種類')||cur('設計類型');html=`<h3>修改階段</h3><div class="option-list">${stagesFor(type).map(n=>opt('data-cp-stage',n,n===cur('階段'))).join('')||'<div class="empty">此種類沒有可選階段</div>'}</div>`}
-      else if(field==='details'){const chosen=new Set(cur('項目細節').split(/\s*[,，、]\s*/).filter(Boolean)),opts=detailOptionsFor(row);for(const c of chosen)if(!opts.includes(c))opts.push(c);html=`<h3>修改項目細節</h3><div class="option-list">${detailPickHtml(opts,chosen,row)||'<div class="empty">此種類與階段沒有項目細節選項</div>'}</div><p class="dq-hint">案件共 ${esc(row['數量']||'')} 件。只勾一項＝全部件數；勾兩項以上時，用下拉分配各項件數（加總自動維持 ${esc(row['數量']||'')} 件）；若每個項目都做了全部件數，請勾下方「每個項目都做了全部」。 <a href="tutorial/item-qty.html" target="_blank" rel="noopener">看教學影片</a></p><div class="popover-actions"><button type="button" data-cp-close>關閉</button><button type="button" data-cp-details>套用</button></div>`}
+      else if(field==='details'){const chosen=new Set(cur('項目細節').split(/\s*[,，、]\s*/).filter(Boolean)),opts=detailOptionsFor(row);for(const c of chosen)if(!opts.includes(c))opts.push(c);html=`<h3>修改項目細節</h3><div class="option-list">${detailPickHtml(opts,chosen,row)||'<div class="empty">此種類與階段沒有項目細節選項</div>'}</div><p class="dq-hint">案件共 ${esc(row['數量']||'')} 件。只勾一項＝全部件數；勾兩項以上時，用下拉分配各項件數（加總自動維持 ${esc(row['數量']||'')} 件）；若每個項目都做了全部件數，請勾下方「每個項目都做了全部」。 <a href="tutorial/item-qty.webm" target="_blank" rel="noopener">看教學影片（有聲音）</a></p><div class="popover-actions"><button type="button" data-cp-close>關閉</button><button type="button" data-cp-details>套用</button></div>`}
       pop.innerHTML=html;pop.hidden=false;state.cellEdit={id,field};if(field==='details')dqInit(pop,row);
       const r=el.getBoundingClientRect(),w=pop.offsetWidth,h=pop.offsetHeight;
       pop.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2))+'px';
@@ -1696,7 +1696,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         for(const c of chosen)if(!options.includes(c))options.push(c);
         state.pendingMove={id,status};
         $('dmSub').textContent=`${id}｜${row['專案名稱']||''}（${[row['設計種類']||row['設計類型'],row['階段']].filter(Boolean).join('／')}）：可複選，確認後狀態改為「執行中」。`;
-        $('dmList').innerHTML=options.length?detailPickHtml(options,chosen,row,'dm-opt')+'<p class="dq-hint">案件共 '+esc(row['數量']||'')+' 件。只勾一項＝全部；勾兩項以上時用下拉分配各項件數（加總自動維持 '+esc(row['數量']||'')+' 件）；若每個項目都做了全部件數，請勾下方「每個項目都做了全部」。 <a href="tutorial/item-qty.html" target="_blank" rel="noopener">看教學影片</a></p>':'<div class="empty">這個種類與階段沒有項目細節選項，直接確認即可。</div>';
+        $('dmList').innerHTML=options.length?detailPickHtml(options,chosen,row,'dm-opt')+'<p class="dq-hint">案件共 '+esc(row['數量']||'')+' 件。只勾一項＝全部；勾兩項以上時用下拉分配各項件數（加總自動維持 '+esc(row['數量']||'')+' 件）；若每個項目都做了全部件數，請勾下方「每個項目都做了全部」。 <a href="tutorial/item-qty.webm" target="_blank" rel="noopener">看教學影片（有聲音）</a></p>':'<div class="empty">這個種類與階段沒有項目細節選項，直接確認即可。</div>';
         dqInit($('dmList'),row);$('detailModal').hidden=false;return;
       }
       applyMove(id,status);
