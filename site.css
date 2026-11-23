@@ -1873,3 +1873,7 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
 .dq-input{width:64px;min-height:32px;height:32px;padding:0 8px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font-weight:700;text-align:right}
 .dq-input:disabled{opacity:.35}
 .dq-hint{margin:8px 2px 0;font-size:12px;color:var(--muted);font-weight:600;line-height:1.5}
+.detail-pick label .dq-input,.detail-pick .dq-opt input.dq-input{width:72px;height:34px;min-height:34px;margin:0;padding:0 8px;accent-color:auto;appearance:auto;-moz-appearance:auto}
+.cell-pop label.option input.dq-input{position:static;opacity:1;width:64px;height:32px;pointer-events:auto;margin:0}
+.cell-pop label.dq-opt{display:flex;align-items:center;gap:8px}
+.dq-input:disabled{opacity:.35}
