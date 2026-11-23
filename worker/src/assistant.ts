@@ -302,15 +302,23 @@ export function getMyToday(database: DatabaseSnapshot, session: SessionRecord, n
   const mineAsDesigner = (r: Row) => names.some(n => sameName(r['設計負責人'], n));
   const mine = caseRows(database).filter(r => canViewCase(database, session, r));
   const pendingReply = mine.filter(r => text(r['狀態']) === '過稿中' && ownerMatches(session, r)).length;
+  /* 修改中的案件：原本的結束日早就過了，改用最新一輪「未確認」修改紀錄的預計收到日當截止日（與前台倒數同一套） */
+  const mods = database.tables['修改紀錄']?.rows || [];
+  const eff = (r: Row): Row => {
+    if (text(r['狀態']) !== '修改中') return r;
+    const open = mods.filter(m => text(m['案件編號']) === text(r['案件編號']) && (Number(m['修改次數']) || 0) > 0 && !text(m['確認修正日']) && dayNumber(m['修改日期']) !== null)
+      .sort((x, y) => (Number(y['修改次數']) || 0) - (Number(x['修改次數']) || 0))[0];
+    return open ? { ...r, 開始日期: text(open['建立日期']) || text(open['修改日期']), 結束日期: text(open['修改日期']) } : r;
+  };
   /* 3 天內截稿：自己設計的（還在製作）算「dueSoon」；自己是專案負責人、別人設計的另算「dueSoonOwner」，招呼語分開講，避免把兩種混成一個數字 */
-  const inThree = (r: Row) => { const d = dayNumber(r['結束日期']); return d !== null && d >= today && d <= today + 3; };
+  const inThree = (r: Row) => { const d = dayNumber(eff(r)['結束日期']); return d !== null && d >= today && d <= today + 3; };
   const brief3 = (r: Row) => ({ 案件編號: text(r['案件編號']), 專案名稱: text(r['專案名稱']), 結束日期: text(r['結束日期']) });
   const due = mine.filter(r => ['未開始', '執行中', '修改中'].includes(text(r['狀態'])) && mineAsDesigner(r) && inThree(r)).map(brief3).slice(0, 5);
   const dueOwner = mine.filter(r => ACTIVE.has(text(r['狀態'])) && !mineAsDesigner(r) && ownerMatches(session, r) && inThree(r)).length;
   const created = mine.filter(r => (mineAsDesigner(r) || ownerMatches(session, r)) && submittedDay(r) === today).length;
   /* 設計師自己的今日截稿與急件（只看還要製作的案件；過稿中、已完成、暫停都已交出，不算）→ 前台登入時主動跳出提醒 */
   const WORKING = new Set(['未開始', '執行中', '修改中']);
-  const mineWork = mine.filter(r => WORKING.has(text(r['狀態'])) && mineAsDesigner(r));
+  const mineWork = mine.filter(r => WORKING.has(text(r['狀態'])) && mineAsDesigner(r)).map(eff);
   const brief = (r: Row) => ({ 案件編號: text(r['案件編號']), 專案名稱: text(r['專案名稱']), 客戶別: text(r['客戶別']), 開始日期: text(r['開始日期']), 結束日期: text(r['結束日期']) });
   const dueToday = mineWork.filter(r => dayNumber(r['結束日期']) === today).map(brief).slice(0, 8);
   const urgent = mineWork.filter(r => {
