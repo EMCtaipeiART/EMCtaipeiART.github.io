@@ -1877,3 +1877,7 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
 .cell-pop label.option input.dq-input{position:static;opacity:1;width:64px;height:32px;pointer-events:auto;margin:0}
 .cell-pop label.dq-opt{display:flex;align-items:center;gap:8px}
 .dq-input:disabled{opacity:.35}
+
+.dq-input{width:auto;min-width:64px;padding:0 6px;appearance:auto;-webkit-appearance:menulist;-moz-appearance:menulist}
+.detail-pick label .dq-input,.detail-pick .dq-opt select.dq-input,.cell-pop label.option select.dq-input{position:static;opacity:1;pointer-events:auto;width:auto;min-width:64px;height:34px;min-height:34px;margin:0;border-radius:8px;text-align:left}
+.dq-input:disabled{opacity:.55}

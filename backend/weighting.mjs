@@ -65,6 +65,24 @@ export function parseDetailQty(value) {
   return out;
 }
 
+/** 各項目細節實際採用的數量（「項目數量」規範，詳見 CLAUDE.md「項目數量計分規範」）：
+ * 1. 只勾 1 個項目（急件不算項目）→ 該項目 = 案件總數量，項目數量欄位被忽略。
+ * 2. 勾 2 個以上：項目數量必須「每個勾選項目都有填」才採用；各項目件數合計 ≠ 總數量時，等比例縮放成總數量。
+ * 3. 欄位缺項／壞掉／合計為 0 → 視為沒填，每個項目都乘總數量（舊案件的行為）。 */
+export function resolveDetailQuantities(selected, totalQty, detailQty) {
+  const items=(Array.isArray(selected)?selected:[]).filter(d=>d!=='急件');
+  const out={};
+  for(const d of items)out[d]=totalQty;
+  if(items.length<2)return out;
+  const map=parseDetailQty(detailQty);
+  if(!items.every(d=>map[d]!==undefined))return out;
+  const sum=items.reduce((n,d)=>n+map[d],0);
+  if(!(sum>0))return out;
+  const ratio=totalQty/sum;
+  for(const d of items)out[d]=Number((map[d]*ratio).toFixed(4));
+  return out;
+}
+
 export function calculateWeight({type='',stage='',qty='',details='',detailQty='',rules=DEFAULT_WEIGHT_RULE_ROWS}={}) {
   const selected=splitDetailValues(details);
   if(!selected.length)return null;
@@ -72,7 +90,7 @@ export function calculateWeight({type='',stage='',qty='',details='',detailQty=''
   const scoreMap=rules===DEFAULT_WEIGHT_RULE_ROWS?DETAIL_SCORE_MAP:detailScoreMap(rules);
   const quantity=Number(String(qty ?? '').replace(/,/g,''));
   const totalQty=Number.isFinite(quantity)?quantity:0;
-  const perDetail=parseDetailQty(detailQty);
+  const perDetail=resolveDetailQuantities(selected,totalQty,detailQty);
   const weightedSum=selected
     .filter(detail=>detail!=='急件')
     .reduce((sum,detail)=>sum+(scoreMap.get(`${normalizedType}\u0000${normalizedStage}\u0000${detail}`) ?? 0)*(perDetail[detail]!==undefined?perDetail[detail]:totalQty),0);

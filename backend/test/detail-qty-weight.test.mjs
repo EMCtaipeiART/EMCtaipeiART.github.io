@@ -17,13 +17,17 @@ test('沒填各項目數量時，每個項目都乘案件總數量（舊行為�
 test('各項目分開填數量：4 張廣告素材＋1 支影音包框 = 4×1 + 1×2 = 6；沒列到的項目沿用總數量', () => {
   const dq = '{"廣告素材":4,"影音包框":1}';
   assert.equal(calculateWeight({ ...base, details: '廣告素材, 影音包框', detailQty: dq }), 6);
-  assert.equal(calculateWeight({ ...base, details: '廣告素材, 影音包框', detailQty: '{"影音包框":1}' }), 7);
+  // 缺項（沒有每個勾選項目都填）→ 視為沒填，維持舊算法
+  assert.equal(calculateWeight({ ...base, details: '廣告素材, 影音包框', detailQty: '{"影音包框":1}' }), 15);
+  // 合計 ≠ 總數量 → 等比例縮放成總數量（廣告素材 2、影音包框 2 → 各 2.5）
+  assert.equal(calculateWeight({ ...base, details: '廣告素材, 影音包框', detailQty: '{"廣告素材":2,"影音包框":2}' }), 7.5);
 });
 
 test('急件仍是整案倍數；取消勾選的項目的數量不會被計入；壞掉的 JSON 當成沒填', () => {
   const dq = { 廣告素材: 4, 影音包框: 1 };
   assert.equal(calculateWeight({ ...base, details: '廣告素材, 影音包框, 急件', detailQty: dq }), 18);
-  assert.equal(calculateWeight({ ...base, details: '廣告素材', detailQty: dq }), 4);
+  // 只勾 1 項 → 一律用總數量，項目數量被忽略
+  assert.equal(calculateWeight({ ...base, details: '廣告素材', detailQty: dq }), 5);
   assert.deepEqual(parseDetailQty('不是JSON'), {});
   assert.equal(calculateWeight({ ...base, details: '廣告素材', detailQty: '壞掉' }), 5);
 });

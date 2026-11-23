@@ -678,6 +678,16 @@ function score(r){
   return qty(r)*regularScore*urgentMultiplier
 }
 function qty(r){const n=parseFloat(String(r['數量']||'').replace(/,/g,''));return Number.isFinite(n)?n:0}
+/* 某個項目細節在這個案件裡的件數：勾 2 項以上且「項目數量」完整時用各自件數（加總不等於總數量時等比例縮放），否則＝案件總數量 */
+function detailQty(r,detail){
+  const total=qty(r),items=scoredDetails(r['項目細節']).filter(d=>d!=='急件');
+  if(items.length<2||detail==='急件')return total;
+  let m={};try{m=JSON.parse(String(r['項目數量']||'{}'))}catch(e){return total}
+  if(!m||typeof m!=='object'||!items.every(d=>Number.isFinite(Number(m[d]))))return total;
+  const sum=items.reduce((n,d)=>n+Number(m[d]),0);if(!(sum>0))return total;
+  if(!Number.isFinite(Number(m[detail])))return total;
+  return Number(m[detail])*total/sum;
+}
 function dailyScore(r){const s=normDate(r['開始日期']),e=normDate(r['結束日期']);if(!s||!e)return score(r);return score(r)/daysBetween(s,e)}
 function group(arr,keyFn,valFn=()=>1){const m=new Map();arr.forEach(r=>{const k=keyFn(r)||'未分類';m.set(k,(m.get(k)||0)+valFn(r))});return [...m.entries()].sort((a,b)=>b[1]-a[1])}
 function trendClass(text){if(text==='—')return 'flat';return text.startsWith('↑')?'up':text.startsWith('↓')?'down':'flat'}
@@ -812,7 +822,7 @@ function splitDetails(v){
 }
 function detailQtyRows(rows){
   const m=new Map();
-  rows.forEach(r=>splitDetails(r['項目細節']).forEach(k=>m.set(k,(m.get(k)||0)+qty(r))));
+  rows.forEach(r=>splitDetails(r['項目細節']).forEach(k=>m.set(k,(m.get(k)||0)+detailQty(r,k))));
   return [...m.entries()].sort((a,b)=>b[1]-a[1])
 }
 const CASE_SHARE_COLORS=['#079455','#2e90fa','#7a5af8','#f79009','#14b8a6','#ef5da8','#6172f3','#98a2b3'];
@@ -1317,7 +1327,7 @@ function renderQuarterRecordTable(y,quarter,designer){
     cells=counts=>counts.flatMap((list,groupIndex)=>list.map(value=>cell(value,groupIndex?'c-video':'c-graphic'))).join(''),
     summarize=list=>{
       // 急件不是欄位；數量只算在各項目細節上，加權分數沿用 score()，已含急件倍率。
-      const counts=columns.map(group=>group.details.map(detail=>list.reduce((sum,row)=>scoringType(row['設計總類'])===group.type&&scoredDetails(row['項目細節']).includes(detail)?sum+qty(row):sum,0)));
+      const counts=columns.map(group=>group.details.map(detail=>list.reduce((sum,row)=>scoringType(row['設計總類'])===group.type&&scoredDetails(row['項目細節']).includes(detail)?sum+detailQty(row,detail):sum,0)));
       return {counts,total:counts.flat().reduce((sum,value)=>sum+value,0),weighted:list.reduce((sum,row)=>sum+score(row),0)}
     },
     head=`<thead><tr><th class="sticky-quarter" rowspan="2">季度</th><th class="sticky-designer" rowspan="2">設計師</th>${columns.filter(group=>group.details.length).map(group=>`<th class="g-${group.type==='平面'?'graphic':'video'}" colspan="${group.details.length}">${group.type}</th>`).join('')}<th class="g-total sticky-end qty" rowspan="2">總數量</th><th class="g-total sticky-end weight" rowspan="2">項目加權分數</th></tr><tr>${columns.flatMap(group=>group.details.map(detail=>`<th class="g-${group.type==='平面'?'graphic':'video'}">${escapeHtml(detail)}</th>`)).join('')}</tr></thead>`,

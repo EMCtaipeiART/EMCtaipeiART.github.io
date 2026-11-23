@@ -956,8 +956,8 @@
       else if(field==='designer')html=`<h3>修改設計負責人</h3><div class="option-list">${designerNames().map(n=>opt('data-cp-designer',n,n===cur('設計負責人'))).join('')}</div>`;
       else if(field==='type')html=`<h3>修改設計類型</h3><div class="option-list">${designTypes().map(n=>opt('data-cp-type',n,n===(cur('設計種類')||cur('設計類型')))).join('')}</div>`;
       else if(field==='stage'){const type=cur('設計種類')||cur('設計類型');html=`<h3>修改階段</h3><div class="option-list">${stagesFor(type).map(n=>opt('data-cp-stage',n,n===cur('階段'))).join('')||'<div class="empty">此種類沒有可選階段</div>'}</div>`}
-      else if(field==='details'){const chosen=new Set(cur('項目細節').split(/\s*[,，、]\s*/).filter(Boolean)),opts=detailOptionsFor(row);for(const c of chosen)if(!opts.includes(c))opts.push(c);html=`<h3>修改項目細節</h3><div class="option-list">${detailPickHtml(opts,chosen,row)||'<div class="empty">此種類與階段沒有項目細節選項</div>'}</div><p class="dq-hint">數量欄留空＝全部 ${esc(row['數量']||'')} 件；若一個案件裡不同項目數量不同（例如 4 張廣告素材＋1 支影音包框），在各項目填各自件數。</p><div class="popover-actions"><button type="button" data-cp-close>關閉</button><button type="button" data-cp-details>套用</button></div>`}
-      pop.innerHTML=html;pop.hidden=false;state.cellEdit={id,field};
+      else if(field==='details'){const chosen=new Set(cur('項目細節').split(/\s*[,，、]\s*/).filter(Boolean)),opts=detailOptionsFor(row);for(const c of chosen)if(!opts.includes(c))opts.push(c);html=`<h3>修改項目細節</h3><div class="option-list">${detailPickHtml(opts,chosen,row)||'<div class="empty">此種類與階段沒有項目細節選項</div>'}</div><p class="dq-hint">案件共 ${esc(row['數量']||'')} 件。只勾一項＝全部件數；勾兩項以上時，用下拉選各項件數，加總會自動維持 ${esc(row['數量']||'')} 件（例如 4 張廣告素材，影音包框自動變 1）。</p><div class="popover-actions"><button type="button" data-cp-close>關閉</button><button type="button" data-cp-details>套用</button></div>`}
+      pop.innerHTML=html;pop.hidden=false;state.cellEdit={id,field};if(field==='details')dqInit(pop,row);
       const r=el.getBoundingClientRect(),w=pop.offsetWidth,h=pop.offsetHeight;
       pop.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2))+'px';
       pop.style.top=(r.bottom+8+h>innerHeight?Math.max(8,r.top-h-8):r.bottom+8)+'px';
@@ -1468,17 +1468,65 @@
     }
     /* 項目細節各自的數量（「項目數量」欄，JSON）：沒填的項目沿用案件總數量 */
     function detailQtyOf(row){let o={};try{o=JSON.parse(String(row['項目數量']||'{}'))}catch(e){}return o&&typeof o==='object'&&!Array.isArray(o)?o:{}}
-    function detailChipText(row,name){const q=detailQtyOf(row)[name];return q===undefined||String(q)===''||Number(q)===Number(row['數量'])?name:name+'×'+q}
+    function detailChipText(row,name){const items=String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(x=>x&&x!=='急件'),m=detailQtyOf(row),q=m[name];return items.length<2||!items.every(x=>m[x]!==undefined)||q===undefined?name:name+'×'+q}
     function detailPickHtml(opts,chosen,row,wrapCls){
-      const qm=detailQtyOf(row),total=Number(row['數量'])||'';
-      return opts.map(o=>{const has=qm[o]!==undefined&&Number(qm[o])!==Number(total);return '<label class="option dq-opt '+(wrapCls||'')+'"><input type="checkbox" value="'+esc(o)+'"'+(chosen.has(o)?' checked':'')+'><span class="dq-name">'+esc(o)+'</span>'+(o==='急件'?'':'<span class="dq-qty"><input type="number" class="dq-input" min="0" step="1" data-dq="'+esc(o)+'" value="'+(has?esc(qm[o]):'')+'" placeholder="'+esc(total)+'" aria-label="'+esc(o)+' 數量"'+(chosen.has(o)?'':' disabled')+'><small>件</small></span>')+'</label>'}).join('');
+      return opts.map(o=>'<label class="option dq-opt '+(wrapCls||'')+'"><input type="checkbox" value="'+esc(o)+'"'+(chosen.has(o)?' checked':'')+'><span class="dq-name">'+esc(o)+'</span>'+(o==='急件'?'':'<span class="dq-qty"><select class="dq-input" data-dq="'+esc(o)+'" aria-label="'+esc(o)+' 件數"></select><small>件</small></span>')+'</label>').join('');
+    }
+    /* 數量下拉：只勾 1 項＝全部件數（鎖定）；勾 2 項以上＝各項件數加總必須等於案件總數量，改一項其他項自動補齊 */
+    function dqCheckedItems(root){return [...root.querySelectorAll('.dq-opt')].filter(l=>l.querySelector('input[type=checkbox]').checked&&l.querySelector('.dq-input'))}
+    function dqBalance(vals,pinnedIdx,total){
+      const n=vals.length;vals=vals.map(v=>Math.max(1,Math.round(v)||1));
+      let diff=total-vals.reduce((a,b)=>a+b,0);
+      const order=[...Array(n).keys()].filter(i=>i!==pinnedIdx);if(!order.length)return vals;
+      for(let k=0;diff!==0&&k<10000;k++){
+        const i=diff>0?order[k%order.length]:order[order.length-1-(k%order.length)];
+        if(diff>0){vals[i]++;diff--}else if(vals[i]>1){vals[i]--;diff++}else if(order.every(j=>vals[j]<=1))break;
+      }
+      return vals;
+    }
+    function dqRender(root,total,vals){
+      const items=dqCheckedItems(root),k=items.length,max=Math.max(1,total-(k-1));
+      root.querySelectorAll('.dq-opt').forEach(l=>{const sel=l.querySelector('.dq-input');if(!sel)return;
+        const idx=items.indexOf(l);
+        if(idx<0){sel.innerHTML='<option value="">-</option>';sel.disabled=true;sel.value='';return}
+        const lim=k===1?total:max,v=k===1?total:vals[idx];
+        sel.innerHTML=Array.from({length:lim},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'</option>').join('');
+        sel.value=String(v);sel.disabled=k===1;
+      });
+    }
+    function dqInit(root,row){
+      const total=Number(row['數量'])||0;root._dqTotal=total;
+      if(total<1){root.querySelectorAll('.dq-qty').forEach(x=>x.style.display='none');return}
+      const items=dqCheckedItems(root),k=items.length,saved=detailQtyOf(row);
+      let vals;
+      if(k>=2){
+        const ok=items.every(l=>saved[l.querySelector('input').value]!==undefined);
+        vals=ok?items.map(l=>Number(saved[l.querySelector('input').value])):items.map((_,i)=>Math.floor(total/k)+(i<total%k?1:0));
+        vals=dqBalance(vals,-1,total);
+      }else vals=[total];
+      dqRender(root,total,vals);
+    }
+    function dqOnChange(root,changed){
+      const total=root._dqTotal||0;if(total<1)return;
+      const items=dqCheckedItems(root),k=items.length;
+      const prev=items.map(l=>Number(l.querySelector('.dq-input').value)||0);
+      let vals,pin=-1;
+      if(k<2)vals=[total];
+      else{
+        if(changed&&changed.matches('.dq-input'))pin=items.indexOf(changed.closest('.dq-opt'));
+        vals=prev.map((v,i)=>v||(Math.floor(total/k)));
+        if(pin>=0)vals[pin]=Math.min(Math.max(1,vals[pin]),total-(k-1));
+        vals=dqBalance(vals,pin,total);
+      }
+      dqRender(root,total,vals);
     }
     function readDetailPick(root,row){
-      const total=Number(row['數量'])||0,names=[],qty={};
-      root.querySelectorAll('.dq-opt').forEach(l=>{const c=l.querySelector('input[type=checkbox]');if(!c||!c.checked)return;names.push(c.value);const q=l.querySelector('.dq-input');const v=q&&q.value.trim();if(v!==''&&v!=null&&Number(v)!==total&&Number.isFinite(Number(v)))qty[c.value]=Number(v)});
-      return {details:names.join(', '),detailQty:Object.keys(qty).length?JSON.stringify(qty):''};
+      const names=[],qty={};let k=0;
+      root.querySelectorAll('.dq-opt').forEach(l=>{const c=l.querySelector('input[type=checkbox]');if(!c||!c.checked)return;names.push(c.value);const q=l.querySelector('.dq-input');if(q){k++;qty[c.value]=Number(q.value)||0}});
+      return {details:names.join(', '),detailQty:(k>=2&&Object.values(qty).every(v=>v>0))?JSON.stringify(qty):''};
     }
-    document.addEventListener('change',e=>{const c=e.target;if(c&&c.matches&&c.matches('.dq-opt input[type=checkbox]')){const q=c.closest('.dq-opt').querySelector('.dq-input');if(q){q.disabled=!c.checked;if(c.checked)q.focus()}}});
+    document.addEventListener('change',e=>{const c=e.target;if(!c||!c.matches)return;
+      if(c.matches('.dq-opt input[type=checkbox], .dq-opt select.dq-input')){const root=c.closest('#cellPop,#dmList');if(root)dqOnChange(root,c)}});
     /* 右上角的 Google 信箱／行事曆小圖示：新開分頁；有登入就帶 authuser 直接開對應帳號 */
     function googleLinksHtml(withAi){
       const acct=String(selfAccount()||'').trim(),au=/@/.test(acct)?'?authuser='+encodeURIComponent(acct):'';
@@ -1631,8 +1679,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         for(const c of chosen)if(!options.includes(c))options.push(c);
         state.pendingMove={id,status};
         $('dmSub').textContent=`${id}｜${row['專案名稱']||''}（${[row['設計種類']||row['設計類型'],row['階段']].filter(Boolean).join('／')}）：可複選，確認後狀態改為「執行中」。`;
-        $('dmList').innerHTML=options.length?detailPickHtml(options,chosen,row,'dm-opt')+'<p class="dq-hint">數量欄留空＝全部 '+esc(row['數量']||'')+' 件；各項目件數不同時才需要填。</p>':'<div class="empty">這個種類與階段沒有項目細節選項，直接確認即可。</div>';
-        $('detailModal').hidden=false;return;
+        $('dmList').innerHTML=options.length?detailPickHtml(options,chosen,row,'dm-opt')+'<p class="dq-hint">案件共 '+esc(row['數量']||'')+' 件。只勾一項＝全部；勾兩項以上時用下拉選各項件數，加總自動維持 '+esc(row['數量']||'')+' 件。</p>':'<div class="empty">這個種類與階段沒有項目細節選項，直接確認即可。</div>';
+        dqInit($('dmList'),row);$('detailModal').hidden=false;return;
       }
       applyMove(id,status);
     }

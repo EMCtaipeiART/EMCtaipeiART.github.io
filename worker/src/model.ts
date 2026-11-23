@@ -160,6 +160,12 @@ export function toSheetRow(source: Row = {}, existing: Row = {}, rules: Row[] = 
     if (value !== undefined) row[header] = value == null ? '' : value;
   }
   for (const header of TABLE_SCHEMAS.database.headers) if (source[header] !== undefined) row[header] = source[header] == null ? '' : source[header];
+  if (source['項目細節'] !== undefined || source.details !== undefined) {
+    const before = String(existing['項目細節'] ?? '').trim();
+    const after = String(row['項目細節'] ?? '').trim();
+    const gaveQty = source['項目數量'] !== undefined || source.detailQty !== undefined;
+    if (!gaveQty && before !== after) row['項目數量'] = '';
+  }
   if (row['數量'] !== '' && row['數量'] !== undefined) row['數量'] = String(Number(row['數量']) || 1);
   if (row['開始日期']) row['月份'] = monthFromDate(row['開始日期']) || row['月份'] || '';
   applyWeightToRow(row, typedWeightRules(rules));
