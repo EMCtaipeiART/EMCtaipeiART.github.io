@@ -2026,6 +2026,19 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       }catch(err){toast(`處理失敗：${err.message}`,true)}
     }
     document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('[data-del-confirm],[data-del-restore]');if(!c)return;delReviewRun(c.hasAttribute('data-del-confirm')?'confirm':'restore')});
+    /* 背景載入（Gmail 狀態、信件串）完成後重畫信件編輯器：保留捲動位置、游標與焦點，避免打字到一半畫面跳掉 */
+    function renderMailKeep(){
+      const ed=$('mBody'),act=document.activeElement,sx=window.scrollX,sy=window.scrollY;
+      let edOff=null,fid='',fs=0,fe=0;
+      if(ed&&act&&ed.contains(act)||ed&&act===ed){const sel=getSelection();if(sel.rangeCount&&ed.contains(sel.anchorNode)){const r=document.createRange();r.selectNodeContents(ed);r.setEnd(sel.anchorNode,sel.anchorOffset);edOff=r.toString().length}}
+      else if(act&&act.id&&/^(mSubject|mModDate)$/.test(act.id)){fid=act.id;try{fs=act.selectionStart;fe=act.selectionEnd}catch(e){}}
+      renderMail();
+      window.scrollTo(sx,sy);
+      const ne=$('mBody');
+      if(edOff!==null&&ne){ne.focus({preventScroll:true});const w=document.createTreeWalker(ne,NodeFilter.SHOW_TEXT);let left=edOff,n,placed=false;while((n=w.nextNode())){if(left<=n.length){const r=document.createRange();r.setStart(n,left);r.collapse(true);const sel=getSelection();sel.removeAllRanges();sel.addRange(r);placed=true;break}left-=n.length}if(!placed){const r=document.createRange();r.selectNodeContents(ne);r.collapse(false);const sel=getSelection();sel.removeAllRanges();sel.addRange(r)}}
+      else if(fid){const el=$(fid);if(el){el.focus({preventScroll:true});try{el.setSelectionRange(fs,fe)}catch(e){}}}
+      window.scrollTo(sx,sy);
+    }
     function startMail(drafts,{schedule=false}={}){
       state.mail={drafts:drafts.map(d=>({scheduleOpen:schedule,id:d.id,row:d.row,to:recipientFor(d.row['設計負責人']),cc:ccFor(d.row['客戶別'],d.row['設計負責人']).join(', '),subject:`【${d.id}】${mailSubjectTags(d.row)}${d.row['客戶別']}_${d.row['專案名稱']}`,body:mailBodyHtml(d.row),sent:false})),index:0,sending:false,sentCount:0,gmailChecked:false};
       state.form=null;show('mail');loadGmailContext();
@@ -2034,7 +2047,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       try{const [status,sig]=await Promise.all([api('gmailStatus'),api('getGmailSignature').catch(()=>({signature:''})),loadUserSettings(false).catch(()=>{})]);state.gmail={connected:Boolean(status.connected),address:status.gmailAddress||''};state.gmailSignature=sig.signature||'';state.signature=(st2.presets[st2.presetDefault]?.html)||sig.signature||''}
       catch(err){state.gmail={connected:false,address:'',error:err.message};state.signature=''}
       if(state.mail)state.mail.gmailChecked=true;
-      if(state.view==='mail'){saveMailDraft();renderMail()}
+      if(state.view==='mail'){saveMailDraft();renderMailKeep()}
     }
 
     /* ---------- 設定頁：個人設定、信件範本、簽名檔設定、客戶設定（沿用舊網站，寫入同一份後台資料） ---------- */
@@ -2402,7 +2415,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         state.thread={id,loading:false,messages:data.messages||[],suggestedTo:withNames(data.suggestedTo),suggestedCc:withNames(data.suggestedCc),replyFrom:data.replyFrom||'',error:''};
         if(applyReply&&state.mail){if(state.view==='mail')saveMailDraft();const d=state.mail.drafts[state.mail.index];if(d&&d.reply&&d.id===id){if(!d.to&&state.thread.suggestedTo)d.to=state.thread.suggestedTo;if(!d.cc&&state.thread.suggestedCc)d.cc=state.thread.suggestedCc;applied=true}}
       }catch(err){state.thread={id,loading:false,messages:[],error:err.message||'讀取失敗'}}
-      if(state.view==='mail'&&state.mail){if(!applied)saveMailDraft();renderMail()}
+      if(state.view==='mail'&&state.mail){if(!applied)saveMailDraft();renderMailKeep()}
       else if(state.view==='thread')renderThreadPage();
     }
     function renderThreadPage(){
