@@ -2160,9 +2160,16 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     const canonAcc=v=>{const a=String(v||'').trim().toLowerCase();return !a||a.startsWith('local:')?a:(a.includes('@')?a:`${a}@emctaipei.com`)};
     /* 目前上架的小幫手角色。角色不是永久的（小黃是剛失業、暫時代班，之後會因為熱門話題或時事換成別的角色）；換角色只改這個物件（與 Worker 的 assistant-character.ts）：
        id（換一個新的，頭像旁就會對每位同事顯示 NEW 標籤）、launched（上架日）、名字、頭像、自我介紹；眼皮與嘴的位置用 vars（CSS 變數 --lid-top／--lid-h／--lid-w／--lid-l／--lid-r／--lid-color／--mouth-l／--mouth-t／--mouth-w／--mouth-h）調整。 */
-    const ASSISTANT_CHARACTER={id:'xiaoliu-2026-11',launched:'2026-11-23',name:'小劉',sub:'設計部代班解答',img:'assets/xiaoliu.webp',
-      intro:'嗨，我是小劉！剛拿下金馬最佳男主角，領完獎還沒進組，正好空檔，就來幫設計部代班解答。我能查案量、找案件、介紹系統功能，也會跟你分享新公告和設計圈新聞。點我就能問～',
-      vars:{'--lid-color':'#fabc96','--lid-l':'30%','--lid-r':'54.6%','--lid-w':'13.5%','--lid-top':'58%','--lid-h':'9.5%','--mouth-l':'44%','--mouth-t':'83%','--mouth-w':'14%','--mouth-h':'5%'}};
+    const ASSISTANT_CHARACTERS=[
+      {id:'xiaoliu-2026-11',launched:'2026-11-23',name:'小劉',sub:'設計部代班解答',img:'assets/xiaoliu.webp',
+        intro:'嗨，我是小劉！剛拿下金馬最佳男主角，領完獎還沒進組，正好空檔，就來幫設計部代班解答。我能查案量、找案件、介紹系統功能，也會跟你分享新公告和設計圈新聞。點我就能問～',
+        vars:{'--lid-color':'#fabc96','--lid-l':'30%','--lid-r':'54.6%','--lid-w':'13.5%','--lid-top':'58%','--lid-h':'9.5%','--mouth-l':'44%','--mouth-t':'83%','--mouth-w':'14%','--mouth-h':'5%'}},
+      {id:'xiaosu-2026-11',launched:'2026-11-23',name:'小蘇',sub:'設計部代班解答',img:'assets/xiaosu.webp',
+        intro:'嗨，我是小蘇！剛拿下金馬最佳導演，下一部還沒開拍，正好空檔，就來幫設計部代班解答。我能查案量、找案件、介紹系統功能，也會跟你分享新公告和設計圈新聞。點我就能問～',
+        vars:{'--lid-color':'#e9b497','--lid-l':'33.5%','--lid-r':'52.6%','--lid-w':'12%','--lid-top':'35%','--lid-h':'4.5%','--mouth-l':'40.3%','--mouth-t':'51.8%','--mouth-w':'15%','--mouth-h':'8.5%'}}
+    ];
+    /* 兩位角色隨機出現：每個瀏覽分頁開啟時抽一位，同一分頁之後都是同一位（避免對話中途換人）；兩位同時上架，NEW 標籤各自計算 */
+    const ASSISTANT_CHARACTER=(()=>{let id='';try{id=sessionStorage.getItem('assistantCharV1')||''}catch(err){}let c=ASSISTANT_CHARACTERS.find(x=>x.id===id);if(!c){c=ASSISTANT_CHARACTERS[Math.floor(Math.random()*ASSISTANT_CHARACTERS.length)];try{sessionStorage.setItem('assistantCharV1',c.id)}catch(err){}}return c})();
     const NEW_DAYS=14;/* 新角色上架後，頭像旁的 NEW 標籤最多顯示幾天（Worker assistant-character.ts 的 newDays 同步） */
     /* 右下角小幫手開關（個人設定）：預設開；本機先記一份讓切換立即生效，同時寫進雲端個人設定跨裝置同步 */
     const assistantOn=()=>{try{return localStorage.getItem('assistantEnabledV1:'+selfAccount())!=='0'}catch(err){return true}};
@@ -5155,7 +5162,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const history=S.msgs.filter(m=>m.content).slice(-6).map(m=>({role:m.role,content:m.content}));
         S.msgs.push({role:'user',content:q,fresh:true});S.busy=true;render();
         try{
-          const r=await api('assistantChat',{message:q,history});
+          const r=await api('assistantChat',{message:q,history,character:ASSISTANT_CHARACTER.id});
           S.msgs.push({role:'assistant',content:r.reply||'……',guides:Array.isArray(r.guides)?r.guides:[],goto:Array.isArray(r.goto)?r.goto:[],logId:r.logId||null,fb:null,fresh:true});talk(400+String(r.reply||'').length*45);
           if(r.quota&&r.quota.tired)S.tired=true;
         }catch(err){S.msgs.push({role:'assistant',content:'小幫手剛剛打了個盹，請再問一次！'})}

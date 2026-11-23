@@ -30,7 +30,7 @@ export const TIRED_LINES = [
   '我先去喝杯咖啡，明天見！'
 ];
 
-import { ASSISTANT_CHARACTER } from './assistant-character';
+import { ASSISTANT_CHARACTER, characterById } from './assistant-character';
 import { personalLine, roleLine, roleOf } from './assistant-role';
 export { ASSISTANT_CHARACTER };
 
@@ -662,6 +662,9 @@ export async function assistantChat(
     return { rows: mergeCaseRows(caseRows(database), history.rows), ok: history.ok };
   })());
   const withRange = (out: Row, ok: boolean): Row => ({ ...out, 資料範圍: ok ? '目前資料庫＋歷史資料庫（2023 年起）' : '只有近期資料（歷史資料庫暫時讀不到，請如實告知使用者較早的資料可能查不到）' });
+  /* 依前台帶來的角色 id 換成對應的名字與人設（預設角色的字樣直接替換） */
+  const who = characterById(payload.character);
+  const systemPrompt = who === ASSISTANT_CHARACTER ? ASSISTANT_SYSTEM_PROMPT : ASSISTANT_SYSTEM_PROMPT.split(ASSISTANT_CHARACTER.backstory).join(who.backstory).split(ASSISTANT_CHARACTER.look).join(who.look).split(ASSISTANT_CHARACTER.name).join(who.name);
   const messages: ChatMessage[] = [...cleanHistory(payload.history), { role: 'user', content: message }];
   let tokens = 0;
   let reply = TOO_HARD_LINE;
@@ -671,7 +674,7 @@ export async function assistantChat(
     const response = await fetchImpl('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': deps.apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: ASSISTANT_MODEL, max_tokens: ASSISTANT_MAX_TOKENS, system: [{ type: 'text', text: ASSISTANT_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }, { type: 'text', text: `${todayLine(nowMs)}
+      body: JSON.stringify({ model: ASSISTANT_MODEL, max_tokens: ASSISTANT_MAX_TOKENS, system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }, { type: 'text', text: `${todayLine(nowMs)}
 ${roleLine(roleOf(database, session), personalLine(getMyToday(database, session, nowMs)))}` }], tools: ASSISTANT_TOOLS, messages })
     });
     if (!response.ok) { reply = '小幫手剛剛打了個盹，請再問一次！'; break; }

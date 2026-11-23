@@ -6,7 +6,7 @@
  * 兩者都是公開 repo 的內容；這裡只讀、不寫。
  */
 import type { AssistantStore } from './assistant';
-import { ASSISTANT_CHARACTER } from './assistant-character';
+import { ASSISTANT_CHARACTERS } from './assistant-character';
 
 export interface ChangeSection { title: string; body: string }
 export interface ChangeCommit { date: string; subject: string }
@@ -27,7 +27,7 @@ const COMMIT_KEEP = 12;
 const ADMIN_ONLY_BASE = /後台|admin|password|密碼|source to repo|onkeydown|管理者|管理員|教小黃|試問|用量|待補|稽核|備份|還原|金鑰|部署|Worker|DO storage|schema|測試|重構|知識庫|維護手冊|走訪|wrangler|ANTHROPIC|CLAUDE\.md|ASSISTANT\.md|小幫手|機器人|泡泡|氣泡|彈出|額度|電池|充電|新聞|\bNEW\b|新上架|角色名字|寫死|常數|提示詞|prompt|tokens?|快取|集中設定|lens-shop|lens-group-buy|團購|到貨|通知到貨/i;
 const escapeRe = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 /** 小幫手角色的名字會換，所以名字不寫死在正規表示式裡，從 assistant-character.ts 取。 */
-export const ADMIN_ONLY = new RegExp(ADMIN_ONLY_BASE.source + '|' + escapeRe(ASSISTANT_CHARACTER.name), 'i');
+export const ADMIN_ONLY = new RegExp(ADMIN_ONLY_BASE.source + '|' + ASSISTANT_CHARACTERS.map(x => escapeRe(x.name)).join('|'), 'i');
 export const isAdminOnly = (value: string): boolean => ADMIN_ONLY.test(value);
 
 /** 取檔尾最新的 N 段「## 標題」；回傳新到舊。 */

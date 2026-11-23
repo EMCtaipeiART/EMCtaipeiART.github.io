@@ -6,9 +6,8 @@
  * 這裡不收錄任何同仁的個人留言、到訪紀錄、帳號密碼或記事本內容，只寫「功能是什麼、怎麼用」。
  */
 import type { KnowledgeTopic } from './assistant-knowledge';
-import { ASSISTANT_CHARACTER } from './assistant-character';
 
-const N = ASSISTANT_CHARACTER.name;
+const N = '小幫手';
 
 export const EXTRA_TOPICS: KnowledgeTopic[] = [
   {

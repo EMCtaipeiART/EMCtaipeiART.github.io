@@ -141,3 +141,5 @@
 ## 已封存的角色（可召回）
 - 小黃：`assistant-characters/xiaohuang.json`（設定）＋`assistant-characters/xiaohuang.webp`（頭像）。召回步驟寫在 json 的「說明」。
 - 2026-11-23 起上架的是「小劉」（`assets/xiaoliu.webp`，眼皮／嘴的位置已用 `vars` 對位）。
+
+- 2026-11-23 起同時上架「小劉」「小蘇」，前台隨機抽一位（sessionStorage 記住），清單見 `ASSISTANT_CHARACTERS`（worker 與 site.js 各一份，要同步）。
