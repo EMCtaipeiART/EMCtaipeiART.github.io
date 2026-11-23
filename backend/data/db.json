@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 12480,
+  "revision": 12481,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-23T07:45:46.746Z",
+  "updatedAt": "2026-11-23T07:56:58.001Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -2417,7 +2417,9 @@
         "案件摘要"
       ],
       "primaryKey": "案件編號",
-      "rows": []
+      "rows": [
+        {"案件編號":"26110177","申請人帳號":"david.liao@emctaipei.com","申請人":"廖秦葦","申請時間":"2026-11-23T07:56:58.001Z","案件摘要":"欣格家居_迪朗奇_11月FB貼文_第四篇_new｜Anna｜未開始"}
+      ]
     },
     "短連結": {
       "headers": [
