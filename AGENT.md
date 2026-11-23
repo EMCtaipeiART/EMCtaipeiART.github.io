@@ -6538,3 +6538,4 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 2026-11-19 addModificationRecord 新增 backfill:true（補登過去漏記的修改需求：直接標已確認、不改案件狀態）。需 wrangler deploy。
 - 2026-11-19 補登漏記的修改紀錄（資料操作，無程式變更）：26100165×2、26100167、26100168、26100169、26100179、26100195(11/02 08:00 輪)、26100201×2、26110002×3 以 backfill 補上（標已確認、不改狀態）；26100187 以一般模式補上（改為修改中、待設計師回覆）。
 - 2026-11-20 寄信 Durable Object 記憶體爆掉（isolate exceeded memory limit）：MIME 組裝與 base64url 編碼改分段處理（utf8ToBase64Url／base64Encode／wrapMimeBase64），減少大附件／長信件串時的記憶體複本；已部署 Worker。
+- 2026-11-23 寄信編輯器「預計收到日」欄位跑版：標籤不換行、日期框固定寬、說明文字同列顯示（手機換行）。

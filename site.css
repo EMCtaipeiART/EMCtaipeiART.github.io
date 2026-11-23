@@ -1855,3 +1855,8 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
   .board.five .col-more{display:none!important}
   .board.five .column-head,.board.five .column-bar{display:none}
 }
+
+.mail-row.mail-row-due{grid-template-columns:78px 170px minmax(0,1fr);column-gap:0}
+.mail-row-due>span{white-space:nowrap}
+.mail-row-due small.page-sub{margin:0 0 0 12px;padding-right:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:700px){.mail-row.mail-row-due{grid-template-columns:62px minmax(0,1fr)}.mail-row-due small.page-sub{grid-column:2;margin:0 0 8px;white-space:normal}}

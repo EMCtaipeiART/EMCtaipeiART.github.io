@@ -2855,7 +2855,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
           <div class="mail-row has-pick"><span>收件人</span>${chipFieldHtml('to',splitEntries(d.to),'輸入信箱後按 Enter')}<button type="button" class="pick-btn" data-pick-contact="to">選擇聯絡人</button></div>
           <div class="mail-row has-pick"><span>副本</span>${chipFieldHtml('cc',splitEntries(d.cc),'可手動輸入信箱')}<button type="button" class="pick-btn" data-pick-contact="cc">選擇聯絡人</button></div>
           <div class="mail-row"><span>主旨</span><input id="mSubject" value="${esc(d.subject)}" autocomplete="off" aria-label="主旨"></div>
-          ${(d.reply&&d.mode==='modification')?`<div class="mail-row"><span>預計收到日</span><input id="mModDate" type="date" value="${esc(d.modDate||(d.modDate=nextWorkdayInput()))}" aria-label="預計收到日" style="max-width:190px"><small class="page-sub" style="margin:0 0 0 10px">設計師依這天倒數；沒填會被當成已逾期</small></div>`:''}
+          ${(d.reply&&d.mode==='modification')?`<div class="mail-row mail-row-due"><span>預計收到日</span><input id="mModDate" type="date" value="${esc(d.modDate||(d.modDate=nextWorkdayInput()))}" aria-label="預計收到日"><small class="page-sub">設計師依這天倒數；沒填會被當成已逾期</small></div>`:''}
         </div>
         <div class="editor-tools rich" role="toolbar" aria-label="格式">
           ${barHtml('data-rc',{mail:true,sigOn:d.sigInserted})}
