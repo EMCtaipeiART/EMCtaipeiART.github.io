@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 12511,
+  "revision": 12512,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-23T09:29:40.334Z",
+  "updatedAt": "2026-11-23T09:29:51.557Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1479,7 +1479,7 @@
         {"案件編號":"26110144","修改次數":"0","建立日期":"2026/11/23 16:45:07","修改日期":"2026/11/23 16:45:07","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/23 16:45:07","圖片連結":"[{\"fileName\":\"261123_ANKER_GTA.png\",\"url\":\"https://lh3.googleusercontent.com/d/14LI7p4FaWN0gFNiDkylD8PnoECtoIdgY=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/23 16:45:07"},
         {"案件編號":"26110056","修改次數":"1","建立日期":"2026/11/23 17:00:20","修改日期":"2026-11-24","修改內容":"奶壺的蓋子需要調整：\n素材NAS：\\\\192.168.0.33\\設計部\\專案企劃部\\執行中\\迪朗奇咖啡機\\素材\\整理素材 For 設計(已整理)\\11月IG\\第四篇\n\n再請協助於明天11/24 12:00前提供修正，謝謝","修改內容連結":"","修改人":"廖秦葦","確認修正日":"","待修改圖片":""},
         {"案件編號":"26110176","修改次數":"0","建立日期":"2026/11/23 17:06:01","修改日期":"2026/11/23 17:06:01","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/23 17:06:01","圖片連結":"[{\"fileName\":\"261123_ANKER_全案型_pchome_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1blieX6sPcU8vboVw81sIqAv2-M1Igj-F=w1600\"},{\"fileName\":\"261123_ANKER_全案型_pchome_3.png\",\"url\":\"https://lh3.googleusercontent.com/d/1linX_svPLsqgpF9qmd3hHWKwBNwlxMpq=w1600\"},{\"fileName\":\"261123_ANKER_全案型_蝦皮_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ryrgw55kutp5mWH07YaRapnuARuO6QVp=w1600\"},{\"fileName\":\"261123_ANKER_全案型_蝦皮_3.png\",\"url\":\"https://lh3.googleusercontent.com/d/1F6ZeTncNmb45PWbHmBBNZyp-noXt28px=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/23 17:06:14"},
-        {"案件編號":"26110085","修改次數":"1","建立日期":"2026/11/23 17:27:09","修改日期":"2026-11-24","修改內容":"LOGO請用黑色，不修改LOGO CI，\n圖二\"草莓\" 圖三\"AUTO\" 圖四\"五段\"\n以上標題文字也請協助一併改色強調，謝謝","修改內容連結":"","修改人":"廖秦葦","確認修正日":"","待修改圖片":""}
+        {"案件編號":"26110085","修改次數":"1","建立日期":"2026/11/23 17:27:09","修改日期":"2026-11-24","修改內容":"LOGO請用黑色，不修改LOGO CI，\n圖二\"草莓\" 圖三\"AUTO\" 圖四\"五段\"\n以上標題文字也請協助一併改色強調，謝謝","修改內容連結":"","修改人":"廖秦葦","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"261120_Nutribullet_第二篇_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1F78a_GCWTjox0F-7f43EjREdHcJWPEeL=w1600\"},{\"fileName\":\"261120_Nutribullet_第二篇_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1XByCcGgEdAicOmayEp0a79AcTsayAESo=w1600\"},{\"fileName\":\"261120_Nutribullet_第二篇_03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1xP-uMtW5hgegeQKXtVQt8EFri9PQ08eU=w1600\"},{\"fileName\":\"261120_Nutribullet_第二篇_04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1cNnm2HKtkn8OY30qOu_-5LJykx_FZtIz=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/23 17:29:51"}
       ]
     },
     "補充資料連結": {
