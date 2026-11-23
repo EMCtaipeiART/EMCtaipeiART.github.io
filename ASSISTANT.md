@@ -136,3 +136,8 @@
 - 換成 Codex 畫的真正閉眼／張嘴圖。
 - 新聞改接正式 API；滑過氣泡針對手機（無 hover）的替代入口。
 - 小黃紀錄的自動備份（目前只存在 Durable Object）。
+
+
+## 已封存的角色（可召回）
+- 小黃：`assistant-characters/xiaohuang.json`（設定）＋`assistant-characters/xiaohuang.webp`（頭像）。召回步驟寫在 json 的「說明」。
+- 2026-11-23 起上架的是「小劉」（`assets/xiaoliu.webp`，眼皮／嘴的位置已用 `vars` 對位）。
