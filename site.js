@@ -5038,8 +5038,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       (function wait(){if(++tries>40)return;if(!loggedIn()||document.getElementById('uniLoading')||state.view!=='board'){setTimeout(wait,1500);return}setTimeout(offer,1500)})();
       try{if(/[?&]tour=1/.test(location.search))addEventListener('load',()=>setTimeout(start,1800))}catch(e){}
       /* 小幫手「前往」按鈕：直接開啟頁面，不給網址 */
-      const GO={universe:{t:'多元宇宙'},projects:{t:'專案',sel:'[data-nav="projects"]'},links:{t:'短網址',sel:'[data-ext="links"]'},calendar:{t:'設計部行事曆',sel:'[data-ext="calendar"]'},wall:{t:'作品牆',sel:'[data-ext="wall"]'},notes:{t:'記事本',sel:'[data-ext="notes"]'},assign:{t:'專案分配',sel:'[data-ext="assign"]'},owner:{t:'您的案件進度',sel:'[data-ext="owner"]'},outfit:{t:'建立角色',sel:'[data-ext="outfit"]'},dashboard:{t:'設計儀表板',sel:'[data-ext="dashboard"]'},lunch:{t:'午餐地圖',sel:'[data-ext="lunch"]'},issues:{t:'問題回報',sel:'[data-ext="issues"]'}};
-      const goTo=id=>{if(id==='universe'){openUniverse();return true}const g=GO[id],el=g&&g.sel&&document.querySelector(g.sel);if(!el||!visible(el))return false;el.click();return true};
+      const GO={universe:{t:'多元宇宙'},projects:{t:'專案',sel:'[data-nav="projects"]'},links:{t:'短網址',sel:'[data-ext="links"]'},calendar:{t:'設計部行事曆',sel:'[data-ext="calendar"]'},wall:{t:'作品牆',sel:'[data-ext="wall"]'},notes:{t:'記事本',sel:'[data-ext="notes"]'},assign:{t:'專案分配',sel:'[data-ext="assign"]'},owner:{t:'您的案件進度',sel:'[data-ext="owner"]'},outfit:{t:'建立角色',sel:'[data-ext="outfit"]'},dashboard:{t:'設計儀表板',sel:'[data-ext="dashboard"]'},lunch:{t:'午餐地圖',sel:'[data-ext="lunch"]'},issues:{t:'問題回報',sel:'[data-ext="issues"]'},tut_qty:{t:'教學影片：分開填各項件數',href:'tutorial/item-qty.html'}};
+      const goTo=id=>{if(id==='universe'){openUniverse();return true}if(GO[id]&&GO[id].href){window.open(GO[id].href,'_blank','noopener');return true}const g=GO[id],el=g&&g.sel&&document.querySelector(g.sel);if(!el||!visible(el))return false;el.click();return true};
       return {start,offer,goTo,goLabel:id=>GO[id]?GO[id].t:'',labelOf:id=>{const x=STEPS.find(y=>y.id===id);return x?x.t:''}};
     })();
     /* ---------- 小幫手 ---------- */

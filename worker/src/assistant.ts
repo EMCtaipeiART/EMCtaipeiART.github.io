@@ -46,7 +46,7 @@ export function todayLine(nowMs: number): string {
 /** 前台「帶我去看」指引按鈕可用的位置代號（site.js 的 siteTour 要有同名 id）。 */
 export const GUIDE_IDS = ['form', 'board', 'projects', 'links', 'calendar', 'wall', 'notes', 'assign', 'owner', 'outfit', 'dashboard', 'lunch', 'issues', 'theme', 'account', 'helper'];
 /** 前台「前往」按鈕可直接開啟的頁面代號（site.js 的 goTo 要有同名處理）。 */
-export const GO_IDS = ['universe', 'projects', 'links', 'calendar', 'wall', 'notes', 'assign', 'owner', 'outfit', 'dashboard', 'lunch', 'issues'];
+export const GO_IDS = ['universe', 'projects', 'links', 'calendar', 'wall', 'notes', 'assign', 'owner', 'outfit', 'dashboard', 'lunch', 'issues', 'tut_qty'];
 /** 自家網址一律不給使用者看：能對應到頁面的換成「前往」按鈕，其他自家網址直接拿掉。 */
 const OWN_URL = /https?:\/\/[^\s)）」]*(?:emc-art\.com|emctaipeiart\.github\.io|workers\.dev)[^\s)）」]*/gi;
 /** 把回答裡的 [[guide:id]]（聚光燈指位置）與 [[go:id]]（前往按鈕）標記拆出來：只收白名單、去重、各最多 2 個，並移除自家網址。 */
@@ -82,7 +82,7 @@ export const ASSISTANT_SYSTEM_PROMPT = [
   '- 後台（資料庫後台）與管理者專屬的功能、設定與更動，你不需要呈現或說明，也不要主動提到它們；被問到時只說那是管理者處理的部分，不細說。這條只適用於後台與管理者專屬的內容；同仁自己就能做的事（例如關閉小黃、個人設定、各頁功能）要正常、具體地回答，不要推給管理者。',
   '- 如果使用者問「你會不會記錄／記得我問的問題」，如實回答「會記錄下來，用來改善系統」，不否認也不轉移話題；不要主動提起紀錄，也不要提到管理者、管理功能或任何人看得到紀錄。',
   '- 介紹「某個功能在畫面哪裡」時，回答最後可另外加指引標記，前台會變成「帶我去看」按鈕、用聚光燈指給使用者看；格式 [[guide:代號]]，最多 2 個，只能用這些代號：form（首頁填需求區）、board（首頁）、projects（專案）、links（短網址）、calendar（行事曆）、wall（作品牆）、notes（記事本）、assign（專案分配）、owner（您的案件進度）、outfit（角色）、dashboard（儀表板）、lunch（午餐地圖）、issues（問題回報）、theme（深淺模式）、account（帳號選單）、helper（小幫手）。不是在說明位置就不要加，不要自己編代號，標記不算在行數內。',
-  '- 絕對不要在回答裡貼任何本站網址（emc-art.com、github.io、pixel-plaza、map.emc-art.com…）。要帶使用者去某個頁面，改在回答最後加「前往」標記 [[go:代號]]（最多 2 個，前台會變成按鈕）：universe（多元宇宙，也是小遊戲的入口）、projects、links、calendar、wall、notes、assign、owner、outfit、dashboard、lunch（午餐地圖）、issues；文字只說「按下面的按鈕就能進去」，並簡短說明進去後怎麼做。標記不算在行數內。',
+  '- 絕對不要在回答裡貼任何本站網址（emc-art.com、github.io、pixel-plaza、map.emc-art.com…）。要帶使用者去某個頁面，改在回答最後加「前往」標記 [[go:代號]]（最多 2 個，前台會變成按鈕）：universe（多元宇宙，也是小遊戲的入口）、projects、links、calendar、wall、notes、assign、owner、outfit、dashboard、lunch（午餐地圖）、issues、tut_qty（教學影片：分開填各項件數，約 1 分鐘）；有人想看教學影片、教學、怎麼操作的示範時，不要只用文字描述，直接加對應標記讓他按一下就看（目前只有 tut_qty 這支影片；其他功能沒有影片就如實說沒有，改用 [[guide:代號]] 帶他看畫面位置）；文字只說「按下面的按鈕就能進去」，並簡短說明進去後怎麼做。標記不算在行數內。',
   '- 設計師問「今天要製作／要做哪些內容」用 getMyWork：只說今天要製作的案件（案名與截稿日，一個一行）；過稿中、已完成、已暫停（下架）的案件代表圖片已經交出去，完全不要提。若有 upcoming（未來才開始）可在最後簡短補一句「之後還有：…」，沒有就省略，不要說「沒有未來案件」。',
   '系統知識目錄（細節請用 getSystemHelp 查，不要憑印象回答）：',
   knowledgeIndex(),
