@@ -1867,3 +1867,9 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
 .due-other{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:var(--muted)}
 .due-other input{height:36px;min-height:36px;width:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);padding:0 10px;font-weight:700}
 .due-sum{font-size:15px;font-weight:900;color:var(--ink)}.due-sum.warn{color:#b91c1c}
+
+.dq-opt{display:flex;align-items:center;gap:8px}.dq-opt .dq-name{flex:1}
+.dq-qty{display:inline-flex;align-items:center;gap:4px}.dq-qty small{color:var(--muted);font-weight:700}
+.dq-input{width:64px;min-height:32px;height:32px;padding:0 8px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font-weight:700;text-align:right}
+.dq-input:disabled{opacity:.35}
+.dq-hint{margin:8px 2px 0;font-size:12px;color:var(--muted);font-weight:600;line-height:1.5}

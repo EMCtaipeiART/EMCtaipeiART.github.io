@@ -52,19 +52,34 @@ export function normalizeDesignType(value) {
   return type;
 }
 
-export function calculateWeight({type='',stage='',qty='',details='',rules=DEFAULT_WEIGHT_RULE_ROWS}={}) {
+/** 「項目數量」：各項目細節各自的數量（JSON，例如 {"廣告素材":4,"影音包框":1}）。沒列到的項目沿用案件總數量。 */
+export function parseDetailQty(value) {
+  let parsed=value;
+  if(typeof value==='string'){try{parsed=JSON.parse(value||'{}')}catch{return {}}}
+  if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))return {};
+  const out={};
+  for(const [name,raw] of Object.entries(parsed)){
+    const n=Number(String(raw??'').replace(/,/g,''));
+    if(name&&Number.isFinite(n)&&n>=0)out[String(name).trim()]=n;
+  }
+  return out;
+}
+
+export function calculateWeight({type='',stage='',qty='',details='',detailQty='',rules=DEFAULT_WEIGHT_RULE_ROWS}={}) {
   const selected=splitDetailValues(details);
   if(!selected.length)return null;
   const normalizedType=normalizeDesignType(type),normalizedStage=String(stage ?? '').trim();
   const scoreMap=rules===DEFAULT_WEIGHT_RULE_ROWS?DETAIL_SCORE_MAP:detailScoreMap(rules);
-  const regularScore=selected
+  const quantity=Number(String(qty ?? '').replace(/,/g,''));
+  const totalQty=Number.isFinite(quantity)?quantity:0;
+  const perDetail=parseDetailQty(detailQty);
+  const weightedSum=selected
     .filter(detail=>detail!=='急件')
-    .reduce((sum,detail)=>sum+(scoreMap.get(`${normalizedType}\u0000${normalizedStage}\u0000${detail}`) ?? 0),0);
+    .reduce((sum,detail)=>sum+(scoreMap.get(`${normalizedType}\u0000${normalizedStage}\u0000${detail}`) ?? 0)*(perDetail[detail]!==undefined?perDetail[detail]:totalQty),0);
   const urgentMultiplier=selected.includes('急件')
     ? (scoreMap.get(`${normalizedType}\u0000${normalizedStage}\u0000急件`) ?? 3)
     : 1;
-  const quantity=Number(String(qty ?? '').replace(/,/g,''));
-  const weighted=(Number.isFinite(quantity)?quantity:0)*regularScore*urgentMultiplier;
+  const weighted=weightedSum*urgentMultiplier;
   return Number(weighted.toFixed(4));
 }
 
@@ -74,6 +89,7 @@ export function applyWeightToRow(row={},rules=DEFAULT_WEIGHT_RULE_ROWS) {
     stage:row['階段'],
     qty:row['數量'],
     details:row['項目細節'],
+    detailQty:row['項目數量'],
     rules
   });
   row['加權']=weight===null?'':String(weight);

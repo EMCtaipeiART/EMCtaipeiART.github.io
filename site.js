@@ -342,7 +342,7 @@
       const items=String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(Boolean);
       const actsHtml=cardActsHtml(row);
       if(!items.length&&!ed&&!actsHtml)return;
-      const chips=items.map(d=>'<span class="lt-detail" title="'+esc(d)+'">'+esc(d)+'</span>').join('');
+      const chips=items.map(d=>'<span class="lt-detail" title="'+esc(d)+'">'+esc(detailChipText(row,d))+'</span>').join('');
       const btn=ed?'<button type="button" class="cd-add" data-edit="details">'+(todo&&!items.length?'＋ 新增項目細節':items.length?'編輯':'＋ 新增項目細節')+'</button>':'';
       const el=document.createElement('div');el.className='cd-items';el.innerHTML='<b>項目細節</b><div class="cd-chips">'+chips+btn+'</div>';
       host.insertBefore(el,host.firstChild);
@@ -788,7 +788,7 @@
       {key:'qty',label:'數量',cell:r=>`<td class="lt-qty">${esc(r['數量'])}</td>`},
       {key:'designer',label:'設計負責人',cell:(r,ed)=>`<td><span class="lt-name${ed?' lt-edit':''}"${ed?' data-edit="designer"':''}>${esc(r['設計負責人']||'-')}</span></td>`},
       {key:'status',label:'狀態',cell:(r,ed)=>{const st=statusOf(r);return `<td><span class="lt-status ${st.cls}${ed?' lt-edit':''}"${ed?' data-edit="status"':''}>${esc(st.label)}</span></td>`}},
-      {key:'details',label:'項目細節',cell:(r,ed)=>{const d=String(r['項目細節']||'').trim();return `<td>${d||ed?`<span class="lt-detail${ed?' lt-edit':''}"${ed?' data-edit="details"':''} title="${esc(d)}">${esc(d||'選擇')}</span>`:'<span class="lt-dash">-</span>'}</td>`}},
+      {key:'details',label:'項目細節',cell:(r,ed)=>{const d=String(r['項目細節']||'').trim();return `<td>${d||ed?`<span class="lt-detail${ed?' lt-edit':''}"${ed?' data-edit="details"':''} title="${esc(d)}">${esc(d?String(d).split(/\s*[,，、]\s*/).filter(Boolean).map(n=>detailChipText(r,n)).join(', '):'選擇')}</span>`:'<span class="lt-dash">-</span>'}</td>`}},
       {key:'rev',label:'修改',cell:(r,ed)=>`<td>${revisionPill(r,ed)}</td>`},
       {key:'owner',label:'專案負責人',cell:r=>`<td><span class="lt-name">${esc(r['專案負責人'])}</span></td>`},
       {key:'type',label:'設計類型',cell:(r,ed)=>{const t=String(r['設計種類']||r['設計類型']||'').trim();return `<td><span class="lt-type lt-type-${esc(t)}${ed?' lt-edit':''}"${ed?' data-edit="type"':''}>${esc(t)}</span></td>`}},
@@ -956,7 +956,7 @@
       else if(field==='designer')html=`<h3>修改設計負責人</h3><div class="option-list">${designerNames().map(n=>opt('data-cp-designer',n,n===cur('設計負責人'))).join('')}</div>`;
       else if(field==='type')html=`<h3>修改設計類型</h3><div class="option-list">${designTypes().map(n=>opt('data-cp-type',n,n===(cur('設計種類')||cur('設計類型')))).join('')}</div>`;
       else if(field==='stage'){const type=cur('設計種類')||cur('設計類型');html=`<h3>修改階段</h3><div class="option-list">${stagesFor(type).map(n=>opt('data-cp-stage',n,n===cur('階段'))).join('')||'<div class="empty">此種類沒有可選階段</div>'}</div>`}
-      else if(field==='details'){const chosen=new Set(cur('項目細節').split(/\s*[,，、]\s*/).filter(Boolean)),opts=detailOptionsFor(row);for(const c of chosen)if(!opts.includes(c))opts.push(c);html=`<h3>修改項目細節</h3><div class="option-list">${opts.map(o=>`<label class="option"><input type="checkbox" value="${esc(o)}"${chosen.has(o)?' checked':''}>${esc(o)}</label>`).join('')||'<div class="empty">此種類與階段沒有項目細節選項</div>'}</div><div class="popover-actions"><button type="button" data-cp-close>關閉</button><button type="button" data-cp-details>套用</button></div>`}
+      else if(field==='details'){const chosen=new Set(cur('項目細節').split(/\s*[,，、]\s*/).filter(Boolean)),opts=detailOptionsFor(row);for(const c of chosen)if(!opts.includes(c))opts.push(c);html=`<h3>修改項目細節</h3><div class="option-list">${detailPickHtml(opts,chosen,row)||'<div class="empty">此種類與階段沒有項目細節選項</div>'}</div><p class="dq-hint">數量欄留空＝全部 ${esc(row['數量']||'')} 件；若一個案件裡不同項目數量不同（例如 4 張廣告素材＋1 支影音包框），在各項目填各自件數。</p><div class="popover-actions"><button type="button" data-cp-close>關閉</button><button type="button" data-cp-details>套用</button></div>`}
       pop.innerHTML=html;pop.hidden=false;state.cellEdit={id,field};
       const r=el.getBoundingClientRect(),w=pop.offsetWidth,h=pop.offsetHeight;
       pop.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2))+'px';
@@ -1466,6 +1466,19 @@
       const type=String(row['設計種類']||row['設計類型']||'').trim(),stage=String(row['階段']||'').trim();
       return [...new Set(state.weights.filter(r=>String(r['設計種類']||'').trim()===type&&String(r['階段']||'').trim()===stage&&String(r['狀態']||'').trim()!=='下架').map(r=>String(r['項目細節']||'').trim()).filter(Boolean))];
     }
+    /* 項目細節各自的數量（「項目數量」欄，JSON）：沒填的項目沿用案件總數量 */
+    function detailQtyOf(row){let o={};try{o=JSON.parse(String(row['項目數量']||'{}'))}catch(e){}return o&&typeof o==='object'&&!Array.isArray(o)?o:{}}
+    function detailChipText(row,name){const q=detailQtyOf(row)[name];return q===undefined||String(q)===''||Number(q)===Number(row['數量'])?name:name+'×'+q}
+    function detailPickHtml(opts,chosen,row,wrapCls){
+      const qm=detailQtyOf(row),total=Number(row['數量'])||'';
+      return opts.map(o=>{const has=qm[o]!==undefined&&Number(qm[o])!==Number(total);return '<label class="option dq-opt '+(wrapCls||'')+'"><input type="checkbox" value="'+esc(o)+'"'+(chosen.has(o)?' checked':'')+'><span class="dq-name">'+esc(o)+'</span>'+(o==='急件'?'':'<span class="dq-qty"><input type="number" class="dq-input" min="0" step="1" data-dq="'+esc(o)+'" value="'+(has?esc(qm[o]):'')+'" placeholder="'+esc(total)+'" aria-label="'+esc(o)+' 數量"'+(chosen.has(o)?'':' disabled')+'><small>件</small></span>')+'</label>'}).join('');
+    }
+    function readDetailPick(root,row){
+      const total=Number(row['數量'])||0,names=[],qty={};
+      root.querySelectorAll('.dq-opt').forEach(l=>{const c=l.querySelector('input[type=checkbox]');if(!c||!c.checked)return;names.push(c.value);const q=l.querySelector('.dq-input');const v=q&&q.value.trim();if(v!==''&&v!=null&&Number(v)!==total&&Number.isFinite(Number(v)))qty[c.value]=Number(v)});
+      return {details:names.join(', '),detailQty:Object.keys(qty).length?JSON.stringify(qty):''};
+    }
+    document.addEventListener('change',e=>{const c=e.target;if(c&&c.matches&&c.matches('.dq-opt input[type=checkbox]')){const q=c.closest('.dq-opt').querySelector('.dq-input');if(q){q.disabled=!c.checked;if(c.checked)q.focus()}}});
     /* 右上角的 Google 信箱／行事曆小圖示：新開分頁；有登入就帶 authuser 直接開對應帳號 */
     function googleLinksHtml(withAi){
       const acct=String(selfAccount()||'').trim(),au=/@/.test(acct)?'?authuser='+encodeURIComponent(acct):'';
@@ -1599,12 +1612,12 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       rows.forEach(r=>obs.observe(r));listObs.push(obs);
     }
     function plistHtml(rows){const all=sortedLatest(rows),shown=all.slice(0,state.plistLimit);return shown.length?listTableHtml(shown)+(all.length>shown.length?`<button type="button" class="more-btn" data-more="plist">顯示更多（還有 ${all.length-shown.length} 筆）</button>`:''):'<div class="empty">沒有符合的案件</div>'}
-    async function applyMove(id,status,details){
+    async function applyMove(id,status,details,detailQty){
       const row=allRows().find(r=>idKey(r)===id);if(!row)return;
       const payload={id,status},headers=['案件狀態'];
-      if(details!==undefined){payload.details=details;headers.push('項目細節','加權')}
-      const old={'狀態':row['狀態'],'項目細節':row['項目細節']};
-      const local={'狀態':status};if(details!==undefined)local['項目細節']=details;
+      if(details!==undefined){payload.details=details;payload.detailQty=detailQty||'';headers.push('項目細節','項目數量','加權')}
+      const old={'狀態':row['狀態'],'項目細節':row['項目細節'],'項目數量':row['項目數量']};
+      const local={'狀態':status};if(details!==undefined){local['項目細節']=details;local['項目數量']=detailQty||''}
       applyLocalEdit(id,local);refreshView();
       try{await api('update',{id,row:payload,forceHeaders:headers,writeHeaders:headers});toast(`案件 ${id} 已改為「${ST[status]?.label||status}」`)}
       catch(err){applyLocalEdit(id,old);state.edits.delete(id);refreshView();toast(/TOKEN|過期|請先登入/.test(`${err.reason||''}${err.message}`)?'登入已過期，請重新登入後再操作':`狀態更新失敗，已還原：${err.message}`,true)}
@@ -1618,7 +1631,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         for(const c of chosen)if(!options.includes(c))options.push(c);
         state.pendingMove={id,status};
         $('dmSub').textContent=`${id}｜${row['專案名稱']||''}（${[row['設計種類']||row['設計類型'],row['階段']].filter(Boolean).join('／')}）：可複選，確認後狀態改為「執行中」。`;
-        $('dmList').innerHTML=options.length?options.map(o=>`<label><input type="checkbox" value="${esc(o)}"${chosen.has(o)?' checked':''}>${esc(o)}</label>`).join(''):'<div class="empty">這個種類與階段沒有項目細節選項，直接確認即可。</div>';
+        $('dmList').innerHTML=options.length?detailPickHtml(options,chosen,row,'dm-opt')+'<p class="dq-hint">數量欄留空＝全部 '+esc(row['數量']||'')+' 件；各項目件數不同時才需要填。</p>':'<div class="empty">這個種類與階段沒有項目細節選項，直接確認即可。</div>';
         $('detailModal').hidden=false;return;
       }
       applyMove(id,status);
@@ -4124,7 +4137,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
           ${kv('專案負責人',person(row['專案負責人'],'專案負責人'),true)}${kv('設計負責人',person(row['設計負責人'],'設計負責人'),true)}${kv('設計種類／階段',`<span class="dp-wrap">${(()=>{const t=String(row['設計類型']||row['設計種類']||'').trim(),g=String(row['階段']||'').trim();return (t||ed?`<span class="lt-type lt-type-${esc(t)}${editAttr('type')}">${esc(t||'選擇')}</span>`:'')+(g||ed?`<span class="lt-stage lt-stage-${esc(g)}${editAttr('stage')}">${esc(g||'選擇')}</span>`:'')||'-'})()}</span>`,true)}
           ${kv('開始日期',slashNice(row['開始日期']))}${kv('結束日期',`${slashNice(row['結束日期'])}${dueTimeOf(row)?' '+dueLabel(row):''}（${countdownText(s)}）`)}${kv('數量',row['數量'])}
           ${loggedIn()&&acc('media.manage',false)?kv('NAS 路徑',`<span>${esc(nasTrackLabel(idKey(row))||'尚未指定')}</span> <button type="button" class="btn" data-act="nas-track" data-id="${esc(idKey(row))}" style="min-height:32px;padding:0 12px;margin-left:6px">${nasTrackLabel(idKey(row))?'更換／追加':'補上 NAS 路徑'}</button>`,true):''}
-          ${kv('使用平台',row['使用平台'])}${kv('填單時間',row['填單時間'])}${kv('項目細節',`<span class="dp-wrap${editAttr('details')}">${(()=>{const items=String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(Boolean);return items.length?items.map(d=>`<span class="lt-detail" title="${esc(d)}">${esc(d)}</span>`).join(''):(ed?'<span class="lt-detail">選擇</span>':'<span class="lt-dash">-</span>')})()}</span>`,true)}
+          ${kv('使用平台',row['使用平台'])}${kv('填單時間',row['填單時間'])}${kv('項目細節',`<span class="dp-wrap${editAttr('details')}">${(()=>{const items=String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(Boolean);return items.length?items.map(d=>`<span class="lt-detail" title="${esc(d)}">${esc(detailChipText(row,d))}</span>`).join(''):(ed?'<span class="lt-detail">選擇</span>':'<span class="lt-dash">-</span>')})()}</span>`,true)}
         </dl>
         ${supp.length?`<div class="detail-sec"><h3>補充資料</h3><div class="supp-list">${supp.map(([label,n,u])=>`<div class="supp-row"><b>${label}</b><span>${/^https?:\/\//i.test(row[u]||'')?`<a href="${esc(row[u])}" target="_blank" rel="noopener noreferrer">${esc(row[n]||row[u])}</a>`:esc(row[n]||row[u])}</span></div>`).join('')}</div></div>`:''}
         <div class="detail-sec"><h3>修改紀錄</h3>${mods.length?mods.map(mod=>{const no=+mod['修改次數']||0,imgs=imageList(mod),li=(state.lb.push(imgs),state.lb.length-1);return `<div class="rev"><div class="rev-head"><span class="rev-no">${no===0?'初稿':`第 ${no} 輪修改`}</span><span class="rev-meta">${mod['修改日期']&&no>0?'預計收到 ':''}${esc(mod['修改日期']||mod['建立日期']||'')}${mod['修改人']?`｜${esc(mod['修改人'])}（填寫）`:''}</span>${mod['確認修正日']&&no>0?`<span class="rev-confirmed" title="設計師確認這一輪已修正完成">✓ 設計師已確認修正 ${esc(mod['確認修正日'])}</span>`:''}${canModEdit()?`<button type="button" class="rev-del" data-rev-del="${no}" title="刪除這一輪修改紀錄" aria-label="刪除這一輪修改紀錄"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M5 4.5l.5 8h5l.5-8M7 7v3.5M9 7v3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></button>`:''}</div><div class="rev-text">${linkify(stripSig(mod['修改內容']||''),mod['修改內容連結'])}</div>${imgs.length?`<div class="thumbs">${imgs.slice(0,24).map((i,n)=>`<a class="design-image-preview-link" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer" title="${esc(i.fileName||'設計圖')}｜停留可放大預覽，點擊開啟原圖" data-design-image-hover-preview data-preview-label="${esc(i.fileName||'設計圖')}" aria-label="放大預覽 ${esc(i.fileName||'設計圖')}，點擊開啟原圖"><img src="${esc(thumbUrl(i.url))}" alt="${esc(i.fileName||'設計圖')}" loading="lazy" referrerpolicy="no-referrer"><span class="design-image-expand-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6 3H3v3M10 3h3v3M6 13H3v-3M10 13h3v-3"/></svg></span></a>`).join('')}</div>`:''}</div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>'}</div>
@@ -4568,8 +4581,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(t.closest('[data-cp-close]')){closeCellPop();return}
       const cpT=t.closest('[data-cp-type]');if(cpT){const id=state.cellEdit.id,v=cpT.dataset.cpType,row=allRows().find(r=>idKey(r)===id),cur=String(row['階段']||'').trim(),stage=stagesFor(v).includes(cur)?cur:defaultStage(v);closeCellPop();applyChange(id,{type:v,stage},['設計類型','階段','加權'],{'設計種類':v,'設計類型':v,'階段':stage});return}
       const cpG=t.closest('[data-cp-stage]');if(cpG){const id=state.cellEdit.id,v=cpG.dataset.cpStage;closeCellPop();applyChange(id,{stage:v},['階段','加權'],{'階段':v});return}
-      if(t.closest('[data-cp-details]')){const id=state.cellEdit.id,v=[...document.querySelectorAll('#cellPop input:checked')].map(i=>i.value).join(', ');closeCellPop();const row0=allRows().find(r=>idKey(r)===id),auto=v&&String(row0?.['狀態']||'').trim()==='未開始';
-        if(auto){applyChange(id,{details:v,status:'執行中'},['項目細節','加權','案件狀態'],{'項目細節':v,'狀態':'執行中'});toast('已選擇項目細節，狀態自動改為「執行中」')}else applyChange(id,{details:v},['項目細節','加權'],{'項目細節':v});return}
+      if(t.closest('[data-cp-details]')){const id=state.cellEdit.id,row0=allRows().find(r=>idKey(r)===id),pk=readDetailPick(document.getElementById('cellPop'),row0||{}),v=pk.details,dq=pk.detailQty;closeCellPop();const auto=v&&String(row0?.['狀態']||'').trim()==='未開始';
+        if(auto){applyChange(id,{details:v,detailQty:dq,status:'執行中'},['項目細節','項目數量','加權','案件狀態'],{'項目細節':v,'項目數量':dq,'狀態':'執行中'});toast('已選擇項目細節，狀態自動改為「執行中」')}else applyChange(id,{details:v,detailQty:dq},['項目細節','項目數量','加權'],{'項目細節':v,'項目數量':dq});return}
       const revOpen=t.closest('[data-rev-open]');if(revOpen){openModModal(revOpen.dataset.revOpen);return}
       if(t.closest('[data-mm="close"]')||t.id==='modModal'){closeModModal();return}
       const rowAct=t.closest('[data-row-act]');if(rowAct){const id=rowAct.dataset.id,a=rowAct.dataset.rowAct;if(a==='reply')openReplyChooser(id,rowAct);else if(a==='modify')startReply(id,'modification');else if(a==='modify-direct'){openModModal(id);const f=$('mmForm');if(f){f.hidden=false;$('mmToggle').hidden=true;setTimeout(()=>f.elements.content.focus(),80)}}else if(a==='bind')openBindModal(id);else if(a==='mailchoice')openMailChoice(id,rowAct);else if(a==='sched')openSchedPage(id);else if(a==='send')startRowMail(id,false);else if(a==='edit'){if(!loggedIn()){toast('請先登入後再編輯案件',true);startLogin();return}{const r0=allRows().find(r=>idKey(r)===id);if(r0&&!canEditRow(r0)){toast('此帳號沒有編輯這個案件的權限',true);return}}const from=state.view==='detail'?'detail':'list';state.detailId=id;state.editing=false;show('detail');startEdit(from)}else if(a==='delete'){const r0=allRows().find(r=>idKey(r)===id);if(r0&&!canDeleteRow(r0)){toast('此帳號沒有刪除案件的權限',true);return}deleteCase(id)}return}
@@ -4584,7 +4597,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(nav){state.home=nav;state.form=null;state.mail=null;state.editing=false;closeCal();state.hl=null;show(nav);if(nav==='projects')openNotify();return}
       const dm=t.closest('[data-dm]')?.dataset.dm;
       if(dm==='cancel'){closeDetailModal();return}
-      if(dm==='ok'){const pm=state.pendingMove;if(pm){const picked=[...document.querySelectorAll('#dmList input:checked')].map(i=>i.value).join(', ');closeDetailModal();const rw=allRows().find(x=>idKey(x)===pm.id),parts=picked.split(', ').filter(Boolean);{const fl=rw&&projFlags(rw);if(fl&&fl.urgent&&!parts.includes('急件'))parts.push('急件')}applyMove(pm.id,pm.status,parts.join(', '))}return}
+      if(dm==='ok'){const pm=state.pendingMove;if(pm){const rw=allRows().find(x=>idKey(x)===pm.id),pk=readDetailPick($('dmList'),rw||{}),picked=pk.details;closeDetailModal();const parts=picked.split(', ').filter(Boolean);{const fl=rw&&projFlags(rw);if(fl&&fl.urgent&&!parts.includes('急件'))parts.push('急件')}applyMove(pm.id,pm.status,parts.join(', '),pk.detailQty)}return}
       const lp=t.closest('[data-lp]')?.dataset.lp;
       if(lp==='google'){googleStart();return}
       if(lp==='toggle'){login.showPw=!login.showPw;renderLoginPage();return}
