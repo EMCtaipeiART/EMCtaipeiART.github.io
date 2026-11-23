@@ -647,6 +647,13 @@
       const list=state.settings.filter(r=>!isHiddenPerson(r)&&/^(平面|影音)$/.test(String(r['組別']||'').trim())&&String(r['名字']||'').trim()&&String(r['設計師顯示']||'v').toLowerCase()!=='x').map(r=>String(r['名字']).trim());
       return list.length?[...new Set(list)]:[...DESIGNERS];
     }
+    /* 設計種類由設計負責人的「組別」自動決定（平面組＝平面、影音組＝影音）；填單畫面不再顯示設計種類，後台仍照常記錄 */
+    function typeOfDesigner(name){const n=String(name||'').trim();if(!n)return '';const r=state.settings.find(x=>String(x['名字']||'').trim()===n&&/^(平面|影音)$/.test(String(x['組別']||'').trim()));return r?String(r['組別']).trim():''}
+    function syncTypeFromDesigner(r){
+      if(!r||r.newProj)return false;
+      const t=typeOfDesigner(r.designer);if(!t||t===r.type)return false;
+      r.type=t;if(!stagesFor(t).includes(r.stage))r.stage=defaultStage(t);r.sub='';r.subReason='';return true;
+    }
     const designTypes=()=>{const t=[...new Set(state.weights.map(r=>String(r['設計種類']||'').trim()).filter(Boolean))];return t.length?t:['平面','影音']};
     const stagesFor=type=>[...new Set(state.weights.filter(r=>String(r['設計種類']||'').trim()===type&&String(r['狀態']||'').trim()!=='下架').map(r=>String(r['階段']||'').trim()).filter(Boolean))];
     function defaultDesignerFor(client){const row=customerRow(client),names=designerNames(),c=row?parseList(row['設計負責人']).filter(n=>names.includes(n)):[];return c[0]||''}
@@ -956,7 +963,7 @@
       else if(field==='designer')html=`<h3>修改設計負責人</h3><div class="option-list">${designerNames().map(n=>opt('data-cp-designer',n,n===cur('設計負責人'))).join('')}</div>`;
       else if(field==='type')html=`<h3>修改設計類型</h3><div class="option-list">${designTypes().map(n=>opt('data-cp-type',n,n===(cur('設計種類')||cur('設計類型')))).join('')}</div>`;
       else if(field==='stage'){const type=cur('設計種類')||cur('設計類型');html=`<h3>修改階段</h3><div class="option-list">${stagesFor(type).map(n=>opt('data-cp-stage',n,n===cur('階段'))).join('')||'<div class="empty">此種類沒有可選階段</div>'}</div>`}
-      else if(field==='details'){const chosen=new Set(cur('項目細節').split(/\s*[,，、]\s*/).filter(Boolean)),opts=detailOptionsFor(row);for(const c of chosen)if(!opts.includes(c))opts.push(c);html=`<h3>修改項目細節</h3><div class="option-list">${detailPickHtml(opts,chosen,row)||'<div class="empty">此種類與階段沒有項目細節選項</div>'}</div><p class="dq-hint">案件共 ${esc(row['數量']||'')} 件。只勾一項＝全部件數；勾兩項以上時，用下拉分配各項件數（加總自動維持 ${esc(row['數量']||'')} 件）；若每個項目都做了全部件數，請勾下方「每個項目都做了全部」。</p><div class="popover-actions"><button type="button" data-cp-close>關閉</button><button type="button" data-cp-details>套用</button></div>`}
+      else if(field==='details'){const chosen=new Set(cur('項目細節').split(/\s*[,，、]\s*/).filter(Boolean)),opts=detailOptionsFor(row);for(const c of chosen)if(!opts.includes(c))opts.push(c);html=`<h3>修改項目細節</h3><div class="option-list">${detailPickHtml(opts,chosen,row)||'<div class="empty">此種類與階段沒有項目細節選項</div>'}</div><p class="dq-hint">案件共 ${esc(row['數量']||'')} 件。只勾一項＝全部件數；勾兩項以上時，用下拉分配各項件數（加總自動維持 ${esc(row['數量']||'')} 件）；若每個項目都做了全部件數，請勾下方「每個項目都做了全部」。 <a href="tutorial/item-qty.html" target="_blank" rel="noopener">看教學影片</a></p><div class="popover-actions"><button type="button" data-cp-close>關閉</button><button type="button" data-cp-details>套用</button></div>`}
       pop.innerHTML=html;pop.hidden=false;state.cellEdit={id,field};if(field==='details')dqInit(pop,row);
       const r=el.getBoundingClientRect(),w=pop.offsetWidth,h=pop.offsetHeight;
       pop.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2))+'px';
@@ -1519,9 +1526,13 @@
       if(k<2)vals=[total];
       else{
         if(changed&&changed.matches('.dq-input'))pin=items.indexOf(changed.closest('.dq-opt'));
-        vals=prev.map((v,i)=>v||(Math.floor(total/k)));
-        if(pin>=0)vals[pin]=Math.min(Math.max(1,vals[pin]),total-(k-1));
-        vals=dqBalance(vals,pin,total);
+        const fresh=pin<0&&(prev.some(v=>!v)||items.some(l=>l.querySelector('.dq-input').disabled));
+        if(fresh)vals=dqBalance(items.map((_,i)=>Math.floor(total/k)+(i<total%k?1:0)),-1,total);
+        else{
+          vals=prev.map((v,i)=>v||(Math.floor(total/k)));
+          if(pin>=0)vals[pin]=Math.min(Math.max(1,vals[pin]),total-(k-1));
+          vals=dqBalance(vals,pin,total);
+        }
       }
       dqRender(root,total,vals);
     }
@@ -1685,7 +1696,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         for(const c of chosen)if(!options.includes(c))options.push(c);
         state.pendingMove={id,status};
         $('dmSub').textContent=`${id}｜${row['專案名稱']||''}（${[row['設計種類']||row['設計類型'],row['階段']].filter(Boolean).join('／')}）：可複選，確認後狀態改為「執行中」。`;
-        $('dmList').innerHTML=options.length?detailPickHtml(options,chosen,row,'dm-opt')+'<p class="dq-hint">案件共 '+esc(row['數量']||'')+' 件。只勾一項＝全部；勾兩項以上時用下拉分配各項件數（加總自動維持 '+esc(row['數量']||'')+' 件）；若每個項目都做了全部件數，請勾下方「每個項目都做了全部」。</p>':'<div class="empty">這個種類與階段沒有項目細節選項，直接確認即可。</div>';
+        $('dmList').innerHTML=options.length?detailPickHtml(options,chosen,row,'dm-opt')+'<p class="dq-hint">案件共 '+esc(row['數量']||'')+' 件。只勾一項＝全部；勾兩項以上時用下拉分配各項件數（加總自動維持 '+esc(row['數量']||'')+' 件）；若每個項目都做了全部件數，請勾下方「每個項目都做了全部」。 <a href="tutorial/item-qty.html" target="_blank" rel="noopener">看教學影片</a></p>':'<div class="empty">這個種類與階段沒有項目細節選項，直接確認即可。</div>';
         dqInit($('dmList'),row);$('detailModal').hidden=false;return;
       }
       applyMove(id,status);
@@ -1855,7 +1866,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     /* 專案負責人：管理者與設計部人員可自行填寫，其他人固定為登入者本人 */
     const ownerSelf=()=>{const s=session();return s.name||s.user||''};
     const ownerLocked=()=>loggedIn()&&!isAdminUser()&&!isMachiUser()&&!(SET_LOCKED_DEPT.test(sessionDept())||isDesignerSession());
-    function newRow(o={}){const start=defaultStart(),types=designTypes(),type=o.type||(types.includes('平面')?'平面':types[0]);return {client:'',project:'',owner:'',qty:'1',dueTime:'',designer:'',start,end:start,platforms:[],supp:blankSupp(),designerTouched:false,sub:'',subReason:'',rot:'',newProj:false,stage:newStage(type,Boolean(o.newProj)),...o,type}}
+    function newRow(o={}){const start=defaultStart(),types=designTypes(),type=(!o.newProj&&typeOfDesigner(o.designer))||o.type||(types.includes('平面')?'平面':types[0]);return {client:'',project:'',owner:'',qty:'1',dueTime:'',designer:'',start,end:start,platforms:[],supp:blankSupp(),designerTouched:false,sub:'',subReason:'',rot:'',newProj:false,stage:newStage(type,Boolean(o.newProj)),...o,type}}
     const copyRow=r=>({...r,platforms:[...r.platforms],supp:{...r.supp}});
     /** 批次新增下一筆：沿用上一筆的所有欄位值（含專案名稱、客戶別、負責人、設計種類、階段、數量、日期、設計負責人、
      * 使用平台、補充資料）；替代設計師與原因每一筆各自決定，不沿用。 */
@@ -1868,8 +1879,9 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       return '<option value="">請選擇</option>'+list.map(s=>`<option value="${esc(s)}"${s===selected?' selected':''}>${esc(s)}</option>`).join('')+(list.includes('新製')&&list.includes('再製')?'<option value="__ai__">AI判斷(beta)</option>':'');
     }
     function rotationFields(r,key){
-      const list=rotationOrder(r.type),others=list.filter(n=>n!==r.rot);
-      return `<div class="field c2"><span class="label">設計負責人（輪替順位第一）</span><input class="input is-locked" value="${esc(r.rot||'無可輪替的設計師')}" readonly tabindex="-1" aria-label="設計負責人" title="依「${esc(r.type==='影音'?'影音':'平面')}輪替表」自動指定，不能更改"></div>
+      const list=rotationOrder(r.type),others=list.filter(n=>n!==r.rot),types=designTypes();
+      return `<div class="field c2"><span class="label">輪替組別 <b>*</b></span><div class="seg" role="radiogroup" aria-label="輪替組別">${types.map(t=>`<label><input type="radio" name="type-${key}" data-f="type" value="${esc(t)}"${t===r.type?' checked':''}>${esc(t)}</label>`).join('')}</div></div>
+        <div class="field c2"><span class="label">設計負責人（輪替順位第一）</span><input class="input is-locked" value="${esc(r.rot||'無可輪替的設計師')}" readonly tabindex="-1" aria-label="設計負責人" title="依「${esc(r.type==='影音'?'影音':'平面')}輪替表」自動指定，不能更改"></div>
         <div class="field c2"><span class="label">替代設計師（選填）</span><select data-f="sub" aria-label="替代設計師"><option value="">不替代</option>${others.map(n=>`<option value="${esc(n)}"${n===r.sub?' selected':''}>${esc(n)}</option>`).join('')}</select></div>
         ${r.sub?`<div class="field c4"><span class="label">替代原因 <b>*</b></span><input class="input" data-f="subReason" value="${esc(r.subReason)}" placeholder="例如：${esc(r.rot)} 出國／繁忙" autocomplete="off" aria-label="替代原因"><div class="np-chips" role="group" aria-label="常用原因">${['出國','休假','繁忙／案量已滿','支援其他專案'].map(t=>`<button type="button" class="np-chip" data-np-reason="${esc(t)}" data-np-key="${esc(key)}">${esc(t)}</button>`).join('')}</div></div>`:''}`;
     }
@@ -1881,7 +1893,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         <div class="field c2"><span class="label">客戶別 <b>*</b></span><select data-f="client" aria-label="客戶別">${shownClients.map(n=>`<option value="${esc(n)}"${n===r.client?' selected':''}>${esc(n)}</option>`).join('')}<option value="__new__">+ 新增客戶別</option></select></div>
         <div class="field c4"><span class="label">專案名稱 <b>*</b></span><input class="input" data-f="project" value="${esc(r.project)}" placeholder="例如：10月社群貼文＿新品上市" autocomplete="off" aria-label="專案名稱"></div>
         <div class="field c2"><span class="label">專案負責人 <b>*</b></span><input class="input${ownerLocked()?' is-locked':''}" data-f="owner" value="${esc(ownerLocked()?ownerSelf():r.owner)}" autocomplete="off" aria-label="專案負責人"${ownerLocked()?' readonly tabindex="-1" title="專案負責人固定為登入者本人"':''}></div>
-        <div class="field c2"><span class="label">設計種類 <b>*</b></span><div class="seg" role="radiogroup" aria-label="設計種類">${types.map(t=>`<label><input type="radio" name="type-${key}" data-f="type" value="${esc(t)}"${t===r.type?' checked':''}>${esc(t)}</label>`).join('')}</div></div>
+        ${key==='edit'?`<div class="field c2"><span class="label">設計種類 <b>*</b></span><div class="seg" role="radiogroup" aria-label="設計種類">${types.map(t=>`<label><input type="radio" name="type-${key}" data-f="type" value="${esc(t)}"${t===r.type?' checked':''}>${esc(t)}</label>`).join('')}</div></div>`:''}
         <div class="field c2"><span class="label">階段 <b>*</b></span><select data-f="stage" aria-label="階段">${stageOptions(r.type,r.stage)}</select></div>
         ${key==='edit'||!r.newProj?`<div class="field c2"><span class="label">設計負責人 <b>*</b></span><select data-f="designer" aria-label="設計負責人"><option value="">請選擇</option>${(!r.designer||names.includes(r.designer)?names:[r.designer,...names]).map(n=>`<option value="${esc(n)}"${n===r.designer?' selected':''}>${esc(n)}</option>`).join('')}</select></div>`:rotationFields(r,key)}
         <div class="field c2"><span class="label">數量 <b>*</b></span><input class="input" data-f="qty" value="${esc(r.qty)}" inputmode="numeric" autocomplete="off" aria-label="數量"></div>
@@ -1910,6 +1922,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
           r[k]=String(input.value).trim();
         });
         r.platforms=[...el.querySelectorAll('[data-f="platform"]:checked')].map(i=>i.value);
+        if(el.dataset.row!=='edit')syncTypeFromDesigner(r);
       });
     }
     const readRowsSafe=()=>{try{readRows()}catch(err){}};
@@ -4759,7 +4772,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         }
         rerender();return;
       }
-      if(field==='designer'){r.designerTouched=true;return}
+      if(field==='designer'){r.designerTouched=true;const before=r.type;readRowsSafe();if(r.type!==before)rerender();return}
       if(field==='sub'){readRowsSafe();r.sub=t.value;if(!r.sub)r.subReason='';rerender();return}
       if(field==='type'){readRowsSafe();r.type=t.value;r.stage=key==='edit'?defaultStage(r.type):newStage(r.type,r.newProj);r.sub='';r.subReason='';rerender();return}
       if(field==='newProj'){readRowsSafe();r.newProj=t.checked;r.sub='';r.subReason='';r.stage=newStage(r.type,r.newProj);if(!r.newProj&&(!r.designerTouched||!r.designer))r.designer=defaultDesignerFor(r.client);rerender();return}
