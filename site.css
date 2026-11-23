@@ -1881,3 +1881,7 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
 .dq-input{width:auto;min-width:64px;padding:0 6px;appearance:auto;-webkit-appearance:menulist;-moz-appearance:menulist}
 .detail-pick label .dq-input,.detail-pick .dq-opt select.dq-input,.cell-pop label.option select.dq-input{position:static;opacity:1;pointer-events:auto;width:auto;min-width:64px;height:34px;min-height:34px;margin:0;border-radius:8px;text-align:left}
 .dq-input:disabled{opacity:.55}
+
+.dq-all-wrap{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;font-size:13px;font-weight:700;color:var(--ink);cursor:pointer;line-height:1.5}
+.dq-all-wrap[hidden]{display:none}
+.detail-pick .dq-all-wrap input,.cell-pop .dq-all-wrap input.dq-all{position:static;opacity:1;pointer-events:auto;width:17px;height:17px;margin:2px 0 0;flex:none}
