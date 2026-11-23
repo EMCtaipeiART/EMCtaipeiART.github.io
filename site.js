@@ -4557,11 +4557,12 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       rows.sort((a,b)=>annDate(a['發布時間']).localeCompare(annDate(b['發布時間']))||annVer(a['公告版本'])[0]-annVer(b['公告版本'])[0]||annVer(a['公告版本'])[1]-annVer(b['公告版本'])[1]);
       return rows.at(-1)||null;
     }
-    const annInline=t=>esc(String(t||'').replace(/\\$/,'')).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+    const annInline=t=>esc(String(t||'').replace(/\\$/,'')).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+|tutorial\/[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
     function annMarkdown(value){
       const html=[];let para=[],list=[];
       const fp=()=>{if(para.length){html.push(`<p>${para.map(annInline).join('<br>')}</p>`);para=[]}},fl=()=>{if(list.length){html.push(`<ul>${list.map(i=>`<li>${annInline(i)}</li>`).join('')}</ul>`);list=[]}};
       for(const raw of String(value||'').replace(/\r\n?/g,'\n').split('\n')){const line=raw.trim();if(!line){fp();fl();continue}
+        const vd=line.match(/^@video\(((?:tutorial|assets)\/[\w./%-]+\.(?:webm|mp4))\)$/);if(vd){fp();fl();html.push(`<video class="ann-video" controls playsinline preload="metadata" src="${esc(vd[1])}"></video>`);continue}
         const h=line.match(/^(#{1,3})\s+(.+)$/);if(h){fp();fl();html.push(`<h${h[1].length}>${annInline(h[2])}</h${h[1].length}>`);continue}
         const li=line.match(/^[-*]\s+(.+)$/);if(li){fp();list.push(li[1]);continue}
         fl();para.push(line)}

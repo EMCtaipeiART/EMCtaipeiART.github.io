@@ -1885,3 +1885,5 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
 .dq-all-wrap{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;font-size:13px;font-weight:700;color:var(--ink);cursor:pointer;line-height:1.5}
 .dq-all-wrap[hidden]{display:none}
 .detail-pick .dq-all-wrap input,.cell-pop .dq-all-wrap input.dq-all{position:static;opacity:1;pointer-events:auto;width:17px;height:17px;margin:2px 0 0;flex:none}
+
+.ann-video{display:block;width:100%;max-width:100%;border-radius:12px;margin:8px 0;background:#000;aspect-ratio:16/9}
