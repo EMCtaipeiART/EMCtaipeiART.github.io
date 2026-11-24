@@ -25,18 +25,17 @@ async function ensureChat(env) {
   for (const c of ['sid TEXT', 'up INTEGER NOT NULL DEFAULT 0', 'del INTEGER NOT NULL DEFAULT 0', 'ed INTEGER NOT NULL DEFAULT 0']) { try { await env.DB.prepare('ALTER TABLE chat ADD COLUMN ' + c).run(); } catch { /* 已存在 */ } }
   chatReady = true;
 }
-const memo = new Map();   // 團購清單在同一個執行個體記 5 秒，並放進邊緣快取 15 秒（寫入時清除）
+// 團購清單放進邊緣快取 15 秒（寫入時整區清除；不在單一執行個體裡另外記，否則別的執行個體會看到舊狀態）
 async function getKV(env, k, d = null) {
   const cacheable = k === 'campaigns';
   if (cacheable) {
-    const m = memo.get(k); if (m && m.exp > Date.now()) return m.v === undefined ? d : structuredClone(m.v);
-    try { const h = await caches.default.match(new Request(EDGE + 'kv/' + k)); if (h) { const j = await h.json(); memo.set(k, { v: j.v === null ? undefined : j.v, exp: Date.now() + 5000 }); return j.v === null ? d : j.v; } } catch {}
+    try { const h = await caches.default.match(new Request(EDGE + 'kv/' + k)); if (h) { const j = await h.json(); return j.v === null ? d : j.v; } } catch {}
   }
   const r = await env.DB.prepare('SELECT v FROM kv WHERE k=?').bind(k).first(); const v = r ? JSON.parse(r.v) : undefined;
-  if (cacheable) { memo.set(k, { v: v === undefined ? undefined : structuredClone(v), exp: Date.now() + 5000 }); try { await caches.default.put(new Request(EDGE + 'kv/' + k), new Response(JSON.stringify({ v: v === undefined ? null : v }), { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=15' } })); } catch {} }
+  if (cacheable) { try { await caches.default.put(new Request(EDGE + 'kv/' + k), new Response(JSON.stringify({ v: v === undefined ? null : v }), { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=15' } })); } catch {} }
   return v === undefined ? d : v;
 }
-async function setKV(env, k, v) { if (k === 'campaigns') { memo.delete(k); try { await caches.default.delete(new Request(EDGE + 'kv/' + k)); } catch {} } await env.DB.prepare('INSERT INTO kv(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v').bind(k, JSON.stringify(v)).run(); }
+async function setKV(env, k, v) { if (k === 'campaigns') { try { await caches.default.delete(new Request(EDGE + 'kv/' + k)); } catch {} } await env.DB.prepare('INSERT INTO kv(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v').bind(k, JSON.stringify(v)).run(); }
 // 多團購：預設團購 'lens' 沿用舊資料的 key（不需搬遷），其他團購的 key 加上 <id>: / <id>/ 前綴
 const DEFAULT_CID = 'lens';
 const kk = (cid, k) => (cid === DEFAULT_CID ? k : cid + ':' + k);
@@ -671,7 +670,7 @@ export default {
         } catch {}
       }
       const res = await handle(req, env, ctx);
-      if (req.method !== 'GET' && req.method !== 'HEAD' && res.status < 400 && new URL(req.url).pathname.startsWith('/api/')) { const cid = new URL(req.url).searchParams.get('c') || 'lens'; ctx.waitUntil(edgePurge(/^[a-z0-9-]{1,20}$/.test(cid) ? cid : 'lens')); }
+      if (req.method !== 'GET' && req.method !== 'HEAD' && res.status < 400 && new URL(req.url).pathname.startsWith('/api/')) { const cid = new URL(req.url).searchParams.get('c') || 'lens'; await (edgePurge(/^[a-z0-9-]{1,20}$/.test(cid) ? cid : 'lens')); }
       return res;
     } catch (e) { console.log('error', e && e.stack || String(e)); return err('伺服器錯誤：' + (e.message || e), 500); }
   },
