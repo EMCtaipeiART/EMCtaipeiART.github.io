@@ -2170,14 +2170,14 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       {id:'xiaoshu-2026-11',launched:'2026-11-23',name:'小舒',sub:'設計部代班解答',img:'assets/xiaoshu.webp',
         intro:'嗨，我是小舒！剛拿下金馬最佳導演，下一部還沒開拍，正好空檔，就來幫設計部代班解答。我能查案量、找案件、介紹系統功能，也會跟你分享新公告和設計圈新聞。點我就能問～',
         vars:{'--lid-color':'#e9b497','--lid-l':'33.5%','--lid-r':'52.6%','--lid-w':'12%','--lid-top':'35%','--lid-h':'4.5%','--mouth-l':'40.3%','--mouth-t':'51.8%','--mouth-w':'15%','--mouth-h':'8.5%'}}
-      ,{id:'pet-calico-2026-11',launched:'2026-11-24',name:'小花',sub:'辦公室三花貓輪值',img:'assets/xiaohua.webp',still:true,
-        intro:'喵～我是小花，住在五樓的三花貓，趁午休來輪值幫設計部的忙！我能查案量、找案件、介紹系統功能，也會分享新公告。點我就能問～',vars:{}}
-      ,{id:'pet-beige-2026-11',launched:'2026-11-24',name:'小麥',sub:'辦公室米貓輪值',img:'assets/xiaomai.webp',still:true,
-        intro:'喵嗚～我是小麥，住在四樓的米色虎斑貓，睡飽了就來輪值幫設計部的忙！我能查案量、找案件、介紹系統功能，也會分享新公告。點我就能問～',vars:{}}
-      ,{id:'pet-dachs-2026-11',launched:'2026-11-24',name:'小棕',sub:'辦公室小狗輪值',img:'assets/xiaozong.webp',still:true,
-        intro:'汪汪！我是小棕，住在四樓的長耳小狗，搖著尾巴來輪值幫設計部的忙！我能查案量、找案件、介紹系統功能，也會分享新公告。點我就能問～',vars:{}}
-      ,{id:'pet-samoyed-2026-11',launched:'2026-11-24',name:'小雪',sub:'辦公室薩摩耶輪值',img:'assets/xiaoxue.webp',still:true,
-        intro:'汪～我是小雪，住在五樓的白色薩摩耶，笑嘻嘻地來輪值幫設計部的忙！我能查案量、找案件、介紹系統功能，也會分享新公告。點我就能問～',vars:{}}
+      ,{id:'pet-calico-2026-11',launched:'2026-11-24',name:'坂本龍喵',sub:'辦公室三花貓輪值',img:'assets/xiaohua.webp',still:true,
+        intro:'喵～我是坂本龍喵，住在五樓的三花貓，趁午休來輪值幫設計部的忙！我能查案量、找案件、介紹系統功能，也會分享新公告。點我就能問～',vars:{}}
+      ,{id:'pet-beige-2026-11',launched:'2026-11-24',name:'咪咪喵',sub:'辦公室米貓輪值',img:'assets/xiaomai.webp',still:true,
+        intro:'喵嗚～我是咪咪喵，住在四樓的米色虎斑貓，睡飽了就來輪值幫設計部的忙！我能查案量、找案件、介紹系統功能，也會分享新公告。點我就能問～',vars:{}}
+      ,{id:'pet-dachs-2026-11',launched:'2026-11-24',name:'腸汪',sub:'辦公室小狗輪值',img:'assets/xiaozong.webp',still:true,
+        intro:'汪汪！我是腸汪，住在四樓的長耳小狗，搖著尾巴來輪值幫設計部的忙！我能查案量、找案件、介紹系統功能，也會分享新公告。點我就能問～',vars:{}}
+      ,{id:'pet-samoyed-2026-11',launched:'2026-11-24',name:'北泡泡',sub:'辦公室薩摩耶輪值',img:'assets/xiaoxue.webp',still:true,
+        intro:'汪～我是北泡泡，住在五樓的白色薩摩耶，笑嘻嘻地來輪值幫設計部的忙！我能查案量、找案件、介紹系統功能，也會分享新公告。點我就能問～',vars:{}}
     ];
     /* 多位角色隨機出現（小黃回鍋、小劉、小舒與四隻辦公室寵物）：每個瀏覽分頁開啟時抽一位，同一分頁之後都是同一位（避免對話中途換人）；兩位同時上架，NEW 標籤各自計算 */
     const ASSISTANT_CHARACTER=(()=>{let id='';try{id=sessionStorage.getItem('assistantCharV1')||''}catch(err){}let c=ASSISTANT_CHARACTERS.find(x=>x.id===id);if(!c){c=ASSISTANT_CHARACTERS[Math.floor(Math.random()*ASSISTANT_CHARACTERS.length)];try{sessionStorage.setItem('assistantCharV1',c.id)}catch(err){}}return c})();
