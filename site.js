@@ -2161,14 +2161,25 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     /* 目前上架的小幫手角色。角色不是永久的（小黃是剛失業、暫時代班，之後會因為熱門話題或時事換成別的角色）；換角色只改這個物件（與 Worker 的 assistant-character.ts）：
        id（換一個新的，頭像旁就會對每位同事顯示 NEW 標籤）、launched（上架日）、名字、頭像、自我介紹；眼皮與嘴的位置用 vars（CSS 變數 --lid-top／--lid-h／--lid-w／--lid-l／--lid-r／--lid-color／--mouth-l／--mouth-t／--mouth-w／--mouth-h）調整。 */
     const ASSISTANT_CHARACTERS=[
+      {id:'xiaohuang-return-2026-11',launched:'2026-11-24',name:'小黃',sub:'回鍋支援設計部',img:'assets/xiaohuang.webp',
+        intro:'嗨，我是小黃，我又回來啦！我回鍋原本的公司上班了，不過放心不下設計部，所以兼任支援，之後會一直輪值幫忙。我能查案量、找案件、介紹系統功能，也會跟你分享新公告和設計圈新聞。點我就能問～',
+        vars:{}},
       {id:'xiaoliu-2026-11',launched:'2026-11-23',name:'小劉',sub:'設計部代班解答',img:'assets/xiaoliu.webp',
         intro:'嗨，我是小劉！剛拿下金馬最佳男主角，領完獎還沒進組，正好空檔，就來幫設計部代班解答。我能查案量、找案件、介紹系統功能，也會跟你分享新公告和設計圈新聞。點我就能問～',
         vars:{'--lid-color':'#fabc96','--lid-l':'30%','--lid-r':'54.6%','--lid-w':'13.5%','--lid-top':'58%','--lid-h':'9.5%','--mouth-l':'44%','--mouth-t':'83%','--mouth-w':'14%','--mouth-h':'5%'}},
       {id:'xiaoshu-2026-11',launched:'2026-11-23',name:'小舒',sub:'設計部代班解答',img:'assets/xiaoshu.webp',
         intro:'嗨，我是小舒！剛拿下金馬最佳導演，下一部還沒開拍，正好空檔，就來幫設計部代班解答。我能查案量、找案件、介紹系統功能，也會跟你分享新公告和設計圈新聞。點我就能問～',
         vars:{'--lid-color':'#e9b497','--lid-l':'33.5%','--lid-r':'52.6%','--lid-w':'12%','--lid-top':'35%','--lid-h':'4.5%','--mouth-l':'40.3%','--mouth-t':'51.8%','--mouth-w':'15%','--mouth-h':'8.5%'}}
+      ,{id:'pet-calico-2026-11',launched:'2026-11-24',name:'小花',sub:'辦公室三花貓輪值',img:'assets/xiaohua.webp',still:true,
+        intro:'喵～我是小花，住在五樓的三花貓，趁午休來輪值幫設計部的忙！我能查案量、找案件、介紹系統功能，也會分享新公告。點我就能問～',vars:{}}
+      ,{id:'pet-beige-2026-11',launched:'2026-11-24',name:'小麥',sub:'辦公室米貓輪值',img:'assets/xiaomai.webp',still:true,
+        intro:'喵嗚～我是小麥，住在四樓的米色虎斑貓，睡飽了就來輪值幫設計部的忙！我能查案量、找案件、介紹系統功能，也會分享新公告。點我就能問～',vars:{}}
+      ,{id:'pet-dachs-2026-11',launched:'2026-11-24',name:'小棕',sub:'辦公室小狗輪值',img:'assets/xiaozong.webp',still:true,
+        intro:'汪汪！我是小棕，住在四樓的長耳小狗，搖著尾巴來輪值幫設計部的忙！我能查案量、找案件、介紹系統功能，也會分享新公告。點我就能問～',vars:{}}
+      ,{id:'pet-samoyed-2026-11',launched:'2026-11-24',name:'小雪',sub:'辦公室薩摩耶輪值',img:'assets/xiaoxue.webp',still:true,
+        intro:'汪～我是小雪，住在五樓的白色薩摩耶，笑嘻嘻地來輪值幫設計部的忙！我能查案量、找案件、介紹系統功能，也會分享新公告。點我就能問～',vars:{}}
     ];
-    /* 兩位角色隨機出現：每個瀏覽分頁開啟時抽一位，同一分頁之後都是同一位（避免對話中途換人）；兩位同時上架，NEW 標籤各自計算 */
+    /* 多位角色隨機出現（小黃回鍋、小劉、小舒與四隻辦公室寵物）：每個瀏覽分頁開啟時抽一位，同一分頁之後都是同一位（避免對話中途換人）；兩位同時上架，NEW 標籤各自計算 */
     const ASSISTANT_CHARACTER=(()=>{let id='';try{id=sessionStorage.getItem('assistantCharV1')||''}catch(err){}let c=ASSISTANT_CHARACTERS.find(x=>x.id===id);if(!c){c=ASSISTANT_CHARACTERS[Math.floor(Math.random()*ASSISTANT_CHARACTERS.length)];try{sessionStorage.setItem('assistantCharV1',c.id)}catch(err){}}return c})();
     const NEW_DAYS=14;/* 新角色上架後，頭像旁的 NEW 標籤最多顯示幾天（Worker assistant-character.ts 的 newDays 同步） */
     /* 右下角小幫手開關（個人設定）：預設開；本機先記一份讓切換立即生效，同時寫進雲端個人設定跨裝置同步 */
@@ -5059,7 +5070,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const kAlert=()=>'assistantAlertV1:'+S.acct;
       const kGreet=()=>'assistantGreetedV1:'+S.acct,kClose=()=>'assistantClosedV1:'+S.acct;
       const lsGet=k=>{try{return localStorage.getItem(k)||''}catch(err){return ''}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(err){}};
-      const FACE='<span class="as-face"><img class="as-face-img" src="'+ASSISTANT_CHARACTER.img+'" alt="" draggable="false"><i class="as-lid l"></i><i class="as-lid r"></i><i class="as-mouth"></i></span>';
+      const FACE='<span class="as-face"><img class="as-face-img" src="'+ASSISTANT_CHARACTER.img+'" alt="" draggable="false">'+(ASSISTANT_CHARACTER.still?'':'<i class="as-lid l"></i><i class="as-lid r"></i><i class="as-mouth"></i>')+'</span>';
       const SVG_X='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
       const SVG_SEND='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 4l-5 16-3-6.5L4 12z"/></svg>';
       function root(){
