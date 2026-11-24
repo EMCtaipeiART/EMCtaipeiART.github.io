@@ -1496,7 +1496,7 @@
       const wrap=root.querySelector('.dq-all-wrap');if(wrap)wrap.hidden=k<2;
       root.querySelectorAll('.dq-opt').forEach(l=>{const sel=l.querySelector('.dq-input');if(!sel)return;
         const idx=items.indexOf(l);
-        if(idx<0){sel.innerHTML='<option value="">-</option>';sel.disabled=true;sel.value='';return}
+        if(idx<0){sel.innerHTML='<option value="">-</option>';sel.disabled=false;sel.value='';return}
         const full=k===1||allMode,lim=full?total:max,v=full?total:vals[idx];
         sel.innerHTML=Array.from({length:lim},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'</option>').join('');
         sel.value=String(v);sel.disabled=full;
@@ -1542,6 +1542,14 @@
       const tg=root.querySelector('.dq-all');
       return {details:names.join(', '),detailQty:(k>=2&&!(tg&&tg.checked)&&Object.values(qty).every(v=>v>0))?JSON.stringify(qty):''};
     }
+    /* 點沒勾選的項目旁邊的件數下拉：自動勾選該項目，並直接展開下拉（整個膠囊都是按鈕範圍） */
+    document.addEventListener('mousedown',e=>{
+      const q=e.target.closest&&e.target.closest('.dq-qty');if(!q)return;
+      const l=q.closest('.dq-opt'),c=l&&l.querySelector('input[type=checkbox]');if(!c||c.checked)return;
+      if(!l.closest('#cellPop,#dmList'))return;
+      e.preventDefault();c.checked=true;c.dispatchEvent(new Event('change',{bubbles:true}));
+      const sel=l.querySelector('select');setTimeout(()=>{if(!sel||sel.disabled)return;sel.focus();try{sel.showPicker()}catch(err){}},0);
+    });
     document.addEventListener('change',e=>{const c=e.target;if(!c||!c.matches)return;
       if(c.matches('.dq-opt input[type=checkbox], .dq-opt select.dq-input, .dq-all')){const root=c.closest('#cellPop,#dmList');if(root)dqOnChange(root,c)}});
     /* 右上角的 Google 信箱／行事曆小圖示：新開分頁；有登入就帶 authuser 直接開對應帳號 */
