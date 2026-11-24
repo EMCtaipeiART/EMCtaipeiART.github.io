@@ -2971,6 +2971,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     });
     function renderMail(){
       const m=state.mail,stage=$('stage');if(!m){backToBoard();return;}
+      /* 重畫前先把編輯框裡已打的字存回目前這封草稿（背景備份完成等非使用者動作觸發重畫時，不會把文字洗回預設內容） */
+      {const o=$('mBody');if(o&&o.__d&&!m.sending&&m.drafts.includes(o.__d)&&!o.__d.sent&&o.getAttribute('contenteditable')==='true')o.__d.body=o.innerHTML}
       setTimeout(()=>{collapseChips('to');collapseChips('cc')},0);
       const d=m.drafts[m.index],total=m.drafts.length,g=state.gmail,locked=d.sent;
             const gmailNotice=!m.gmailChecked?'<div class="notice">正在確認 Gmail 連線…</div>'
@@ -3013,6 +3015,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
           ${d.editSchedId?'':'<button type="button" class="btn" data-mail="skip">略過，回案件列表</button>'}
         </div>
       </div>`;
+      {const ne=$('mBody');if(ne)ne.__d=d}
     }
     function prepareBody(d){
       const div=document.createElement('div');div.innerHTML=d.body;const used=[];
