@@ -1,6 +1,6 @@
 import { buildCatalog } from './catalog.js';
 import { buildDrinkCatalog, buildManualItems, pickDrink } from './drink.js';
-import { ensureAccounts, signUser, getUser as getUserRaw, verifyGoogle } from './auth.js';
+import { ensureAccounts, signUser, getUser as getUserRaw, emailFromToken, verifyGoogle } from './auth.js';
 import { parseNidin } from './nidin.js';
 import { checkLink, parseUberJoin, fetchGroups } from './ubereats.js';
 import { fillForms } from './xlsx.js';
@@ -25,8 +25,18 @@ async function ensureChat(env) {
   for (const c of ['sid TEXT', 'up INTEGER NOT NULL DEFAULT 0', 'del INTEGER NOT NULL DEFAULT 0', 'ed INTEGER NOT NULL DEFAULT 0']) { try { await env.DB.prepare('ALTER TABLE chat ADD COLUMN ' + c).run(); } catch { /* 已存在 */ } }
   chatReady = true;
 }
-async function getKV(env, k, d = null) { const r = await env.DB.prepare('SELECT v FROM kv WHERE k=?').bind(k).first(); return r ? JSON.parse(r.v) : d; }
-async function setKV(env, k, v) { await env.DB.prepare('INSERT INTO kv(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v').bind(k, JSON.stringify(v)).run(); }
+const memo = new Map();   // 團購清單在同一個執行個體記 5 秒，並放進邊緣快取 15 秒（寫入時清除）
+async function getKV(env, k, d = null) {
+  const cacheable = k === 'campaigns';
+  if (cacheable) {
+    const m = memo.get(k); if (m && m.exp > Date.now()) return m.v === undefined ? d : structuredClone(m.v);
+    try { const h = await caches.default.match(new Request(EDGE + 'kv/' + k)); if (h) { const j = await h.json(); memo.set(k, { v: j.v === null ? undefined : j.v, exp: Date.now() + 5000 }); return j.v === null ? d : j.v; } } catch {}
+  }
+  const r = await env.DB.prepare('SELECT v FROM kv WHERE k=?').bind(k).first(); const v = r ? JSON.parse(r.v) : undefined;
+  if (cacheable) { memo.set(k, { v: v === undefined ? undefined : structuredClone(v), exp: Date.now() + 5000 }); try { await caches.default.put(new Request(EDGE + 'kv/' + k), new Response(JSON.stringify({ v: v === undefined ? null : v }), { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=15' } })); } catch {} }
+  return v === undefined ? d : v;
+}
+async function setKV(env, k, v) { if (k === 'campaigns') { memo.delete(k); try { await caches.default.delete(new Request(EDGE + 'kv/' + k)); } catch {} } await env.DB.prepare('INSERT INTO kv(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v').bind(k, JSON.stringify(v)).run(); }
 // 多團購：預設團購 'lens' 沿用舊資料的 key（不需搬遷），其他團購的 key 加上 <id>: / <id>/ 前綴
 const DEFAULT_CID = 'lens';
 const kk = (cid, k) => (cid === DEFAULT_CID ? k : cid + ':' + k);
@@ -259,7 +269,7 @@ async function handle(req, env, ctx) {
 
   if (path === '/api/campaigns' && method === 'GET') {
     const usr = await getUser(req, env);
-    const base = await edgeGet('campaigns', 10, async () => {
+    const base = await edgeGet('campaigns', 30, async () => {
       const list = await Promise.all(camps.map(async (c) => {
         const [s, cat, rs, pimgs] = await Promise.all([getSettings(env, c.id), getCatalog(env, c.id), env.DB.prepare("SELECT name,total,created_at FROM orders WHERE campaign=? AND status='active' ORDER BY created_at").bind(c.id).all(), getKV(env, kk(c.id, 'pimgs'), {})]);
         const goal = Math.max(0, parseInt(String(s.goal || '0').replace(/[^\d]/g, ''), 10) || 0);
@@ -279,7 +289,7 @@ async function handle(req, env, ctx) {
   }
 
   if (path === '/api/catalog' && method === 'GET') {
-    const out = await edgeGet('catalog/' + cid, 30, async () => {
+    const out = await edgeGet('catalog/' + cid, 60, async () => {
       const [cat, s, pimgs] = await Promise.all([getCatalog(env, cid), getSettings(env, cid), getKV(env, kk(cid, 'pimgs'), {})]);
       if (cat && cat.drink && /^https:\/\//.test(s.drinkLink || '')) { const h = new URL(s.drinkLink).hostname; cat.link = s.drinkLink; cat.platform = /uber/.test(h) ? 'ubereats' : /nidin/.test(h) ? 'nidin' : cat.platform; }
       return { catalog: cat, pimgs, settings: { shopName: s.shopName, deadline: s.deadline, closed: closedNow(s), bankName: s.bankName, bankAccount: s.bankAccount, accountName: s.accountName, linePay: lineLink(s.linePay), notes: s.notes, goal: s.goal, drinkLink: s.drinkLink } };
@@ -656,7 +666,7 @@ export default {
       if (req.method === 'GET') { // 快取命中就不必先查資料庫
         const u = new URL(req.url);
         try {
-          if (u.pathname === '/api/campaigns' && !req.headers.get('x-user')) { const hit = await caches.default.match(new Request(EDGE + 'campaigns')); if (hit) return json({ campaigns: (await hit.json()).map(({ _o, ...x }) => ({ ...x, mine: false })) }, 200, { 'cache-control': 'no-store' }); }
+          if (u.pathname === '/api/campaigns') { const hit = await caches.default.match(new Request(EDGE + 'campaigns')); if (hit) { const em = req.headers.get('x-user') ? await emailFromToken(hmac, env, req) : ''; return json({ campaigns: (await hit.json()).map(({ _o, ...x }) => ({ ...x, mine: !!(em && _o && _o === em) })) }, 200, { 'cache-control': 'no-store' }); } }
           else if (u.pathname === '/api/catalog' && /^[a-z0-9-]{1,20}$/.test(u.searchParams.get('c') || 'lens')) { const hit = await caches.default.match(new Request(EDGE + 'catalog/' + (u.searchParams.get('c') || 'lens'))); if (hit) return json(await hit.json(), 200, { 'cache-control': 'no-store' }); }
         } catch {}
       }

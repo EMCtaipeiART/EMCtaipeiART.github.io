@@ -21,6 +21,13 @@ export async function getUser(hmac, env, req) {
   await ensureAccounts(env);
   return (await env.DB.prepare('SELECT * FROM accounts WHERE email=?').bind(email).first()) || null;
 }
+// 只驗簽章、不查資料庫：回傳 token 內的 Email（供快取路徑判斷「我的團購」用），無效回傳 ''
+export async function emailFromToken(hmac, env, req) {
+  const a = (req.headers.get('x-user') || '').split('.');
+  if (a.length !== 4 || a[0] !== 'u' || +a[1] < Date.now()) return '';
+  if ((await hmac(env, a.slice(0, 3).join('.'))) !== a[3]) return '';
+  try { return unb64u(a[2]); } catch { return ''; }
+}
 // 驗證 Google ID token（用 Google 的 tokeninfo 端點，檢查 aud 與 email_verified）
 export async function verifyGoogle(credential, clientId) {
   if (!clientId) throw new Error('尚未設定 Google 登入（管理者需先填用戶端 ID）');
