@@ -2187,8 +2187,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       ,{id:'pet-samoyed-2026-11',launched:'2026-11-24',name:'北泡泡',sub:'辦公室薩摩耶輪值',img:'assets/xiaoxue.webp',still:true,
         intro:'汪～我是北泡泡，住在五樓的白色薩摩耶，笑嘻嘻地來輪值幫設計部的忙！我能查案量、找案件、介紹系統功能，也會分享新公告。點我就能問～',vars:{}}
     ];
-    /* 多位角色隨機出現（小黃回鍋、小劉、小舒與四隻辦公室寵物）：每個瀏覽分頁開啟時抽一位，同一分頁之後都是同一位（避免對話中途換人）；兩位同時上架，NEW 標籤各自計算 */
-    const ASSISTANT_CHARACTER=(()=>{let id='';try{id=sessionStorage.getItem('assistantCharV1')||''}catch(err){}let c=ASSISTANT_CHARACTERS.find(x=>x.id===id);if(!c){c=ASSISTANT_CHARACTERS[Math.floor(Math.random()*ASSISTANT_CHARACTERS.length)];try{sessionStorage.setItem('assistantCharV1',c.id)}catch(err){}}return c})();
+    /* 多位角色隨機出現（小黃回鍋、小劉、小舒與四隻辦公室寵物）：每次開啟／重新整理頁面就重新抽一位；同一次載入內不會換人（對話只存在頁面記憶體，重新整理本來就會清掉）；兩位同時上架，NEW 標籤各自計算 */
+    const ASSISTANT_CHARACTER=ASSISTANT_CHARACTERS[Math.floor(Math.random()*ASSISTANT_CHARACTERS.length)];
     const NEW_DAYS=14;/* 新角色上架後，頭像旁的 NEW 標籤最多顯示幾天（Worker assistant-character.ts 的 newDays 同步） */
     /* 右下角小幫手開關（個人設定）：預設開；本機先記一份讓切換立即生效，同時寫進雲端個人設定跨裝置同步 */
     const assistantOn=()=>{try{return localStorage.getItem('assistantEnabledV1:'+selfAccount())!=='0'}catch(err){return true}};
