@@ -2188,7 +2188,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         intro:'汪～我是北泡泡，住在五樓的白色薩摩耶，笑嘻嘻地來輪值幫設計部的忙！我能查案量、找案件、介紹系統功能，也會分享新公告。點我就能問～',vars:{'--lid-color':'#fff3f0','--lid-l':'34.8%','--lid-r':'58%','--lid-w':'6.5%','--lid-top':'36%','--lid-h':'7%','--mouth-l':'43.8%','--mouth-t':'50%','--mouth-w':'12.5%','--mouth-h':'8%'}}
     ];
     /* 多位角色隨機出現（小黃回鍋、小劉、小舒與四隻辦公室寵物）：每次開啟／重新整理頁面就重新抽一位；同一次載入內不會換人（對話只存在頁面記憶體，重新整理本來就會清掉）；兩位同時上架，NEW 標籤各自計算 */
-    const ASSISTANT_CHARACTER=ASSISTANT_CHARACTERS[Math.floor(Math.random()*ASSISTANT_CHARACTERS.length)];
+    let ASSISTANT_CHARACTER=ASSISTANT_CHARACTERS[Math.floor(Math.random()*ASSISTANT_CHARACTERS.length)];
     const NEW_DAYS=14;/* 新角色上架後，頭像旁的 NEW 標籤最多顯示幾天（Worker assistant-character.ts 的 newDays 同步） */
     /* 右下角小幫手開關（個人設定）：預設開；本機先記一份讓切換立即生效，同時寫進雲端個人設定跨裝置同步 */
     const assistantOn=()=>{try{return localStorage.getItem('assistantEnabledV1:'+selfAccount())!=='0'}catch(err){return true}};
@@ -5084,7 +5084,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const kAlert=()=>'assistantAlertV1:'+S.acct;
       const kGreet=()=>'assistantGreetedV1:'+S.acct,kClose=()=>'assistantClosedV1:'+S.acct;
       const lsGet=k=>{try{return localStorage.getItem(k)||''}catch(err){return ''}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(err){}};
-      const FACE='<span class="as-face"><img class="as-face-img" src="'+ASSISTANT_CHARACTER.img+'" alt="" draggable="false">'+(ASSISTANT_CHARACTER.still?'':'<i class="as-lid l"></i><i class="as-lid r"></i><i class="as-mouth"></i>')+'</span>';
+      const mkFace=()=>'<span class="as-face"><img class="as-face-img" src="'+ASSISTANT_CHARACTER.img+'" alt="" draggable="false">'+(ASSISTANT_CHARACTER.still?'':'<i class="as-lid l"></i><i class="as-lid r"></i><i class="as-mouth"></i>')+'</span>';
+      let FACE=mkFace();
       const SVG_X='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
       const SVG_SEND='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 4l-5 16-3-6.5L4 12z"/></svg>';
       function root(){
@@ -5246,7 +5247,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         updateNew();
       }
       /* 滑鼠移到小黃身上：彈出自我介紹／新功能／新聞話題小氣泡（內容是現成的，不呼叫 AI、不花 token；新聞每 3 小時由後端更新） */
-      const HELLO_INTRO=ASSISTANT_CHARACTER.intro;
+      let HELLO_INTRO=ASSISTANT_CHARACTER.intro;
       const HELLO_TIPS=['多元宇宙裡有 4 隻寵物：坂本龍喵、咪咪喵、北泡泡、腸汪，可以摸摸、餵點心喔。','元宇宙五樓的倉庫有 7 個小遊戲入口，點一下就能玩，像是辦公室賽車、槍戰。','想換個心情？出氣擂台有 8 種道具可以打，連擊越多倍率越高。','角色工坊可以用 AI 生出自己的元宇宙人物，第一個人物免費。','案件寄信可以「排程」，選好時間按送出就會自動寄。','首頁設計師頭像滑過去，可以看到等級、稱號和工作負載。','午餐不知道吃什麼？左側選單有「午餐地圖」。','行事曆有會議時，元宇宙裡的人物會自己走進會議室。'];
       const hello={deck:null,idx:-1,seen:false,tickerP:null,hideT:0,showT:0};
       const helloEl=()=>{let el=document.getElementById('asHello');if(!el){el=document.createElement('div');el.id='asHello';el.className='as-hello';el.hidden=true;document.body.appendChild(el);
@@ -5323,6 +5324,27 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         try{localStorage.setItem(metKey(),JSON.stringify([...metSet(),ASSISTANT_CHARACTER.id].slice(-20)))}catch(err){}
         S.hasNew=false;
       }
+      /* 小幫手自己輪替：頭像開著不動時，每 20～40 分鐘翻轉換成另一位（不會太頻繁）；聊天視窗開著、思考中、已經跟他聊過、介紹氣泡顯示中、分頁在背景都不換，改 2 分鐘後再試 */
+      function swapCharacter(){
+        const retry=ms=>setTimeout(swapCharacter,ms);
+        const ok=!(S.open||S.farewell||S.busy||S.tired||document.hidden||!loggedIn()||!assistantOn()||S.msgs.some(m=>m.role==='user'));
+        const el=document.getElementById('asHelper'),fab=el&&el.querySelector('.as-fab'),shown=document.getElementById('asHello');
+        if(!ok||!el||!fab||el.classList.contains('away')||(shown&&shown.classList.contains('show')))return retry(120000);
+        const pool=ASSISTANT_CHARACTERS.filter(c=>c.id!==ASSISTANT_CHARACTER.id);
+        if(!pool.length)return;
+        const next=pool[Math.floor(Math.random()*pool.length)];
+        fab.classList.add('as-flip-out');
+        setTimeout(()=>{
+          Object.keys(ASSISTANT_CHARACTER.vars||{}).forEach(k=>el.style.removeProperty(k));
+          ASSISTANT_CHARACTER=next;FACE=mkFace();HELLO_INTRO=next.intro;hello.seen=false;
+          Object.entries(next.vars||{}).forEach(([k,v])=>el.style.setProperty(k,v));
+          updateNew();render();
+          const f=document.querySelector('#asHelper .as-fab');
+          if(f){f.classList.add('as-flip-in');setTimeout(()=>f.classList.remove('as-flip-in'),600)}
+          retry((20+Math.random()*20)*60000);
+        },380);
+      }
+      setTimeout(swapCharacter,(20+Math.random()*20)*60000);
       async function autoHello(){
         if(S.open||S.farewell||S.tired||document.hidden||!loggedIn()||!assistantOn())return;
         const root=document.getElementById('asHelper');if(!root||root.classList.contains('away'))return;
