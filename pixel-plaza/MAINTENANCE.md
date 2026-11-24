@@ -146,5 +146,5 @@
 - `bgmUI` 的音樂控制條由 `gameui.js` 在載入後搬進選單（輪詢最多 20 秒）。
 
 ## 精靈疊層（sprite stacking）樣品（2026-11-24）
-- 茶水間「快快乖」是樣品：`snacks/stack_kuaikuai.png`（44 層 30×9 px 的水平薄片，左＝地面）由四視角圖經 https://github.com/danielwh2/sprite-stacking（MIT）的 `views_to_slices.py` 切出；`snackStack3d()` 把每層做成一片水平平面往上疊（每層加一片半層高的複本填縫），轉鏡頭就有真的厚度。其他零食仍是朝向鏡頭的平面圖。
+- 茶水間「快快乖」是樣品：`snacks/stack_kuaikuai.png`（80 層 56×22 px 的水平薄片，左＝地面）由四視角圖經 https://github.com/danielwh2/sprite-stacking（MIT）的 `views_to_slices.py` 切出；`snackStack3d()` 把每層做成一片水平平面往上疊（每層加一片半層高的複本填縫），轉鏡頭就有真的厚度。其他零食仍是朝向鏡頭的平面圖。
 - 其他物件要做：準備 4 視角圖（頂、側、正、背）→ 切片 → 放進 `snacks/` → 呼叫 `snackStack3d(parent, 檔名, 層數, 寬px, 深px, 高度, x, z, y)`。

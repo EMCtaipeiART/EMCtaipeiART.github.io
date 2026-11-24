@@ -1552,14 +1552,14 @@ async function snackStack3d(parent, file, n, sw, sd, h, wx, wz, y){
   for (let i = 0; i < n; i++) {
     const t = base.clone(); t.needsUpdate = true; t.repeat.set(1 / n, 1); t.offset.set(i / n, 0);
     const mat = new THREE.MeshStandardMaterial({map:t, alphaTest:.5, roughness:1, metalness:0, side:THREE.DoubleSide});
-    for (const k of [0, .5]) { const m = new THREE.Mesh(geo, mat); m.rotation.x = -Math.PI / 2; m.position.y = (i + k) * step + .002; m.castShadow = true; grp.add(m); }
+    for (const k of [0]) { const m = new THREE.Mesh(geo, mat); m.rotation.x = -Math.PI / 2; m.position.y = (i + k) * step + .002; m.castShadow = true; grp.add(m); }
   }
   grp.position.set(wx, y, wz); parent.add(grp); return grp;
 }
 function snackPacks3d(parent, left, right, baseY, zBack, zFront){   // 一包一包的零食（朝向鏡頭的 billboard，不做薄片疊厚度）；兩排各 4 包、固定格位不重疊
   const slot = (right - left) / 4;
   SNACK_PACKS.forEach(async ([k, h], i) => {
-    if (k === 'snack_kuaikuai') { const col0 = i % 4, row0 = i < 4 ? 0 : 1; snackStack3d(parent, 'stack_kuaikuai.png', 44, 30, 9, h, left + slot * (col0 + .5), row0 ? zFront : zBack, baseY + (row0 ? 0 : .1)); return; }   // 樣品：快快乖用疊層做出厚度，其他仍是平面圖
+    if (k === 'snack_kuaikuai') { const col0 = i % 4, row0 = i < 4 ? 0 : 1; snackStack3d(parent, 'stack_kuaikuai.png', 80, 56, 22, h, left + slot * (col0 + .5), row0 ? zFront : zBack, baseY + (row0 ? 0 : .1)); return; }   // 樣品：快快乖用疊層做出厚度，其他仍是平面圖
     const img = await (snackImgCache[k] || (snackImgCache[k] = loadImg('snacks/' + k + '.png'))); const raw = img && trimmed(img); if (!raw) return;
     const src = outlined(raw, 6), maxW = slot - .06; let dh = h * src.height / raw.height, dw = dh * src.width / src.height; if (dw > maxW) { dh *= maxW / dw; dw = maxW; }
     const col = i % 4, row = i < 4 ? 0 : 1, wx = parent.position.x + left + slot * (col + .5), wz = parent.position.z + (row ? zFront : zBack);
