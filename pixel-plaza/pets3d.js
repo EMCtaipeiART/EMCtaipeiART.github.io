@@ -16,7 +16,7 @@ const REF = {
 const SHAPE = {
   cat:{
     head:[[80,862,932,38],[92,836,962,80],[112,815,985,104],[140,804,999,119],[170,799,1001,126],[188,798,1002,127],[210,806,1000,122],[230,820,986,103],[244,840,966,78],[253,868,938,45]],
-    pads:[992,217,27,38,32,33], eyeGap:9,
+    pads:[996,227,23,35,27,31], eyeGap:9, nose:[1022,203], fur:[0xfdf3e4, 0xe9d3bb],
     body:[[576,300,395,50],[592,262,414,90],[620,236,424,112],[660,222,422,122],[700,218,424,120],[750,218,428,114],[800,226,428,114],[850,240,424,114],[900,254,418,102],[938,270,395,76],[960,298,360,40]],
     chest:[895,325,68,86,100], pivot:{head:[170,912], body:[322,765]},
     front:{x:43, u:878, top:345, r:[40,35,34]}, hind:{x:72, u:628, top:350, r:[44,36,34], thigh:[636,368,62,64,44]}, paw:[44,23,36],
@@ -26,7 +26,7 @@ const SHAPE = {
   },
   cat2:{
     head:[[80,860,928,38],[95,830,956,80],[115,808,976,102],[145,795,988,119],[185,790,990,127],[215,806,986,118],[238,830,966,96],[250,855,944,70],[258,885,920,35]],
-    pads:[979,227,27,38,31,32], eyeGap:9,
+    pads:[981,236,23,35,26,30], eyeGap:9, nose:[1007,213], fur:[0xf6e6cd, 0xdcc19d],
     body:[[612,310,405,58],[630,276,421,96],[660,254,424,110],[700,244,422,112],[740,242,422,108],[790,248,422,108],[840,262,424,112],[880,278,415,106],[918,300,390,82],[938,328,360,42]],
     chest:[870,330,66,82,102], pivot:{head:[172,897], body:[330,770]},
     front:{x:43, u:858, top:345, r:[40,35,35]}, hind:{x:72, u:642, top:350, r:[44,36,35], thigh:[648,368,62,64,44]}, paw:[44,23,36],
@@ -63,7 +63,7 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
   const Y = v => (R.gy - v) / PX, Z = u => (u - R.sz) / PX, X = u => (u - R.fx) / PX;
   const INK = R.line / PX, isCat = !id.startsWith('dog');
 
-  const atlas = new THREE.TextureLoader().load(new URL('assets/pets3d/' + id + '.webp?v=4', import.meta.url).href, () => { group.visible = true; ready && ready(); }, undefined, () => fail && fail());
+  const atlas = new THREE.TextureLoader().load(new URL('assets/pets3d/' + id + '.webp?v=5', import.meta.url).href, () => { group.visible = true; ready && ready(); }, undefined, () => fail && fail());
   atlas.colorSpace = THREE.SRGBColorSpace; atlas.anisotropy = 4;
   // 身體材質：依面的朝向混合三視圖（aK＝正面、側面、背面的權重倍數；w=1 表示改用單色 aCol）
   const skin = new THREE.MeshBasicMaterial({map:atlas});
@@ -139,10 +139,24 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
   };
   const tufts = (amp, k = 9) => (a, t) => 1 + amp * (Math.pow(Math.abs(Math.sin(a * k / 2 + t * 7)), .5) * Math.pow(Math.abs(Math.sin(t * 17 + a)), .35) - .45);   // 蓬毛：輪廓一撮一撮
 
+  // ───── 體型 ─────
+  const fat = isCat ? {x:1.24, z:.93, leg:.68, top:Y(372), head:[1.07, 1.14, 1.08], ear:.86} : null;
+  const warp = (p, big) => { if (!fat) return p; const hy0 = Y(A.pivot.head[0]), hz0 = Z(A.pivot.head[1]);
+    if (big) p.set(p.x * fat.head[0], hy0 + (p.y - hy0) * fat.head[1], hz0 + (p.z - hz0) * fat.head[2]);
+    p.x *= fat.x; p.z *= fat.z; p.y = p.y < fat.top ? p.y * fat.leg : p.y - fat.top * (1 - fat.leg); return p; };
+  const W = (x, y, z) => warp(V(x, y, z)).toArray();
+  function shape(b, geo){   // 回傳套用體型後的幾何（法線重算）
+    if (!fat) return geo;
+    const g = geo.clone(), a = g.attributes.position, v = V(0, 0, 0);
+    for (let i = 0; i < a.count; i++) { warp(v.fromBufferAttribute(a, i), b.userData.big); a.setXYZ(i, v.x, v.y, v.z); }
+    g.computeVertexNormals(); return g;
+  }
+
   // ───── 骨架：每根骨頭收集自己的零件，最後合併 ─────
   const bones = [];
   function bone(parent, at, name){
-    const g = new THREE.Group(); g.name = name; g.userData = {at, skin:[], solid:[], ink:[]};
+    const g = new THREE.Group(); g.name = name; g.userData = {skin:[], solid:[], ink:[], big:name === 'head' || !!parent.userData.big};
+    at = at.warped ? at : W(...at); at.warped = true; g.userData.at = at;
     const pa = parent.userData.at || [0, 0, 0]; g.position.set(at[0] - pa[0], at[1] - pa[1], at[2] - pa[2]);
     g.userData.rest = g.position.clone(); parent.add(g); bones.push(g); return g;
   }
@@ -158,13 +172,14 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
       ak.set([...(k || [0, 0, 0]), color != null ? 1 : 0], i * 4);
       if (color != null) { v.fromBufferAttribute(p, i); n.fromBufferAttribute(nr, i); const c = typeof color === 'function' ? color(v, n) : C(color); col.set([c.r, c.g, c.b], i * 3); }
     }
-    if (line) outline(b, geo);
-    const g = local(b, geo); g.setAttribute('aRest', p.clone()); g.setAttribute('aN', nr.clone()); g.setAttribute('aK', new THREE.BufferAttribute(ak, 4)); g.setAttribute('aCol', new THREE.BufferAttribute(col, 3));
+    const shaped = shape(b, geo);
+    if (line) outline(b, shaped);
+    const g = local(b, shaped); g.setAttribute('aRest', p.clone()); g.setAttribute('aN', nr.clone()); g.setAttribute('aK', new THREE.BufferAttribute(ak, 4)); g.setAttribute('aCol', new THREE.BufferAttribute(col, 3));
     b.userData.skin.push(g);
   }
   function ink(b, geo, color){   // 純色小零件（閉眼線、舌頭）
     const p = geo.attributes.position, col = new Float32Array(p.count * 3), c = C(color); for (let i = 0; i < p.count; i++) col.set([c.r, c.g, c.b], i * 3);
-    const g = local(b, geo); g.deleteAttribute('normal'); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); b.userData.solid.push(g);
+    const g = local(b, shape(b, geo)); g.deleteAttribute('normal'); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); b.userData.solid.push(g);
   }
 
   const group = new THREE.Group(); group.visible = false;
@@ -174,7 +189,7 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
   const S = {scale:R.scale, head:[0, hy, hz], hr:[hw, hh, hd], body:[0, by, bz], br:[Math.max(...A.body.map(r => r[3])) / PX, (Math.max(...A.body.map(r => r[2])) - Math.min(...A.body.map(r => r[1]))) / PX / 2, 0],
     legF:[A.front.x / PX, Y(A.front.top), Z(A.front.u)], legB:[A.hind.x / PX, Y(A.hind.top), Z(A.hind.u)], lr:A.front.r[1] / PX};
   const [rx, ry, rz] = S.hr, br = S.br;
-  const roll = new THREE.Group(); roll.position.set(0, by, bz); roll.userData = {at:[0, by, bz]}; group.add(roll);
+  const roll = new THREE.Group(); const mid = W(0, by, bz); mid.warped = true; roll.position.set(...mid); roll.userData = {at:mid}; group.add(roll);
   const torso = bone(roll, [0, by, bz], 'torso');
   const head = bone(torso, [0, hy - ry * .62, hz - rz * .25], 'head');
   const tp = A.tail.pts.map((p, i) => V((A.tail.x ? A.tail.x[i] : 0) / PX, Y(p[1]), Z(p[0])));
@@ -183,8 +198,8 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
   const fluffy = id === 'dog2';
 
   // ───── 身體 ─────
-  paint(torso, loft('z', A.body, {n:48, sides:fluffy ? 72 : 48, bump:fluffy ? tufts(.07) : id === 'dog1' ? (a, t) => 1 + (Math.sin(a) < -.5 ? .07 * Math.abs(Math.sin(t * 26)) : 0) : null}), [.85, 1.35, 1]);
-  if (A.chest) { const [u, v, d, h, w] = A.chest; paint(torso, oval(0, Y(v), Z(u), w / PX, h / PX, d / PX, {seg:44, bump:id === 'dog1' ? tufts(.09, 11) : null}), [1.5, 1, 0], {line:id === 'dog1'}); }
+  paint(torso, loft('z', A.body, {n:48, sides:fluffy ? 72 : 48, bump:fluffy ? tufts(.07) : isCat ? tufts(.03, 13) : id === 'dog1' ? (a, t) => 1 + (Math.sin(a) < -.5 ? .07 * Math.abs(Math.sin(t * 26)) : 0) : null}), [.85, 1.35, 1]);
+  if (A.chest) { const [u, v, d, h, w] = A.chest; paint(torso, oval(0, Y(v), Z(u), w / PX, h / PX, d / PX, {seg:44, bump:id === 'dog1' ? tufts(.09, 11) : isCat ? tufts(.06, 11) : null}), [1.5, 1, 0], {line:id === 'dog1'}); }
   if (A.mane) paint(torso, loft('y', A.mane, {n:56, sides:84, power:2.1, bump:tufts(.1, 11)}), [1.15, 1, 1]);
 
   for (const k in legs) {
@@ -195,19 +210,29 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
   }
 
   // ───── 尾巴 ─────
-  const tg = tube(tp, A.tail.r.map(r => r / PX), {n:48, sides:fluffy ? 56 : 28, bump:fluffy ? tufts(.1, 9) : id === 'dog1' ? tufts(.14, 5) : null});
+  const tg = tube(tp, A.tail.r.map(r => r / PX), {n:48, sides:fluffy ? 56 : 28, bump:fluffy ? tufts(.1, 9) : id === 'dog1' ? tufts(.14, 5) : tufts(.07, 7)});
   if (id === 'dog1') paint(tail, tg, null, {color:(v, n) => C(0xa65a34).lerp(C(0xfbbd7c), sm(.15, -.55, n.y - n.z * .5 + Math.sin(v.y * 31 + v.z * 23) * .22))});
   else if (id === 'dog2') paint(tail, tg, null, {color:(v, n) => C(0xfbf5f1).lerp(C(0xe2d3d1), sm(.45, .95, Math.sin(v.y * 19 + v.z * 13 + Math.sin(v.x * 23) * 1.5)) * .55 + sm(.2, -.8, n.y) * .6)});
   else paint(tail, tg, [0, 1, 0]);
 
   // ───── 頭、耳朵 ─────
-  const headGeo = [loft('y', [...A.head].reverse(), {n:48, sides:64, power:isCat ? 2.35 : 2.15})];
+  const headGeo = [loft('y', [...A.head].reverse(), {n:48, sides:80, power:isCat ? 2.3 : 2.15, bump:isCat ? (a, t) => t < .42 ? 1 + (tufts(.075, 15)(a, t) - 1) * Math.pow(Math.abs(Math.cos(a)), 2) : 1 : null})];
   paint(head, headGeo[0], [1.55, 1, 1]);
   if (A.muzzle) { headGeo.push(loft('z', A.muzzle, {n:24, sides:36, power:2.1})); paint(head, headGeo[1], [1.2, 1, 0]); }
-  if (A.pads) { const [u, v, dx, w, h, d] = A.pads; for (const s of [1, -1]) { const g = oval(s * dx / PX, Y(v), Z(u), w / PX, h / PX, d / PX, {seg:36}); headGeo.push(g); paint(head, g, [1.4, 1, 0]);
-    // 嘴邊肉下緣的圓弧嘴線（往外側微微上勾），側面才看得出兩團圓嘴
-    const arc = [[.42, -.66], [.7, -.64], [.98, -.54], [1.24, -.36], [1.42, -.16]].map(([az, el]) => V(s * (dx + Math.sin(az) * Math.cos(el) * w * 1.04) / PX, Y(v) + Math.sin(el) * h * 1.04 / PX, Z(u) + Math.cos(az) * Math.cos(el) * d * 1.04 / PX));
-    ink(head, tube(arc, [.005, .011, .012, .01, .004], {n:20, sides:8}), R.ink); } }
+  if (A.pads) { const [u, v, dx, w, h, d] = A.pads, [light, dark] = A.fur;
+    const furry = (v0, ry0) => (p, n) => C(dark).lerp(C(light), sm(-.75, .15, n.y + (p.y - v0) / ry0 * .25));
+    for (const s of [1, -1]) {
+      const g = oval(s * dx / PX, Y(v), Z(u), w / PX, h / PX, d / PX, {seg:40}); headGeo.push(g); paint(head, g, null, {color:furry(Y(v), h / PX)});
+      const arc = [[-.72, -.42], [-.4, -.68], [.02, -.74], [.42, -.66], [.72, -.46]].map(([az, el]) => V(s * (dx + Math.sin(az) * Math.cos(el) * w * 1.035) / PX, Y(v) + Math.sin(el) * h * 1.035 / PX, Z(u) + Math.cos(az) * Math.cos(el) * d * 1.035 / PX));
+      ink(head, tube(arc, [.008, .012, .012, .01, .004], {n:20, sides:8}), R.ink);
+      for (const [az, el] of [[.12, .08], [.46, -.08], [.22, -.28]]) ink(head, oval(s * (dx + Math.sin(az) * Math.cos(el) * w) / PX, Y(v) + Math.sin(el) * h / PX, Z(u) + Math.cos(az) * Math.cos(el) * d / PX, .009, .009, .006, {seg:8}), dark);   // 鬍鬚點
+    }
+    const chin = oval(0, Y(v + h * .86), Z(u - 4), 22 / PX, 15 / PX, 25 / PX, {seg:28}); headGeo.push(chin); paint(head, chin, null, {color:furry(Y(v + h * .86), 15 / PX)});
+    const [nu, nv] = A.nose, nose = oval(0, Y(nv), Z(nu), 14 / PX, 9.5 / PX, 10 / PX, {seg:28}); headGeo.push(nose);
+    paint(head, nose, null, {line:false, color:(p, n) => C(0xd96f76).lerp(C(0xffb0ac), sm(.3, .95, n.y * .8 + n.z * .35))});
+    const mx = Z(u) + d / PX * .8;
+    ink(head, tube([V(0, Y(nv + 8), Z(nu) + .035), V(0, Y(v + h * .38), mx + .02)], [.009, .009], {n:6, sides:8}), R.ink);   // 鼻子到嘴的中線
+  }
   const ears = [];
   for (const s of [1, -1]) {
     if (id === 'dog1') {   // 垂耳：[v, 後緣 u, 前緣 u, 半寬, 正面圖左耳中心 u]
@@ -220,7 +245,7 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
       const E = A.ear, base = V(s * X(E.base[0]) * 1, Y(E.base[1]), Z(E.base[2])), tip = V(s * X(E.tip[0]) * 1, Y(E.tip[1]), Z(E.tip[2]));
       base.x = -s * X(E.base[0]); tip.x = -s * X(E.tip[0]);
       const e = bone(head, [base.x, base.y, base.z], 'ear'); ears.push([e, s]);
-      const ax = tip.clone().sub(base), side = ax.clone().cross(V(0, 0, 1)).normalize(), dep = side.clone().cross(ax).normalize(), turn = ax.clone().normalize(), rings = [];
+      const ax = tip.clone().sub(base).multiplyScalar(fat ? fat.ear : 1), side = ax.clone().cross(V(0, 0, 1)).normalize(), dep = side.clone().cross(ax).normalize(), turn = ax.clone().normalize(), rings = [];
       side.applyAxisAngle(turn, s * .55); dep.applyAxisAngle(turn, s * .55);   // 耳朵朝外轉一點，側面看才有寬度
       for (let i = 0; i <= 18; i++) { const t = -.3 + 1.3 * i / 18, k = clamp(t), w = E.w / PX * (1 - .88 * Math.pow(k, 1.45)), d = E.d / PX * (1 - .72 * k), at = base.clone().addScaledVector(ax, t);
         rings.push(Array.from({length:32}, (_, j) => { const a = j / 32 * Math.PI * 2, hollow = Math.sin(a) * (dep.z > 0 ? 1 : -1) > 0 ? .55 : 1; return at.clone().addScaledVector(side, Math.cos(a) * w).addScaledVector(dep, Math.sin(a) * d * hollow); })); }
@@ -236,13 +261,13 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
     const rings = 8, seg = 36, pos = [], uv = [], idx = [], cx = X(cu + shift), c = V(cx, Y(cv), front(cx, Y(cv)) ?? hz + rz);
     const d = V(Math.sin(yaw), 0, Math.cos(yaw)), t = V(Math.cos(yaw), 0, -Math.sin(yaw)), wide = 1 / Math.sqrt(Math.cos(yaw));
     for (let i = 0; i <= rings; i++) for (let j = 0; j < seg; j++) {
-      const k = i / rings, a = j / seg * Math.PI * 2, du = Math.cos(a) * pu * k, dv = Math.sin(a) * pv * k, q = c.clone().addScaledVector(t, du * wide / PX); q.y = Y(cv + dv);
+      const k = i / rings, a = j / seg * Math.PI * 2, du = Math.cos(a) * pu * k, dv = Math.sin(a) * pv * k, q = c.clone().addScaledVector(t, du * wide * (fat && b === eyesO ? fat.head[1] / (fat.head[0] * fat.x) : 1) / PX); q.y = Y(cv + dv);
       ray.set(q.clone().addScaledVector(d, 3), d.clone().negate()); const h = ray.intersectObjects(probe, false)[0]?.point || q;
       pos.push(h.x + d.x * lift, h.y, h.z + d.z * lift); uv.push((1380 + 200 + X(cu + du) * PX) / ATLAS, 1 - (500 - Y(cv + dv) * PX) / 520);
     }
     for (let i = 0; i < rings; i++) for (let j = 0; j < seg; j++) { const a = i * seg + j, c2 = i * seg + (j + 1) % seg; idx.push(a, a + seg, c2, c2, a + seg, c2 + seg); }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx);
-    const m = new THREE.Mesh(local(b, g), decal); b.add(m);
+    const m = new THREE.Mesh(local(b, shape(b, g)), decal); b.add(m);
   }
   const face = bone(head, head.userData.at, 'face'), eyesO = bone(face, [0, Y(A.eyes[0][1]), hz], 'eyesOpen'), eyesC = bone(face, [0, hy, hz], 'eyesShut'), tng = bone(face, head.userData.at, 'tongue');
   for (const e of A.eyes) {
@@ -251,7 +276,7 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
     const [cu, cv, pu, pv] = e, arc = [-.82, -.42, 0, .42, .82].map(t => { const x = X(cu + shift + t * pu), y = Y(cv + pv * (.3 - .42 * t * t)); return V(x, y, (front(x, y) ?? hz + rz) + .03); });
     ink(eyesC, tube(arc, [.012, .022, .025, .022, .012], {n:16, sides:8}), R.ink);
   }
-  patch(face, A.muzzlePatch, .01);
+  if (!A.pads) patch(face, A.muzzlePatch, .01);
   if (isCat) { const [u, v] = A.muzzlePatch, x = X(u), y = Y(v + 20); ink(tng, oval(x, y, (front(x, y) ?? hz + rz) + .02, .05, .065, .028, {seg:16}), 0xf27f83); }
   else if (id === 'dog1') { const x = 0, y = Y(255), z = (front(0, Y(240)) ?? hz + rz) - .02; ink(tng, oval(x, y, z, .075, .105, .042, {seg:20}), 0xf7848a); }
 
@@ -279,14 +304,15 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
     if (lines.length) { const m = new THREE.Mesh(mergeGeometries(lines), inkMat); m.layers.set(hullLayer); b.add(m); }
     b.userData.skin = b.userData.solid = b.userData.ink = null;
   }
-  group.scale.set(S.scale, S.scale * 1.08, S.scale);
+  group.scale.set(S.scale, S.scale * (fat ? 1.02 : 1.08), S.scale);
+  if (fat) { for (const k of ['head', 'body', 'legF', 'legB']) S[k] = W(...S[k]); br[0] *= fat.x; S.lr *= fat.x; }
 
   // ───── 動作 ─────
   // 每個姿勢是各骨頭相對站姿的偏移 [x,y,z, rx,ry,rz]；切換姿勢時平滑過去
   const keys = ['roll', 'torso', 'head', 'tail', 'FL', 'FR', 'BL', 'BR'], nodes = {roll, torso, head, tail, ...legs};
   const cur = {}; for (const k of keys) cur[k] = [0, 0, 0, 0, 0, 0];
   const rest = roll.position.clone(); let ph = 0, last = 0, lids = 1, tOut = 0;
-  const low = Y(Math.max(...A.body.map(r => r[2]))) - .04, legLen = S.legF[1];
+  const low = W(0, Y(Math.max(...A.body.map(r => r[2]))), 0)[1] - .03, legLen = S.legF[1];
   function target(pose, t){
     const o = {}; for (const k of keys) o[k] = [0, 0, 0, 0, 0, 0];
     let eyes = 1, tongueOut = id === 'dog2' ? 1 : 0;
@@ -296,7 +322,7 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
       const tilt = id === 'dog1' ? -.5 : -.66, drop = id === 'dog1' ? .14 : .24;
       set('torso', [0, -drop, 0, tilt]); set('head', [0, 0, 0, -tilt * .92]);
       for (const k of ['BL', 'BR']) set(k, [(k === 'BL' ? 1 : -1) * .07, -(legLen - S.lr * 1.9), .22, -1.42]);
-      const up = Math.sin(-tilt) * (S.legF[2] - bz) - drop;   // 胸口抬高多少，前腳就跟著拉長
+      const up = Math.sin(-tilt) * (S.legF[2] - S.body[2]) - drop;   // 胸口抬高多少，前腳就跟著拉長
       for (const k of ['FL', 'FR']) { set(k, [0, up * .78, -.14]); o[k][6] = 1 + up * .78 / legLen; }
       set('tail', [0, 0, 0, id === 'cat' ? .95 : .55, Math.sin(t * 1.6) * .14]);
     };
@@ -323,7 +349,7 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
     } else if (pose === 'loaf') { lie(id === 'cat' || id === 'cat2' ? .2 : .1); eyes = 0; tongueOut = 0; set('torso', [0, breathe]); }
     else if (pose === 'down') { lie(.16); eyes = 0; tongueOut = 0; set('torso', [0, breathe]); set('tail', [0, 0, 0, 0, Math.sin(t * 3) * .2]); }
     else if (pose === 'sleep') {
-      lie(hy - ry - low - .02); eyes = 0; tongueOut = 0; set('head', [.14, .05, .1, .03, .38, .2]); set('torso', [0, breathe * 1.8, 0, 0, -.16]); set('tail', [0, 0, 0, .3, .7]);
+      lie(Math.max(.1, S.head[1] - ry - low - .02)); eyes = 0; tongueOut = 0; set('head', [.14, .05, .1, .03, .38, .2]); set('torso', [0, breathe * 1.8, 0, 0, -.16]); set('tail', [0, 0, 0, .3, .7]);
     } else if (pose === 'eat') {
       const drop = Math.max(.35, hy - ry * 1.5), chew = Math.abs(Math.sin(t * 9)) * .05;
       set('torso', [0, -.06, 0, .2]); set('head', [0, -drop * .72 - chew, .24, .42 + chew]);
@@ -333,7 +359,7 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
       set('torso', [0, Math.abs(w) * .03, 0, 0, w * .09]); set('head', [0, 0, 0, -.1, -w * .06, w * .05]); set('tail', [0, 0, 0, 0, w * .75]); tongueOut = 1;
     } else if (pose === 'belly') {
       const w = Math.sin(t * 7);
-      set('roll', [0, -(by - br[1] * .95), 0, 0, 0, Math.PI + w * .16]);
+      set('roll', [0, -(S.body[1] - br[1] * .95), 0, 0, 0, Math.PI + w * .16]);
       set('head', [0, .34, .16, .1, 0, -Math.PI * .92]);
       for (const [k, d] of [['FL', 1], ['FR', -1], ['BL', -1], ['BR', 1]]) set(k, [0, 0, 0, (k[0] === 'F' ? -.6 : .35) + w * .25 * d]);
       set('tail', [0, 0, 0, .9, w * .4]); eyes = 0; tongueOut = 1;
