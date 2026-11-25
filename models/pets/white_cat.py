@@ -45,7 +45,7 @@ def cat(key, art, collar):
       'paw': [W(95), W(48), W(78)],
       'ear': {'base': [319 - 66, 507 - 386, U(745)], 'tip': [319 - 108, 507 - 464, U(778)], 'w': 46, 'd': 34, 'turn': .62},
       'tail': {'pts': [[U(x), V(y)] for x, y in tail], 'r': [W(r) for r in tail_r]},
-      'eyeAt': [46, GY_OF[key] - 344, 24.5, 25.5],      # 眼睛中心高度 y=1.72
+      'eyeAt': [46, GY_OF[key] - 344, 29.5, 30.5],      # 眼睛中心高度 y=1.72
       'muzzleAt': [V(490), W(106), W(56)],
       'faceMap': [[(507 - v) / 200 for v in FACE_V['cat']], FACE_V[key]],   # 模型高度 → 原圖高度（分段對位）
       'collar': collar,
@@ -131,20 +131,16 @@ rep("set('head', [0, 0, 0, -tilt * .92]);", "set('head', [0, A.white ? .07 : 0, 
 s = s.replace('Z(uc + d + 6)', 'Z(uc + d + (A.white ? 16 : 6))')
 # ── 臉：鼻子、嘴邊、下巴直接雕在同一顆頭上 ──
 rep("loft('y', [...A.head].reverse(), {n:48, sides:64,", "loft('y', [...A.head].reverse(), {n:A.white ? 110 : 48, sides:A.white ? 144 : 64,")
-rep("  paint(head, headGeo[0], [1.55, 1, 1]);\n", """  const EYE_TAN = .85, bump = (x, y, cx, cy, rx, ry) => Math.exp(-(((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2));
+rep("  paint(head, headGeo[0], [1.55, 1, 1]);\n", """  const bump = (x, y, cx, cy, rx, ry) => Math.exp(-(((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2));
   if (A.white) { const p = headGeo[0].attributes.position;   // 嘴邊、鼻梁、下巴：同一顆頭上的柔和隆起
     for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), f = sm(.7, 1.0, z); if (!f) continue;
       const pad = 1 - (1 - bump(x, y, .095, 1.43, .12, .098)) * (1 - bump(x, y, -.095, 1.43, .12, .098));
       p.setZ(i, z + f * .018 * pad); }
-    const ex = A.eyeAt[0] / PX, ey = Y(A.eyeAt[1]), ea = A.eyeAt[2] / PX, eb = A.eyeAt[3] / PX;
-    let zc = 0, best = 9; for (let i = 0; i < p.count; i++) { if (p.getZ(i) < .7) continue; const d = Math.hypot(Math.abs(p.getX(i)) - ex, p.getY(i) - ey); if (d < best) { best = d; zc = p.getZ(i); } }
-    zc -= .05; head.userData.eyeZ = zc;
-    for (let i = 0; i < p.count; i++) { const z = p.getZ(i); if (z < .5) continue; const q = Math.abs(p.getX(i)) - ex, w = 1 - sm(1.08, 2.1, Math.hypot(q / ea, (p.getY(i) - ey) / eb)); if (w > 0) p.setZ(i, z + (zc - q * EYE_TAN - z) * w); }
     headGeo[0].computeVertexNormals(); }
   paint(head, headGeo[0], [1.55, 1, 1]);
   if (A.white) {   // 臉的範圍只用正面原圖（混到側面圖會出現兩層鼻嘴）
     const k = head.userData.skin[head.userData.skin.length - 1].attributes.aK, p = headGeo[0].attributes.position;
-    for (let i = 0; i < p.count; i++) { if (p.getZ(i) < .7) continue; const nz = headGeo[0].attributes.normal.getZ(i), near = (1 - sm(.85, 1.3, Math.hypot(p.getX(i) / .36, (p.getY(i) - 1.48) / .29))) * sm(.7, .9, p.getZ(i)), w = near * sm(.2, .55, nz);
+    for (let i = 0; i < p.count; i++) { if (p.getZ(i) < .7) continue; const nz = headGeo[0].attributes.normal.getZ(i), near = (1 - sm(.85, 1.3, Math.hypot(p.getX(i) / .45, (p.getY(i) - 1.56) / .37))) * sm(.7, .9, p.getZ(i)), w = near * sm(.2, .55, nz);
       k.setX(i, 1.55 + 5 * w); k.setY(i, 1 - .88 * w);
       head.userData.skin[head.userData.skin.length - 1].attributes.aCol.setX(i, .075 * Math.exp(-(((p.getY(i) - 1.45) / .16) ** 2)) * sm(.65, .95, p.getZ(i))); } }
 """)
@@ -162,10 +158,11 @@ s = s.replace("A.white ? .085 : .045", "A.white ? .11 : .045")
 rep("rings.push(ring(shrink(rows[0], f), 0, -dir * d));", "rings.push(ring(shrink(rows[0], f), 0, -dir * d * (A.white ? .12 : 1)));")
 rep("rings.push(ring(shrink(rows[rows.length - 1], f), 1, dir * d));", "rings.push(ring(shrink(rows[rows.length - 1], f), 1, dir * d * (A.white ? .12 : 1)));")
 rep("vec3 cS = texture2D(map, vec2((690.0 + vRest.z * 200.0) / ${ATLAS}.0, ty)).rgb;", "vec3 cS = texture2D(map, vec2((690.0 + vRest.z * 200.0) / ${ATLAS}.0, ty + (1.0 - step(0.001, vK.w)) * vSolid.x * 200.0 / 520.0)).rgb;")
-s = s.replace("assets/pets3d/' + id + '.webp?v=7'", "assets/pets3d/' + id + '.webp?v=10'")
-# 眼睛：固定在臉上的微凸鏡片（略朝外），任何角度都是同一顆，不切換、不跟著頭的曲面皺折
-rep("pos.push(h.x + d.x * lift, h.y, h.z + d.z * lift);", """if (at) { const x = c.x + du / PX; pos.push(x, Y(cv + dv), head.userData.eyeZ - (Math.abs(x) - Math.abs(c.x)) * EYE_TAN + .012 + .034 * (1 - k * k)); }
-      else pos.push(h.x + d.x * lift, h.y, h.z + d.z * lift);""")
+s = s.replace("assets/pets3d/' + id + '.webp?v=7'", "assets/pets3d/' + id + '.webp?v=11'")
+# 眼睛：貼著頭的表面、中央鼓起（不挖眼窩）；貼片比眼睛大一圈，周圍一圈就是原圖本來的眼眶
+rep("pos.push(h.x + d.x * lift, h.y, h.z + d.z * lift);", """const kk = Math.min(1, k * 1.2), l2 = at ? .007 + .065 * (1 - kk * kk) : lift; pos.push(h.x + d.x * l2, h.y, h.z + d.z * l2);""")
+# 閉眼線照眼睛實際大小（貼片多出來的那一圈不算）
+rep("const [cu, cv, pu, pv] = at || e,", "const [cu, cv, pu, pv] = at ? [at[0], at[1], at[2] / 1.2, at[3] / 1.2] : e,")
 # 鈴鐺自己描一圈貼身的邊（坐下時鈴鐺離胸口遠，整體外框會變成一圈懸空的黑環）
 rep("n.y * .7 + n.z * .5))});", """n.y * .7 + n.z * .5)), line:!A.white});
       if (A.white) { const rim = new THREE.Mesh(local(head, oval(0, Y(bv_), Z(uc + d + 16), br_ * 1.14, br_ * 1.14, dz * 1.14)), new THREE.MeshBasicMaterial({color:R.ink, side:THREE.BackSide})); head.add(rim); }""")
