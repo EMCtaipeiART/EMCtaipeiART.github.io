@@ -1,232 +1,277 @@
 // 辦公室寵物的立體模型（三花貓 cat、虎斑貓 cat2、臘腸狗 dog1、薩摩耶 dog2）。
-// 全部用程式建模（不需要模型檔）：身體部位是變形球體與漸縮管，花色直接畫在頂點上，外框用沿法線外推的背面。
-// 單位：舊圖集的 100 像素 = 1；面朝 +Z、腳底 y=0。makePet() 回傳 {group, update(姿勢, 毫秒, 移動距離)}。
+// 外形照原圖站姿三視圖逐段量出來（程式建模、沒有模型檔）；花紋與五官直接取用原圖：assets/pets3d/<id>.webp
+// （由 models/pets/build_pet_textures.py 產生），依每個面的朝向混合正面／側面／背面三張圖。外框是沿法線外推的背面。
+// 量測座標＝三視圖縮成 1600 px 寬時的像素：u 橫向、v 向下；模型單位 = 200 px，面朝 +Z、腳底 y=0。
+// makePet() 回傳 {group, update(姿勢, 毫秒, 移動距離)}。
 
-const SPECS = {
-  cat:{scale:.42, head:[0, 1.60, .50], hr:[.66, .55, .52], body:[0, .84, -.12], br:[.52, .47, .80], legF:[.27, .72, .38], legB:[.31, .72, -.60], lr:.155, ink:0x24120a},
-  cat2:{scale:.42, head:[0, 1.58, .50], hr:[.67, .56, .53], body:[0, .83, -.12], br:[.54, .48, .80], legF:[.27, .70, .38], legB:[.31, .70, -.60], lr:.165, ink:0x2c180c},
-  dog1:{scale:.61, head:[0, 1.22, .82], hr:[.47, .45, .45], body:[0, .64, -.14], br:[.42, .39, 1.00], legF:[.25, .50, .52], legB:[.26, .50, -.82], lr:.135, ink:0x2a1005},
-  dog2:{scale:.61, head:[0, 1.46, .52], hr:[.55, .49, .47], body:[0, .84, -.22], br:[.55, .50, .74], legF:[.28, .62, .34], legB:[.31, .62, -.64], lr:.17, ink:0x3a1d10},
+const PX = 200, ATLAS = 1780;
+// gy 腳底、fx 正面中線、sz 側面原點（要和貼圖腳本一致）
+const REF = {
+  cat:{gy:507, fx:319, sz:770, scale:.42, ink:0x351a10, line:8},
+  cat2:{gy:505, fx:319, sz:760, scale:.42, ink:0x3c2216, line:8},
+  dog1:{gy:432, fx:265, sz:790, scale:.61, ink:0x351c0c, line:11},
+  dog2:{gy:464, fx:278, sz:800, scale:.61, ink:0x431f0a, line:11},
+};
+// body＝沿前後方向 [u, 上緣 v, 下緣 v, 半寬]；head／mane＝沿上下方向 [v, 後緣 u, 前緣 u, 半寬]
+const SHAPE = {
+  cat:{
+    head:[[80,862,942,38],[92,836,978,80],[112,815,998,104],[140,804,1012,119],[170,799,1020,126],[188,798,1030,127],[210,806,1022,122],[230,820,1000,103],[244,840,978,78],[253,868,945,45]],
+    body:[[576,300,395,50],[592,262,414,90],[620,236,424,112],[660,222,422,122],[700,218,424,120],[750,218,428,114],[800,226,428,114],[850,240,424,114],[900,254,418,102],[938,270,395,76],[960,298,360,40]],
+    chest:[895,325,68,86,100], pivot:{head:[170,912], body:[322,765]},
+    front:{x:43, u:878, top:345, r:[40,35,34]}, hind:{x:72, u:628, top:350, r:[44,36,34], thigh:[636,368,62,64,44]}, paw:[44,23,36],
+    ear:{base:[232,130,878], tip:[212,38,882], w:50, d:26},
+    tail:{pts:[[612,285],[590,232],[580,180],[589,136],[612,108],[644,90],[661,87]], r:[34,36,36,35,33,29,23]},
+    eyes:[[272,162,27,28],[368,162,27,28]], muzzlePatch:[319,213,42,28],
+  },
+  cat2:{
+    head:[[80,860,940,38],[95,830,972,80],[115,808,992,102],[145,795,1004,119],[185,790,1006,127],[215,806,998,118],[238,830,975,96],[250,855,950,70],[258,885,925,35]],
+    body:[[612,310,405,58],[630,276,421,96],[660,254,424,110],[700,244,422,112],[740,242,422,108],[790,248,422,108],[840,262,424,112],[880,278,415,106],[918,300,390,82],[938,328,360,42]],
+    chest:[870,330,66,82,102], pivot:{head:[172,897], body:[330,770]},
+    front:{x:43, u:858, top:345, r:[40,35,35]}, hind:{x:72, u:642, top:350, r:[44,36,35], thigh:[648,368,62,64,44]}, paw:[44,23,36],
+    ear:{base:[232,130,862], tip:[214,44,860], w:48, d:26},
+    tail:{pts:[[632,318],[598,355],[568,405],[544,445],[524,458]], r:[36,40,39,34,26]},
+    eyes:[[273,178,27,28],[368,178,27,28]], muzzlePatch:[320,224,40,28],
+  },
+  dog1:{
+    head:[[86,892,978,42],[100,870,998,62],[125,852,1012,76],[155,840,1018,84],[190,836,1010,86],[215,842,990,80],[240,855,975,64],[256,880,950,40]],
+    muzzle:[[955,184,246,50],[985,187,245,48],[1010,192,238,40],[1030,195,228,28],[1046,200,217,13]],
+    body:[[608,338,385,32],[630,296,396,66],[670,258,396,84],[720,254,392,80],[770,264,392,76],[820,260,396,78],[870,258,402,86],[920,266,398,80],[955,285,380,56],[978,315,350,26]],
+    chest:[936,328,50,70,70], pivot:{head:[170,925], body:[330,790]},
+    front:{x:50, u:882, top:352, r:[32,28,28]}, hind:{x:56, u:652, top:350, r:[34,28,28], thigh:[662,362,56,48,40]}, paw:[42,20,34],
+    tail:{pts:[[628,305],[590,303],[555,276],[541,232],[562,194],[600,184]], r:[26,40,45,38,24,8]},
+    eyes:[[222,187,17,23],[309,187,17,23]], muzzlePatch:[265,229,34,28],
+  },
+  dog2:{
+    head:[[95,855,925,45],[110,832,948,72],[135,812,962,92],[165,795,975,104],[200,785,975,108],[235,790,965,100],[260,805,950,86],[280,830,930,58]],
+    muzzle:[[940,158,226,50],[965,162,216,44],[988,167,204,30],[1003,170,192,13]],
+    mane:[[150,800,925,78],[175,780,935,108],[200,766,940,130],[240,762,952,148],[290,770,978,152],[330,776,968,136],[365,800,948,106],[392,840,915,58]],
+    body:[[625,310,390,48],[650,268,402,94],[700,250,405,106],[750,248,396,102],[800,248,396,100],[850,248,390,100],[890,262,385,86],[914,300,375,54]],
+    pivot:{head:[185,885], body:[322,765]},
+    front:{x:66, u:860, top:345, r:[42,36,36]}, hind:{x:66, u:668, top:345, r:[44,36,36], thigh:[668,368,62,70,48]}, paw:[46,23,38],
+    ear:{base:[220,135,866], tip:[213,56,872], w:42, d:26},
+    tail:{pts:[[668,322],[620,292],[597,230],[624,178],[688,162],[734,190]], r:[40,62,74,66,50,26], x:[0,0,0,4,10,16]},
+    eyes:[[239,162,15,17],[318,162,15,17]], muzzlePatch:[279,207,52,46],
+  },
 };
 
-export function makePet(THREE, utils, id, hullLayer){
-  const S = SPECS[id]; if (!S) return null;
-  const {mergeGeometries, mergeVertices} = utils, V = (x, y, z) => new THREE.Vector3(x, y, z);
-  const INK = .018 / S.scale, LIGHT = V(-.4, .75, .55).normalize();
-  const flat = new THREE.MeshBasicMaterial({vertexColors:true}), inkMat = new THREE.MeshBasicMaterial({color:S.ink, side:THREE.BackSide});
-  const C = h => new THREE.Color(h), clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
-  const sm = (a, b, v) => { const t = clamp((v - a) / (b - a)); return t * t * (3 - 2 * t); };
-  const mix = (a, b, t) => a.clone().lerp(b, clamp(t));
+export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null} = {}){
+  const R = REF[id], A = SHAPE[id]; if (!R || !A) return null;
+  const {mergeGeometries} = utils, V = (x, y, z) => new THREE.Vector3(x, y, z), C = h => new THREE.Color(h);
+  const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v)), sm = (a, b, v) => { const t = clamp((v - a) / (b - a)); return t * t * (3 - 2 * t); };
+  const Y = v => (R.gy - v) / PX, Z = u => (u - R.sz) / PX, X = u => (u - R.fx) / PX;
+  const INK = R.line / PX, isCat = !id.startsWith('dog');
+
+  const atlas = new THREE.TextureLoader().load(new URL('assets/pets3d/' + id + '.webp?v=4', import.meta.url).href, () => { group.visible = true; ready && ready(); }, undefined, () => fail && fail());
+  atlas.colorSpace = THREE.SRGBColorSpace; atlas.anisotropy = 4;
+  // 身體材質：依面的朝向混合三視圖（aK＝正面、側面、背面的權重倍數；w=1 表示改用單色 aCol）
+  const skin = new THREE.MeshBasicMaterial({map:atlas});
+  skin.onBeforeCompile = sh => {
+    const vary = 'varying vec3 vRest; varying vec3 vRestN; varying vec4 vK; varying vec3 vSolid;\n';
+    sh.vertexShader = vary + 'attribute vec3 aRest; attribute vec3 aN; attribute vec4 aK; attribute vec3 aCol;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vRest = aRest; vRestN = aN; vK = aK; vSolid = aCol;');
+    sh.fragmentShader = vary + sh.fragmentShader.replace('#include <map_fragment>', `
+      vec3 n = normalize(vRestN);
+      float ty = 1.0 - (500.0 - vRest.y * 200.0) / 520.0;
+      vec3 cF = texture2D(map, vec2((200.0 + vRest.x * 200.0) / ${ATLAS}.0, ty)).rgb;
+      vec3 cS = texture2D(map, vec2((690.0 + vRest.z * 200.0) / ${ATLAS}.0, ty)).rgb;
+      vec3 cB = texture2D(map, vec2((1180.0 - vRest.x * 200.0) / ${ATLAS}.0, ty)).rgb;
+      vec3 w = vec3(pow(max(n.z, 0.0) * vK.x, 5.0), pow(abs(n.x) * vK.y, 5.0) + 0.00002, pow(max(-n.z, 0.0) * vK.z, 5.0));
+      vec3 art = (cF * w.x + cS * w.y + cB * w.z) / (w.x + w.y + w.z);
+      diffuseColor.rgb *= mix(art, vSolid, vK.w) * (1.0 - 0.07 * max(-n.y, 0.0));`);
+  };
+  skin.customProgramCacheKey = () => 'pet-skin';
+  const decal = new THREE.MeshBasicMaterial({map:atlas, side:THREE.DoubleSide});   // 眼睛、口鼻：直接貼正面原圖
+  const flat = new THREE.MeshBasicMaterial({vertexColors:true}), inkMat = new THREE.MeshBasicMaterial({color:R.ink, side:THREE.BackSide});
+  // 外框往鏡頭後方退一點：保留外輪廓，蓬毛零件交疊處不會冒出雜線
+  const sink = id === 'dog2' ? .16 : id === 'dog1' ? .06 : .025;
+  inkMat.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>\n mvPosition.z -= ${sink.toFixed(3)}; gl_Position = projectionMatrix * mvPosition;`); };
+  inkMat.customProgramCacheKey = () => 'pet-ink' + sink;
 
   // ───── 幾何 ─────
-  function ellipsoid(c, r, {seg = 40, bump = null, rot = null} = {}){
-    let g = new THREE.SphereGeometry(1, seg, Math.round(seg * .7)); g.deleteAttribute('uv'); g.deleteAttribute('normal'); g = mergeVertices(g, 1e-4);
-    const p = g.attributes.position, q = rot ? new THREE.Quaternion().setFromEuler(new THREE.Euler(...rot)) : null, v = V();
-    for (let i = 0; i < p.count; i++) {
-      v.fromBufferAttribute(p, i); const k = bump ? bump(v) : 1;
-      v.set(v.x * r[0] * k, v.y * r[1] * k, v.z * r[2] * k); if (q) v.applyQuaternion(q);
-      p.setXYZ(i, v.x + c[0], v.y + c[1], v.z + c[2]);
+  function fromRings(rings){   // rings：每圈同樣點數；兩端收成一點
+    const n = rings[0].length, pos = [], idx = [];
+    const mid = r => r.reduce((a, p) => a.add(p), V(0, 0, 0)).divideScalar(r.length);
+    for (const r of rings) for (const p of r) pos.push(p.x, p.y, p.z);
+    for (let i = 0; i < rings.length - 1; i++) for (let j = 0; j < n; j++) { const a = i * n + j, b = i * n + (j + 1) % n; idx.push(a, b, a + n, b, b + n, a + n); }
+    for (const [i, flip] of [[0, true], [rings.length - 1, false]]) {
+      const c = mid(rings[i]), k = pos.length / 3; pos.push(c.x, c.y, c.z);
+      for (let j = 0; j < n; j++) { const a = i * n + j, b = i * n + (j + 1) % n; flip ? idx.push(k, b, a) : idx.push(k, a, b); }
     }
-    g.computeVertexNormals(); return g;
-  }
-  function tube(pts, radii, {n = 28, sides = 18, bump = null} = {}){
-    const curve = new THREE.CatmullRomCurve3(pts.map(a => V(...a))), frames = curve.computeFrenetFrames(n, false), pos = [], idx = [];
-    const rad = f => { const x = f * (radii.length - 1), k = Math.min(radii.length - 2, x | 0); return radii[k] + (radii[k + 1] - radii[k]) * (x - k); };
-    const cap = 4, rings = [];   // 兩端各補幾圈收成圓頭
-    for (let i = cap; i > 0; i--) { const a = i / cap * Math.PI / 2; rings.push([0, -Math.sin(a) * rad(0), Math.cos(a)]); }
-    for (let i = 0; i <= n; i++) rings.push([i / n, 0, 1]);
-    for (let i = 1; i <= cap; i++) { const a = i / cap * Math.PI / 2; rings.push([1, Math.sin(a) * rad(1), Math.cos(a)]); }
-    for (const [f, off, w] of rings) {
-      const i = Math.round(f * n), at = curve.getPointAt(f).addScaledVector(frames.tangents[i], off);
-      for (let j = 0; j < sides; j++) {
-        const a = j / sides * Math.PI * 2, k = rad(f) * Math.max(w, .02) * (bump ? bump(f, a) : 1);
-        const d = frames.normals[i].clone().multiplyScalar(Math.cos(a)).addScaledVector(frames.binormals[i], Math.sin(a));
-        const q = at.clone().addScaledVector(d, k); pos.push(q.x, q.y, q.z);
-      }
-    }
-    for (let i = 0; i < rings.length - 1; i++) for (let j = 0; j < sides; j++) {
-      const a = i * sides + j, b = i * sides + (j + 1) % sides; idx.push(a, b, a + sides, b, b + sides, a + sides);
-    }
+    let vol = 0; const P = i => V(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]);
+    for (let i = 0; i < idx.length; i += 3) vol += P(idx[i]).dot(P(idx[i + 1]).cross(P(idx[i + 2])));
+    if (vol < 0) for (let i = 0; i < idx.length; i += 3) [idx[i + 1], idx[i + 2]] = [idx[i + 2], idx[i + 1]];
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g;
   }
-  const puff = (amp, f = 6.5) => v => 1 + amp * .55 * (Math.abs(Math.sin(v.x * f + v.y * 2.5)) + Math.abs(Math.sin(v.y * f + v.z * 2.5)) + Math.abs(Math.sin(v.z * f + v.x * 2.5))) / 1.5 - amp * .5;   // 蓬毛：輪廓一撮一撮
+  const spline = (rows, t) => { const m = rows.length - 1, x = t * m, i = Math.min(m - 1, x | 0), f = x - i;
+    return rows[0].map((_, k) => { const a = rows[Math.max(0, i - 1)][k], b = rows[i][k], c = rows[i + 1][k], d = rows[Math.min(m, i + 2)][k];
+      return .5 * (2 * b + (c - a) * f + (2 * a - 5 * b + 4 * c - d) * f * f + (3 * b - a - 3 * c + d) * f * f * f); }); };
+  const pw = (v, e) => Math.sign(v) * Math.pow(Math.abs(v), e);
+  function loft(axis, rows, {n = 44, sides = 48, power = 2.25, bump = null, cx = 0} = {}){
+    const rings = [], ring = (r, k, shift) => Array.from({length:sides}, (_, j) => {
+      const a = j / sides * Math.PI * 2, c = pw(Math.cos(a), 2 / power), s = pw(Math.sin(a), 2 / power), b = (bump ? bump(a, k) : 1);
+      if (axis === 'z') { const y0 = Y(r[1]), y1 = Y(r[2]), z = Z(r[0]) + shift, w = r[3] / PX; return V(cx + c * w * b, (y0 + y1) / 2 + s * (y0 - y1) / 2 * b, z); }
+      const z0 = Z(r[1]), z1 = Z(r[2]), w = r[3] / PX; return V(cx + c * w * b, Y(r[0]) + shift, (z0 + z1) / 2 + s * (z1 - z0) / 2 * b);
+    });
+    const shrink = (r, f) => axis === 'z' ? [r[0], r[1] + (r[2] - r[1]) * (1 - f) / 2, r[2] - (r[2] - r[1]) * (1 - f) / 2, r[3] * f] : [r[0], r[1] + (r[2] - r[1]) * (1 - f) / 2, r[2] - (r[2] - r[1]) * (1 - f) / 2, r[3] * f];
+    const dir = axis === 'z' ? Math.sign(rows[rows.length - 1][0] - rows[0][0]) : -Math.sign(rows[rows.length - 1][0] - rows[0][0]);
+    for (const [f, d] of [[.45, .045], [.78, .028]]) rings.push(ring(shrink(rows[0], f), 0, -dir * d));
+    for (let i = 0; i <= n; i++) rings.push(ring(spline(rows, i / n), i / n, 0));
+    for (const [f, d] of [[.78, .028], [.45, .045]]) rings.push(ring(shrink(rows[rows.length - 1], f), 1, dir * d));
+    return fromRings(rings);
+  }
+  function tube(pts, radii, {n = 30, sides = 24, bump = null} = {}){   // pts：模型座標
+    const curve = new THREE.CatmullRomCurve3(pts), fr = curve.computeFrenetFrames(n, false);
+    const rad = f => { const x = f * (radii.length - 1), k = Math.min(radii.length - 2, x | 0); return radii[k] + (radii[k + 1] - radii[k]) * (x - k); };
+    const rings = [], ring = (i, off, k) => { const f = i / n, at = curve.getPointAt(f).addScaledVector(fr.tangents[i], off);
+      return Array.from({length:sides}, (_, j) => { const a = j / sides * Math.PI * 2, r = rad(f) * k * (bump ? bump(a, f) : 1);
+        return at.clone().addScaledVector(fr.normals[i], Math.cos(a) * r).addScaledVector(fr.binormals[i], Math.sin(a) * r); }); };
+    for (const [d, k] of [[.85, .5], [.5, .86]]) rings.push(ring(0, -rad(0) * d, k));
+    for (let i = 0; i <= n; i++) rings.push(ring(i, 0, 1));
+    for (const [d, k] of [[.5, .86], [.85, .5]]) rings.push(ring(n, rad(1) * d, k));
+    return fromRings(rings);
+  }
+  const oval = (x, y, z, rx, ry, rz, {seg = 32, bump = null} = {}) => {   // 橢球（模型座標）
+    const rings = [];
+    for (let i = 1; i < seg * .7; i++) { const t = i / (seg * .7) * Math.PI - Math.PI / 2;
+      rings.push(Array.from({length:seg}, (_, j) => { const a = j / seg * Math.PI * 2, b = bump ? bump(a, i / (seg * .7)) : 1; return V(x + Math.cos(t) * Math.cos(a) * rx * b, y + Math.sin(t) * ry * b, z + Math.cos(t) * Math.sin(a) * rz * b); })); }
+    return fromRings(rings);
+  };
+  const tufts = (amp, k = 9) => (a, t) => 1 + amp * (Math.pow(Math.abs(Math.sin(a * k / 2 + t * 7)), .5) * Math.pow(Math.abs(Math.sin(t * 17 + a)), .35) - .45);   // 蓬毛：輪廓一撮一撮
 
   // ───── 骨架：每根骨頭收集自己的零件，最後合併 ─────
   const bones = [];
-  function bone(parent, at, name){   // at＝模型座標的關節位置
-    const g = new THREE.Group(); g.name = name; g.userData = {at, solid:[], ink:[]};
+  function bone(parent, at, name){
+    const g = new THREE.Group(); g.name = name; g.userData = {at, skin:[], solid:[], ink:[]};
     const pa = parent.userData.at || [0, 0, 0]; g.position.set(at[0] - pa[0], at[1] - pa[1], at[2] - pa[2]);
     g.userData.rest = g.position.clone(); parent.add(g); bones.push(g); return g;
   }
-  function add(b, geo, color, {line = true, shade = 1} = {}){
-    const p = geo.attributes.position, nr = geo.attributes.normal, col = new Float32Array(p.count * 3), v = V(), n = V();
+  const local = (b, geo) => { const a = b.userData.at; return geo.clone().applyMatrix4(new THREE.Matrix4().makeTranslation(-a[0], -a[1], -a[2])); };
+  function outline(b, geo){
+    const p = geo.attributes.position, nr = geo.attributes.normal, a = new Float32Array(p.count * 3);
+    for (let i = 0; i < p.count; i++) a.set([p.getX(i) + nr.getX(i) * INK, p.getY(i) + nr.getY(i) * INK, p.getZ(i) + nr.getZ(i) * INK], i * 3);
+    const h = new THREE.BufferGeometry(); h.setAttribute('position', new THREE.BufferAttribute(a, 3)); h.setIndex(geo.index.clone()); b.userData.ink.push(local(b, h));
+  }
+  function paint(b, geo, k, {line = true, color = null} = {}){   // 貼原圖（k＝[正,側,背] 權重）或單色／漸層（color）
+    const p = geo.attributes.position, nr = geo.attributes.normal, ak = new Float32Array(p.count * 4), col = new Float32Array(p.count * 3), v = V(0, 0, 0), n = V(0, 0, 0);
     for (let i = 0; i < p.count; i++) {
-      v.fromBufferAttribute(p, i); n.fromBufferAttribute(nr, i);
-      const c = typeof color === 'function' ? color(v, n) : C(color), k = 1 - shade * (.08 - .1 * Math.max(0, n.dot(LIGHT)) + .07 * Math.max(0, -n.y));
-      col.set([c.r * k, c.g * k, c.b * k], i * 3);
+      ak.set([...(k || [0, 0, 0]), color != null ? 1 : 0], i * 4);
+      if (color != null) { v.fromBufferAttribute(p, i); n.fromBufferAttribute(nr, i); const c = typeof color === 'function' ? color(v, n) : C(color); col.set([c.r, c.g, c.b], i * 3); }
     }
-    const at = b.userData.at, g = new THREE.BufferGeometry();
-    g.setAttribute('position', p.clone().applyMatrix4(new THREE.Matrix4().makeTranslation(-at[0], -at[1], -at[2])));
-    g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.setIndex(geo.index.clone()); b.userData.solid.push(g);
-    if (line) {
-      const h = new THREE.BufferGeometry(), a = new Float32Array(p.count * 3), q = g.attributes.position;
-      for (let i = 0; i < p.count; i++) a.set([q.getX(i) + nr.getX(i) * INK, q.getY(i) + nr.getY(i) * INK, q.getZ(i) + nr.getZ(i) * INK], i * 3);
-      h.setAttribute('position', new THREE.BufferAttribute(a, 3)); h.setIndex(geo.index.clone()); b.userData.ink.push(h);
-    }
+    if (line) outline(b, geo);
+    const g = local(b, geo); g.setAttribute('aRest', p.clone()); g.setAttribute('aN', nr.clone()); g.setAttribute('aK', new THREE.BufferAttribute(ak, 4)); g.setAttribute('aCol', new THREE.BufferAttribute(col, 3));
+    b.userData.skin.push(g);
+  }
+  function ink(b, geo, color){   // 純色小零件（閉眼線、舌頭）
+    const p = geo.attributes.position, col = new Float32Array(p.count * 3), c = C(color); for (let i = 0; i < p.count; i++) col.set([c.r, c.g, c.b], i * 3);
+    const g = local(b, geo); g.deleteAttribute('normal'); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); b.userData.solid.push(g);
   }
 
-  const group = new THREE.Group(), roll = new THREE.Group(); roll.position.set(0, S.body[1], S.body[2]); roll.userData = {at:[0, S.body[1], S.body[2]]}; group.add(roll);
-  const [hx, hy, hz] = S.head, [rx, ry, rz] = S.hr, [, by, bz] = S.body, br = S.br, isCat = !id.startsWith('dog');
+  const group = new THREE.Group(); group.visible = false;
+  const [hv, hu] = A.pivot.head, [bv, bu] = A.pivot.body;
+  const hy = Y(hv), hz = Z(hu), by = Y(bv), bz = Z(bu);
+  const hw = Math.max(...A.head.map(r => r[3])) / PX, hh = (A.head[A.head.length - 1][0] - A.head[0][0]) / PX / 2, hd = (hu - A.head[3][1]) / PX;
+  const S = {scale:R.scale, head:[0, hy, hz], hr:[hw, hh, hd], body:[0, by, bz], br:[Math.max(...A.body.map(r => r[3])) / PX, (Math.max(...A.body.map(r => r[2])) - Math.min(...A.body.map(r => r[1]))) / PX / 2, 0],
+    legF:[A.front.x / PX, Y(A.front.top), Z(A.front.u)], legB:[A.hind.x / PX, Y(A.hind.top), Z(A.hind.u)], lr:A.front.r[1] / PX};
+  const [rx, ry, rz] = S.hr, br = S.br;
+  const roll = new THREE.Group(); roll.position.set(0, by, bz); roll.userData = {at:[0, by, bz]}; group.add(roll);
   const torso = bone(roll, [0, by, bz], 'torso');
   const head = bone(torso, [0, hy - ry * .62, hz - rz * .25], 'head');
-  const tailAt = {cat:[0, 1.0, -.82], cat2:[0, .86, -.84], dog1:[0, .76, -1.05], dog2:[0, 1.1, -.82]}[id];
-  const tail = bone(torso, tailAt, 'tail');
-  const legs = {}; for (const [k, a, sx] of [['FL', S.legF, 1], ['FR', S.legF, -1], ['BL', S.legB, 1], ['BR', S.legB, -1]]) legs[k] = bone(roll, [a[0] * sx, a[1], a[2]], 'leg' + k);
-
-  // 頭部表面上的點（五官貼在這裡）
-  const surf = (x, y, out = 0) => [x, hy + y, hz + rz * Math.sqrt(Math.max(.05, 1 - (x / rx) ** 2 - (y / ry) ** 2)) + out];
-  const stripe = (t, w = .34) => sm(1 - w * 2 - .12, 1 - w * 2 + .12, Math.sin(t));
-
-  // ───── 花色 ─────
-  const paint = {};
-  if (id === 'cat') {
-    const W = C(0xfdf3e4), O = C(0xe8812a), D = C(0x5a3220);
-    paint.head = v => { const x = v.x / rx, y = (v.y - hy) / ry, z = (v.z - hz) / rz;
-      let c = mix(O, D, sm(-.12, -.3, x) * sm(.05, .25, y)); c = mix(c, D, stripe(x * 19, .2) * sm(.5, .7, y) * .8);
-      const blaze = z > 0 ? sm(.2 - .2 * clamp(-y), .08 - .2 * clamp(-y), Math.abs(x)) * sm(.65, .45, y) : 0;
-      const muzzle = sm(-.02, -.2, y - .3 * x * x) * sm(-.2, .2, z);
-      return mix(c, W, Math.max(blaze, muzzle)); };
-    paint.body = v => { const y = (v.y - by) / br[1], z = (v.z - bz) / br[2];
-      const c = mix(O, D, stripe(z * 9 + Math.abs(v.x) * 1.5, .27)); return mix(c, W, sm(-.12, -.34, y + .12 * Math.sin(z * 7) - .35 * sm(.45, .95, z))); };
-    paint.leg = v => mix(O, W, sm(.62, .46, v.y));
-    paint.tail = (v) => mix(O, D, Math.max(stripe((v.y * 1.6 - v.z) * 5.2, .3), sm(1.9, 2.05, v.y)));
-    paint.ear = O; paint.earL = D; paint.chest = W; paint.paw = W;
-  } else if (id === 'cat2') {
-    const T = C(0xeec796), D = C(0xd29c66), W = C(0xfdecd2);
-    paint.head = v => { const x = v.x / rx, y = (v.y - hy) / ry, z = (v.z - hz) / rz;
-      let c = mix(T, D, Math.max(stripe(x * 17, .17) * sm(.42, .62, y), stripe(y * 15 + 1, .14) * sm(.55, .75, Math.abs(x))));
-      return mix(c, W, sm(-.1, -.3, y - .35 * x * x) * sm(-.1, .3, z)); };
-    paint.body = v => { const y = (v.y - by) / br[1], z = (v.z - bz) / br[2];
-      return mix(mix(T, D, stripe(z * 11 + Math.abs(v.x) * 2.2, .2) * sm(-.35, .1, y)), W, sm(-.3, -.6, y - .3 * sm(.5, .95, z))); };
-    paint.leg = v => mix(mix(T, D, stripe(v.y * 22, .14) * .8), W, sm(.28, .16, v.y));
-    paint.tail = v => mix(T, D, stripe((v.z + v.y) * 11, .24));
-    paint.ear = T; paint.earL = T; paint.chest = W; paint.paw = W;
-  } else if (id === 'dog1') {
-    const R = C(0xa8532b), D = C(0x873b1c), T = C(0xf4b06a), L = C(0xfdd39b);
-    paint.head = v => { const x = v.x / rx, y = (v.y - hy) / ry, z = (v.z - hz) / rz; return mix(R, T, sm(-.15, -.45, y) * sm(0, .35, z) + sm(.2, .08, Math.hypot(Math.abs(x) - .34, y - .42)) * sm(.3, .5, z)); };
-    paint.body = v => { const y = (v.y - by) / br[1]; return mix(mix(D, R, sm(.75, .1, y)), T, sm(-.28, -.62, y + .1 * Math.sin(v.z * 14))); };
-    paint.chest = v => mix(R, mix(T, L, sm(.55, .35, v.y)), sm(.98, .8, v.y + .06 * Math.sin(v.x * 26)) * sm(.46, .66, v.z));
-    paint.leg = v => mix(R, T, sm(.36, .24, v.y)); paint.paw = L;
-    paint.tail = (v, n) => mix(R, L, sm(.1, -.45, n.y - n.z * .35)); paint.ear = D; paint.muzzle = T;
-  } else {
-    const W = C(0xfdf6f1), P = C(0xf2ddd5);
-    const white = (v, n) => mix(W, P, sm(-.1, -.75, n.y));
-    paint.head = (v, n) => { const x = v.x / rx, y = (v.y - hy) / ry; return mix(white(v, n), C(0xffab9c), sm(.24, .1, Math.hypot((Math.abs(x) - .56) * .9, (y + .2) * 1.5)) * (n.z > .3 ? 1 : 0)); };
-    paint.body = paint.chest = paint.leg = paint.tail = paint.muzzle = white; paint.paw = W; paint.ear = W;
-  }
+  const tp = A.tail.pts.map((p, i) => V((A.tail.x ? A.tail.x[i] : 0) / PX, Y(p[1]), Z(p[0])));
+  const tail = bone(torso, [0, tp[0].y, tp[0].z], 'tail');
+  const legs = {}; for (const [k, L, sx] of [['FL', S.legF, 1], ['FR', S.legF, -1], ['BL', S.legB, 1], ['BR', S.legB, -1]]) legs[k] = bone(roll, [L[0] * sx, L[1], L[2]], 'leg' + k);
   const fluffy = id === 'dog2';
 
   // ───── 身體 ─────
-  add(torso, ellipsoid([0, by, bz], br, {seg:fluffy ? 64 : 44, bump:fluffy ? puff(.12) : null}), paint.body);
-  const chest = {cat:[[0, .98, .34], [.40, .46, .35]], cat2:[[0, .96, .33], [.42, .46, .36]], dog1:[[0, .72, .56], [.37, .44, .36]], dog2:[[0, 1.04, .28], [.60, .52, .43]]}[id];
-  add(torso, ellipsoid(chest[0], chest[1], {seg:fluffy ? 64 : 36, bump:fluffy ? puff(.14) : id === 'dog1' ? puff(.09, 11) : null}), paint.chest);
-  if (id === 'dog1') add(torso, ellipsoid([0, .46, -.2], [.3, .2, .72], {bump:puff(.14, 12)}), paint.body);
+  paint(torso, loft('z', A.body, {n:48, sides:fluffy ? 72 : 48, bump:fluffy ? tufts(.07) : id === 'dog1' ? (a, t) => 1 + (Math.sin(a) < -.5 ? .07 * Math.abs(Math.sin(t * 26)) : 0) : null}), [.85, 1.35, 1]);
+  if (A.chest) { const [u, v, d, h, w] = A.chest; paint(torso, oval(0, Y(v), Z(u), w / PX, h / PX, d / PX, {seg:44, bump:id === 'dog1' ? tufts(.09, 11) : null}), [1.5, 1, 0], {line:id === 'dog1'}); }
+  if (A.mane) paint(torso, loft('y', A.mane, {n:56, sides:84, power:2.1, bump:tufts(.1, 11)}), [1.15, 1, 1]);
+
   for (const k in legs) {
-    const [x, y, z] = legs[k].userData.at, r = S.lr, front = k[0] === 'F';
-    if (!front) add(legs[k], ellipsoid([x * .98, y - .04, z + .03], [r * 1.45, r * 1.9, r * 1.9], {seg:28, bump:fluffy ? puff(.1) : null}), paint.body);
-    add(legs[k], tube([[x, y, z], [x, y * .55, z + (front ? .01 : -.02)], [x, r * .75, z + .03]], [r * 1.12, r * .96, r], {bump:fluffy ? (f, a) => 1 + .09 * Math.abs(Math.sin(a * 5 + f * 14)) : null}), paint.leg);
-    add(legs[k], ellipsoid([x, r * .66, z + .09], [r * 1.16, r * .72, r * 1.38], {seg:24}), paint.paw);
-    for (const t of [-1, 1]) add(legs[k], tube([[x + t * r * .38, r * .95, z + .09 + r * 1.18], [x + t * r * .4, r * .45, z + .09 + r * 1.36]], [.012, .012], {n:6, sides:6}), S.ink, {line:false, shade:0});
+    const front = k[0] === 'F', L = front ? A.front : A.hind, sx = k[1] === 'L' ? 1 : -1, x = sx * L.x / PX, [pl, ph, pwid] = A.paw;
+    if (L.thigh) { const [u, v, d, h, w] = L.thigh; paint(legs[k], oval(x * .92, Y(v), Z(u), w / PX, h / PX, d / PX, {bump:fluffy ? tufts(.07) : null}), [.8, 1.3, 1], {line:fluffy}); }
+    paint(legs[k], tube([V(x, Y(L.top), Z(L.u)), V(x, Y((L.top + R.gy) / 2), Z(L.u - (front ? 2 : 10))), V(x, Y(R.gy - ph * 1.5), Z(L.u + 4))], L.r.map(r => r / PX), {bump:fluffy ? tufts(.05, 7) : null}), [1, 1.2, 1]);
+    paint(legs[k], oval(x, Y(R.gy - ph), Z(L.u + 12), pwid / PX, ph / PX, pl / PX), [1.25, 1.1, 1]);
   }
 
   // ───── 尾巴 ─────
-  if (id === 'cat') add(tail, tube([tailAt, [0, 1.12, -1.16], [0, 1.55, -1.30], [0, 1.98, -1.16], [0, 2.14, -.94]], [.15, .15, .145, .135, .115], {n:44, bump:(f, a) => 1 + .05 * Math.abs(Math.sin(a * 7 + f * 40))}), paint.tail);
-  else if (id === 'cat2') add(tail, tube([tailAt, [0, .66, -1.18], [.05, .62, -1.5], [.14, .8, -1.7], [.18, 1.04, -1.68]], [.16, .155, .15, .14, .115], {n:40}), paint.tail);
-  else if (id === 'dog1') add(tail, tube([tailAt, [0, .86, -1.34], [0, 1.16, -1.48], [0, 1.44, -1.34], [0, 1.5, -1.16]], [.11, .19, .2, .13, .04], {n:36, bump:(f, a) => 1 + .2 * Math.abs(Math.sin(a * 3 + f * 19))}), paint.tail);
-  else add(tail, tube([tailAt, [0, 1.46, -1.02], [.06, 1.74, -.74], [.2, 1.68, -.38], [.3, 1.42, -.24]], [.2, .36, .38, .29, .1], {n:40, sides:34, bump:(f, a) => 1 + .17 * Math.pow(Math.abs(Math.sin(a * 4 + f * 17) * Math.sin(f * 23 + a)), .4)}), paint.tail);
+  const tg = tube(tp, A.tail.r.map(r => r / PX), {n:48, sides:fluffy ? 56 : 28, bump:fluffy ? tufts(.1, 9) : id === 'dog1' ? tufts(.14, 5) : null});
+  if (id === 'dog1') paint(tail, tg, null, {color:(v, n) => C(0xa65a34).lerp(C(0xfbbd7c), sm(.15, -.55, n.y - n.z * .5 + Math.sin(v.y * 31 + v.z * 23) * .22))});
+  else paint(tail, tg, [0, 1, 0]);
 
-  // ───── 頭 ─────
-  const cheek = isCat ? v => 1 + .09 * sm(.35, .85, Math.abs(v.x)) * sm(.35, -.25, v.y) * sm(-.9, -.4, v.y) : null;
-  add(head, ellipsoid(S.head, S.hr, {seg:fluffy ? 60 : 48, bump:fluffy ? v => 1 + (puff(.12)(v) - 1) * sm(.75, .2, v.z) : cheek}), paint.head);
-
-  // 耳朵
+  // ───── 頭、耳朵 ─────
+  const headGeo = [loft('y', [...A.head].reverse(), {n:48, sides:64, power:isCat ? 2.35 : 2.15})];
+  paint(head, headGeo[0], [1.55, 1, 1]);
+  if (A.muzzle) { headGeo.push(loft('z', A.muzzle, {n:24, sides:36, power:2.1})); paint(head, headGeo[1], [1.2, 1, 0]); }
   const ears = [];
   for (const s of [1, -1]) {
-    if (id === 'dog1') {
-      const e = bone(head, [s * rx * .74, hy + ry * .48, hz - .05], 'ear'); ears.push([e, s]);
-      add(e, ellipsoid([s * rx * 1.06, hy - ry * .2, hz - .08], [.19, .50, .30], {seg:40, bump:v => 1 + (v.y < .1 ? .13 * Math.abs(Math.sin(v.x * 8 + v.z * 9)) : 0), rot:[0, 0, s * .2]}), v => mix(paint.ear, C(0xa04a24), sm(hy - ry * .1, hy - ry * .65, v.y)));
+    if (id === 'dog1') {   // 垂耳：[v, 後緣 u, 前緣 u, 半寬, 正面圖左耳中心 u]
+      const rows = [[318,848,878,9,172],[298,816,908,30,161],[250,801,942,45,150],[200,808,945,45,153],[150,826,938,36,168],[122,846,922,20,188]];
+      const e = bone(head, [s * .4, Y(140), Z(885)], 'ear'); ears.push([e, s]);
+      const g = loft('y', rows.map(r => r.slice(0, 4)), {n:40, sides:40, power:2.2, bump:tufts(.07, 5)});
+      const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const v = R.gy - p.getY(i) * PX; let j = 0; while (j < rows.length - 2 && v < rows[j + 1][0]) j++; const a = rows[j], b = rows[j + 1], t = clamp((a[0] - v) / (a[0] - b[0])); p.setX(i, p.getX(i) - s * X(a[4] + (b[4] - a[4]) * t) * 1); }
+      if (s < 0) { /* 右耳在 +x 側 */ } g.computeVertexNormals(); paint(e, g, [1, 1.3, 1]);
     } else {
-      const big = isCat, w = big ? .27 : .2, h = big ? .5 : .38, ex = s * rx * .6, ey = hy + ry * .68, ez = hz - .04;
-      const e = bone(head, [ex, ey, ez], 'ear'); ears.push([e, s]);
-      const cone = (c, W, H, D) => ellipsoid(c, [W, H, D], {seg:32, rot:[0, 0, -s * .34], bump:v => v.y > 0 ? 1 - .0 * v.y : 1});
-      const point = (g, c, H) => { const p = g.attributes.position, q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -s * .34)).invert(), v = V();   // 把球拉成尖耳
-        for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).sub(V(...c)).applyQuaternion(q); const t = clamp(v.y / H, 0, 1); v.x *= 1 - .86 * Math.pow(t, 1.6); v.z *= 1 - .6 * t; v.applyQuaternion(q.clone().invert()).add(V(...c)); p.setXYZ(i, v.x, v.y, v.z); }
-        g.computeVertexNormals(); return g; };
-      const oc = [ex + s * .05, ey + .08, ez], ic = [ex + s * .05, ey + .09, ez + .09];
-      add(e, point(cone(oc, w, h, .15), oc, h), s > 0 || id !== 'cat' ? paint.ear : paint.earL);
-      add(e, point(cone(ic, w * .6, h * .72, .08), ic, h * .72), 0xf59a8c, {line:false, shade:.4});
+      const E = A.ear, base = V(s * X(E.base[0]) * 1, Y(E.base[1]), Z(E.base[2])), tip = V(s * X(E.tip[0]) * 1, Y(E.tip[1]), Z(E.tip[2]));
+      base.x = -s * X(E.base[0]); tip.x = -s * X(E.tip[0]);
+      const e = bone(head, [base.x, base.y, base.z], 'ear'); ears.push([e, s]);
+      const ax = tip.clone().sub(base), side = ax.clone().cross(V(0, 0, 1)).normalize(), dep = side.clone().cross(ax).normalize(), turn = ax.clone().normalize(), rings = [];
+      side.applyAxisAngle(turn, s * .55); dep.applyAxisAngle(turn, s * .55);   // 耳朵朝外轉一點，側面看才有寬度
+      for (let i = 0; i <= 18; i++) { const t = -.3 + 1.3 * i / 18, k = clamp(t), w = E.w / PX * (1 - .88 * Math.pow(k, 1.45)), d = E.d / PX * (1 - .72 * k), at = base.clone().addScaledVector(ax, t);
+        rings.push(Array.from({length:32}, (_, j) => { const a = j / 32 * Math.PI * 2, hollow = Math.sin(a) * (dep.z > 0 ? 1 : -1) > 0 ? .55 : 1; return at.clone().addScaledVector(side, Math.cos(a) * w).addScaledVector(dep, Math.sin(a) * d * hollow); })); }
+      paint(e, fromRings(rings), [1.5, .45, 1.2]);
     }
   }
 
-  // 眼睛、鼻子、嘴
-  const open = new THREE.Group(), shut = new THREE.Group(), tongue = new THREE.Group();
-  const face = bone(head, head.userData.at, 'face'), eyesO = bone(face, [0, hy, hz], 'eyesOpen'), eyesC = bone(face, [0, hy, hz], 'eyesShut'), tng = bone(face, head.userData.at, 'tongue');
-  const ex = rx * (isCat ? .41 : id === 'dog1' ? .4 : .38), ey = isCat ? -.02 : id === 'dog1' ? .07 : .04;
-  for (const s of [1, -1]) {
-    const E = surf(s * ex, ey), look = [-ey * .9 / ry * .5, s * Math.atan2(ex / rx ** 2, Math.sqrt(1 - (ex / rx) ** 2) / rz) * .85, 0];
-    const disc = (dx, dy, w, h, out, color) => add(eyesO, ellipsoid([E[0] + dx, E[1] + dy, E[2] + out], [w, h, .035], {seg:22, rot:look}), color, {line:false, shade:0});
-    if (isCat) {
-      disc(0, 0, .155, .175, -.012, S.ink); disc(0, 0, .135, .155, .004, id === 'cat' ? 0x86a62c : 0xb07422);
-      disc(0, -.005, .085, .125, .018, 0x120a06); disc(s * -.035 + .015, .062, .04, .045, .036, 0xffffff); disc(.045 * -s, -.07, .018, .018, .034, 0xffffff);
-    } else {
-      const w = id === 'dog1' ? .083 : .074, h = id === 'dog1' ? .115 : .092;
-      disc(0, 0, w, h, .005, 0x1c0c06); disc(-.022, h * .38, w * .32, h * .26, .028, 0xffffff);
+  // ───── 眼睛、口鼻：沿著頭的表面貼原圖 ─────
+  const probe = headGeo.map(g => new THREE.Mesh(g, new THREE.MeshBasicMaterial({side:THREE.DoubleSide}))), ray = new THREE.Raycaster();
+  const front = (x, y) => { ray.set(V(x, y, 20), V(0, 0, -1)); const h = ray.intersectObjects(probe, false)[0]; return h ? h.point.z : null; };
+  // yaw：貼片沿哪個水平方向貼到頭上（眼睛朝外斜一點，側面才看得到）
+  function patch(b, [cu, cv, pu, pv], lift, yaw = 0){
+    const rings = 8, seg = 36, pos = [], uv = [], idx = [], cx = X(cu), c = V(cx, Y(cv), front(cx, Y(cv)) ?? hz + rz);
+    const d = V(Math.sin(yaw), 0, Math.cos(yaw)), t = V(Math.cos(yaw), 0, -Math.sin(yaw)), wide = 1 / Math.sqrt(Math.cos(yaw));
+    for (let i = 0; i <= rings; i++) for (let j = 0; j < seg; j++) {
+      const k = i / rings, a = j / seg * Math.PI * 2, du = Math.cos(a) * pu * k, dv = Math.sin(a) * pv * k, q = c.clone().addScaledVector(t, du * wide / PX); q.y = Y(cv + dv);
+      ray.set(q.clone().addScaledVector(d, 3), d.clone().negate()); const h = ray.intersectObjects(probe, false)[0]?.point || q;
+      pos.push(h.x + d.x * lift, h.y, h.z + d.z * lift); uv.push((1380 + 200 + X(cu + du) * PX) / ATLAS, 1 - (500 - Y(cv + dv) * PX) / 520);
     }
-    const arc = [[-.13, .03], [-.065, -.03], [0, -.048], [.065, -.03], [.13, .03]].map(([dx, dy]) => surf(s * ex + dx * (isCat ? 1 : .75), ey + dy, .028));
-    add(eyesC, tube(arc, [.014, .027, .03, .027, .014], {n:14, sides:8}), S.ink, {line:false, shade:0});
+    for (let i = 0; i < rings; i++) for (let j = 0; j < seg; j++) { const a = i * seg + j, c2 = i * seg + (j + 1) % seg; idx.push(a, a + seg, c2, c2, a + seg, c2 + seg); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx);
+    const m = new THREE.Mesh(local(b, g), decal); b.add(m);
   }
-  const lineTube = (pts, r, color = S.ink, b = face) => add(b, tube(pts, [r * .6, r, r * .6], {n:12, sides:7}), color, {line:false, shade:0});
-  if (isCat) {
-    const n = surf(0, -.19, .02);
-    add(face, ellipsoid(n, [.062, .042, .035], {seg:16}), 0xe8776f, {line:false});
-    for (const s of [1, -1]) {
-      lineTube([surf(0, -.23, .02), surf(s * .045, -.3, .02), surf(s * .12, -.275, .02)], .014);
-      for (const k of [0, 1]) lineTube([surf(s * rx * .66, -.17 - k * .08, .015), surf(s * rx * .84, -.17 - k * .11, .09), [s * rx * 1.16, hy - .16 - k * .14, hz + rz * .42]], .008, 0xfff6ea);
-    }
-    add(tng, ellipsoid(surf(0, -.33, .015), [.055, .075, .03], {seg:16}), 0xf27f83);
-  } else {
-    const dach = id === 'dog1', mc = dach ? [0, hy - .17, hz + rz * .88] : [0, hy - .17, hz + rz * .86], mr = dach ? [.23, .175, .3] : [.25, .18, .19];
-    add(face, ellipsoid(mc, mr, {seg:32}), paint.muzzle);
-    const tip = mc[2] + mr[2];
-    add(face, ellipsoid([0, mc[1] + .07, tip - .02], [.09, .062, .06], {seg:20}), 0x24100a, {line:false, shade:.3});
-    add(face, ellipsoid([-.028, mc[1] + .095, tip + .038], [.02, .012, .008], {seg:10}), 0xffffff, {line:false, shade:0});
-    for (const s of [1, -1]) lineTube([[0, mc[1] - .005, tip + .012], [s * .045, mc[1] - .062, tip - .008], [s * .125, mc[1] - .045, tip - .07]], .015);
-    add(tng, ellipsoid([0, mc[1] - .13, tip - .07], [.075, .11, .042], {seg:20, rot:[-.25, 0, 0]}), 0xf7848a);
-    if (dach) for (const s of [1, -1]) add(face, ellipsoid(surf(s * ex * .82, ey + .19, .0), [.07, .05, .02], {seg:12, rot:[-.4, s * .3, 0]}), 0xf4b06a, {line:false});
+  const face = bone(head, head.userData.at, 'face'), eyesO = bone(face, [0, Y(A.eyes[0][1]), hz], 'eyesOpen'), eyesC = bone(face, [0, hy, hz], 'eyesShut'), tng = bone(face, head.userData.at, 'tongue');
+  for (const e of A.eyes) {
+    const yaw = Math.sign(X(e[0])) * (isCat ? .76 : .7);
+    patch(eyesO, e, .018, yaw);
+    const [cu, cv, pu, pv] = e, arc = [-.82, -.42, 0, .42, .82].map(t => { const x = X(cu + t * pu), y = Y(cv + pv * (.3 - .42 * t * t)); return V(x, y, (front(x, y) ?? hz + rz) + .03); });
+    ink(eyesC, tube(arc, [.012, .022, .025, .022, .012], {n:16, sides:8}), R.ink);
   }
+  patch(face, A.muzzlePatch, .01);
+  if (isCat) { const [u, v] = A.muzzlePatch, x = X(u), y = Y(v + 20); ink(tng, oval(x, y, (front(x, y) ?? hz + rz) + .02, .05, .065, .028, {seg:16}), 0xf27f83); }
+  else if (id === 'dog1') { const x = 0, y = Y(255), z = (front(0, Y(240)) ?? hz + rz) - .02; ink(tng, oval(x, y, z, .075, .105, .042, {seg:20}), 0xf7848a); }
 
-  // 項圈
+  // ───── 項圈（跟著頭走，坐下時才不會蓋到嘴巴） ─────
   if (isCat) {
-    const nc = [0, hy - ry * 1.05, hz - .1], ring = (a, r = 1) => [Math.sin(a) * .49 * r, nc[1] - .08 * Math.max(0, Math.cos(a)), nc[2] + Math.cos(a) * .50 * r];
+    const [uc, d, vc, tilt, w] = id === 'cat' ? [890, 86, 250, 28, 108] : [880, 88, 262, 30, 110];
+    const ring = a => V(Math.sin(a) * w / PX, Y(vc + tilt * Math.cos(a)), Z(uc + d * Math.cos(a)));
     if (id === 'cat') {
-      add(torso, tube(Array.from({length:25}, (_, i) => ring(i / 24 * Math.PI * 2, 1.02)), [.055, .055], {n:60, sides:10}), 0xe87f86);
-      add(torso, ellipsoid([0, nc[1] - .2, nc[2] + .6], [.13, .13, .11], {seg:24}), 0xee8a72);
-      add(torso, ellipsoid([0, nc[1] - .22, nc[2] + .71], [.028, .045, .016], {seg:10}), S.ink, {line:false});
+      paint(head, tube(Array.from({length:33}, (_, i) => ring(i / 32 * Math.PI * 2)), [9 / PX, 9 / PX], {n:80, sides:10}), null, {color:0xe8858c});
+      paint(head, oval(0, Y(292), Z(uc + d + 6), .135, .135, .11), null, {color:(v, n) => C(0xe9807a).lerp(C(0xffc9bd), sm(.55, .95, n.y * .7 + n.z * .5))});
+      for (const [y, r] of [[286, .036], [302, .018]]) paint(head, oval(0, Y(y), Z(uc + d + 6) + .108, r, y > 290 ? .05 : r, .018, {seg:12}), null, {color:R.ink, line:false});
     } else {
-      const cols = [0xf6c9c0, 0xb58ad0, 0xa9cdea, 0x66c7c0, 0xfbf7ee, 0xf8d51f];
-      for (let i = 0; i < 18; i++) add(torso, ellipsoid(ring((i - 2.5) / 18 * Math.PI * 2, 1.13), [.095, .095, .095], {seg:18}), cols[i % 6]);
-      for (const s of [-.06, .07]) add(torso, ellipsoid([.24 + s, nc[1] - .2, nc[2] + .58], [.065, .065, .06], {seg:14}), 0xd99a1c);
+      const cols = [0x6cc5be, 0xfbf7ee, 0xf9d616, 0xf8c8bd, 0xb283c4, 0xa3c4e4];
+      for (let i = 0; i < 18; i++) { const p = ring(i / 18 * Math.PI * 2), c = C(cols[i % 6]);
+        paint(head, oval(p.x, p.y, p.z, .108, .108, .108, {seg:20}), null, {color:(v, n) => c.clone().multiplyScalar(.9 + .18 * Math.max(0, n.y * .8 + n.z * .3)).lerp(C(0xffffff), sm(.88, .99, n.y * .7 + n.z * .6) * .6)}); }
+      for (const [a, dy] of [[.5, 30], [.72, 24]]) { const p = ring(a); paint(head, oval(p.x * 1.08, p.y - dy / PX, p.z + .04, .066, .066, .062, {seg:16}), null, {color:0xdb9b22}); }
     }
   }
 
   // 合併每根骨頭的零件
   for (const b of bones) {
-    const {solid, ink} = b.userData;
+    const {skin:sk, solid, ink:lines} = b.userData;
+    if (sk.length) b.add(new THREE.Mesh(mergeGeometries(sk.map(g => { g.deleteAttribute('normal'); return g; })), skin));
     if (solid.length) b.add(new THREE.Mesh(mergeGeometries(solid), flat));
-    if (ink.length) { const m = new THREE.Mesh(mergeGeometries(ink), inkMat); m.layers.set(hullLayer); b.add(m); }
-    b.userData.solid = b.userData.ink = null;
+    if (lines.length) { const m = new THREE.Mesh(mergeGeometries(lines), inkMat); m.layers.set(hullLayer); b.add(m); }
+    b.userData.skin = b.userData.solid = b.userData.ink = null;
   }
-  head.scale.setScalar({cat:1.14, cat2:1.14, dog1:1.04, dog2:1.12}[id]);   // Q 版大頭
   group.scale.set(S.scale, S.scale * 1.08, S.scale);
 
   // ───── 動作 ─────
@@ -234,7 +279,7 @@ export function makePet(THREE, utils, id, hullLayer){
   const keys = ['roll', 'torso', 'head', 'tail', 'FL', 'FR', 'BL', 'BR'], nodes = {roll, torso, head, tail, ...legs};
   const cur = {}; for (const k of keys) cur[k] = [0, 0, 0, 0, 0, 0];
   const rest = roll.position.clone(); let ph = 0, last = 0, lids = 1, tOut = 0;
-  const low = by - br[1] * .93, legLen = S.legF[1];
+  const low = Y(Math.max(...A.body.map(r => r[2]))) - .04, legLen = S.legF[1];
   function target(pose, t){
     const o = {}; for (const k of keys) o[k] = [0, 0, 0, 0, 0, 0];
     let eyes = 1, tongueOut = id === 'dog2' ? 1 : 0;

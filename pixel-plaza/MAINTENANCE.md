@@ -160,5 +160,7 @@
 - 髮殼外框：`solidPart()` 只保留貼圖上不透明的三角形做實心描邊（用透明遮罩描邊會在近看時出現虛線）。
 
 ## 3D 寵物（2026-11-25）
-- 四隻寵物的模型與動作全部在 `pets3d.js`（程式建模、沒有模型檔）：`makePet(THREE, utils, id, hullLayer)`，花色畫在頂點上，姿勢是各骨頭的偏移量（stand／walk／run／sit／loaf／down／sleep／eat／groom／wag／belly），切換時自動平滑。
-- `catBuild()` 建立、`catPose()` 餵姿勢名稱與移動距離；舊的平面圖保留當點選範圍與備援（`?px=1` 或建模失敗時顯示）。圖鑑等其他地方仍用圖集。改 `pets3d.js` 後把 import 的 `?v=` 加一。
+- 四隻寵物的模型與動作都在 `pets3d.js`：外形依原圖站姿三視圖逐段量尺寸（`SHAPE`，座標＝三視圖縮成 1600 px 寬的像素，200 px＝1 單位），花紋與五官直接貼原圖。
+- 貼圖 `assets/pets3d/<id>.webp` 由 `python3 models/pets/build_pet_textures.py` 產生（需要本機的 `ai-views/` 原圖）；版面＝正面／側面／背面（去外框、塗掉眼睛）＋正面原圖（眼睛、口鼻貼片用）。腳本的座標常數要和 `pets3d.js` 的 `REF` 一致。
+- 身體材質依各面朝向混合三視圖（權重在 `paint(骨頭, 幾何, [正,側,背])`）；臘腸狗尾巴與項圈、鈴鐺、珠子用單色漸層。外框粗細 `REF.line`，並用 `sink` 往後退一點避免蓬毛交疊處出現雜線。
+- 姿勢是各骨頭的偏移量（stand／walk／run／sit／loaf／down／sleep／eat／groom／wag／belly），切換時自動平滑。`catBuild()` 建立、`catPose()` 餵姿勢與移動距離；貼圖載入完成才隱藏 2D 平面圖，載入失敗或 `?px=1` 維持 2D（平面圖也保留當點選範圍）。改 `pets3d.js` 或貼圖後要把對應的 `?v=` 加一。
