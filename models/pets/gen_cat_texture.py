@@ -1,14 +1,15 @@
-# 生成版 3D 貓的貼圖：把原圖三視圖照特徵點扭曲到模型的正交視圖座標，輸出 pixel-plaza/assets/pets3d-gen/cat.webp
+# 生成版 3D 貓的貼圖：把原圖三視圖照特徵點扭曲到模型的正交視圖座標，輸出 pixel-plaza/assets/pets3d-gen/<id>.webp
 # 版面：[正面 1024][側面（朝右） 1024][背面 1024]；每格是正交視圖：寬高 2.6 單位、中心高度 1.1（和 pets3d-gen.js 一致）。
-# 執行：python3 models/pets/gen_cat_texture.py（需要本機 pixel-plaza/ai-views/ 原圖）
-import os
+# 執行：python3 models/pets/gen_cat_texture.py <cat|cat2>（需要本機 pixel-plaza/ai-views/ 原圖）
+import os, sys
 import numpy as np
 from PIL import Image
 from scipy import ndimage
 from scipy.interpolate import RBFInterpolator
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-art = np.array(Image.open(os.path.join(ROOT, 'pixel-plaza/ai-views/cat-sheets/stand-sheet.webp')).convert('RGB')).astype(np.float32)
+ID = sys.argv[1] if len(sys.argv) > 1 else 'cat'
+art = np.array(Image.open(os.path.join(ROOT, 'pixel-plaza/ai-views/%s-sheets/stand-sheet.webp' % ID)).convert('RGB')).astype(np.float32)
 yy, xx = np.mgrid[0:art.shape[0], 0:art.shape[1]]
 
 # 去掉背景與深色外框：往內縮一圈，外面用最近的毛色填滿
@@ -27,21 +28,22 @@ def fill(img, hole, blur):
 clean = fill(art, ~ndimage.binary_erosion(fg, iterations=14), 0)
 # 腿部的描線投到立體的腿上會變成黑線
 lum = clean @ np.array([.3, .59, .11])
-dark = ((lum < 120) | (lum < ndimage.uniform_filter(lum, 32) - 34)) & (yy > 492)
+top, contrast = {'cat':(492, 34), 'cat2':(425, 55)}[ID]       # 虎斑的條紋要留下，只清掉很深的描線
+dark = ((lum < 120) | (lum < ndimage.uniform_filter(lum, 32) - contrast)) & (yy > top)
 clean = fill(clean, ndimage.binary_dilation(dark, iterations=4), 5)
-# 背面圖垂下來的尾巴塗掉（模型的尾巴是翹起來的）
-x0, x1, y0, y1 = 1550, 1680, 420, 667
-span = x1 - x0
 back = clean.copy()
-for y in range(y0, y1):
-    n = span // 2
-    t = np.linspace(0, 1, span)[:, None]
-    a = clean[y, x0 - 1 - (np.arange(span) % n)]
-    c = clean[y, x1 + (np.arange(span)[::-1] % n)]
-    back[y, x0:x1] = a * (1 - t) + c * t
-# 背面圖的項圈塗掉（模型的項圈從後面看會被身體擋住，投影到屁股上會變成粉紅色條紋）
-back[250:316, 1400:1830] = back[316:382, 1400:1830][::-1]   # 用下面的背部毛色鏡射蓋過去
-
+if ID == 'cat':
+    # 背面圖垂下來的尾巴塗掉（模型的尾巴是翹起來的）
+    x0, x1, y0, y1 = 1550, 1680, 420, 667
+    span = x1 - x0
+    for y in range(y0, y1):
+        n = span // 2
+        t = np.linspace(0, 1, span)[:, None]
+        a = clean[y, x0 - 1 - (np.arange(span) % n)]
+        c = clean[y, x1 + (np.arange(span)[::-1] % n)]
+        back[y, x0:x1] = a * (1 - t) + c * t
+    # 背面圖的項圈塗掉（模型的項圈從後面看會被身體擋住，投影到屁股上會變成粉紅色條紋）
+    back[250:316, 1400:1830] = back[316:382, 1400:1830][::-1]   # 用下面的背部毛色鏡射蓋過去
 # 特徵點：(模型正交視圖像素, 原圖像素)
 def f(mx, my, ax, ay): return ((mx, my), (120 + ax / 1.5, ay / 1.5))     # 量測圖放大 1.5 倍、左緣 120
 def s(mx, my, ax, ay): return ((mx, my), (660 + ax / 1.5, ay / 1.5))
@@ -65,6 +67,30 @@ BACK = [b(344,82,1480,48), b(684,82,1768,48), b(512,175,1616,100), b(290,350,145
         b(345,480,1478,300), b(680,480,1750,300), b(512,490,1612,282), b(262,690,1448,455), b(762,690,1782,455),
         b(300,880,1478,610), b(724,880,1750,610), b(435,940,1535,645), b(590,940,1690,645)]
 
+if ID == 'cat2':   # 虎斑貓（量測圖左緣：正面 120、側面 620、背面 1300）
+    def f(mx, my, ax, ay): return ((mx, my), (120 + ax / 1.5, ay / 1.5))
+    def s(mx, my, ax, ay): return ((mx, my), (620 + ax / 1.5, ay / 1.5))
+    def b(mx, my, ax, ay): return ((mx, my), (1300 + ax / 1.5, ay / 1.5))
+    FRONT = [f(340,82,215,70), f(683,82,605,70), f(300,262,190,255), f(718,262,645,255), f(512,172,420,158), f(285,360,172,365), f(738,360,660,365),
+             f(418,325,332,335), f(372,325,290,335), f(464,325,374,335), f(418,284,332,293), f(418,366,332,378),   # 眼睛略往外放，正側面才看得到
+             f(605,325,510,335), f(559,325,468,335), f(651,325,552,335), f(605,284,510,293), f(605,366,510,378),
+             f(515,365,420,395), f(512,420,420,440), f(430,440,340,462), f(595,440,500,462), f(512,485,420,495),
+             f(335,490,215,505), f(690,485,615,500), f(420,540,315,555), f(610,530,545,545), f(512,515,420,548), f(512,562,420,598),
+             f(650,585,570,603), f(285,690,165,680), f(740,690,660,680), f(420,890,345,890), f(595,890,485,890),
+             f(420,940,345,955), f(595,940,485,955), f(330,900,200,905), f(700,900,628,905), f(512,795,415,800)]
+    SIDE = [s(778,82,692,42), s(870,180,860,175), s(602,340,530,330), s(950,250,930,235), s(780,300,690,300),
+            s(910,325,855,300), s(882,325,822,300), s(938,325,888,300), s(910,288,855,258), s(910,362,855,342), s(966,325,925,300),   # 側面的眼睛要落在頭的輪廓內
+            s(998,372,968,345), s(975,450,940,430), s(620,430,535,420), s(730,500,650,500), s(930,503,886,502), s(905,530,843,572), s(926,545,866,580), s(950,560,893,570), s(926,572,862,602), s(905,600,848,625),
+            s(480,468,440,445), s(300,530,200,520), s(200,610,135,630), s(110,760,60,760), s(25,870,15,860), s(100,940,60,905),
+            s(270,660,205,650), s(250,820,200,830), s(150,780,110,790),
+            s(285,930,215,935), s(365,940,290,950), s(440,900,345,900), s(480,808,400,815), s(560,808,500,800), s(650,800,575,800),
+            s(660,830,590,840), s(750,935,680,945), s(860,900,790,905), s(900,640,845,630), s(835,770,795,770),
+            s(330,640,300,640), s(480,640,470,640), s(660,620,620,620), s(360,780,290,780), s(750,780,690,780)]
+    BACK = [b(342,82,268,66), b(683,82,644,68), b(512,172,460,152), b(303,262,228,262), b(720,262,688,262), b(285,370,208,370), b(738,370,702,370),
+            b(330,440,270,448), b(695,440,655,448), b(512,415,460,455), b(512,468,460,512), b(360,465,300,500), b(660,465,590,500),
+            b(345,540,285,578), b(680,540,645,578), b(285,690,232,690), b(740,690,685,690), b(512,600,460,640),
+            b(430,800,385,820), b(590,800,535,820), b(512,935,460,970), b(325,900,270,910), b(692,900,645,910), b(380,940,310,950), b(640,940,590,950)]
+
 panels = []
 gy, gx = np.mgrid[0:1024, 0:1024]
 for img, marks in ((clean, FRONT), (clean, SIDE), (back, BACK)):
@@ -73,6 +99,6 @@ for img, marks in ((clean, FRONT), (clean, SIDE), (back, BACK)):
     small = warp(np.stack([gx[::4, ::4].ravel(), gy[::4, ::4].ravel()], 1)).reshape(256, 256, 2)   # 先算粗格再放大
     big = np.stack([ndimage.map_coordinates(small[..., k], [gy / 4, gx / 4], order=1, mode='nearest') for k in range(2)], 2)
     panels.append(np.stack([ndimage.map_coordinates(img[..., k], [big[..., 1], big[..., 0]], order=1, mode='nearest') for k in range(3)], 2))
-out = os.path.join(ROOT, 'pixel-plaza/assets/pets3d-gen/cat.webp')
+out = os.path.join(ROOT, 'pixel-plaza/assets/pets3d-gen/%s.webp' % ID)
 Image.fromarray(np.concatenate(panels, 1).clip(0, 255).astype(np.uint8)).save(out, quality=92, method=6)
 print(os.path.getsize(out) // 1024, 'KB')

@@ -180,8 +180,10 @@
 - `build_pet_textures.py` 清串珠／項圈的範圍不可往上蓋到臉（虎斑貓的鼻嘴曾因此被抹糊）。
 - 試作版貓眼睛：貼齊頭面（只高出約 0.014，更高會被說太凸、挖低會被說凹），改完要看 0／40／65／90 度；貼片半徑是眼睛的 1.2 倍（貼圖清眼睛的範圍要比它小）。不要挖眼窩或壓平臉面、不要依視角切換貼片、不要另畫側面笑嘴（使用者都退回過）。
 
-## 生成版 3D 貓（試作）
-- `pets3d-gen.js`（只給 `viewer.html?ver=gen`）＋`assets/pets3d-gen/`。重建：`models/pets/gen_cat_model.py`（Blender，原始 GLB 在本機 `ai-views/cat-glb/`）→ `models/pets/gen_cat_texture.py`；改貼圖要更新 `pets3d-gen.js` 的 `?v=`。
+## 生成版 3D 貓（遊戲裡的兩隻貓）
+- `pets3d-gen.js`（遊戲 `index.html` 的 `catBuild` 與 `viewer.html` 共用；狗仍用 `pets3d.js`）＋`assets/pets3d-gen/`。遊戲裡縮放 .485、外框 .055；改模組要同時更新 `index.html` import 的 `?v=`。
+- 重建貼圖要帶 id：`gen_cat_texture.py cat|cat2`；虎斑貓的模型另加 `whiskers` 旗標清掉生成出來的鬍鬚管。每隻貓的骨架、脖子線、鈴鐺、尾巴參數在 `IDS`。虎斑貓臉較平，正 90 度只看得到眼睛邊緣；不要改成另外投一顆側面眼睛（斜面會出現四顆眼）。
+- 重建：`models/pets/gen_cat_model.py`（Blender，原始 GLB 在本機 `ai-views/cat-glb/`）→ `models/pets/gen_cat_texture.py`；改貼圖要更新 `pets3d-gen.js` 的 `?v=`。
 - 貼圖是正交三視圖（寬高 2.6、中心高 1.1）；對位靠腳本裡的特徵點，換模型要重量。
 - 圖生 3D 的空間匿名可用的 GPU 時間很短：只能呼叫 `/shape_generation`（上色那支會超時或報錯）。
 - 動作：骨架與權重在 `pets3d-gen.js` 的 `IDS`／`weigh()`（脖子斜線、背線、腿高度是照這顆模型量的）；姿勢數值抄自 `pets3d-draft.js`，理毛、吃、趴睡有針對一體成形的網格調小。項圈和鈴鐺跟著頭。
