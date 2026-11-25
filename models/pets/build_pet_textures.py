@@ -98,6 +98,12 @@ for pid, P in PETS.items():
             a = np.clip((1.15 - d) / .4, 0, 1)[..., None]
             clean = clean * (1 - a) + moved * a
             continue
+        if pid.startswith('cat'):   # 正面眼睛位置換成上方的毛（模糊填色從側面看是一塊白霧）
+            moved = np.roll(clean, int(50 * SC), axis=0)
+            d = np.sqrt(((xx - cx * SC) / (rx * 1.2 * SC)) ** 2 + ((yy - cy * SC) / (ry * 1.2 * SC)) ** 2)
+            a = np.clip((1.15 - d) / .35, 0, 1)[..., None]
+            clean = clean * (1 - a) + moved * a
+            continue
         hole = ((xx - cx * SC) / (rx * SC)) ** 2 + ((yy - cy * SC) / (ry * SC)) ** 2 < 1
         j = ndimage.distance_transform_edt(hole, return_distances=False, return_indices=True)
         filled = clean[j[0], j[1]]

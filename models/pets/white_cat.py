@@ -135,7 +135,7 @@ rep("  paint(head, headGeo[0], [1.55, 1, 1]);\n", """  const bump = (x, y, cx, c
   if (A.white) { const p = headGeo[0].attributes.position;   // 嘴邊、鼻梁、下巴：同一顆頭上的柔和隆起
     for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), f = sm(.7, 1.0, z); if (!f) continue;
       const pad = 1 - (1 - bump(x, y, .095, 1.43, .12, .098)) * (1 - bump(x, y, -.095, 1.43, .12, .098));
-      const socket = sm(.03, .27, Math.abs(x)) * Math.exp(-(((y - 1.73) / .19) ** 2));\n      p.setZ(i, z + f * (.018 * pad - .15 * socket)); }
+      const socket = sm(.05, .42, Math.abs(x)) * Math.exp(-(((y - 1.7) / .34) ** 2));\n      p.setZ(i, z + f * (.018 * pad - .13 * socket)); }
     headGeo[0].computeVertexNormals(); }
   paint(head, headGeo[0], [1.55, 1, 1]);
   if (A.white) {   // 臉的範圍只用正面原圖（混到側面圖會出現兩層鼻嘴）
@@ -158,7 +158,7 @@ s = s.replace("A.white ? .085 : .045", "A.white ? .11 : .045")
 rep("rings.push(ring(shrink(rows[0], f), 0, -dir * d));", "rings.push(ring(shrink(rows[0], f), 0, -dir * d * (A.white ? .12 : 1)));")
 rep("rings.push(ring(shrink(rows[rows.length - 1], f), 1, dir * d));", "rings.push(ring(shrink(rows[rows.length - 1], f), 1, dir * d * (A.white ? .12 : 1)));")
 rep("vec3 cS = texture2D(map, vec2((690.0 + vRest.z * 200.0) / ${ATLAS}.0, ty)).rgb;", "vec3 cS = texture2D(map, vec2((690.0 + vRest.z * 200.0) / ${ATLAS}.0, ty + (1.0 - step(0.001, vK.w)) * vSolid.x * 200.0 / 520.0)).rgb;")
-s = s.replace("assets/pets3d/' + id + '.webp?v=7'", "assets/pets3d/' + id + '.webp?v=9'")
+s = s.replace("assets/pets3d/' + id + '.webp?v=7'", "assets/pets3d/' + id + '.webp?v=10'")
 # 側面笑嘴：只在偏側面時畫出來（正面已經有原圖的嘴）
 rep("  patch(eyesO, e, .018, yaw, shift, at);\n", "  patch(eyesO, e, .018, yaw, shift, at);\n") if False else None
 rep("  // ───── 項圈", """  if (A.white) {
@@ -173,11 +173,34 @@ rep("  // ───── 項圈", """  if (A.white) {
 
   // ───── 項圈""")
 # 眼睛：沿正前方貼到頭上（正面才是正圓），中央微凸
-rep("pos.push(h.x + d.x * lift, h.y, h.z + d.z * lift);", """const l2 = lift + (at ? .028 * (1 - k * k) : 0); let z = h.z + d.z * l2;
+rep("pos.push(h.x + d.x * lift, h.y, h.z + d.z * lift);", """const l2 = lift + (at ? .05 * (1 - k * k) : 0); let z = h.z + d.z * l2;
       if (at) { const flat = c.z + lift + .012 - Math.tan(.5) * (h.x - c.x) * Math.sign(c.x) + .02 * (1 - k * k); if (flat > z) z += (flat - z) * .75; }
       pos.push(h.x + d.x * l2, h.y, z);""")
 # 鈴鐺自己描一圈貼身的邊（坐下時鈴鐺離胸口遠，整體外框會變成一圈懸空的黑環）
 rep("n.y * .7 + n.z * .5))});", """n.y * .7 + n.z * .5)), line:!A.white});
       if (A.white) { const rim = new THREE.Mesh(local(head, oval(0, Y(bv_), Z(uc + d + 16), br_ * 1.14, br_ * 1.14, dz * 1.14)), new THREE.MeshBasicMaterial({color:R.ink, side:THREE.BackSide})); head.add(rim); }""")
+# 側面的眼睛：偏側面時，正面那片換成貼在臉側的完整眼睛（位置照黑線比例尺）
+rep("  // ───── 項圈", r"""  if (A.white) {
+    const gate = side => { const m = decal.clone(); m.onBeforeCompile = sh => {
+        sh.vertexShader = 'varying float vF;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n vF = dot(normalize(mat3(modelMatrix) * vec3(0.0, 0.0, 1.0)), normalize(cameraPosition - (modelMatrix * vec4(transformed, 1.0)).xyz));');
+        sh.fragmentShader = 'varying float vF;\n' + sh.fragmentShader.replace('void main() {', 'void main() {\n if (vF ' + (side ? '>=' : '<') + ' 0.34) discard;'); };
+      m.customProgramCacheKey = () => 'eye' + side; return m; };
+    const frontEye = gate(false), sideEye = gate(true);
+    for (const m of eyesO.children) if (m.material === decal) m.material = frontEye;
+    for (const e of A.eyes) {
+      const s = -Math.sign(X(e[0])) || 1, rings = 8, seg = 36, pos = [], uv = [], idx = [], cu = 946, cv = A.eyeAt[1] + 1, ru = 21, rv = A.eyeAt[3] - 1;
+      for (let i = 0; i <= rings; i++) for (let j = 0; j < seg; j++) {
+        const k = i / rings, a = j / seg * Math.PI * 2, y = Y(cv + Math.sin(a) * rv * k), z = Z(cu + Math.cos(a) * ru * k);
+        ray.set(V(s * 3, y, z), V(-s, 0, 0)); const h = ray.intersectObjects(probe, false)[0];
+        pos.push((h ? h.point.x : 0) + s * (.014 + .03 * (1 - k * k)), y, z);
+        const au = e[0] - s * Math.cos(a) * A.eyeAt[2] * k, av = e[1] + Math.sin(a) * A.eyeAt[3] * k; uv.push((1380 + 200 + X(au) * PX) / ATLAS, 1 - (500 - Y(av) * PX) / 520);
+      }
+      for (let i = 0; i < rings; i++) for (let j = 0; j < seg; j++) { const a = i * seg + j, c2 = i * seg + (j + 1) % seg; idx.push(a, a + seg, c2, c2, a + seg, c2 + seg); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx);
+      eyesO.add(new THREE.Mesh(local(eyesO, g), sideEye));
+    }
+  }
+
+  // ───── 項圈""")
 open('pixel-plaza/pets3d-draft.js', 'w', encoding='utf-8').write(s)
 print('ok')

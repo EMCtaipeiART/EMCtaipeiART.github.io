@@ -45,7 +45,7 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
   const Y = v => (R.gy - v) / PX, Z = u => (u - R.sz) / PX, X = u => (u - R.fx) / PX;
   const INK = R.line / PX, isCat = !id.startsWith('dog');
 
-  const atlas = new THREE.TextureLoader().load(new URL('assets/pets3d/' + id + '.webp?v=9', import.meta.url).href, () => { group.visible = true; ready && ready(); }, undefined, () => fail && fail());
+  const atlas = new THREE.TextureLoader().load(new URL('assets/pets3d/' + id + '.webp?v=10', import.meta.url).href, () => { group.visible = true; ready && ready(); }, undefined, () => fail && fail());
   atlas.colorSpace = THREE.SRGBColorSpace; atlas.anisotropy = 4;
   // 身體材質：依面的朝向混合三視圖（aK＝正面、側面、背面的權重倍數；w=1 表示改用單色 aCol）
   const skin = new THREE.MeshBasicMaterial({map:atlas});
@@ -196,8 +196,8 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
   if (A.white) { const p = headGeo[0].attributes.position;   // 嘴邊、鼻梁、下巴：同一顆頭上的柔和隆起
     for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), f = sm(.7, 1.0, z); if (!f) continue;
       const pad = 1 - (1 - bump(x, y, .095, 1.43, .12, .098)) * (1 - bump(x, y, -.095, 1.43, .12, .098));
-      const socket = sm(.03, .27, Math.abs(x)) * Math.exp(-(((y - 1.73) / .19) ** 2));
-      p.setZ(i, z + f * (.018 * pad - .15 * socket)); }
+      const socket = sm(.05, .42, Math.abs(x)) * Math.exp(-(((y - 1.7) / .34) ** 2));
+      p.setZ(i, z + f * (.018 * pad - .13 * socket)); }
     headGeo[0].computeVertexNormals(); }
   paint(head, headGeo[0], [1.55, 1, 1]);
   if (A.white) {   // 臉的範圍只用正面原圖（混到側面圖會出現兩層鼻嘴）
@@ -243,7 +243,7 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
     for (let i = 0; i <= rings; i++) for (let j = 0; j < seg; j++) {
       const k = i / rings, a = j / seg * Math.PI * 2, du = Math.cos(a) * pu * k, dv = Math.sin(a) * pv * k, q = c.clone().addScaledVector(t, du * wide / PX); q.y = Y(cv + dv);
       ray.set(q.clone().addScaledVector(d, 3), d.clone().negate()); const h = ray.intersectObjects(probe, false)[0]?.point || q;
-      const l2 = lift + (at ? .028 * (1 - k * k) : 0); let z = h.z + d.z * l2;
+      const l2 = lift + (at ? .05 * (1 - k * k) : 0); let z = h.z + d.z * l2;
       if (at) { const flat = c.z + lift + .012 - Math.tan(.5) * (h.x - c.x) * Math.sign(c.x) + .02 * (1 - k * k); if (flat > z) z += (flat - z) * .75; }
       pos.push(h.x + d.x * l2, h.y, z); const au = su + Math.cos(a) * (at ? pu : qu) * k, av = sv + Math.sin(a) * (at ? pv : qv) * k; uv.push((1380 + 200 + X(au) * PX) / ATLAS, 1 - (500 - Y(av) * PX) / 520);
     }
@@ -271,6 +271,27 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
     for (const s of [1, -1]) {
       const pts = [[1002, 203], [993, 214], [980, 220], [966, 218], [957, 211]].map(([u, v]) => { const y = Y(v) - (id === 'cat2' ? .02 : 0), z = Z(u); ray.set(V(s * 3, y, z), V(-s, 0, 0)); const h = ray.intersectObjects(probe, false)[0]; return h ? V(h.point.x + s * .005, y, z) : null; }).filter(Boolean);
       if (pts.length > 2) face.add(new THREE.Mesh(local(face, tube(pts, [.003, .008, .009, .007, .002], {n:32, sides:8})), smile));
+    }
+  }
+
+  if (A.white) {
+    const gate = side => { const m = decal.clone(); m.onBeforeCompile = sh => {
+        sh.vertexShader = 'varying float vF;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n vF = dot(normalize(mat3(modelMatrix) * vec3(0.0, 0.0, 1.0)), normalize(cameraPosition - (modelMatrix * vec4(transformed, 1.0)).xyz));');
+        sh.fragmentShader = 'varying float vF;\n' + sh.fragmentShader.replace('void main() {', 'void main() {\n if (vF ' + (side ? '>=' : '<') + ' 0.34) discard;'); };
+      m.customProgramCacheKey = () => 'eye' + side; return m; };
+    const frontEye = gate(false), sideEye = gate(true);
+    for (const m of eyesO.children) if (m.material === decal) m.material = frontEye;
+    for (const e of A.eyes) {
+      const s = -Math.sign(X(e[0])) || 1, rings = 8, seg = 36, pos = [], uv = [], idx = [], cu = 946, cv = A.eyeAt[1] + 1, ru = 21, rv = A.eyeAt[3] - 1;
+      for (let i = 0; i <= rings; i++) for (let j = 0; j < seg; j++) {
+        const k = i / rings, a = j / seg * Math.PI * 2, y = Y(cv + Math.sin(a) * rv * k), z = Z(cu + Math.cos(a) * ru * k);
+        ray.set(V(s * 3, y, z), V(-s, 0, 0)); const h = ray.intersectObjects(probe, false)[0];
+        pos.push((h ? h.point.x : 0) + s * (.014 + .03 * (1 - k * k)), y, z);
+        const au = e[0] - s * Math.cos(a) * A.eyeAt[2] * k, av = e[1] + Math.sin(a) * A.eyeAt[3] * k; uv.push((1380 + 200 + X(au) * PX) / ATLAS, 1 - (500 - Y(av) * PX) / 520);
+      }
+      for (let i = 0; i < rings; i++) for (let j = 0; j < seg; j++) { const a = i * seg + j, c2 = i * seg + (j + 1) % seg; idx.push(a, a + seg, c2, c2, a + seg, c2 + seg); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx);
+      eyesO.add(new THREE.Mesh(local(eyesO, g), sideEye));
     }
   }
 
