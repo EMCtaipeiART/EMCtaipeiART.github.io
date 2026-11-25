@@ -192,12 +192,15 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
 
   // ───── 頭、耳朵 ─────
   const headGeo = [loft('y', [...A.head].reverse(), {n:A.white ? 110 : 48, sides:A.white ? 144 : 64, power:A.white ? 2.05 : isCat ? 2.35 : 2.15})];
-  const bump = (x, y, cx, cy, rx, ry) => Math.exp(-(((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2));
+  const EYE_TAN = .85, bump = (x, y, cx, cy, rx, ry) => Math.exp(-(((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2));
   if (A.white) { const p = headGeo[0].attributes.position;   // 嘴邊、鼻梁、下巴：同一顆頭上的柔和隆起
     for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), f = sm(.7, 1.0, z); if (!f) continue;
       const pad = 1 - (1 - bump(x, y, .095, 1.43, .12, .098)) * (1 - bump(x, y, -.095, 1.43, .12, .098));
-      const socket = sm(.05, .42, Math.abs(x)) * Math.exp(-(((y - 1.7) / .34) ** 2));
-      p.setZ(i, z + f * (.018 * pad - .13 * socket)); }
+      p.setZ(i, z + f * .018 * pad); }
+    const ex = A.eyeAt[0] / PX, ey = Y(A.eyeAt[1]), ea = A.eyeAt[2] / PX, eb = A.eyeAt[3] / PX;
+    let zc = 0, best = 9; for (let i = 0; i < p.count; i++) { if (p.getZ(i) < .7) continue; const d = Math.hypot(Math.abs(p.getX(i)) - ex, p.getY(i) - ey); if (d < best) { best = d; zc = p.getZ(i); } }
+    zc -= .05; head.userData.eyeZ = zc;
+    for (let i = 0; i < p.count; i++) { const z = p.getZ(i); if (z < .5) continue; const q = Math.abs(p.getX(i)) - ex, w = 1 - sm(1.08, 2.1, Math.hypot(q / ea, (p.getY(i) - ey) / eb)); if (w > 0) p.setZ(i, z + (zc - q * EYE_TAN - z) * w); }
     headGeo[0].computeVertexNormals(); }
   paint(head, headGeo[0], [1.55, 1, 1]);
   if (A.white) {   // 臉的範圍只用正面原圖（混到側面圖會出現兩層鼻嘴）
@@ -243,9 +246,8 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
     for (let i = 0; i <= rings; i++) for (let j = 0; j < seg; j++) {
       const k = i / rings, a = j / seg * Math.PI * 2, du = Math.cos(a) * pu * k, dv = Math.sin(a) * pv * k, q = c.clone().addScaledVector(t, du * wide / PX); q.y = Y(cv + dv);
       ray.set(q.clone().addScaledVector(d, 3), d.clone().negate()); const h = ray.intersectObjects(probe, false)[0]?.point || q;
-      const l2 = lift + (at ? .05 * (1 - k * k) : 0); let z = h.z + d.z * l2;
-      if (at) { const flat = c.z + lift + .012 - Math.tan(.5) * (h.x - c.x) * Math.sign(c.x) + .02 * (1 - k * k); if (flat > z) z += (flat - z) * .75; }
-      pos.push(h.x + d.x * l2, h.y, z); const au = su + Math.cos(a) * (at ? pu : qu) * k, av = sv + Math.sin(a) * (at ? pv : qv) * k; uv.push((1380 + 200 + X(au) * PX) / ATLAS, 1 - (500 - Y(av) * PX) / 520);
+      if (at) { const x = c.x + du / PX; pos.push(x, Y(cv + dv), head.userData.eyeZ - (Math.abs(x) - Math.abs(c.x)) * EYE_TAN + .012 + .034 * (1 - k * k)); }
+      else pos.push(h.x + d.x * lift, h.y, h.z + d.z * lift); const au = su + Math.cos(a) * (at ? pu : qu) * k, av = sv + Math.sin(a) * (at ? pv : qv) * k; uv.push((1380 + 200 + X(au) * PX) / ATLAS, 1 - (500 - Y(av) * PX) / 520);
     }
     for (let i = 0; i < rings; i++) for (let j = 0; j < seg; j++) { const a = i * seg + j, c2 = i * seg + (j + 1) % seg; idx.push(a, a + seg, c2, c2, a + seg, c2 + seg); }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx);
@@ -263,37 +265,6 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
   if (!A.white) patch(face, A.muzzlePatch, .01, 0, 0, mAt);
   if (isCat) { const [u, v] = mAt || A.muzzlePatch, x = X(u), y = A.white ? 1.35 : Y(v + 20); ink(tng, oval(x, y, (front(x, y) ?? hz + rz) + .02, .05, .065, .028, {seg:16}), 0xf27f83); }
   else if (id === 'dog1') { const x = 0, y = Y(255), z = (front(0, Y(240)) ?? hz + rz) - .02; ink(tng, oval(x, y, z, .075, .105, .042, {seg:20}), 0xf7848a); }
-
-  if (A.white) {
-    const smile = new THREE.ShaderMaterial({uniforms:{c:{value:new THREE.Color(R.ink)}}, side:THREE.DoubleSide,
-      vertexShader:'varying float f; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vec3 fwd = normalize(mat3(modelMatrix) * vec3(0.0, 0.0, 1.0)); f = dot(fwd, normalize(cameraPosition - w.xyz)); gl_Position = projectionMatrix * viewMatrix * w; }',
-      fragmentShader:'uniform vec3 c; varying float f; void main(){ if (f > 0.34) discard; gl_FragColor = vec4(c, 1.0); \n #include <colorspace_fragment> \n }'});
-    for (const s of [1, -1]) {
-      const pts = [[1002, 203], [993, 214], [980, 220], [966, 218], [957, 211]].map(([u, v]) => { const y = Y(v) - (id === 'cat2' ? .02 : 0), z = Z(u); ray.set(V(s * 3, y, z), V(-s, 0, 0)); const h = ray.intersectObjects(probe, false)[0]; return h ? V(h.point.x + s * .005, y, z) : null; }).filter(Boolean);
-      if (pts.length > 2) face.add(new THREE.Mesh(local(face, tube(pts, [.003, .008, .009, .007, .002], {n:32, sides:8})), smile));
-    }
-  }
-
-  if (A.white) {
-    const gate = side => { const m = decal.clone(); m.onBeforeCompile = sh => {
-        sh.vertexShader = 'varying float vF;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n vF = dot(normalize(mat3(modelMatrix) * vec3(0.0, 0.0, 1.0)), normalize(cameraPosition - (modelMatrix * vec4(transformed, 1.0)).xyz));');
-        sh.fragmentShader = 'varying float vF;\n' + sh.fragmentShader.replace('void main() {', 'void main() {\n if (vF ' + (side ? '>=' : '<') + ' 0.34) discard;'); };
-      m.customProgramCacheKey = () => 'eye' + side; return m; };
-    const frontEye = gate(false), sideEye = gate(true);
-    for (const m of eyesO.children) if (m.material === decal) m.material = frontEye;
-    for (const e of A.eyes) {
-      const s = -Math.sign(X(e[0])) || 1, rings = 8, seg = 36, pos = [], uv = [], idx = [], cu = 946, cv = A.eyeAt[1] + 1, ru = 21, rv = A.eyeAt[3] - 1;
-      for (let i = 0; i <= rings; i++) for (let j = 0; j < seg; j++) {
-        const k = i / rings, a = j / seg * Math.PI * 2, y = Y(cv + Math.sin(a) * rv * k), z = Z(cu + Math.cos(a) * ru * k);
-        ray.set(V(s * 3, y, z), V(-s, 0, 0)); const h = ray.intersectObjects(probe, false)[0];
-        pos.push((h ? h.point.x : 0) + s * (.014 + .03 * (1 - k * k)), y, z);
-        const au = e[0] - s * Math.cos(a) * A.eyeAt[2] * k, av = e[1] + Math.sin(a) * A.eyeAt[3] * k; uv.push((1380 + 200 + X(au) * PX) / ATLAS, 1 - (500 - Y(av) * PX) / 520);
-      }
-      for (let i = 0; i < rings; i++) for (let j = 0; j < seg; j++) { const a = i * seg + j, c2 = i * seg + (j + 1) % seg; idx.push(a, a + seg, c2, c2, a + seg, c2 + seg); }
-      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx);
-      eyesO.add(new THREE.Mesh(local(eyesO, g), sideEye));
-    }
-  }
 
   // ───── 項圈（跟著頭走，坐下時才不會蓋到嘴巴） ─────
   if (isCat) {
@@ -347,7 +318,7 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
     const s = Math.sin(ph), c = Math.cos(ph), breathe = Math.sin(t * 2.1) * .012;
     const sit = () => {
       const tilt = id === 'dog1' ? -.5 : -.66, drop = id === 'dog1' ? .14 : .24;
-      set('torso', [0, -drop, 0, tilt]); set('head', [0, A.white ? -.22 : 0, A.white ? .42 : 0, -tilt * .92]);
+      set('torso', [0, -drop, 0, tilt]); set('head', [0, A.white ? -.14 : 0, A.white ? .28 : 0, -tilt * .92]);
       for (const k of ['BL', 'BR']) set(k, [(k === 'BL' ? 1 : -1) * .07, -(legLen - S.lr * 1.9), .22, -1.42]);
       const up = Math.sin(-tilt) * (S.legF[2] - bz) - drop;   // 胸口抬高多少，前腳就跟著拉長
       for (const k of ['FL', 'FR']) { set(k, [0, up * .78, -.14]); o[k][6] = 1 + up * .78 / legLen; }
