@@ -41,11 +41,12 @@ import {mergeGeometries, mergeVertices} from '../character-studio/vendor/BufferG
 const HULL_LAYER = 1, bust = '?t=' + Date.now();
 const live = await import('./pets3d.js' + bust);
 const draft = await import('./pets3d-draft.js' + bust).catch(() => null);
+const gen = await import('./pets3d-gen.js' + bust).catch(() => null);   // 生成版（目前只有無名小貓、站姿）
 const WHO = [['Machi', 'Machi'], ['cat', '無名小貓'], ['cat2', '四樓小貓'], ['dog1', '臘腸'], ['dog2', '薩摩耶']];
 const PET_POSES = [['stand', '站'], ['walk', '走'], ['run', '跑'], ['sit', '坐'], ['loaf', '趴縮'], ['down', '趴下'], ['sleep', '睡'], ['eat', '吃'], ['groom', '理毛'], ['wag', '搖尾'], ['belly', '翻肚']];
 const MAN_POSES = [['stand', '站'], ['walk', '走'], ['run', '跑'], ['sit', '坐']];
 const q = new URLSearchParams(location.search);
-const state = {who:WHO.some(w => w[0] === q.get('who')) ? q.get('who') : 'cat', pose:q.get('pose') || 'stand', ver:draft && q.get('ver') !== 'live' ? 'draft' : 'live',
+const state = {who:WHO.some(w => w[0] === q.get('who')) ? q.get('who') : 'cat', pose:q.get('pose') || 'stand', ver:gen && q.get('ver') === 'gen' ? 'gen' : draft && q.get('ver') !== 'live' ? 'draft' : 'live',
   yaw:(+q.get('yaw') || 0) * Math.PI / 180, el:.12, zoom:1, spin:false, clay:false, ortho:false};
 
 const view = document.getElementById('view');
@@ -82,7 +83,7 @@ async function makeMachi(){
   }, follow:() => holder.position.z};
 }
 function makePetView(id){
-  const lib = state.ver === 'draft' && draft ? draft : live;
+  const lib = state.ver === 'gen' && gen && gen.hasPet(id) ? gen : state.ver !== 'live' && draft ? draft : live;
   return new Promise((res, rej) => {
     const pet = lib.makePet(THREE, {mergeGeometries, mergeVertices}, id, HULL_LAYER, {ready:() => res({group:pet.group, update:pet.update, follow:() => 0}), fail:() => rej(new Error('貼圖載入失敗'))});
   });
@@ -121,11 +122,11 @@ function draw(){
   bar('who', '角色', WHO, v => v === state.who, v => { if (v !== state.who) { state.who = v; if (v === 'Machi' && !MAN_POSES.some(p => p[0] === state.pose)) state.pose = 'stand'; load(); } });
   bar('poses', '動作', state.who === 'Machi' ? MAN_POSES : PET_POSES, v => v === state.pose, v => { state.pose = v; });
   const tools = [['a0', '正面'], ['a45', '45°'], ['a90', '側面'], ['a180', '背面'], ['spin', '自動旋轉'], ['clay', '白膜'], ['ortho', '平面投影'], ['ref', '參考圖']];
-  if (draft && state.who !== 'Machi') tools.push(['draft', '試作版'], ['live', '線上版']);
+  if (draft && state.who !== 'Machi') tools.push(...(gen && gen.hasPet(state.who) ? [['gen', '生成版']] : []), ['draft', '試作版'], ['live', '線上版']);
   bar('tools', '檢視', tools, v => v === 'spin' ? state.spin : v === 'clay' ? state.clay : v === 'ortho' ? state.ortho : v === state.ver, v => {
     if (v[0] === 'a') { state.yaw = +v.slice(1) * Math.PI / 180; state.el = 0; state.spin = false; }
     else if (v === 'ref') document.getElementById('file').click();
-    else if (v === 'draft' || v === 'live') { state.ver = v; load(); }
+    else if (v === 'draft' || v === 'live' || v === 'gen') { state.ver = v; load(); }
     else { state[v] = !state[v]; if (v === 'clay') applyClay(); }
   });
 }
