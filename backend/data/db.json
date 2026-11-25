@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 12845,
+  "revision": 12846,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-25T11:07:31.413Z",
+  "updatedAt": "2026-11-25T11:08:31.942Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1530,7 +1530,7 @@
         {"案件編號":"26110145","修改次數":"1","建立日期":"2026/11/25 18:28:33","修改日期":"2026-11-26","修改內容":"以下素材的「12/1」都改成「即日起至」\n-momo_AeroClip_電商_雙12大促_A-momo_Liberty Buds_電商_雙12大促_A\n-momo_Liberty 5 Pro_電商_雙12大促_A\n-momo_Liberty 5 Pro Max_電商_雙12大促_A\n\n共四張，請協助在明天(11/26)17：00前提供，再麻煩了，謝謝","修改內容連結":"","修改人":"廖秦葦","確認修正日":"","待修改圖片":""},
         {"案件編號":"26110060","修改次數":"0","建立日期":"2026/11/25 19:05:09","修改日期":"2026/11/25 19:05:09","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/25 19:05:09","圖片連結":"[{\"fileName\":\"261125_Epson_社群貼文_集中列印2.0_電費省.png\",\"url\":\"https://lh3.googleusercontent.com/d/1UmjQYVc9FNFlpImvd7dnbtqT0VVo0aHJ=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/25 19:05:09"},
         {"案件編號":"26110059","修改次數":"0","建立日期":"2026/11/25 19:06:41","修改日期":"2026/11/25 19:06:41","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/25 19:06:41","圖片連結":"[{\"fileName\":\"261125_Epson_社群貼文_集中列印2.0_房租省.png\",\"url\":\"https://lh3.googleusercontent.com/d/16robSaNyBIWLbIM4CchCAWTsA5ts0hg5=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/25 19:06:41"},
-        {"案件編號":"26110058","修改次數":"0","建立日期":"2026/11/25 19:07:23","修改日期":"2026/11/25 19:07:23","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/25 19:07:23","圖片連結":"[{\"fileName\":\"261125_Epson_社群貼文_集中列印2.0_列印省.png\",\"url\":\"https://lh3.googleusercontent.com/d/1U_Gb6CXmPCfAEzIFj7-5NcoAGYL7nAGl=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/25 19:07:23"}
+        {"案件編號":"26110058","修改次數":"0","建立日期":"2026/11/25 19:07:23","修改日期":"2026/11/25 19:07:23","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/25 19:07:23","圖片連結":"[{\"fileName\":\"261125_Epson_社群貼文_集中列印2.0_列印省.png\",\"url\":\"https://lh3.googleusercontent.com/d/1U_Gb6CXmPCfAEzIFj7-5NcoAGYL7nAGl=w1600\"},{\"fileName\":\"261125_Epson_社群貼文_集中列印2.0_房租省.png\",\"url\":\"https://lh3.googleusercontent.com/d/1LJRPRHcR5rd5Z0JbnsOVAub6cQNw57Ms=w1600\"},{\"fileName\":\"261125_Epson_社群貼文_集中列印2.0_電費省.png\",\"url\":\"https://lh3.googleusercontent.com/d/1lb9gsX2_8t6r9_xkTq4ULgwdxQnl32JH=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/25 19:08:31"}
       ]
     },
     "補充資料連結": {
