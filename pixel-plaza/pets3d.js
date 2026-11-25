@@ -63,7 +63,7 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
   const Y = v => (R.gy - v) / PX, Z = u => (u - R.sz) / PX, X = u => (u - R.fx) / PX;
   const INK = R.line / PX, isCat = !id.startsWith('dog');
 
-  const atlas = new THREE.TextureLoader().load(new URL('assets/pets3d/' + id + '.webp?v=6', import.meta.url).href, () => { group.visible = true; ready && ready(); }, undefined, () => fail && fail());
+  const atlas = new THREE.TextureLoader().load(new URL('assets/pets3d/' + id + '.webp?v=7', import.meta.url).href, () => { group.visible = true; ready && ready(); }, undefined, () => fail && fail());
   atlas.colorSpace = THREE.SRGBColorSpace; atlas.anisotropy = 4;
   // 身體材質：依面的朝向混合三視圖（aK＝正面、側面、背面的權重倍數；w=1 表示改用單色 aCol）
   const skin = new THREE.MeshBasicMaterial({map:atlas});
@@ -152,20 +152,25 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
     for (let i = 0; i < p.count; i++) a.set([p.getX(i) + nr.getX(i) * INK, p.getY(i) + nr.getY(i) * INK, p.getZ(i) + nr.getZ(i) * INK], i * 3);
     const h = new THREE.BufferGeometry(); h.setAttribute('position', new THREE.BufferAttribute(a, 3)); h.setIndex(geo.index.clone()); b.userData.ink.push(local(b, h));
   }
-  function paint(b, geo, k, {line = true, color = null} = {}){   // 貼原圖（k＝[正,側,背] 權重）或單色／漸層（color）
+  function paint(b, geo, k, {line = true, color = null, map = null} = {}){   // 貼原圖（k＝[正,側,背] 權重）或單色／漸層（color）
     const p = geo.attributes.position, nr = geo.attributes.normal, ak = new Float32Array(p.count * 4), col = new Float32Array(p.count * 3), v = V(0, 0, 0), n = V(0, 0, 0);
     for (let i = 0; i < p.count; i++) {
       ak.set([...(k || [0, 0, 0]), color != null ? 1 : 0], i * 4);
       if (color != null) { v.fromBufferAttribute(p, i); n.fromBufferAttribute(nr, i); const c = typeof color === 'function' ? color(v, n) : C(color); col.set([c.r, c.g, c.b], i * 3); }
     }
     if (line) outline(b, geo);
-    const g = local(b, geo); g.setAttribute('aRest', p.clone()); g.setAttribute('aN', nr.clone()); g.setAttribute('aK', new THREE.BufferAttribute(ak, 4)); g.setAttribute('aCol', new THREE.BufferAttribute(col, 3));
+    const rest = p.clone(); if (map) for (let i = 0; i < rest.count; i++) { map(v.fromBufferAttribute(rest, i)); rest.setXYZ(i, v.x, v.y, v.z); }
+    const g = local(b, geo); g.setAttribute('aRest', rest); g.setAttribute('aN', nr.clone()); g.setAttribute('aK', new THREE.BufferAttribute(ak, 4)); g.setAttribute('aCol', new THREE.BufferAttribute(col, 3));
     b.userData.skin.push(g);
   }
   function ink(b, geo, color){   // 純色小零件（閉眼線、舌頭）
     const p = geo.attributes.position, col = new Float32Array(p.count * 3), c = C(color); for (let i = 0; i < p.count; i++) col.set([c.r, c.g, c.b], i * 3);
     const g = local(b, geo); g.deleteAttribute('normal'); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); b.userData.solid.push(g);
   }
+
+  // 薩摩耶的身體、胸毛只能取原圖嘴巴以下的毛（否則臉會印在身上，趴下時看到第二張臉）
+  const furBelow = id === 'dog2' ? p => p.setY(Math.min(p.y, Y(290))) : null;
+  const maneMap = id === 'dog2' ? p => p.setY(Y(290 + clamp((R.gy - p.y * PX - 150) / 242) * 102)) : null;
 
   const group = new THREE.Group(); group.visible = false;
   const [hv, hu] = A.pivot.head, [bv, bu] = A.pivot.body;
@@ -183,9 +188,9 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
   const fluffy = id === 'dog2';
 
   // ───── 身體 ─────
-  paint(torso, loft('z', A.body, {n:48, sides:fluffy ? 72 : 48, bump:fluffy ? tufts(.07) : id === 'dog1' ? (a, t) => 1 + (Math.sin(a) < -.5 ? .07 * Math.abs(Math.sin(t * 26)) : 0) : null}), [.85, 1.35, 1]);
+  paint(torso, loft('z', A.body, {n:48, sides:fluffy ? 72 : 48, bump:fluffy ? tufts(.07) : id === 'dog1' ? (a, t) => 1 + (Math.sin(a) < -.5 ? .07 * Math.abs(Math.sin(t * 26)) : 0) : null}), [.85, 1.35, 1], {map:furBelow});
   if (A.chest) { const [u, v, d, h, w] = A.chest; paint(torso, oval(0, Y(v), Z(u), w / PX, h / PX, d / PX, {seg:44, bump:id === 'dog1' ? tufts(.09, 11) : null}), [1.5, 1, 0], {line:id === 'dog1'}); }
-  if (A.mane) paint(torso, loft('y', A.mane, {n:56, sides:84, power:2.1, bump:tufts(.1, 11)}), [1.15, 1, 1]);
+  if (A.mane) paint(torso, loft('y', A.mane, {n:56, sides:84, power:2.1, bump:tufts(.1, 11)}), [1.15, 1, 1], {map:maneMap});
 
   for (const k in legs) {
     const front = k[0] === 'F', L = front ? A.front : A.hind, sx = k[1] === 'L' ? 1 : -1, x = sx * L.x / PX, [pl, ph, pwid] = A.paw;

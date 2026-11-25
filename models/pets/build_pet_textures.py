@@ -60,6 +60,18 @@ for pid, P in PETS.items():
         filled = clean[j[0], j[1]]
         soft = np.stack([ndimage.gaussian_filter(filled[..., k], 3 * SC) for k in range(3)], axis=2)
         clean = np.where(beads[..., None], soft, clean)
+    # 三花貓的項圈和鈴鐺另外建模：從圖上塗掉，趴下時身上才不會印著第二個鈴鐺
+    if pid == 'cat':
+        r1, g1, b1 = clean[..., 0], clean[..., 1], clean[..., 2]
+        band = (yy > 222 * SC) & (yy < 330 * SC)
+        collar = (r1 > 150) & (r1 - g1 > 45) & (b1 > g1 * .9) & band
+        for (cx, cy) in [(319, 292), (985, 292)]:
+            collar |= (xx - cx * SC) ** 2 + (yy - cy * SC) ** 2 < (38 * SC) ** 2
+        collar = ndimage.binary_dilation(collar, iterations=int(7 * SC))
+        j = ndimage.distance_transform_edt(collar, return_distances=False, return_indices=True)
+        filled = clean[j[0], j[1]]
+        soft = np.stack([ndimage.gaussian_filter(filled[..., k], 4 * SC) for k in range(3)], axis=2)
+        clean = np.where(collar[..., None], soft, clean)
     # 眼睛塗掉（模型上另外貼）：用周圍毛色補
     for (cx, cy, rx, ry) in P['eyes']:
         hole = ((xx - cx * SC) / (rx * SC)) ** 2 + ((yy - cy * SC) / (ry * SC)) ** 2 < 1
