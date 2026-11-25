@@ -1110,9 +1110,9 @@ function elevator3d(x,bottom,w){ // 原素材 footprint：x..x+w、bottom-40..bo
   const W=w*U,D=40*U,g=officeGroup((x+w/2)*U,(bottom-20)*U), C=OFFICE, floor=x>FX4?4:5;
   // 保持原門洞量體與黑色外殼：內層只替換成拉絲鋁雙開門，不改碰撞或點選範圍。
   officeParts(g,[[W,3.12,D,C.coal,0,1.56,0],[W-.12,2.86,.095,C.metal,0,1.49,D/2-.055],
-    [W-.18,.08,.22,C.metal,0,.04,D/2-.11],[W-.22,.21,.08,C.slate,0,2.99,D/2-.06],
+    [W-.18,.08,.22,C.metal,0,.04,D/2-.095],[W-.22,.21,.08,C.slate,0,2.99,D/2-.06],
     [.16,2.78,.12,C.metal,-W/2+.12,1.47,D/2-.09],[.16,2.78,.12,C.metal,W/2-.12,1.47,D/2-.09]]);
-  officeDecal(g,'elevator-doors',W-.3,2.63,0,1.48,D/2+.001,0,0,(c,W,H)=>{
+  officeDecal(g,'elevator-doors',W-.3,2.63,0,1.48,D/2+.01,0,0,(c,W,H)=>{
     const edge=Math.max(5,Math.round(W*.025)), seam=Math.max(4,Math.round(W*.018)), split=Math.floor(W/2);
     const panel=(x0,x1,shade)=>{const grad=c.createLinearGradient(x0,0,x1,0);grad.addColorStop(0,shade[0]);grad.addColorStop(.18,shade[1]);grad.addColorStop(.72,shade[2]);grad.addColorStop(1,shade[3]);c.fillStyle=grad;c.fillRect(x0,edge,x1-x0,H-edge*2);
       c.fillStyle='rgba(35,48,62,.075)';for(let xx=x0+7;xx<x1-4;xx+=7){c.fillRect(xx,edge+2,1,H-edge*2-4);}
@@ -1128,14 +1128,14 @@ function elevator3d(x,bottom,w){ // 原素材 footprint：x..x+w、bottom-40..bo
     c.fillStyle='#159e31';c.beginPath();c.arc(px+9,py+11,4,0,Math.PI*2);c.fill();c.fillStyle='#ffb000';c.beginPath();c.arc(px+9,py+30,4,0,Math.PI*2);c.fill();
     c.fillStyle='#26313c';c.beginPath();c.moveTo(px+9,py+5);c.lineTo(px+5,py+10);c.lineTo(px+13,py+10);c.fill();c.beginPath();c.moveTo(px+9,py+36);c.lineTo(px+5,py+31);c.lineTo(px+13,py+31);c.fill();
   });
-  officeDecal(g,'elevator-indicator-'+floor,.64,.20,0,2.99,D/2+.006,0,0,(c,W,H)=>{c.fillStyle='#202830';c.fillRect(0,0,W,H);c.strokeStyle='#cfd6e0';c.lineWidth=5;c.strokeRect(3,3,W-6,H-6);c.fillStyle='#ffb000';c.font='700 '+Math.round(H*.72)+'px monospace';c.textAlign='center';c.textBaseline='middle';c.fillText('▲ '+floor,W/2,H/2+2);});
-  officeDecal(g,'elevator-threshold',W-.3,.13,0,.066,D/2+.012,-Math.PI/2,0,(c,W,H)=>{c.fillStyle='#8c98ad';c.fillRect(0,0,W,H);c.fillStyle='#cfd6e0';c.fillRect(0,6,W,H-12);c.fillStyle='#536171';for(let x=10;x<W-8;x+=20){c.fillRect(x,12,8,H-24);c.fillRect(x+2,H-18,4,5);}});
+  officeDecal(g,'elevator-indicator-'+floor,.64,.20,0,2.99,D/2+.016,0,0,(c,W,H)=>{c.fillStyle='#202830';c.fillRect(0,0,W,H);c.strokeStyle='#cfd6e0';c.lineWidth=5;c.strokeRect(3,3,W-6,H-6);c.fillStyle='#ffb000';c.font='700 '+Math.round(H*.72)+'px monospace';c.textAlign='center';c.textBaseline='middle';c.fillText('▲ '+floor,W/2,H/2+2);});
+  officeDecal(g,'elevator-threshold',W-.3,.13,0,.09,D/2+.022,-Math.PI/2,0,(c,W,H)=>{c.fillStyle='#8c98ad';c.fillRect(0,0,W,H);c.fillStyle='#cfd6e0';c.fillRect(0,6,W,H-12);c.fillStyle='#536171';for(let x=10;x<W-8;x+=20){c.fillRect(x,12,8,H-24);c.fillRect(x+2,H-18,4,5);}});
 }
 function projectionWall(w,d,x,z){
   pbox(w,2.3,d,OFFICE.cream,x,0,z);
   // 嵌在原牆厚內的收邊，不改投影面與門口的淨空。
   officeParts(officeGroup(x,z),[[w-.002,.06,d-.02,OFFICE.metal,0,.03,0],
-    [w-.002,.04,d-.02,OFFICE.coal,0,2.28,0]]);
+    [w-.002,.04,d-.02,OFFICE.coal,0,2.292,0]]);   // 頂面比牆頂高 .012，同高會閃
 }
 function bookcase3d(x, z, w, d, h = 2.0){   // 版面圖像素；層櫃開口朝左（-x），其餘面是黑色側板
   x += 1; w -= 2;   // 和桌子之間留 2px 縫，外框不會互相穿插
@@ -1660,8 +1660,8 @@ function projectorRig(x, z, face, o){
     const f = o.floor, m = new THREE.Mesh(new THREE.PlaneGeometry(f.w, f.d), mat); m.rotation.x = -Math.PI / 2; m.position.set(f.x, .03, f.z); scene.add(m); p.plane = m;
     p.beam = beam(apex, [new THREE.Vector3(f.x - f.w / 2, .03, f.z - f.d / 2), new THREE.Vector3(f.x + f.w / 2, .03, f.z - f.d / 2), new THREE.Vector3(f.x + f.w / 2, .03, f.z + f.d / 2), new THREE.Vector3(f.x - f.w / 2, .03, f.z + f.d / 2)]);
   } else {         // 投在牆上：畫面平貼在白牆上
-    const yc = 1.3, ph = o.wallDir > 0 ? Math.PI / 2 : -Math.PI / 2, m = new THREE.Mesh(new THREE.PlaneGeometry(o.w, o.h), mat); m.rotation.y = ph; m.position.set(o.wallX, yc, o.zc); scene.add(m); p.plane = m;
-    const X = o.wallX; p.beam = beam(apex, [new THREE.Vector3(X, yc + o.h / 2, o.zc - o.w / 2), new THREE.Vector3(X, yc + o.h / 2, o.zc + o.w / 2), new THREE.Vector3(X, yc - o.h / 2, o.zc + o.w / 2), new THREE.Vector3(X, yc - o.h / 2, o.zc - o.w / 2)]);
+    const yc = 1.2, sh = Math.min(o.h, 2.0), ph = o.wallDir > 0 ? Math.PI / 2 : -Math.PI / 2, m = new THREE.Mesh(new THREE.PlaneGeometry(o.w, sh), mat);   /* 畫面上緣要低於牆頂（牆高 2.3），否則會凸出牆上方 */ m.rotation.y = ph; m.position.set(o.wallX, yc, o.zc); scene.add(m); p.plane = m;
+    const X = o.wallX; p.beam = beam(apex, [new THREE.Vector3(X, yc + sh / 2, o.zc - o.w / 2), new THREE.Vector3(X, yc + sh / 2, o.zc + o.w / 2), new THREE.Vector3(X, yc - sh / 2, o.zc + o.w / 2), new THREE.Vector3(X, yc - sh / 2, o.zc - o.w / 2)]);
   }
   p.plane.userData.pick = {kind:'proj', p}; pickables.push(p.plane); pg.userData.pick = {kind:'proj', p}; pickables.push(pg); projectors.push(p); return p;
 }

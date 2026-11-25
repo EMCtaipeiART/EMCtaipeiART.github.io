@@ -148,3 +148,7 @@
 ## 精靈疊層（sprite stacking）樣品（2026-11-24）
 - 茶水間「快快乖」是樣品：`snacks/stack_kuaikuai.png`（80 層 56×22 px 的水平薄片，左＝地面）由四視角圖經 https://github.com/danielwh2/sprite-stacking（MIT）的 `views_to_slices.py` 切出；`snackStack3d()` 把每層做成一片水平平面往上疊（每層加一片半層高的複本填縫），轉鏡頭就有真的厚度。其他零食仍是朝向鏡頭的平面圖。
 - 其他物件要做：準備 4 視角圖（頂、側、正、背）→ 切片 → 放進 `snacks/` → 呼叫 `snackStack3d(parent, 檔名, 層數, 寬px, 深px, 高度, x, z, y)`。
+
+## 面重疊閃動（z-fighting）守則（2026-11-25）
+- 兩個面不可落在同一平面；貼圖（officeDecal）離底面至少 .01，收邊條要比底座高／凸出 .008 以上。
+- 投影畫面高度上限 2.0（中心 y 1.2），不可超過牆高 2.3。
