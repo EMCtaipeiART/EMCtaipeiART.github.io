@@ -3869,3 +3869,8 @@ $126-10-30
 ## 2026-11-25 問題回報：左側選單紅點提醒
 - 管理者有「回報中」且還沒打開看過的問題回報時，左側「問題」選單右上會亮紅點，滑鼠移上去顯示筆數；打開問題回報頁就熄掉。小幫手轉達的許願也算在內。
 - 沿用原本每 3 分鐘的背景檢查（site.js 的 checkIssueNotify／updateIssueDot，樣式 site.css 的 rail-dot）。看過的紀錄存在各瀏覽器，換電腦會再亮一次。
+
+## 2026-11-25　安裝 Blender 與 Blender MCP，Machi 3D 人物樣品
+- 本機（iMac M3）用 Homebrew 安裝 Blender 5.3.0 與 uv；Blender MCP（PyPI mcp-for-blender）附加元件已裝並啟用，Claude Code 以本專案 local scope 登錄 blender（DISABLE_TELEMETRY=true、BLENDER_MCP_SAFE_MODE=1）。使用時要開著 Blender，MCP 工具需新開對話才出現。
+- models/machi/build_machi.py：用腳本在背景建出 Machi Q 版 3D 人物（參考 pixel-plaza/sprites-hd/Machi.png），輸出 models/machi/machi.glb（約 625 KB、3.4 萬面）與對照圖 preview.png。重建：blender --background --factory-startup --python models/machi/build_machi.py -- 預覽圖資料夾
+- 目前只是靜態樣品：沒有骨架與走路動畫，尚未放進元宇宙。GLB 不含黑色外框（放進元宇宙時用 three.js 加）。
