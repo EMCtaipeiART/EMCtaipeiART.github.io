@@ -72,6 +72,23 @@ for pid, P in PETS.items():
         filled = clean[j[0], j[1]]
         soft = np.stack([ndimage.gaussian_filter(filled[..., k], 4 * SC) for k in range(3)], axis=2)
         clean = np.where(collar[..., None], soft, clean)
+    if pid == 'cat2':
+        r3, g3, b3 = clean[..., 0], clean[..., 1], clean[..., 2]
+        pink = (r3 > 190) & (r3 - g3 > 30) & (b3 > g3 * .9) & (yy > 230 * SC) & (yy < 360 * SC)
+        pink = ndimage.binary_dilation(pink, iterations=int(8 * SC))
+        j = ndimage.distance_transform_edt(pink, return_distances=False, return_indices=True)
+        filled = clean[j[0], j[1]]
+        soft = np.stack([ndimage.gaussian_filter(filled[..., k], 3 * SC) for k in range(3)], axis=2)
+        clean = np.where(pink[..., None], soft, clean)
+    if pid.startswith('cat'):   # 腿腳上的描線投到立體的腳上會變成一條條黑線：腿部高度的深色線換成旁邊的毛色
+        lum = clean[..., :3] @ np.array([.3, .59, .11])
+        local = ndimage.uniform_filter(lum, int(26 * SC))
+        dark = ((lum < 120) | (lum < local - 34)) & (yy > 385 * SC)
+        dark = ndimage.binary_dilation(dark, iterations=int(3 * SC))
+        j = ndimage.distance_transform_edt(dark, return_distances=False, return_indices=True)
+        filled = clean[j[0], j[1]]
+        soft = np.stack([ndimage.gaussian_filter(filled[..., k], 4 * SC) for k in range(3)], axis=2)
+        clean = np.where(dark[..., None], soft, clean)
     # 眼睛塗掉（模型上另外貼）：用周圍毛色補
     for n, (cx, cy, rx, ry) in enumerate(P['eyes']):
         if n == 2 and pid.startswith('cat'):   # 貓的側面眼睛：整塊換成旁邊的毛（只模糊填色會在側臉留下一圈霧斑）

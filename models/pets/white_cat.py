@@ -13,7 +13,17 @@ HDY = 0                                          # 頭部高度以正面圖為�
 # 頭：[y, 後緣 x, 前緣 x, 半寬]
 head0 = [[194.5,862,886,14],[197,838,902,48],[204,800,922,96],[216,758,946,136],[240,708,972,184],[270,662,992,222],[300,632,1008,244],[340,611,1026,262],
         [380,606,1040,274],[420,612,1048,279],[455,624,1052,277],[490,648,1050,262],[520,682,1034,238],[550,728,1008,202],[575,782,976,162],[595,840,942,108],[608,878,912,58]]
-head = [[y, a - (18 if 260 <= y <= 530 else 0), b, w] for y, a, b, w in head0]
+# 側面輪廓：使用者提供的黑線比例尺（右近側面）逐點量出，座標 (y, 後緣 x, 前緣 x)；已扣掉約 3px 描邊。眼睛中心 y=68 對齊 v=163
+SIDE = [(26.5,45,75),(28,36,87),(31,29,95),(36,21,102),(44,11,110),(52,6,115.5),(60,3,117.5),(65.5,2.3,117.8),(71,1.8,123),(76,1.5,125.5),(81,1.5,126),(86,2,125.5),(91,6,124),(96,16,120),(101,32,115),(108,52,107),(113,68,98),(117,80,89)]
+def head_half(v):   # 正面半寬沿用正面白膜量到的值
+    pts = [(V(y), W(w)) for y, a, b, w in head0]
+    if v <= pts[0][0]: pass
+    pts.sort()
+    for (v0, w0), (v1, w1) in zip(pts, pts[1:]):
+        if v0 <= v <= v1: return round(w0 + (w1 - w0) * (v - v0) / (v1 - v0), 1)
+    return pts[0][1] if v < pts[0][0] else pts[-1][1]
+head = [[round(163 + (y - 68) * 1.88, 1), round(779 + 1.88 * a, 1), round(779 + 1.88 * b, 1)] for y, a, b in SIDE]
+head = [[v, a, b, head_half(v)] for v, a, b in head]
 # 身體：[x, 上緣 y, 下緣 y, 半寬]
 body = [[140,690,835,125],[172,612,900,195],[225,558,925,240],[300,522,938,268],[400,506,938,272],[500,508,950,262],[600,520,955,252],
         [690,515,950,240],[780,528,930,228],[880,576,900,204],[918,610,886,180],[940,642,866,148],[953,668,848,114],[961,696,824,74],[965,724,798,34]]
@@ -25,7 +35,7 @@ FACE_V = {'cat': [82, 163, 205, 232, 262], 'cat2': [86, 178, 215, 238, 264]}   #
 def cat(key, art, collar):
     d = {
       'white': 1,
-      'head': [[V(y), U(a), U(b), W(w)] for y, a, b, w in head],
+      'head': head,
       
       'body': [[U(x), V(a), V(b), W(w * .91)] for x, a, b, w in body],
       'pivot': {'head': [V(400), U(838)], 'body': [V(730), U(545)]},
@@ -85,7 +95,7 @@ rep("paint(legs[k], tube([V(x, Y(L.top), Z(L.u)), V(x, Y((L.top + R.gy) / 2), Z(
 rep("paint(legs[k], oval(x, Y(R.gy - ph), Z(L.u + 12),", "paint(legs[k], oval(x, Y(R.gy - ph), Z(lu[3]),")
 # 腳趾縫
 rep("[1.25, 1.1, 1]);\n  }", """[1.25, 1.1, 1]);
-    if (A.white) for (const t of [-.36, 0, .36]) { const arc = [.05, .3, .55, .8].map(e => V(x + t * pwid / PX * Math.cos(e) * 1.02, Y(R.gy - ph) + Math.sin(e) * ph / PX * 1.03, Z(lu[3]) + Math.sqrt(1 - t * t) * Math.cos(e) * pl / PX * 1.02));
+    if (A.white && A.toes) for (const t of [-.36, 0, .36]) { const arc = [.05, .3, .55, .8].map(e => V(x + t * pwid / PX * Math.cos(e) * 1.02, Y(R.gy - ph) + Math.sin(e) * ph / PX * 1.03, Z(lu[3]) + Math.sqrt(1 - t * t) * Math.cos(e) * pl / PX * 1.02));
       ink(legs[k], tube(arc, [.004, .008, .007, .003], {n:12, sides:6}), R.ink); }
   }""")
 rep("power:isCat ? 2.35 : 2.15", "power:A.white ? 2.05 : isCat ? 2.35 : 2.15")
@@ -98,7 +108,7 @@ rep("uv.push((1380 + 200 + X(cu + du) * PX) / ATLAS, 1 - (500 - Y(cv + dv) * PX)
 rep("""    const side = Math.sign(X(e[0])), yaw = side * (isCat ? .76 : .7), shift = side * (A.eyeGap || 0);
     patch(eyesO, e, .018, yaw, shift);
     const [cu, cv, pu, pv] = e,""", """    const side = Math.sign(X(e[0])), at = A.eyeAt ? [R.fx + side * A.eyeAt[0], A.eyeAt[1], A.eyeAt[2], A.eyeAt[3]] : null;
-    const yaw = side * (at ? .68 : isCat ? .76 : .7), shift = at ? 0 : side * (A.eyeGap || 0);
+    const yaw = side * (at ? 0 : isCat ? .76 : .7), shift = at ? 0 : side * (A.eyeGap || 0);
     patch(eyesO, e, .018, yaw, shift, at);
     const [cu, cv, pu, pv] = at || e,""")
 rep("eyesO = bone(face, [0, Y(A.eyes[0][1]), hz], 'eyesOpen')", "eyesO = bone(face, [0, Y(A.eyeAt ? A.eyeAt[1] : A.eyes[0][1]), hz], 'eyesOpen')")
@@ -125,12 +135,12 @@ rep("  paint(head, headGeo[0], [1.55, 1, 1]);\n", """  const bump = (x, y, cx, c
   if (A.white) { const p = headGeo[0].attributes.position;   // 嘴邊、鼻梁、下巴：同一顆頭上的柔和隆起
     for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), f = sm(.7, 1.0, z); if (!f) continue;
       const pad = 1 - (1 - bump(x, y, .095, 1.43, .12, .098)) * (1 - bump(x, y, -.095, 1.43, .12, .098));
-      const socket = sm(.06, .36, Math.abs(x)) * Math.exp(-(((y - 1.72) / .17) ** 2));\n      p.setZ(i, z + f * (.108 * pad + .05 * bump(x, y, 0, 1.505, .075, .068) + .03 * bump(x, y, 0, 1.32, .12, .07) - .072 * socket)); }
+      const socket = sm(.03, .27, Math.abs(x)) * Math.exp(-(((y - 1.73) / .19) ** 2));\n      p.setZ(i, z + f * (.018 * pad - .15 * socket)); }
     headGeo[0].computeVertexNormals(); }
   paint(head, headGeo[0], [1.55, 1, 1]);
   if (A.white) {   // 臉的範圍只用正面原圖（混到側面圖會出現兩層鼻嘴）
     const k = head.userData.skin[head.userData.skin.length - 1].attributes.aK, p = headGeo[0].attributes.position;
-    for (let i = 0; i < p.count; i++) { if (p.getZ(i) < .7) continue; const nz = headGeo[0].attributes.normal.getZ(i), near = (1 - sm(.85, 1.3, Math.hypot(p.getX(i) / .36, (p.getY(i) - 1.48) / .29))) * sm(.7, .9, p.getZ(i)), w = near * sm(.5, .85, nz);
+    for (let i = 0; i < p.count; i++) { if (p.getZ(i) < .7) continue; const nz = headGeo[0].attributes.normal.getZ(i), near = (1 - sm(.85, 1.3, Math.hypot(p.getX(i) / .36, (p.getY(i) - 1.48) / .29))) * sm(.7, .9, p.getZ(i)), w = near * sm(.2, .55, nz);
       k.setX(i, 1.55 + 5 * w); k.setY(i, 1 - .88 * w);
       head.userData.skin[head.userData.skin.length - 1].attributes.aCol.setX(i, .075 * Math.exp(-(((p.getY(i) - 1.45) / .16) ** 2)) * sm(.65, .95, p.getZ(i))); } }
 """)
@@ -141,13 +151,33 @@ rep("""const t = -.3 + 1.3 * i / 18, k = clamp(t), w = E.w / PX * (1 - .88 * Mat
 rep("return at.clone().addScaledVector(side, Math.cos(a) * w).addScaledVector(dep, Math.sin(a) * d * hollow); })); }",
     "let z = Math.sin(a) * hollow;\n          if (A.white) { const c2 = Math.cos(a) ** 2, facing = Math.sin(a) * (dep.z > 0 ? 1 : -1); z = facing > 0 ? Math.sign(dep.z) * (1.5 * c2 * (1 - c2) - .42 * (1 - c2) ** 2) * Math.min(1, (1 - k) * 2.5) : Math.sin(a); }\n          return at.clone().addScaledVector(side, Math.cos(a) * w).addScaledVector(dep, z * d); })); }")
 # 坐下：頭往後收到胸口上方
-s = s.replace("set('head', [0, A.white ? .07 : 0, A.white ? .13 : 0, -tilt * .92]);", "set('head', [0, A.white ? -.07 : 0, A.white ? .2 : 0, -tilt * .92]);")
+s = s.replace("set('head', [0, A.white ? .07 : 0, A.white ? .13 : 0, -tilt * .92]);", "set('head', [0, A.white ? -.22 : 0, A.white ? .42 : 0, -tilt * .92]);")
 rep("const au = su + Math.cos(a) * qu * k, av = sv + Math.sin(a) * qv * k;", "const au = su + Math.cos(a) * (at ? pu : qu) * k, av = sv + Math.sin(a) * (at ? pv : qv) * k;")
 s = s.replace("A.white ? .085 : .045", "A.white ? .11 : .045")
 # 白膜版的收尾圈不要往外突（否則頭頂、胸口會冒出小凸點）
 rep("rings.push(ring(shrink(rows[0], f), 0, -dir * d));", "rings.push(ring(shrink(rows[0], f), 0, -dir * d * (A.white ? .12 : 1)));")
 rep("rings.push(ring(shrink(rows[rows.length - 1], f), 1, dir * d));", "rings.push(ring(shrink(rows[rows.length - 1], f), 1, dir * d * (A.white ? .12 : 1)));")
 rep("vec3 cS = texture2D(map, vec2((690.0 + vRest.z * 200.0) / ${ATLAS}.0, ty)).rgb;", "vec3 cS = texture2D(map, vec2((690.0 + vRest.z * 200.0) / ${ATLAS}.0, ty + (1.0 - step(0.001, vK.w)) * vSolid.x * 200.0 / 520.0)).rgb;")
-s = s.replace("assets/pets3d/' + id + '.webp?v=7'", "assets/pets3d/' + id + '.webp?v=8'")
+s = s.replace("assets/pets3d/' + id + '.webp?v=7'", "assets/pets3d/' + id + '.webp?v=9'")
+# 側面笑嘴：只在偏側面時畫出來（正面已經有原圖的嘴）
+rep("  patch(eyesO, e, .018, yaw, shift, at);\n", "  patch(eyesO, e, .018, yaw, shift, at);\n") if False else None
+rep("  // ───── 項圈", """  if (A.white) {
+    const smile = new THREE.ShaderMaterial({uniforms:{c:{value:new THREE.Color(R.ink)}}, side:THREE.DoubleSide,
+      vertexShader:'varying float f; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vec3 fwd = normalize(mat3(modelMatrix) * vec3(0.0, 0.0, 1.0)); f = dot(fwd, normalize(cameraPosition - w.xyz)); gl_Position = projectionMatrix * viewMatrix * w; }',
+      fragmentShader:'uniform vec3 c; varying float f; void main(){ if (f > 0.34) discard; gl_FragColor = vec4(c, 1.0); \\n #include <colorspace_fragment> \\n }'});
+    for (const s of [1, -1]) {
+      const pts = [[1002, 203], [993, 214], [980, 220], [966, 218], [957, 211]].map(([u, v]) => { const y = Y(v) - (id === 'cat2' ? .02 : 0), z = Z(u); ray.set(V(s * 3, y, z), V(-s, 0, 0)); const h = ray.intersectObjects(probe, false)[0]; return h ? V(h.point.x + s * .005, y, z) : null; }).filter(Boolean);
+      if (pts.length > 2) face.add(new THREE.Mesh(local(face, tube(pts, [.003, .008, .009, .007, .002], {n:32, sides:8})), smile));
+    }
+  }
+
+  // ───── 項圈""")
+# 眼睛：沿正前方貼到頭上（正面才是正圓），中央微凸
+rep("pos.push(h.x + d.x * lift, h.y, h.z + d.z * lift);", """const l2 = lift + (at ? .028 * (1 - k * k) : 0); let z = h.z + d.z * l2;
+      if (at) { const flat = c.z + lift + .012 - Math.tan(.5) * (h.x - c.x) * Math.sign(c.x) + .02 * (1 - k * k); if (flat > z) z += (flat - z) * .75; }
+      pos.push(h.x + d.x * l2, h.y, z);""")
+# 鈴鐺自己描一圈貼身的邊（坐下時鈴鐺離胸口遠，整體外框會變成一圈懸空的黑環）
+rep("n.y * .7 + n.z * .5))});", """n.y * .7 + n.z * .5)), line:!A.white});
+      if (A.white) { const rim = new THREE.Mesh(local(head, oval(0, Y(bv_), Z(uc + d + 16), br_ * 1.14, br_ * 1.14, dz * 1.14)), new THREE.MeshBasicMaterial({color:R.ink, side:THREE.BackSide})); head.add(rim); }""")
 open('pixel-plaza/pets3d-draft.js', 'w', encoding='utf-8').write(s)
 print('ok')
