@@ -3874,3 +3874,8 @@ $126-10-30
 - 本機（iMac M3）用 Homebrew 安裝 Blender 5.3.0 與 uv；Blender MCP（PyPI mcp-for-blender）附加元件已裝並啟用，Claude Code 以本專案 local scope 登錄 blender（DISABLE_TELEMETRY=true、BLENDER_MCP_SAFE_MODE=1）。使用時要開著 Blender，MCP 工具需新開對話才出現。
 - models/machi/build_machi.py：用腳本在背景建出 Machi Q 版 3D 人物（參考 pixel-plaza/sprites-hd/Machi.png），輸出 models/machi/machi.glb（約 625 KB、3.4 萬面）與對照圖 preview.png。重建：blender --background --factory-startup --python models/machi/build_machi.py -- 預覽圖資料夾
 - 目前只是靜態樣品：沒有骨架與走路動畫，尚未放進元宇宙。GLB 不含黑色外框（放進元宇宙時用 three.js 加）。
+
+## 2026-11-25　Machi 3D 人物第二版：比例、臉型五官、肩寬
+- models/machi/build_machi.py 整個改寫：身體、臉、頭髮改為照原圖正面與側面逐段量出的輪廓放樣；臉寬與肩寬縮窄。
+- 五官直接取自 expedition/story/Machi_neutral.webp（高解析正面圖）；頭髮顏色與髮際線由該圖加 12 角度圖投影成貼圖（hair 材質為 alpha MASK、雙面）。改這兩張參考圖要重跑腳本。
+- 產出 machi.glb 約 2.1 MB、5.7 萬面（比第一版重，放進元宇宙前要減面與縮貼圖）。已知瑕疵：太陽穴附近正面與側面貼圖交界有接縫，側面髮尾尖角比原圖少。
