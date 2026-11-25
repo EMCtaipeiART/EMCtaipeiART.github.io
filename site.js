@@ -3909,7 +3909,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
 
 
     /* ---------- 短網址（左側欄「短網址」：建立、命名、自訂短碼、編輯、刪除） ---------- */
-    const links={list:[],loading:false,loaded:false,error:'',editing:'',editDraft:null,project:'',selected:new Set(),creating:false,saving:false,batch:{open:false,text:'',p:'',np:'',v:'group',us:'',um:'',uc:'',busy:false,result:null}};
+    const links={list:[],loading:false,loaded:false,error:'',editing:'',editDraft:null,project:'',query:'',selected:new Set(),creating:false,saving:false,batch:{open:false,text:'',p:'',np:'',v:'group',us:'',um:'',uc:'',busy:false,result:null}};
     /* 短網址用主站網域 emc-art.com/<短碼>：DNS 走 Cloudflare 代理時由 Worker 直接 302 並計點擊，否則由 404.html 轉址；go.emc-art.com 舊連結仍有效 */
     const SHORT_BASE=()=>'https://emc-art.com/';
     const SHORT_CODE_RE=/^(?:[A-Za-z0-9\u3400-\u9fff\uf900-\ufaff]{2,32})$/;
@@ -3959,7 +3959,19 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       }
       return `<article class="link-item"><div class="link-main"><div class="link-card-heading">${l.canEdit?`<label class="link-check" title="選取"><input type="checkbox" data-link-sel="${esc(l.code)}"${links.selected.has(l.code)?' checked':''} aria-label="選取 ${esc(l.name||l.code)}"></label>`:''}<h3 class="link-name">${esc(l.name||l.code)}</h3><span class="link-tag${l.project?'':' link-tag-none'}">${esc(l.project||'未分類')}</span><span class="link-tag link-tag-vis link-vis-${linkVisCode(l.visibility)}">${linkVisLabel(linkVisCode(l.visibility))}</span></div><a class="link-short" href="${esc(fullHref)}" target="_blank" rel="noopener">${esc(full)}</a><div class="link-meta link-destination" title="${esc(l.url)}">原始網址 · ${esc(l.url)}</div>${l.utmSource||l.utmMedium||l.utmCampaign?`<div class="link-meta link-utm-line">UTM · ${[l.utmSource,l.utmMedium,l.utmCampaign].map(v=>v?esc(v):'—').join(' / ')}</div>`:''}<div class="link-meta">${esc(l.owner||'')}${l.group?` ・ ${esc(l.group)}`:''}${l.owner?' · ':''}${l.updatedAt?'更新於 ':'建立於 '}${esc(l.updatedAt||l.createdAt||'')}</div></div><div class="link-clicks" title="${l.lastClickAt?`最後點擊：${esc(l.lastClickAt)}`:'尚無點擊'}"><b>${Number(l.clicks||0).toLocaleString('zh-TW')}</b><span>累計點擊</span><i class="link-uniq" title="同一個訪客（IP＋瀏覽器）只算一次；上線前的舊點擊沒有訪客紀錄"><b>${Number(l.uniqueClicks||0).toLocaleString('zh-TW')}</b><span>不重複點擊</span></i></div><div class="link-actions"><button type="button" class="btn link-btn link-btn-copy" data-link-copy="${esc(l.code)}">${linkIcon('copy')}複製</button>${l.canEdit?`<button type="button" class="btn link-btn link-btn-edit" data-link-editbtn="${esc(l.code)}">${linkIcon('edit')}編輯</button><button type="button" class="btn link-btn link-btn-delete" data-link-del="${esc(l.code)}">${linkIcon('delete')}刪除</button>`:''}</div></article>`;
     }
-    const linkVisible=()=>links.project?links.list.filter(l=>(links.project==='__none'?!l.project:l.project===links.project)):links.list;
+    /* 搜尋：名稱、短碼／完整短網址、原始網址、專案、建立者、組別、UTM；空白分隔的多個關鍵字要全部符合 */
+    const linkSearchWords=()=>String(links.query||'').normalize('NFKC').toLowerCase().split(/\s+/).filter(Boolean);
+    function linkMatches(l,words){
+      const hay=[l.name,SHORT_BASE()+l.code,l.url,l.project,l.owner,l.group,l.utmSource,l.utmMedium,l.utmCampaign].map(v=>String(v||'')).join('\n').normalize('NFKC').toLowerCase();
+      return words.every(w=>hay.includes(w));
+    }
+    const linkVisible=()=>{const words=linkSearchWords();return links.list.filter(l=>(!links.project||(links.project==='__none'?!l.project:l.project===links.project))&&(!words.length||linkMatches(l,words)))};
+    function refreshLinkList(){
+      const list=$('linkList');if(!list)return;
+      list.innerHTML=linksListHtml();
+      const bulk=$('linkBulkWrap');if(bulk)bulk.innerHTML=linkBulkHtml();
+      const n=$('linkCount');if(n)n.textContent=`${linkVisible().length} 筆`;
+    }
     const linkEditable=()=>linkVisible().filter(l=>l.canEdit);
     function linkBulkHtml(){
       const ed=linkEditable();if(!ed.length)return '';
@@ -3977,10 +3989,10 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(links.loading&&!links.list.length)return '<div class="empty">載入中...</div>';
       if(links.error&&!links.list.length)return `<div class="empty">列表載入失敗：${esc(links.error)}　<button type="button" class="btn" data-link-reload>重新讀取</button></div>`;
       if(!links.list.length)return '<div class="empty">還沒有短網址</div>';
-      const shown=linkVisible();if(!shown.length)return '<div class="empty">這個分類沒有短網址</div>';
+      const shown=linkVisible(),searching=linkSearchWords().length>0;if(!shown.length)return `<div class="empty">${searching?'找不到符合的短網址':'這個分類沒有短網址'}</div>`;
       const gk=l=>(l.owner||'')+'|'+(l.createdAt||''),cnt={};shown.forEach(l=>{cnt[gk(l)]=(cnt[gk(l)]||0)+1});
       const done={};
-      return shown.map(l=>{const k=gk(l);if(!l.createdAt||cnt[k]<2)return linkCardHtml(l);if(done[k])return '';done[k]=1;return linkGroupHtml(k,shown.filter(x=>gk(x)===k))}).join('');
+      return shown.map(l=>{const k=gk(l);if(searching||!l.createdAt||cnt[k]<2)return linkCardHtml(l);if(done[k])return '';done[k]=1;return linkGroupHtml(k,shown.filter(x=>gk(x)===k))}).join('');
     }
     const linkGroupLine=l=>(l.name?l.name+' ':'')+shortFull(l.code);
     function linkGroupHtml(key,items){
@@ -4030,7 +4042,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       stage.innerHTML=`<div class="page link-page"><div class="page-top"><div><h2 class="page-title">短網址 <span class="link-total">${links.list.length}</span></h2><p class="page-sub">讓每個連結更好分享。自訂名稱、整理專案，隨時掌握點擊成效。短網址列表只有同組別的同事（與管理者）看得到。</p></div></div>
         <form class="link-form" id="linkForm"><div class="link-section-head link-wide"><h3>建立短網址</h3><span class="link-hint">建立後自動複製連結</span></div><label class="field link-wide"><span class="label">原始網址 <b>*</b></span><input class="input" name="url" type="url" required placeholder="https://example.com/very-long-link" value="${esc(draft.u)}"></label><label class="field"><span class="label">名稱 <small>（選填，方便辨識）</small></span><input class="input" name="name" maxlength="60" placeholder="例如：夏季活動素材" value="${esc(draft.n)}"></label>${linkProjectField(draft,'linkCreateProject')}${linkVisibilityField(draft,'linkCreateVisibility')}${linkCodeField(draft.c,false)}<div class="link-form-actions link-wide"><span class="link-hint">建立者與管理者可以編輯或刪除</span><button type="submit" class="btn link-btn link-btn-primary" id="linkSubmit"${links.creating?' disabled':''}>${links.creating?'建立中…':'建立短網址'}</button></div></form>
         ${linkBatchHtml()}
-        <div class="link-filter"><h3 class="link-list-title">短網址列表 <span class="link-hint">${linkVisible().length} 筆</span></h3><div class="link-filter-field"><label for="linkProjectFilter">專案篩選</label><div class="link-select-wrap"><select class="input link-select" id="linkProjectFilter"><option value="">全部專案</option>${[...new Set(links.list.map(l=>l.project).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant')).map(n=>`<option value="${esc(n)}"${links.project===n?' selected':''}>${esc(n)}（${links.list.filter(l=>l.project===n).length}）</option>`).join('')}<option value="__none"${links.project==='__none'?' selected':''}>未分類（${links.list.filter(l=>!l.project).length}）</option></select>${linkIcon('chevron')}</div></div></div>${linkBulkHtml()}<div class="link-list" id="linkList">${linksListHtml()}</div></div>`;
+        <div class="link-filter"><h3 class="link-list-title">短網址列表 <span class="link-hint" id="linkCount">${linkVisible().length} 筆</span></h3><div class="link-search"><input class="input" type="search" id="linkSearch" placeholder="搜尋名稱、短碼、網址、專案、建立者" aria-label="搜尋短網址" autocomplete="off" spellcheck="false" value="${esc(links.query)}"></div><div class="link-filter-field"><label for="linkProjectFilter">專案篩選</label><div class="link-select-wrap"><select class="input link-select" id="linkProjectFilter"><option value="">全部專案</option>${[...new Set(links.list.map(l=>l.project).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant')).map(n=>`<option value="${esc(n)}"${links.project===n?' selected':''}>${esc(n)}（${links.list.filter(l=>l.project===n).length}）</option>`).join('')}<option value="__none"${links.project==='__none'?' selected':''}>未分類（${links.list.filter(l=>!l.project).length}）</option></select>${linkIcon('chevron')}</div></div></div><div id="linkBulkWrap">${linkBulkHtml()}</div><div class="link-list" id="linkList">${linksListHtml()}</div></div>`;
       if(!links.loaded&&!links.loading&&!links.error)loadLinks();
     }
     async function copyText(t){try{await navigator.clipboard.writeText(t)}catch(err){const i=document.createElement('input');i.value=t;document.body.appendChild(i);i.select();document.execCommand('copy');i.remove()}}
@@ -4095,6 +4107,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(state.view==='links')renderLinksPage(true);
     }
     const deleteLink=code=>deleteLinks([code],(links.list.find(x=>x.code===code)||{}).name);
+    document.addEventListener('input',e=>{if(e.target.id==='linkSearch'){links.query=e.target.value;refreshLinkList()}});
     document.addEventListener('input',e=>{if(e.target.name==='batchText'){const c=$('linkBatchCount');if(c){const n=parseBatchLines(e.target.value).length;c.textContent=n?`偵測到 ${n} 筆`:'短碼會自動產生'}}});
     document.addEventListener('submit',e=>{if(e.target.id==='linkBatchForm'){e.preventDefault();submitBatch(e.target)}else if(e.target.dataset.groupEdit!==undefined){e.preventDefault();saveLinkGroup(e.target)}else if(e.target.id==='linkForm'){e.preventDefault();submitLink(e.target)}else if(e.target.dataset&&e.target.dataset.linkEdit){e.preventDefault();saveLinkEdit(e.target)}});
     document.addEventListener('change',e=>{
@@ -4109,7 +4122,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     });
     document.addEventListener('click',e=>{
       const t=e.target.closest&&e.target.closest('[data-link-delsel],[data-group-copy],[data-group-toggle],[data-group-editbtn],[data-group-del],[data-group-cancel],[data-batch-copy],[data-batch-clear],[data-link-copy],[data-link-editbtn],[data-link-del],[data-link-cancel],[data-link-reload]');if(!t||t.disabled)return;
-      if(t.hasAttribute('data-link-delsel')){deleteLinks([...links.selected]);return}
+      if(t.hasAttribute('data-link-delsel')){deleteLinks(linkEditable().filter(l=>links.selected.has(l.code)).map(l=>l.code));return}
       if(t.dataset.groupCopy){const it=linkGroupItems(t.dataset.groupCopy);copyText(it.map(linkGroupLine).join(String.fromCharCode(10))).then(()=>toast(`已複製整包（${it.length} 筆）`));return}
       if(t.dataset.groupToggle){links.groupClosed=links.groupClosed||new Set();const k=t.dataset.groupToggle;links.groupClosed.has(k)?links.groupClosed.delete(k):links.groupClosed.add(k);renderLinksPage(true);return}
       if(t.dataset.groupEditbtn){links.groupEdit=t.dataset.groupEditbtn;links.groupDraft=null;renderLinksPage(true);return}
