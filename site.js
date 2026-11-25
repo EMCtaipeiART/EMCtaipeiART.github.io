@@ -1031,7 +1031,7 @@
       {k:'dbadmin',menu:true,label:'資料庫',title:'資料庫後台',ok:()=>loggedIn()&&acc('page.database_admin',isAdminAcct()||isMachi0())&&acc('database.manage',isAdminAcct()||isMachi0()),svg:'<ellipse cx="12" cy="6" rx="7.5" ry="2.8"/><path d="M4.5 6v6c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8V6M4.5 12v6c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-6"/>'},
     ];
     const isMachi0=()=>String(session().user||'').trim()==='Machi'||norm(session().name)==='machi'||norm(session().user)==='machi.chen@emctaipei.com';
-    function renderRailExtra(){const box=$('railExtra');if(!box)return;const mk=list=>list.map(x=>{const n=x.k==='owner'?ownerRows().length+delReviewCount():0;return `<button type="button" class="rail-item${(x.k==='owner'&&state.view==='owner')||(x.k==='issues'&&state.view==='issues')||(x.k==='links'&&state.view==='links')||(x.k==='wall'&&state.view==='wall')||(x.k==='notes'&&state.view==='notes')||(x.k==='assign'&&state.view==='assign')||(x.k==='calendar'&&state.view==='calendar')||(x.k==='outfit'&&state.view==='outfit')?' is-active':''}" data-ext="${x.k}" title="${x.title}${n?`（${n}）`:''}" aria-label="${x.title}"><svg viewBox="0 0 24 24">${x.svg}</svg>${x.label}${n?`<span class="rail-badge">${n>99?'99+':n}</span>`:''}</button>`}).join('');const on=RAIL_EXT.filter(x=>!x.menu&&x.ok()),html=mk(on.filter(x=>x.k!=='issues')),html2=mk(on.filter(x=>x.k==='issues')),box2=$('railBottom');if(box.dataset.h!==html){box.dataset.h=html;box.innerHTML=html}if(box2&&box2.dataset.h!==html2){box2.dataset.h=html2;box2.innerHTML=html2}const st=document.querySelector('[data-nav="settings"]');if(st)st.hidden=loggedIn()&&!acc('profile.edit',true)}
+    function renderRailExtra(){const box=$('railExtra');if(!box)return;const mk=list=>list.map(x=>{const n=x.k==='owner'?ownerRows().length+delReviewCount():0,dot=x.k==='issues'&&issUnread&&loggedIn()&&isIssueManager()?issUnread:0;return `<button type="button" class="rail-item${(x.k==='owner'&&state.view==='owner')||(x.k==='issues'&&state.view==='issues')||(x.k==='links'&&state.view==='links')||(x.k==='wall'&&state.view==='wall')||(x.k==='notes'&&state.view==='notes')||(x.k==='assign'&&state.view==='assign')||(x.k==='calendar'&&state.view==='calendar')||(x.k==='outfit'&&state.view==='outfit')?' is-active':''}" data-ext="${x.k}" title="${x.title}${n?`（${n}）`:''}${dot?`（${dot} 筆新回報）`:''}" aria-label="${x.title}${dot?`，有 ${dot} 筆新回報`:''}"><svg viewBox="0 0 24 24">${x.svg}</svg>${x.label}${n?`<span class="rail-badge">${n>99?'99+':n}</span>`:''}${dot?'<span class="rail-dot"></span>':''}</button>`}).join('');const on=RAIL_EXT.filter(x=>!x.menu&&x.ok()),html=mk(on.filter(x=>x.k!=='issues')),html2=mk(on.filter(x=>x.k==='issues')),box2=$('railBottom');if(box.dataset.h!==html){box.dataset.h=html;box.innerHTML=html}if(box2&&box2.dataset.h!==html2){box2.dataset.h=html2;box2.innerHTML=html2}const st=document.querySelector('[data-nav="settings"]');if(st)st.hidden=loggedIn()&&!acc('profile.edit',true)}
     /* ---------- 作品牆：設計師備份的圖片素材，Pinterest 式瀑布流（隨機排序），點圖看案件細節 ---------- */
     const WALL_IMG=/\.(png|jpe?g|gif|webp|bmp|avif)$/i,WALL_PAGE=36;
     function wallBuild(){
@@ -3713,6 +3713,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
             if(fresh2.length&&state.view!=='issues'){showIssueReplyToast(fresh2);if(bnOn()&&document.hidden){try{new Notification('EMC 設計需求：管理者回覆了你的問題回報',{body:fresh2[0]['管理者回覆'].slice(0,80),tag:'emc-issue-reply',icon:'assets/EMC_design_logo.svg'})}catch(e){}}}
             if(fresh2.length)save2()}}
         if(!isIssueManager())return;
+        updateIssueDot(list);
         const keys=list.filter(r=>r['狀態']==='回報中').map(r=>'i:'+r.rowNumber+':'+r['時間']);
         let seen=null;try{seen=JSON.parse(localStorage.getItem(issSeenKey())||'null')}catch(e){}
         if(!Array.isArray(seen)){try{localStorage.setItem(issSeenKey(),JSON.stringify(keys))}catch(e){}return}
@@ -3723,6 +3724,18 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(bnOn()&&document.hidden){try{new Notification('EMC 設計需求：新問題回報',{body:fresh[0]['內容'].slice(0,80),tag:'emc-issue',icon:'assets/EMC_design_logo.svg'})}catch(e){}}
         markIssuesSeen(list);
       }catch(e){}finally{issNtBusy=false}
+    }
+    /* 左側「問題」選單紅點：管理者有「回報中」且還沒打開問題回報頁看過的回報就亮；打開該頁就熄 */
+    const issViewedKey=()=>'v5IssueViewed:'+(selfAccount()||session().user||'');
+    const issKey=r=>'i:'+r.rowNumber+':'+r['時間'];
+    let issUnread=0;
+    function updateIssueDot(list){
+      const open=list.filter(r=>r['狀態']==='回報中').map(issKey);
+      if(state.view==='issues'){try{localStorage.setItem(issViewedKey(),JSON.stringify(open.slice(-400)))}catch(e){}}
+      let seen=[];try{seen=JSON.parse(localStorage.getItem(issViewedKey())||'[]')}catch(e){}
+      if(!Array.isArray(seen))seen=[];
+      const n=open.filter(k=>!seen.includes(k)).length;
+      if(n!==issUnread){issUnread=n;renderRailExtra()}
     }
     function markIssuesSeen(list){try{localStorage.setItem(issSeenKey(),JSON.stringify(list.filter(r=>r['狀態']==='回報中').map(r=>'i:'+r.rowNumber+':'+r['時間']).slice(-400)))}catch(e){}}
     function showIssueReplyToast(items){
@@ -3875,6 +3888,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       }).join('');
     }
     function renderIssuesPage(keepForm){
+      if(issues.loaded&&state.view==='issues'&&isIssueManager())updateIssueDot(issues.list);
       const stage=$('stage');
       let draft={c:'',s:''};if(keepForm||$('issueForm')){const f=$('issueForm');if(f)draft={c:f.elements.content.value,s:f.elements.suggestion.value}}
       const canReport=!loggedIn()||acc('issue.report',true);
