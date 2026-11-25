@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 12793,
+  "revision": 12794,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-11-25T08:22:26.499Z",
+  "updatedAt": "2026-11-25T08:22:58.663Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1522,7 +1522,7 @@
         {"案件編號":"26110161","修改次數":"1","建立日期":"2026/11/25 13:54:42","修改日期":"2026-11-25","修改內容":"來信提供修改需求，主要日期改為即日起，代言人圖減少icon，詳細如附件P34~P36，再請協助，感恩","修改內容連結":"[{\"text\":\"如附件P34~P36\",\"url\":\"https://docs.google.com/presentation/d/1PPjDtircCMmBkilcpHEvfIKxaJahH3UOtti-P7U_MKA/edit?slide=id.h4d23776403c89257_0_0#slide=id.h4d23776403c89257_0_0\"}]","修改人":"吳冠賢","確認修正日":"","待修改圖片":""},
         {"案件編號":"26110162","修改次數":"1","建立日期":"2026/11/25 13:55:40","修改日期":"2026-11-25","修改內容":"來信提供修改需求，主要日期改為即日起，代言人圖減少icon，詳細如附件P37~P39，再請協助，感恩","修改內容連結":"[{\"text\":\"如附件P37~P39\",\"url\":\"https://docs.google.com/presentation/d/1PPjDtircCMmBkilcpHEvfIKxaJahH3UOtti-P7U_MKA/edit?slide=id.h4d23776403c89257_0_60#slide=id.h4d23776403c89257_0_60\"}]","修改人":"吳冠賢","確認修正日":"","待修改圖片":""},
         {"案件編號":"26110149","修改次數":"1","建立日期":"2026/11/25 16:06:28","修改日期":"2026-11-25","修改內容":"來信提供調整，主因客戶新法尊怕讓好友誤會保險具有療效，因此調整項目用詞，詳細如P12~P15，在請協助，感恩","修改內容連結":"[{\"text\":\"詳細如P12~P15\",\"url\":\"https://docs.google.com/presentation/d/1MC8TLYe4O60JAqL6uycBDjA0mVpBDBgQ/edit?slide=id.hc8cf504126709d9_0_12#slide=id.hc8cf504126709d9_0_12\"}]","修改人":"吳冠賢","確認修正日":"","待修改圖片":""},
-        {"案件編號":"26110173","修改次數":"2","建立日期":"2026/11/25 16:12:46","修改日期":"2026-11-26","修改內容":"如討論，電商、情境圖的勃根地紅圓點色系偏土色，需調整。\n詳細請看：附件。","修改內容連結":"[{\"text\":\"附件\",\"url\":\"https://docs.google.com/presentation/d/1ocrZfrWiBq6czjL3y43fCpgjl-8zfaSw/edit?slide=id.h4eb3adfb490860ae_0_0#slide=id.h4eb3adfb490860ae_0_0\"}]","修改人":"朱祖翎","確認修正日":"","待修改圖片":""},
+        {"案件編號":"26110173","修改次數":"2","建立日期":"2026/11/25 16:12:46","修改日期":"2026-11-26","修改內容":"如討論，電商、情境圖的勃根地紅圓點色系偏土色，需調整。\n詳細請看：附件。","修改內容連結":"[{\"text\":\"附件\",\"url\":\"https://docs.google.com/presentation/d/1ocrZfrWiBq6czjL3y43fCpgjl-8zfaSw/edit?slide=id.h4eb3adfb490860ae_0_0#slide=id.h4eb3adfb490860ae_0_0\"}]","修改人":"朱祖翎","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"261123_PChomeˍ雙12大促ˍCPAS_AeroClip2_情境01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1fcOFrQnYPaooBPvwdPgjLhiPiDggjll_=w1600\"},{\"fileName\":\"261123_PChomeˍ雙12大促ˍCPAS_AeroClip2_電商01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1q4Qm4mPxM-4N6K88sguLA2g-GD9dRhEE=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/25 16:22:58"},
         {"案件編號":"26110191","修改次數":"0","建立日期":"2026/11/25 16:22:09","修改日期":"2026/11/25 16:22:09","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/11/25 16:22:09","圖片連結":"[{\"fileName\":\"261112_保誠人壽_冬季進補活動_啟動圖.png\",\"url\":\"https://lh3.googleusercontent.com/d/1mgqeVTAVv72aoAjkpt3mxGBsnTDgcr4i=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/11/25 16:22:09"}
       ]
     },
