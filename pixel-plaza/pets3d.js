@@ -16,7 +16,7 @@ const REF = {
 const SHAPE = {
   cat:{
     head:[[80,862,932,38],[92,836,962,80],[112,815,985,104],[140,804,999,119],[170,799,1001,126],[188,798,1002,127],[210,806,1000,122],[230,820,986,103],[244,840,966,78],[253,868,938,45]],
-    pads:[992,217,27,38,32,33],
+    pads:[992,217,27,38,32,33], eyeGap:9,
     body:[[576,300,395,50],[592,262,414,90],[620,236,424,112],[660,222,422,122],[700,218,424,120],[750,218,428,114],[800,226,428,114],[850,240,424,114],[900,254,418,102],[938,270,395,76],[960,298,360,40]],
     chest:[895,325,68,86,100], pivot:{head:[170,912], body:[322,765]},
     front:{x:43, u:878, top:345, r:[40,35,34]}, hind:{x:72, u:628, top:350, r:[44,36,34], thigh:[636,368,62,64,44]}, paw:[44,23,36],
@@ -26,7 +26,7 @@ const SHAPE = {
   },
   cat2:{
     head:[[80,860,928,38],[95,830,956,80],[115,808,976,102],[145,795,988,119],[185,790,990,127],[215,806,986,118],[238,830,966,96],[250,855,944,70],[258,885,920,35]],
-    pads:[979,227,27,38,31,32],
+    pads:[979,227,27,38,31,32], eyeGap:9,
     body:[[612,310,405,58],[630,276,421,96],[660,254,424,110],[700,244,422,112],[740,242,422,108],[790,248,422,108],[840,262,424,112],[880,278,415,106],[918,300,390,82],[938,328,360,42]],
     chest:[870,330,66,82,102], pivot:{head:[172,897], body:[330,770]},
     front:{x:43, u:858, top:345, r:[40,35,35]}, hind:{x:72, u:642, top:350, r:[44,36,35], thigh:[648,368,62,64,44]}, paw:[44,23,36],
@@ -232,8 +232,8 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
   const probe = headGeo.map(g => new THREE.Mesh(g, new THREE.MeshBasicMaterial({side:THREE.DoubleSide}))), ray = new THREE.Raycaster();
   const front = (x, y) => { ray.set(V(x, y, 20), V(0, 0, -1)); const h = ray.intersectObjects(probe, false)[0]; return h ? h.point.z : null; };
   // yaw：貼片沿哪個水平方向貼到頭上（眼睛朝外斜一點，側面才看得到）
-  function patch(b, [cu, cv, pu, pv], lift, yaw = 0){
-    const rings = 8, seg = 36, pos = [], uv = [], idx = [], cx = X(cu), c = V(cx, Y(cv), front(cx, Y(cv)) ?? hz + rz);
+  function patch(b, [cu, cv, pu, pv], lift, yaw = 0, shift = 0){
+    const rings = 8, seg = 36, pos = [], uv = [], idx = [], cx = X(cu + shift), c = V(cx, Y(cv), front(cx, Y(cv)) ?? hz + rz);
     const d = V(Math.sin(yaw), 0, Math.cos(yaw)), t = V(Math.cos(yaw), 0, -Math.sin(yaw)), wide = 1 / Math.sqrt(Math.cos(yaw));
     for (let i = 0; i <= rings; i++) for (let j = 0; j < seg; j++) {
       const k = i / rings, a = j / seg * Math.PI * 2, du = Math.cos(a) * pu * k, dv = Math.sin(a) * pv * k, q = c.clone().addScaledVector(t, du * wide / PX); q.y = Y(cv + dv);
@@ -246,9 +246,9 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
   }
   const face = bone(head, head.userData.at, 'face'), eyesO = bone(face, [0, Y(A.eyes[0][1]), hz], 'eyesOpen'), eyesC = bone(face, [0, hy, hz], 'eyesShut'), tng = bone(face, head.userData.at, 'tongue');
   for (const e of A.eyes) {
-    const yaw = Math.sign(X(e[0])) * (isCat ? .76 : .7);
-    patch(eyesO, e, .018, yaw);
-    const [cu, cv, pu, pv] = e, arc = [-.82, -.42, 0, .42, .82].map(t => { const x = X(cu + t * pu), y = Y(cv + pv * (.3 - .42 * t * t)); return V(x, y, (front(x, y) ?? hz + rz) + .03); });
+    const side = Math.sign(X(e[0])), yaw = side * (isCat ? .76 : .7), shift = side * (A.eyeGap || 0);
+    patch(eyesO, e, .018, yaw, shift);
+    const [cu, cv, pu, pv] = e, arc = [-.82, -.42, 0, .42, .82].map(t => { const x = X(cu + shift + t * pu), y = Y(cv + pv * (.3 - .42 * t * t)); return V(x, y, (front(x, y) ?? hz + rz) + .03); });
     ink(eyesC, tube(arc, [.012, .022, .025, .022, .012], {n:16, sides:8}), R.ink);
   }
   patch(face, A.muzzlePatch, .01);
@@ -320,8 +320,8 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
     else if (pose === 'groom') {
       sit(); eyes = 0; tongueOut = 1; const lick = Math.sin(t * 9) * .09;
       set('FR', [.07, .3, .3, -1.85 + lick]); o.FR[6] = .9; set('head', [-.05, -.08, .04, .38 + lick * .5, -.2, -.12]);
-    } else if (pose === 'loaf') { lie(id === 'cat' || id === 'cat2' ? .2 : .1); eyes = .38; set('torso', [0, breathe]); }
-    else if (pose === 'down') { lie(.16); set('torso', [0, breathe]); set('tail', [0, 0, 0, 0, Math.sin(t * 3) * .2]); }
+    } else if (pose === 'loaf') { lie(id === 'cat' || id === 'cat2' ? .2 : .1); eyes = 0; tongueOut = 0; set('torso', [0, breathe]); }
+    else if (pose === 'down') { lie(.16); eyes = 0; tongueOut = 0; set('torso', [0, breathe]); set('tail', [0, 0, 0, 0, Math.sin(t * 3) * .2]); }
     else if (pose === 'sleep') {
       lie(hy - ry - low - .02); eyes = 0; tongueOut = 0; set('head', [.14, .05, .1, .03, .38, .2]); set('torso', [0, breathe * 1.8, 0, 0, -.16]); set('tail', [0, 0, 0, .3, .7]);
     } else if (pose === 'eat') {
