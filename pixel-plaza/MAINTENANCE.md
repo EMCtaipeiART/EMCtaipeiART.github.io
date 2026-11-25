@@ -157,3 +157,8 @@
 - 清單 `MODEL3D`（模型網址＋對應的角色工坊造型版本 `atlas`）；`attach3d(c)` 載入後掛在 `c.holder`，原本的 2D 平面圖只保留點選範圍。載入失敗、`?px=1`、或本人發佈了比 `atlas` 新的造型時維持 2D。
 - 模型：`MACHI_LITE=1 blender --background --factory-startup --python models/machi/build_machi.py`；節點名稱 `machi_<head|body|armL|armR|legL|legR>__<材質>[_n]`。改模型後把 `?v=` 加一；改關節位置要同步 `PIVOT3D`。
 - 動作都在 `c.m3d.update()`：步伐相位跟移動距離走（腳不打滑）、`c.moving > 3.5` 為跑步、`c.sitting` 為坐姿（辦公椅上手會打字）。外框粗細 `INK3D`。
+- 髮殼外框：`solidPart()` 只保留貼圖上不透明的三角形做實心描邊（用透明遮罩描邊會在近看時出現虛線）。
+
+## 3D 寵物（2026-11-25）
+- 四隻寵物的模型與動作全部在 `pets3d.js`（程式建模、沒有模型檔）：`makePet(THREE, utils, id, hullLayer)`，花色畫在頂點上，姿勢是各骨頭的偏移量（stand／walk／run／sit／loaf／down／sleep／eat／groom／wag／belly），切換時自動平滑。
+- `catBuild()` 建立、`catPose()` 餵姿勢名稱與移動距離；舊的平面圖保留當點選範圍與備援（`?px=1` 或建模失敗時顯示）。圖鑑等其他地方仍用圖集。改 `pets3d.js` 後把 import 的 `?v=` 加一。
