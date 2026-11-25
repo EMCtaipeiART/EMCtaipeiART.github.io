@@ -164,3 +164,6 @@
 - 貼圖 `assets/pets3d/<id>.webp` 由 `python3 models/pets/build_pet_textures.py` 產生（需要本機的 `ai-views/` 原圖）；版面＝正面／側面／背面（去外框、塗掉眼睛）＋正面原圖（眼睛、口鼻貼片用）。腳本的座標常數要和 `pets3d.js` 的 `REF` 一致。
 - 身體材質依各面朝向混合三視圖（權重在 `paint(骨頭, 幾何, [正,側,背])`）；臘腸狗尾巴與項圈、鈴鐺、珠子用單色漸層。外框粗細 `REF.line`，並用 `sink` 往後退一點避免蓬毛交疊處出現雜線。
 - 姿勢是各骨頭的偏移量（stand／walk／run／sit／loaf／down／sleep／eat／groom／wag／belly），切換時自動平滑。`catBuild()` 建立、`catPose()` 餵姿勢與移動距離；貼圖載入完成才隱藏 2D 平面圖，載入失敗或 `?px=1` 維持 2D（平面圖也保留當點選範圍）。改 `pets3d.js` 或貼圖後要把對應的 `?v=` 加一。
+
+## 外框粗細（2026-11-25）
+- 人物與寵物的黑外框統一為 `EDGE_W`（世界單位，以兩隻狗為準）。立體 Machi 用 `INK3D`（由 `EDGE_W` 換算）；平面人物用 `thickEdge()` 在圖上原有外框（約 `EDGE_BAKED`）外再描一圈；寵物在 `pets3d.js` 的 `REF.line`（px）× `scale` ÷ 200，改 `EDGE_W` 時要一起改。

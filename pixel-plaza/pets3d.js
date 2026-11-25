@@ -7,8 +7,8 @@
 const PX = 200, ATLAS = 1780;
 // gy 腳底、fx 正面中線、sz 側面原點（要和貼圖腳本一致）
 const REF = {
-  cat:{gy:507, fx:319, sz:770, scale:.42, ink:0x351a10, line:8},
-  cat2:{gy:505, fx:319, sz:760, scale:.42, ink:0x3c2216, line:8},
+  cat:{gy:507, fx:319, sz:770, scale:.42, ink:0x351a10, line:16},
+  cat2:{gy:505, fx:319, sz:760, scale:.42, ink:0x3c2216, line:16},
   dog1:{gy:432, fx:265, sz:790, scale:.61, ink:0x351c0c, line:11},
   dog2:{gy:464, fx:278, sz:800, scale:.61, ink:0x431f0a, line:11},
 };
@@ -82,7 +82,7 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
   const decal = new THREE.MeshBasicMaterial({map:atlas, side:THREE.DoubleSide});   // 眼睛、口鼻：直接貼正面原圖
   const flat = new THREE.MeshBasicMaterial({vertexColors:true}), inkMat = new THREE.MeshBasicMaterial({color:R.ink, side:THREE.BackSide});
   // 外框往鏡頭後方退一點：保留外輪廓，蓬毛零件交疊處不會冒出雜線
-  const sink = id === 'dog2' ? .16 : id === 'dog1' ? .06 : .025;
+  const sink = id === 'dog2' ? .16 : id === 'dog1' ? .06 : .045;
   inkMat.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>\n mvPosition.z -= ${sink.toFixed(3)}; gl_Position = projectionMatrix * mvPosition;`); };
   inkMat.customProgramCacheKey = () => 'pet-ink' + sink;
 

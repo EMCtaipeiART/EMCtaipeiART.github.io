@@ -525,7 +525,7 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 <script type="module">
 import * as THREE from 'three';
 import {mergeGeometries, mergeVertices} from '../character-studio/vendor/BufferGeometryUtils.js';
-import {makePet} from './pets3d.js?v=2';
+import {makePet} from './pets3d.js?v=3';
 import {RoundedBoxGeometry} from '../character-studio/vendor/RoundedBoxGeometry.js';
 import {LineSegments2} from '../character-studio/vendor/lines/LineSegments2.js';
 import {LineSegmentsGeometry} from '../character-studio/vendor/lines/LineSegmentsGeometry.js';
@@ -1695,7 +1695,24 @@ const shadowTex = (() => { const c = document.createElement('canvas'); c.width =
 // ---------- 3D 人物（目前只有 Machi）：走路、跑步、坐下都用立體模型；模型載入失敗或本人在角色工坊換了造型就維持 2D ----------
 // 模型由 models/machi/build_machi.py（MACHI_LITE=1）產生，節點名稱 machi_<肢體>__<材質>[_n]（_n＝不描外框）；貼圖自帶陰影，用不受光材質。
 const MODEL3D = {Machi:{url:'assets/machi3d/machi.glb?v=2', atlas:5}};   // atlas：模型對應的角色工坊造型版本；之後發佈了更新的造型就改回 2D
-const INK3D = .05;   // 黑色外框粗細（模型單位，身高約 6）
+const EDGE_W = .0336;   // 人物與寵物的黑色外框粗細（世界單位），以兩隻狗為準
+const INK3D = EDGE_W / (WORLD_H * 224 / 240 / 6);   // 立體人物的外框（模型單位，身高約 6）
+// 平面人物：圖上原有的外框約 EDGE_BAKED 寬，不足的部分在輪廓外再描一圈
+const EDGE_BAKED = .022;
+function thickEdge(mat){
+  const r = ((EDGE_W - EDGE_BAKED) / WORLD_H).toFixed(5);
+  mat.onBeforeCompile = sh => {
+    sh.vertexShader = 'varying vec2 vEdge;\n' + sh.vertexShader.replace('#include <uv_vertex>', `#include <uv_vertex>\n vEdge = (mapTransform * vec3(${r}, ${r}, 0.0)).xy;`);
+    sh.fragmentShader = 'varying vec2 vEdge;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+      if (diffuseColor.a < 0.98) {
+        float near = 0.0;
+        for (int i = 0; i < 12; i++) { float a = float(i) * 0.5235988; near = max(near, texture2D(map, vMapUv + vec2(cos(a), sin(a)) * vEdge).a); }
+        if (near > diffuseColor.a) { diffuseColor.rgb = mix(vec3(0.012, 0.006, 0.004) * diffuse, diffuseColor.rgb, diffuseColor.a); diffuseColor.a = max(diffuseColor.a, near); }
+      }`);
+  };
+  mat.customProgramCacheKey = () => 'char-edge';
+  return mat;
+}
 const PIVOT3D = {hips:[0, 1.5, .18], legL:[.52, 1.52, .18], legR:[-.52, 1.52, .18], armL:[.62, 2.78, .13], armR:[-.62, 2.78, .13], head:[0, 3.1, .2]};
 function solidPart(g, uv, img){   // 只留下三個頂點和中心在貼圖上都不透明的三角形
   const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
@@ -1713,6 +1730,9 @@ async function attach3d(c){
     gltf.scene.updateMatrixWorld(true);
     const light = new THREE.Vector3(-.4, .75, .55).normalize(), tinted = [], parts = {};
     const flatMat = new THREE.MeshBasicMaterial({vertexColors:true}), inkMat = new THREE.MeshBasicMaterial({color:0x0b0807, side:THREE.BackSide});
+    // 外框往鏡頭後方退一點：外輪廓維持完整粗細，手指、鞋帶等小零件不會糊成一團
+    inkMat.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n mvPosition.z -= 0.045; gl_Position = projectionMatrix * mvPosition;'); };
+    inkMat.customProgramCacheKey = () => 'char-ink';
     tinted.push(flatMat);
     gltf.scene.traverse(o => {
       if (!o.isMesh) return;
@@ -1778,7 +1798,7 @@ async function addChar(name, i){
   // 雲端圖集載入失敗（網路、尚未部署）就退回本機靜態檔，不能讓人物消失
   const tex = await loadTex(url(name)).catch(() => { delete cloudChars[name]; return loadTex(url(name)); });
   const sprite = new THREE.Mesh(new THREE.PlaneGeometry(WORLD_H * CELL_W / CELL_H, WORLD_H),
-    new THREE.MeshBasicMaterial({map:tex, transparent:true, alphaTest:.5, side:THREE.DoubleSide}));
+    thickEdge(new THREE.MeshBasicMaterial({map:tex, transparent:true, alphaTest:.5, side:THREE.DoubleSide})));
   sprite.geometry.translate(0, WORLD_H / 2 - .03, 0);
   const blob = new THREE.Mesh(new THREE.PlaneGeometry(1.1, .8), new THREE.MeshBasicMaterial({map:shadowTex, transparent:true, opacity:.34, depthWrite:false}));
   blob.rotation.x = -Math.PI / 2; blob.position.y = .02;
