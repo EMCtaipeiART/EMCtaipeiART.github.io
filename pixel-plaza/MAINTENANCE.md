@@ -184,3 +184,4 @@
 - `pets3d-gen.js`（只給 `viewer.html?ver=gen`）＋`assets/pets3d-gen/`。重建：`models/pets/gen_cat_model.py`（Blender，原始 GLB 在本機 `ai-views/cat-glb/`）→ `models/pets/gen_cat_texture.py`；改貼圖要更新 `pets3d-gen.js` 的 `?v=`。
 - 貼圖是正交三視圖（寬高 2.6、中心高 1.1）；對位靠腳本裡的特徵點，換模型要重量。
 - 圖生 3D 的空間匿名可用的 GPU 時間很短：只能呼叫 `/shape_generation`（上色那支會超時或報錯）。
+- 動作：骨架與權重在 `pets3d-gen.js` 的 `IDS`／`weigh()`（脖子斜線、背線、腿高度是照這顆模型量的）；姿勢數值抄自 `pets3d-draft.js`，理毛、吃、趴睡有針對一體成形的網格調小。項圈和鈴鐺跟著頭。
