@@ -14,8 +14,8 @@ const REF = {
 };
 // body＝沿前後方向 [u, 上緣 v, 下緣 v, 半寬]；head／mane＝沿上下方向 [v, 後緣 u, 前緣 u, 半寬]
 const SHAPE = {
-  cat:{"white":1,"head":[[83.2,901.9,917.0,6.2],[84.3,891.2,927.6,21.3],[87.4,874.3,941.8,42.6],[92.7,855.7,957.8,60.4],[103.4,833.5,974.2,81.7],[116.7,813.1,983.6,98.6],[130.0,799.7,988.9,108.3],[147.8,790.4,992.4,116.3],[165.6,788.2,992.4,121.7],[183.3,790.9,990.7,123.9],[198.9,796.2,990.7,123.0],[214.4,806.9,985.3,116.3],[227.7,821.9,976.5,105.7],[241.0,842.4,964.9,89.7],[252.1,866.3,951.6,71.9],[261.0,892.1,937.4,48.0],[266.8,909.0,924.1,25.8]],"body":[[581.3,303.2,367.6,50.5],[595.5,268.6,396.4,78.8],[619.0,244.6,407.5,97.0],[652.3,228.6,413.3,108.3],[696.7,221.5,413.3,109.9],[741.1,222.4,418.6,105.9],[785.5,227.7,420.9,101.8],[825.5,225.5,418.6,97.0],[865.5,231.3,409.8,92.1],[909.9,252.6,396.4,82.4],[926.7,267.7,390.2,72.7],[936.5,281.9,381.3,59.8],[942.3,293.4,373.4,46.1],[945.8,305.9,362.7,29.9],[947.6,318.3,351.2,13.7]],"pivot":{"head":[174.4,891.2],"body":[321.0,761.1]},"front":{"x":38.2,"u":852.1,"top":338.7,"r":[42.6,33.7,31.1],"path":[851.3,853.0,860.1,869.9],"bottom":1},"hind":{"x":66.6,"u":625.7,"top":343.2,"r":[46.6,32.0,27.5],"path":[654.6,617.7,614.6,631.0],"thigh":[645.7,336.5,66.6,75.5,42.2]},"paw":[42.2,21.3,34.6],"ear":{"base":[253,121,849.9],"tip":[211,43,864.6],"w":46,"d":34,"turn":0.62},"tail":{"pts":[[639.0,272.1],[602.6,238.8],[581.3,198.9],[577.7,157.6],[590.2,118.9],[620.4,91.0],[657.7,80.3]],"r":[31.1,35.5,38.2,37.3,33.7,28.4,24.0]},"eyeAt":[49.7,166.9,23.1,22.2],"muzzleAt":[214.4,47.1,24.9],"headMap":[[84.8,166.9,214.4,266.8],[79,162,218,252]],"collar":[879.7,87.0,248.1,31.1,92.4,297.9,23.1],"nose":[14254190,16643304],"eyes":[[272,162,27,28],[368,162,27,28]],"muzzlePatch":[319,218,52,30],"art":{"torso":[-0.612,0.393,-1.015,0.612,1.449,0.995],"head":[-0.637,1.225,0.138,0.637,2.18,1.275],"ear+":[0.186,1.706,0.363,0.65,2.352,0.684],"ear-":[-0.65,1.706,0.363,-0.186,2.352,0.684],"tail":[-0.18,0.944,-1.127,0.18,2.215,-0.439],"legFL":[0.015,0.001,0.34,0.415,0.982,0.82],"legFR":[-0.415,0.001,0.34,-0.015,0.982,0.82],"legBL":[0.111,0.001,-0.98,0.58,1.014,-0.36],"legBR":[-0.58,0.001,-0.98,-0.111,1.014,-0.36]}},
-  cat2:{"white":1,"head":[[83.2,901.9,917.0,6.2],[84.3,891.2,927.6,21.3],[87.4,874.3,941.8,42.6],[92.7,855.7,957.8,60.4],[103.4,833.5,974.2,81.7],[116.7,813.1,983.6,98.6],[130.0,799.7,988.9,108.3],[147.8,790.4,992.4,116.3],[165.6,788.2,992.4,121.7],[183.3,790.9,990.7,123.9],[198.9,796.2,990.7,123.0],[214.4,806.9,985.3,116.3],[227.7,821.9,976.5,105.7],[241.0,842.4,964.9,89.7],[252.1,866.3,951.6,71.9],[261.0,892.1,937.4,48.0],[266.8,909.0,924.1,25.8]],"body":[[581.3,303.2,367.6,50.5],[595.5,268.6,396.4,78.8],[619.0,244.6,407.5,97.0],[652.3,228.6,413.3,108.3],[696.7,221.5,413.3,109.9],[741.1,222.4,418.6,105.9],[785.5,227.7,420.9,101.8],[825.5,225.5,418.6,97.0],[865.5,231.3,409.8,92.1],[909.9,252.6,396.4,82.4],[926.7,267.7,390.2,72.7],[936.5,281.9,381.3,59.8],[942.3,293.4,373.4,46.1],[945.8,305.9,362.7,29.9],[947.6,318.3,351.2,13.7]],"pivot":{"head":[174.4,891.2],"body":[321.0,761.1]},"front":{"x":38.2,"u":852.1,"top":338.7,"r":[42.6,33.7,31.1],"path":[851.3,853.0,860.1,869.9],"bottom":1},"hind":{"x":66.6,"u":625.7,"top":343.2,"r":[46.6,32.0,27.5],"path":[654.6,617.7,614.6,631.0],"thigh":[645.7,336.5,66.6,75.5,42.2]},"paw":[42.2,21.3,34.6],"ear":{"base":[253,121,849.9],"tip":[211,43,864.6],"w":46,"d":34,"turn":0.62},"tail":{"pts":[[639.0,272.1],[602.6,238.8],[581.3,198.9],[577.7,157.6],[590.2,118.9],[620.4,91.0],[657.7,80.3]],"r":[31.1,35.5,38.2,37.3,33.7,28.4,24.0]},"eyeAt":[49.7,166.9,23.1,22.2],"muzzleAt":[214.4,47.1,24.9],"headMap":[[84.8,166.9,214.4,266.8],[84,178,229,257]],"collar":[879.7,87.0,248.1,31.1,92.4,297.9,23.1],"nose":[13994876,16245700],"eyes":[[273,178,27,28],[368,178,27,28]],"muzzlePatch":[320,229,52,30],"art":{"torso":[-0.561,0.404,-0.785,0.561,1.316,0.935],"head":[-0.635,1.19,0.148,0.635,2.17,1.255],"ear+":[0.198,1.701,0.343,0.64,2.311,0.652],"ear-":[-0.64,1.701,0.343,-0.198,2.311,0.652],"tail":[-0.2,0.106,-1.308,0.2,1.109,-0.465],"legFL":[0.015,0.001,0.29,0.415,0.972,0.77],"legFR":[-0.415,0.001,0.29,-0.015,0.972,0.77],"legBL":[0.111,0.001,-0.87,0.58,1.004,-0.25],"legBR":[-0.58,0.001,-0.87,-0.111,1.004,-0.25]}},
+  cat:{"white":1,"head":[[83.2,901.9,917.0,6.2],[84.3,891.2,927.6,21.3],[87.4,874.3,941.8,42.6],[92.7,855.7,957.8,60.4],[103.4,833.5,974.2,81.7],[116.7,805.1,983.6,98.6],[130.0,791.8,988.9,108.3],[147.8,782.4,992.4,116.3],[165.6,780.2,992.4,121.7],[183.3,782.9,990.7,123.9],[198.9,788.2,990.7,123.0],[214.4,798.9,985.3,116.3],[227.7,814.0,976.5,105.7],[241.0,842.4,964.9,89.7],[252.1,866.3,951.6,71.9],[261.0,892.1,937.4,48.0],[266.8,909.0,924.1,25.8]],"body":[[581.3,303.2,367.6,50.5],[595.5,268.6,396.4,78.8],[619.0,244.6,407.5,97.0],[652.3,228.6,413.3,108.3],[696.7,221.5,413.3,109.9],[741.1,222.4,418.6,105.9],[785.5,227.7,420.9,101.8],[825.5,225.5,418.6,97.0],[865.5,231.3,409.8,92.1],[909.9,252.6,396.4,82.4],[926.7,267.7,390.2,72.7],[936.5,281.9,381.3,59.8],[942.3,293.4,373.4,46.1],[945.8,305.9,362.7,29.9],[947.6,318.3,351.2,13.7]],"pivot":{"head":[174.4,891.2],"body":[321.0,761.1]},"front":{"x":38.2,"u":852.1,"top":338.7,"r":[42.6,33.7,31.1],"path":[851.3,853.0,860.1,869.9],"bottom":1},"hind":{"x":66.6,"u":625.7,"top":343.2,"r":[46.6,32.0,27.5],"path":[654.6,617.7,614.6,631.0],"thigh":[645.7,336.5,66.6,75.5,42.2]},"paw":[42.2,21.3,34.6],"ear":{"base":[253,121,849.9],"tip":[211,43,864.6],"w":46,"d":34,"turn":0.62},"tail":{"pts":[[639.0,272.1],[602.6,238.8],[581.3,198.9],[577.7,157.6],[590.2,118.9],[620.4,91.0],[657.7,80.3]],"r":[31.1,35.5,38.2,37.3,33.7,28.4,24.0]},"eyeAt":[46,163,24.5,25.5],"muzzleAt":[214.4,47.1,24.9],"faceMap":[[2.125,1.72,1.51,1.375,1.225],[82,163,205,232,262]],"collar":[879.7,87.0,248.1,31.1,92.4,297.9,23.1],"nose":[14254190,16643304],"eyes":[[272,162,27,28],[368,162,27,28]],"muzzlePatch":[319,213,42,28],"art":{"torso":[-0.612,0.393,-1.015,0.612,1.449,0.995],"head":[-0.637,1.225,0.138,0.637,2.18,1.275],"ear+":[0.186,1.706,0.363,0.65,2.352,0.684],"ear-":[-0.65,1.706,0.363,-0.186,2.352,0.684],"tail":[-0.18,0.944,-1.127,0.18,2.215,-0.439],"legFL":[0.015,0.001,0.34,0.415,0.982,0.82],"legFR":[-0.415,0.001,0.34,-0.015,0.982,0.82],"legBL":[0.111,0.001,-0.98,0.58,1.014,-0.36],"legBR":[-0.58,0.001,-0.98,-0.111,1.014,-0.36]}},
+  cat2:{"white":1,"head":[[83.2,901.9,917.0,6.2],[84.3,891.2,927.6,21.3],[87.4,874.3,941.8,42.6],[92.7,855.7,957.8,60.4],[103.4,833.5,974.2,81.7],[116.7,805.1,983.6,98.6],[130.0,791.8,988.9,108.3],[147.8,782.4,992.4,116.3],[165.6,780.2,992.4,121.7],[183.3,782.9,990.7,123.9],[198.9,788.2,990.7,123.0],[214.4,798.9,985.3,116.3],[227.7,814.0,976.5,105.7],[241.0,842.4,964.9,89.7],[252.1,866.3,951.6,71.9],[261.0,892.1,937.4,48.0],[266.8,909.0,924.1,25.8]],"body":[[581.3,303.2,367.6,50.5],[595.5,268.6,396.4,78.8],[619.0,244.6,407.5,97.0],[652.3,228.6,413.3,108.3],[696.7,221.5,413.3,109.9],[741.1,222.4,418.6,105.9],[785.5,227.7,420.9,101.8],[825.5,225.5,418.6,97.0],[865.5,231.3,409.8,92.1],[909.9,252.6,396.4,82.4],[926.7,267.7,390.2,72.7],[936.5,281.9,381.3,59.8],[942.3,293.4,373.4,46.1],[945.8,305.9,362.7,29.9],[947.6,318.3,351.2,13.7]],"pivot":{"head":[174.4,891.2],"body":[321.0,761.1]},"front":{"x":38.2,"u":852.1,"top":338.7,"r":[42.6,33.7,31.1],"path":[851.3,853.0,860.1,869.9],"bottom":1},"hind":{"x":66.6,"u":625.7,"top":343.2,"r":[46.6,32.0,27.5],"path":[654.6,617.7,614.6,631.0],"thigh":[645.7,336.5,66.6,75.5,42.2]},"paw":[42.2,21.3,34.6],"ear":{"base":[253,121,849.9],"tip":[211,43,864.6],"w":46,"d":34,"turn":0.62},"tail":{"pts":[[639.0,272.1],[602.6,238.8],[581.3,198.9],[577.7,157.6],[590.2,118.9],[620.4,91.0],[657.7,80.3]],"r":[31.1,35.5,38.2,37.3,33.7,28.4,24.0]},"eyeAt":[46,161,24.5,25.5],"muzzleAt":[214.4,47.1,24.9],"faceMap":[[2.125,1.72,1.51,1.375,1.225],[86,178,215,238,264]],"collar":[879.7,87.0,248.1,31.1,92.4,297.9,23.1],"nose":[13994876,16245700],"eyes":[[273,178,27,28],[368,178,27,28]],"muzzlePatch":[320,224,40,28],"art":{"torso":[-0.561,0.404,-0.785,0.561,1.316,0.935],"head":[-0.635,1.19,0.148,0.635,2.17,1.255],"ear+":[0.198,1.701,0.343,0.64,2.311,0.652],"ear-":[-0.64,1.701,0.343,-0.198,2.311,0.652],"tail":[-0.2,0.106,-1.308,0.2,1.109,-0.465],"legFL":[0.015,0.001,0.29,0.415,0.972,0.77],"legFR":[-0.415,0.001,0.29,-0.015,0.972,0.77],"legBL":[0.111,0.001,-0.87,0.58,1.004,-0.25],"legBR":[-0.58,0.001,-0.87,-0.111,1.004,-0.25]}},
   dog1:{
     head:[[86,892,978,42],[100,870,998,62],[125,852,1012,76],[155,840,1018,84],[190,836,1010,86],[215,842,990,80],[240,855,975,64],[256,880,950,40]],
     muzzle:[[955,184,246,50],[985,187,245,48],[1010,192,238,40],[1030,195,228,28],[1046,200,217,13]],
@@ -45,7 +45,7 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
   const Y = v => (R.gy - v) / PX, Z = u => (u - R.sz) / PX, X = u => (u - R.fx) / PX;
   const INK = R.line / PX, isCat = !id.startsWith('dog');
 
-  const atlas = new THREE.TextureLoader().load(new URL('assets/pets3d/' + id + '.webp?v=7', import.meta.url).href, () => { group.visible = true; ready && ready(); }, undefined, () => fail && fail());
+  const atlas = new THREE.TextureLoader().load(new URL('assets/pets3d/' + id + '.webp?v=8', import.meta.url).href, () => { group.visible = true; ready && ready(); }, undefined, () => fail && fail());
   atlas.colorSpace = THREE.SRGBColorSpace; atlas.anisotropy = 4;
   // 身體材質：依面的朝向混合三視圖（aK＝正面、側面、背面的權重倍數；w=1 表示改用單色 aCol）
   const skin = new THREE.MeshBasicMaterial({map:atlas});
@@ -56,7 +56,7 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
       vec3 n = normalize(vRestN);
       float ty = 1.0 - (500.0 - vRest.y * 200.0) / 520.0;
       vec3 cF = texture2D(map, vec2((200.0 + vRest.x * 200.0) / ${ATLAS}.0, ty)).rgb;
-      vec3 cS = texture2D(map, vec2((690.0 + vRest.z * 200.0) / ${ATLAS}.0, ty)).rgb;
+      vec3 cS = texture2D(map, vec2((690.0 + vRest.z * 200.0) / ${ATLAS}.0, ty + (1.0 - step(0.001, vK.w)) * vSolid.x * 200.0 / 520.0)).rgb;
       vec3 cB = texture2D(map, vec2((1180.0 - vRest.x * 200.0) / ${ATLAS}.0, ty)).rgb;
       vec3 w = vec3(pow(max(n.z, 0.0) * vK.x, 5.0), pow(abs(n.x) * vK.y, 5.0) + 0.00002, pow(max(-n.z, 0.0) * vK.z, 5.0));
       vec3 art = (cF * w.x + cS * w.y + cB * w.z) / (w.x + w.y + w.z);
@@ -193,16 +193,18 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
   // ───── 頭、耳朵 ─────
   const headGeo = [loft('y', [...A.head].reverse(), {n:A.white ? 110 : 48, sides:A.white ? 144 : 64, power:A.white ? 2.05 : isCat ? 2.35 : 2.15})];
   const bump = (x, y, cx, cy, rx, ry) => Math.exp(-(((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2));
-  if (A.white) { const p = headGeo[0].attributes.position;
+  if (A.white) { const p = headGeo[0].attributes.position;   // 嘴邊、鼻梁、下巴：同一顆頭上的柔和隆起
     for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), f = sm(.7, 1.0, z); if (!f) continue;
-      const pad = 1 - (1 - bump(x, y, .095, 1.448, .095, .072)) * (1 - bump(x, y, -.095, 1.448, .095, .072));
-      p.setZ(i, z + f * (.09 * pad - .022 * (bump(x, y, .11, 1.36, .09, .028) + bump(x, y, -.11, 1.36, .09, .028)) + .022 * bump(x, y, 0, 1.55, .075, .085) + .018 * bump(x, y, 0, 1.31, .1, .055) - .012 * (bump(x, y, .25, 1.7, .11, .1) + bump(x, y, -.25, 1.7, .11, .1)))); }
+      const pad = 1 - (1 - bump(x, y, .1, 1.43, .11, .08)) * (1 - bump(x, y, -.1, 1.43, .11, .08));
+      const socket = sm(.06, .36, Math.abs(x)) * Math.exp(-(((y - 1.72) / .17) ** 2));
+      p.setZ(i, z + f * (.062 * pad + .05 * bump(x, y, 0, 1.52, .07, .06) + .014 * bump(x, y, 0, 1.30, .1, .05) - .1 * socket)); }
     headGeo[0].computeVertexNormals(); }
   paint(head, headGeo[0], [1.55, 1, 1]);
-  if (A.white) {   // 原圖畫的鼻嘴用毛色蓋掉，改用立體鼻子和嘴線
-    const g = head.userData.skin[head.userData.skin.length - 1], r = g.attributes.aRest, k = g.attributes.aK, col = g.attributes.aCol, p = headGeo[0].attributes.position, c = C(A.nose[1]);
-    for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), d = Math.hypot(x / .31, (y - 1.43) / .17); if (p.getZ(i) < .75 || d > 1.25) continue;
-      k.setW(i, 1 - sm(.62, 1.25, d)); const shade = .93 + .07 * sm(-.2, .5, headGeo[0].attributes.normal.getY(i)); col.setXYZ(i, c.r * shade, c.g * shade, c.b * shade); } }
+  if (A.white) {   // 臉的範圍只用正面原圖（混到側面圖會出現兩層鼻嘴）
+    const k = head.userData.skin[head.userData.skin.length - 1].attributes.aK, p = headGeo[0].attributes.position;
+    for (let i = 0; i < p.count; i++) { if (p.getZ(i) < .7) continue; const nz = headGeo[0].attributes.normal.getZ(i), near = (1 - sm(.85, 1.3, Math.hypot(p.getX(i) / .36, (p.getY(i) - 1.48) / .29))) * sm(.7, .9, p.getZ(i)), w = near * sm(.5, .85, nz);
+      k.setX(i, 1.55 + 5 * w); k.setY(i, 1 - .88 * w);
+      head.userData.skin[head.userData.skin.length - 1].attributes.aCol.setX(i, .075 * Math.exp(-(((p.getY(i) - 1.45) / .16) ** 2)) * sm(.65, .95, p.getZ(i))); } }
   if (A.muzzle) { headGeo.push(loft('z', A.muzzle, {n:24, sides:36, power:2.1})); paint(head, headGeo[1], [1.2, 1, 0]); }
   if (A.pads) { const [u, v, dx, w, h, d] = A.pads; for (const s of [1, -1]) { const g = oval(s * dx / PX, Y(v), Z(u), w / PX, h / PX, d / PX, {seg:36}); headGeo.push(g); paint(head, g, [1.4, 1, 0]);
     // 嘴邊肉下緣的圓弧嘴線（往外側微微上勾），側面才看得出兩團圓嘴
@@ -241,7 +243,7 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
     for (let i = 0; i <= rings; i++) for (let j = 0; j < seg; j++) {
       const k = i / rings, a = j / seg * Math.PI * 2, du = Math.cos(a) * pu * k, dv = Math.sin(a) * pv * k, q = c.clone().addScaledVector(t, du * wide / PX); q.y = Y(cv + dv);
       ray.set(q.clone().addScaledVector(d, 3), d.clone().negate()); const h = ray.intersectObjects(probe, false)[0]?.point || q;
-      pos.push(h.x + d.x * lift, h.y, h.z + d.z * lift); const crop = at && b !== face ? .8 : 1, au = su + Math.cos(a) * qu * k * crop, av = sv + Math.sin(a) * qv * k * crop; uv.push((1380 + 200 + X(au) * PX) / ATLAS, 1 - (500 - Y(av) * PX) / 520);
+      pos.push(h.x + d.x * lift, h.y, h.z + d.z * lift); const au = su + Math.cos(a) * (at ? pu : qu) * k, av = sv + Math.sin(a) * (at ? pv : qv) * k; uv.push((1380 + 200 + X(au) * PX) / ATLAS, 1 - (500 - Y(av) * PX) / 520);
     }
     for (let i = 0; i < rings; i++) for (let j = 0; j < seg; j++) { const a = i * seg + j, c2 = i * seg + (j + 1) % seg; idx.push(a, a + seg, c2, c2, a + seg, c2 + seg); }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx);
@@ -250,23 +252,14 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
   const face = bone(head, head.userData.at, 'face'), eyesO = bone(face, [0, Y(A.eyeAt ? A.eyeAt[1] : A.eyes[0][1]), hz], 'eyesOpen'), eyesC = bone(face, [0, hy, hz], 'eyesShut'), tng = bone(face, head.userData.at, 'tongue');
   for (const e of A.eyes) {
     const side = Math.sign(X(e[0])), at = A.eyeAt ? [R.fx + side * A.eyeAt[0], A.eyeAt[1], A.eyeAt[2], A.eyeAt[3]] : null;
-    const yaw = side * (at ? .55 : isCat ? .76 : .7), shift = at ? 0 : side * (A.eyeGap || 0);
+    const yaw = side * (at ? .68 : isCat ? .76 : .7), shift = at ? 0 : side * (A.eyeGap || 0);
     patch(eyesO, e, .018, yaw, shift, at);
     const [cu, cv, pu, pv] = at || e, arc = [-.82, -.42, 0, .42, .82].map(t => { const x = X(cu + shift + t * pu), y = Y(cv + pv * (.3 - .42 * t * t)); return V(x, y, (front(x, y) ?? hz + rz) + .03); });
     ink(eyesC, tube(arc, [.012, .022, .025, .022, .012], {n:16, sides:8}), R.ink);
   }
   const mAt = A.muzzleAt ? [R.fx, ...A.muzzleAt] : null;
   if (!A.white) patch(face, A.muzzlePatch, .01, 0, 0, mAt);
-  else {
-    const on = (x, y, lift = .004) => V(x, y, (front(x, y) ?? hz + rz) + lift);
-    const nz = front(0, 1.535), n = oval(0, 1.535, nz + .004, .068, .042, .032, {seg:32}), p = n.attributes.position;
-    for (let i = 0; i < p.count; i++) p.setX(i, p.getX(i) * (.62 + .5 * clamp((p.getY(i) - 1.493) / .084)));   // 上寬下窄的小鼻子
-    n.computeVertexNormals(); paint(face, n, null, {line:false, color:(v, nn) => C(A.nose[0]).multiplyScalar(.82 + .22 * clamp(nn.y + .5)).lerp(C(0xffffff), sm(.86, 1, nn.y * .7 + nn.z * .55) * .45)});
-    const stroke = (pts, r) => ink(face, tube(pts.map(([x, y]) => on(x, y)), r, {n:40, sides:8}), R.ink);
-    stroke([[0, 1.497], [0, 1.465], [0, 1.434]], [.006, .006, .007]);
-    for (const s of [1, -1]) stroke([[0, 1.436], [s * .032, 1.41], [s * .075, 1.397], [s * .12, 1.406], [s * .155, 1.434]], [.007, .0085, .008, .006, .002]);
-  }
-  if (isCat) { const [u, v] = mAt || A.muzzlePatch, x = X(u), y = A.white ? 1.375 : Y(v + 20); ink(tng, oval(x, y, (front(x, y) ?? hz + rz) + .02, .05, .065, .028, {seg:16}), 0xf27f83); }
+  if (isCat) { const [u, v] = mAt || A.muzzlePatch, x = X(u), y = A.white ? 1.35 : Y(v + 20); ink(tng, oval(x, y, (front(x, y) ?? hz + rz) + .02, .05, .065, .028, {seg:16}), 0xf27f83); }
   else if (id === 'dog1') { const x = 0, y = Y(255), z = (front(0, Y(240)) ?? hz + rz) - .02; ink(tng, oval(x, y, z, .075, .105, .042, {seg:20}), 0xf7848a); }
 
   // ───── 項圈（跟著頭走，坐下時才不會蓋到嘴巴） ─────
@@ -293,7 +286,7 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
     const lo = [9, 9, 9], hi = [-9, -9, -9];
     for (const g of list) { const a = g.attributes.aRest.array; for (let i = 0; i < a.length; i++) { lo[i % 3] = Math.min(lo[i % 3], a[i]); hi[i % 3] = Math.max(hi[i % 3], a[i]); } }
     for (const g of list) { const a = g.attributes.aRest.array; for (let i = 0; i < a.length; i++) { const k = i % 3;
-      if (b.name === 'head' && A.headMap && k < 2) { if (k === 1) { const [from, to] = A.headMap, v = R.gy - a[i] * PX; let j = 0; while (j < 2 && v > from[j + 1]) j++; a[i] = Y(to[j] + (v - from[j]) * (to[j + 1] - to[j]) / (from[j + 1] - from[j])); } continue; }
+      if (b.name === 'head' && A.faceMap && k < 2) { if (k === 1) { const [from, to] = A.faceMap, y = a[i]; let j = 0; while (j < from.length - 2 && y < from[j + 1]) j++; a[i] = Y(to[j] + (from[j] - y) / (from[j] - from[j + 1]) * (to[j + 1] - to[j])); } continue; }
       a[i] = box[k] + (a[i] - lo[k]) * (box[k + 3] - box[k]) / Math.max(1e-3, hi[k] - lo[k]); } }
   }
 

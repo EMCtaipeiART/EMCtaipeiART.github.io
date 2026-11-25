@@ -176,3 +176,5 @@
 - Machi 的綁定程式是直接從 `index.html` 的 `const MODEL3D` 到 `async function addChar(` 之間取出執行，這兩個標記不要改名，中間新增的外部相依要同步補到 viewer。
 - 改寵物造型先改 `pets3d-draft.js`（只有展示間會載入），使用者在展示間同意後再覆蓋 `pets3d.js` 並更新版本參數。
 - 兩隻貓的白膜版造型由 `models/pets/white_cat.py` 產生（量測值＝使用者提供的白膜三視圖，圖在本機 `pixel-plaza/ai-views/cat-white/`）：從專案根目錄執行，讀線上版 `pets3d.js`、輸出 `pets3d-draft.js`；調造型改腳本裡的數值，不要手改 draft。上線覆蓋 `pets3d.js` 之後這支腳本即停用。
+- 貓臉的鼻子、嘴巴、鬍鬚一律用原圖畫好的（頭部花紋照原圖座標、`faceMap` 分段對位高度），不要另外建鼻子或嘴線。側臉輪廓靠幾何調整（眼睛兩側內收、鼻頭挺出），正面看不受影響。
+- `build_pet_textures.py` 清串珠／項圈的範圍不可往上蓋到臉（虎斑貓的鼻嘴曾因此被抹糊）。

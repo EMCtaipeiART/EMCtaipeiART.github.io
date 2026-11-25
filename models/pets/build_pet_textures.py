@@ -54,7 +54,7 @@ for pid, P in PETS.items():
     # 虎斑貓的串珠項圈另外建模：把圖上的彩色珠子塗掉，變胖後才不會在背上透出色塊
     if pid == 'cat2':
         r2, b2 = clean[..., 0], clean[..., 2]
-        beads = ((b2 > r2 * .8) | ((r2 > 200) & (clean[..., 1] > 160) & (b2 < 90))) & (yy < 345 * SC) & (yy > 190 * SC) & (r2 + clean[..., 1] + b2 > 150)
+        beads = ((b2 > r2 * .8) | ((r2 > 200) & (clean[..., 1] > 160) & (b2 < 90))) & (yy < 345 * SC) & (yy > 249 * SC) & (r2 + clean[..., 1] + b2 > 150)
         beads = ndimage.binary_dilation(beads, iterations=int(9 * SC))
         j = ndimage.distance_transform_edt(beads, return_distances=False, return_indices=True)
         filled = clean[j[0], j[1]]
@@ -73,7 +73,14 @@ for pid, P in PETS.items():
         soft = np.stack([ndimage.gaussian_filter(filled[..., k], 4 * SC) for k in range(3)], axis=2)
         clean = np.where(collar[..., None], soft, clean)
     # 眼睛塗掉（模型上另外貼）：用周圍毛色補
-    for (cx, cy, rx, ry) in P['eyes']:
+    for n, (cx, cy, rx, ry) in enumerate(P['eyes']):
+        if n == 2 and pid.startswith('cat'):   # 貓的側面眼睛：整塊換成旁邊的毛（只模糊填色會在側臉留下一圈霧斑）
+            dx, dy = int(56 * SC), int(6 * SC)
+            moved = np.roll(clean, (dy, dx), axis=(0, 1))
+            d = np.sqrt(((xx - cx * SC) / (rx * 1.35 * SC)) ** 2 + ((yy - cy * SC) / (ry * 1.35 * SC)) ** 2)
+            a = np.clip((1.15 - d) / .4, 0, 1)[..., None]
+            clean = clean * (1 - a) + moved * a
+            continue
         hole = ((xx - cx * SC) / (rx * SC)) ** 2 + ((yy - cy * SC) / (ry * SC)) ** 2 < 1
         j = ndimage.distance_transform_edt(hole, return_distances=False, return_indices=True)
         filled = clean[j[0], j[1]]

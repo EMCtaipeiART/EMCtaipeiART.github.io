@@ -11,14 +11,17 @@ XU = lambda off: round(FX - off * K, 1)          # 正面圖左右偏移 → 原
 HDY = 0                                          # 頭部高度以正面圖為準
 
 # 頭：[y, 後緣 x, 前緣 x, 半寬]
-head = [[194.5,862,896,14],[197,838,920,48],[204,800,952,96],[216,758,988,136],[240,708,1025,184],[270,662,1046,222],[300,632,1058,244],[340,611,1066,262],
+head0 = [[194.5,862,896,14],[197,838,920,48],[204,800,952,96],[216,758,988,136],[240,708,1025,184],[270,662,1046,222],[300,632,1058,244],[340,611,1066,262],
         [380,606,1066,274],[420,612,1062,279],[455,624,1062,277],[490,648,1050,262],[520,682,1030,238],[550,728,1004,202],[575,782,974,162],[595,840,942,108],[608,878,912,58]]
+head = [[y, a - (18 if 260 <= y <= 530 else 0), b, w] for y, a, b, w in head0]
 # 身體：[x, 上緣 y, 下緣 y, 半寬]
 body = [[140,690,835,125],[172,612,900,195],[225,558,925,240],[300,522,938,268],[400,506,938,272],[500,508,950,262],[600,520,955,252],
         [690,515,950,240],[780,528,930,228],[880,576,900,204],[918,610,886,180],[940,642,866,148],[953,668,848,114],[961,696,824,74],[965,724,798,34]]
 tail = [[270,620],[188,545],[140,455],[132,362],[160,275],[228,212],[312,188]]
 tail_r = [70,80,86,84,76,64,54]
 
+GY_OF = {'cat': 507, 'cat2': 505}
+FACE_V = {'cat': [82, 163, 205, 232, 262], 'cat2': [86, 178, 215, 238, 264]}   # 頭頂、眼、鼻、嘴、下巴
 def cat(key, art, collar):
     d = {
       'white': 1,
@@ -32,16 +35,13 @@ def cat(key, art, collar):
       'paw': [W(95), W(48), W(78)],
       'ear': {'base': [319 - 66, 507 - 386, U(745)], 'tip': [319 - 108, 507 - 464, U(778)], 'w': 46, 'd': 34, 'turn': .62},
       'tail': {'pts': [[U(x), V(y)] for x, y in tail], 'r': [W(r) for r in tail_r]},
-      'eyeAt': [W(112), V(383), W(52), W(50)],
+      'eyeAt': [46, GY_OF[key] - 344, 24.5, 25.5],      # 眼睛中心高度 y=1.72
       'muzzleAt': [V(490), W(106), W(56)],
-      'headMap': [[V(198), V(383), V(490), V(608)], None],
+      'faceMap': [[(507 - v) / 200 for v in FACE_V['cat']], FACE_V[key]],   # 模型高度 → 原圖高度（分段對位）
       'collar': collar,
       'nose': [0xd9806e, 0xfdf4e8] if key == 'cat' else [0xd58b7c, 0xf7e3c4],
     }
     d.update(art)
-    eye, mouth = d['eyes'][0][1], d['muzzlePatch'][1] + 5
-    d['headMap'][1] = [79 if key == 'cat' else 84, eye, mouth, 252 if key == 'cat' else 257]
-    d['muzzlePatch'] = [d['muzzlePatch'][0], mouth, 52, 30]
     return d
 
 old = {}
@@ -98,7 +98,7 @@ rep("uv.push((1380 + 200 + X(cu + du) * PX) / ATLAS, 1 - (500 - Y(cv + dv) * PX)
 rep("""    const side = Math.sign(X(e[0])), yaw = side * (isCat ? .76 : .7), shift = side * (A.eyeGap || 0);
     patch(eyesO, e, .018, yaw, shift);
     const [cu, cv, pu, pv] = e,""", """    const side = Math.sign(X(e[0])), at = A.eyeAt ? [R.fx + side * A.eyeAt[0], A.eyeAt[1], A.eyeAt[2], A.eyeAt[3]] : null;
-    const yaw = side * (at ? .55 : isCat ? .76 : .7), shift = at ? 0 : side * (A.eyeGap || 0);
+    const yaw = side * (at ? .68 : isCat ? .76 : .7), shift = at ? 0 : side * (A.eyeGap || 0);
     patch(eyesO, e, .018, yaw, shift, at);
     const [cu, cv, pu, pv] = at || e,""")
 rep("eyesO = bone(face, [0, Y(A.eyes[0][1]), hz], 'eyesOpen')", "eyesO = bone(face, [0, Y(A.eyeAt ? A.eyeAt[1] : A.eyes[0][1]), hz], 'eyesOpen')")
@@ -113,8 +113,8 @@ rep("for (const [y, r] of [[286, .036], [302, .018]]) paint(head, oval(0, Y(y), 
 rep("group.scale.set(S.scale, S.scale * 1.08, S.scale);", "group.scale.set(S.scale, S.scale * (A.white ? 1.03 : 1.08), S.scale);")
 rep("side.applyAxisAngle(turn, s * .55); dep.applyAxisAngle(turn, s * .55);", "side.applyAxisAngle(turn, s * (E.turn || .55)); dep.applyAxisAngle(turn, s * (E.turn || .55));")
 rep("const sink = id === 'dog2' ? .16 : id === 'dog1' ? .06 : .045;", "const sink = id === 'dog2' ? .16 : id === 'dog1' ? .06 : A.white ? .085 : .045;")
-# 頭部花紋依眼睛、嘴巴高度分段對位；左右不縮放，原圖的五官才會和模型重疊
-rep("for (let i = 0; i < a.length; i++) { const k = i % 3; a[i] =", "for (let i = 0; i < a.length; i++) { const k = i % 3;\n      if (b.name === 'head' && A.headMap && k < 2) { if (k === 1) { const [from, to] = A.headMap, v = R.gy - a[i] * PX; let j = 0; while (j < 2 && v > from[j + 1]) j++; a[i] = Y(to[j] + (v - from[j]) * (to[j + 1] - to[j]) / (from[j + 1] - from[j])); } continue; }\n      a[i] =")
+# 頭部花紋直接用原圖座標（高度分段對位），原圖畫好的鼻子、嘴巴、鬍鬚才會落在正確位置
+rep("for (let i = 0; i < a.length; i++) { const k = i % 3; a[i] =", "for (let i = 0; i < a.length; i++) { const k = i % 3;\n      if (b.name === 'head' && A.faceMap && k < 2) { if (k === 1) { const [from, to] = A.faceMap, y = a[i]; let j = 0; while (j < from.length - 2 && y < from[j + 1]) j++; a[i] = Y(to[j] + (from[j] - y) / (from[j] - from[j + 1]) * (to[j + 1] - to[j])); } continue; }\n      a[i] =")
 # 嘴線改用原圖（另外畫線會變成兩層嘴巴）
 rep("    ink(head, tube(arc, [.005, .011, .012, .01, .004], {n:20, sides:8}), R.ink); } }", "    if (!A.white) ink(head, tube(arc, [.005, .011, .012, .01, .004], {n:20, sides:8}), R.ink); } }")
 rep("set('head', [0, 0, 0, -tilt * .92]);", "set('head', [0, A.white ? .07 : 0, A.white ? .13 : 0, -tilt * .92]);")
@@ -122,38 +122,32 @@ s = s.replace('Z(uc + d + 6)', 'Z(uc + d + (A.white ? 16 : 6))')
 # ── 臉：鼻子、嘴邊、下巴直接雕在同一顆頭上 ──
 rep("loft('y', [...A.head].reverse(), {n:48, sides:64,", "loft('y', [...A.head].reverse(), {n:A.white ? 110 : 48, sides:A.white ? 144 : 64,")
 rep("  paint(head, headGeo[0], [1.55, 1, 1]);\n", """  const bump = (x, y, cx, cy, rx, ry) => Math.exp(-(((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2));
-  if (A.white) { const p = headGeo[0].attributes.position;
+  if (A.white) { const p = headGeo[0].attributes.position;   // 嘴邊、鼻梁、下巴：同一顆頭上的柔和隆起
     for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), f = sm(.7, 1.0, z); if (!f) continue;
-      const pad = 1 - (1 - bump(x, y, .095, 1.448, .095, .072)) * (1 - bump(x, y, -.095, 1.448, .095, .072));
-      p.setZ(i, z + f * (.09 * pad - .022 * (bump(x, y, .11, 1.36, .09, .028) + bump(x, y, -.11, 1.36, .09, .028)) + .022 * bump(x, y, 0, 1.55, .075, .085) + .018 * bump(x, y, 0, 1.31, .1, .055) - .012 * (bump(x, y, .25, 1.7, .11, .1) + bump(x, y, -.25, 1.7, .11, .1)))); }
+      const pad = 1 - (1 - bump(x, y, .1, 1.43, .11, .08)) * (1 - bump(x, y, -.1, 1.43, .11, .08));
+      const socket = sm(.06, .36, Math.abs(x)) * Math.exp(-(((y - 1.72) / .17) ** 2));\n      p.setZ(i, z + f * (.062 * pad + .05 * bump(x, y, 0, 1.52, .07, .06) + .014 * bump(x, y, 0, 1.30, .1, .05) - .1 * socket)); }
     headGeo[0].computeVertexNormals(); }
   paint(head, headGeo[0], [1.55, 1, 1]);
-  if (A.white) {   // 原圖畫的鼻嘴用毛色蓋掉，改用立體鼻子和嘴線
-    const g = head.userData.skin[head.userData.skin.length - 1], r = g.attributes.aRest, k = g.attributes.aK, col = g.attributes.aCol, p = headGeo[0].attributes.position, c = C(A.nose[1]);
-    for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), d = Math.hypot(x / .31, (y - 1.43) / .17); if (p.getZ(i) < .75 || d > 1.25) continue;
-      k.setW(i, 1 - sm(.62, 1.25, d)); const shade = .93 + .07 * sm(-.2, .5, headGeo[0].attributes.normal.getY(i)); col.setXYZ(i, c.r * shade, c.g * shade, c.b * shade); } }
+  if (A.white) {   // 臉的範圍只用正面原圖（混到側面圖會出現兩層鼻嘴）
+    const k = head.userData.skin[head.userData.skin.length - 1].attributes.aK, p = headGeo[0].attributes.position;
+    for (let i = 0; i < p.count; i++) { if (p.getZ(i) < .7) continue; const nz = headGeo[0].attributes.normal.getZ(i), near = (1 - sm(.85, 1.3, Math.hypot(p.getX(i) / .36, (p.getY(i) - 1.48) / .29))) * sm(.7, .9, p.getZ(i)), w = near * sm(.5, .85, nz);
+      k.setX(i, 1.55 + 5 * w); k.setY(i, 1 - .88 * w);
+      head.userData.skin[head.userData.skin.length - 1].attributes.aCol.setX(i, .075 * Math.exp(-(((p.getY(i) - 1.45) / .16) ** 2)) * sm(.65, .95, p.getZ(i))); } }
 """)
-rep("  patch(face, A.muzzlePatch, .01, 0, 0, mAt);", """  if (!A.white) patch(face, A.muzzlePatch, .01, 0, 0, mAt);
-  else {
-    const on = (x, y, lift = .004) => V(x, y, (front(x, y) ?? hz + rz) + lift);
-    const nz = front(0, 1.535), n = oval(0, 1.535, nz + .004, .068, .042, .032, {seg:32}), p = n.attributes.position;
-    for (let i = 0; i < p.count; i++) p.setX(i, p.getX(i) * (.62 + .5 * clamp((p.getY(i) - 1.493) / .084)));   // 上寬下窄的小鼻子
-    n.computeVertexNormals(); paint(face, n, null, {line:false, color:(v, nn) => C(A.nose[0]).multiplyScalar(.82 + .22 * clamp(nn.y + .5)).lerp(C(0xffffff), sm(.86, 1, nn.y * .7 + nn.z * .55) * .45)});
-    const stroke = (pts, r) => ink(face, tube(pts.map(([x, y]) => on(x, y)), r, {n:40, sides:8}), R.ink);
-    stroke([[0, 1.497], [0, 1.465], [0, 1.434]], [.006, .006, .007]);
-    for (const s of [1, -1]) stroke([[0, 1.436], [s * .032, 1.41], [s * .075, 1.397], [s * .12, 1.406], [s * .155, 1.434]], [.007, .0085, .008, .006, .002]);
-  }""")
-rep("if (isCat) { const [u, v] = mAt || A.muzzlePatch, x = X(u), y = Y(v + 20);", "if (isCat) { const [u, v] = mAt || A.muzzlePatch, x = X(u), y = A.white ? 1.375 : Y(v + 20);")
+rep("  patch(face, A.muzzlePatch, .01, 0, 0, mAt);", """  if (!A.white) patch(face, A.muzzlePatch, .01, 0, 0, mAt);""")
+rep("if (isCat) { const [u, v] = mAt || A.muzzlePatch, x = X(u), y = Y(v + 20);", "if (isCat) { const [u, v] = mAt || A.muzzlePatch, x = X(u), y = A.white ? 1.35 : Y(v + 20);")
 # 耳朵：前面凹、邊緣厚、尖端圓
 rep("""const t = -.3 + 1.3 * i / 18, k = clamp(t), w = E.w / PX * (1 - .88 * Math.pow(k, 1.45)),""", """const t = -.3 + 1.3 * i / 18, k = clamp(t), w = E.w / PX * (A.white ? Math.max(.14, Math.pow(1 - Math.pow(k, 1.75), .82)) : 1 - .88 * Math.pow(k, 1.45)),""")
 rep("return at.clone().addScaledVector(side, Math.cos(a) * w).addScaledVector(dep, Math.sin(a) * d * hollow); })); }",
     "let z = Math.sin(a) * hollow;\n          if (A.white) { const c2 = Math.cos(a) ** 2, facing = Math.sin(a) * (dep.z > 0 ? 1 : -1); z = facing > 0 ? Math.sign(dep.z) * (1.5 * c2 * (1 - c2) - .42 * (1 - c2) ** 2) * Math.min(1, (1 - k) * 2.5) : Math.sin(a); }\n          return at.clone().addScaledVector(side, Math.cos(a) * w).addScaledVector(dep, z * d); })); }")
 # 坐下：頭往後收到胸口上方
 s = s.replace("set('head', [0, A.white ? .07 : 0, A.white ? .13 : 0, -tilt * .92]);", "set('head', [0, A.white ? -.07 : 0, A.white ? .2 : 0, -tilt * .92]);")
-rep("const au = su + Math.cos(a) * qu * k, av = sv + Math.sin(a) * qv * k;", "const crop = at && b !== face ? .8 : 1, au = su + Math.cos(a) * qu * k * crop, av = sv + Math.sin(a) * qv * k * crop;")
+rep("const au = su + Math.cos(a) * qu * k, av = sv + Math.sin(a) * qv * k;", "const au = su + Math.cos(a) * (at ? pu : qu) * k, av = sv + Math.sin(a) * (at ? pv : qv) * k;")
 s = s.replace("A.white ? .085 : .045", "A.white ? .11 : .045")
 # 白膜版的收尾圈不要往外突（否則頭頂、胸口會冒出小凸點）
 rep("rings.push(ring(shrink(rows[0], f), 0, -dir * d));", "rings.push(ring(shrink(rows[0], f), 0, -dir * d * (A.white ? .12 : 1)));")
 rep("rings.push(ring(shrink(rows[rows.length - 1], f), 1, dir * d));", "rings.push(ring(shrink(rows[rows.length - 1], f), 1, dir * d * (A.white ? .12 : 1)));")
+rep("vec3 cS = texture2D(map, vec2((690.0 + vRest.z * 200.0) / ${ATLAS}.0, ty)).rgb;", "vec3 cS = texture2D(map, vec2((690.0 + vRest.z * 200.0) / ${ATLAS}.0, ty + (1.0 - step(0.001, vK.w)) * vSolid.x * 200.0 / 520.0)).rgb;")
+s = s.replace("assets/pets3d/' + id + '.webp?v=7'", "assets/pets3d/' + id + '.webp?v=8'")
 open('pixel-plaza/pets3d-draft.js', 'w', encoding='utf-8').write(s)
 print('ok')
