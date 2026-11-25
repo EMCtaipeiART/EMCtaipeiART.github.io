@@ -15,7 +15,8 @@ const REF = {
 // body＝沿前後方向 [u, 上緣 v, 下緣 v, 半寬]；head／mane＝沿上下方向 [v, 後緣 u, 前緣 u, 半寬]
 const SHAPE = {
   cat:{
-    head:[[80,862,942,38],[92,836,978,80],[112,815,998,104],[140,804,1012,119],[170,799,1020,126],[188,798,1030,127],[210,806,1022,122],[230,820,1000,103],[244,840,978,78],[253,868,945,45]],
+    head:[[80,862,932,38],[92,836,962,80],[112,815,985,104],[140,804,999,119],[170,799,1001,126],[188,798,1002,127],[210,806,1000,122],[230,820,986,103],[244,840,966,78],[253,868,938,45]],
+    muzzle:[[955,182,248,64],[988,182,247,60],[1012,183,240,50],[1028,185,231,39],[1037,190,219,23]],
     body:[[576,300,395,50],[592,262,414,90],[620,236,424,112],[660,222,422,122],[700,218,424,120],[750,218,428,114],[800,226,428,114],[850,240,424,114],[900,254,418,102],[938,270,395,76],[960,298,360,40]],
     chest:[895,325,68,86,100], pivot:{head:[170,912], body:[322,765]},
     front:{x:43, u:878, top:345, r:[40,35,34]}, hind:{x:72, u:628, top:350, r:[44,36,34], thigh:[636,368,62,64,44]}, paw:[44,23,36],
@@ -24,7 +25,8 @@ const SHAPE = {
     eyes:[[272,162,27,28],[368,162,27,28]], muzzlePatch:[319,213,42,28],
   },
   cat2:{
-    head:[[80,860,940,38],[95,830,972,80],[115,808,992,102],[145,795,1004,119],[185,790,1006,127],[215,806,998,118],[238,830,975,96],[250,855,950,70],[258,885,925,35]],
+    head:[[80,860,928,38],[95,830,956,80],[115,808,976,102],[145,795,988,119],[185,790,990,127],[215,806,986,118],[238,830,966,96],[250,855,944,70],[258,885,920,35]],
+    muzzle:[[945,192,256,62],[976,192,255,58],[999,193,249,48],[1015,196,240,37],[1024,201,228,22]],
     body:[[612,310,405,58],[630,276,421,96],[660,254,424,110],[700,244,422,112],[740,242,422,108],[790,248,422,108],[840,262,424,112],[880,278,415,106],[918,300,390,82],[938,328,360,42]],
     chest:[870,330,66,82,102], pivot:{head:[172,897], body:[330,770]},
     front:{x:43, u:858, top:345, r:[40,35,35]}, hind:{x:72, u:642, top:350, r:[44,36,35], thigh:[648,368,62,64,44]}, paw:[44,23,36],
@@ -83,7 +85,7 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
   const flat = new THREE.MeshBasicMaterial({vertexColors:true}), inkMat = new THREE.MeshBasicMaterial({color:R.ink, side:THREE.BackSide});
   // 外框往鏡頭後方退一點：保留外輪廓，蓬毛零件交疊處不會冒出雜線
   const sink = id === 'dog2' ? .16 : id === 'dog1' ? .06 : .045;
-  inkMat.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>\n mvPosition.z -= ${sink.toFixed(3)}; gl_Position = projectionMatrix * mvPosition;`); };
+  inkMat.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>\n if (isOrthographic) mvPosition.z -= ${sink.toFixed(3)}; else mvPosition.xyz += normalize(mvPosition.xyz) * ${sink.toFixed(3)}; gl_Position = projectionMatrix * mvPosition;`); };
   inkMat.customProgramCacheKey = () => 'pet-ink' + sink;
 
   // ───── 幾何 ─────
@@ -195,6 +197,7 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
   // ───── 尾巴 ─────
   const tg = tube(tp, A.tail.r.map(r => r / PX), {n:48, sides:fluffy ? 56 : 28, bump:fluffy ? tufts(.1, 9) : id === 'dog1' ? tufts(.14, 5) : null});
   if (id === 'dog1') paint(tail, tg, null, {color:(v, n) => C(0xa65a34).lerp(C(0xfbbd7c), sm(.15, -.55, n.y - n.z * .5 + Math.sin(v.y * 31 + v.z * 23) * .22))});
+  else if (id === 'dog2') paint(tail, tg, null, {color:(v, n) => C(0xfbf5f1).lerp(C(0xe2d3d1), sm(.45, .95, Math.sin(v.y * 19 + v.z * 13 + Math.sin(v.x * 23) * 1.5)) * .55 + sm(.2, -.8, n.y) * .6)});
   else paint(tail, tg, [0, 1, 0]);
 
   // ───── 頭、耳朵 ─────

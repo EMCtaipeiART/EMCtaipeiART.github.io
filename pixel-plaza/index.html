@@ -525,7 +525,7 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 <script type="module">
 import * as THREE from 'three';
 import {mergeGeometries, mergeVertices} from '../character-studio/vendor/BufferGeometryUtils.js';
-import {makePet} from './pets3d.js?v=3';
+import {makePet} from './pets3d.js?v=4';
 import {RoundedBoxGeometry} from '../character-studio/vendor/RoundedBoxGeometry.js';
 import {LineSegments2} from '../character-studio/vendor/lines/LineSegments2.js';
 import {LineSegmentsGeometry} from '../character-studio/vendor/lines/LineSegmentsGeometry.js';
@@ -1731,7 +1731,7 @@ async function attach3d(c){
     const light = new THREE.Vector3(-.4, .75, .55).normalize(), tinted = [], parts = {};
     const flatMat = new THREE.MeshBasicMaterial({vertexColors:true}), inkMat = new THREE.MeshBasicMaterial({color:0x0b0807, side:THREE.BackSide});
     // 外框往鏡頭後方退一點：外輪廓維持完整粗細，手指、鞋帶等小零件不會糊成一團
-    inkMat.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n mvPosition.z -= 0.045; gl_Position = projectionMatrix * mvPosition;'); };
+    inkMat.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n if (isOrthographic) mvPosition.z -= 0.045; else mvPosition.xyz += normalize(mvPosition.xyz) * 0.045; gl_Position = projectionMatrix * mvPosition;'); };
     inkMat.customProgramCacheKey = () => 'char-ink';
     tinted.push(flatMat);
     gltf.scene.traverse(o => {
