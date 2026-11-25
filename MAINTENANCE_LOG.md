@@ -3886,3 +3886,8 @@ $126-10-30
 - 對照圖多一張 models/machi/preview-45.png（30／60／300／330 度）；用環境變數 MACHI_VIEWS 指定渲染角度。
 - 髮殼是 alpha MASK：之後在 three.js 加外框時，髮殼的外框材質要套同一張透明遮罩，否則臉會被黑色蓋住。
 - 原圖 300／330 度把小雞畫在另一側肩膀，模型固定放在角色右肩。GLB 約 3.7 MB、8.2 萬面，放進元宇宙前要減面縮貼圖。
+
+## 2026-11-25　元宇宙放一個站著的 3D Machi（試看樣品）
+- models/machi/build_machi.py 加輕量模式（環境變數 MACHI_LITE=1）：面數減到約 2 萬、貼圖縮一半並存 WebP，輸出 pixel-plaza/assets/machi3d/machi.glb（437 KB；原版約 3.7 MB、8.2 萬面）。
+- pixel-plaza/index.html 的 machi3dSample()：模型站在 Machi 座位附近，正面停 4 秒再轉一圈；用不受光材質、加黑色外框與腳下陰影，素色部分合併成一個網格（共 7 次繪製）。
+- 只有 Machi 登入（或網址加 ?m3d=1）看得到，內嵌小視窗不載入；不加碰撞（避免各人的隨機道具位置不同）。沒有走路動作，原本的 2D 人物照舊。

@@ -152,3 +152,6 @@
 ## 面重疊閃動（z-fighting）守則（2026-11-25）
 - 兩個面不可落在同一平面；貼圖（officeDecal）離底面至少 .01，收邊條要比底座高／凸出 .008 以上。
 - 投影畫面高度上限 2.0（中心 y 1.2），不可超過牆高 2.3。
+
+## 3D 人物樣品（2026-11-25）
+- machi3dSample()：載入 assets/machi3d/machi.glb（由 models/machi/build_machi.py 以 MACHI_LITE=1 產生，改模型後把網址的 ?v= 加一）。限 Machi 或 ?m3d=1；確認效果前不要接到走路／座位系統。

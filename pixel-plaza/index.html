@@ -904,7 +904,7 @@ function syncFun(){
 function collectDrop(d){ claims[d.id] = [1, Date.now()]; fnClaim(d.id, 1); stat.found++; saveStat(); const fresh = dexAdd('d', d.k); showQuote('', (fresh ? '🆕 新發現！' : '✨ ') + ITEMS[d.k][2] + '（累計撿到 ' + stat.found + ' 個）'); floatAt(d.x, 1.2, d.z, fresh ? '+1 新圖鑑！' : '+1'); syncFun(); }
 function collectNote(n){ claims[n.id] = [1, Date.now()]; fnClaim(n.id, 1); stat.notes++; saveStat(); const fresh = dexAdd('n', n.k); showQuote('', (fresh ? '🆕 ' : '') + NOTES[n.k][1] + '（累計 ' + stat.notes + ' 件）'); floatAt(n.x, 1.8, n.z, fresh ? '+1 新圖鑑！' : '+1'); syncFun(); }
 function flushPoop(p){ claims[p.id] = [1, Date.now()]; fnClaim(p.id, 1); stat.flush++; saveStat(); floatAt(p.t.x, 1.4, p.t.z, '+1 衛生之星'); showQuote('', rnd(['🚽 嘩～沖乾淨了！衛生之星 +1', '🚽 順手沖馬桶，同事感謝你！', '🚽 清潔小天使上線，今天運氣 +1', '🚽 沖水成功！廁所又恢復清爽']) + '（累計 ' + stat.flush + ' 次）'); syncFun(); }
-function startGameplay(){ syncFun(); setInterval(syncFun, 1000); syncScreens(); setInterval(syncScreens, 400); }
+function startGameplay(){ setTimeout(machi3dSample, 0); syncFun(); setInterval(syncFun, 1000); syncScreens(); setInterval(syncScreens, 400); }
 let lastCollect = 0;
 function updateGameplay(){
   const t = performance.now() / 1000;
@@ -2737,6 +2737,57 @@ if (!handoff) { try {   // 沒有交接資料時，直接讀網站首頁的登�
     handoff = {name, user, token:get('designRequestEditorToken'), staff:false, monitor:user === 'Machi' || name.toLowerCase() === 'machi', at:Date.now(), fromSite:true};
   } } catch (e) {} }
 if (!handoff) { const as = new URLSearchParams(location.search).get('as'); if (as && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) handoff = {name:as, staff:false, monitor:as === 'Machi', at:Date.now(), dev:true}; }   // 只有本機開發才能用 ?as=名字 假裝登入
+// ---- 3D 人物樣品（試看用）：Machi 的立體模型站在座位附近，慢慢轉一圈。只有 Machi 登入（或網址加 ?m3d=1）看得到 ----
+// 模型由 models/machi/build_machi.py（MACHI_LITE=1）產生；貼圖自帶陰影，所以用不受光的材質，和 2D 人物一致。
+async function machi3dSample(){
+  const me = handoff && [handoff.name, handoff.user].includes('Machi');
+  if (/[?&]embed=1/.test(location.search) || (!me && !/[?&]m3d=1/.test(location.search))) return;
+  try {
+    const {GLTFLoader} = await import('../character-studio/vendor/GLTFLoader.js');
+    const gltf = await new GLTFLoader().loadAsync('assets/machi3d/machi.glb?v=1');
+    gltf.scene.updateMatrixWorld(true);
+    const INK = .036, solid = [], hulls = [], body = new THREE.Group(), light = new THREE.Vector3(-.4, .75, .55).normalize();
+    gltf.scene.traverse(o => {
+      if (!o.isMesh) return;
+      const src = o.material, name = src.name, geo = o.geometry.clone().applyMatrix4(o.matrixWorld), outline = !/_n(_\d+)?$/.test(o.name) && name !== 'bang';
+      const pos = geo.attributes.position, nor = geo.attributes.normal;
+      const inked = () => { const g = new THREE.BufferGeometry(), p = new Float32Array(pos.count * 3);
+        for (let i = 0; i < pos.count; i++) p.set([pos.getX(i) + nor.getX(i) * INK, pos.getY(i) + nor.getY(i) * INK, pos.getZ(i) + nor.getZ(i) * INK], i * 3);
+        g.setAttribute('position', new THREE.BufferAttribute(p, 3)); g.setIndex(geo.index.clone()); return g; };
+      if (src.emissiveMap) {   // 臉、頭髮、瀏海：貼圖
+        const cut = name !== 'face', map = src.emissiveMap;
+        body.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({map, alphaTest:cut ? .5 : 0, side:cut ? THREE.DoubleSide : THREE.FrontSide})));
+        if (outline && cut) { const g = inked(); g.setAttribute('uv', geo.attributes.uv.clone());
+          const h = new THREE.Mesh(g, new THREE.MeshBasicMaterial({map, color:0x000000, alphaTest:.5, side:THREE.BackSide})); h.layers.set(HULL_LAYER); body.add(h); }
+        else if (outline) hulls.push(inked());
+        return;
+      }
+      const c = src.color.clone().add(src.emissive.clone().multiplyScalar(src.emissiveIntensity)), col = new Float32Array(pos.count * 3), n = new THREE.Vector3();
+      for (let i = 0; i < pos.count; i++) { const k = .9 + .16 * Math.max(0, n.fromBufferAttribute(nor, i).dot(light)); col.set([c.r * k, c.g * k, c.b * k], i * 3); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', pos.clone()); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.setIndex(geo.index.clone()); solid.push(g);
+      if (outline) hulls.push(inked());
+    });
+    body.add(new THREE.Mesh(mergeGeometries(solid), new THREE.MeshBasicMaterial({vertexColors:true})));
+    const edge = new THREE.Mesh(mergeGeometries(hulls), new THREE.MeshBasicMaterial({color:0x0d0908, side:THREE.BackSide})); edge.layers.set(HULL_LAYER); body.add(edge);
+    // 高度對齊 2D 人物；鏡頭是俯視的，稍微拉高並往後仰，臉才不會被頭頂蓋住
+    const k = WORLD_H * 224 / 240 / 6, lean = new THREE.Group(), holder = new THREE.Group();
+    body.scale.set(k, k * 1.12, k); lean.rotation.x = -.14; lean.add(body);
+    const blob = new THREE.Mesh(new THREE.PlaneGeometry(1.1, .8), new THREE.MeshBasicMaterial({map:shadowTex, transparent:true, opacity:.34, depthWrite:false}));
+    blob.rotation.x = -Math.PI / 2; blob.position.y = .02; holder.add(blob, lean);
+    const home = chars.Machi?.home || {x:673 * U, z:900 * U};
+    let spot = null;
+    for (let r = 1.5; r <= 7 && !spot; r += .5) for (const a of [0, .5, -.5, 1, -1, 1.57, -1.57, 2.1, -2.1, 3.14]) {   // 座位前方起找一塊空地
+      const x = home.x + Math.sin(a) * r, z = home.z + Math.cos(a) * r;
+      if ([[0, 0], [.6, 0], [-.6, 0], [0, .6], [0, -.6]].every(([dx, dz]) => !blocked(x + dx, z + dz))) { spot = {x, z}; break; }
+    }
+    spot ||= {x:home.x + 1.5, z:home.z};
+    holder.position.set(spot.x, 0, spot.z); scene.add(holder);   // 樣品不加碰撞：只有部分人看得到，加了會讓各人的隨機道具位置不一致
+    const t0 = performance.now();
+    const spin = now => { const t = ((now - t0) / 1000) % 14, u = Math.max(0, t - 4) / 10; body.rotation.y = Math.PI * 2 * (u * u * (3 - 2 * u)); requestAnimationFrame(spin); };   // 正面停 4 秒，再轉一圈
+    requestAnimationFrame(spin);
+    window.__machi3d = holder;
+  } catch (e) { console.warn('3D Machi 樣品載入失敗', e); }
+}
 const adminToken = () => (handoff && handoff.token) || '';
 const isAdmin = () => Boolean(handoff && handoff.monitor && handoff.token);
 const radial = document.createElement('div'); radial.id = 'cpage'; radial.hidden = true; document.body.appendChild(radial);   // 舊名 radial 沿用，指向角色頁面

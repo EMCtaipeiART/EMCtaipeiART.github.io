@@ -11,6 +11,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 OUT = sys.argv[sys.argv.index('--') + 1] if '--' in sys.argv else HERE
 PX = 36.92
+# MACHI_LITE=1：元宇宙用的輕量版（面數與貼圖縮小），輸出到 pixel-plaza/assets/machi3d/，不渲染預覽
+LITE = os.environ.get('MACHI_LITE') == '1'
+def res(n, low=6): return max(low, int(round(n * .45))) if LITE else n
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene
 
@@ -100,6 +103,7 @@ def new_obj(name, verts, faces, m, uvs=None, smooth=True):
 
 def loft(name, rows, m, nth=40, nt=24, power=2.4, cx=0.0, bump=None, uv=False, caps=True):
     R = smooth_rows(rows)
+    nth, nt = res(nth, 14), res(nt, 4)
     th = np.linspace(-math.pi, math.pi, nth + 1); t = np.linspace(0, 1, nt + 1)
     TH, T = np.meshgrid(th, t)
     x, y, z = surf(R, TH, T, power, cx, bump)
@@ -138,6 +142,8 @@ def mat(name, rgb, glow=.5):
     return m
 
 def tex_mat(name, rgba, clip=False):
+    if LITE:                      # 2×2 平均縮成一半
+        rgba = rgba.reshape(rgba.shape[0] // 2, 2, rgba.shape[1] // 2, 2, 4).mean((1, 3))
     h, w = rgba.shape[:2]
     im = bpy.data.images.new(name, w, h, alpha=True)
     im.pixels.foreach_set(np.ascontiguousarray(rgba[::-1], np.float32).ravel()); im.pack()
@@ -343,6 +349,7 @@ loft('bang', BANG_ROWS, tex_mat('bang', bang_texture(), clip=True), 128, 80, 2.2
 # ───────── 小零件 ─────────
 def ball(name, c, r, m, seg=18, rings=12, rz=0.0, ry=0.0):
     bm = bmesh.new()
+    seg, rings = res(seg, 8), res(rings, 6)
     bmesh.ops.create_uvsphere(bm, u_segments=seg, v_segments=rings, radius=1)
     M = Matrix.Rotation(rz, 3, 'Z') @ Matrix.Rotation(ry, 3, 'Y')
     for v in bm.verts:
@@ -364,6 +371,7 @@ def catmull(pts, n):
     return out
 
 def tube(name, pts, radii, m, n=14, sides=14, flat=1.0, line=False):
+    n, sides = res(n, 5), res(sides, 5)
     path = catmull(pts, n); verts, faces = [], []
     for i, p in enumerate(path):
         t = (path[min(i + 1, n)] - path[max(i - 1, 0)]).normalized()
@@ -503,10 +511,16 @@ for o in scene.collection.objects:
 parts = [(join(v, f'machi_{k[0]}' + ('_n' if k[1] else '')), k[1]) for k, v in groups.items()]
 tris = sum(len(p.vertices) - 2 for o, _ in parts for p in o.data.polygons)
 
-glb = os.path.join(HERE, 'machi.glb')
+glb = os.path.join(ROOT, 'pixel-plaza/assets/machi3d/machi.glb') if LITE else os.path.join(HERE, 'machi.glb')
+os.makedirs(os.path.dirname(glb), exist_ok=True)
 bpy.ops.object.select_all(action='SELECT')
-bpy.ops.export_scene.gltf(filepath=glb, export_format='GLB', use_selection=True)
+extra = {'export_image_format': 'WEBP', 'export_image_quality': 90} if LITE else {}
+bpy.ops.export_scene.gltf(filepath=glb, export_format='GLB', use_selection=True, **extra)
 print(f'GLB {os.path.getsize(glb) / 1024:.0f} KB, {tris} tris, {len(parts)} meshes')
+
+if LITE:
+    print('DONE')
+    sys.exit(0)
 
 # ───────── 預覽渲染 ─────────
 ink = bpy.data.materials.new('outline'); ink.use_nodes = True
