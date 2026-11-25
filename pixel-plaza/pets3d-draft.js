@@ -242,7 +242,7 @@ export function makePet(THREE, utils, id, hullLayer, {ready = null, fail = null}
     for (let i = 0; i <= rings; i++) for (let j = 0; j < seg; j++) {
       const k = i / rings, a = j / seg * Math.PI * 2, du = Math.cos(a) * pu * k, dv = Math.sin(a) * pv * k, q = c.clone().addScaledVector(t, du * wide / PX); q.y = Y(cv + dv);
       ray.set(q.clone().addScaledVector(d, 3), d.clone().negate()); const h = ray.intersectObjects(probe, false)[0]?.point || q;
-      const kk = Math.min(1, k * 1.2), l2 = at ? .007 + .065 * (1 - kk * kk) : lift; pos.push(h.x + d.x * l2, h.y, h.z + d.z * l2); const au = su + Math.cos(a) * (at ? pu : qu) * k, av = sv + Math.sin(a) * (at ? pv : qv) * k; uv.push((1380 + 200 + X(au) * PX) / ATLAS, 1 - (500 - Y(av) * PX) / 520);
+      const kk = Math.min(1, k * 1.2), l2 = at ? .006 + .008 * (1 - kk * kk) : lift; pos.push(h.x + d.x * l2, h.y, h.z + d.z * l2); const au = su + Math.cos(a) * (at ? pu : qu) * k, av = sv + Math.sin(a) * (at ? pv : qv) * k; uv.push((1380 + 200 + X(au) * PX) / ATLAS, 1 - (500 - Y(av) * PX) / 520);
     }
     for (let i = 0; i < rings; i++) for (let j = 0; j < seg; j++) { const a = i * seg + j, c2 = i * seg + (j + 1) % seg; idx.push(a, a + seg, c2, c2, a + seg, c2 + seg); }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx);

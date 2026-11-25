@@ -160,7 +160,7 @@ rep("rings.push(ring(shrink(rows[rows.length - 1], f), 1, dir * d));", "rings.pu
 rep("vec3 cS = texture2D(map, vec2((690.0 + vRest.z * 200.0) / ${ATLAS}.0, ty)).rgb;", "vec3 cS = texture2D(map, vec2((690.0 + vRest.z * 200.0) / ${ATLAS}.0, ty + (1.0 - step(0.001, vK.w)) * vSolid.x * 200.0 / 520.0)).rgb;")
 s = s.replace("assets/pets3d/' + id + '.webp?v=7'", "assets/pets3d/' + id + '.webp?v=11'")
 # 眼睛：貼著頭的表面、中央鼓起（不挖眼窩）；貼片比眼睛大一圈，周圍一圈就是原圖本來的眼眶
-rep("pos.push(h.x + d.x * lift, h.y, h.z + d.z * lift);", """const kk = Math.min(1, k * 1.2), l2 = at ? .007 + .065 * (1 - kk * kk) : lift; pos.push(h.x + d.x * l2, h.y, h.z + d.z * l2);""")
+rep("pos.push(h.x + d.x * lift, h.y, h.z + d.z * lift);", """const kk = Math.min(1, k * 1.2), l2 = at ? .006 + .008 * (1 - kk * kk) : lift; pos.push(h.x + d.x * l2, h.y, h.z + d.z * l2);""")
 # 閉眼線照眼睛實際大小（貼片多出來的那一圈不算）
 rep("const [cu, cv, pu, pv] = at || e,", "const [cu, cv, pu, pv] = at ? [at[0], at[1], at[2] / 1.2, at[3] / 1.2] : e,")
 # 鈴鐺自己描一圈貼身的邊（坐下時鈴鐺離胸口遠，整體外框會變成一圈懸空的黑環）
