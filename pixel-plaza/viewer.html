@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="robots" content="noindex">
+<title>3D 角色展示間</title>
+<style>
+:root{--bg:#0b1d15;--panel:#163a2a;--line:#2f6b4f;--text:#eafff2;--sub:#9cc5ae;--on:#5fe08a}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font:14px system-ui,sans-serif;touch-action:none}
+body{display:flex;flex-direction:column}
+.bar{display:flex;flex-wrap:wrap;gap:6px;padding:8px 10px;background:var(--panel);align-items:center}
+.bar span{color:var(--sub);margin:0 2px 0 6px}
+button,label.btn{font:inherit;color:var(--text);background:transparent;border:2px solid var(--line);border-radius:8px;padding:4px 10px;cursor:pointer}
+button.on{background:var(--on);border-color:var(--on);color:#06210f}
+#main{flex:1;display:flex;min-height:0}
+#view{flex:1;position:relative;min-width:0;cursor:grab}
+#view canvas{display:block;position:absolute;inset:0}
+#ref{width:38%;display:none;overflow:hidden;border-left:2px solid var(--line);background:#fff;position:relative}
+#ref img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+#note{position:absolute;left:10px;bottom:8px;color:#14382a;pointer-events:none}
+@media (max-width:700px){button,label.btn{font-size:12px;padding:3px 7px}#main{flex-direction:column}#ref{width:100%;height:35%;border-left:0;border-top:2px solid var(--line)}}
+</style>
+</head>
+<body>
+<div class="bar" id="who"></div>
+<div class="bar" id="poses"></div>
+<div class="bar" id="tools"></div>
+<div id="main">
+  <div id="view"><div id="note">拖曳旋轉・滾輪或兩指縮放</div></div>
+  <div id="ref"><img id="refimg" alt="參考圖"></div>
+</div>
+<input type="file" id="file" accept="image/*" hidden>
+<script type="importmap">{"imports":{"three":"../character-studio/vendor/three.module.js"}}</script>
+<script type="module">
+// 3D 角色展示間：和遊戲共用同一份模型程式（寵物 pets3d*.js；Machi 直接取用 index.html 裡的綁定程式），改完在這裡先看再上線。
+import * as THREE from 'three';
+import {mergeGeometries, mergeVertices} from '../character-studio/vendor/BufferGeometryUtils.js';
+
+const HULL_LAYER = 1, bust = '?t=' + Date.now();
+const live = await import('./pets3d.js' + bust);
+const draft = await import('./pets3d-draft.js' + bust).catch(() => null);
+const WHO = [['Machi', 'Machi'], ['cat', '無名小貓'], ['cat2', '四樓小貓'], ['dog1', '臘腸'], ['dog2', '薩摩耶']];
+const PET_POSES = [['stand', '站'], ['walk', '走'], ['run', '跑'], ['sit', '坐'], ['loaf', '趴縮'], ['down', '趴下'], ['sleep', '睡'], ['eat', '吃'], ['groom', '理毛'], ['wag', '搖尾'], ['belly', '翻肚']];
+const MAN_POSES = [['stand', '站'], ['walk', '走'], ['run', '跑'], ['sit', '坐']];
+const q = new URLSearchParams(location.search);
+const state = {who:WHO.some(w => w[0] === q.get('who')) ? q.get('who') : 'cat', pose:q.get('pose') || 'stand', ver:draft && q.get('ver') !== 'live' ? 'draft' : 'live',
+  yaw:(+q.get('yaw') || 0) * Math.PI / 180, el:.12, zoom:1, spin:false, clay:false, ortho:false};
+
+const view = document.getElementById('view');
+const renderer = new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); view.prepend(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0xcfeadb);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f94, 2.2));
+const key = new THREE.DirectionalLight(0xffffff, 1.2); key.position.set(-2, 4, 3); scene.add(key);
+const floor = new THREE.GridHelper(6, 24, 0x86bfa0, 0xa9d3bb); scene.add(floor);
+const persp = new THREE.PerspectiveCamera(30, 1, .1, 100), ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, .1, 100);
+persp.layers.enable(HULL_LAYER); ortho.layers.enable(HULL_LAYER);
+const clayMat = new THREE.MeshLambertMaterial({color:0xe9e7e3, side:THREE.DoubleSide});
+
+// ---------- Machi：把 index.html 的「3D 人物」整段取出來執行，和遊戲一模一樣 ----------
+let machiKit = null;
+async function makeMachi(){
+  if (!machiKit) {
+    const html = await (await fetch('index.html' + bust)).text();
+    const code = html.slice(html.indexOf('const MODEL3D'), html.indexOf('async function addChar('));
+    const WORLD_H = +/WORLD_H = ([\d.]+)/.exec(html)[1];
+    const body = code.split("'../character-studio/").join("'" + new URL('../character-studio/', location.href).href)
+      .split('MODEL3D[c.name].url').join("new URL(MODEL3D[c.name].url, location.href).href");
+    machiKit = {WORLD_H, attach:new Function('THREE', 'WORLD_H', 'mergeGeometries', 'HULL_LAYER', 'camYaw', body + '\nreturn attach3d;')(THREE, WORLD_H, mergeGeometries, HULL_LAYER, 0)};
+  }
+  const holder = new THREE.Group();
+  const c = {name:'Machi', holder, sprite:{visible:true, material:{visible:true, color:new THREE.Color(1, 1, 1)}}, face:0, moving:0, sitting:null};
+  await machiKit.attach(c);
+  let z = 0, last = 0;
+  return {group:holder, height:2.1, update(pose, now){
+    const dt = Math.min(.05, (now - last) / 1000 || .016); last = now;
+    c.moving = pose === 'walk' ? 2 : pose === 'run' ? 5 : 0; c.sitting = pose === 'sit' ? {} : null;
+    z += c.moving * dt; holder.position.z = z;                 // 步伐跟著移動距離，所以讓他往前走、鏡頭跟著
+    c.m3d && c.m3d.update(dt);
+  }, follow:() => holder.position.z};
+}
+function makePetView(id){
+  const lib = state.ver === 'draft' && draft ? draft : live;
+  return new Promise((res, rej) => {
+    const pet = lib.makePet(THREE, {mergeGeometries, mergeVertices}, id, HULL_LAYER, {ready:() => res({group:pet.group, update:pet.update, follow:() => 0}), fail:() => rej(new Error('貼圖載入失敗'))});
+  });
+}
+
+let current = null, token = 0;
+const originals = new WeakMap();
+function applyClay(){
+  if (!current) return;
+  current.group.traverse(o => {
+    if (!o.isMesh || o.layers.isEnabled(HULL_LAYER)) return;
+    if (!originals.has(o)) originals.set(o, o.material);
+    o.material = state.clay ? clayMat : originals.get(o);
+    if (state.clay && !o.geometry.attributes.normal) o.geometry.computeVertexNormals();
+  });
+}
+async function load(){
+  const mine = ++token;
+  const next = await (state.who === 'Machi' ? makeMachi() : makePetView(state.who));
+  if (mine !== token) return;
+  if (current) scene.remove(current.group);
+  current = next; scene.add(current.group);
+  // 依模型大小決定鏡頭距離
+  for (let i = 0; i < 40; i++) current.update('stand', performance.now() + i * 33, 0);
+  const box = new THREE.Box3().setFromObject(current.group), size = box.getSize(new THREE.Vector3());
+  current.mid = (box.min.y + box.max.y) / 2; current.span = Math.max(size.y, size.x, size.z) * 1.35;
+  applyClay(); window.__viewer = {state, current, ready:true};
+}
+
+function bar(id, label, items, isOn, pick){
+  const el = document.getElementById(id); el.replaceChildren();
+  if (label) { const s = document.createElement('span'); s.textContent = label; el.append(s); }
+  for (const [value, text] of items) { const b = document.createElement('button'); b.textContent = text; b.className = isOn(value) ? 'on' : ''; b.onclick = () => { pick(value); draw(); }; el.append(b); }
+}
+function draw(){
+  bar('who', '角色', WHO, v => v === state.who, v => { if (v !== state.who) { state.who = v; if (v === 'Machi' && !MAN_POSES.some(p => p[0] === state.pose)) state.pose = 'stand'; load(); } });
+  bar('poses', '動作', state.who === 'Machi' ? MAN_POSES : PET_POSES, v => v === state.pose, v => { state.pose = v; });
+  const tools = [['a0', '正面'], ['a45', '45°'], ['a90', '側面'], ['a180', '背面'], ['spin', '自動旋轉'], ['clay', '白膜'], ['ortho', '平面投影'], ['ref', '參考圖']];
+  if (draft && state.who !== 'Machi') tools.push(['draft', '試作版'], ['live', '線上版']);
+  bar('tools', '檢視', tools, v => v === 'spin' ? state.spin : v === 'clay' ? state.clay : v === 'ortho' ? state.ortho : v === state.ver, v => {
+    if (v[0] === 'a') { state.yaw = +v.slice(1) * Math.PI / 180; state.el = 0; state.spin = false; }
+    else if (v === 'ref') document.getElementById('file').click();
+    else if (v === 'draft' || v === 'live') { state.ver = v; load(); }
+    else { state[v] = !state[v]; if (v === 'clay') applyClay(); }
+  });
+}
+document.getElementById('file').onchange = e => {   // 自己的參考圖（例如白膜三視圖）並排比對；只在這台裝置上看，不會上傳
+  const f = e.target.files[0]; if (!f) return;
+  document.getElementById('refimg').src = URL.createObjectURL(f); document.getElementById('ref').style.display = 'block';
+};
+document.getElementById('ref').ondblclick = e => { e.currentTarget.style.display = 'none'; };
+
+const pts = new Map(); let pinch = 0;
+view.addEventListener('pointerdown', e => { view.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); pinch = 0; state.spin = false; draw(); });
+view.addEventListener('pointermove', e => {
+  const p = pts.get(e.pointerId); if (!p) return;
+  if (pts.size === 1) { state.yaw -= (e.clientX - p[0]) * .01; state.el = Math.max(-.2, Math.min(1.35, state.el + (e.clientY - p[1]) * .006)); }
+  pts.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pts.size === 2) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch) state.zoom = Math.max(.5, Math.min(4, state.zoom * d / pinch)); pinch = d; }
+});
+for (const t of ['pointerup', 'pointercancel']) view.addEventListener(t, e => { pts.delete(e.pointerId); pinch = 0; });
+view.addEventListener('wheel', e => { e.preventDefault(); state.zoom = Math.max(.5, Math.min(4, state.zoom * Math.exp(-e.deltaY * .0015))); }, {passive:false});
+addEventListener('gesturestart', e => e.preventDefault());
+
+let size = [0, 0];
+renderer.setAnimationLoop(now => {
+  const w = view.clientWidth, h = view.clientHeight;
+  if (w !== size[0] || h !== size[1]) { size = [w, h]; renderer.setSize(w, h); }
+  if (!current) return;
+  current.update(state.pose, now, 0);
+  if (state.spin) state.yaw += .008;
+  const aspect = w / h, span = current.span / state.zoom * Math.max(1, .9 / aspect), z = current.follow(), cam = state.ortho ? ortho : persp;
+  const dist = span / 2 / Math.tan(15 * Math.PI / 180);
+  if (state.ortho) { ortho.left = -span * aspect / 2; ortho.right = span * aspect / 2; ortho.top = span / 2; ortho.bottom = -span / 2; }
+  else persp.aspect = aspect;
+  cam.updateProjectionMatrix();
+  // 鏡頭繞著模型轉（模型本身不動）
+  cam.position.set(Math.sin(state.yaw) * Math.cos(state.el) * dist, current.mid + Math.sin(state.el) * dist, z + Math.cos(state.yaw) * Math.cos(state.el) * dist);
+  cam.lookAt(0, current.mid, z);
+  floor.position.z = Math.round(z / .25) * .25;
+  renderer.render(scene, cam);
+});
+draw(); load();
+</script>
+</body>
+</html>
