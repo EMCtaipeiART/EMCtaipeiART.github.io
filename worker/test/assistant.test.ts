@@ -72,6 +72,15 @@ describe('assistantChat', () => {
     expect((store.data.get(logKey(taipeiDay(NOW))) as AssistantLogEntry[])[0]).toMatchObject({ tired: true, question: '嗨' });
   });
 
+  it('files a wish even when the model only claims it was recorded', async () => {
+    const filed: string[] = [];
+    await assistantChat({ message: '許願！短網址希望可以新增「搜尋」' }, db(), anna, memoryStore(), { apiKey: 'k', now: () => NOW,
+      fetchImpl: (async () => reply('我已經把這個需求記下來回報給管理者。')) as typeof fetch,
+      fileIssue: async (_who, content) => { filed.push(content); } });
+    expect(filed).toHaveLength(1);
+    expect(filed[0]).toContain('【小幫手轉達許願】');
+  });
+
   it('warns about low battery only once when crossing 80%', async () => {
     const store = memoryStore();
     await store.put(usageKey(taipeiDay(NOW), 'anna@emctaipei.com'), ASSISTANT_DAILY_TOKENS * 0.79);
