@@ -93,7 +93,7 @@ const originals = new WeakMap();
 function applyClay(){
   if (!current) return;
   current.group.traverse(o => {
-    if (!o.isMesh || o.layers.isEnabled(HULL_LAYER)) return;
+    if (!o.isMesh || o.layers.isEnabled(HULL_LAYER) || (state.who !== 'Machi' && !o.geometry.attributes.aRest)) return;
     if (!originals.has(o)) originals.set(o, o.material);
     o.material = state.clay ? clayMat : originals.get(o);
     if (state.clay && !o.geometry.attributes.normal) o.geometry.computeVertexNormals();
@@ -159,6 +159,7 @@ renderer.setAnimationLoop(now => {
   if (state.ortho) { ortho.left = -span * aspect / 2; ortho.right = span * aspect / 2; ortho.top = span / 2; ortho.bottom = -span / 2; }
   else persp.aspect = aspect;
   cam.updateProjectionMatrix();
+  if (state.clay) cam.layers.disable(HULL_LAYER); else cam.layers.enable(HULL_LAYER);
   // 鏡頭繞著模型轉（模型本身不動）
   cam.position.set(Math.sin(state.yaw) * Math.cos(state.el) * dist, current.mid + Math.sin(state.el) * dist, z + Math.cos(state.yaw) * Math.cos(state.el) * dist);
   cam.lookAt(0, current.mid, z);
