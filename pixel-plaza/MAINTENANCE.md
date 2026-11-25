@@ -153,5 +153,7 @@
 - 兩個面不可落在同一平面；貼圖（officeDecal）離底面至少 .01，收邊條要比底座高／凸出 .008 以上。
 - 投影畫面高度上限 2.0（中心 y 1.2），不可超過牆高 2.3。
 
-## 3D 人物樣品（2026-11-25）
-- machi3dSample()：載入 assets/machi3d/machi.glb（由 models/machi/build_machi.py 以 MACHI_LITE=1 產生，改模型後把網址的 ?v= 加一）。限 Machi 或 ?m3d=1；確認效果前不要接到走路／座位系統。
+## 3D 人物（2026-11-25，目前只有 Machi）
+- 清單 `MODEL3D`（模型網址＋對應的角色工坊造型版本 `atlas`）；`attach3d(c)` 載入後掛在 `c.holder`，原本的 2D 平面圖只保留點選範圍。載入失敗、`?px=1`、或本人發佈了比 `atlas` 新的造型時維持 2D。
+- 模型：`MACHI_LITE=1 blender --background --factory-startup --python models/machi/build_machi.py`；節點名稱 `machi_<head|body|armL|armR|legL|legR>__<材質>[_n]`。改模型後把 `?v=` 加一；改關節位置要同步 `PIVOT3D`。
+- 動作都在 `c.m3d.update()`：步伐相位跟移動距離走（腳不打滑）、`c.moving > 3.5` 為跑步、`c.sitting` 為坐姿（辦公椅上手會打字）。外框粗細 `INK3D`。

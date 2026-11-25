@@ -505,10 +505,21 @@ def join(objs, name):
     objs[0].name = name
     return objs[0]
 
+LEGS = {'sole', 'shoe', 'tongue', 'lace', 'toecap', 'soleline', 'short', 'leg'}
+ARMS = {'sleeve', 'cuff', 'hand', 'thumb', 'knuckle', 'cuffline'}
+def limb(o):   # 元宇宙要讓手腳擺動：節點名稱帶肢體（L＝角色左側 +X）
+    n = o.name.split('.')[0]
+    if n in ('head', 'hair', 'bang') or n.startswith('ear'):
+        return 'head'
+    if n in LEGS or n in ARMS:
+        x = sum(v.co.x for v in o.data.vertices)
+        return ('leg' if n in LEGS else 'arm') + ('L' if x > 0 else 'R')
+    return 'body'
+
 groups = {}
 for o in scene.collection.objects:
-    groups.setdefault((o.data.materials[0].name, bool(o.get('noline'))), []).append(o)
-parts = [(join(v, f'machi_{k[0]}' + ('_n' if k[1] else '')), k[1]) for k, v in groups.items()]
+    groups.setdefault((limb(o), o.data.materials[0].name, bool(o.get('noline'))), []).append(o)
+parts = [(join(v, f'machi_{k[0]}__{k[1]}' + ('_n' if k[2] else '')), k[2]) for k, v in groups.items()]
 tris = sum(len(p.vertices) - 2 for o, _ in parts for p in o.data.polygons)
 
 glb = os.path.join(ROOT, 'pixel-plaza/assets/machi3d/machi.glb') if LITE else os.path.join(HERE, 'machi.glb')
