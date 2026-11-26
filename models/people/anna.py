@@ -96,20 +96,18 @@ def paste_art(col, th, x, z, lo=.5):
 EDGE = (.28, .15, .08)
 SCALP = rows([(112, 47, 128, 84), (104, 54, 140, 75), (94, 62.5, 160, 68), (84, 61.5, 172, 65), (72, 61, 180, 64), (60, 59.5, 183, 64),
               (50, 56.5, 182, 66), (40, 53, 178, 70), (30, 47, 172, 77), (20, 37.5, 162, 87), (14, 26, 148, 100), (11, 2, 125, 118)])
-FRONT_WIN = [(193, 105), (205, 99), (218, 105), (234, 128), (248, 151), (270, 171), (292, 190), (312, 204), (320, 220), (330, 234), (302, 248),
-             (287, 262), (262, 273), (205, 286), (148, 273), (123, 262), (108, 248), (80, 234), (90, 220), (98, 204), (118, 190), (140, 171),
-             (162, 151), (176, 128)]
-SIDE_WIN = [(215, 48), (172, 54), (166, 64), (150, 69), (141, 80), (133, 89), (123, 86), (109, 87), (107, 102), (120, 109), (132, 116), (215, 120)]
+FRONT_WIN = [(205, 103), (192, 102), (181, 110), (171, 132), (160, 152), (141, 171), (126, 185), (114, 192), (100, 197), (85, 206), (76, 219), (77, 234), (88, 243), (105, 247), (124, 257), (149, 270), (176, 276), (205, 279), (235, 276), (262, 270), (286, 258), (303, 247), (321, 243), (332, 233), (332, 219), (323, 205), (310, 198), (295, 195), (284, 184), (268, 170), (250, 151), (238, 130), (229, 109), (217, 102)]
+SIDE_WIN = [(215, 52), (172, 58), (160, 69), (147, 74), (141, 82), (133, 89), (123, 86), (109, 87), (107, 102), (120, 109), (132, 116), (215, 120)]
 
-def scalp_texture(W=1024, H=768):
+def scalp_texture(W=1536, H=1152):
     R = smooth_rows(SCALP)
     U, V = np.meshgrid((np.arange(W) + .5) / W, 1 - (np.arange(H) + .5) / H)
     th = (U - .5) * 2 * math.pi
     x, y, z = surf(R, th, V, 2.25, bump=waves(.018))
     col = paste_art(hair_color(th, z), th, x, z, .55)
     nx, ny = neutral_px(x, z)
-    win = (y < -.45) & in_poly(nx, ny, FRONT_WIN)
-    win |= (y < .52) & (y > -1.35) & (np.abs(x) > np.interp(z, (Z(82), Z(66)), (.8, 1.36))) & in_poly(120 - PX * y, 120 - PX * (z - 3), SIDE_WIN)
+    win = (y < -.45) & in_poly(nx, ny, smooth_poly(FRONT_WIN)) & (np.abs(x) < np.interp(z, (Z(84), Z(62)), (1.06, 1.7)))     # 太陽穴交給前面的髮束蓋
+    win |= (y < .52) & (y > -1.35) & (np.abs(x) > np.interp(z, (Z(82), Z(66)), (.8, 1.36))) & in_poly(120 - PX * y, 120 - PX * (z - 3), smooth_poly(SIDE_WIN))
     win |= (z < Z(103)) & (y < -.3) & (np.abs(x) < 1.1)
     pad = np.pad(win, ((0, 0), (5, 5)), mode='wrap')
     line = dilate(pad, 3)[:, 5:-5] & ~win
@@ -136,17 +134,28 @@ def mass_texture(R_, bump, front_lo, phase, hem=None, cx=0.0, W=1024, H=768, pow
     return np.dstack([np.clip(col, 0, 1), a])
 
 hem = lambda th, x: Z(153) - .22 * np.abs(np.sin(th * 6.5)) ** .6 - .05 * np.sin(th * 15)
-loft('hairback', MASS, tex_mat('hair_back', mass_texture(MASS, waves(.055), .8, 0.0, hem), clip=True), 96, 56, 2.3, bump=waves(.055), uv=True, caps=False)
+MR = smooth_rows(MASS)
+back_, _ = loft('hairback', MASS, tex_mat('hair_back', mass_texture(MASS, waves(.055), .8, 0.0, hem), clip=True), 96, 56, 2.3, bump=waves(.055), uv=True, caps=False)
+for v_ in back_.data.vertices:                                      # 下巴以下的後髮退到手臂後面，才不會穿出袖子
+    k = min(1.0, max(0.0, (Z(110) - v_.co.z) / .35)) * min(1.0, max(0.0, (1.45 - abs(v_.co.x)) / .35))
+    if v_.co.y < .16: v_.co.y += (.16 - v_.co.y) * k
 
-# 肩前兩束
-LOCK = rows([(160, 3, 148, 138), (152, 12, 160, 127), (140, 19, 165, 120), (127, 15, 160, 117), (115, 17, 153, 116), (108, 12, 146, 118), (100, 3, 136, 123)])
-for s in (-1, 1):
-    cx = s * 52 / PX
-    lock, _ = loft('lock', LOCK, tex_mat('hair_lock%d' % (s > 0), mass_texture(LOCK, waves(.09), .35, s * 2.0, cx=cx, W=512, H=512, power=2.1)),
-                   48, 40, 2.1, cx=cx, bump=waves(.09), uv=True)
-    for v in lock.data.vertices:
-        row = 120 - (v.co.z - 3) * PX
-        v.co.x += s * float(np.interp(row, (100, 112, 127, 141, 160), (-1, -2, -5, 4, -1))) / PX
+# 肩前髮束：直接照原畫剪下來做成往外後彎的弧面（正面看就是原畫的輪廓和筆觸）
+PANELS = [([(150.0, 150.0), (140.0, 170.0), (125.0, 185.0), (114.5, 191.2), (113.8, 205.0), (115.5, 220.0), (116.5, 237.5), (118.8, 247.0), (140.0, 260.5), (162.5, 269.0), (185.5, 274.0), (183.8, 285.0), (172.5, 289.0), (152.5, 296.5), (140.0, 312.5), (125.0, 324.0), (111.2, 337.5), (107.5, 345.5), (111.5, 355.0), (114.0, 364.0), (106.5, 382.5), (97.5, 405.0), (89.5, 421.5), (75.0, 416.2), (0.0, 416.2), (0.0, 232.0), (48.0, 205.0), (96.0, 176.0), (140.0, 153.0)], None),
+          ([(255.0, 150.0), (267.5, 170.0), (285.0, 185.0), (294.0, 192.5), (294.5, 210.0), (293.0, 230.0), (293.5, 241.2), (287.5, 253.0), (275.0, 264.0), (255.0, 271.5), (227.0, 274.0), (227.5, 284.0), (242.5, 289.0), (258.0, 295.5), (272.5, 307.5), (282.5, 319.0), (295.0, 327.5), (301.5, 341.2), (299.0, 349.0), (294.0, 357.5), (300.0, 375.0), (308.0, 392.5), (317.5, 412.5), (330.5, 420.5), (409.0, 420.5), (409.0, 232.0), (362.0, 205.0), (314.0, 176.0), (270.0, 153.0)], None)]
+def panel_y(x, z):
+    row = 120 - (z - 3) * PX; px_ = abs(x) * PX
+    inner = float(np.interp(row, (68, 82, 96, 110, 125, 142, 160), (116, 122, 136, 158, 166, 163, 148)))
+    t = min(1.0, max(0.0, (px_ - 30) / 56))
+    u = inner + (112 - inner) * t ** 2.4
+    w, yf, yb = (float(np.interp(z, MR[:, 0], MR[:, j])) for j in (1, 2, 3))      # 不能埋進背後那團頭髮
+    if abs(x) < w and MR[0, 0] <= z <= MR[-1, 0]:
+        q = (1 - abs(x / w) ** 2.3) ** (1 / 2.3)
+        u = max(u, 120 - PX * ((yf + yb) / 2 - (yb - yf) / 2 * q * 1.07) + 2)
+    return Y(u)
+for poly, hole in PANELS:
+    art_panel('lock', NEU, neutral_px, poly, panel_y, hole)['noline'] = True
+
 def hair_pt(th, v, out=.03):
     t = np.interp(Z(v), SR[:, 0], np.linspace(0, 1, len(SR)))
     x, y, z = surf(SR, np.array(th), np.array(t), 2.25)
@@ -175,10 +184,10 @@ for s in (-1, 1):
     for o in set(scene.collection.objects) - before:
         o.data.transform(M)
 
-# 耳朵
-for s in (-1, 1):
-    ball('ear', (s * 1.17, .13, Z(95)), (.23, .21, .28), SKIN, 22, 14, rz=s * .6)
-    ball('earin', (s * 1.35, .04, Z(95.5)), (.07, .12, .155), PINK, 14, 10, rz=s * .6)['noline'] = True
+# 耳朵：照原畫的形狀
+EAR_ART = [(107, 200), (96, 197), (85, 202), (79, 212), (79, 224), (85, 234), (95, 240), (105, 239), (108, 220)]
+for s, poly in ((-1, EAR_ART), (1, [(410 - x, y) for x, y in EAR_ART])):
+    art_ear(NEU, neutral_px, poly, .08, s * .62, .16, SKIN)
 
 # ───────── 身體：上衣正面直接貼原畫 ─────────
 def leopard(W=512, H=512, seed=31, cols=11, rows_=6):
@@ -223,7 +232,8 @@ def torso_texture(W=1024, H=768):
     col[pants] = leopard(W, H, 5, 20, 8)[pants]
     nx, ny = neutral_px(x, z)
     s = sample(NEU, nx, ny)
-    ok = (s[..., 3] > .9) & (np.cos(th) > .45) & (np.abs(nx - 205) < 54) & (ny > 280) & (ny < 440)
+    hairpx = (s[..., 0] - s[..., 2] > .2) & (s[..., 1] > .3) & (s[..., 1] < .72) & (v < 151) & (np.abs(nx - 205) > 32)     # 原畫上蓋住身體的頭髮不要貼上衣服
+    ok = (s[..., 3] > .9) & (np.cos(th) > .45) & (np.abs(nx - 205) < 44) & (ny > 280) & (ny < 440) & ~hairpx
     a = (np.clip((np.cos(th) - .45) / .2, 0, 1) * ok)[..., None]
     col = col * (1 - a) + s[..., :3] * a
     return np.dstack([np.clip(col, 0, 1), np.ones((H, W), np.float32)])
@@ -292,6 +302,6 @@ for s in (-1, 1):
             v.co.z = v.co.z * 1.7 if (thick or v.co.z < .18) else v.co.z * .80 + .16        # 厚底
 
 finish('Anna',
-       heads={'head', 'hair', 'hairback', 'lock', 'clip', 'cliphood', 'clipface', 'clipskull', 'clipeye', 'ear', 'earin'},
+       heads={'head', 'hair', 'hairback', 'lock', 'clip', 'cliphood', 'clipface', 'clipskull', 'clipeye', 'ear', 'earback'},
        legs={'sole', 'shoe', 'tongue', 'soleline', 'pant'},
        arms={'arm', 'hand', 'thumb', 'puff', 'puffedge', 'bracelet'})

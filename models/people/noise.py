@@ -37,8 +37,8 @@ LACE = mat('lace', (196, 186, 176), .75)
 METAL = mat('button', (182, 176, 168), .8)
 
 # ───────── 臉 ─────────
-FACE_ROWS = rows([(126.5, 5, 142, 118), (124.5, 17, 154, 104), (120, 29, 161, 94), (114, 36.5, 165, 86), (108, 40, 166.5, 80), (100, 41.5, 166, 74),
-                  (90, 41.5, 165, 71), (80, 40, 163, 70), (70, 37.5, 159, 72), (60, 33, 152, 77), (52, 24, 140, 88), (47, 2, 118, 112)])
+FACE_ROWS = rows([(128.3, 5, 142, 118), (126.8, 18, 154, 104), (124.2, 29, 161, 94), (121, 35.5, 164, 87), (117, 39.5, 165.5, 81), (111, 41.5, 166.5, 76),
+                  (103, 42.3, 166, 73), (95, 42.3, 165.5, 71), (86, 41.2, 164, 70), (76, 39, 161, 72), (66, 34.5, 155, 76), (56, 25, 141, 88), (51, 2, 118, 112)])
 def cheek(th, z):
     side = np.exp(-((np.abs(th) - .85) / .38) ** 2)
     return side * (.04 * np.exp(-((z - Z(111)) / .2) ** 2) - .03 * np.exp(-((z - Z(94)) / .22) ** 2))
@@ -61,7 +61,7 @@ def face_texture(W=1024, H=768):
         a = np.clip((1 - d) / .08, 0, 1) * front
         col = col * (1 - a[..., None]) + s * a[..., None]
     for x0, x1 in ((94, 153), (202, 262)):                           # 眉毛
-        a = np.clip((.55 - r) / .2, 0, 1) * ((nx > x0) & (nx < x1) & (ny > 199) & (ny < 220)) * front
+        a = np.clip((.55 - r) / .2, 0, 1) * ((nx > x0) & (nx < x1) & (ny > 199) & (ny < 232) & (s[..., 2] < r + .12)) * front
         col = col * (1 - a[..., None]) + s * a[..., None]
     a = np.clip((.62 - g) / .14, 0, 1) * ((nx > 156) & (nx < 200) & (ny > 280) & (ny < 296)) * front      # 嘴巴
     col = col * (1 - a[..., None]) + s * a[..., None]
@@ -73,7 +73,7 @@ def face_texture(W=1024, H=768):
 loft('head', FACE_ROWS, tex_mat('face', face_texture()), 72, 48, 2.35, bump=cheek, uv=True)
 
 # ───────── 短髮（帽子下露出的後腦、鬢角） ─────────
-HAIR_ROWS = rows([(122, 20, 104, 92), (117, 34, 118, 78), (110, 42, 134, 68), (100, 47, 150, 62), (90, 50.5, 163, 59),
+HAIR_ROWS = rows([(126.5, 24, 108, 90), (123, 37, 120, 78), (117, 45, 132, 70), (110, 47, 142, 66), (100, 47, 150, 62), (90, 50.5, 163, 59),
                   (80, 51.5, 169, 59), (70, 50, 168, 61), (60, 45, 162, 66), (50, 34, 148, 80), (45, 3, 120, 110)])
 def tufts(th, z):
     total = np.zeros(np.shape(th))
@@ -87,8 +87,7 @@ def tufts(th, z):
 
 FWIN_L = [(177.5, 150), (92, 150), (82, 196), (88, 222), (80, 236), (66, 250), (62, 285), (84, 296), (98, 330), (177.5, 330)]
 FRONT_WIN = FWIN_L + [(355 - x, y) for x, y in FWIN_L[::-1]]
-SIDE_WIN = [(200, 40), (150, 66), (138, 76), (124, 80), (116, 84), (112, 96), (108, 109), (103, 100), (98, 92), (93, 96), (92, 108),
-            (97, 116), (106, 121), (112, 140), (200, 140)]
+SIDE_WIN = [(200, 40), (150, 66), (140, 76), (134, 88), (133, 98), (127, 107), (134, 108), (126, 116), (118, 126), (112, 140), (200, 140)]
 def hair_texture(W=1024, H=768):
     R = smooth_rows(HAIR_ROWS)
     U, V = np.meshgrid((np.arange(W) + .5) / W, 1 - (np.arange(H) + .5) / H)
@@ -108,17 +107,34 @@ def hair_texture(W=1024, H=768):
 
 loft('hair', HAIR_ROWS, tex_mat('hair', hair_texture(), clip=True), 96, 56, 2.25, bump=tufts, uv=True, caps=False)
 
-# 耳朵
+# 耳朵：照原畫的形狀與耳窩
+EAR_ART = [[(x / 4, y / 4 + 100) for x, y in pts] for pts in (
+    [(318, 645), (296, 590), (262, 558), (215, 545), (165, 560), (128, 598), (112, 648), (122, 700), (158, 742), (215, 770), (285, 778), (332, 762), (346, 725), (334, 690)],
+    [(1096, 645), (1120, 580), (1160, 548), (1215, 543), (1260, 568), (1288, 615), (1292, 660), (1272, 710), (1232, 750), (1165, 776), (1105, 776), (1072, 752), (1075, 700)])]
+for s, poly in zip((-1, 1), EAR_ART):
+    art_ear(NEU, neutral_px, poly, -.02, s * .55, .15, SKIN)
+    for o in [o for o in bpy.context.scene.collection.all_objects if o.name.startswith('ear') and not o.get('moved')]:
+        c = sum((v.co for v in o.data.vertices), Vector()) / len(o.data.vertices)
+        for v in o.data.vertices:
+            v.co = Vector((c.x * .985 + (v.co.x - c.x) * .96, v.co.y, c.z + (v.co.z - c.z) * .96 + 2.5 / PX))
+        o['moved'] = True
+# 鬢角和帽緣下翹出來的髮尾
 for s in (-1, 1):
-    ball('ear', (s * 1.37, .12, Z(102)), (.31, .17, .34), SKIN, 24, 16, rz=s * .7)
-    ball('earin', (s * 1.45, -.025, Z(101.5)), (.17, .05, .21), PINK, 16, 10, rz=s * .7)['noline'] = True
-    ball('earin2', (s * 1.41, -.07, Z(103.5)), (.095, .035, .11), SKIN, 14, 8, rz=s * .7)['noline'] = True
+    tube('sideburn', [(s * 44 / PX, Y(130), Z(80)), (s * 44.5 / PX, Y(138), Z(90)), (s * 43 / PX, Y(143), Z(99)), (s * 40.5 / PX, Y(147), Z(106))],
+         [.17, .15, .085, .008], HAIRM, 20, 12, .55)
+    tube('sideburn', [(s * 45 / PX, Y(112), Z(78)), (s * 51 / PX, Y(111), Z(85)), (s * 58 / PX, Y(108), Z(88))], [.17, .11, .008], HAIRM, 14, 10, .7)
+
+for s in (-1, 1):                                          # 帽緣兩側和耳下翹出來的捲髮（短而厚，貼著頭）
+    for pts, r in ((((43, 112, 80), (51, 112, 82), (57.5, 108, 80)), .13), (((44, 106, 88), (51, 105, 93), (57, 101, 93)), .12),
+                   (((38, 112, 109), (44, 111, 115), (49, 106, 114.5)), .16), (((30, 116, 117), (35, 113, 123), (41, 108, 123)), .16),
+                   (((20, 122, 122), (23, 118, 126.5), (29, 114, 128)), .13)):
+        tube('sideburn', [(s * u / PX, Y(d), Z(v)) for u, d, v in pts], [r * 1.15, r, .012], HAIRM, 16, 12, .75)
 
 # ───────── 棒球帽 ─────────
 def droop(y, z):              # 帽緣前高後低
     return .36 * min(1, max(0, (y + .1) / 1.4)) * min(1, max(0, (Z(36) - z) / (Z(36) - Z(70))))
-CAP_ROWS = rows([(70, 56.5, 169, 59.5), (63, 57.5, 171.5, 58.5), (54, 56, 169, 60), (44, 51.5, 162, 66), (34, 44, 151, 76),
-                 (25, 37, 143, 83), (19, 27, 134, 93), (15.5, 16, 125, 103), (14, 1.5, 116, 113)])
+CAP_ROWS = rows([(70, 56.5, 170, 59.5), (63, 57.8, 173.5, 58.5), (54, 57, 173.5, 60), (44, 53.5, 170, 65), (34, 46.5, 162, 73),
+                 (25, 39, 152, 81), (19, 28.5, 141, 91), (15.5, 16.5, 129, 102), (14, 1.5, 118, 111)])
 capo, CR = loft('cap', CAP_ROWS, CAP, 64, 28, 2.25, caps=False)
 for v in capo.data.vertices: v.co.z -= droop(v.co.y, v.co.z)
 
@@ -142,9 +158,10 @@ tube('strap', [(-.56, by - .07, Z(76) - .36), (0, by + .09, Z(76) - .35), (.56, 
 # 帽舌：由帽身前緣往外伸的弧形薄板
 def brim_edge(s):   # s ∈ [-1, 1]；回傳 (帽身接合點, 外緣點)
     q = abs(s)
-    root = Vector(cap_pt(s * math.radians(92), 53 + 17 * q ** 1.7, .005))
-    outer = Vector((1.47 * math.sin(s * math.pi / 2 * .93), Y(192 - 30 * q ** 2 - 40 * q ** 5), Z(62 + 29 * q ** 1.7)))
-    return root, outer
+    root = Vector(cap_pt(s * math.radians(92), 61.5 + 11 * q ** 1.7, .005))
+    outer = Vector((1.47 * math.sin(s * math.pi / 2 * .93), Y(192 - 30 * q ** 2 - 40 * q ** 5), Z(73.5 + 17.5 * q ** 1.7)))
+    k = max(0.0, (q - .8) / .2) ** 2                       # 帽舌兩角收圓
+    return root, outer.lerp(root, .55 * k)
 def brim(name, m, lift):
     nu, nv = 32, 8; verts, faces = [], []
     for i in range(nu + 1):
@@ -166,6 +183,11 @@ for t, r, m in ((1.0, .04, CAPTOP), (.82, .012, CAPLINE)):
         s = -1 + 2 * i / 24; root, outer = brim_edge(s); p = root.lerp(outer, t)
         p.z += .12 * math.sin(math.pi * t) * (1 - s * s) + (.006 if t == 1 else .062); pts.append(tuple(p))
     tube('brimline', pts, [r * .6, r, r * .6], m, 40, 8, line=m is CAPLINE)
+
+pts = []                                                    # 帽舌和帽身之間的深色接縫
+for i in range(33):
+    root, _ = brim_edge(-1 + 2 * i / 32); pts.append((root.x, root.y - .012, root.z + .07))
+tube('brimline', pts, [.012, .026, .03, .026, .012], CAPLINE, 48, 8, line=True)
 
 # ───────── 身體 ─────────
 loft('neck', rows([(138, 9, 141, 108), (130, 8.5, 142, 106), (121, 10, 143, 107)]), SKIN, 24, 8, 2)
@@ -230,6 +252,6 @@ for s in (-1, 1):
             v.co.z *= .74; v.co.x = s * .66 + (v.co.x - s * .66) * .95; v.co.y *= .93
 
 finish('Noise',
-       heads={'head', 'hair', 'ear', 'earin', 'earin2', 'cap', 'capline', 'capbtn', 'capback', 'strap', 'brim', 'brimunder', 'brimline'},
+       heads={'head', 'hair', 'ear', 'sideburn', 'earback', 'cap', 'capline', 'capbtn', 'capback', 'strap', 'brim', 'brimunder', 'brimline'},
        legs={'sole', 'shoe', 'tongue', 'lace', 'toecap', 'soleline', 'short', 'cuffroll', 'leg'},
        arms={'sleeve', 'cuff', 'cuffline', 'hand', 'thumb'})

@@ -50,6 +50,93 @@ def in_poly(px, py, poly):
         inside ^= hit
     return inside
 
+def smooth_poly(pts, k=6):
+    """多邊形頂點用 Catmull-Rom 補圓，剪出來的髮際線才不會有直角。"""
+    P = np.array(pts, float); n = len(P); out = []
+    for i in range(n):
+        a, b, c, d = P[(i - 1) % n], P[i], P[(i + 1) % n], P[(i + 2) % n]
+        for j in range(k):
+            u = j / k
+            out.append(tuple(.5 * (2 * b + (-a + c) * u + (2 * a - 5 * b + 4 * c - d) * u * u + (-a + 3 * b - 3 * c + d) * u ** 3)))
+    return out
+
+def art_panel(name, art, to_art, poly, depth, hole=None, nx_=48, nz=56):
+    """把原畫的一塊（多邊形內）直接做成前面的弧面薄片：正面看就是原畫，往外側往後彎。
+    to_art(x, z) → 原畫像素；depth(x, z) → y。"""
+    h, w = art.shape[:2]
+    gx, gy = np.meshgrid((np.arange(w * 2) + .5) / 2, (np.arange(h * 2) + .5) / 2)
+    mask = in_poly(gx, gy, smooth_poly(poly, 4) if len(poly) < 40 else poly) & (sample(art, gx, gy)[..., 3] > .5)
+    if hole:
+        mask &= ~in_poly(gx, gy, smooth_poly(hole, 6))
+    rgba = sample(art, gx, gy); rgba[..., 3] = mask
+    # 透明處填髮色邊緣色，縮圖時邊緣才不會混到背景
+    rgba[~mask, :3] = (.10, .05, .035)
+    if rgba.shape[0] % 2: rgba = rgba[:-1]
+    # 模型座標範圍（由遮罩反推）
+    x0, z0 = 0.0, 0.0
+    ax0, ay0 = to_art(np.array(0.0), np.array(0.0)); ax1, ay1 = to_art(np.array(1.0), np.array(1.0))
+    sx, sy = ax1 - ax0, ay1 - ay0
+    ys, xs = np.nonzero(mask)
+    X = (np.array([xs.min() / 2 - 2, xs.max() / 2 + 3]) - ax0) / sx
+    Zr = np.sort((np.array([ys.max() / 2 + 3, ys.min() / 2 - 2]) - ay0) / sy)
+    xg, zg = np.linspace(X.min(), X.max(), nx_ + 1), np.linspace(Zr[0], Zr[1], nz + 1)
+    verts, faces, uvs = [], [], []
+    for z in zg:
+        for x in xg:
+            verts.append((float(x), float(depth(x, z)), float(z)))
+    def uv(i, j):
+        px, py = to_art(xg[i], zg[j])
+        return (float(px) / w, 1 - float(py) * 2 / rgba.shape[0])
+    for j in range(nz):
+        for i in range(nx_):
+            cx, cy = to_art(np.linspace(xg[i], xg[i + 1], 4)[None, :], np.linspace(zg[j], zg[j + 1], 4)[:, None])
+            cx, cy = np.broadcast_arrays(cx, cy)
+            ix = np.clip((cx * 2).astype(int), 0, w * 2 - 1); iy = np.clip((cy * 2).astype(int), 0, h * 2 - 1)
+            if not mask[iy, ix].any():
+                continue
+            a = j * (nx_ + 1) + i
+            faces.append((a, a + 1, a + nx_ + 2, a + nx_ + 1))
+            uvs.append([uv(i, j), uv(i + 1, j), uv(i + 1, j + 1), uv(i, j + 1)])
+    return new_obj(name, verts, faces, tex_mat(name + str(len(MATS)) + str(int(xs.min())), rgba, clip=True), uvs)
+
+def art_ear(art, to_art, poly, y, yaw, dome=.12, back=None, name='ear'):
+    """耳朵照原畫輪廓做成鼓起的立體片：正面看就是原畫的形狀和耳窩；yaw 讓它朝外側轉。
+    poly 是原畫像素座標；y 是耳朵中心的前後位置。"""
+    P_ = np.array(smooth_poly(poly, 5))
+    ax0, ay0 = to_art(np.array(0.0), np.array(0.0)); ax1, ay1 = to_art(np.array(1.0), np.array(1.0))
+    X = (P_[:, 0] - ax0) / (ax1 - ax0); Zs = (P_[:, 1] - ay0) / (ay1 - ay0)
+    cx, cz = (X.max() + X.min()) / 2, (Zs.max() + Zs.min()) / 2
+    h, w = art.shape[:2]
+    tex = art.copy(); tex[..., 3] = 1
+    tex = tex[:h - h % 2, :w - w % 2]
+    mfront = tex_mat('%s_art%d' % (name, len(MATS) + int(abs(cx) * 997) + int(cx > 0)), np.repeat(np.repeat(tex, 2, 0), 2, 1))
+    n, rings = len(P_), 6
+    M = Matrix.Rotation(yaw, 3, 'Z'); stretch = 1 / math.cos(yaw)
+    def side(sign, thick, shrink):
+        verts, uvs_, faces = [], [], []
+        for r in range(rings + 1):
+            t = r / rings
+            for i in range(n):
+                x, z = cx + (X[i] - cx) * t, cz + (Zs[i] - cz) * t
+                p = M @ Vector(((x - cx) * stretch, sign * thick * (1 - t ** 2.2), 0))
+                verts.append((cx + p.x, y + p.y, z))
+                px_, py_ = to_art(np.array(cx + (x - cx) * shrink), np.array(cz + (z - cz) * shrink))
+                uvs_.append((float(px_) / w, 1 - float(py_) / (h - h % 2)))
+        fu = []
+        for r in range(rings):
+            for i in range(n):
+                q = (r * n + i, r * n + (i + 1) % n, (r + 1) * n + (i + 1) % n, (r + 1) * n + i)
+                faces.append(q); fu.append([uvs_[j] for j in q])
+        return verts, faces, fu
+    for sign, thick, m in ((-1, dome, mfront), (1, dome * .8, back)):
+        v, f, u = side(sign, thick, .97)
+        o = new_obj(name if sign < 0 else name + 'back', v, f, m, u if sign < 0 else None)
+        bm = bmesh.new(); bm.from_mesh(o.data); bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        nrm = sum((fc.normal * fc.calc_area() for fc in bm.faces), Vector())
+        if nrm.y * sign < 0: bmesh.ops.reverse_faces(bm, faces=bm.faces)
+        bm.to_mesh(o.data); bm.free()
+
 # ───────── 逐段放樣（loft） ─────────
 def smooth_rows(rows, n=160):
     """rows: [(z, 半寬, 前緣y, 後緣y)]，由下往上；用 Catmull-Rom 補成 n 段。"""
@@ -284,7 +371,7 @@ def preview(parts, OUT):
         o.parent = root
     cam = bpy.data.cameras.new('cam'); cam.type = 'ORTHO'; cam.ortho_scale = 6.5
     co = bpy.data.objects.new('cam', cam); scene.collection.objects.link(co); scene.camera = co
-    tilt = math.radians(6)
+    tilt = math.radians(float(os.environ.get('TILT', '6')))     # 疊圖比對時設 0：1 張圖像素＝原圖 1/3 像素
     co.location = (0, -20 * math.cos(tilt), 3.0 + 20 * math.sin(tilt)); co.rotation_euler = (math.pi / 2 - tilt, 0, 0)
     for name, energy, rot in (('key', 2.0, (.75, 0, -.55)), ('fill', .6, (1.25, 0, .85)), ('back', 1.0, (.9, 0, 2.8))):
         l = bpy.data.lights.new(name, 'SUN'); l.energy = energy; l.angle = .6

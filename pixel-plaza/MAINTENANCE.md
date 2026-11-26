@@ -196,4 +196,6 @@
 - 產出 assets/people3d/<名字小寫>.glb，節點名沿用 machi_<部位>__<材質>，index.html 的 attach3d 直接套動作。展示間在 viewer.html 的 PEOPLE 登記，換檔要改 ?v=。
 - 重建：Blender --background --factory-startup --python models/people/noise.py -- <預覽圖資料夾>。
 - 遊戲（index.html 的 MODEL3D）尚未使用，要上線需另外登記。
+- 肩前髮束與耳朵直接剪原畫：kit.py 的 art_panel（Amber、Anna 髮束）、art_ear（Noise、Anna 耳朵）；座標用 expedition/story/<名字>_neutral.webp 的像素。
+- 改臉型／耳朵／髮際線要做「原圖與模型同尺寸疊圖」核對：正面算圖用環境變數 TILT=0（算圖 3 px＝原圖 12 角度圖的 1 px），MACHI_VIEWS 指定角度。Noise 的 12 角度圖第 1～3 格都是 30～50 度的斜角，不是正側面。
 
