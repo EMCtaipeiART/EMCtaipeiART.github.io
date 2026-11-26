@@ -19,6 +19,7 @@ button.on{background:var(--on);border-color:var(--on);color:#06210f}
 #view canvas{display:block;position:absolute;inset:0}
 #ref{width:38%;display:none;overflow:hidden;border-left:2px solid var(--line);background:#fff;position:relative}
 #ref img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.tag{position:absolute;top:8px;font-weight:700;color:#14382a;background:#ffffffcc;border-radius:6px;padding:2px 10px;pointer-events:none;transform:translateX(-50%);display:none}
 #note{position:absolute;left:10px;bottom:8px;color:#14382a;pointer-events:none}
 @media (max-width:700px){button,label.btn{font-size:12px;padding:3px 7px}#main{flex-direction:column}#ref{width:100%;height:35%;border-left:0;border-top:2px solid var(--line)}}
 </style>
@@ -28,7 +29,7 @@ button.on{background:var(--on);border-color:var(--on);color:#06210f}
 <div class="bar" id="poses"></div>
 <div class="bar" id="tools"></div>
 <div id="main">
-  <div id="view"><div id="note">拖曳旋轉・滾輪或兩指縮放</div></div>
+  <div id="view"><div class="tag" id="tagA">舊版</div><div class="tag" id="tagB">新版</div><div id="note">拖曳旋轉・滾輪或兩指縮放</div></div>
   <div id="ref"><img id="refimg" alt="參考圖"></div>
 </div>
 <input type="file" id="file" accept="image/*" hidden>
@@ -42,12 +43,13 @@ const HULL_LAYER = 1, bust = '?t=' + Date.now();
 const live = await import('./pets3d.js' + bust);
 const draft = await import('./pets3d-draft.js' + bust).catch(() => null);
 const gen = await import('./pets3d-gen.js' + bust).catch(() => null);   // 生成版（兩隻貓，遊戲裡用的就是這個）
+const genMan = await import('./machi3d-gen.js' + bust).catch(() => null);   // 生成版 Machi（只在這裡和舊版比對）
 const WHO = [['Machi', 'Machi'], ['cat', '無名小貓'], ['cat2', '四樓小貓'], ['dog1', '臘腸'], ['dog2', '薩摩耶']];
 const PET_POSES = [['stand', '站'], ['walk', '走'], ['run', '跑'], ['sit', '坐'], ['loaf', '趴縮'], ['down', '趴下'], ['sleep', '睡'], ['eat', '吃'], ['groom', '理毛'], ['wag', '搖尾'], ['belly', '翻肚']];
 const MAN_POSES = [['stand', '站'], ['walk', '走'], ['run', '跑'], ['sit', '坐']];
 const q = new URLSearchParams(location.search);
 const state = {who:WHO.some(w => w[0] === q.get('who')) ? q.get('who') : 'cat', pose:q.get('pose') || 'stand', ver:['gen', 'draft', 'live'].includes(q.get('ver')) ? q.get('ver') : 'gen',
-  yaw:(+q.get('yaw') || 0) * Math.PI / 180, el:.12, zoom:1, spin:false, clay:false, ortho:false};
+  man:['both', 'new', 'old'].includes(q.get('man')) ? q.get('man') : 'both', yaw:(+q.get('yaw') || 0) * Math.PI / 180, el:.12, zoom:1, spin:false, clay:false, ortho:false};
 
 const view = document.getElementById('view');
 const renderer = new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:true});
@@ -63,6 +65,22 @@ const clayMat = new THREE.MeshLambertMaterial({color:0xe9e7e3, side:THREE.Double
 // ---------- Machi：把 index.html 的「3D 人物」整段取出來執行，和遊戲一模一樣 ----------
 let machiKit = null;
 async function makeMachi(){
+  const old = state.man !== 'new' || !genMan ? await makeOldMachi() : null;
+  const neu = state.man !== 'old' && genMan ? await makeNewMachi() : null;
+  const list = [old, neu].filter(Boolean);
+  const group = new THREE.Group(); list.forEach(m => group.add(m.group));
+  return {group, pair:old && neu ? [old.group, neu.group] : null, update:(pose, now) => list.forEach(m => m.update(pose, now)), follow:() => list[0].follow()};
+}
+async function makeNewMachi(){
+  const html = await (await fetch('index.html' + bust)).text(), WORLD_H = +/WORLD_H = ([\d.]+)/.exec(html)[1];
+  const m = await new Promise((res, rej) => { const man = genMan.makeMachiGen(THREE, {mergeVertices}, HULL_LAYER, {WORLD_H, ready:() => res(man), fail:() => rej(new Error('模型載入失敗'))}); });
+  let z = 0, last = 0;
+  return {group:m.group, update(pose, now){
+    const dt = Math.min(.05, (now - last) / 1000 || .016); last = now;
+    z += (pose === 'walk' ? 2 : pose === 'run' ? 5 : 0) * dt; m.group.position.z = z; m.update(pose, now);
+  }, follow:() => m.group.position.z};
+}
+async function makeOldMachi(){
   if (!machiKit) {
     const html = await (await fetch('index.html' + bust)).text();
     const code = html.slice(html.indexOf('const MODEL3D'), html.indexOf('async function addChar('));
@@ -124,9 +142,11 @@ function draw(){
   const tools = [['a0', '正面'], ['a45', '45°'], ['a90', '側面'], ['a180', '背面'], ['spin', '自動旋轉'], ['clay', '白膜'], ['ortho', '平面投影'], ['ref', '參考圖']];
   const isGen = !!(gen && gen.hasPet(state.who)), isTrial = !!(gen && !isGen && gen.hasPet(state.who, true));
   if (draft && state.who !== 'Machi') tools.push(...(isGen ? [['gen', '線上版'], ['draft', '試作版'], ['live', '舊版']] : isTrial ? [['gen', '生成版'], ['draft', '試作版'], ['live', '線上版']] : [['draft', '試作版'], ['live', '線上版']]));
-  bar('tools', '檢視', tools, v => v === 'spin' ? state.spin : v === 'clay' ? state.clay : v === 'ortho' ? state.ortho : v === (state.ver === 'gen' && !isGen && !isTrial ? 'draft' : state.ver), v => {
+  if (state.who === 'Machi' && genMan) tools.push(['both', '新舊並排'], ['new', '新版'], ['old', '舊版']);
+  bar('tools', '檢視', tools, v => state.who === 'Machi' && ['both', 'new', 'old'].includes(v) ? v === state.man : v === 'spin' ? state.spin : v === 'clay' ? state.clay : v === 'ortho' ? state.ortho : v === (state.ver === 'gen' && !isGen && !isTrial ? 'draft' : state.ver), v => {
     if (v[0] === 'a') { state.yaw = +v.slice(1) * Math.PI / 180; state.el = 0; state.spin = false; }
     else if (v === 'ref') document.getElementById('file').click();
+    else if (['both', 'new', 'old'].includes(v)) { state.man = v; load(); }
     else if (v === 'draft' || v === 'live' || v === 'gen') { state.ver = v; load(); }
     else { state[v] = !state[v]; if (v === 'clay') applyClay(); }
   });
@@ -156,7 +176,8 @@ renderer.setAnimationLoop(now => {
   if (!current) return;
   current.update(state.pose, now, 0);
   if (state.spin) state.yaw += .008;
-  const aspect = w / h, span = current.span / state.zoom * Math.max(1, .9 / aspect), z = current.follow(), cam = state.ortho ? ortho : persp;
+  const pair = current.pair, rows = pair && w < h * .9, vw = pair && !rows ? w / 2 : w, vh = rows ? h / 2 : h;
+  const aspect = vw / vh, span = current.span / state.zoom * Math.max(1, .9 / aspect), z = current.follow(), cam = state.ortho ? ortho : persp;
   const dist = span / 2 / Math.tan(15 * Math.PI / 180);
   if (state.ortho) { ortho.left = -span * aspect / 2; ortho.right = span * aspect / 2; ortho.top = span / 2; ortho.bottom = -span / 2; }
   else persp.aspect = aspect;
@@ -166,7 +187,18 @@ renderer.setAnimationLoop(now => {
   cam.position.set(Math.sin(state.yaw) * Math.cos(state.el) * dist, current.mid + Math.sin(state.el) * dist, z + Math.cos(state.yaw) * Math.cos(state.el) * dist);
   cam.lookAt(0, current.mid, z);
   floor.position.z = Math.round(z / .25) * .25;
-  renderer.render(scene, cam);
+  // 並排比對：同一個鏡頭，畫面分兩格各畫一個版本（窄螢幕改上下）
+  const tagA = document.getElementById('tagA'), tagB = document.getElementById('tagB'), solo = state.who === 'Machi' && !pair;
+  tagA.style.display = pair || (solo && state.man === 'old') ? 'block' : 'none'; tagB.style.display = pair || (solo && state.man === 'new') ? 'block' : 'none';
+  tagA.style.left = pair && !rows ? '25%' : '50%'; tagB.style.left = pair && !rows ? '75%' : '50%'; tagB.style.top = rows ? 'calc(50% + 8px)' : '8px';
+  if (!pair) { renderer.setScissorTest(false); renderer.setViewport(0, 0, w, h); renderer.render(scene, cam); return; }
+  renderer.setScissorTest(true);
+  pair.forEach((g, i) => {
+    const x = rows ? 0 : i * vw, y = rows ? (1 - i) * vh : 0;
+    renderer.setViewport(x, y, vw, vh); renderer.setScissor(x, y, vw, vh);
+    pair.forEach(o => o.visible = o === g); renderer.render(scene, cam);
+  });
+  pair.forEach(o => o.visible = true);
 });
 draw(); load();
 </script>
