@@ -13,6 +13,7 @@
     help: ic('<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.6 2.6 0 1 1 3.6 2.4c-.8.4-1.1.9-1.1 1.8"/><circle cx="12" cy="16.8" r=".6"/>'),
     people: ic('<circle cx="9" cy="8.5" r="3"/><circle cx="17" cy="9.5" r="2.4"/><path d="M3.5 19c.5-3.2 2.7-5 5.5-5s5 1.8 5.5 5"/><path d="M15.5 14.4c3 0 4.6 1.6 5 4.6"/>'),
     music: ic('<path d="M9 18V6l10-2v12"/><circle cx="7" cy="18" r="2.2"/><circle cx="17" cy="16" r="2.2"/>'),
+    dance: ic('<circle cx="13" cy="4.8" r="2"/><path d="M5 5.5l5 4h5l4-3.5M12.5 9.5L11.5 14l-4 6M11.5 14l5 2 .5 5"/>'),
     exit: ic('<path d="M10 4H5v16h5"/><path d="M14 8l4 4-4 4M8.5 12H18"/>')
   };
 
@@ -22,7 +23,7 @@
   btn.innerHTML = ICON.menu + '<span>選單</span><kbd>M</kbd>';
   const mask = document.createElement('div'); mask.id = 'gMask';
   const menu = document.createElement('nav'); menu.id = 'gMenu'; menu.setAttribute('aria-label', '主選單');
-  const ROWS = [['bWheel', '角色', 'role', ''], ['bDex', '圖鑑', 'dex', ''], ['bHelp', '說明', 'help', ''], ['bPeople', '切換人物', 'people', '']];
+  const ROWS = [['bWheel', '角色', 'role', ''], ['bDance', '跳舞（F）', 'dance', ''], ['bDex', '圖鑑', 'dex', ''], ['bHelp', '說明', 'help', ''], ['bPeople', '切換人物', 'people', '']];
   menu.innerHTML = '<div class="gm-title">MENU</div><button class="gm-x" type="button" aria-label="關閉選單">✕</button>'
     + '<div class="gm-sec">快速功能</div>'
     + ROWS.map(r => '<button class="gm-row" type="button" data-src="' + r[0] + '">' + ICON[r[2]] + '<span>' + r[1] + '</span></button>').join('')
@@ -45,7 +46,8 @@
   const PANELS = ['dexPanel', 'helpPanel', 'drawer', 'cpage', 'fridgeP', 'catP', 'sv'];
   const panelOpen = () => PANELS.some(id => { const el = $(id); return el && !el.hidden; });
   mask.onclick = () => { if (!panelOpen()) setOpen(false); }; menu.querySelector('.gm-x').onclick = () => setOpen(false);
-  rows.forEach(r => r.onclick = () => { const src = $(r.dataset.src); if (src) setTimeout(() => src.click(), 60); });
+  rows.forEach(r => r.onclick = () => { const src = $(r.dataset.src); if (r.dataset.src === 'bDance') setOpen(false);   // 跳舞要看得到人物：收起選單
+    if (src) setTimeout(() => src.click(), 60); });
   addEventListener('keydown', e => {
     const t = e.target, typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
     if (e.key === 'Escape') { const p = ['dexPanel', 'helpPanel', 'drawer'].map($).find(el => el && !el.hidden); if (p) { p.hidden = true; e.stopImmediatePropagation(); return; } }   // Esc 先關最上層的圖鑑／說明／選角面板

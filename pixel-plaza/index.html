@@ -507,7 +507,7 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 <div id="hud">
   <div class="hp-card"><div class="hp-av" id="pAv"></div><div class="hp-info"><div class="hp-name" id="pName">—</div><div class="hp-st" id="pSt"></div><div class="hp-exp"><i id="pExp"></i></div><div class="hp-lv" id="pLv"></div></div></div>
   <div class="hp-clock" id="pClock">🕒 …</div>
-  <div class="hp-top"><button id="bPeople" type="button" class="pk-teal" hidden title="切換人物"><i data-px="people"></i><span>切換人物</span></button><button id="bWheel" type="button" class="pk-orange" title="角色"><i data-px="role"></i><span>角色</span></button><button id="bDex" type="button" class="pk-green" title="圖鑑"><i data-px="dex"></i><span>圖鑑</span></button><button id="bClose" type="button" class="pk-red" title="關閉"><i data-px="close"></i><span>關閉</span></button></div>
+  <div class="hp-top"><button id="bPeople" type="button" class="pk-teal" hidden title="切換人物"><i data-px="people"></i><span>切換人物</span></button><button id="bWheel" type="button" class="pk-orange" title="角色"><i data-px="role"></i><span>角色</span></button><button id="bDance" type="button" class="pk-purple" title="跳舞" hidden></button><button id="bDex" type="button" class="pk-green" title="圖鑑"><i data-px="dex"></i><span>圖鑑</span></button><button id="bClose" type="button" class="pk-red" title="關閉"><i data-px="close"></i><span>關閉</span></button></div>
   <div class="hp-br"><button id="bHelp" type="button" class="pk-purple" title="說明"><i data-px="help"></i><span>說明</span></button></div>
 </div>
 <div id="stick"><i></i></div>
@@ -521,7 +521,7 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 <div id="drawer" hidden><div class="dr-head"><span>選擇角色</span><button class="px-x" type="button" title="關閉">✕</button></div><div id="roster"></div></div>
 <div id="dexPanel" hidden><div class="px-head"><span>📖 辦公室圖鑑</span><button class="px-x" type="button">✕</button></div><div id="dexBody"></div></div>
 <div id="helpPanel" hidden><div class="px-head"><span>❓ 操作說明</span><button class="px-x" type="button">✕</button></div>
-  <div class="help-list"><div>🕹️ WASD／方向鍵移動，按住 Shift 加速跑步，點椅子／馬桶等物件會走過去（手機可點地面走過去，或用左下搖桿）</div><div>🎥 在空地按住滑鼠左鍵或右鍵拖曳（或 Q／E）旋轉視角，R 回正</div><div>🪑 點椅子或馬桶，人物會走過去坐下；要起身直接走動</div><div>🎮 點自己的人物或按「角色頁面」：狀態、心情、想說的話、音樂、限時動態（管理者另有全員上下班與班長工具）</div><div>✨ 撿地上的道具、沖馬桶、點投影機，圖鑑會記錄你的發現，每 5 個升一級</div><div>📡 角色依「凱曜設計部」的即時出勤狀態行動（在座／加班／用餐／廁所／會議／下班…）</div></div></div>
+  <div class="help-list"><div>🕹️ WASD／方向鍵移動，按住 Shift 加速跑步，按 F 跳舞（部分人物），點椅子／馬桶等物件會走過去（手機可點地面走過去，或用左下搖桿）</div><div>🎥 在空地按住滑鼠左鍵或右鍵拖曳（或 Q／E）旋轉視角，R 回正</div><div>🪑 點椅子或馬桶，人物會走過去坐下；要起身直接走動</div><div>🎮 點自己的人物或按「角色頁面」：狀態、心情、想說的話、音樂、限時動態（管理者另有全員上下班與班長工具）</div><div>✨ 撿地上的道具、沖馬桶、點投影機，圖鑑會記錄你的發現，每 5 個升一級</div><div>📡 角色依「凱曜設計部」的即時出勤狀態行動（在座／加班／用餐／廁所／會議／下班…）</div></div></div>
 <script type="module">
 import * as THREE from 'three';
 import {mergeGeometries, mergeVertices} from '../character-studio/vendor/BufferGeometryUtils.js';
@@ -1782,7 +1782,7 @@ const shadowTex = (() => { const c = document.createElement('canvas'); c.width =
 
 // ---------- 3D 人物（目前只有 Machi）：走路、跑步、坐下都用立體模型；模型載入失敗或本人在角色工坊換了造型就維持 2D ----------
 // 模型由 models/machi/build_machi.py（MACHI_LITE=1）產生，節點名稱 machi_<肢體>__<材質>[_n]（_n＝不描外框）；貼圖自帶陰影，用不受光材質。
-const MODEL3D = {Machi:{url:'assets/machi3d/machi.glb?v=2', atlas:5}, Noise:{url:'assets/people3d/noise.glb?v=4', atlas:0}, Leona:{url:'assets/people3d/leona.glb?v=6', atlas:8},
+const MODEL3D = {Machi:{url:'assets/machi3d/machi.glb?v=2', atlas:5, dance:true}, Noise:{url:'assets/people3d/noise.glb?v=4', atlas:0}, Leona:{url:'assets/people3d/leona.glb?v=6', atlas:8},
   Amber:{url:'assets/people3d/amber.glb?v=4', atlas:0}, Anna:{url:'assets/people3d/anna.glb?v=5', atlas:3},
   傅思凱:{url:'assets/people3d/eric.glb?v=1', atlas:3}};   // atlas：模型對應的角色工坊造型版本；之後發佈了更新的造型就改回 2D
 const EDGE_W = .0336;   // 人物與寵物的黑色外框粗細（世界單位），以兩隻狗為準
@@ -1812,6 +1812,37 @@ function solidPart(g, uv, img){   // 只留下三個頂點和中心在貼圖上�
   for (let i = 0; i < ix.length; i += 3) { const t = [ix[i], ix[i + 1], ix[i + 2]], U_ = t.map(k => uv.getX(k)), V = t.map(k => uv.getY(k));
     if (t.every((_, j) => on(U_[j], V[j])) && on((U_[0] + U_[1] + U_[2]) / 3, (V[0] + V[1] + V[2]) / 3)) keep.push(...t); }
   g.setIndex(keep); return g;
+}
+// 跳舞：一拍 DANCE_BEAT 秒，每段 8 拍，五段經典橋段輪流（名稱在 DANCE_NAMES）
+// x/y 位移、spin 轉身、b* 上身、h* 頭、a* 手臂（x 前後、y 水平掃、z 外張，u/f 肩膀上移／前移）、l* 腿（u 抬腳）、ki 氣功球大小與位置
+const DANCE_BEAT = .48, DANCE_NAMES = ['月球漫步', '週末夜狂熱', '扭扭舞', '合體舞', '龜派氣功'];
+function danceMove(b){
+  const sec = Math.floor(b / 8) % DANCE_NAMES.length, n = b % 8, f = n % 1, i = Math.floor(n), s = Math.sin(Math.PI * b), up = Math.abs(s);
+  const m = {x:0, y:0, spin:0, bx:0, by:0, bz:0, hx:0, hy:0, hz:0, aLx:0, aLy:0, aLz:0, aLu:0, aLf:0, aRx:0, aRy:0, aRz:0, aRu:0, aRf:0, lLx:0, lLz:0, lLu:0, lRx:0, lRz:0, lRu:0, ki:0, kx:0, ky:2.2, kz:1.1};
+  const set = o => Object.assign(m, o), ramp = t => { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); };
+  if (sec === 0) {   // 月球漫步：側身往後滑，一腳平拖、一腳踮起；4 拍後轉身滑回來
+    const dir = i < 4 ? 1 : -1, k = (n % 4) / 4, front = i % 2 ? 'lL' : 'lR', back = i % 2 ? 'lR' : 'lL', sw = (i % 2 ? 1 : -1) * (f - .5);
+    set({spin:-1.45 * dir, x:dir * (-.75 + 1.5 * k), bx:.2, hx:.1, aLx:.55 * sw, aRx:-.55 * sw, aLz:.22, aRz:-.22, y:.03 * up});
+    m[back + 'x'] = -.15 + .75 * f; m[front + 'x'] = .6 - .75 * f; m[front + 'u'] = .3 * Math.sin(Math.PI * f);
+  } else if (sec === 1) {   // 週末夜狂熱：右手指天、斜劃到對側腰下，左手叉腰扭臀
+    const hi = i % 2 === 0;
+    set({x:hi ? -.14 : .14, y:.13 * up, bz:hi ? .15 : -.12, by:hi ? -.3 : .35, hz:hi ? -.16 : .1, hx:hi ? -.1 : .14, aLz:.85, aLx:.25, lLz:hi ? .28 : .05, lRz:hi ? -.05 : -.2, lRx:hi ? 0 : -.35 * up});
+    set(hi ? {aRz:-2.3, aRx:-.15, aRu:.15} : {aRz:.75, aRx:-.95, aRf:.35});
+  } else if (sec === 2) {   // 扭扭舞：比 V 的手輪流從眼前掃開，腰左右扭
+    const L = Math.floor(n / 2) % 2 === 1, k = ramp((n % 2) / 1.7), tw = Math.sin(Math.PI * b * 2);
+    set({y:-.08 + .12 * Math.abs(Math.cos(Math.PI * b * 2)), spin:.3 * tw, by:-.5 * tw, bz:.08 * tw, hz:.14 * s, lLz:.2, lRz:-.2, lLx:.25 * tw, lRx:-.25 * tw, aLz:.5, aRz:-.5, aLx:-.5 - .3 * tw, aRx:-.5 + .3 * tw});
+    set(L ? {aLz:1.62, aLy:-1.45 + 1.35 * k, aLx:0, aLu:.62, aLf:.45} : {aRz:-1.62, aRy:1.45 - 1.35 * k, aRx:0, aRu:.62, aRf:.45});
+  } else if (sec === 3) {   // 合體舞：雙手擺到一側 → 甩到另一側抬膝 → 傾身「哈！」定格
+    if (n < 2) set({x:.55 - .15 * n, y:.14 * up, aRz:-1.65, aRu:.15, aLz:1.15, aLy:-2.35, aLf:.45, bz:-.08, hz:-.1, lLz:.2 * up, lRz:-.2 * up});
+    else if (n < 4) set({x:.25 - .25 * (n - 2), y:.2 * up, aLz:1.65, aLu:.15, aRz:-1.15, aRy:2.35, aRf:.45, bz:.1, hz:.12, lRx:-1.15, lRz:-.2});
+    else { const sh = Math.sin(b * 38) * .025; set({x:0, y:-.06, bz:.3 + sh, hz:.1, spin:.1, aRz:-1.85, aRu:.15, aLz:1.2, aLy:-2.35, aLf:.5, lLz:.85, lLu:.16, lRz:.08}); }
+  } else {   // 龜派氣功：側身蓄力，氣越聚越大 → 轉回正面推出去
+    if (n < 4.5) { const k = ramp(n / 4.2), sh = Math.sin(b * 45) * .03 * k;
+      set({spin:-.75, y:-.2 * k + sh, bx:.18, by:-.35, bz:sh, hy:.5, aRz:-.75, aRx:.35, aRf:.15, aLz:1.25, aLy:-2.5, aLf:.4, aLx:.25, lLz:.45, lRz:-.45, lLx:-.2, lRx:.25, ki:.18 + .55 * k + Math.sin(b * 30) * .05, kx:-1.25, ky:2.05, kz:1.15}); }
+    else { const k = ramp((n - 4.5) / .5), go = ramp((n - 6.2) / 1.6), sh = Math.sin(b * 55) * .035;
+      set({y:-.14 + sh, bx:.22 - .1 * go, hx:-.12, aRz:-1.5, aRy:1.38, aRf:.5, aRu:.12, aLz:1.5, aLy:-1.38, aLf:.5, aLu:.12, lLz:.42, lRz:-.42, lLx:.2, lRx:-.35, ki:(.75 + .8 * go) * k * (1 - ramp((n - 7.4) / .6)) + sh, kx:0, ky:2.3 + .55 * go, kz:1.5 + 3.4 * go}); }
+  }
+  return m;
 }
 async function attach3d(c){
   try {
@@ -1858,7 +1889,7 @@ async function attach3d(c){
     fill(J.upper, 'body', PIVOT3D.hips);
     for (const id of ['legL', 'legR', 'armL', 'armR', 'head']) fill(J[id], id, PIVOT3D[id]);
     c.holder.add(rig); c.sprite.material.visible = false;   // 原本的平面圖保留當點選範圍，只是不畫出來
-    const st = {walk:0, run:0, sit:0, ph:0, yaw:c.face, x:c.holder.position.x, z:c.holder.position.z};
+    const st = {walk:0, run:0, sit:0, dance:0, beat:0, pose:null, ki:null, ph:0, yaw:c.face, x:c.holder.position.x, z:c.holder.position.z};
     const qy = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), e = new THREE.Euler(0, 0, 0, 'YXZ');
     c.m3d = {rig, J, root, state:st, update(dt){
       rig.visible = c.sprite.visible;
@@ -1880,6 +1911,29 @@ async function attach3d(c){
       J.upper.rotation.set(mix(.05, .24) * w + .05 * q, s * .09 * w, s * .035 * w * (1 - r));
       J.upper.scale.y = 1 + Math.sin(t * 2.2) * .008 * (1 - w);   // 站著、坐著時輕微呼吸
       J.head.rotation.set(-mix(.03, .17) * w + Math.sin(st.ph * 2) * .025 * w, -s * .06 * w, 0);
+      // 跳舞：疊在站姿上，走動或坐下就停
+      const dancing = Boolean(c.dancing) && !moving && !c.sitting;
+      st.dance = ease(st.dance, dancing ? 1 : 0, 10);
+      if (dancing) st.beat += dt / DANCE_BEAT; else if (st.dance < .01) { st.beat = 0; st.pose = null; }
+      const D = st.dance < .001 ? 0 : st.dance, tg = danceMove(st.beat), P = st.pose ||= {...tg, spin:0};
+      for (const key in tg) if (key !== 'spin') P[key] = ease(P[key], tg[key], 20);   // 換段時順順接過去
+      P.spin += Math.atan2(Math.sin(tg.spin - P.spin), Math.cos(tg.spin - P.spin)) * (1 - Math.exp(-dt * 16));
+      const on = (o, k, v) => { o[k] += (v - o[k]) * D; };
+      root.position.x = P.x * D; on(root.position, 'y', P.y); root.rotation.y = P.spin * D;
+      on(J.upper.rotation, 'x', P.bx); on(J.upper.rotation, 'y', P.by); on(J.upper.rotation, 'z', P.bz);
+      on(J.head.rotation, 'x', P.hx); on(J.head.rotation, 'y', P.hy); on(J.head.rotation, 'z', P.hz);
+      for (const [id, sg, k] of [['armL', 1, 'aL'], ['armR', -1, 'aR']]) {
+        const g = J[id], base = PIVOT3D[id];
+        on(g.rotation, 'x', P[k + 'x']); g.rotation.y = P[k + 'y'] * D; on(g.rotation, 'z', P[k + 'z']);
+        const h = D * Math.min(1, Math.max(0, Math.abs(g.rotation.z) - 1.15) / .85);   // 頭大手短：手舉高時肩膀往前挪並拉長一點，才不會藏進頭後面
+        g.position.set(base[0] - PIVOT3D.hips[0] + sg * .12 * h, base[1] - PIVOT3D.hips[1] + .04 * h + P[k + 'u'] * D, base[2] - PIVOT3D.hips[2] + .66 * h + P[k + 'f'] * D); g.scale.setScalar(1 + .24 * h);
+      }
+      for (const [id, k] of [['legL', 'lL'], ['legR', 'lR']]) { const g = J[id]; on(g.rotation, 'x', P[k + 'x']); g.rotation.z = P[k + 'z'] * D; g.position.y += P[k + 'u'] * D; }
+      // 氣功球：第一次用到才建立
+      if (!st.ki && D > .5 && tg.ki > .05) { const ball = (r, color, op) => new THREE.Mesh(new THREE.SphereGeometry(r, 24, 16), new THREE.MeshBasicMaterial({color, transparent:true, opacity:op, depthWrite:false}));
+        st.ki = new THREE.Group(); st.ki.add(ball(.42, 0xffffff, .95), ball(.68, 0x6fd6ff, .6), ball(.98, 0x2f9dff, .25)); root.add(st.ki); }
+      if (st.ki) { const size = P.ki * D; st.ki.visible = size > .06 && rig.visible; if (tg.ki > .05 && P.ki < .12) { P.kx = tg.kx; P.ky = tg.ky; P.kz = tg.kz; }
+        st.ki.position.set(P.kx, P.ky, P.kz); st.ki.scale.setScalar(Math.max(.001, size) * (1 + Math.sin(t * 40) * .06)); }
     }};
   } catch (e) { console.warn('3D 人物載入失敗，維持 2D', c.name, e); }
 }
@@ -3201,6 +3255,7 @@ function wheelOpen(c){   // 點自己的人物：在人物旁邊展開小卡（�
 }
 function wheelClose(){ wheel.hidden = true; wheel.classList.remove('open'); wheelChar = null; }
 function updateWheel(){
+  $('bDance').hidden = !canDance(player);
   if (wheel.hidden || !wheelChar) return;
   const p = wheelChar.holder.position.clone(); p.y = wheelChar.holder.visible ? 1.05 : 1.3; p.project(camera);
   wheel.style.transform = 'translate(' + ((p.x * .5 + .5) * innerWidth) + 'px,' + ((-p.y * .5 + .5) * innerHeight) + 'px)';
@@ -3370,6 +3425,20 @@ function renderDex(){
 $('bDex').onclick = () => { renderDex(); $('dexPanel').hidden = false; $('helpPanel').hidden = true; panelAnchor = null; };
 $('bHelp').onclick = () => { $('helpPanel').hidden = false; $('dexPanel').hidden = true; panelAnchor = null; };
 document.querySelectorAll('.px-x').forEach(b => b.onclick = () => { $('dexPanel').hidden = true; $('helpPanel').hidden = true; $('drawer').hidden = true; });
+// 跳舞：選單的「跳舞」或按 F；走動、坐下、離開座位狀態就停。目前只在自己的畫面上播
+const canDance = c => Boolean(c && c.m3d && MODEL3D[c.name] && MODEL3D[c.name].dance);
+function toggleDance(){
+  const c = player; if (!c) { showQuote('', '請先登入才能操作人物'); return; }
+  if (c.dancing) { c.dancing = false; return; }
+  if (!canDance(c)) { showQuote('', '這個人物還沒有跳舞動作'); return; }
+  if (elevBusy || expBusy || !radial.hidden || !$('sv').hidden) return;
+  c.actAt = Date.now(); staffBackCheck(); if (AWAY.has(c.status)) releaseAway(c);
+  if (c.sitting) standUp(c);
+  target = null; wantSeat = null; fridgeWant = false; wantElev = false; wheelClose();
+  c.face = camYaw; c.dancing = true;
+}
+$('bDance').onclick = toggleDance;
+addEventListener('keydown', e => { if (e.code !== 'KeyF' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return; const t = e.target; if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return; if ($('title') && !$('title').classList.contains('gone')) return; toggleDance(); });
 $('bWheel').onclick = () => { if (!player) { showQuote('', '請先登入才能操作人物'); return; } if (radial.hidden) radialOpen(); else radialClose(); };
 // 浮動文字（撿到東西時 +1 往上飄）
 function floatAt(x, y, z, text){
@@ -3968,7 +4037,9 @@ function tick(){
     if (dir.lengthSq() > .01 || target) { player.actAt = Date.now(); staffBackCheck(); if (AWAY.has(player.status)) releaseAway(player); }   // 有操作就解除「用餐／下班…」，不會卡住不能動
     if (!radial.hidden || !$('sv').hidden || AWAY.has(player.status) || elevBusy || expBusy) { dir.set(0, 0, 0); target = null; }   // 角色頁面開著時人物不跟著走
     if (player.sitting && dir.lengthSq() > 1e-4) standUp(player);
+    if (player.dancing && (dir.lengthSq() > .01 || target || player.sitting || AWAY.has(player.status) || elevBusy || expBusy)) player.dancing = false;
     if (!player.sitting) { unstick(player); moveChar(player, dir, run ? RUN_SPEED : WALK_SPEED, dt); }
+    { const st = player.m3d && player.m3d.state, sec = player.dancing && st ? Math.floor(st.beat / 8) % DANCE_NAMES.length : -1; if (sec !== player.danceSec) { player.danceSec = sec; if (sec >= 0) floatAt(player.holder.position.x, 3.1, player.holder.position.z, '♪ ' + DANCE_NAMES[sec]); } }
     if (wantElev) { const sp = elevSpot(floorOf(player)); if (Math.hypot(sp.x - player.holder.position.x, sp.z - player.holder.position.z) < 1.6) elevGo(floorOf(player) === 5 ? 4 : 5); }
     if (wantSeat) { const st = wantSeat; if (st.by || st.hidden || player.sitting) wantSeat = null; else if (Math.hypot(st.x - player.holder.position.x, st.z - player.holder.position.z) < 1.0) { wantSeat = null; target = null; sitAt(player, st); } }
   }
@@ -3992,4 +4063,4 @@ function tick(){
   requestAnimationFrame(tick);
 }
 tick();
-</script><script src="gameui.js?v=20261115c"></script></body></html>
+</script><script src="gameui.js?v=20261126"></script></body></html>

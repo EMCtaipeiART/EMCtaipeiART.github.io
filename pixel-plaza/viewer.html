@@ -47,7 +47,7 @@ const PEOPLE = {Noise:'assets/people3d/noise.glb?v=4', Leona:'assets/people3d/le
 const isMan = who => who === 'Machi' || who in PEOPLE;
 const WHO = [['Machi', 'Machi'], ...Object.keys(PEOPLE).map(n => [n, n]), ['cat', '無名小貓'], ['cat2', '四樓小貓'], ['dog1', '臘腸'], ['dog2', '薩摩耶']];
 const PET_POSES = [['stand', '站'], ['walk', '走'], ['run', '跑'], ['sit', '坐'], ['loaf', '趴縮'], ['down', '趴下'], ['sleep', '睡'], ['eat', '吃'], ['groom', '理毛'], ['wag', '搖尾'], ['belly', '翻肚']];
-const MAN_POSES = [['stand', '站'], ['walk', '走'], ['run', '跑'], ['sit', '坐']];
+const MAN_POSES = [['stand', '站'], ['walk', '走'], ['run', '跑'], ['sit', '坐'], ['dance', '跳舞']];
 const q = new URLSearchParams(location.search);
 const state = {who:WHO.some(w => w[0] === q.get('who')) ? q.get('who') : 'cat', pose:q.get('pose') || 'stand', ver:['gen', 'draft', 'live'].includes(q.get('ver')) ? q.get('ver') : 'gen',
   yaw:(+q.get('yaw') || 0) * Math.PI / 180, el:.12, zoom:1, spin:false, clay:false, ortho:false};
@@ -82,7 +82,7 @@ async function makeMachi(name){
   let z = 0, last = 0;
   return {group:holder, height:2.1, update(pose, now){
     const dt = Math.min(.05, (now - last) / 1000 || .016); last = now;
-    c.moving = pose === 'walk' ? 3.4 : pose === 'run' ? 9.5 : 0; c.sitting = pose === 'sit' ? {} : null;
+    c.moving = pose === 'walk' ? 3.4 : pose === 'run' ? 9.5 : 0; c.sitting = pose === 'sit' ? {} : null; c.dancing = pose === 'dance';
     z += c.moving * dt; holder.position.z = z;                 // 步伐跟著移動距離，所以讓他往前走、鏡頭跟著
     c.m3d && c.m3d.update(dt);
   }, follow:() => holder.position.z};
