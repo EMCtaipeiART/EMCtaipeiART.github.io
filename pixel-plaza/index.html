@@ -2210,7 +2210,7 @@ function remoteStep(c, dt){
   else {
     c.moving = 0;
     const st = chairSeats.find(q => !q.by && !q.hidden && Math.hypot(sitSpot(q).x - p.x, sitSpot(q).z - p.z) < .2);
-    if (st) sitDown(c); else if (r.dir) c.face = ({down:0, up:Math.PI, right:Math.PI / 2, left:-Math.PI / 2})[r.dir] ?? c.face;
+    if (st && !c.dancing) sitDown(c); else if (r.dir) c.face = ({down:0, up:Math.PI, right:Math.PI / 2, left:-Math.PI / 2})[r.dir] ?? c.face;
   }
 }
 // 即時推送：後端每次有人寫入（狀態、位置、留言…）就透過 WebSocket 通知所有連線，收到通知立刻重讀，不必等輪詢。
@@ -2237,7 +2237,7 @@ function remoteWsPos(m){   // 別人經 WebSocket 傳來的位置：直接併進
     if (ws && ws.readyState <= 1) return;
     try { ws = new WebSocket(url); } catch (e) { return; }
     ws.onopen = () => { retry = 0; pushOpen = true; wsHello(ws); clearInterval(ping); ping = setInterval(() => { try { if (ws.readyState === 1) ws.send('ping'); } catch (e) {} }, 25000); };
-    ws.onmessage = ev => { let m = null; try { m = JSON.parse(ev.data); } catch (e) { return; } if (!m) return; if (m.type === 'pixel') pollNow(); else if (m.t === 'p') remoteWsPos(m); else if (m.t === 'lv') { const c = chars[m.n]; if (c && c !== player) levelUpFx(c); } else if (m.t === 'hi') { wsPos.ok = Boolean(m.ok); wsPos.send = m.ok ? o => { try { if (ws.readyState === 1) ws.send(JSON.stringify(o)); } catch (e) {} } : null; } };
+    ws.onmessage = ev => { let m = null; try { m = JSON.parse(ev.data); } catch (e) { return; } if (!m) return; if (m.type === 'pixel') pollNow(); else if (m.t === 'p') remoteWsPos(m); else if (m.t === 'dance') remoteDance(m); else if (m.t === 'lv') { const c = chars[m.n]; if (c && c !== player) levelUpFx(c); } else if (m.t === 'hi') { wsPos.ok = Boolean(m.ok); wsPos.send = m.ok ? o => { try { if (ws.readyState === 1) ws.send(JSON.stringify(o)); } catch (e) {} } : null; } };
     ws.onclose = () => { pushOpen = false; wsPos.ok = false; wsPos.send = null; clearInterval(ping); setTimeout(connect, Math.min(30000, 1000 * Math.pow(2, retry++))); };
     ws.onerror = () => { try { ws.close(); } catch (e) {} };
   };
@@ -3425,7 +3425,24 @@ function renderDex(){
 $('bDex').onclick = () => { renderDex(); $('dexPanel').hidden = false; $('helpPanel').hidden = true; panelAnchor = null; };
 $('bHelp').onclick = () => { $('helpPanel').hidden = false; $('dexPanel').hidden = true; panelAnchor = null; };
 document.querySelectorAll('.px-x').forEach(b => b.onclick = () => { $('dexPanel').hidden = true; $('helpPanel').hidden = true; $('drawer').hidden = true; });
-// 跳舞：選單的「跳舞」或按 F；走動、坐下、離開座位狀態就停。目前只在自己的畫面上播
+// 跳舞：選單的「跳舞」或按 F；走動、坐下、離開座位狀態就停。
+// 同步：跳舞中每 1.5 秒經 WebSocket 送一次 {t:'dance'}，後端轉發給其他人；超過 5 秒沒收到就當作停了（晚進來的人也會在 1.5 秒內看到）
+const danceSent = {on:false, t:0};
+function pushDance(){
+  const c = player, on = Boolean(c && c.dancing), now = performance.now();
+  if (!wsPos.ok || !wsPos.send) { danceSent.on = false; return; }
+  if (on === danceSent.on && !(on && now - danceSent.t > 1500)) return;
+  if (on && !danceSent.on) { posSent.t = 0; posSent.x = -99; posSent.wx = -99; posSent.wt = 0; }   // 剛起身開跳：位置也立刻補送，別人才不會看到他還坐著
+  danceSent.on = on; danceSent.t = now;
+  wsPos.send({t:'dance', on, beat:on && c.m3d ? +c.m3d.state.beat.toFixed(2) : 0});
+}
+function remoteDance(m){
+  const c = chars[m.n]; if (!c || c === player) return;
+  if (!m.on || !canDance(c)) { c.dancing = false; return; }
+  if (c.sitting) standUp(c);
+  c.dancing = true; c.danceUntil = performance.now() + 5000;
+  const st = c.m3d.state, beat = Number(m.beat) || 0; if (Math.abs(st.beat - beat) > .7) st.beat = beat;   // 跟本人跳在同一拍
+}
 const canDance = c => Boolean(c && c.m3d && MODEL3D[c.name] && MODEL3D[c.name].dance);
 function toggleDance(){
   const c = player; if (!c) { showQuote('', '請先登入才能操作人物'); return; }
@@ -4048,6 +4065,7 @@ function tick(){
     else if (c.remote && c !== player) remoteStep(c, dt);
     else if (c.wander && !c.sitting) wanderSynced(c);
     if (c.sitting) { const sp = sitSpot(c.sitting); if (Math.hypot(sp.x - c.holder.position.x, sp.z - c.holder.position.z) > .6 || (c.moving > 0 && c === player)) releaseSeat(c); }   // 走動中就不是坐著：離開座位的人一律解除入座
+    if (c !== player && c.dancing && performance.now() > c.danceUntil) c.dancing = false;
     updateSprite(c, dt); stationFx(c, dt); moodOrb(c); levelFx(c);
     if (c.hopAt) { const k = (performance.now() - c.hopAt) / 600; if (k >= 1) { c.hopAt = 0; c.holder.position.y = 0; } else c.holder.position.y = Math.abs(Math.sin(k * Math.PI * 2)) * .6 * (1 - k); }
   }
@@ -4058,7 +4076,7 @@ function tick(){
     camera.position.copy(camPos); look.lerp(p, 1 - Math.pow(.001, dt)); camera.lookAt(look.x, 1, look.z);
   } else { const k = 1 - Math.pow(.0005, dt); camPos.lerp(new THREE.Vector3(guestAt.x, 10.9, guestAt.z + 12.2), k); camera.position.copy(camPos); look.lerp(new THREE.Vector3(guestAt.x, 1, guestAt.z), k); camera.lookAt(look); }   // 沒登入：滾輪／左鍵拖曳平移畫面，點電梯換看另一層
   { const cx = player ? player.holder.position : guestAt; sun.target.position.set(cx.x, 0, cx.z); sun.position.set(cx.x - 13, 22, cx.z - 5); /* 光從左後上方斜照：影子落向右前方 */ }
-  CATS.forEach(c => c.update(dt)); updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay(); updateTags(); placeRadial(); updateFridge(); updateElev(); updateTheater(); pushPosition(); trackLast();
+  CATS.forEach(c => c.update(dt)); updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay(); updateTags(); placeRadial(); updateFridge(); updateElev(); updateTheater(); pushPosition(); pushDance(); trackLast();
   renderFrame();
   requestAnimationFrame(tick);
 }

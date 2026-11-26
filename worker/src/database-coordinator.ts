@@ -1,4 +1,4 @@
-import { PIXEL_MOVE_MIN_GAP_MS, parseMove, sessionMatchesName } from './pixel-ws';
+import { PIXEL_DANCE_MIN_GAP_MS, PIXEL_MOVE_MIN_GAP_MS, parseDance, parseMove, sessionMatchesName } from './pixel-ws';
 import { DurableObject } from 'cloudflare:workers';
 import { getNewsTicker } from './assistant-news';
 import { getChangeLog } from './assistant-changes';
@@ -5595,6 +5595,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   private pixelWsLast = new WeakMap<WebSocket, number>();
   private pixelLvLast = new WeakMap<WebSocket, number>();
+  private pixelDanceLast = new WeakMap<WebSocket, number>();
   /** 前台送來的即時訊息：hello（登入確認，之後這條連線只能代表這位同仁）、p（位置，直接轉發給其他人，不寫資料庫）。ping 由 setWebSocketAutoResponse 處理。 */
   async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
     if (typeof message !== 'string' || message.length > 400) return;
@@ -5616,6 +5617,18 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       this.pixelLvLast.set(ws, now);
       const lv = Math.max(1, Math.min(999, Math.floor(Number(m.lv)) || 1));
       const out = JSON.stringify({ t: 'lv', n: who, lv });
+      for (const socket of this.ctx.getWebSockets()) { if (socket === ws) continue; try { socket.send(out); } catch { /* 已失效 */ } }
+      return;
+    }
+    if (m.t === 'dance') {   // 跳舞：轉發給其他連線，只能代表自己；停止訊息不限速，才不會漏掉
+      const dance = parseDance(m);
+      let who = '';
+      try { who = text((ws.deserializeAttachment() as { name?: string } | null)?.name); } catch { who = ''; }
+      if (!dance || !who) return;
+      const now = Date.now();
+      if (dance.on && now - (this.pixelDanceLast.get(ws) || 0) < PIXEL_DANCE_MIN_GAP_MS) return;
+      this.pixelDanceLast.set(ws, now);
+      const out = JSON.stringify({ t: 'dance', n: who, on: dance.on, beat: dance.beat });
       for (const socket of this.ctx.getWebSockets()) { if (socket === ws) continue; try { socket.send(out); } catch { /* 已失效 */ } }
       return;
     }

@@ -20,3 +20,13 @@ export function parseMove(raw: unknown): PixelMove | null {
   if (!Number.isFinite(fx) || !Number.isFinite(fy) || Math.abs(fx) > 20000 || Math.abs(fy) > 20000) return null;
   return { fx: Math.round(fx), fy: Math.round(fy), d: ['up', 'down', 'left', 'right'].includes(d) ? d : '' };
 }
+
+export const PIXEL_DANCE_MIN_GAP_MS = 200;
+
+/** 驗證跳舞訊息（開始／停止＋目前拍子，讓大家跳在同一拍）；格式不對回傳 null。 */
+export function parseDance(raw: unknown): { on: boolean; beat: number } | null {
+  const m = raw && typeof raw === 'object' ? raw as Record<string, unknown> : null;
+  if (!m || m.t !== 'dance' || typeof m.on !== 'boolean') return null;
+  const beat = Number(m.beat);
+  return { on: m.on, beat: Number.isFinite(beat) && beat > 0 ? Math.min(100000, Math.round(beat * 100) / 100) : 0 };
+}

@@ -195,7 +195,7 @@
 ## 設計部立體人物（手工建模，2026-11-26 起用在遊戲）
 - 做法同 Machi：models/people/<名字>.py（共用工具 models/people/kit.py），逐段放樣＋原畫貼圖；預設不要用圖片生成立體模型（使用者比較過，明顯較差；Eric 的混合做法例外，見下一條）。
 - Eric（傅思凱）是混合版：頭、頭髮、臉、眼鏡用本機 AI（~/hunyuan3d-local，輸出 eric.glb 不在 Git）生成外型後重畫貼圖（eric_ai.py），身體、手、腳用手工版（eric.py），最後用 eric_combine.py 合併（指令寫在檔頭）。AI 模型的手臂與身體黏在一起，直接切肢體會破洞，不要走回那條路。同名節點被加 .001 時遊戲認不出結尾的 _n，編號要放在 _n 前面。
-- 跳舞：舞步在 danceMove()（月球漫步、週末夜狂熱、扭扭舞、合體舞、龜派氣功，每段 8 拍），c.dancing 開關；MODEL3D 加 dance:true 的人才開放（先只有 Machi，其他人要先在展示間「跳舞」檢查穿模）。選單「跳舞」呼叫 HUD 的隱藏按鈕 bDance，快捷鍵 F。目前只有本人畫面看得到；要同步給別人需改 Worker 的 WebSocket 轉發。
+- 跳舞：舞步在 danceMove()（月球漫步、週末夜狂熱、扭扭舞、合體舞、龜派氣功，每段 8 拍），c.dancing 開關；MODEL3D 加 dance:true 的人才開放（先只有 Machi，其他人要先在展示間「跳舞」檢查穿模）。選單「跳舞」呼叫 HUD 的隱藏按鈕 bDance，快捷鍵 F。同步：WebSocket {t:'dance', on, beat}（pushDance／remoteDance，Worker 在 pixel-ws.ts 的 parseDance）；只有走得了即時通道的本人（登入帳號＝角色名）送得出去，訪客看得到。
 - viewer.html 用 new Function 借遊戲的 attach3d：attach3d 新增用到的全域常數時，viewer 的參數列要一起補。
 - 產出 assets/people3d/<名字小寫>.glb，節點名沿用 machi_<部位>__<材質>，index.html 的 attach3d 直接套動作。遊戲在 index.html 的 MODEL3D、展示間在 viewer.html 的 PEOPLE 登記，換檔兩邊的 ?v= 都要改。
 - 重建：Blender --background --factory-startup --python models/people/noise.py -- <預覽圖資料夾>。
