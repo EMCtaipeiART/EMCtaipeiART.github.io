@@ -1,4 +1,4 @@
-// 生成版 3D 寵物（兩隻貓和薩摩耶是遊戲與展示頁共用；臘腸是 trial，只在展示頁）：外型是白膜圖生成的 GLB，花紋用原圖三視圖依表面朝向投影。動作和 pets3d.js 同一套（骨架權重在 weigh()）。
+// 生成版 3D 寵物（兩隻貓和兩隻狗，遊戲與展示頁共用）：外型是白膜圖生成的 GLB，花紋用原圖三視圖依表面朝向投影。動作和 pets3d.js 同一套（骨架權重在 weigh()）。
 // 模型：assets/pets3d-gen/<id>.glb（models/pets/gen_cat_model.py）；貼圖：<id>.webp（models/pets/gen_cat_texture.py）
 import {GLTFLoader} from '../character-studio/vendor/GLTFLoader.js';
 // 骨架（模型座標）：和 pets3d.js 同樣的骨頭名稱，姿勢數值共用
@@ -14,7 +14,7 @@ const IDS = {
     line:[1.22, .3, .36, .02, .24], bell:[.34, .92, .9, .13], bellFrom:-.35, bellZ:.8, beads:1, sideEye:[1.01, 1.575, .09, .115], legs:[.13, .13, .37, .1, -.15], face:.6, upTail:0,
     tp:{sit:1.35, lie:.45, run:.75, eat:.1, belly:.5, sleep:0}},
   // 狗另外給：span 貼圖視圖寬高；fc 臉部範圍 [高度, 半寬, 半高]；legY 腿的高度漸層；tailW 尾巴範圍 [[z起, z迄, y起, y迄]]；ears 垂耳也跟著頭 [x起迄, y起迄, z起迄]；sit [身體仰角, 下沉]
-  dog1:{trial:1, ink:0x331c0e, body:[.65, 0], br:.4, head:[1.5, 1], hr:[.5, .5], neck:[0, 1.05, .55], tail:[0, .55, -1],
+  dog1:{ink:0x331c0e, body:[.65, 0], br:.4, head:[1.5, 1], hr:[.5, .5], neck:[0, 1.05, .55], tail:[0, .55, -1],
     legF:[.32, .5, .66], legB:[.3, .48, -.68], lr:.17, low:.12, eyes:[[-.245, 1.527], [.345, 1.527]], eyeR:[.1, .145], span:3.8,
     line:[1, .6, .25, .05, .35], bell:[9, 9, 9, .1], bellFrom:0, bellZ:9, beads:0, legs:[0, .15, .38, -.15, -.38], legY:[.18, .55, .1, .24], face:.85, upTail:0,
     fc:[1.45, .46, .42], sink:.18, muzzle:[1.42, 1.38], nose:[[.048, 1.322, 1.7], [.135, .09, .13]], tailW:[[-.95, -1.2, .12, .3]], ears:[.4, .52, .66, .8, -.05, .15], sit:[-.28, .04],
@@ -28,7 +28,7 @@ const IDS = {
 export const hasPet = (id, trial) => !!IDS[id] && (!!trial || !IDS[id].trial);   // 遊戲只拿正式的；展示頁傳 true
 // scale：模型高 2.2，遊戲裡縮到和舊版差不多大；outline：外框外擴量（模型單位）
 export function makePet(THREE, {mergeVertices}, id, HULL_LAYER, {ready, fail, scale = 1, outline = .034} = {}){
-  const P = IDS[id], group = new THREE.Group(), base = new URL('assets/pets3d-gen/', import.meta.url).href, v = '?v=17';
+  const P = IDS[id], group = new THREE.Group(), base = new URL('assets/pets3d-gen/', import.meta.url).href, v = '?v=18';
   const bones = {}, order = ['roll', 'torso', 'head', 'tail', 'FL', 'FR', 'BL', 'BR'];
   const [by, bz] = P.body, [hy] = P.head, ry = P.hr[0], isCat = id === 'cat' || id === 'cat2';
   const at = {roll:[0, by, bz], torso:[0, by, bz], head:P.neck, tail:P.tail,
