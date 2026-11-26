@@ -486,14 +486,45 @@ export function resolvePath(base, value) {
   return path.isAbsolute(value) ? value : path.join(base, value);
 }
 
+/** 讀同步狀態。檔案內容壞掉（空的／寫到一半：存檔時行程被中斷或磁碟寫滿）時不能讓備份從此全部失敗：
+ * 先改用上一份備份（.bak）；備份也不能用就從空白狀態開始（資料庫已記錄過的圖不會重新上傳，見 uploadPendingRound）。
+ * 壞掉的原檔改名為 .corrupt-時間 保留，方便事後查。權限之類的讀取錯誤照舊丟出。 */
 export async function loadState(stateFile) {
-  const state = await loadJsonFile(stateFile, {});
-  return state || {};
+  let raw;
+  try {
+    raw = await fs.readFile(stateFile, 'utf8');
+  } catch (error) {
+    if (error.code === 'ENOENT') return {};
+    throw new Error(`讀取 ${stateFile} 失敗：${error.message}`);
+  }
+  try {
+    return JSON.parse(raw) || {};
+  } catch (error) {
+    let backup = null;
+    try { backup = JSON.parse(await fs.readFile(`${stateFile}.bak`, 'utf8')); } catch { /* 沒有可用的備份 */ }
+    console.warn(`[警告] 同步狀態檔損毀（${error.message}），${backup ? '改用上一份備份' : '沒有可用備份，從空白狀態重新建立'}：${stateFile}`);
+    await fs.rename(stateFile, `${stateFile}.corrupt-${Date.now()}`).catch(() => {});
+    return backup || {};
+  }
+}
+
+/** 先寫到暫存檔再改名蓋過去：任何時間點讀到的都是完整內容，中途中斷或磁碟寫滿也不會留下半份檔案。 */
+async function writeFileAtomic(filePath, content) {
+  const tmp = `${filePath}.tmp-${process.pid}`;
+  try {
+    await fs.writeFile(tmp, content, 'utf8');
+    await fs.rename(tmp, filePath);
+  } catch (error) {
+    await fs.rm(tmp, { force: true }).catch(() => {});
+    throw error;
+  }
 }
 
 export async function saveState(stateFile, state) {
   await fs.mkdir(path.dirname(stateFile), { recursive: true });
-  await fs.writeFile(stateFile, JSON.stringify(state, null, 2), 'utf8');
+  const content = JSON.stringify(state, null, 2);
+  await writeFileAtomic(stateFile, content);
+  await writeFileAtomic(`${stateFile}.bak`, content).catch(() => {}); // 備份寫不進去不影響這次備份
 }
 
 export async function hashFile(filePath) {
