@@ -47,6 +47,7 @@ else:
     top, contrast = {'cat':(492, 34), 'cat2':(425, 55)}[ID]   # 虎斑的條紋要留下，只清掉很深的描線
     dark = ((lum < 120) | (lum < ndimage.uniform_filter(lum, 32) - contrast)) & (yy > top)
 clean = fill(clean, ndimage.binary_dilation(dark, iterations=4), 5)
+FUR = np.array([252, 247, 243], np.float32)
 if ID == 'dog2':   # 側面圖的腮紅在斜角會和正面的疊成兩個
     cheek = ((xx - 1233) / 28) ** 2 + ((yy - 253) / 23) ** 2 < 1
     clean = fill(clean, cheek, 4)
@@ -55,6 +56,10 @@ if ID.startswith('dog'):   # 鼻頭改由程式畫在立體上（投影會在側
         nose = (((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2 < 1)
         around = ndimage.binary_dilation(nose, iterations=14) & ~nose & fg & (clean @ np.array([.3, .59, .11]) > 135)
         clean[nose] = np.median(clean[around], axis=0)
+if ID == 'dog2':   # 原圖的毛流陰影投到蓬毛上會變成一塊塊灰影：五官和粉紅色以外整體調淡
+    pink = (clean[..., 0] - clean[..., 1] > 25) & (clean @ np.array([.3, .59, .11]) > 140)   # 深咖啡色的殘線也是偏紅，要看亮度
+    soft = ~face & ~pink
+    clean[soft] = FUR + (clean[soft] - FUR) * .3
 back = clean.copy()
 if ID == 'cat':
     # 背面圖垂下來的尾巴塗掉（模型的尾巴是翹起來的）

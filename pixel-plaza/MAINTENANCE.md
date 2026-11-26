@@ -189,3 +189,4 @@
 - 動作：骨架與權重在 `pets3d-gen.js` 的 `IDS`／`weigh()`（脖子斜線、背線、腿高度是照這顆模型量的）；姿勢數值抄自 `pets3d-draft.js`，理毛、吃、趴睡有針對一體成形的網格調小。項圈和鈴鐺跟著頭。
 - 兩隻狗（`dog1`／`dog2`）也有生成版，但 `IDS` 標 `trial`：`hasPet(id)` 不回傳，遊戲仍用 `pets3d.js`；展示頁用 `hasPet(id, true)`。要上線就拿掉 `trial`、在 `catBuild` 設狗的縮放與外框，並更新 import 的 `?v=`。
 - 狗的原始模型是本機生成（`~/hunyuan3d-local`，`venv/bin/python gen.py <輸入資料夾> <id> out/<id>.glb`，一隻約 15 分鐘，不進 Git）。清理：`gen_cat_model.py ... span=3.8`（臘腸身體長）／`beadeyes`（薩摩耶眼睛壓平）；貼圖 `gen_cat_texture.py dog1|dog2`。鼻頭是 shader 畫在立體上（`nose`），不要改回貼圖投影（側面會出現黑圈）。
+- 薩摩耶（`crisp`）：深色與粉紅色只允許出現在眼睛、口鼻、腮紅、內耳的範圍，其他一律蓋成毛色；白毛立體感照模型法線打淡影，不用原圖陰影線。立耳只在最前面那層上內耳色（`earFront`）。外框要退得比較深（`sink`，口鼻另加 `aSink`），否則皺褶會穿出黑色碎線。

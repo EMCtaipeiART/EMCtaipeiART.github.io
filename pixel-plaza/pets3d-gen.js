@@ -17,18 +17,18 @@ const IDS = {
   dog1:{trial:1, ink:0x331c0e, body:[.65, 0], br:.4, head:[1.5, 1], hr:[.5, .5], neck:[0, 1.05, .55], tail:[0, .55, -1],
     legF:[.32, .5, .66], legB:[.3, .48, -.68], lr:.17, low:.12, eyes:[[-.245, 1.527], [.345, 1.527]], eyeR:[.1, .145], span:3.8,
     line:[1, .6, .25, .05, .35], bell:[9, 9, 9, .1], bellFrom:0, bellZ:9, beads:0, legs:[0, .15, .38, -.15, -.38], legY:[.18, .55, .1, .24], face:.85, upTail:0,
-    fc:[1.45, .46, .42], muzzle:[1.42, 1.38], nose:[[.048, 1.322, 1.7], [.135, .09, .13]], tailW:[[-.95, -1.2, .12, .3]], ears:[.4, .52, .66, .8, -.05, .15], sit:[-.28, .04],
+    fc:[1.45, .46, .42], sink:.18, muzzle:[1.42, 1.38], nose:[[.048, 1.322, 1.7], [.135, .09, .13]], tailW:[[-.95, -1.2, .12, .3]], ears:[.4, .52, .66, .8, -.05, .15], sit:[-.28, .04],
     tp:{sit:.2, lie:.1, run:.25, eat:0, belly:.3, sleep:0}},
   dog2:{trial:1, ink:0x432010, body:[.85, 0], br:.45, head:[1.65, .55], hr:[.5, .5], neck:[0, 1.22, .3], tail:[0, 1.2, -.45],
     legF:[.28, .6, .52], legB:[.28, .6, -.46], lr:.17, low:.28, eyes:[[-.203, 1.587], [.203, 1.587]], eyeR:[.08, .1],
     line:[1.18, .5, .3, -.05, .2], bell:[9, 9, 9, .1], bellFrom:0, bellZ:9, beads:0, legs:[.02, .15, .32, -.1, -.28], legY:[.25, .62, .15, .3], face:.45, upTail:1,
-    fc:[1.45, .45, .42], muzzle:[.94, 1.48], nose:[[0, 1.515, 1.135], [.1, .072, .11]], tailW:[[-.2, -.42, 1.26, 1.42], [-.66, -.84, .72, .94]], sit:[-.5, .18],
+    fc:[1.45, .45, .42], earFront:[1.76, .05], sink:.3, hideFarEye:1, crisp:1, muzzle:[.94, 1.48], nose:[[0, 1.515, 1.135], [.1, .072, .11]], tailW:[[-.2, -.42, 1.26, 1.42], [-.66, -.84, .72, .94]], sit:[-.5, .18],
     tp:{sit:.2, lie:.2, run:-.15, eat:0, belly:.4, sleep:.15}},
 };
 export const hasPet = (id, trial) => !!IDS[id] && (!!trial || !IDS[id].trial);   // 遊戲只拿正式的；展示頁傳 true
 // scale：模型高 2.2，遊戲裡縮到和舊版差不多大；outline：外框外擴量（模型單位）
 export function makePet(THREE, {mergeVertices}, id, HULL_LAYER, {ready, fail, scale = 1, outline = .034} = {}){
-  const P = IDS[id], group = new THREE.Group(), base = new URL('assets/pets3d-gen/', import.meta.url).href, v = '?v=14';
+  const P = IDS[id], group = new THREE.Group(), base = new URL('assets/pets3d-gen/', import.meta.url).href, v = '?v=15';
   const bones = {}, order = ['roll', 'torso', 'head', 'tail', 'FL', 'FR', 'BL', 'BR'];
   const [by, bz] = P.body, [hy] = P.head, ry = P.hr[0], isCat = id === 'cat' || id === 'cat2';
   const at = {roll:[0, by, bz], torso:[0, by, bz], head:P.neck, tail:P.tail,
@@ -72,14 +72,18 @@ export function makePet(THREE, {mergeVertices}, id, HULL_LAYER, {ready, fail, sc
     const skin = new THREE.ShaderMaterial({uniforms:{map:{value:map}, lid}, vertexShader:`
       #include <common>
       #include <skinning_pars_vertex>
-      varying vec3 p; varying vec3 n;
+      varying vec3 p; varying vec3 n; varying float facing;
       void main(){ p = position; n = normal;
+        #include <beginnormal_vertex>
         #include <skinbase_vertex>
+        #include <skinnormal_vertex>
+        #include <defaultnormal_vertex>
         #include <begin_vertex>
         #include <skinning_vertex>
         #include <project_vertex>
+        facing = dot(normalize(transformedNormal), isOrthographic ? vec3(0.0, 0.0, 1.0) : normalize(-mvPosition.xyz));
       }`, fragmentShader:`
-      uniform sampler2D map; uniform float lid; varying vec3 p; varying vec3 n;
+      uniform sampler2D map; uniform float lid; varying vec3 p; varying vec3 n; varying float facing;
       vec3 panel(float u, float v, float i){ return texture2D(map, vec2((i + clamp(0.5 + u / ${span}, 0.002, 0.998)) / 3.0, 0.5 + v / ${span})).rgb; }
       void main(){
         vec3 m = normalize(n); float h = p.y - 1.1;
@@ -99,6 +103,16 @@ export function makePet(THREE, {mergeVertices}, id, HULL_LAYER, {ready, fail, sc
         wf = (wf + 6.0 * face) * (1.0 - tail); ws = ws * (1.0 - face) + tail; wb *= 1.0 - tail;
         vec3 c = panel(p.x, h, 0.0) * wf + panel(p.z + tail * p.x * abs(m.z) * 0.9, h, 1.0) * ws + panel(-p.x, h, 2.0) * wb;
         c /= max(wf + ws + wb, 1e-12);
+        ${P.crisp ? `{   // 口鼻只在正面圖和側面圖之間乾脆地切換，兩張混在一起嘴巴會有灰色重影
+          float zone = smoothstep(${num(P.muzzle[0])}, ${num(P.muzzle[0] + .06)}, p.z) * smoothstep(1.08, 1.14, p.y) * (1.0 - smoothstep(${num(P.muzzle[1])}, ${num(P.muzzle[1] + .06)}, p.y)) * (1.0 - smoothstep(0.28, 0.34, abs(p.x)));
+          c = mix(c, mix(panel(p.x, h, 0.0), panel(p.z, h, 1.0), smoothstep(0.66, 0.74, abs(m.x))), zone);
+        }` : ''}
+        ${P.earFront ? `{   // 立耳只有朝前的面用正面圖（粉紅內耳），其他面是白毛；三張圖混著投會變成好幾隻耳朵
+          float ear = smoothstep(${num(P.earFront[0])}, ${num(P.earFront[0] + .08)}, p.y) * smoothstep(${num(P.earFront[1])}, ${num(P.earFront[1] + .1)}, p.z);
+          float inner = smoothstep(0.15, 0.4, m.z) * smoothstep(0.6, 0.64, p.z) * (1.0 - smoothstep(0.37, 0.41, abs(p.x)));
+          vec3 fur = vec3(0.97, 0.93, 0.9);
+          c = mix(c, mix(fur, panel(p.x, h, 0.0), inner), ear);
+        }` : ''}
         // 閉眼：眼睛範圍由上往下蓋上周圍的毛色，下緣畫一條彎彎的眼線
         if (lid > 0.01 && p.z > ${num(P.face + .1)}) for (int i = 0; i < 2; i++) {
           vec2 ctr = i == 0 ? vec2(${e[0][0]}, ${e[0][1]}) : vec2(${e[1][0]}, ${e[1][1]});
@@ -117,6 +131,27 @@ export function makePet(THREE, {mergeVertices}, id, HULL_LAYER, {ready, fail, sc
           if (inside > 0.0 && q.y > 1.1 - 2.2 * lid) c = mix(c, panel(p.z - 0.06, h + ${num(P.sideEye[3])} * 1.8, 1.0), inside);
           if (lid > 0.75 && abs(q.x) < 0.85) c = mix(c, vec3(0.045, 0.018, 0.01), (1.0 - smoothstep(0.07, 0.13, abs(q.y - (-0.38 + 0.42 * q.x * q.x)))) * smoothstep(0.3, 0.65, abs(m.x)) * (1.0 - face));
         }` : ''}
+        ${P.crisp ? `{   // 白毛上除了眼睛和口鼻，不該有任何深色：殘影一律蓋掉
+          float eyeZone = step(0.5, p.z) * smoothstep(1.44, 1.47, p.y) * (1.0 - smoothstep(1.71, 1.74, p.y)) * (1.0 - smoothstep(0.3, 0.34, abs(p.x)));
+          float mouthZone = step(0.8, p.z) * smoothstep(1.06, 1.1, p.y) * (1.0 - smoothstep(1.55, 1.6, p.y)) * (1.0 - smoothstep(0.26, 0.31, abs(p.x)));
+          float dark = 1.0 - smoothstep(0.35, 0.62, dot(c, vec3(0.3, 0.59, 0.11)));
+          float pink = smoothstep(0.1, 0.2, c.r - c.g) * smoothstep(0.2, 0.3, c.r);
+          c = mix(c, vec3(0.93, 0.88, 0.85), dark * (1.0 - pink) * (1.0 - max(eyeZone, mouthZone)));
+          // 粉紅色只留在內耳、腮紅和舌頭，別處（例如尾巴）投到的蓋掉
+          float cheekZone = step(0.6, p.z) * smoothstep(1.3, 1.34, p.y) * (1.0 - smoothstep(1.58, 1.62, p.y)) * (1.0 - smoothstep(0.46, 0.5, abs(p.x)));
+          float earZone = smoothstep(1.76, 1.8, p.y) * step(0.05, p.z);
+          float tint = smoothstep(0.03, 0.09, c.r - c.g) * smoothstep(0.35, 0.5, c.r);
+          c = mix(c, vec3(0.97, 0.93, 0.9), tint * (1.0 - max(max(cheekZone, mouthZone), max(earZone, eyeZone))));
+          // 毛的立體感改照模型本身的起伏打淡影（原圖的陰影線投上來會變污點）
+          float white = smoothstep(0.55, 0.75, dot(c, vec3(0.3, 0.59, 0.11)));
+          float lit = smoothstep(-0.35, 0.6, dot(m, normalize(vec3(0.25, 0.75, 0.6))));
+          c *= mix(vec3(1.0), mix(vec3(0.8, 0.74, 0.74), vec3(1.0), lit), white);
+        }` : ''}
+        ${P.hideFarEye ? `for (int i = 0; i < 2; i++) {   // 背向鏡頭那側的眼睛只剩一條黑線，蓋回毛色
+          vec2 ctr = i == 0 ? vec2(${e[0][0]}, ${e[0][1]}) : vec2(${e[1][0]}, ${e[1][1]});
+          float inside = (1.0 - smoothstep(1.2, 1.45, length((p.xy - ctr) / vec2(${er[0]}, ${er[1]})))) * step(${num(P.face)}, p.z);
+          c = mix(c, vec3(0.97, 0.93, 0.9), inside * (1.0 - smoothstep(0.45, 0.6, facing)));
+        }` : ''}
         ${P.nose ? `{ vec3 q = (p - vec3(${P.nose[0].map(num)})) / vec3(${P.nose[1].map(num)});   // 鼻頭和上面的亮點
           c = mix(c, vec3(0.028, 0.01, 0.005), 1.0 - smoothstep(0.9, 1.08, length(q)));
           c = mix(c, vec3(0.11, 0.055, 0.035), (1.0 - smoothstep(0.7, 1.1, length((q.xy - vec2(-0.25, 0.42)) / vec2(0.36, 0.2)))) * step(0.0, q.z) * step(length(q), 1.05)); }` : ''}
@@ -129,9 +164,15 @@ export function makePet(THREE, {mergeVertices}, id, HULL_LAYER, {ready, fail, sc
     // 外框：沿法線外擴的背面
     const hull = g.clone(), hp = hull.attributes.position, hn = hull.attributes.normal;
     for (let i = 0; i < hp.count; i++) hp.setXYZ(i, hp.getX(i) + hn.getX(i) * outline, hp.getY(i) + hn.getY(i) * outline, hp.getZ(i) + hn.getZ(i) * outline);
+    // 口鼻的外框退得更深：對著背景時照樣有輪廓，對著自己的臉時不會畫出一道黑弧
+    const extra = new Float32Array(hp.count), rest = g.attributes.position;
+    if (P.crisp) for (let i = 0; i < hp.count; i++) { const x = rest.getX(i), y = rest.getY(i), z = rest.getZ(i);
+      extra[i] = .45 * scale * sm(.78, .92, z) * (1 - sm(.32, .42, Math.abs(x))) * sm(.98, 1.08, y) * (1 - sm(1.66, 1.76, y)); }
+    hull.setAttribute('aSink', new THREE.BufferAttribute(extra, 1));
+    const sink = ((P.sink || .1) * scale).toFixed(3);   // 外框往後退多少；蓬毛皺褶多的要退深一點，才不會穿出黑色碎線
     const ink = new THREE.MeshBasicMaterial({color:P.ink, side:THREE.BackSide});
-    ink.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n if (isOrthographic) mvPosition.z -= ' + (.1 * scale).toFixed(3) + '; else mvPosition.xyz += normalize(mvPosition.xyz) * ' + (.1 * scale).toFixed(3) + '; gl_Position = projectionMatrix * mvPosition;'); };
-    ink.customProgramCacheKey = () => 'pet-gen-ink' + scale;
+    ink.onBeforeCompile = sh => { sh.vertexShader = 'attribute float aSink;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n if (isOrthographic) mvPosition.z -= ' + sink + ' + aSink; else mvPosition.xyz += normalize(mvPosition.xyz) * (' + sink + ' + aSink); gl_Position = projectionMatrix * mvPosition;'); };
+    ink.customProgramCacheKey = () => 'pet-gen-ink' + sink;
     const line = new THREE.SkinnedMesh(hull, ink); line.layers.set(HULL_LAYER); line.frustumCulled = false; group.add(line); line.updateMatrixWorld(true); line.bind(skeleton, mesh.bindMatrix);
     mesh.raycast = line.raycast = () => {};   // 點選交給遊戲裡的平面範圍，4 萬面不做射線偵測
     group.scale.setScalar(scale);
