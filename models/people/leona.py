@@ -63,6 +63,15 @@ def face_texture(W=1024, H=768):
         b = np.exp(-(((nx - cx) / 17) ** 2 + ((ny - 266) / 11) ** 2) ** 1.5) * .3 * front * (1 - a)
         col = col * (1 - b[..., None]) + np.array((246, 128, 112), np.float32) / 255 * b[..., None]
     col = col * (1 - a[..., None]) + s[..., :3] * a[..., None]
+    for cx in (170, 286):                                            # 整顆頭加寬時，眼睛本身不跟著變胖
+        ex = cx + (nx - cx) * 1.06
+        w_ = np.clip((1 - np.sqrt(((nx - cx) / 40) ** 2 + ((ny - 229) / 36) ** 2)) / .08, 0, 1) * front
+        e_ = sample(NEU, ex, ny)[..., :3]
+        hair_ = (ex < 133.5) | (ex > 322)                            # 睫毛外側是原畫的頭髮，那裡鋪回膚色
+        e_ = np.where(hair_[..., None], np.array(SKIN_RGB, np.float32) / 255, e_)
+        w_ = np.maximum(w_, (hair_ & (np.abs(ny - 229) < 38) & ((nx < 150) | (nx > 306)) & front).astype(np.float32))
+        w_ = w_ * ((nx < 228) == (cx < 228))
+        col = col * (1 - w_[..., None]) + e_ * w_[..., None]
     edge = np.clip((np.abs(th) - .8) / .9, 0, 1) * .3 + np.clip((Z(101) - z) / .2, 0, 1) * .3
     edge = np.clip(edge, 0, .4)[..., None] * (1 - a[..., None])
     col = col * (1 - edge) + np.array((238, 140, 104), np.float32) / 255 * edge
@@ -287,6 +296,14 @@ for s in (-1, 1):
              [.05, .075, .05], BOW, 12, 8, .45)
         tube('shoebowline', [(bx + d * .06, by - .095, bz + .01), (bx + d * .29, by - .10, bz + .07)], [.012, .006], BOWL, 8, 6, line=True)
     ball('shoeknot', (bx, by - .06, bz + .01), (.085, .08, .09), BOW, 12, 8)
+
+# 臉再寬一些：整顆頭（臉、耳朵、頭髮）橫向加寬，肩膀以下的長髮少撐一點
+HEADS = ('head', 'hair', 'hairback', 'lock', 'braid', 'braidline', 'tail', 'ear', 'earin')
+for o in scene.collection.objects:
+    if o.type != 'MESH' or o.name.split('.')[0] not in HEADS:
+        continue
+    for v in o.data.vertices:
+        v.co.x *= float(np.interp(v.co.z, (Z(140), Z(104), Z(70), Z(20)), (1.02, 1.08, 1.08, 1.045)))
 
 finish('Leona',
        heads={'head', 'hair', 'hairback', 'lock', 'braid', 'braidline', 'tail', 'ear', 'earin'},

@@ -526,7 +526,7 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 import * as THREE from 'three';
 import {mergeGeometries, mergeVertices} from '../character-studio/vendor/BufferGeometryUtils.js';
 import {makePet} from './pets3d.js?v=10';
-import {makePet as makeGenPet, hasPet as hasGenPet} from './pets3d-gen.js?v=15';   // 兩隻貓用生成版模型
+import {makePet as makeGenPet, hasPet as hasGenPet} from './pets3d-gen.js?v=16';   // 兩隻貓和薩摩耶用生成版模型
 import {RoundedBoxGeometry} from '../character-studio/vendor/RoundedBoxGeometry.js';
 import {LineSegments2} from '../character-studio/vendor/lines/LineSegments2.js';
 import {LineSegmentsGeometry} from '../character-studio/vendor/lines/LineSegmentsGeometry.js';
@@ -1695,7 +1695,7 @@ const shadowTex = (() => { const c = document.createElement('canvas'); c.width =
 
 // ---------- 3D 人物（目前只有 Machi）：走路、跑步、坐下都用立體模型；模型載入失敗或本人在角色工坊換了造型就維持 2D ----------
 // 模型由 models/machi/build_machi.py（MACHI_LITE=1）產生，節點名稱 machi_<肢體>__<材質>[_n]（_n＝不描外框）；貼圖自帶陰影，用不受光材質。
-const MODEL3D = {Machi:{url:'assets/machi3d/machi.glb?v=2', atlas:5}, Noise:{url:'assets/people3d/noise.glb?v=4', atlas:0}, Leona:{url:'assets/people3d/leona.glb?v=4', atlas:8},
+const MODEL3D = {Machi:{url:'assets/machi3d/machi.glb?v=2', atlas:5}, Noise:{url:'assets/people3d/noise.glb?v=4', atlas:0}, Leona:{url:'assets/people3d/leona.glb?v=5', atlas:8},
   Amber:{url:'assets/people3d/amber.glb?v=4', atlas:0}, Anna:{url:'assets/people3d/anna.glb?v=3', atlas:3}};   // atlas：模型對應的角色工坊造型版本；之後發佈了更新的造型就改回 2D
 const EDGE_W = .0336;   // 人物與寵物的黑色外框粗細（世界單位），以兩隻狗為準
 const INK3D = EDGE_W / (WORLD_H * 224 / 240 / 6);   // 立體人物的外框（模型單位，身高約 6）
@@ -3512,7 +3512,7 @@ function catBuild(){
   m.userData.pickRoot = g; m.visible = false; g.add(m); P.sprite = m; P.tex = tex;
   if (!PIXEL_MODE) try {   // 立體模型（pets3d.js）；失敗就維持 2D。平面圖保留當點選範圍，只是不畫出來
     const gen = hasGenPet(DEF.id);   // 生成版模型是載入完才掛上網格，所以 pickRoot 在 ready 再標一次
-    const pet = (gen ? makeGenPet : makePet)(THREE, {mergeGeometries, mergeVertices}, DEF.id, HULL_LAYER, {scale:.485, outline:.055, ready:() => { m.material.visible = false; pet.group.traverse(o => { o.userData.pickRoot = g; }); }, fail:() => { g.remove(blob, pet.group); P.m3d = null; }}); pet.group.traverse(o => { o.userData.pickRoot = g; });
+    const pet = (gen ? makeGenPet : makePet)(THREE, {mergeGeometries, mergeVertices}, DEF.id, HULL_LAYER, {scale:DEF.id === 'dog2' ? .62 : .485, outline:DEF.id === 'dog2' ? .054 : .055, ready:() => { m.material.visible = false; pet.group.traverse(o => { o.userData.pickRoot = g; }); }, fail:() => { g.remove(blob, pet.group); P.m3d = null; }}); pet.group.traverse(o => { o.userData.pickRoot = g; });
     const blob = new THREE.Mesh(new THREE.PlaneGeometry(.95, .8), new THREE.MeshBasicMaterial({map:shadowTex, transparent:true, opacity:.3, depthWrite:false})); blob.rotation.x = -Math.PI / 2; blob.position.y = .02; blob.raycast = () => {};
     g.add(blob, pet.group); P.m3d = pet; P.ready = true;
   } catch (e) { console.warn('3D 寵物建立失敗，維持 2D', DEF.id, e); }
