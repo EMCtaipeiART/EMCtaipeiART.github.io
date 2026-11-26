@@ -621,7 +621,9 @@ const DOORS = [
   {horiz:false, c:666, a:zN(125), b:zN(210)},        // 會議室 A
   {horiz:false, c:284, a:zN(1118), b:zN(1170)},     // 倉庫
   {horiz:false, c:284, a:zN(1325), b:zN(1380)},     // 會議室 C
-  {horiz:true, c:zN(1045) + 6, a:820, b:872}         // 會議室 D
+  {horiz:true, c:zN(1045) + 6, a:820, b:872},        // 會議室 D
+  {horiz:true, c:zN(276) + 6, a:385, b:431},          // 男廁
+  {horiz:true, c:zN(276) + 6, a:543, b:596}           // 女廁
 ];
 const LABELS_RAW = [['男廁',370,44],['女廁',526,44],['會議室 A',863,110],['倉庫',215,1062],['會議室 C',186,1432],['茶水間',368,1226],['冰箱',510,1208],['會議室 D',845,1285],['電梯',201,262]];
 const LABELS = LABELS_RAW.map(l => [l[0], l[1], zN(l[2])]);
@@ -629,17 +631,17 @@ const LABELS = LABELS_RAW.map(l => [l[0], l[1], zN(l[2])]);
 const FX4 = 3600, F4_Z1 = 1700, F4_X0 = -100, F4_X1 = 1430, F4_Z0 = -100;   // 四樓離五樓很遠（視野內看不到五樓）；四邊各留 70 px 走廊
 const F4 = {EX:122.5, EY:149, toilets:[['男廁', 451.5], ['女廁', 612.5]], TY:30, TW:173, TH:219,
   H:{x:598, y:369, w:598, h:344}, OFF:{x:598, y:763, w:690, h:510.5}, O1:{x:598, y:763, w:339, h:510.5}, O2:{x:949, y:763, w:339, h:510.5}, F:{x:598, y:1323.5, w:234, h:219}, G:{x:912, y:1323.5, w:234, h:219}};
-function glassWalls(x, y, w, h, doors, marked = true){   // 玻璃屋：四面牆，door ＝ {side:'t'|'b'|'l'|'r', c:門中心座標}（寬 60）；marked：門口要不要標示門柱
+function glassWalls(x, y, w, h, doors){   // 玻璃屋：四面牆，door ＝ {side:'t'|'b'|'l'|'r', c:門中心座標}（寬 60）
   const RT = 12, d = 30, gap = k => doors.find(o => o.side === k);
   const seg = (a, b, g) => { if (!g) return [[a, b]]; const o = [], g0 = g.c - d, g1 = g.c + d; if (a < g0) o.push([a, Math.min(b, g0)]); if (b > g1) o.push([Math.max(a, g1), b]); return o; };
   for (const [a, b] of seg(x, x + w, gap('t'))) WALLS.push([a + FX4, y, b - a, RT]);
   for (const [a, b] of seg(x, x + w, gap('b'))) WALLS.push([a + FX4, y + h - RT, b - a, RT]);
   for (const [a, b] of seg(y + RT, y + h - RT, gap('l'))) WALLS.push([x + FX4, a, RT, b - a]);
   for (const [a, b] of seg(y + RT, y + h - RT, gap('r'))) WALLS.push([x + w - RT + FX4, a, RT, b - a]);
-  if (marked) for (const o of doors) { const hz = o.side === 't' || o.side === 'b', near = o.side === 't' || o.side === 'l', c = hz ? (near ? y + 6 : y + h - 6) : (near ? x + 6 : x + w - 6) + FX4;
+  for (const o of doors) { const hz = o.side === 't' || o.side === 'b', near = o.side === 't' || o.side === 'l', c = hz ? (near ? y + 6 : y + h - 6) : (near ? x + 6 : x + w - 6) + FX4;
     DOORS.push({horiz:hz, c, a:o.c - d + (hz ? FX4 : 0), b:o.c + d + (hz ? FX4 : 0)}); }
 }
-for (const [, rx] of F4.toilets) glassWalls(rx, F4.TY, F4.TW, F4.TH, [{side:'b', c:rx + 131}], false);
+for (const [, rx] of F4.toilets) glassWalls(rx, F4.TY, F4.TW, F4.TH, [{side:'b', c:rx + 131}]);
 { const H = F4.H; glassWalls(H.x, H.y, H.w, H.h, [{side:'t', c:H.x + 107}, {side:'b', c:H.x + H.w / 2}]); }
 { const o = F4.OFF, mid = o.y + o.h / 2; glassWalls(o.x, o.y, o.w, o.h, [{side:'t', c:o.x + 170}, {side:'b', c:o.x + 520}, {side:'l', c:mid}, {side:'r', c:mid}]);   // 兩間合併成一間：上下左右各一道門
   WALLS.push([F4.O1.x + F4.O1.w + FX4, o.y + 12, 12, mid - 30 - (o.y + 12)], [F4.O1.x + F4.O1.w + FX4, mid + 30, 12, o.y + o.h - 12 - (mid + 30)]);
@@ -659,18 +661,32 @@ const SEATS = {Leona:[0,2,0,'top'],Amber:[0,2,1,'top'],Noise:[0,2,2,'top'],Anna:
 const FLOOR_X0 = -3, FLOOR_X1 = 1201 * U + 3, FLOOR_Z0 = -100 * U, FLOOR_Z1 = 1560 * U + 3;
 // 地板：近白的拋光大方磚，磚縫很淡；材質帶反光（見下方 MeshStandardMaterial）
 function paintFloor(g, dark){
-  const a = dark ? '#c9d0da' : '#dfe4ea', b = dark ? '#bcc4d1' : '#d3d9e1', joint = dark ? 'rgba(80,92,115,.2)' : 'rgba(110,125,150,.16)';
+  const a = dark ? '#464180' : '#dfe4ea', b = dark ? '#3d3972' : '#d3d9e1', joint = dark ? 'rgba(10,8,30,.55)' : 'rgba(110,125,150,.16)';
   for (let ty = 0; ty < 2; ty++) for (let tx = 0; tx < 2; tx++) { g.fillStyle = (tx + ty) % 2 ? b : a; g.fillRect(tx * 32, ty * 32, 32, 32); }
   g.fillStyle = joint; g.fillRect(0, 0, 64, 1); g.fillRect(0, 32, 64, 1); g.fillRect(0, 0, 1, 64); g.fillRect(32, 0, 1, 64);
 }
 // 地板：拋光方磚（五樓、四樓各一塊）；深色模式換成深色方磚（見 applyTheme）
 const floorTiles = [];
+const NEON = {cyan:0x2fe9ff, pink:0xff3fd0};
+const neonOnly = [];   // 只有深色（霓虹）模式才顯示的燈條
+const themeHooks = [];   // 之後才建立的物件要跟著深淺模式變，就登記在這裡
+function neonBar(w, h, d, color, x, y, z){   // 一條發光燈管（世界座標，y＝底部）
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({color}));
+  m.position.set(x, y + h / 2, z); m.userData.noMask = m.userData.noShift = true; m.visible = false; scene.add(m); neonOnly.push(m); return m;
+}
+const gridGlow = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, 64, 64);
+  g.fillStyle = '#1fb8e0'; g.fillRect(0, 0, 64, 1); g.fillRect(0, 0, 1, 64); g.fillStyle = '#7a2a9c'; g.fillRect(0, 32, 64, 1); g.fillRect(32, 0, 1, 64); return c; })();
 for (const [FLOOR_X0, FLOOR_X1, FLOOR_Z0, FLOOR_Z1] of [[-3, 1201 * U + 3, -100 * U, 1560 * U + 3], [(FX4 + F4_X0) * U, (FX4 + F4_X1) * U, F4_Z0 * U, F4_Z1 * U]]) {
   const c = document.createElement('canvas'); c.width = c.height = 64; paintFloor(c.getContext('2d'), false);
   const t = new THREE.CanvasTexture(c); floorTiles.push({c, t}); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.LinearFilter; t.colorSpace = THREE.SRGBColorSpace;
   t.repeat.set((FLOOR_X1 - FLOOR_X0) / 2, (FLOOR_Z1 - FLOOR_Z0) / 2);
   const f = new THREE.Mesh(new THREE.PlaneGeometry(FLOOR_X1 - FLOOR_X0, FLOOR_Z1 - FLOOR_Z0), FLAT ? new THREE.MeshLambertMaterial({map:t}) : new THREE.MeshStandardMaterial({map:t, roughness:.34, metalness:0, envMapIntensity:.35}));
   f.rotation.x = -Math.PI / 2; f.position.set((FLOOR_X0 + FLOOR_X1) / 2, 0, (FLOOR_Z0 + FLOOR_Z1) / 2); scene.add(f); f.userData.noMask = true; f.receiveShadow = !FLAT;
+  const glowMap = new THREE.CanvasTexture(gridGlow); glowMap.wrapS = glowMap.wrapT = THREE.RepeatWrapping; glowMap.colorSpace = THREE.SRGBColorSpace; glowMap.repeat.copy(t.repeat);
+  f.material.emissiveMap = glowMap; floorTiles[floorTiles.length - 1].mat = f.material;
+  const W = FLOOR_X1 - FLOOR_X0, D = FLOOR_Z1 - FLOOR_Z0, cx = (FLOOR_X0 + FLOOR_X1) / 2, cz = (FLOOR_Z0 + FLOOR_Z1) / 2;   // 樓層邊緣的燈條
+  for (const [z, c] of [[FLOOR_Z0, NEON.pink], [FLOOR_Z1, NEON.pink]]) neonBar(W, .08, .12, c, cx, 0, z);
+  for (const [x, c] of [[FLOOR_X0, NEON.cyan], [FLOOR_X1, NEON.cyan]]) neonBar(.12, .08, D, c, x, 0, cz);
 }
 // 地板外的背景：漂浮在宇宙裡的其他「平行辦公室」。只是遠景（在地板下方、不可點、無碰撞、不進外框遮罩）
 const multiverse = (() => {
@@ -700,32 +716,35 @@ const multiverse = (() => {
     const lines = new THREE.LineSegments(t.edges, new THREE.LineBasicMaterial({color:0x1c2233}));
     const g = new THREE.Group(); g.add(body, lines); g.position.set(x, y, z); g.rotation.y = turn; g.scale.setScalar(scale);
     g.traverse(o => { o.userData.noMask = o.userData.noShift = true; }); body.renderOrder = -1; scene.add(g);
-    items.push({g, y, phase, far, lines});
+    items.push({g, y, phase, far, lines, amount:u.amount});
   }
   const sky = document.createElement('canvas'); sky.width = 1024; sky.height = 640; const skyTex = new THREE.CanvasTexture(sky); skyTex.colorSpace = THREE.SRGBColorSpace;
   const theme = dark => {
     const g = sky.getContext('2d'), W = sky.width, H = sky.height, base = g.createLinearGradient(0, 0, 0, H);
-    (dark ? ['#111726', '#19202e'] : ['#d3dcea', '#e2e8f0']).forEach((c, i) => base.addColorStop(i, c)); g.fillStyle = base; g.fillRect(0, 0, W, H);
+    (dark ? ['#0b0524', '#2a0d4a'] : ['#d3dcea', '#e2e8f0']).forEach((c, i) => base.addColorStop(i, c)); g.fillStyle = base; g.fillRect(0, 0, W, H);
     let k = 7; const r = () => { k = (k * 1664525 + 1013904223) >>> 0; return k / 4294967296; };
-    for (let i = 0; i < 90; i++) { const x = r() * W, y = r() * H; g.fillStyle = dark ? `rgba(255,255,255,${.2 + r() * .35})` : `rgba(255,255,255,${.5 + r() * .4})`; g.fillRect(x, y, 1.6, 1.6); }
+    for (let i = 0; i < 90; i++) { const x = r() * W, y = r() * H; g.fillStyle = dark ? (i % 3 ? `rgba(90,230,255,${.35 + r() * .4})` : `rgba(255,90,215,${.35 + r() * .4})`) : `rgba(255,255,255,${.5 + r() * .4})`; g.fillRect(x, y, 1.6, 1.6); }
     skyTex.needsUpdate = true; scene.background = skyTex;
-    haze.set(dark ? 0x161d2b : 0xdae2ed);
-    for (const it of items) { it.lines.material.color.copy(ink).lerp(haze, .55 + it.far * .3); }
+    haze.set(dark ? 0x1e0b40 : 0xdae2ed);
+    for (const it of items) { if (dark) it.lines.material.color.set(it.phase > 3.14 ? 0x2fe9ff : 0xff3fd0).lerp(haze, it.far * .25); else it.lines.material.color.copy(ink).lerp(haze, .55 + it.far * .3); it.amount.value = dark ? .66 + it.far * .22 : .52 + it.far * .3; }
   };
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (!still) (function drift(ms){ for (const it of items) it.g.position.y = it.y + Math.sin(ms / 3600 + it.phase) * .18; requestAnimationFrame(drift); })(0);
   return {theme, items};
 })();
-// 深色模式（跟著網站的深淺模式：localStorage designRequestThemeV1，網站切換時用 postMessage 通知）：只有地板外的天空變成夜空，辦公室照樣開燈（亮地板、接近淺色模式的燈光）
+var themeNow = 'light';
+// 深色模式（跟著網站的深淺模式：localStorage designRequestThemeV1，網站切換時用 postMessage 通知）：賽博龐克霓虹風——深靛藍地磚＋發光格線、青／桃紅燈條、紫色夜空；燈光要夠亮，看得清楚家具與人物
 function applyTheme(t){
-  const dark = t === 'dark';
-  for (const {c, t: tex} of floorTiles) { paintFloor(c.getContext('2d'), dark); tex.needsUpdate = true; }
+  const dark = t === 'dark'; themeNow = t;
+  for (const {c, t: tex, mat} of floorTiles) { paintFloor(c.getContext('2d'), dark); tex.needsUpdate = true; mat.emissive.set(dark ? 0xffffff : 0x000000); }
+  for (const m of neonOnly) m.visible = dark;
+  for (const hook of themeHooks) hook(dark);
   multiverse.theme(dark);
-  hemiLight.color.set(dark ? 0xfbfaf8 : 0xf2f6ff); hemiLight.groundColor.set(dark ? 0xa9b0bd : 0xb9c2d2); hemiLight.intensity = (FLAT ? 2 : .62) * (dark ? .95 : 1);
-  sun.intensity = (FLAT ? 0 : 2.1) * (dark ? .85 : 1); sun.color.set(dark ? 0xfff9f0 : 0xffffff);
+  hemiLight.color.set(dark ? 0x9fdcff : 0xf2f6ff); hemiLight.groundColor.set(dark ? 0xc45ae0 : 0xb9c2d2); hemiLight.intensity = (FLAT ? 2 : .62) * (dark ? 1.75 : 1);
+  sun.intensity = (FLAT ? 0 : 2.1) * (dark ? .95 : 1); sun.color.set(dark ? 0xffc4f2 : 0xffffff);
   document.documentElement.dataset.plazaTheme = dark ? 'dark' : 'light';
 }
-let themeNow = 'light'; try { themeNow = localStorage.getItem('designRequestThemeV1') === 'dark' ? 'dark' : 'light'; } catch (e) {}
+try { themeNow = localStorage.getItem('designRequestThemeV1') === 'dark' ? 'dark' : 'light'; } catch (e) {}
 applyTheme(themeNow);
 addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'pixelOfficeTheme') applyTheme(e.data.theme === 'dark' ? 'dark' : 'light'); });
 addEventListener('storage', e => { if (e.key === 'designRequestThemeV1') applyTheme(e.newValue === 'dark' ? 'dark' : 'light'); });
@@ -797,6 +816,8 @@ const rectsWallEnd = rects.length;
   free.forEach(([cx, cz]) => { pos.push(cx * U, 0, cz * U, cx * U, H, cz * U); });
   const lm = new LineMaterial({color:0x14202a, linewidth:HD ? 2 * DPR : 1.2}), le = new LineSegments2(new LineSegmentsGeometry().setPositions(pos), lm);
   le.userData.noShift = true; scene.add(le); lineMats.push(lm); lm.resolution.set(renderer.domElement.width, renderer.domElement.height);
+  themeHooks.push(dark => { lm.color.set(dark ? NEON.cyan : 0x14202a); wallMat.color.set(dark ? 0x7b5cff : 0x8c98ad); wallMat.opacity = dark ? .3 : .5; });
+  themeHooks[themeHooks.length - 1](themeNow === 'dark');
 }
 const R_PLAYER = .45;
 function blocked(x, z){
@@ -1080,6 +1101,9 @@ function doors3d(){   // 門口：兩側深色門柱＋貼地的灰色門檻。�
     const box = (al, h, sal, sac, color) => pbox(hz ? sal : sac, h, hz ? sac : sal, color, hz ? al : c, .004, hz ? c : al);
     box((o.a + o.b) / 2 * U, .018, (o.b - o.a) * U - .12, .34, 0x7c879a);          // 門檻
     for (const end of [o.a - 1, o.b + 1]) box(end * U, 1.68, .17, .24, OFFICE.coal);   // 門柱
+    const bar = (al, y, sal, h, sac) => { neonBar(hz ? sal : sac, h, hz ? sac : sal, NEON.pink, hz ? al : c, y, hz ? c : al).visible = themeNow === 'dark'; };
+    bar((o.a + o.b) / 2 * U, .024, (o.b - o.a) * U - .2, .012, .14);                 // 發光門檻
+    for (const end of [o.a - 1, o.b + 1]) bar(end * U, 1.69, .19, .07, .26);          // 門柱燈頭
   }
 }
 async function buildOffice(){
