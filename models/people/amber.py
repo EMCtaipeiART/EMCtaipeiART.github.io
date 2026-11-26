@@ -115,7 +115,7 @@ def scalp_texture(W=1024, H=768):
     col = paste_art(hair_color(th, z), th, x, z, .55)
     nx, ny = neutral_px(x, z)
     win = (y < -.45) & in_poly(nx, ny, FRONT_WIN)
-    win |= (y < .52) & (y > -1.35) & (np.abs(x) > 1.05) & in_poly(120 - PX * y, 120 - PX * (z - 3), SIDE_WIN)
+    win |= (y < .52) & (y > -1.35) & (np.abs(x) > np.interp(z, (Z(82), Z(66)), (.8, 1.36))) & in_poly(120 - PX * y, 120 - PX * (z - 3), SIDE_WIN)
     win |= (z < Z(99)) & (y < -.3) & (np.abs(x) < 1.1)
     pad = np.pad(win, ((0, 0), (5, 5)), mode='wrap')
     line = dilate(pad, 3)[:, 5:-5] & ~win
@@ -125,7 +125,7 @@ def scalp_texture(W=1024, H=768):
 _, SR = loft('hair', SCALP, tex_mat('hair', scalp_texture(), clip=True), 96, 56, 2.25, bump=waves(.022), uv=True, caps=False)
 
 MASS = rows([(156, 56, 122, 80), (150, 70, 132, 62), (140, 81, 138, 53), (127, 88, 135, 49), (116, 83, 126, 52), (105, 73, 110, 53),
-             (94, 74.5, 100, 54), (82, 69, 99, 58), (68, 56, 100, 68)])
+             (94, 74.5, 100, 54), (82, 69, 99, 57), (68, 56, 100, 64), (54, 42, 100, 74)])
 
 def mass_texture(R_, bump, front_lo, phase, hem=None, cx=0.0, W=1024, H=768, power=2.3):
     R = smooth_rows(R_)
@@ -143,7 +143,7 @@ def mass_texture(R_, bump, front_lo, phase, hem=None, cx=0.0, W=1024, H=768, pow
     return np.dstack([np.clip(col, 0, 1), a])
 
 hem = lambda th, x: Z(149) - .20 * np.abs(np.sin(th * 5.5)) ** .6 - .06 * np.sin(th * 13)
-loft('hairback', MASS, tex_mat('hair_back', mass_texture(MASS, waves(.055), .8, 1.3, hem), clip=True), 96, 56, 2.3, bump=waves(.055), uv=True, caps=False)
+loft('hairback', MASS, tex_mat('hair_back', mass_texture(MASS, waves(.055), .8, 0.0, hem), clip=True), 96, 56, 2.3, bump=waves(.055), uv=True, caps=False)
 
 # 肩前兩大束
 for s in (-1, 1):

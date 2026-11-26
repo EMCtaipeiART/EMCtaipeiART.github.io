@@ -43,7 +43,7 @@ const live = await import('./pets3d.js' + bust);
 const draft = await import('./pets3d-draft.js' + bust).catch(() => null);
 const gen = await import('./pets3d-gen.js' + bust).catch(() => null);   // 生成版（兩隻貓，遊戲裡用的就是這個）
 // 設計部立體人物：Machi 在 index.html 的 MODEL3D；其他人上線前只在這裡看（模型在 assets/people3d/，腳本在 models/people/）
-const PEOPLE = {Noise:'assets/people3d/noise.glb?v=2', Leona:'assets/people3d/leona.glb?v=1', Amber:'assets/people3d/amber.glb?v=1'};
+const PEOPLE = {Noise:'assets/people3d/noise.glb?v=2', Leona:'assets/people3d/leona.glb?v=1', Amber:'assets/people3d/amber.glb?v=2', Anna:'assets/people3d/anna.glb?v=1'};
 const isMan = who => who === 'Machi' || who in PEOPLE;
 const WHO = [['Machi', 'Machi'], ...Object.keys(PEOPLE).map(n => [n, n]), ['cat', '無名小貓'], ['cat2', '四樓小貓'], ['dog1', '臘腸'], ['dog2', '薩摩耶']];
 const PET_POSES = [['stand', '站'], ['walk', '走'], ['run', '跑'], ['sit', '坐'], ['loaf', '趴縮'], ['down', '趴下'], ['sleep', '睡'], ['eat', '吃'], ['groom', '理毛'], ['wag', '搖尾'], ['belly', '翻肚']];
