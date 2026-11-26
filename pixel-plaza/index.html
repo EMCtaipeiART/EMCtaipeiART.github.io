@@ -632,8 +632,8 @@ const FX4 = 3600, F4_Z1 = 1700, F4_X0 = -100, F4_X1 = 1430, F4_Z0 = -100;   // �
 const F4 = {EX:122.5, EY:149, toilets:[['男廁', 451.5], ['女廁', 612.5]], TY:30, TW:173, TH:219,
   H:{x:598, y:369, w:598, h:344}, OFF:{x:598, y:763, w:690, h:510.5}, O1:{x:598, y:763, w:339, h:510.5}, O2:{x:949, y:763, w:339, h:510.5}, F:{x:598, y:1323.5, w:234, h:219}, G:{x:912, y:1323.5, w:234, h:219}};
 function glassWalls(x, y, w, h, doors){   // 玻璃屋：四面牆，door ＝ {side:'t'|'b'|'l'|'r', c:門中心座標}（寬 60）
-  const RT = 12, d = 30, gap = k => doors.find(o => o.side === k);
-  const seg = (a, b, g) => { if (!g) return [[a, b]]; const o = [], g0 = g.c - d, g1 = g.c + d; if (a < g0) o.push([a, Math.min(b, g0)]); if (b > g1) o.push([Math.max(a, g1), b]); return o; };
+  const RT = 12, d = 30, gap = k => doors.filter(o => o.side === k);   // 同一面牆可以開好幾個門
+  const seg = (a, b, gs) => { const o = []; let at = a; for (const g of [...gs].sort((p, q) => p.c - q.c)) { if (g.c - d > at) o.push([at, Math.min(b, g.c - d)]); at = Math.max(at, g.c + d); } if (b > at) o.push([at, b]); return o; };
   for (const [a, b] of seg(x, x + w, gap('t'))) WALLS.push([a + FX4, y, b - a, RT]);
   for (const [a, b] of seg(x, x + w, gap('b'))) WALLS.push([a + FX4, y + h - RT, b - a, RT]);
   for (const [a, b] of seg(y + RT, y + h - RT, gap('l'))) WALLS.push([x + FX4, a, RT, b - a]);
@@ -643,7 +643,7 @@ function glassWalls(x, y, w, h, doors){   // 玻璃屋：四面牆，door ＝ {s
 }
 for (const [, rx] of F4.toilets) glassWalls(rx, F4.TY, F4.TW, F4.TH, [{side:'b', c:rx + 131}]);
 { const H = F4.H; glassWalls(H.x, H.y, H.w, H.h, [{side:'t', c:H.x + 107}, {side:'b', c:H.x + H.w / 2}]); }
-{ const o = F4.OFF, mid = o.y + o.h / 2; glassWalls(o.x, o.y, o.w, o.h, [{side:'t', c:o.x + 170}, {side:'b', c:o.x + 520}, {side:'l', c:mid}, {side:'r', c:mid}]);   // 兩間合併成一間：上下左右各一道門
+{ const o = F4.OFF, mid = o.y + o.h / 2; glassWalls(o.x, o.y, o.w, o.h, [{side:'t', c:o.x + 170}, {side:'t', c:o.x + 520}, {side:'b', c:o.x + 170}, {side:'b', c:o.x + 520}, {side:'l', c:mid}, {side:'r', c:mid}]);   // 兩間合併成一間：上下左右各一道門
   WALLS.push([F4.O1.x + F4.O1.w + FX4, o.y + 12, 12, mid - 30 - (o.y + 12)], [F4.O1.x + F4.O1.w + FX4, mid + 30, 12, o.y + o.h - 12 - (mid + 30)]);
   DOORS.push({horiz:false, c:F4.O1.x + F4.O1.w + FX4 + 6, a:mid - 30, b:mid + 30}); }   // 中間隔一道玻璃牆，正中央留開口
 glassWalls(F4.F.x, F4.F.y, F4.F.w, F4.F.h, [{side:'r', c:F4.F.y + F4.F.h / 2}]); glassWalls(F4.G.x, F4.G.y, F4.G.w, F4.G.h, [{side:'l', c:F4.G.y + F4.G.h / 2}]);
