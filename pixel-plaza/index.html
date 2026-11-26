@@ -1695,7 +1695,7 @@ const shadowTex = (() => { const c = document.createElement('canvas'); c.width =
 
 // ---------- 3D 人物（目前只有 Machi）：走路、跑步、坐下都用立體模型；模型載入失敗或本人在角色工坊換了造型就維持 2D ----------
 // 模型由 models/machi/build_machi.py（MACHI_LITE=1）產生，節點名稱 machi_<肢體>__<材質>[_n]（_n＝不描外框）；貼圖自帶陰影，用不受光材質。
-const MODEL3D = {Machi:{url:'assets/machi3d/machi.glb?v=2', atlas:5}, Noise:{url:'assets/people3d/noise.glb?v=4', atlas:0}, Leona:{url:'assets/people3d/leona.glb?v=5', atlas:8},
+const MODEL3D = {Machi:{url:'assets/machi3d/machi.glb?v=2', atlas:5}, Noise:{url:'assets/people3d/noise.glb?v=4', atlas:0}, Leona:{url:'assets/people3d/leona.glb?v=6', atlas:8},
   Amber:{url:'assets/people3d/amber.glb?v=4', atlas:0}, Anna:{url:'assets/people3d/anna.glb?v=5', atlas:3}};   // atlas：模型對應的角色工坊造型版本；之後發佈了更新的造型就改回 2D
 const EDGE_W = .0336;   // 人物與寵物的黑色外框粗細（世界單位），以兩隻狗為準
 const INK3D = EDGE_W / (WORLD_H * 224 / 240 / 6);   // 立體人物的外框（模型單位，身高約 6）
