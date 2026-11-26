@@ -108,37 +108,7 @@ if 'beadeyes' in flags:   # 薩摩耶的眼睛被生成成兩顆凸出的小球�
         bm.normal_update()
     print('OPEN', sum(e.is_boundary for e in bm.edges))
     bm.to_mesh(me); bm.free()
-if 'machi' in flags:   # Machi：後腦杓中間被生成成一張「臉」（兩顆凸點＋尖角）要磨成順的髮面；眼睛的圓片壓平改用畫的
-    import bmesh
-    import numpy as np
-    from mathutils import Vector
-    bm = bmesh.new(); bm.from_mesh(me); bm.normal_update()
-    K = 2.6 / 1024
-    def repair(cx, cz, rx, rz, back, degree, passes, groove=0):
-        sign = 1 if back else -1                                      # Blender y：朝後為正
-        rad = lambda v: (((v.co.x - cx) / rx) ** 2 + ((v.co.z - cz) / rz) ** 2) ** .5
-        side = lambda v: v.co.y * sign > .1
-        basis = lambda x, z: [x ** i * z ** (n - i) for n in range(degree + 1) for i in range(n + 1)]
-        ring = [v for v in bm.verts if side(v) and 1.0 < rad(v) < 1.35 and v.normal.y * sign > .2]
-        k = np.linalg.lstsq(np.array([basis(v.co.x - cx, v.co.z - cz) for v in ring]), np.array([v.co.y for v in ring]), rcond=None)[0]
-        area = []
-        for v in bm.verts:
-            r = rad(v)
-            if not side(v) or r > 1.12: continue
-            fit = float(np.dot(k, basis(v.co.x - cx, v.co.z - cz)))
-            if abs(v.co.y - fit) > .3: continue
-            t = min(1, max(0, (1.12 - r) / .3)); w = t * t * (3 - 2 * t)
-            fit += sign * groove * math.sin((v.co.x - cx) * 55 + (v.co.z - cz) * 9)   # 淡淡的髮絲紋
-            v.co.y += (fit - v.co.y) * w; area.append(v)
-        for _ in range(passes): bmesh.ops.smooth_vert(bm, verts=area, factor=.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
-        bm.normal_update()
-    repair(0, 1.1 + (512 - 318) * K, 140 * K, 135 * K, True, 4, 6, .0025)
-    repair(0, 1.1 + (512 - 398) * K, 62 * K, 48 * K, True, 3, 25)      # 尖角底下殘留的小皺摺
-    for px in (433, 589): repair((px - 512) * K, 1.1 + (512 - 377) * K, 40 * K, 48 * K, False, 2, 8)
-    for px, pz in ((349, 508), (378, 510), (399, 496)):                # 小雞臉上的小疙瘩（五官改用畫的），壓平
-        repair((px - 512) * K, 1.1 + (512 - pz) * K, 15 * K, 16 * K, False, 2, 10)
-    bm.to_mesh(me); bm.free()
-m = o.modifiers.new('d', 'DECIMATE'); m.ratio = min(1, (60000 if 'machi' in flags else 40000) / len(me.polygons)); bpy.ops.object.modifier_apply(modifier='d')
+m = o.modifiers.new('d', 'DECIMATE'); m.ratio = min(1, 40000 / len(me.polygons)); bpy.ops.object.modifier_apply(modifier='d')
 for p in me.polygons: p.use_smooth = True
 me.materials.clear(); me.update()
 for other in list(sc.objects):
