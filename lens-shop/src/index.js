@@ -60,7 +60,7 @@ async function edgeGet(k, ttl, compute, ctx) {
   try { const put = caches.default.put(key, new Response(JSON.stringify(v), { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=' + ttl } })); ctx && ctx.waitUntil ? ctx.waitUntil(put) : await put; } catch {}
   return v;
 }
-async function edgePurge(cid) { try { await Promise.all([caches.default.delete(new Request(EDGE + 'campaigns')), caches.default.delete(new Request(EDGE + 'catalog/' + cid))]); } catch {} }
+async function edgePurge(cid) { try { await Promise.all([caches.default.delete(new Request(EDGE + 'campaigns')), caches.default.delete(new Request(EDGE + 'catalog/' + cid)), caches.default.delete(new Request(EDGE + 'share/' + cid))]); } catch {} }
 
 // ── 管理者簽章 ──
 async function hmac(env, data) {
@@ -604,7 +604,7 @@ async function handle(req, env, ctx) {
       if (ip) { for (const im of built.images) im.key = ip + im.key; for (const c of built.catalog.limited.cards) if (c.img) c.img = ip + c.img; }
       const old = await env.FILES.list({ prefix: 'img/' + ip + 'lim' });
       if (old.objects.length) await env.FILES.delete(old.objects.map((o) => o.key));
-      for (const im of built.images) await env.FILES.put('img/' + im.key, im.data, { httpMetadata: { contentType: im.mime } });
+      for (const im of built.images) { await env.FILES.put('img/' + im.key, im.data, { httpMetadata: { contentType: im.mime } }); try { await caches.default.delete(new Request(EDGE + 'img/' + im.key)); } catch {} }
       await env.FILES.put(fk(cid, 'template.xlsx'), bytes);
       await env.FILES.put(fk(cid, 'catalog.json'), JSON.stringify(built.catalog), { httpMetadata: { contentType: 'application/json' } });
       return json({ ok: true, items: built.catalog.items.length, exclusive: built.catalog.exclusive.length, limited: built.catalog.limited.cards.length, specRows: built.catalog.specs?.grid.length || 0, bytes: bytes.length });
@@ -661,15 +661,19 @@ ${SYSTEM_NOTE}`;
 }
 
 // /g/<代號>：回傳同一份前端頁面，但帶入該團的分享預覽資訊；查詢失敗就照原樣回傳
-async function sharePage(req, env) {
+async function sharePage(req, env, ctx) {
   const url = new URL(req.url);
   const page = await env.ASSETS.fetch(new Request(new URL('/', url)));
   try {
     const cid = (url.pathname.match(/^\/g\/([a-z0-9-]{1,20})(?:\/|$)/) || [])[1];
-    const camps = cid ? await getCamps(env) : [];
-    if (!page.ok || !camps.some((c) => c.id === cid)) return page;
-    const s = await getSettings(env, cid);
-    const meta = shareMeta(s, isClosed(s) || isEnded(camps, cid));
+    if (!page.ok || !cid) return page;
+    const { meta } = await edgeGet('share/' + cid, 60, async () => { // 分享資訊快取 60 秒，寫入時清除
+      const camps = await getCamps(env);
+      if (!camps.some((c) => c.id === cid)) return { meta: null };
+      const s = await getSettings(env, cid);
+      return { meta: shareMeta(s, isClosed(s) || isEnded(camps, cid)) };
+    }, ctx);
+    if (!meta) return page;
     const headers = new Headers(page.headers); headers.delete('etag'); headers.delete('content-length'); headers.set('cache-control', 'no-cache');
     return new Response(injectShare(await page.clone().text(), meta, `${url.origin}/g/${cid}/`), { headers });
   } catch (e) { console.log('share meta error', String(e)); return page; }
@@ -678,7 +682,7 @@ async function sharePage(req, env) {
 export default {
   async fetch(req, env, ctx) {
     try {
-      if ((req.method === 'GET' || req.method === 'HEAD') && new URL(req.url).pathname.startsWith('/g/')) return await sharePage(req, env);
+      if ((req.method === 'GET' || req.method === 'HEAD') && new URL(req.url).pathname.startsWith('/g/')) return await sharePage(req, env, ctx);
       if (req.method === 'GET') { // 快取命中就不必先查資料庫
         const u = new URL(req.url);
         try {
@@ -686,7 +690,14 @@ export default {
           else if (u.pathname === '/api/catalog' && /^[a-z0-9-]{1,20}$/.test(u.searchParams.get('c') || 'lens')) { const hit = await caches.default.match(new Request(EDGE + 'catalog/' + (u.searchParams.get('c') || 'lens'))); if (hit) return json(await hit.json(), 200, { 'cache-control': 'no-store' }); }
         } catch {}
       }
+      // 商品／聊天圖片：先看邊緣快取，沒有才查資料庫。期間限定圖（lim…）重傳會同名覆蓋，只快取 5 分鐘
+      const imgPath = req.method === 'GET' && new URL(req.url).pathname.startsWith('/api/img/') ? new URL(req.url).pathname : '';
+      const imgKey = imgPath ? new Request(EDGE + 'img/' + imgPath.slice(9)) : null;
+      if (imgKey) { try { const hit = await caches.default.match(imgKey); if (hit) return hit; } catch {} }
       const res = await handle(req, env, ctx);
+      if (imgKey && res.status === 200) {
+        try { const copy = new Response(res.clone().body, res); if (imgPath.includes('lim')) copy.headers.set('cache-control', 'public, max-age=300'); const put = caches.default.put(imgKey, copy.clone()); ctx && ctx.waitUntil ? ctx.waitUntil(put) : await put; return copy; } catch {}
+      }
       if (req.method !== 'GET' && req.method !== 'HEAD' && res.status < 400 && new URL(req.url).pathname.startsWith('/api/')) { const cid = new URL(req.url).searchParams.get('c') || 'lens'; await (edgePurge(/^[a-z0-9-]{1,20}$/.test(cid) ? cid : 'lens')); }
       return res;
     } catch (e) { console.log('error', e && e.stack || String(e)); return err('伺服器錯誤：' + (e.message || e), 500); }
