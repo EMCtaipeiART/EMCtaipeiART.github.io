@@ -678,9 +678,9 @@ function bindPay(tok,o){const b=$('#paygo');if(!b)return;b.onclick=async()=>{con
   try{if(v)await api('/orders/'+tok+'/payment',{method:'POST',json:{last5:v}});
    if(f){const blob=await shrink(f,1400);await api('/orders/'+tok+'/payment',{method:'POST',headers:{'content-type':'image/jpeg'},body:blob})}
    toast('已回報匯款，謝謝！');viewOrder(tok)}catch(e){alert(e.message);b.disabled=false;b.textContent='送出匯款回報'}}}
-async function viewMine(){
- $('#app').innerHTML='<h2>訂單列表</h2><p class="muted">載入中…</p>';
- let d={orders:[],count:0,sum:0};try{d=await api('/orders-public')}catch(e){}
+async function viewMine(quiet){const path=location.pathname;
+ if(quiet!==true)$('#app').innerHTML='<h2>訂單列表</h2><p class="muted">載入中…</p>';
+ let d={orders:[],count:0,sum:0};try{d=await api('/orders-public')}catch(e){if(quiet===true)return}
  await fetchRev();
  let mine=JSON.parse(localStorage.lensMine||'[]');
  const chk=await Promise.all(mine.map(m=>api('/orders/'+m.token).then(r=>r.order.status==='active'?{...m,paid:!!r.order.pay,campaign:r.order.campaign}:null,e=>/找不到/.test(e.message)?null:m)));
@@ -688,6 +688,8 @@ async function viewMine(){
  const q=(st.oq||'').trim().toLowerCase();
  const L=d.orders.filter(o=>!q||(o.name+o.items.map(l=>l.name+l.no).join(' ')).toLowerCase().includes(q));
  const hv=mine.length>0,hp=mine.some(m=>m.paid);
+ if(quiet===true&&(location.pathname!==path||!canRefresh()))return;
+ st.osig=JSON.stringify(d);
  $('#app').innerHTML=`${flowHtml([hv,hv,hp,hp])}<h2>訂單列表</h2><div class="note ok">目前共 <b>${d.count}</b> 筆訂單，合計 <b>${nt(d.sum)}</b></div>
  <div class="tools"><input type="search" id="oq" placeholder="搜尋姓名或商品…" value="${esc(st.oq||'')}"></div>
  ${L.map(o=>`<div class="card" style="margin-bottom:10px"><div class="sp"><b>${esc(o.name)}${o.paid?'<span class="paid">✔ 已付款</span>':'<span class="unpaid">未付款</span>'}</b><span class="muted">訂單 ${o.id}｜${tp(o.updatedAt)}</span></div>
@@ -740,13 +742,15 @@ async function acctAdminUI(){const box=document.getElementById('acbox');if(!box)
  <table class="t"><thead><tr><th>姓名</th><th>Email</th><th>最近登入</th><th>可開團</th></tr></thead><tbody>${l.accounts.map(x=>`<tr><td>${esc(x.name)}</td><td class="sub">${esc(x.email)}</td><td class="sub">${esc((x.last_login||'').slice(0,16).replace('T',' '))}</td><td><input type="checkbox" data-ac="${esc(x.email)}" ${x.can_create?'checked':''}></td></tr>`).join('')||'<tr><td colspan="4" class="muted">還沒有同事登入</td></tr>'}</tbody></table>`;
  document.getElementById('gsv').onclick=async()=>{try{await api('/admin/auth',{method:'PUT',admin:1,json:{clientId:document.getElementById('gcid').value.trim()||'__keep__',defaultCreate:document.getElementById('gdef').checked}});toast('已儲存')}catch(e){alert(e.message)}};
  box.querySelectorAll('[data-ac]').forEach(c=>c.onchange=async()=>{try{await api('/admin/accounts/'+encodeURIComponent(c.dataset.ac),{method:'PUT',admin:1,json:{canCreate:c.checked}});toast('已更新')}catch(e){alert(e.message);c.checked=!c.checked}})}catch(e){box.textContent=e.message}}
-async function viewSummary(){const t=new URLSearchParams(location.search).get('t')||'';let d;try{d=await api('/summary?t='+encodeURIComponent(t))}catch(e){$('#app').innerHTML='<div class="card">'+esc(e.message)+'</div>';return}
+async function viewSummary(quiet){const path=location.pathname;const t=new URLSearchParams(location.search).get('t')||'';let d;try{d=await api('/summary?t='+encodeURIComponent(t))}catch(e){if(quiet!==true)$('#app').innerHTML='<div class="card">'+esc(e.message)+'</div>';return}
+ if(quiet===true&&(location.pathname!==path||!canRefresh()))return;
+ st.osig=JSON.stringify(d);
  const plat=d.platform==='ubereats'?'Uber Eats 揪團':d.platform==='nidin'?'你訂開團':'揪團';
  $('#app').innerHTML=`<style>@media print{#nav,.noprint,header{display:none!important}body{background:#fff}.card{box-shadow:none;border:0}}</style><div class="card"><div class="sp"><h2 style="margin:0">${esc(d.shopName)}　訂單明細</h2><button class="noprint" onclick="window.print()">列印／存成 PDF</button></div>
  <p class="muted">${d.store?esc(d.store)+'　':''}${d.orders.length} 人、${d.cups} ${d.platform===''?'份':'杯'}，合計 ${nt(d.sum)}${d.link?'　<a href="'+esc(d.link)+'" target="_blank" rel="noopener">前往'+plat+'</a>':''}</p>
  <h3>品項彙總</h3><table class="t"><thead><tr><th>品項</th><th>選項</th><th class="num">${d.platform===''?'數量':'杯數'}</th></tr></thead><tbody>${d.tally.map(x=>`<tr><td>${esc(x.name)}</td><td class="sub">${esc(x.opts)}</td><td class="num">${x.qty}</td></tr>`).join('')}</tbody></table>
  <h3>每人明細</h3><table class="t"><thead><tr><th>姓名</th><th>品項</th><th class="num">金額</th></tr></thead><tbody>${d.orders.map(o=>`<tr><td><b>${esc(o.name)}</b></td><td>${o.items.map(l=>esc(l.name)+(l.opts?'（'+esc(l.opts)+'）':'')+' ×'+l.qty+(l.gift?' 備註：'+esc(l.gift):'')).join('<br>')}</td><td class="num">${nt(o.total)}</td></tr>`).join('')}</tbody></table></div>`}
-async function viewAdmin(){
+async function viewAdmin(quiet){const path=location.pathname;
  if(!st.admin&&!(st.user&&st.user.canCreate)){$('#app').innerHTML=`<div class="lgp"><div class="lg-h"><div class="lg-ic"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg></div><h3>登入</h3><p class="muted">用 Google 帳號登入即可開團並管理自己的團購。</p></div><div id="lbx"></div></div>`;loginBox($('#lbx'),()=>{renderNav();viewAdmin()});return}
  try{const isAdm=!!st.admin;const cs0=await loadCamps();const cs=isAdm?cs0:cs0.filter(c=>c.mine);const curm=cs.find(c=>c.id===st.cid);
   if(!isAdm&&!curm&&cs.length&&st.cid!==cs[0].id){return go('/g/'+cs[0].id+'/admin')}
@@ -756,6 +760,8 @@ async function viewAdmin(){
   const setHtml=()=>`<div><h3 style="margin:0 0 10px">設定：${esc(cur.name||st.cid||'')}</h3><div class="form2">${f('shopName','團購名稱')}${f('goal','達標金額（NT$，開團成功門檻；留空或 0＝不設門檻）','number')}${f('drinkLink','餐飲團開團連結（貼上Uber Eats ／你訂開團網址）')}${f('deadline','截止日期時間（台北時間）','datetime-local')}${f('bankName','銀行（含代碼）')}${f('bankAccount','匯款帳號')}${f('accountName','戶名')}${f('linePay','LINE Pay （貼 LINE 加好友連結或填 LINE ID）')}${f('siteUrl','網站網址（信件連結用，可留空）')}</div>
   <div class="fld" style="margin-top:6px"><label class="sub">信件／頁面附註</label><textarea data-k="notes" rows="2" style="width:100%">${esc(s.notes)}</textarea></div>
   <p><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="closed" style="width:auto" ${s.closed?'checked':''}> 手動結單（勾選後同事無法再下單／修改）</label></p><button id="sv">儲存設定</button>${st.cat?.drink?'<button class="sec" id="rimg" style="margin-left:8px">重新抓取商品圖片</button>':''}${st.cat?.drink?'':'<div style="margin-top:12px"><label class="sub">更新報價 Excel（取代目前價格與範本，訂單保留）</label><div><input type="file" id="xf" accept=".xlsx"> <button class="sec" id="up">上傳並更新</button> <span id="upm" class="muted"></span></div></div>'}</div>`;
+  if(quiet===true&&(location.pathname!==path||!canRefresh()))return;
+  st.osig=JSON.stringify(o);const oldAc=quiet===true?$('#acbox'):null;
   $('#app').innerHTML=`<style>#app>.card{margin-top:18px!important}</style><div class="sp"><h2>管理後台${isAdm?'':'（'+esc(st.user.name)+'）'}</h2><span style="display:flex;gap:8px">${st.user?'<a class="btn sec" href="/joined">我參加過的團</a>':''}<button class="sec" id="lo">登出</button></span></div>
   <div class="card"><h3 style="margin-top:0">團購管理</h3><p class="muted">點卡片切換並顯示該團購的訂單；「管理／設定」開啟設定視窗。結束後訂單會保留，同事不能再下單或修改。</p>
   <div class="acg">${cs.filter(c=>!(c.ended||c.closed)).map(c=>`<div class="acd ${c.id===st.cid?'on':''}" data-cid="${esc(c.id)}" style="cursor:pointer"><span class="atg ${c.custom?'kc':c.drink?'dk':''}">${kindName(c)}</span><span class="ast ${c.ended?'x':''}">${c.ended?'已結束':'進行中'}</span><h4>${esc(c.name)}</h4><div class="sub">${c.drink&&c.store?esc(c.store)+'　':''}代號 ${esc(c.id)}</div><div class="sub">${c.count} 人下單　${nt(c.sum)}${c.goal?'　目標 '+nt(c.goal):''}</div>
@@ -830,7 +836,7 @@ async function viewAdmin(){
   const cp=$('#cpy');if(cp)cp.onclick=async()=>{const NL='\n';const act=o.orders.filter(x=>x.status!=='cancelled');const t=act.map(x=>x.name+NL+x.items.map(l=>'  '+l.name+(l.opts?'（'+l.opts+'）':'')+(l.gift?' 備註：'+l.gift:'')+' ×'+l.qty).join(NL)).join(NL+NL)+NL+NL+'— 彙總 —'+NL+o.tally.map(t=>t.name+(t.opts?'（'+t.opts+'）':'')+' ×'+t.qty).join(NL)+NL+'合計 '+o.tally.reduce((n,t)=>n+t.qty,0)+' 杯，NT$ '+o.sum;try{await navigator.clipboard.writeText(t);toast('已複製點餐清單')}catch(e){prompt('請手動複製：',t)}};
   $('#lo').onclick=()=>{if(st.admin){st.admin='';localStorage.removeItem('lensAdmin')}if(st.user){st.user=null;localStorage.removeItem('lensUser')}renderNav();go('/')};
   if(lite)document.querySelectorAll('#app > .card').forEach((c,i)=>{if(i>0)c.style.display='none'});
-  if(isAdm)acctAdminUI();
+  if(isAdm){if(oldAc&&$('#acbox'))$('#acbox').replaceWith(oldAc);else acctAdminUI()}
   const bindSet=()=>{const ri=$('#rimg');if(ri)ri.onclick=async()=>{ri.disabled=true;ri.textContent='抓取中…';try{const r=await api('/admin/drink-images',{method:'POST',admin:1,json:{}});toast('已更新 '+r.count+' / '+r.total+' 項商品圖片');await fetchCat()}catch(e){alert(e.message)}ri.disabled=false;ri.textContent='重新抓取商品圖片'};const upb=$('#up');if(upb)upb.onclick=async()=>{const f=$('#xf').files[0];if(!f)return alert('請先選擇檔案');$('#upm').textContent='上傳解析中…';try{const d=await api('/admin/upload',{method:'POST',admin:1,body:f});$('#upm').textContent=`✔ 已更新：${d.items} 項商品、${d.limited} 張限定卡、規格表 ${d.specRows} 列`;st.cat=null;load()}catch(e){$('#upm').textContent='✘ '+e.message}};
   $('#sv').onclick=async()=>{const b={closed:$('#closed').checked};document.querySelectorAll('[data-k]').forEach(i=>b[i.dataset.k]=i.value);const sr=await api('/admin/settings',{method:'PUT',admin:1,json:b});toast(sr.mail==='sent'?'已儲存，訂單明細信已寄給開團者':'已儲存');document.querySelectorAll('.modalbg').forEach(x=>x.remove());load()};};
   const openSet=()=>{const bg=document.createElement('div');bg.className='modalbg';bg.innerHTML='<div class="modal" style="max-width:760px;width:94vw;max-height:88vh;overflow:auto">'+setHtml()+'<div class="acts" style="margin-top:14px"><button class="sec" id="set-x">關閉</button></div></div>';document.body.appendChild(bg);bg.querySelector('#set-x').onclick=()=>bg.remove();bindSet()};
@@ -840,7 +846,7 @@ async function viewAdmin(){
   document.querySelectorAll('[data-pi]').forEach(a=>a.onclick=async e=>{e.preventDefault();const r=await api('/admin/payimg/'+a.dataset.pi,{admin:1,raw:1});window.open(URL.createObjectURL(await r.blob()))});
   document.querySelectorAll('[data-rp]').forEach(a=>a.onclick=async e=>{e.preventDefault();if(confirm('撤銷訂單 '+a.dataset.rp+' 的付款標記？')){await api('/admin/orders/'+a.dataset.rp+'/payment',{method:'DELETE',admin:1});viewAdmin()}});
   document.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{if(confirm('永久刪除訂單 '+b.dataset.del+'？')){await api('/admin/orders/'+b.dataset.del,{method:'DELETE',admin:1});viewAdmin()}});
- }catch(e){alert(e.message);if(!st.admin)viewAdmin()}}
+ }catch(e){if(quiet===true)return;alert(e.message);if(!st.admin)viewAdmin()}}
 
 async function shrink(file,max=480){const im=await createImageBitmap(file);const k=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);return await new Promise(r=>c.toBlob(r,'image/jpeg',.8))}
 async function setImg(nos,file,url){if(url)await api('/admin/product-image?nos='+nos.join(','),{method:'POST',admin:1,json:{url}});else{const b=await shrink(file);await api('/admin/product-image?nos='+nos.join(','),{method:'POST',admin:1,headers:{'content-type':'image/jpeg'},body:b})}}
@@ -895,6 +901,16 @@ document.addEventListener('click',e=>{const a=e.target.closest('#newcamp');if(!a
 const onPicker=()=>{const p=P();return p.cid===null&&p.page==='campaigns'||location.pathname==='/'};
 const refreshPicker=async()=>{if(document.hidden||!onPicker()||document.querySelector('.modalbg'))return;await loadCamps();if(onPicker()&&!document.querySelector('.modalbg'))viewPicker()};
 setInterval(refreshPicker,15000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshPicker()});
+// 訂單自動刷新：每 15 秒比對一次，有變動才重畫；正在輸入、開著視窗、拖曳或選取文字時先不動
+const canRefresh=()=>{const a=document.activeElement,r=$('#rec');return !document.hidden&&!document.querySelector('.modalbg,#lb,.dragging')&&!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))&&!(r&&r.value!==r.defaultValue)&&!String(getSelection())};
+let orderBusy=false;
+async function refreshOrders(){const p=P(),path=location.pathname;if(orderBusy||p.cid===null||!['mine','admin','summary'].includes(p.page)||!canRefresh())return;
+ if(p.page==='admin'&&!st.admin&&!(st.user&&st.user.canCreate))return;
+ orderBusy=true;try{
+  const d=p.page==='mine'?await api('/orders-public'):p.page==='admin'?await api('/admin/orders',{admin:1}):await api('/summary?t='+encodeURIComponent(new URLSearchParams(location.search).get('t')||''));
+  if(location.pathname===path&&JSON.stringify(d)!==st.osig)await({mine:viewMine,admin:viewAdmin,summary:viewSummary}[p.page])(true);
+ }catch(e){}finally{orderBusy=false}}
+setInterval(refreshOrders,15000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshOrders()});
 addEventListener('popstate',route);
 function go(p){history.pushState(null,'',p);route()}
 document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[href^="/"]');if(!a||e.defaultPrevented||e.metaKey||e.ctrlKey||e.shiftKey||e.button||a.target==='_blank')return;const h=a.getAttribute('href');if(h.startsWith('/api/'))return;e.preventDefault();go(h)});
