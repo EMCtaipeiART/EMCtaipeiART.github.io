@@ -190,3 +190,10 @@
 - 兩隻狗（`dog1`／`dog2`）也有生成版，但 `IDS` 標 `trial`：`hasPet(id)` 不回傳，遊戲仍用 `pets3d.js`；展示頁用 `hasPet(id, true)`。要上線就拿掉 `trial`、在 `catBuild` 設狗的縮放與外框，並更新 import 的 `?v=`。
 - 狗的原始模型是本機生成（`~/hunyuan3d-local`，`venv/bin/python gen.py <輸入資料夾> <id> out/<id>.glb`，一隻約 15 分鐘，不進 Git）。清理：`gen_cat_model.py ... span=3.8`（臘腸身體長）／`beadeyes`（薩摩耶眼睛壓平）；貼圖 `gen_cat_texture.py dog1|dog2`。鼻頭是 shader 畫在立體上（`nose`），不要改回貼圖投影（側面會出現黑圈）。
 - 薩摩耶（`crisp`）：深色與粉紅色只允許出現在眼睛、口鼻、腮紅、內耳的範圍，其他一律蓋成毛色；白毛立體感照模型法線打淡影，不用原圖陰影線。立耳只在最前面那層上內耳色（`earFront`）。外框要退得比較深（`sink`，口鼻另加 `aSink`），否則皺褶會穿出黑色碎線。
+
+## 設計部立體人物（手工建模，只在展示間）
+- 做法同 Machi：models/people/<名字>.py（共用工具 models/people/kit.py），逐段放樣＋原畫貼圖；不要用圖片生成立體模型（使用者比較過，明顯較差）。
+- 產出 assets/people3d/<名字小寫>.glb，節點名沿用 machi_<部位>__<材質>，index.html 的 attach3d 直接套動作。展示間在 viewer.html 的 PEOPLE 登記，換檔要改 ?v=。
+- 重建：Blender --background --factory-startup --python models/people/noise.py -- <預覽圖資料夾>。
+- 遊戲（index.html 的 MODEL3D）尚未使用，要上線需另外登記。
+

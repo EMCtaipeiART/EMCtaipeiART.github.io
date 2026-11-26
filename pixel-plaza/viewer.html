@@ -42,7 +42,10 @@ const HULL_LAYER = 1, bust = '?t=' + Date.now();
 const live = await import('./pets3d.js' + bust);
 const draft = await import('./pets3d-draft.js' + bust).catch(() => null);
 const gen = await import('./pets3d-gen.js' + bust).catch(() => null);   // 生成版（兩隻貓，遊戲裡用的就是這個）
-const WHO = [['Machi', 'Machi'], ['cat', '無名小貓'], ['cat2', '四樓小貓'], ['dog1', '臘腸'], ['dog2', '薩摩耶']];
+// 設計部立體人物：Machi 在 index.html 的 MODEL3D；其他人上線前只在這裡看（模型在 assets/people3d/，腳本在 models/people/）
+const PEOPLE = {Noise:'assets/people3d/noise.glb?v=2'};
+const isMan = who => who === 'Machi' || who in PEOPLE;
+const WHO = [['Machi', 'Machi'], ...Object.keys(PEOPLE).map(n => [n, n]), ['cat', '無名小貓'], ['cat2', '四樓小貓'], ['dog1', '臘腸'], ['dog2', '薩摩耶']];
 const PET_POSES = [['stand', '站'], ['walk', '走'], ['run', '跑'], ['sit', '坐'], ['loaf', '趴縮'], ['down', '趴下'], ['sleep', '睡'], ['eat', '吃'], ['groom', '理毛'], ['wag', '搖尾'], ['belly', '翻肚']];
 const MAN_POSES = [['stand', '站'], ['walk', '走'], ['run', '跑'], ['sit', '坐']];
 const q = new URLSearchParams(location.search);
@@ -62,18 +65,20 @@ const clayMat = new THREE.MeshLambertMaterial({color:0xe9e7e3, side:THREE.Double
 
 // ---------- Machi：把 index.html 的「3D 人物」整段取出來執行，和遊戲一模一樣 ----------
 let machiKit = null;
-async function makeMachi(){
+async function makeMachi(name){
   if (!machiKit) {
     const html = await (await fetch('index.html' + bust)).text();
     const code = html.slice(html.indexOf('const MODEL3D'), html.indexOf('async function addChar('));
     const WORLD_H = +/WORLD_H = ([\d.]+)/.exec(html)[1];
     const body = code.split("'../character-studio/").join("'" + new URL('../character-studio/', location.href).href)
       .split('MODEL3D[c.name].url').join("new URL(MODEL3D[c.name].url, location.href).href");
-    machiKit = {WORLD_H, attach:new Function('THREE', 'WORLD_H', 'mergeGeometries', 'HULL_LAYER', 'camYaw', body + '\nreturn attach3d;')(THREE, WORLD_H, mergeGeometries, HULL_LAYER, 0)};
+    machiKit = {WORLD_H, attach:new Function('THREE', 'WORLD_H', 'mergeGeometries', 'HULL_LAYER', 'camYaw', body + '\nreturn {attach3d, MODEL3D};')(THREE, WORLD_H, mergeGeometries, HULL_LAYER, 0)};
+    Object.assign(machiKit, machiKit.attach);
+    for (const [n, u] of Object.entries(PEOPLE)) machiKit.MODEL3D[n] ||= {url:u};
   }
   const holder = new THREE.Group();
-  const c = {name:'Machi', holder, sprite:{visible:true, material:{visible:true, color:new THREE.Color(1, 1, 1)}}, face:0, moving:0, sitting:null};
-  await machiKit.attach(c);
+  const c = {name, holder, sprite:{visible:true, material:{visible:true, color:new THREE.Color(1, 1, 1)}}, face:0, moving:0, sitting:null};
+  await machiKit.attach3d(c);
   let z = 0, last = 0;
   return {group:holder, height:2.1, update(pose, now){
     const dt = Math.min(.05, (now - last) / 1000 || .016); last = now;
@@ -94,7 +99,7 @@ const originals = new WeakMap();
 function applyClay(){
   if (!current) return;
   current.group.traverse(o => {
-    if (!o.isMesh || o.layers.isEnabled(HULL_LAYER) || (state.who !== 'Machi' && !o.geometry.attributes.aRest)) return;
+    if (!o.isMesh || o.layers.isEnabled(HULL_LAYER) || (!isMan(state.who) && !o.geometry.attributes.aRest)) return;
     if (!originals.has(o)) originals.set(o, o.material);
     o.material = state.clay ? clayMat : originals.get(o);
     if (state.clay && !o.geometry.attributes.normal) o.geometry.computeVertexNormals();
@@ -102,7 +107,7 @@ function applyClay(){
 }
 async function load(){
   const mine = ++token;
-  const next = await (state.who === 'Machi' ? makeMachi() : makePetView(state.who));
+  const next = await (isMan(state.who) ? makeMachi(state.who) : makePetView(state.who));
   if (mine !== token) return;
   if (current) scene.remove(current.group);
   current = next; scene.add(current.group);
@@ -119,11 +124,11 @@ function bar(id, label, items, isOn, pick){
   for (const [value, text] of items) { const b = document.createElement('button'); b.textContent = text; b.className = isOn(value) ? 'on' : ''; b.onclick = () => { pick(value); draw(); }; el.append(b); }
 }
 function draw(){
-  bar('who', '角色', WHO, v => v === state.who, v => { if (v !== state.who) { state.who = v; if (v === 'Machi' && !MAN_POSES.some(p => p[0] === state.pose)) state.pose = 'stand'; load(); } });
-  bar('poses', '動作', state.who === 'Machi' ? MAN_POSES : PET_POSES, v => v === state.pose, v => { state.pose = v; });
+  bar('who', '角色', WHO, v => v === state.who, v => { if (v !== state.who) { state.who = v; if (isMan(v) && !MAN_POSES.some(p => p[0] === state.pose)) state.pose = 'stand'; load(); } });
+  bar('poses', '動作', isMan(state.who) ? MAN_POSES : PET_POSES, v => v === state.pose, v => { state.pose = v; });
   const tools = [['a0', '正面'], ['a45', '45°'], ['a90', '側面'], ['a180', '背面'], ['spin', '自動旋轉'], ['clay', '白膜'], ['ortho', '平面投影'], ['ref', '參考圖']];
   const isGen = !!(gen && gen.hasPet(state.who)), isTrial = !!(gen && !isGen && gen.hasPet(state.who, true));
-  if (draft && state.who !== 'Machi') tools.push(...(isGen ? [['gen', '線上版'], ['draft', '試作版'], ['live', '舊版']] : isTrial ? [['gen', '生成版'], ['draft', '試作版'], ['live', '線上版']] : [['draft', '試作版'], ['live', '線上版']]));
+  if (draft && !isMan(state.who)) tools.push(...(isGen ? [['gen', '線上版'], ['draft', '試作版'], ['live', '舊版']] : isTrial ? [['gen', '生成版'], ['draft', '試作版'], ['live', '線上版']] : [['draft', '試作版'], ['live', '線上版']]));
   bar('tools', '檢視', tools, v => v === 'spin' ? state.spin : v === 'clay' ? state.clay : v === 'ortho' ? state.ortho : v === (state.ver === 'gen' && !isGen && !isTrial ? 'draft' : state.ver), v => {
     if (v[0] === 'a') { state.yaw = +v.slice(1) * Math.PI / 180; state.el = 0; state.spin = false; }
     else if (v === 'ref') document.getElementById('file').click();
