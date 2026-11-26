@@ -56,10 +56,11 @@ def face_texture(W=1024, H=768):
         col = col * (1 - a[..., None]) + np.array((246, 128, 112), np.float32) / 255 * a[..., None]
     s = sample(NEU, nx, ny)[..., :3]
     r, g = s[..., 0], s[..., 1]
-    for cx in (127.5, 227.5):                                        # 眼睛
-        d = np.sqrt(((nx - cx) / 28) ** 2 + ((ny - 248) / 27) ** 2)
+    for cx in (127.5, 227.5):                                        # 眼睛（整顆頭加寬，眼睛本身不跟著變胖）
+        ex = cx + (nx - cx) * 1.08
+        d = np.sqrt(((ex - cx) / 28) ** 2 + ((ny - 248) / 27) ** 2)
         a = np.clip((1 - d) / .08, 0, 1) * front
-        col = col * (1 - a[..., None]) + s * a[..., None]
+        col = col * (1 - a[..., None]) + sample(NEU, ex, ny)[..., :3] * a[..., None]
     for x0, x1 in ((94, 153), (202, 262)):                           # 眉毛
         a = np.clip((.55 - r) / .2, 0, 1) * ((nx > x0) & (nx < x1) & (ny > 199) & (ny < 232) & (s[..., 2] < r + .12)) * front
         col = col * (1 - a[..., None]) + s * a[..., None]
@@ -85,7 +86,7 @@ def tufts(th, z):
             total = np.maximum(total, k * tri)
     return total
 
-FWIN_L = [(177.5, 150), (92, 150), (82, 196), (88, 222), (80, 236), (66, 250), (62, 285), (84, 296), (98, 330), (177.5, 330)]
+FWIN_L = [(177.5, 150), (92, 150), (77, 196), (80, 222), (72, 236), (62, 250), (62, 285), (84, 296), (98, 330), (177.5, 330)]
 FRONT_WIN = FWIN_L + [(355 - x, y) for x, y in FWIN_L[::-1]]
 SIDE_WIN = [(200, 40), (150, 66), (140, 76), (134, 88), (133, 98), (127, 107), (134, 108), (126, 116), (118, 126), (112, 140), (200, 140)]
 def hair_texture(W=1024, H=768):
@@ -250,6 +251,17 @@ for s in (-1, 1):
     for o in set(scene.collection.objects) - before:        # 白球鞋比 Machi 的靴子矮一點
         for v in o.data.vertices:
             v.co.z *= .74; v.co.x = s * .66 + (v.co.x - s * .66) * .95; v.co.y *= .93
+
+# 原圖的臉寬而短：整顆頭（含帽子、耳朵、頭髮）橫向加寬，下半臉往上收
+HEADS = ('head', 'hair', 'sideburn', 'ear', 'earback', 'cap', 'capline', 'capbtn', 'capback', 'strap', 'brim', 'brimunder', 'brimline')
+for o in scene.collection.objects:
+    if o.type != 'MESH' or o.name.split('.')[0] not in HEADS:
+        continue
+    for v in o.data.vertices:
+        ear = o.name.startswith('ear')
+        v.co.x *= 1.06 if ear else float(np.interp(v.co.z, (Z(70), Z(20)), (1.12, 1.06)))      # 耳朵少撐一點，才不會比原圖外擴
+        if v.co.z < Z(96):
+            v.co.z = Z(96) + (v.co.z - Z(96)) * .91
 
 finish('Noise',
        heads={'head', 'hair', 'ear', 'sideburn', 'earback', 'cap', 'capline', 'capbtn', 'capback', 'strap', 'brim', 'brimunder', 'brimline'},

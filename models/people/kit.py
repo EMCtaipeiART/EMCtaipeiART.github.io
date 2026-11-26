@@ -106,9 +106,10 @@ def art_ear(art, to_art, poly, y, yaw, dome=.12, back=None, name='ear'):
     ax0, ay0 = to_art(np.array(0.0), np.array(0.0)); ax1, ay1 = to_art(np.array(1.0), np.array(1.0))
     X = (P_[:, 0] - ax0) / (ax1 - ax0); Zs = (P_[:, 1] - ay0) / (ay1 - ay0)
     cx, cz = (X.max() + X.min()) / 2, (Zs.max() + Zs.min()) / 2
-    h, w = art.shape[:2]
-    tex = art.copy(); tex[..., 3] = 1
-    tex = tex[:h - h % 2, :w - w % 2]
+    ox, oy = max(0, int(P_[:, 0].min()) - 3), max(0, int(P_[:, 1].min()) - 3)
+    tex = art[oy:int(P_[:, 1].max()) + 4, ox:int(P_[:, 0].max()) + 4].copy(); tex[..., 3] = 1
+    tex = tex[:tex.shape[0] - tex.shape[0] % 2, :tex.shape[1] - tex.shape[1] % 2]
+    h, w = tex.shape[:2]
     mfront = tex_mat('%s_art%d' % (name, len(MATS) + int(abs(cx) * 997) + int(cx > 0)), np.repeat(np.repeat(tex, 2, 0), 2, 1))
     n, rings = len(P_), 6
     M = Matrix.Rotation(yaw, 3, 'Z'); stretch = 1 / math.cos(yaw)
@@ -121,7 +122,7 @@ def art_ear(art, to_art, poly, y, yaw, dome=.12, back=None, name='ear'):
                 p = M @ Vector(((x - cx) * stretch, sign * thick * (1 - t ** 2.2), 0))
                 verts.append((cx + p.x, y + p.y, z))
                 px_, py_ = to_art(np.array(cx + (x - cx) * shrink), np.array(cz + (z - cz) * shrink))
-                uvs_.append((float(px_) / w, 1 - float(py_) / (h - h % 2)))
+                uvs_.append(((float(px_) - ox) / w, 1 - (float(py_) - oy) / h))
         fu = []
         for r in range(rings):
             for i in range(n):
@@ -136,6 +137,60 @@ def art_ear(art, to_art, poly, y, yaw, dome=.12, back=None, name='ear'):
         nrm = sum((fc.normal * fc.calc_area() for fc in bm.faces), Vector())
         if nrm.y * sign < 0: bmesh.ops.reverse_faces(bm, faces=bm.faces)
         bm.to_mesh(o.data); bm.free()
+
+def art_puff(name, art, to_art, poly, y, dome=.2, back_rgb=(253, 230, 142), yaw=0.0, round_px=26, nx_=44, nz=52):
+    """把原畫剪下來做成前後鼓起的立體片（布丁狗、手、蝴蝶結）：用格子網格＋透明裁切，凹形輪廓也不會折出破面。
+    poly 是原畫像素座標（輪廓要包含原畫的深色外框線）；y 是中心的前後位置，round_px 是邊緣圓角寬度。"""
+    P_ = np.array(smooth_poly(poly, 5))
+    ox, oy = int(P_[:, 0].min()) - 2, int(P_[:, 1].min()) - 2
+    W, H = int(P_[:, 0].max()) + 3 - ox, int(P_[:, 1].max()) + 3 - oy
+    W += W % 2; H += H % 2
+    gx, gy = np.meshgrid(ox + (np.arange(W * 2) + .5) / 2, oy + (np.arange(H * 2) + .5) / 2)
+    mask = in_poly(gx, gy, [tuple(p) for p in P_])
+    front = sample(art, gx, gy); front[..., 3] = dilate(mask, 2)
+    rear = np.ones_like(front); rear[..., :3] = np.array(back_rgb, np.float32) / 255; rear[..., 3] = dilate(mask, 2)
+    uid = '%s%d' % (name, len(MATS) + ox * 7 + oy)
+    ax0, ay0 = to_art(np.array(0.0), np.array(0.0)); ax1, ay1 = to_art(np.array(1.0), np.array(1.0))
+    xs_, ys_ = np.linspace(ox, ox + W, nx_ + 1), np.linspace(oy + H, oy, nz + 1)
+    A, B = P_, np.roll(P_, -1, axis=0)
+    def nearest(px_, py_):
+        d = B - A; t = np.clip(((px_ - A[:, 0]) * d[:, 0] + (py_ - A[:, 1]) * d[:, 1]) / np.maximum(1e-9, (d ** 2).sum(1)), 0, 1)
+        q_ = A + d * t[:, None]; r_ = np.sqrt(((q_ - (px_, py_)) ** 2).sum(1)); n_ = int(r_.argmin())
+        return float(r_[n_]), q_[n_]
+    thick = np.zeros((nz + 1, nx_ + 1))
+    inside = in_poly(*np.meshgrid(xs_, ys_), [tuple(p) for p in P_])
+    gxs, gys = np.meshgrid(xs_, ys_)
+    gxs, gys = gxs.copy(), gys.copy()
+    for j in range(nz + 1):
+        for i in range(nx_ + 1):
+            r_, q_ = nearest(xs_[i], ys_[j])
+            if inside[j, i]:
+                q = min(1.0, r_ / round_px)
+                thick[j, i] = q * (2 - q)
+            else:                                   # 框外的點收到輪廓線上，前後兩片的邊緣才會密合
+                gxs[j, i], gys[j, i] = q_
+    cx = float(((ox + W / 2) - ax0) / (ax1 - ax0))
+    cs, sn = math.cos(yaw), math.sin(yaw)
+    for sign, depth, img, tag in ((-1, dome, front, ''), (1, dome * .75, rear, 'back')):
+        m = tex_mat(uid + tag, img, clip=True)
+        verts, faces, uvs = [], [], []
+        for j in range(nz + 1):
+            for i in range(nx_ + 1):
+                x = float((gxs[j, i] - ax0) / (ax1 - ax0)); z = float((gys[j, i] - ay0) / (ay1 - ay0))
+                dx, dy = (x - cx) / cs, sign * depth * thick[j, i]
+                verts.append((cx + dx * cs - dy * sn, y + dx * sn + dy * cs, z))
+        for j in range(nz):
+            for i in range(nx_):
+                if not inside[j:j + 2, i:i + 2].any():
+                    continue
+                a_ = j * (nx_ + 1) + i
+                q = [a_, a_ + 1, a_ + nx_ + 2, a_ + nx_ + 1]
+                cr = [(i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1)]
+                if sign > 0:
+                    q, cr = q[::-1], cr[::-1]
+                faces.append(tuple(q))
+                uvs.append([(float((gxs[v, u] - ox) / W), float(1 - (gys[v, u] - oy) / H)) for u, v in cr])
+        new_obj(name + tag, verts, faces, m, uvs)['noline'] = True
 
 # ───────── 逐段放樣（loft） ─────────
 def smooth_rows(rows, n=160):
