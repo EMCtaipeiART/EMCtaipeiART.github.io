@@ -49,6 +49,7 @@
 1. CSS（`:root` 色票、`.hp-*` HUD、`.cp-*` 角色頁面、`.cui-*` 頭上資訊、`#swheel` 輪盤、`#elevFx`、`#fridgeP`、`.sv-*` 動態檢視器、手機 `@media (max-width:640px)`）。
 2. 常數與版面表：`PROPS`、`TABLES`、`WALLS`、`LABELS`、`F4`、`ROOMS`、`SEATS`、`SEATS4`、`STATUS`、`MOOD`、`AWAY`。
 3. 場景：地板、`blocked()`／`rects`（碰撞）、`buildOffice()`（家具、椅子、廁所、冰箱、茶水間、`buildFloor4()`，**最後才 `startGameplay()`**）。
+   - 地板外的背景是 `multiverse`（天空貼圖＋小島，深淺模式由 `applyTheme` 呼叫 `multiverse.theme`）；門口是 `DOORS`＋`doors3d()`，規格見 UI-SPEC §7.2。新增隔間門要補進 `DOORS`。
 4. 趣味系統：`dropsNow/notesNow/poopsNow`、`syncFun`、`collect*`、投影機（`projectorRig`、`projState`、`toggleProjector`）、`fnClaim/applyFunClaims`。
 5. 角色：`addChar`、`applyStatus`、`sitDown/standUp`、`remoteFromState/remoteStep`（別人的位置）、`pushPosition`（自己的位置）、`stationFx`（座位現場）。
 6. 互動：`pointerdown → onPick`、`wheelOpen`（狀態輪盤）、`updatePlate`（名牌）、`findPath`（A\*）、`elevInteract/elevGo/elevCover`、`fridge*`。

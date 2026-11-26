@@ -616,24 +616,34 @@ const WALLS = [
   [610,1045,210,12],[872,1045,210,12],[610,1045,12,417],[1070,1045,12,417],[610,1450,472,12]
 ];
 WALLS.forEach(w => { w[1] = zN(w[1]); });
+// 房間門口（只做外觀）：horiz＝橫牆上的門；c＝牆中心線；a～b＝門洞
+const DOORS = [
+  {horiz:false, c:666, a:zN(125), b:zN(210)},        // 會議室 A
+  {horiz:false, c:284, a:zN(1118), b:zN(1170)},     // 倉庫
+  {horiz:false, c:284, a:zN(1325), b:zN(1380)},     // 會議室 C
+  {horiz:true, c:zN(1045) + 6, a:820, b:872}         // 會議室 D
+];
 const LABELS_RAW = [['男廁',370,44],['女廁',526,44],['會議室 A',863,110],['倉庫',215,1062],['會議室 C',186,1432],['茶水間',368,1226],['冰箱',510,1208],['會議室 D',845,1285],['電梯',201,262]];
 const LABELS = LABELS_RAW.map(l => [l[0], l[1], zN(l[2])]);
 // ===== 四樓：版面取自 2D 版 floor4.js（座標 ×0.5，套用五樓同一套家具尺寸），整層放在五樓右邊 FX4 px 處 =====
 const FX4 = 3600, F4_Z1 = 1700, F4_X0 = -100, F4_X1 = 1430, F4_Z0 = -100;   // 四樓離五樓很遠（視野內看不到五樓）；四邊各留 70 px 走廊
 const F4 = {EX:122.5, EY:149, toilets:[['男廁', 451.5], ['女廁', 612.5]], TY:30, TW:173, TH:219,
   H:{x:598, y:369, w:598, h:344}, OFF:{x:598, y:763, w:690, h:510.5}, O1:{x:598, y:763, w:339, h:510.5}, O2:{x:949, y:763, w:339, h:510.5}, F:{x:598, y:1323.5, w:234, h:219}, G:{x:912, y:1323.5, w:234, h:219}};
-function glassWalls(x, y, w, h, doors){   // 玻璃屋：四面牆，door ＝ {side:'t'|'b'|'l'|'r', c:門中心座標}（寬 60）
+function glassWalls(x, y, w, h, doors, marked = true){   // 玻璃屋：四面牆，door ＝ {side:'t'|'b'|'l'|'r', c:門中心座標}（寬 60）；marked：門口要不要標示門柱
   const RT = 12, d = 30, gap = k => doors.find(o => o.side === k);
   const seg = (a, b, g) => { if (!g) return [[a, b]]; const o = [], g0 = g.c - d, g1 = g.c + d; if (a < g0) o.push([a, Math.min(b, g0)]); if (b > g1) o.push([Math.max(a, g1), b]); return o; };
   for (const [a, b] of seg(x, x + w, gap('t'))) WALLS.push([a + FX4, y, b - a, RT]);
   for (const [a, b] of seg(x, x + w, gap('b'))) WALLS.push([a + FX4, y + h - RT, b - a, RT]);
   for (const [a, b] of seg(y + RT, y + h - RT, gap('l'))) WALLS.push([x + FX4, a, RT, b - a]);
   for (const [a, b] of seg(y + RT, y + h - RT, gap('r'))) WALLS.push([x + w - RT + FX4, a, RT, b - a]);
+  if (marked) for (const o of doors) { const hz = o.side === 't' || o.side === 'b', near = o.side === 't' || o.side === 'l', c = hz ? (near ? y + 6 : y + h - 6) : (near ? x + 6 : x + w - 6) + FX4;
+    DOORS.push({horiz:hz, c, a:o.c - d + (hz ? FX4 : 0), b:o.c + d + (hz ? FX4 : 0)}); }
 }
-for (const [, rx] of F4.toilets) glassWalls(rx, F4.TY, F4.TW, F4.TH, [{side:'b', c:rx + 131}]);
+for (const [, rx] of F4.toilets) glassWalls(rx, F4.TY, F4.TW, F4.TH, [{side:'b', c:rx + 131}], false);
 { const H = F4.H; glassWalls(H.x, H.y, H.w, H.h, [{side:'t', c:H.x + 107}, {side:'b', c:H.x + H.w / 2}]); }
 { const o = F4.OFF, mid = o.y + o.h / 2; glassWalls(o.x, o.y, o.w, o.h, [{side:'t', c:o.x + 170}, {side:'b', c:o.x + 520}, {side:'l', c:mid}, {side:'r', c:mid}]);   // 兩間合併成一間：上下左右各一道門
-  WALLS.push([F4.O1.x + F4.O1.w + FX4, o.y + 12, 12, mid - 30 - (o.y + 12)], [F4.O1.x + F4.O1.w + FX4, mid + 30, 12, o.y + o.h - 12 - (mid + 30)]); }   // 中間隔一道玻璃牆，正中央留開口
+  WALLS.push([F4.O1.x + F4.O1.w + FX4, o.y + 12, 12, mid - 30 - (o.y + 12)], [F4.O1.x + F4.O1.w + FX4, mid + 30, 12, o.y + o.h - 12 - (mid + 30)]);
+  DOORS.push({horiz:false, c:F4.O1.x + F4.O1.w + FX4 + 6, a:mid - 30, b:mid + 30}); }   // 中間隔一道玻璃牆，正中央留開口
 glassWalls(F4.F.x, F4.F.y, F4.F.w, F4.F.h, [{side:'r', c:F4.F.y + F4.F.h / 2}]); glassWalls(F4.G.x, F4.G.y, F4.G.w, F4.G.h, [{side:'l', c:F4.G.y + F4.G.h / 2}]);
 LABELS.push(['男廁', F4.toilets[0][1] + 86 + FX4, 44], ['女廁', F4.toilets[1][1] + 86 + FX4, 44], ['4F 電梯', F4.EX + 37 + FX4, F4.EY + 20], ['會議室 H', F4.H.x + 300 + FX4, F4.H.y + 40], ['辦公室', F4.OFF.x + 345 + FX4, F4.OFF.y + 24],
   ['會議室 F', F4.F.x + 117 + FX4, F4.F.y + 40], ['會議室 G', F4.G.x + 117 + FX4, F4.G.y + 40], ['茶水間', 930 + FX4, 40], ['冰箱', 1030 + FX4, 20]);
@@ -662,11 +672,55 @@ for (const [FLOOR_X0, FLOOR_X1, FLOOR_Z0, FLOOR_Z1] of [[-3, 1201 * U + 3, -100 
   const f = new THREE.Mesh(new THREE.PlaneGeometry(FLOOR_X1 - FLOOR_X0, FLOOR_Z1 - FLOOR_Z0), FLAT ? new THREE.MeshLambertMaterial({map:t}) : new THREE.MeshStandardMaterial({map:t, roughness:.34, metalness:0, envMapIntensity:.35}));
   f.rotation.x = -Math.PI / 2; f.position.set((FLOOR_X0 + FLOOR_X1) / 2, 0, (FLOOR_Z0 + FLOOR_Z1) / 2); scene.add(f); f.userData.noMask = true; f.receiveShadow = !FLAT;
 }
+// 地板外的背景：漂浮在宇宙裡的其他「平行辦公室」。只是遠景（在地板下方、不可點、無碰撞、不進外框遮罩）
+const multiverse = (() => {
+  let seed = 20261126; const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  const part = (list, w, h, d, color, x, y, z) => { const g = new THREE.BoxGeometry(w, h, d).toNonIndexed(), c = new THREE.Color(color), n = g.attributes.position.count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) c.toArray(a, i * 3); g.setAttribute('color', new THREE.BufferAttribute(a, 3)); g.deleteAttribute('uv'); g.translate(x, y + h / 2, z); list.push(g); };
+  const desk = (l, x, z, top) => { part(l, 1.9, .14, 1, top, x, .75, z); for (const sx of [-.8, .8]) part(l, .12, .75, .7, 0x4a515e, x + sx, 0, z); part(l, .7, .45, .08, 0x23282e, x, .96, z - .2); };
+  const chair = (l, x, z) => { part(l, .6, .12, .6, 0x2b2f36, x, .42, z); part(l, .6, .7, .12, 0x2b2f36, x, .54, z + .28); part(l, .12, .42, .12, 0x4a515e, x, 0, z); };
+  const plant = (l, x, z) => { part(l, .45, .4, .45, 0xb98a50, x, 0, z); part(l, .7, .65, .7, 0x3fae62, x, .4, z); };
+  const slab = (l, w, d) => { part(l, w, .22, d, 0xeef1f5, 0, -.22, 0); part(l, w - .3, .55, d - .3, 0x7b869c, 0, -.77, 0); part(l, w * .55, .6, d * .55, 0x59627a, 0, -1.37, 0); };
+  const templates = [
+    l => { slab(l, 8, 6); for (const x of [-1.9, 1.9]) for (const z of [-1.4, 1.2]) { desk(l, x, z, 0xb98a50); chair(l, x, z + .9); } plant(l, 0, -2.3); part(l, .1, 1.1, 4.4, 0x9fb4d0, 0, 0, 0); },
+    l => { slab(l, 7, 5.6); part(l, 3.8, .16, 1.7, 0x2b2f36, 0, .75, 0); for (const x of [-1.5, 1.5]) part(l, .16, .75, 1, 0x4a515e, x, 0, 0); for (const x of [-1.2, 0, 1.2]) { chair(l, x, 1.5); part(l, .6, .8, .12, 0x2b2f36, x, .45, -1.5); } part(l, 3.6, 1.7, .14, 0xf4f1ea, 0, .35, -2.5); plant(l, 2.8, 1.9); },
+    l => { slab(l, 6.4, 5); part(l, 3, .9, .8, 0x8a6a3c, -.8, 0, -1.7); [0xe8503a, 0xffb000, 0x3f8cff, 0x3fae62].forEach((c, i) => part(l, .35, .45, .35, c, -1.9 + i * .72, .9, -1.7)); part(l, 1, 1.9, .9, 0x2b2f36, 2.2, 0, -1.6); part(l, 2.2, .5, .9, 0x3f6fd0, -.9, 0, 1.3); part(l, 2.2, .7, .25, 0x3f6fd0, -.9, .4, 1.8); part(l, 1.1, .4, 1.1, 0xf4f1ea, 1.3, 0, .9); },
+    l => { slab(l, 9, 4.6); for (const x of [-2.9, 0, 2.9]) { desk(l, x, -.4, 0x2d58a8); chair(l, x, .55); } part(l, .5, 1.5, 2.2, 0xb98a50, -4.1, 0, -.4); plant(l, 3.9, 1.5); plant(l, -3.9, 1.6); }
+  ].map(make => { const l = []; make(l); const geo = mergeGeometries(l); return {geo, edges:new THREE.EdgesGeometry(geo, 30)}; });
+  const items = [], haze = new THREE.Color(), ink = new THREE.Color(0x1c2233);
+  const floors = [[-3, 1201 * U + 3, -100 * U, 1560 * U + 3], [(FX4 + F4_X0) * U, (FX4 + F4_X1) * U, F4_Z0 * U, F4_Z1 * U]];
+  for (const [x0, x1, z0, z1] of floors) for (let gx = x0 - 34; gx <= x1 + 34; gx += 17) for (let gz = z0 - 40; gz <= z1 + 22; gz += 15) {
+    const x = gx + (rnd() - .5) * 5, z = gz + (rnd() - .5) * 4, far = rnd(), y = -3.5 - far * 7, scale = .85 - far * .3;
+    const out = Math.max(x0 - x, x - x1, z0 - z, z - z1);          // 只放在地板外面
+    const t = templates[Math.floor(rnd() * templates.length)], turn = (rnd() - .5) * .5, phase = rnd() * 6.28;
+    if (out < 5.5) continue;
+    const u = {haze:{value:haze}, amount:{value:.52 + far * .3}};
+    const body = new THREE.Mesh(t.geo, new THREE.ShaderMaterial({uniforms:u, vertexColors:true,
+      vertexShader:'varying vec3 vC; varying float vL; void main(){ vC = color; vL = .66 + .34 * max(normal.y, 0.0) + .1 * max(normal.z, 0.0); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader:'uniform vec3 haze; uniform float amount; varying vec3 vC; varying float vL; void main(){ gl_FragColor = vec4(mix(vec3(dot(vC * vL, vec3(.3, .55, .15))) * .45 + vC * vL * .55, haze, amount), 1.0);\n#include <colorspace_fragment>\n }'}));
+    const lines = new THREE.LineSegments(t.edges, new THREE.LineBasicMaterial({color:0x1c2233}));
+    const g = new THREE.Group(); g.add(body, lines); g.position.set(x, y, z); g.rotation.y = turn; g.scale.setScalar(scale);
+    g.traverse(o => { o.userData.noMask = o.userData.noShift = true; }); body.renderOrder = -1; scene.add(g);
+    items.push({g, y, phase, far, lines});
+  }
+  const sky = document.createElement('canvas'); sky.width = 1024; sky.height = 640; const skyTex = new THREE.CanvasTexture(sky); skyTex.colorSpace = THREE.SRGBColorSpace;
+  const theme = dark => {
+    const g = sky.getContext('2d'), W = sky.width, H = sky.height, base = g.createLinearGradient(0, 0, 0, H);
+    (dark ? ['#111726', '#19202e'] : ['#d3dcea', '#e2e8f0']).forEach((c, i) => base.addColorStop(i, c)); g.fillStyle = base; g.fillRect(0, 0, W, H);
+    let k = 7; const r = () => { k = (k * 1664525 + 1013904223) >>> 0; return k / 4294967296; };
+    for (let i = 0; i < 90; i++) { const x = r() * W, y = r() * H; g.fillStyle = dark ? `rgba(255,255,255,${.2 + r() * .35})` : `rgba(255,255,255,${.5 + r() * .4})`; g.fillRect(x, y, 1.6, 1.6); }
+    skyTex.needsUpdate = true; scene.background = skyTex;
+    haze.set(dark ? 0x161d2b : 0xdae2ed);
+    for (const it of items) { it.lines.material.color.copy(ink).lerp(haze, .55 + it.far * .3); }
+  };
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!still) (function drift(ms){ for (const it of items) it.g.position.y = it.y + Math.sin(ms / 3600 + it.phase) * .18; requestAnimationFrame(drift); })(0);
+  return {theme, items};
+})();
 // 深色模式（跟著網站的深淺模式：localStorage designRequestThemeV1，網站切換時用 postMessage 通知）：地板、背景、燈光一起變暗
 function applyTheme(t){
   const dark = t === 'dark';
   for (const {c, t: tex} of floorTiles) { paintFloor(c.getContext('2d'), dark); tex.needsUpdate = true; }
-  scene.background.set(dark ? 0x141a20 : 0xdde5ee);
+  multiverse.theme(dark);
   hemiLight.color.set(dark ? 0xaab6c8 : 0xf2f6ff); hemiLight.groundColor.set(dark ? 0x3a4350 : 0xb9c2d2); hemiLight.intensity = (FLAT ? 2 : .62) * (dark ? .7 : 1);
   sun.intensity = (FLAT ? 0 : 2.1) * (dark ? .45 : 1); sun.color.set(dark ? 0xc8d4ff : 0xffffff);
   document.documentElement.dataset.plazaTheme = dark ? 'dark' : 'light';
@@ -1020,6 +1074,14 @@ function reflow5F(){   // 五樓分區位移：北邊（廁所、會議室 A、�
   toilets.forEach(t => { if (is5(t.x)) t.z += dz(t.z); });
   fridges.forEach(fr => { if (is5(fr.cx)) { const d = dz(fr.cz); fr.cz += d; fr.zf += d; } });
 }
+function doors3d(){   // 門口：兩側深色門柱＋貼地的灰色門檻。純外觀，不加碰撞、不改通道；座標已是位移後的值，所以要在 reflow5F 之後蓋
+  for (const o of DOORS) {
+    const hz = o.horiz, c = o.c * U;
+    const box = (al, h, sal, sac, color) => pbox(hz ? sal : sac, h, hz ? sac : sal, color, hz ? al : c, .004, hz ? c : al);
+    box((o.a + o.b) / 2 * U, .018, (o.b - o.a) * U - .12, .34, 0x7c879a);          // 門檻
+    for (const end of [o.a - 1, o.b + 1]) box(end * U, 1.68, .17, .24, OFFICE.coal);   // 門柱
+  }
+}
 async function buildOffice(){
   const funP = loadFunArt();
   await Promise.all(Object.entries(FILES).map(async ([k, f]) => { imgs[k] = await loadImg(ASSET + f); }));
@@ -1072,7 +1134,7 @@ async function buildOffice(){
     officeDecal(scene,'l-cabinet',I(50),.73,I(111),.48,I(930)+.003,0,0,(g,w,h)=>{g.fillStyle='#f4f1ea';g.fillRect(0,0,w,h);g.fillStyle='#8c98ad';for(const y of [40,80])g.fillRect(6,y,w-12,2);for(const y of [15,55,95])g.fillRect(w/2-15,y,30,4);});
     laptop3d(I(224), I(852), 1);
     rects.push([I(85), I(828), I(137), I(930)], [I(137), I(828), I(308), I(873)]); }
-  reflow5F(); upgradeMaterials();
+  reflow5F(); doors3d(); upgradeMaterials();
   dropCache.clear(); noteCache.clear(); startGameplay();   // 場景（含四樓）全部蓋好、碰撞都齊了才開始算道具：否則每個人載入的時間點不同，算出來的位置會不一樣
 }
 // 辦公室細節：依家具／顏色合併幾何，共用材質與貼圖；局部群組保留入座收起與 reflow 語意。
