@@ -1,3 +1,4 @@
+import { shareMeta, injectShare } from './share.js';
 import { buildCatalog } from './catalog.js';
 import { buildDrinkCatalog, buildManualItems, pickDrink } from './drink.js';
 import { ensureAccounts, signUser, getUser as getUserRaw, emailFromToken, verifyGoogle } from './auth.js';
@@ -659,9 +660,25 @@ ${SYSTEM_NOTE}`;
   return err('not found', 404);
 }
 
+// /g/<代號>：回傳同一份前端頁面，但帶入該團的分享預覽資訊；查詢失敗就照原樣回傳
+async function sharePage(req, env) {
+  const url = new URL(req.url);
+  const page = await env.ASSETS.fetch(new Request(new URL('/', url)));
+  try {
+    const cid = (url.pathname.match(/^\/g\/([a-z0-9-]{1,20})(?:\/|$)/) || [])[1];
+    const camps = cid ? await getCamps(env) : [];
+    if (!page.ok || !camps.some((c) => c.id === cid)) return page;
+    const s = await getSettings(env, cid);
+    const meta = shareMeta(s, isClosed(s) || isEnded(camps, cid));
+    const headers = new Headers(page.headers); headers.delete('etag'); headers.delete('content-length'); headers.set('cache-control', 'no-cache');
+    return new Response(injectShare(await page.clone().text(), meta, `${url.origin}/g/${cid}/`), { headers });
+  } catch (e) { console.log('share meta error', String(e)); return page; }
+}
+
 export default {
   async fetch(req, env, ctx) {
     try {
+      if ((req.method === 'GET' || req.method === 'HEAD') && new URL(req.url).pathname.startsWith('/g/')) return await sharePage(req, env);
       if (req.method === 'GET') { // 快取命中就不必先查資料庫
         const u = new URL(req.url);
         try {
