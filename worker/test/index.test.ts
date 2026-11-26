@@ -3143,6 +3143,10 @@ describe('Machi Design API Worker', () => {
     expect(read.settings.assistantEnabled).toBe(false);
     const on = await api({ action: 'saveUserSettings', settings: { assistantEnabled: true } }, token) as { settings: { assistantEnabled: boolean } };
     expect(on.settings.assistantEnabled).toBe(true);
+    const pinned = await api({ action: 'saveUserSettings', settings: { assistantEnabled: true, assistantPick: 'pet-calico-2026-11' } }, token) as { settings: { assistantEnabled: boolean; assistantPick: string } };
+    expect(pinned.settings).toMatchObject({ assistantEnabled: true, assistantPick: 'pet-calico-2026-11' });
+    const random = await api({ action: 'saveUserSettings', settings: { assistantEnabled: true, assistantPick: '' } }, token) as { settings: { assistantPick: string } };
+    expect(random.settings.assistantPick).toBe('');
   });
 
   it('does not commit to GitHub when saveUserSettings would leave the settings row exactly as it was', async () => {

@@ -148,7 +148,7 @@ describe('usage report', () => {
 describe('system prompt', () => {
   it('knows the main system features such as 多元宇宙', () => {
     expect(ASSISTANT_SYSTEM_PROMPT).toContain('小黃');
-    expect(ASSISTANT_SYSTEM_PROMPT).toContain('剛失業');
+    expect(ASSISTANT_SYSTEM_PROMPT).toContain('回鍋');
     expect(ASSISTANT_SYSTEM_PROMPT).toContain('換成別的角色');
     expect(ASSISTANT_SYSTEM_PROMPT).toContain('多元宇宙');
   });

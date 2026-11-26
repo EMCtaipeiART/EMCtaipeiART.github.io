@@ -5,7 +5,7 @@ import { KNOWLEDGE_TOPICS, lookupKnowledge } from '../src/assistant-knowledge';
 describe('小黃知道自己的設定（怎麼關閉、NEW 標籤…）', () => {
   it('has the turn-off instructions straight in the prompt, so he never answers "no permission, ask an admin"', () => {
     expect(ASSISTANT_SYSTEM_PROMPT).toContain('個人設定');
-    expect(ASSISTANT_SYSTEM_PROMPT).toContain('顯示右下角小幫手');
+    expect(ASSISTANT_SYSTEM_PROMPT).toContain('右下角小幫手');
     expect(ASSISTANT_SYSTEM_PROMPT).toContain('不要說沒權限');
     expect(ASSISTANT_SYSTEM_PROMPT).toContain('同仁自己就能做的事');
     expect(ASSISTANT_SYSTEM_PROMPT).toContain('× 只是先把視窗收成小圖示');
@@ -18,7 +18,7 @@ describe('小黃知道自己的設定（怎麼關閉、NEW 標籤…）', () => 
     }
     const body = KNOWLEDGE_TOPICS.find(t => t.id === 'assistant')!.body;
     expect(body).toContain('個人設定');
-    expect(body).toContain('顯示右下角小幫手');
+    expect(body).toContain('右下角小幫手');
     expect(body).not.toContain('後台');
   });
 });

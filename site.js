@@ -994,7 +994,7 @@
     async function pullFilters(force){
       if(!loggedIn())return;if(!force&&Date.now()-filtPulledAt<20000)return;filtPulledAt=Date.now();
       try{
-        const data=await api('getUserSettings',{account:selfAccount()}),st=data.settings||{};try{applyCloudColOrder(st.columnOrder||st['專案欄位順序'])}catch(err){}try{applyCloudTheme(String(st.theme||''))}catch(err){}try{if(typeof st.assistantEnabled==='boolean'&&st.assistantEnabled!==assistantOn())setAssistantOn(st.assistantEnabled,false)}catch(err){}
+        const data=await api('getUserSettings',{account:selfAccount()}),st=data.settings||{};try{applyCloudColOrder(st.columnOrder||st['專案欄位順序'])}catch(err){}try{applyCloudTheme(String(st.theme||''))}catch(err){}try{if(typeof st.assistantEnabled==='boolean'){const want=!st.assistantEnabled?'off':typeof st.assistantPick==='string'?st.assistantPick:assistantPick(),now=assistantOn()?assistantPick():'off';if(want!==now)setAssistantPref(want,false)}}catch(err){}
         const sp=v=>String(v||'').split(/\s*,\s*/).map(x=>x.trim()).filter(Boolean);
         let applied=false,needPush=false;
         const monthsReset=Boolean(window.__monthsAllReset);
@@ -2172,13 +2172,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       {id:'xiaohuang-return-2026-11',launched:'2026-11-24',name:'小黃',sub:'回鍋支援設計部',img:'assets/xiaohuang.webp',
         intro:'嗨，我是小黃，我又回來啦！我回鍋原本的公司上班了，不過放心不下設計部，所以兼任支援，之後會一直輪值幫忙。我能查案量、找案件、介紹系統功能，也會跟你分享新公告和設計圈新聞。點我就能問～',
         vars:{}},
-      {id:'xiaoliu-2026-11',launched:'2026-11-23',name:'小劉',sub:'設計部代班解答',img:'assets/xiaoliu.webp',
-        intro:'嗨，我是小劉！剛拿下金馬最佳男主角，領完獎還沒進組，正好空檔，就來幫設計部代班解答。我能查案量、找案件、介紹系統功能，也會跟你分享新公告和設計圈新聞。點我就能問～',
-        vars:{'--lid-color':'#fabc96','--lid-l':'30%','--lid-r':'54.6%','--lid-w':'13.5%','--lid-top':'58%','--lid-h':'9.5%','--mouth-l':'44%','--mouth-t':'83%','--mouth-w':'14%','--mouth-h':'5%'}},
-      {id:'xiaoshu-2026-11',launched:'2026-11-23',name:'小舒',sub:'設計部代班解答',img:'assets/xiaoshu.webp',
-        intro:'嗨，我是小舒！剛拿下金馬最佳導演，下一部還沒開拍，正好空檔，就來幫設計部代班解答。我能查案量、找案件、介紹系統功能，也會跟你分享新公告和設計圈新聞。點我就能問～',
-        vars:{'--lid-color':'#e9b497','--lid-l':'33.5%','--lid-r':'52.6%','--lid-w':'12%','--lid-top':'35%','--lid-h':'4.5%','--mouth-l':'40.3%','--mouth-t':'51.8%','--mouth-w':'15%','--mouth-h':'8.5%'}}
-      ,{id:'pet-calico-2026-11',launched:'2026-11-24',name:'坂本龍喵',sub:'辦公室三花貓輪值',img:'assets/xiaohua.webp',
+      {id:'pet-calico-2026-11',launched:'2026-11-24',name:'坂本龍喵',sub:'辦公室三花貓輪值',img:'assets/xiaohua.webp',
         intro:'喵～我是坂本龍喵，住在五樓的三花貓，趁午休來輪值幫設計部的忙！我能查案量、找案件、介紹系統功能，也會分享新公告。點我就能問～',vars:{'--lid-color':'#f3e3cf','--lid-l':'32.3%','--lid-r':'57.2%','--lid-w':'11.5%','--lid-top':'38.5%','--lid-h':'12.5%','--mouth-l':'45%','--mouth-t':'56.5%','--mouth-w':'10%','--mouth-h':'5%'}}
       ,{id:'pet-beige-2026-11',launched:'2026-11-24',name:'咪咪喵',sub:'辦公室米貓輪值',img:'assets/xiaomai.webp',
         intro:'喵嗚～我是咪咪喵，住在四樓的米色虎斑貓，睡飽了就來輪值幫設計部的忙！我能查案量、找案件、介紹系統功能，也會分享新公告。點我就能問～',vars:{'--lid-color':'#ecd1a8','--lid-l':'27.3%','--lid-r':'57.3%','--lid-w':'13%','--lid-top':'39.5%','--lid-h':'13.5%','--mouth-l':'45.5%','--mouth-t':'55.5%','--mouth-w':'9%','--mouth-h':'4.5%'}}
@@ -2187,15 +2181,19 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       ,{id:'pet-samoyed-2026-11',launched:'2026-11-24',name:'北泡泡',sub:'辦公室薩摩耶輪值',img:'assets/xiaoxue.webp',
         intro:'汪～我是北泡泡，住在五樓的白色薩摩耶，笑嘻嘻地來輪值幫設計部的忙！我能查案量、找案件、介紹系統功能，也會分享新公告。點我就能問～',vars:{'--lid-color':'#fff3f0','--lid-l':'34.8%','--lid-r':'58%','--lid-w':'6.5%','--lid-top':'36%','--lid-h':'7%','--mouth-l':'43.8%','--mouth-t':'50%','--mouth-w':'12.5%','--mouth-h':'8%'}}
     ];
-    /* 多位角色隨機出現（小黃回鍋、小劉、小舒與四隻辦公室寵物）：每次開啟／重新整理頁面就重新抽一位；同一次載入內不會換人（對話只存在頁面記憶體，重新整理本來就會清掉）；兩位同時上架，NEW 標籤各自計算 */
+    /* 多位角色隨機出現（小黃回鍋與四隻辦公室寵物）：每次開啟／重新整理頁面就重新抽一位；同一次載入內不會換人（對話只存在頁面記憶體，重新整理本來就會清掉）；NEW 標籤各角色分開計算 */
     let ASSISTANT_CHARACTER=ASSISTANT_CHARACTERS[Math.floor(Math.random()*ASSISTANT_CHARACTERS.length)];
     const NEW_DAYS=14;/* 新角色上架後，頭像旁的 NEW 標籤最多顯示幾天（Worker assistant-character.ts 的 newDays 同步） */
-    /* 右下角小幫手開關（個人設定）：預設開；本機先記一份讓切換立即生效，同時寫進雲端個人設定跨裝置同步 */
+    /* 右下角小幫手（個人設定）：隨機輪替（預設）／指定一位常駐／關閉；本機先記一份讓切換立即生效，同時寫進雲端個人設定跨裝置同步 */
     const assistantOn=()=>{try{return localStorage.getItem('assistantEnabledV1:'+selfAccount())!=='0'}catch(err){return true}};
-    function setAssistantOn(on,sync){
-      try{localStorage.setItem('assistantEnabledV1:'+selfAccount(),on?'1':'0')}catch(err){}
+    /* 指定常駐的角色 id；沒指定（隨機）或指定的角色已下架時回傳空字串 */
+    const assistantPick=()=>{try{const v=localStorage.getItem('assistantPickV1:'+selfAccount())||'';return ASSISTANT_CHARACTERS.some(c=>c.id===v)?v:''}catch(err){return ''}};
+    /* value：'' 隨機、角色 id 常駐、'off' 關閉 */
+    function setAssistantPref(value,sync){
+      const on=value!=='off',pick=on?value:'';
+      try{localStorage.setItem('assistantEnabledV1:'+selfAccount(),on?'1':'0');if(on)localStorage.setItem('assistantPickV1:'+selfAccount(),pick)}catch(err){}
       try{window.__asRefresh&&window.__asRefresh()}catch(err){}
-      if(sync!==false)api('saveUserSettings',{account:selfAccount(),settings:{assistantEnabled:on}}).catch(()=>{});
+      if(sync!==false)api('saveUserSettings',{account:selfAccount(),settings:{assistantEnabled:on,assistantPick:pick}}).catch(()=>{});
     }
     const sessionDept=()=>sessionValue('designRequestEditorDepartment');
     const sessionRawGroup=()=>sessionValue('designRequestEditorRawGroup');
@@ -2264,7 +2262,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       pop.innerHTML=list.map(([l,v])=>`<button type="button" data-fmt-menu="${kind}:${esc(v)}"${kind==='font'&&v?` style="font-family:'${esc(v)}'"`:''}><b>${esc(l)}</b></button>`).join('');
       document.body.appendChild(pop);const r=btn.getBoundingClientRect();pop.style.left=Math.max(8,Math.min(innerWidth-pop.offsetWidth-8,r.left))+'px';pop.style.top=(r.bottom+6)+'px';
     }
-    document.addEventListener('change',e=>{const t=e.target;if(t&&t.id==='setAssistant'){setAssistantOn(t.checked);toast(t.checked?'右下角小幫手已開啟':'右下角小幫手已關閉')}});
+    document.addEventListener('change',e=>{const t=e.target;if(!t||t.id!=='setAssistant')return;setAssistantPref(t.value);const c=ASSISTANT_CHARACTERS.find(x=>x.id===t.value);toast(t.value==='off'?'右下角小幫手已關閉':c?'右下角小幫手固定為'+c.name:'右下角小幫手改為隨機輪替')});
+    const assistantOptions=()=>{const cur=assistantOn()?assistantPick():'off',opt=(v,l)=>`<option value="${esc(v)}"${v===cur?' selected':''}>${esc(l)}</option>`;return opt('','隨機輪替（預設）')+ASSISTANT_CHARACTERS.map(c=>opt(c.id,c.name+'常駐（'+c.sub+'）')).join('')+opt('off','關閉小幫手')};
     const sectionOpen=k=>st2.open[k]?' open':'';
     function profileHtml(){
       const own=ownDesignerName(),name=own||session().name||session().user,locked=nameLocked(),snapAv=own?'':(personaSnapAvatar(name)||personaSnapAvatar(session().user)||''),url=snapAv||(locked?(pixImg(name)||personAvatar(name)):(st2.avatar||personAvatar(name)));/* snapAv：已用「服裝」頁建立的個人形象快照當頭像，就不再提供上傳照片更換 */
@@ -2272,7 +2271,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         <div class="set-body"><div class="set-profile"><span class="set-avatar">${url?`<img src="${esc(url)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">`:esc(initial(name))}</span>
         <div class="set-fields"><label class="field"><span class="label">顯示名</span><input class="input${locked?' is-locked':''}" id="setDisplayName" maxlength="40" value="${esc(own||st2.display||name)}"${locked?' readonly disabled aria-disabled="true"':''}></label><small>${locked?'此名稱會顯示在帳號選單、案件與信件聯絡人中，已與像素辦公室綁定，不能自行修改。':'此名稱會顯示在帳號選單、案件與信件聯絡人中。'}</small></div></div>
         ${snapAv?'<p class="set-note">頭像使用你在「服裝」頁建立的個人形象快照，不能上傳照片更換。</p>':locked?'<p class="set-note">頭像固定使用像素辦公室的像素大頭，顯示名也已綁定，不能自行更換或修改。</p>':'<div class="set-actions"><button type="button" class="btn" data-avatar-upload>上傳／更換頭像</button></div>'}
-        <label class="set-switch" style="display:flex;gap:10px;align-items:center;margin:14px 0 4px;font-weight:800;cursor:pointer"><input type="checkbox" id="setAssistant"${assistantOn()?' checked':''}><span>顯示右下角小幫手（${esc(ASSISTANT_CHARACTER.name)}）</span></label><small>預設開啟；關閉後右下角就不會再出現${esc(ASSISTANT_CHARACTER.name)}，也不會彈出氣泡，隨時可以回來打開。</small>
+        <div class="set-fields" style="margin-top:14px"><label class="field"><span class="label">右下角小幫手</span><select class="input" id="setAssistant">${assistantOptions()}</select></label><small>可以隨機輪替、指定一位常駐，或整個關閉（關閉後不會出現圖示和氣泡）。選好立即生效。</small></div>
         <div class="set-actions">${locked?'':`<button type="button" class="btn primary" data-set-save="profile"${st2.busy==='profile'?' disabled':''}>${st2.busy==='profile'?'儲存中…':'儲存'}</button>`}</div></div></details>`;
     }
     function templatesHtml(){
@@ -5160,8 +5159,20 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       /* 電量用完（今天額度用盡）時，頭像換成充電中的電池：外框、三格電量依序充滿、閃電跳動（動畫在 site.css 的 .as-batt） */
       const BATTERY='<span class="as-batt" role="img" aria-label="充電中"><svg viewBox="0 0 64 64" aria-hidden="true"><rect class="as-batt-cap" x="25" y="4" width="14" height="6" rx="2"/><rect class="as-batt-body" x="16" y="9" width="32" height="50" rx="7"/><rect class="as-batt-cell c1" x="21" y="43" width="22" height="11" rx="2.5"/><rect class="as-batt-cell c2" x="21" y="30" width="22" height="11" rx="2.5"/><rect class="as-batt-cell c3" x="21" y="17" width="22" height="11" rx="2.5"/><path class="as-batt-bolt" d="M35 20 25 36h7l-3 12 11-18h-7z"/></svg></span>';
       const faceHtml=()=>S.tired?BATTERY:FACE;
+      /* 換成另一位角色（輪替或個人設定指定常駐） */
+      function applyCharacter(next){
+        const el=document.getElementById('asHelper');
+        if(el)Object.keys(ASSISTANT_CHARACTER.vars||{}).forEach(k=>el.style.removeProperty(k));
+        ASSISTANT_CHARACTER=next;FACE=mkFace();HELLO_INTRO=next.intro;hello.seen=false;
+        if(el)Object.entries(next.vars||{}).forEach(([k,v])=>el.style.setProperty(k,v));
+      }
+      function applyPick(){
+        const id=loggedIn()?assistantPick():'';if(!id||id===ASSISTANT_CHARACTER.id)return;
+        hideHello(0);applyCharacter(ASSISTANT_CHARACTERS.find(c=>c.id===id));
+      }
       function render(){
         if(!loggedIn()||!assistantOn()){const el=document.getElementById('asHelper');if(el)el.remove();const h=document.getElementById('asHello');if(h)h.remove();S.fabShown=false;return}
+        applyPick();
         const el=root(),unread=Boolean(S.ann);
         if(!S.open){
           const drop=S.fabShown?'':' as-drop';S.fabShown=true;
@@ -5354,6 +5365,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       /* 小幫手自己輪替：頭像開著不動時，每 20～40 分鐘翻轉換成另一位（不會太頻繁）；聊天視窗開著、思考中、已經跟他聊過、介紹氣泡顯示中、分頁在背景都不換，改 2 分鐘後再試 */
       function swapCharacter(){
         const retry=ms=>setTimeout(swapCharacter,ms);
+        if(assistantPick())return retry(120000);/* 指定常駐：不輪替 */
         const ok=!(S.open||S.farewell||S.busy||S.tired||document.hidden||!loggedIn()||!assistantOn()||S.msgs.some(m=>m.role==='user'));
         const el=document.getElementById('asHelper'),fab=el&&el.querySelector('.as-fab'),shown=document.getElementById('asHello');
         if(!ok||!el||!fab||el.classList.contains('away')||(shown&&shown.classList.contains('show')))return retry(120000);
@@ -5362,9 +5374,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const next=pool[Math.floor(Math.random()*pool.length)];
         fab.classList.add('as-flip-out');
         setTimeout(()=>{
-          Object.keys(ASSISTANT_CHARACTER.vars||{}).forEach(k=>el.style.removeProperty(k));
-          ASSISTANT_CHARACTER=next;FACE=mkFace();HELLO_INTRO=next.intro;hello.seen=false;
-          Object.entries(next.vars||{}).forEach(([k,v])=>el.style.setProperty(k,v));
+          if(!assistantPick())applyCharacter(next);
           updateNew();render();
           const f=document.querySelector('#asHelper .as-fab');
           if(f){f.classList.add('as-flip-in');setTimeout(()=>f.classList.remove('as-flip-in'),600)}
@@ -5394,7 +5404,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const el=document.getElementById('asHelper');if(!el)return;
         el.classList.add('away');hideHello(0);clearTimeout(scrollT);scrollT=setTimeout(()=>el.classList.remove('away'),520);
       },{capture:true,passive:true});
-      window.__asRefresh=()=>{sync();updateNew();render()};
+      window.__asRefresh=()=>{sync();applyPick();updateNew();render()};
       setInterval(sync,2000);setTimeout(sync,800);
       return {send,state:S};
     })();
