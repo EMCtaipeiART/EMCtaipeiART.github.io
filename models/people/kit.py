@@ -138,7 +138,7 @@ def art_ear(art, to_art, poly, y, yaw, dome=.12, back=None, name='ear'):
         if nrm.y * sign < 0: bmesh.ops.reverse_faces(bm, faces=bm.faces)
         bm.to_mesh(o.data); bm.free()
 
-def art_puff(name, art, to_art, poly, y, dome=.2, back_rgb=(253, 230, 142), yaw=0.0, round_px=26, nx_=44, nz=52):
+def art_puff(name, art, to_art, poly, y, dome=.2, back_rgb=(253, 230, 142), yaw=0.0, round_px=26, nx_=44, nz=52, plump=False, back_k=.75, inset=0.0, line=False):
     """把原畫剪下來做成前後鼓起的立體片（布丁狗、手、蝴蝶結）：用格子網格＋透明裁切，凹形輪廓也不會折出破面。
     poly 是原畫像素座標（輪廓要包含原畫的深色外框線）；y 是中心的前後位置，round_px 是邊緣圓角寬度。"""
     P_ = np.array(smooth_poly(poly, 5))
@@ -149,6 +149,23 @@ def art_puff(name, art, to_art, poly, y, dome=.2, back_rgb=(253, 230, 142), yaw=
     mask = in_poly(gx, gy, [tuple(p) for p in P_])
     front = sample(art, gx, gy); front[..., 3] = dilate(mask, 2)
     rear = np.ones_like(front); rear[..., :3] = np.array(back_rgb, np.float32) / 255; rear[..., 3] = dilate(mask, 2)
+    if plump:                       # 厚的立體件：邊緣漸漸融成背面的底色，側面才沒有前後接縫；深咖啡色（帽子）背面也塗同色
+        pts = np.stack([gx.ravel(), gy.ravel()], 1)
+        far = np.full(len(pts), 1e9)
+        for a_, b_ in zip(P_, np.roll(P_, -1, axis=0)):
+            d_ = b_ - a_; t_ = np.clip(((pts - a_) @ d_) / max(1e-9, float(d_ @ d_)), 0, 1)
+            far = np.minimum(far, np.sqrt(((pts - a_ - d_ * t_[:, None]) ** 2).sum(1)))
+        far = far.reshape(gx.shape)
+        base = np.array(back_rgb, np.float32) / 255
+        brown = (front[..., 0] < .72) & (front[..., 0] > front[..., 2] * 1.5) & (gy < oy + H * .22)
+        top = np.zeros(gx.shape, bool)
+        if brown.any():
+            tone = np.median(front[brown & mask, :3], axis=0)
+            cols = np.where(brown.any(0), brown.shape[0] - 1 - brown[::-1].argmax(0), -1)   # 每一直行帽子的下緣
+            top = (np.arange(gx.shape[0])[:, None] <= cols[None, :])
+            rear[top, :3] = tone
+        k_ = np.clip((far - 3) / 13, 0, 1); k_ = (k_ * k_ * (3 - 2 * k_))[..., None]
+        front[..., :3] = front[..., :3] * k_ + np.where(top[..., None], rear[..., :3], base) * (1 - k_)
     uid = '%s%d' % (name, len(MATS) + ox * 7 + oy)
     ax0, ay0 = to_art(np.array(0.0), np.array(0.0)); ax1, ay1 = to_art(np.array(1.0), np.array(1.0))
     xs_, ys_ = np.linspace(ox, ox + W, nx_ + 1), np.linspace(oy + H, oy, nz + 1)
@@ -169,9 +186,26 @@ def art_puff(name, art, to_art, poly, y, dome=.2, back_rgb=(253, 230, 142), yaw=
                 thick[j, i] = q * (2 - q)
             else:                                   # 框外的點收到輪廓線上，前後兩片的邊緣才會密合
                 gxs[j, i], gys[j, i] = q_
+    if plump:                       # 像充氣一樣鼓起（解 Poisson）：凹進去的輪廓不會在側面留下摺線
+        h_ = np.zeros_like(thick)
+        wx, wy = 1 / (W / nx_) ** 2, 1 / (H / nz) ** 2
+        for _ in range(1500):
+            q_ = np.pad(h_, 1)
+            h_ = np.where(inside, (wx * (q_[1:-1, :-2] + q_[1:-1, 2:]) + wy * (q_[:-2, 1:-1] + q_[2:, 1:-1]) + 1) / (2 * wx + 2 * wy), 0)
+        thick = np.clip(h_ / max(1e-9, float(h_.max())), 0, 1) ** .5
+    us, vs = gxs.copy(), gys.copy()                    # 貼圖取樣點；inset：邊緣往內取，原畫外框線才不會被拉到側面
+    if inset:
+        mid = P_.mean(0)
+        for j in range(nz + 1):
+            for i in range(nx_ + 1):
+                pt = np.array((gxs[j, i], gys[j, i])); r_, q_ = nearest(*pt)
+                if r_ < inset * 2:
+                    d_ = pt - q_ if r_ > .5 else mid - pt
+                    d_ = d_ / max(1e-9, float(np.linalg.norm(d_)))
+                    us[j, i], vs[j, i] = pt + d_ * (inset - r_ / 2)
     cx = float(((ox + W / 2) - ax0) / (ax1 - ax0))
     cs, sn = math.cos(yaw), math.sin(yaw)
-    for sign, depth, img, tag in ((-1, dome, front, ''), (1, dome * .75, rear, 'back')):
+    for sign, depth, img, tag in ((-1, dome, front, ''), (1, dome * back_k, rear, 'back')):
         m = tex_mat(uid + tag, img, clip=True)
         verts, faces, uvs = [], [], []
         for j in range(nz + 1):
@@ -189,8 +223,10 @@ def art_puff(name, art, to_art, poly, y, dome=.2, back_rgb=(253, 230, 142), yaw=
                 if sign > 0:
                     q, cr = q[::-1], cr[::-1]
                 faces.append(tuple(q))
-                uvs.append([(float((gxs[v, u] - ox) / W), float(1 - (gys[v, u] - oy) / H)) for u, v in cr])
-        new_obj(name + tag, verts, faces, m, uvs)['noline'] = True
+                uvs.append([(float((us[v, u] - ox) / W), float(1 - (vs[v, u] - oy) / H)) for u, v in cr])
+        o_ = new_obj(name + tag, verts, faces, m, uvs)
+        if not line:
+            o_['noline'] = True
 
 # ───────── 逐段放樣（loft） ─────────
 def smooth_rows(rows, n=160):

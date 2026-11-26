@@ -232,7 +232,7 @@ ball('hand', P(39, 138, 160), (.2, .21, .23), SKIN, 22, 16)
 ball('thumb', P(34, 145, 159), (.08, .09, .12), SKIN, 14, 10, ry=-.45)
 
 # 右手抱著布丁狗（固定在身上，走路時不甩動）
-tube('holdsleeve', [P(-17, 126, 113), P(-28, 126, 129), P(-33, 131, 144), P(-28, 148, 147), P(-22, 160, 143)],
+tube('holdsleeve', [P(-17, 126, 113), P(-28, 126, 129), P(-33, 131, 144), P(-31, 160, 147), P(-26, 171, 143.5)],
      [.14, .24, .27, .24, .21], KNIT, 32, 18)
 # 布丁狗、抱住牠的手和袖口：輪廓與五官直接用原畫做成鼓起的立體片
 def zp(pts): return [(x / 5 + 30, y / 5 + 300) for x, y in pts]
@@ -251,9 +251,9 @@ for poly in (HAND, CUFF):
     big = [tuple(c_ + (np.array(p) - c_) * 1.16) for p in poly]
     cover = in_poly(gx_, gy_, big) & in_poly(gx_, gy_, DOG)
     dogart[cover, :3] = np.array((253, 230, 142), np.float32) / 255
-art_puff('pud', dogart, neutral_px, DOG, Y(155), .40, (253, 230, 142), round_px=60)
-art_puff('holdcuff', NEU, neutral_px, CUFF, Y(166), .22, (240, 218, 160), yaw=-.12, round_px=16)
-art_puff('holdhand', NEU, neutral_px, HAND, Y(171), .17, SKIN_RGB, round_px=16)
+art_puff('pud', dogart, neutral_px, DOG, Y(150), .68, (253, 230, 142), round_px=46, plump=True, back_k=.66, inset=7, line=True, nx_=64, nz=76)
+art_puff('holdcuff', NEU, neutral_px, CUFF, Y(172), .22, (240, 218, 160), yaw=-.12, round_px=16)
+art_puff('holdhand', NEU, neutral_px, HAND, Y(177), .17, SKIN_RGB, round_px=16)
 
 # ───────── 寬牛仔褲與鞋 ─────────
 def denim_texture(W=512, H=512):

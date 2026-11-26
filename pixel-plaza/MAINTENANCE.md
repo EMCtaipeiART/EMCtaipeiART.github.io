@@ -153,7 +153,7 @@
 - 兩個面不可落在同一平面；貼圖（officeDecal）離底面至少 .01，收邊條要比底座高／凸出 .008 以上。
 - 投影畫面高度上限 2.0（中心 y 1.2），不可超過牆高 2.3。
 
-## 3D 人物（2026-11-25，目前只有 Machi）
+## 3D 人物（Machi、Noise、Leona、Amber、Anna）
 - 清單 `MODEL3D`（模型網址＋對應的角色工坊造型版本 `atlas`）；`attach3d(c)` 載入後掛在 `c.holder`，原本的 2D 平面圖只保留點選範圍。載入失敗、`?px=1`、或本人發佈了比 `atlas` 新的造型時維持 2D。
 - 模型：`MACHI_LITE=1 blender --background --factory-startup --python models/machi/build_machi.py`；節點名稱 `machi_<head|body|armL|armR|legL|legR>__<材質>[_n]`。改模型後把 `?v=` 加一；改關節位置要同步 `PIVOT3D`。
 - 動作都在 `c.m3d.update()`：步伐相位跟移動距離走（腳不打滑）、`c.moving > 3.5` 為跑步、`c.sitting` 為坐姿（辦公椅上手會打字）。外框粗細 `INK3D`。
@@ -191,12 +191,13 @@
 - 狗的原始模型是本機生成（`~/hunyuan3d-local`，`venv/bin/python gen.py <輸入資料夾> <id> out/<id>.glb`，一隻約 15 分鐘，不進 Git）。清理：`gen_cat_model.py ... span=3.8`（臘腸身體長）／`beadeyes`（薩摩耶眼睛壓平）；貼圖 `gen_cat_texture.py dog1|dog2`。鼻頭是 shader 畫在立體上（`nose`），不要改回貼圖投影（側面會出現黑圈）。
 - 薩摩耶（`crisp`）：深色與粉紅色只允許出現在眼睛、口鼻、腮紅、內耳的範圍，其他一律蓋成毛色；白毛立體感照模型法線打淡影，不用原圖陰影線。立耳只在最前面那層上內耳色（`earFront`）。外框要退得比較深（`sink`，口鼻另加 `aSink`），否則皺褶會穿出黑色碎線。
 
-## 設計部立體人物（手工建模，只在展示間）
+## 設計部立體人物（手工建模，2026-11-26 起用在遊戲）
 - 做法同 Machi：models/people/<名字>.py（共用工具 models/people/kit.py），逐段放樣＋原畫貼圖；不要用圖片生成立體模型（使用者比較過，明顯較差）。
-- 產出 assets/people3d/<名字小寫>.glb，節點名沿用 machi_<部位>__<材質>，index.html 的 attach3d 直接套動作。展示間在 viewer.html 的 PEOPLE 登記，換檔要改 ?v=。
+- 產出 assets/people3d/<名字小寫>.glb，節點名沿用 machi_<部位>__<材質>，index.html 的 attach3d 直接套動作。遊戲在 index.html 的 MODEL3D、展示間在 viewer.html 的 PEOPLE 登記，換檔兩邊的 ?v= 都要改。
 - 重建：Blender --background --factory-startup --python models/people/noise.py -- <預覽圖資料夾>。
-- 遊戲（index.html 的 MODEL3D）尚未使用，要上線需另外登記。
+- MODEL3D 的 atlas＝上線當時角色工坊發佈的版本（Leona 8、Anna 3；Noise、Amber 沒發佈過填 0）。本人之後發佈更新的造型，遊戲會自動改回 2D。
 - 肩前髮束與耳朵直接剪原畫：kit.py 的 art_panel（Amber、Anna 髮束）、art_ear（Noise、Anna 耳朵）；座標用 expedition/story/<名字>_neutral.webp 的像素。
 - 凹形輪廓的立體小物（布丁狗、抱東西的手、蝴蝶結、Amber 耳朵）用 art_puff（格子網格＋透明裁切）；art_ear 只適合接近圓形的輪廓，凹形會折出黑線破面。
+- 要做厚的立體物用 art_puff 的 plump=True（充氣式厚度、邊緣融成背面底色），再配 inset、line。
 - 改臉型／耳朵／髮際線要做「原圖與模型同尺寸疊圖」核對：正面算圖用環境變數 TILT=0（算圖 3 px＝原圖 12 角度圖的 1 px），MACHI_VIEWS 指定角度。Noise 的 12 角度圖第 1～3 格都是 30～50 度的斜角，不是正側面。
 
