@@ -659,7 +659,7 @@ const SEATS = {Leona:[0,2,0,'top'],Amber:[0,2,1,'top'],Noise:[0,2,2,'top'],Anna:
 const FLOOR_X0 = -3, FLOOR_X1 = 1201 * U + 3, FLOOR_Z0 = -100 * U, FLOOR_Z1 = 1560 * U + 3;
 // 地板：近白的拋光大方磚，磚縫很淡；材質帶反光（見下方 MeshStandardMaterial）
 function paintFloor(g, dark){
-  const a = dark ? '#2c313b' : '#dfe4ea', b = dark ? '#323844' : '#d3d9e1', joint = dark ? 'rgba(0,0,0,.3)' : 'rgba(110,125,150,.16)';
+  const a = dark ? '#c9d0da' : '#dfe4ea', b = dark ? '#bcc4d1' : '#d3d9e1', joint = dark ? 'rgba(80,92,115,.2)' : 'rgba(110,125,150,.16)';
   for (let ty = 0; ty < 2; ty++) for (let tx = 0; tx < 2; tx++) { g.fillStyle = (tx + ty) % 2 ? b : a; g.fillRect(tx * 32, ty * 32, 32, 32); }
   g.fillStyle = joint; g.fillRect(0, 0, 64, 1); g.fillRect(0, 32, 64, 1); g.fillRect(0, 0, 1, 64); g.fillRect(32, 0, 1, 64);
 }
@@ -716,13 +716,13 @@ const multiverse = (() => {
   if (!still) (function drift(ms){ for (const it of items) it.g.position.y = it.y + Math.sin(ms / 3600 + it.phase) * .18; requestAnimationFrame(drift); })(0);
   return {theme, items};
 })();
-// 深色模式（跟著網站的深淺模式：localStorage designRequestThemeV1，網站切換時用 postMessage 通知）：地板、背景、燈光一起變暗
+// 深色模式（跟著網站的深淺模式：localStorage designRequestThemeV1，網站切換時用 postMessage 通知）：只有地板外的天空變成夜空，辦公室照樣開燈（亮地板、接近淺色模式的燈光）
 function applyTheme(t){
   const dark = t === 'dark';
   for (const {c, t: tex} of floorTiles) { paintFloor(c.getContext('2d'), dark); tex.needsUpdate = true; }
   multiverse.theme(dark);
-  hemiLight.color.set(dark ? 0xaab6c8 : 0xf2f6ff); hemiLight.groundColor.set(dark ? 0x3a4350 : 0xb9c2d2); hemiLight.intensity = (FLAT ? 2 : .62) * (dark ? .7 : 1);
-  sun.intensity = (FLAT ? 0 : 2.1) * (dark ? .45 : 1); sun.color.set(dark ? 0xc8d4ff : 0xffffff);
+  hemiLight.color.set(dark ? 0xfbfaf8 : 0xf2f6ff); hemiLight.groundColor.set(dark ? 0xa9b0bd : 0xb9c2d2); hemiLight.intensity = (FLAT ? 2 : .62) * (dark ? .95 : 1);
+  sun.intensity = (FLAT ? 0 : 2.1) * (dark ? .85 : 1); sun.color.set(dark ? 0xfff9f0 : 0xffffff);
   document.documentElement.dataset.plazaTheme = dark ? 'dark' : 'light';
 }
 let themeNow = 'light'; try { themeNow = localStorage.getItem('designRequestThemeV1') === 'dark' ? 'dark' : 'light'; } catch (e) {}
