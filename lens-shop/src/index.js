@@ -637,7 +637,9 @@ ${SYSTEM_NOTE}`;
       const tally = {};
       for (const o of orders) if (o.status === 'active') for (const l of o.items) { const t = (tally[l.no + '|' + (l.opts || '')] ||= { no: l.no, brand: l.brand, name: l.name, price: l.price, opts: l.opts || '', qty: 0 }); t.qty += l.qty; }
       const active = orders.filter((o) => o.status === 'active');
-      return json({ orders, tally: Object.values(tally).sort((a, b) => a.no - b.no || String(a.opts).localeCompare(String(b.opts))), sum: active.reduce((s, o) => s + o.total, 0), count: active.length });
+      const cat = await getCatalog(env, cid); // 餐飲／自訂團：附上訂單明細頁連結，供後台「匯出 PDF」
+      const summary = cat && cat.drink ? `/g/${cid}/summary?t=${await sumToken(env, cid)}` : '';
+      return json({ summary, orders, tally: Object.values(tally).sort((a, b) => a.no - b.no || String(a.opts).localeCompare(String(b.opts))), sum: active.reduce((s, o) => s + o.total, 0), count: active.length });
     }
     if ((m = path.match(/^\/api\/admin\/orders\/([0-9A-F]{8})$/)) && method === 'DELETE') {
       await env.DB.prepare('DELETE FROM orders WHERE id=?').bind(m[1]).run(); return json({ ok: true });
