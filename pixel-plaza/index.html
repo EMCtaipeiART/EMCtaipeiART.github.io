@@ -588,6 +588,7 @@ addEventListener('resize', resize); resize();
 
 // ---------- 辦公室整層（依使用者提供的平面配置圖） ----------
 // 版面圖座標（1201×1526 px）× U = 世界座標。桌子 105 px 寬 ≈ 3.15 單位，與角色身高 2.04 的比例同遊戲內一致。
+const WALK_SPEED = 3.4, RUN_SPEED = 9.5, RUN_AT = 5;   // 玩家走路／跑步速度（世界單位／秒）；c.moving 超過 RUN_AT 就播跑步動作
 const U = 0.03, PPU = HD ? 29.5 * DPR * innerHeight / 300 : 29.5;               // PPU：每單位約幾個螢幕像素（貼圖縮成這個大小才會清楚）
 const ASSET = 'assets/';
 const FILES = {elevator:'props2/elevator.png'};
@@ -1777,7 +1778,7 @@ async function attach3d(c){
       for (const m of tinted) m.color.copy(c.sprite.material.color);   // 加班時段的偏藍色調跟 2D 人物一致
       const p = c.holder.position; let d = Math.hypot(p.x - st.x, p.z - st.z); st.x = p.x; st.z = p.z; if (d > 1) d = 0;   // 瞬間移動不算步伐
       const ease = (v, to, r) => v + (to - v) * (1 - Math.exp(-dt * r)), moving = c.moving > 0 && !c.sitting;
-      st.walk = ease(st.walk, moving ? 1 : 0, 12); st.run = ease(st.run, moving && c.moving > 3.5 ? 1 : 0, 9); st.sit = c.sitting ? ease(st.sit, 1, 18) : ease(st.sit, 0, 14);
+      st.walk = ease(st.walk, moving ? 1 : 0, 12); st.run = ease(st.run, moving && c.moving > RUN_AT ? 1 : 0, 9); st.sit = c.sitting ? ease(st.sit, 1, 18) : ease(st.sit, 0, 14);
       st.ph += d * (4.2 - 2.1 * st.run);   // 步伐跟著實際移動距離，腳不打滑
       st.yaw += Math.atan2(Math.sin(c.face - st.yaw), Math.cos(c.face - st.yaw)) * (c.sitting ? 1 : 1 - Math.exp(-dt * 14));
       yaw.rotation.y = st.yaw;
@@ -2049,7 +2050,7 @@ function remoteStep(c, dt){
     if (rt <= b[0].t) { ix = b[0].x; iz = b[0].z; }
     else if (rt >= b[b.length - 1].t) {   // 資料用完：沿著最後的速度往前推一小段（最多 160ms），新樣本到了再平滑修正；超過就停在最後位置
       ix = r.x; iz = r.z; const n = b.length, a = b[n - 2], l = b[n - 1], dtS = l.t - a.t, ahead = rt - l.t;
-      if (live && dtS > 20 && dtS < 400 && ahead < 160 && Math.hypot(l.x - a.x, l.z - a.z) / dtS * 1000 < 9) { const k = ahead / dtS; ix = l.x + (l.x - a.x) * k; iz = l.z + (l.z - a.z) * k; }
+      if (live && dtS > 20 && dtS < 400 && ahead < 160 && Math.hypot(l.x - a.x, l.z - a.z) / dtS * 1000 < 12) { const k = ahead / dtS; ix = l.x + (l.x - a.x) * k; iz = l.z + (l.z - a.z) * k; }
     }
     else { const a = b[i - 1], n = b[i], k = (rt - a.t) / Math.max(1, n.t - a.t); ix = a.x + (n.x - a.x) * k; iz = a.z + (n.z - a.z) * k; }
     const ddx = ix - p.x, ddz = iz - p.z, jump = Math.hypot(ddx, ddz);
@@ -2059,12 +2060,12 @@ function remoteStep(c, dt){
       const sp = dt > 0 ? mv / dt : 0; c.mvS = (c.mvS || 0) * .86 + sp * .14;
       if (mv > .0015) { if (jump > .03) c.face = Math.atan2(ddx, ddz); p.x += mx; p.z += mz; c.stepD = mv; }
       if (c.mvS > 1.1) c.walkOn = true; else if (c.mvS < .35) c.walkOn = false;   // 走／停用遲滯判斷，不會在邊界上抖動
-      c.moving = c.walkOn ? (c.mvS > (c.moving === 7 ? 3.0 : 4.4) ? 7 : 2.4) : 0;
+      c.moving = c.walkOn ? (c.mvS > (c.moving === RUN_SPEED ? 4.4 : 6.2) ? RUN_SPEED : WALK_SPEED) : 0;
     }
     if (!(rt >= b[b.length - 1].t && Math.hypot(r.x - p.x, r.z - p.z) < .06)) return;   // 還沒播到最後一個樣本：下一幀繼續；到了才走下面「停下來」的處理（入座、朝向）
     c.mvS = 0; d = 0;
   }
-  if (d > .06) { const step = Math.min(d, Math.max(7, d * 3.2) * dt); p.x += dx / d * step; p.z += dz / d * step; c.stepD = step; c.face = Math.atan2(dx, dz); c.moving = d > 1.6 ? 7 : 2.4; }
+  if (d > .06) { const step = Math.min(d, Math.max(RUN_SPEED, d * 3.2) * dt); p.x += dx / d * step; p.z += dz / d * step; c.stepD = step; c.face = Math.atan2(dx, dz); c.moving = d > 1.6 ? RUN_SPEED : WALK_SPEED; }
   else {
     c.moving = 0;
     const st = chairSeats.find(q => !q.by && !q.hidden && Math.hypot(sitSpot(q).x - p.x, sitSpot(q).z - p.z) < .2);
@@ -2583,12 +2584,12 @@ function updateSprite(c, dt){
   const rel = Math.atan2(Math.sin(c.face - toCam), Math.cos(c.face - toCam));   // 0 = 面向鏡頭
   const col = (Math.round(rel / (Math.PI * 2) * ANGLES) + ANGLES) % ANGLES;
   c.tex.offset.set(col / ANGLES, 0);
-  c.phase += c.remote && c !== player && c.moving > 0 && c.stepD > 0 ? c.stepD * 3.9 : dt * (c.moving > 3.5 ? 26 : 10) * (c.moving > 0 ? 1 : 0);   // 別人的走路步伐跟著實際移動距離，腳步才不會滑   // 沒有走路影格的人，以彈跳加搖擺表現
+  c.phase += c.remote && c !== player && c.moving > 0 && c.stepD > 0 ? c.stepD * 3.9 : dt * (c.moving > RUN_AT ? 32 : 14) * (c.moving > 0 ? 1 : 0);   // 別人的走路步伐跟著實際移動距離，腳步才不會滑   // 沒有走路影格的人，以彈跳加搖擺表現
   const sw = Math.sin(c.phase), wk = c.walkTex && c.moving > 0;
   let map = c.tex;
   if (wk) { const st = Math.floor(c.phase / (Math.PI / 2)) % 4; if (st % 2) { map = c.walkTex; map.offset.set(col / ANGLES, st === 1 ? .5 : 0); } }   // 4 格循環：站姿、左腳出、站姿、右腳出
   if (c.sprite.material.map !== map) { c.sprite.material.map = map; c.sprite.material.needsUpdate = true; }
-  c.sprite.position.y = (c.sitting ? -SIT_DROP : 0) + (c.moving > 0 ? Math.abs(sw) * (c.moving > 3.5 ? .2 : .1) : 0);
+  c.sprite.position.y = (c.sitting ? -SIT_DROP : 0) + (c.moving > 0 ? Math.abs(sw) * (c.moving > RUN_AT ? .2 : .1) : 0);
   { const ks = CHAR_SCALE[c.name] || 1; c.sprite.scale.x = ks; c.sprite.scale.y = STRETCH * ks; } _e.set(-TILT, toCam, 0); c.sprite.quaternion.setFromEuler(_e).multiply(_tilt.setFromAxisAngle(_z, c.moving > 0 ? sw * .07 : 0));   // 面向鏡頭，走路時輕微搖擺
 }
 
@@ -3880,7 +3881,7 @@ function tick(){
     if (dir.lengthSq() > .01 || target) { player.actAt = Date.now(); staffBackCheck(); if (AWAY.has(player.status)) releaseAway(player); }   // 有操作就解除「用餐／下班…」，不會卡住不能動
     if (!radial.hidden || !$('sv').hidden || AWAY.has(player.status) || elevBusy || expBusy) { dir.set(0, 0, 0); target = null; }   // 角色頁面開著時人物不跟著走
     if (player.sitting && dir.lengthSq() > 1e-4) standUp(player);
-    if (!player.sitting) { unstick(player); moveChar(player, dir, run ? 7 : 2.4, dt); }
+    if (!player.sitting) { unstick(player); moveChar(player, dir, run ? RUN_SPEED : WALK_SPEED, dt); }
     if (wantElev) { const sp = elevSpot(floorOf(player)); if (Math.hypot(sp.x - player.holder.position.x, sp.z - player.holder.position.z) < 1.6) elevGo(floorOf(player) === 5 ? 4 : 5); }
     if (wantSeat) { const st = wantSeat; if (st.by || st.hidden || player.sitting) wantSeat = null; else if (Math.hypot(st.x - player.holder.position.x, st.z - player.holder.position.z) < 1.0) { wantSeat = null; target = null; sitAt(player, st); } }
   }
