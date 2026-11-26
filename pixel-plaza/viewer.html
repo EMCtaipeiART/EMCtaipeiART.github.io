@@ -83,7 +83,7 @@ async function makeMachi(){
   }, follow:() => holder.position.z};
 }
 function makePetView(id){
-  const lib = state.ver === 'gen' && gen && gen.hasPet(id) ? gen : state.ver !== 'live' && draft ? draft : live;
+  const lib = state.ver === 'gen' && gen && gen.hasPet(id, true) ? gen : state.ver !== 'live' && draft ? draft : live;
   return new Promise((res, rej) => {
     const pet = lib.makePet(THREE, {mergeGeometries, mergeVertices}, id, HULL_LAYER, {ready:() => res({group:pet.group, update:pet.update, follow:() => 0}), fail:() => rej(new Error('貼圖載入失敗'))});
   });
@@ -122,9 +122,9 @@ function draw(){
   bar('who', '角色', WHO, v => v === state.who, v => { if (v !== state.who) { state.who = v; if (v === 'Machi' && !MAN_POSES.some(p => p[0] === state.pose)) state.pose = 'stand'; load(); } });
   bar('poses', '動作', state.who === 'Machi' ? MAN_POSES : PET_POSES, v => v === state.pose, v => { state.pose = v; });
   const tools = [['a0', '正面'], ['a45', '45°'], ['a90', '側面'], ['a180', '背面'], ['spin', '自動旋轉'], ['clay', '白膜'], ['ortho', '平面投影'], ['ref', '參考圖']];
-  const isGen = !!(gen && gen.hasPet(state.who));
-  if (draft && state.who !== 'Machi') tools.push(...(isGen ? [['gen', '線上版'], ['draft', '試作版'], ['live', '舊版']] : [['draft', '試作版'], ['live', '線上版']]));
-  bar('tools', '檢視', tools, v => v === 'spin' ? state.spin : v === 'clay' ? state.clay : v === 'ortho' ? state.ortho : v === (state.ver === 'gen' && !isGen ? 'draft' : state.ver), v => {
+  const isGen = !!(gen && gen.hasPet(state.who)), isTrial = !!(gen && !isGen && gen.hasPet(state.who, true));
+  if (draft && state.who !== 'Machi') tools.push(...(isGen ? [['gen', '線上版'], ['draft', '試作版'], ['live', '舊版']] : isTrial ? [['gen', '生成版'], ['draft', '試作版'], ['live', '線上版']] : [['draft', '試作版'], ['live', '線上版']]));
+  bar('tools', '檢視', tools, v => v === 'spin' ? state.spin : v === 'clay' ? state.clay : v === 'ortho' ? state.ortho : v === (state.ver === 'gen' && !isGen && !isTrial ? 'draft' : state.ver), v => {
     if (v[0] === 'a') { state.yaw = +v.slice(1) * Math.PI / 180; state.el = 0; state.spin = false; }
     else if (v === 'ref') document.getElementById('file').click();
     else if (v === 'draft' || v === 'live' || v === 'gen') { state.ver = v; load(); }

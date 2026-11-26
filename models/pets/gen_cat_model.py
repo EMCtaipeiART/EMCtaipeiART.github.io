@@ -90,6 +90,24 @@ if 'whiskers' in flags:   # 虎斑貓的鬍鬚被生成成一堆細管（和一�
         bm.normal_update()
     print('OPEN', sum(e.is_boundary for e in bm.edges))
     bm.to_mesh(me); bm.free()
+if 'beadeyes' in flags:   # 薩摩耶的眼睛被生成成兩顆凸出的小球：整塊挖掉，照周圍臉型的曲面補平（眼睛改用畫的）
+    import bmesh, math
+    import numpy as np
+    bm = bmesh.new(); bm.from_mesh(me); bm.normal_update()
+    EZ = 1.587
+    for cx in (-.218, .19):   # 不挖洞（挖了會在鼻子旁留下碎面）：直接把凸出的點壓回曲面再抹平
+        dist = lambda v: ((v.co.x - cx) ** 2 + (v.co.z - EZ) ** 2) ** .5
+        ring = [v for v in bm.verts if -v.co.y > .3 and .1 < dist(v) < .16 and v.normal.y < -.3]
+        basis = lambda x, z: [1, x, z, x * x, z * z, x * z]
+        k = np.linalg.lstsq(np.array([basis(v.co.x, v.co.z) for v in ring]), np.array([v.co.y for v in ring]), rcond=None)[0]
+        surf = lambda v: float(k @ basis(v.co.x, v.co.z))
+        for v in bm.verts:
+            if dist(v) < .1 and abs(v.co.y - surf(v)) < .12: v.co.y = surf(v)
+        area = [v for v in bm.verts if -v.co.y > .3 and dist(v) < .115]
+        for _ in range(30): bmesh.ops.smooth_vert(bm, verts=area, factor=.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+        bm.normal_update()
+    print('OPEN', sum(e.is_boundary for e in bm.edges))
+    bm.to_mesh(me); bm.free()
 m = o.modifiers.new('d', 'DECIMATE'); m.ratio = min(1, 40000 / len(me.polygons)); bpy.ops.object.modifier_apply(modifier='d')
 for p in me.polygons: p.use_smooth = True
 me.materials.clear(); me.update()
@@ -101,7 +119,7 @@ sc.render.engine = 'BLENDER_WORKBENCH'; sc.display.shading.light = 'STUDIO'; sc.
 sc.render.resolution_x = sc.render.resolution_y = 1024
 sc.world = bpy.data.worlds.new('w'); sc.world.color = (.35, .4, .38)
 cam = bpy.data.objects.new('c', bpy.data.cameras.new('c')); sc.collection.objects.link(cam); sc.camera = cam
-cam.data.type = 'ORTHO'; cam.data.ortho_scale = 2.6
+cam.data.type = 'ORTHO'; cam.data.ortho_scale = float(next((f[5:] for f in flags if f.startswith('span=')), 2.6))   # 身體長的臘腸要拉遠
 # glTF (x, y, z) = Blender (x, z, -y)
 for name, d in [('front', (0, -1, 0)), ('side', (-1, 0, 0)), ('back', (0, 1, 0))]:
     d = mathutils.Vector(d); cam.location = mathutils.Vector((0, 0, 1.1)) + d * 8; cam.rotation_euler = (-d).to_track_quat('-Z', 'Y').to_euler()
