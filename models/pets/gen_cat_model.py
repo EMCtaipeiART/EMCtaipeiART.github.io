@@ -109,6 +109,59 @@ if 'beadeyes' in flags:   # 薩摩耶的眼睛被生成成兩顆凸出的小球�
     print('OPEN', sum(e.is_boundary for e in bm.edges))
     bm.to_mesh(me); bm.free()
 m = o.modifiers.new('d', 'DECIMATE'); m.ratio = min(1, 40000 / len(me.polygons)); bpy.ops.object.modifier_apply(modifier='d')
+if 'backears' in flags:   # 薩摩耶生成出前後兩對耳朵：後面那對整塊切掉，切面照周圍頭型的高度補成圓頂
+    import bmesh
+    import numpy as np
+    xs, ts = np.linspace(-.68, .68, 69), np.linspace(0, 1, 31)
+    def cut_front(x): return float(np.interp(abs(x), (0, .15, .28, .4, .68), (-.58, -.605, -.588, -.535, -.535)))   # 前後耳之間那道溝
+    def floor(x, y):                                                      # 切到多低：中間是頭頂、兩側是耳後的頭型
+        mid = np.interp(y, (-.6, -.45, -.3, -.2, -.05), (1.975, 1.965, 1.912, 1.835, 1.76))
+        side = np.interp(y, (-.6, -.55, -.45, -.3, -.2, -.05), (1.77, 1.785, 1.845, 1.825, 1.755, 1.68))
+        k = min(1.0, (abs(x) / .4)) ** 2
+        v = mid + (side - mid) * k
+        return float(v - .12 * max(0.0, abs(x) - .45) / .2)
+    nxs, nts = len(xs), len(ts)
+    verts = []
+    for top in (0, 1):
+        for x in xs:
+            for t in ts:
+                y = cut_front(x) + t * (-.05 - cut_front(x))
+                verts.append((float(x), float(y), 2.45 if top else floor(x, y)))
+    idx = lambda top, i, j: top * nxs * nts + i * nts + j
+    faces = []
+    for i in range(nxs - 1):
+        for j in range(nts - 1):
+            faces.append((idx(0, i, j), idx(0, i, j + 1), idx(0, i + 1, j + 1), idx(0, i + 1, j)))
+            faces.append((idx(1, i, j), idx(1, i + 1, j), idx(1, i + 1, j + 1), idx(1, i, j + 1)))
+        for j, flip in ((0, False), (nts - 1, True)):
+            q = (idx(0, i, j), idx(0, i + 1, j), idx(1, i + 1, j), idx(1, i, j)); faces.append(q[::-1] if flip else q)
+    for j in range(nts - 1):
+        for i, flip in ((0, True), (nxs - 1, False)):
+            q = (idx(0, i, j), idx(0, i, j + 1), idx(1, i, j + 1), idx(1, i, j)); faces.append(q[::-1] if flip else q)
+    cm = bpy.data.meshes.new('cut'); cm.from_pydata(verts, [], faces)
+    bm = bmesh.new(); bm.from_mesh(cm); bmesh.ops.recalc_face_normals(bm, faces=bm.faces); bm.to_mesh(cm); bm.free()
+    cutter = bpy.data.objects.new('cut', cm); sc.collection.objects.link(cutter)
+    bpy.context.view_layer.objects.active = o
+    mod = o.modifiers.new('ear', 'BOOLEAN'); mod.operation = 'DIFFERENCE'; mod.solver = 'EXACT'; mod.object = cutter
+    bpy.ops.object.modifier_apply(modifier='ear')
+    me = o.data
+    bm = bmesh.new(); bm.from_mesh(me)
+    bmesh.ops.triangulate(bm, faces=bm.faces)
+    for _ in range(3):
+        long = [e for e in bm.edges if e.calc_length() > .035 and any(-.66 < v.co.y < .0 and v.co.z > 1.6 and abs(v.co.x) < .72 for v in e.verts)]
+        if long: bmesh.ops.subdivide_edges(bm, edges=long, cuts=1); bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 3])
+    def near(v):                                                          # 切面和切口邊緣：抹成圓的
+        x, y, z = v.co
+        if abs(x) > .68 or y > -.02: return False
+        return y > cut_front(x) - .025 and z > floor(x, max(y, cut_front(x))) - .06
+    area = [v for v in bm.verts if near(v)]
+    for _ in range(40): bmesh.ops.smooth_vert(bm, verts=area, factor=.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    ridge = [v for v in area if v.co.z > 1.9 and v.co.y < cut_front(v.co.x) + .05]      # 前耳背面上緣的缺角再抹一次
+    for _ in range(40): bmesh.ops.smooth_vert(bm, verts=ridge, factor=.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    bm.normal_update()
+    print('EARCUT', len(area), 'OPEN', sum(e.is_boundary for e in bm.edges))
+    bm.to_mesh(me); bm.free()
+    bpy.data.objects.remove(cutter)
 for p in me.polygons: p.use_smooth = True
 me.materials.clear(); me.update()
 for other in list(sc.objects):

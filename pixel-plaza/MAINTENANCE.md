@@ -188,7 +188,7 @@
 - 圖生 3D 的空間匿名可用的 GPU 時間很短：只能呼叫 `/shape_generation`（上色那支會超時或報錯）。
 - 動作：骨架與權重在 `pets3d-gen.js` 的 `IDS`／`weigh()`（脖子斜線、背線、腿高度是照這顆模型量的）；姿勢數值抄自 `pets3d-draft.js`，理毛、吃、趴睡有針對一體成形的網格調小。項圈和鈴鐺跟著頭。
 - 薩摩耶（`dog2`）2026-11-26 起遊戲用生成版（`catBuild` 縮放 .62、外框 .054，高度對齊舊版）。臘腸（`dog1`）在 `IDS` 仍標 `trial`：遊戲用 `pets3d.js`，展示頁用 `hasPet(id, true)`；要上線就拿掉 `trial`、在 `catBuild` 設縮放與外框，並更新 import 的 `?v=`。
-- 狗的原始模型是本機生成（`~/hunyuan3d-local`，`venv/bin/python gen.py <輸入資料夾> <id> out/<id>.glb`，一隻約 15 分鐘，不進 Git）。清理：`gen_cat_model.py ... span=3.8`（臘腸身體長）／`beadeyes`（薩摩耶眼睛壓平）；貼圖 `gen_cat_texture.py dog1|dog2`。鼻頭是 shader 畫在立體上（`nose`），不要改回貼圖投影（側面會出現黑圈）。
+- 狗的原始模型是本機生成（`~/hunyuan3d-local`，`venv/bin/python gen.py <輸入資料夾> <id> out/<id>.glb`，一隻約 15 分鐘，不進 Git）。清理：`gen_cat_model.py ... span=3.8`（臘腸身體長）／`beadeyes backears`（薩摩耶：眼睛壓平、切掉生成出來的後面那對耳朵；兩個旗標都要帶）；貼圖 `gen_cat_texture.py dog1|dog2`。鼻頭是 shader 畫在立體上（`nose`），不要改回貼圖投影（側面會出現黑圈）。
 - 薩摩耶（`crisp`）：深色與粉紅色只允許出現在眼睛、口鼻、腮紅、內耳的範圍，其他一律蓋成毛色；白毛立體感照模型法線打淡影，不用原圖陰影線。立耳只在最前面那層上內耳色（`earFront`）。外框要退得比較深（`sink`，口鼻另加 `aSink`），否則皺褶會穿出黑色碎線。
 
 ## 設計部立體人物（手工建模，2026-11-26 起用在遊戲）

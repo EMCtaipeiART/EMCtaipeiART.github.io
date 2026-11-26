@@ -28,7 +28,7 @@ const IDS = {
 export const hasPet = (id, trial) => !!IDS[id] && (!!trial || !IDS[id].trial);   // 遊戲只拿正式的；展示頁傳 true
 // scale：模型高 2.2，遊戲裡縮到和舊版差不多大；outline：外框外擴量（模型單位）
 export function makePet(THREE, {mergeVertices}, id, HULL_LAYER, {ready, fail, scale = 1, outline = .034} = {}){
-  const P = IDS[id], group = new THREE.Group(), base = new URL('assets/pets3d-gen/', import.meta.url).href, v = '?v=16';
+  const P = IDS[id], group = new THREE.Group(), base = new URL('assets/pets3d-gen/', import.meta.url).href, v = '?v=17';
   const bones = {}, order = ['roll', 'torso', 'head', 'tail', 'FL', 'FR', 'BL', 'BR'];
   const [by, bz] = P.body, [hy] = P.head, ry = P.hr[0], isCat = id === 'cat' || id === 'cat2';
   const at = {roll:[0, by, bz], torso:[0, by, bz], head:P.neck, tail:P.tail,
