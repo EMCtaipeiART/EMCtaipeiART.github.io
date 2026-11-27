@@ -434,6 +434,12 @@ summary{min-height:40px;padding:8px 0;color:var(--bd)}
 @keyframes ldspin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.ld-box i,.ld-in i{animation-duration:2.4s}}
 @media print{#ldg{display:none!important}}
+/* 狀態膠囊統一：全部團購、管理後台、我參加過的團共用同一套尺寸與配色 */
+.stp,.pcd .bdg,.acd .ast.stp{display:inline-flex;align-items:center;white-space:nowrap;font-size:11px!important;font-weight:700!important;line-height:1.5;padding:4px 10px!important;border-radius:999px!important;border:1px solid transparent;box-shadow:none}
+.stp.go,.pcd .bdg.go,.acd .ast.stp.go{background:#ffeaf1!important;color:#c4507a!important;border-color:#f8cddc!important}
+.stp.x,.pcd .bdg.x,.acd .ast.stp.x{background:#f0f3f1!important;color:#6b7771!important;border-color:#e1e7e3!important}
+.pcd .bdg.ok{background:var(--bs)!important;color:var(--bd)!important;border-color:#cbe6d2!important}.pcd .bdg.no{background:#fdecec!important;color:#b42323!important;border-color:#f6cfcf!important}
+.acd .ast.stp{top:16px;right:16px}.atg{font-size:11px;font-weight:700;padding:4px 10px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -847,7 +853,7 @@ async function viewAdmin(quiet){const path=location.pathname;
   st.osig=JSON.stringify(o);const oldAc=quiet===true?$('#acbox'):null;
   $('#app').innerHTML=`<style>#app>.card{margin-top:18px!important}</style><div class="sp"><h2>管理後台${isAdm?'':'（'+esc(st.user.name)+'）'}</h2><span style="display:flex;gap:8px">${st.user?'<a class="btn sec" href="/joined">我參加過的團</a>':''}<button class="sec" id="lo">登出</button></span></div>
   <div class="card"><h3 style="margin-top:0">團購管理</h3><p class="muted">點卡片切換並顯示該團購的訂單；「管理／設定」開啟設定視窗。結束後訂單會保留，同事不能再下單或修改。</p>
-  <div class="acg">${cs.filter(c=>!(c.ended||c.closed)).map(c=>`<div class="acd ${c.id===st.cid?'on':''}" data-cid="${esc(c.id)}" style="cursor:pointer"><span class="atg ${c.custom?'kc':c.drink?'dk':''}">${kindName(c)}</span><span class="ast ${c.ended?'x':''}">${c.ended?'已結束':'進行中'}</span><h4>${esc(c.name)}</h4><div class="sub">${c.drink&&c.store?esc(c.store)+'　':''}代號 ${esc(c.id)}</div><div class="sub">${c.count} 人下單　${nt(c.sum)}${c.goal?'　目標 '+nt(c.goal):''}</div>
+  <div class="acg">${cs.filter(c=>!(c.ended||c.closed)).map(c=>`<div class="acd ${c.id===st.cid?'on':''}" data-cid="${esc(c.id)}" style="cursor:pointer"><span class="atg ${c.custom?'kc':c.drink?'dk':''}">${kindName(c)}</span><span class="ast stp ${c.ended?'x':'go'}">${c.ended?'已結束':'團購中'}</span><h4>${esc(c.name)}</h4><div class="sub">${c.drink&&c.store?esc(c.store)+'　':''}代號 ${esc(c.id)}</div><div class="sub">${c.count} 人下單　${nt(c.sum)}${c.goal?'　目標 '+nt(c.goal):''}</div>
    <div class="acts"><button data-mg="${esc(c.id)}">${c.id===st.cid?'設定':'管理'}</button><button class="sec" data-ce="${esc(c.id)}" data-en="${c.ended?0:1}">${c.ended?'重新開放':'結束'}</button>${c.id==='lens'?'':`<button class="sec" data-dl="${esc(c.id)}" style="color:#b42323">刪除</button>`}</div></div>`).join('')}
   </div>
   <h3 style="margin:26px 0 8px">歷史團購（已結束）</h3>
@@ -976,7 +982,7 @@ async function viewJoined(){
  $('#app').innerHTML='<div class="sech"><h2>我參加過的團</h2></div><div class="ld-in"><i></i>載入中…</div>';
  let d={orders:[]};try{d=await api('/auth/orders')}catch(e){$('#app').innerHTML='<h2>我參加過的團</h2><div class="card muted">'+esc(e.message)+'</div>';return}
  const os=d.orders,sum=os.filter(o=>o.status==='active').reduce((a,o)=>a+o.total,0);
- const row=o=>`<a class="card jn" href="/order/${esc(o.token)}" style="display:block;text-decoration:none;color:inherit;margin-top:12px"><div class="sp"><h3 style="margin:0">${esc(o.campaignName)}</h3><span class="atg ${o.status!=='active'?'':o.ended?'':'dk'}" style="${o.status!=='active'?'background:#f0f3f1;color:#6b7771':o.ended?'background:#e8f4ec;color:#159E31':''}">${o.status!=='active'?'已取消':o.ended?'已結束':'進行中'}</span></div><div class="sub" style="margin:6px 0">${fmtT(o.createdAt)}　${o.paid?'已回報匯款':'未回報匯款'}</div><div>${o.items.slice(0,4).map(l=>esc(l.name)+(l.qty>1?' ×'+l.qty:'')).join('、')}${o.items.length>4?'…等 '+o.items.length+' 項':''}</div><div style="text-align:right;margin-top:6px"><b style="color:#159E31;font-size:18px">${nt(o.total)}</b></div></a>`;
+ const row=o=>`<a class="card jn" href="/order/${esc(o.token)}" style="display:block;text-decoration:none;color:inherit;margin-top:12px"><div class="sp"><h3 style="margin:0">${esc(o.campaignName)}</h3><span class="stp ${o.status!=='active'||o.ended?'x':'go'}">${o.status!=='active'?'已取消':o.ended?'已結束':'團購中'}</span></div><div class="sub" style="margin:6px 0">${fmtT(o.createdAt)}　${o.paid?'已回報匯款':'未回報匯款'}</div><div>${o.items.slice(0,4).map(l=>esc(l.name)+(l.qty>1?' ×'+l.qty:'')).join('、')}${o.items.length>4?'…等 '+o.items.length+' 項':''}</div><div style="text-align:right;margin-top:6px"><b style="color:#159E31;font-size:18px">${nt(o.total)}</b></div></a>`;
  $('#app').innerHTML=`<div class="sech"><h2>我參加過的團</h2><span>共 ${os.length} 筆　合計 ${nt(sum)}</span></div>${os.length?os.map(row).join(''):'<div class="card muted" style="margin-top:14px">還沒有用這個帳號下過單。<br>（只有登入後、或用同一個 Email 下的訂單會顯示在這裡）</div>'}`}
 function viewPicker(){st.psig=JSON.stringify(st.camps||[]);
  const cs=st.camps||[];const open=cs.filter(c=>!(c.ended||c.closed)),end=cs.filter(c=>c.ended||c.closed);
