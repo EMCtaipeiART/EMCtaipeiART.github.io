@@ -14,6 +14,7 @@
     people: ic('<circle cx="9" cy="8.5" r="3"/><circle cx="17" cy="9.5" r="2.4"/><path d="M3.5 19c.5-3.2 2.7-5 5.5-5s5 1.8 5.5 5"/><path d="M15.5 14.4c3 0 4.6 1.6 5 4.6"/>'),
     music: ic('<path d="M9 18V6l10-2v12"/><circle cx="7" cy="18" r="2.2"/><circle cx="17" cy="16" r="2.2"/>'),
     dance: ic('<circle cx="13" cy="4.8" r="2"/><path d="M5 5.5l5 4h5l4-3.5M12.5 9.5L11.5 14l-4 6M11.5 14l5 2 .5 5"/>'),
+    games: ic('<path d="M7 7h10a4 4 0 0 1 4 4v3a3 3 0 0 1-5.2 2L14 15h-4l-1.8 1A3 3 0 0 1 3 14v-3a4 4 0 0 1 4-4z"/><path d="M8 9.5v3M6.5 11h3M15.5 10.2h.1M17.3 12h.1"/>'),
     exit: ic('<path d="M10 4H5v16h5"/><path d="M14 8l4 4-4 4M8.5 12H18"/>')
   };
 
@@ -23,7 +24,7 @@
   btn.innerHTML = ICON.menu + '<span>選單</span><kbd>M</kbd>';
   const mask = document.createElement('div'); mask.id = 'gMask';
   const menu = document.createElement('nav'); menu.id = 'gMenu'; menu.setAttribute('aria-label', '主選單');
-  const ROWS = [['bWheel', '角色', 'role', ''], ['bDance', '跳舞（F）', 'dance', ''], ['bDex', '圖鑑', 'dex', ''], ['bHelp', '說明', 'help', ''], ['bPeople', '切換人物', 'people', '']];
+  const ROWS = [['bWheel', '角色', 'role', ''], ['bDance', '跳舞（F）', 'dance', ''], ['bDex', '圖鑑', 'dex', ''], ['bGames', '小遊戲', 'games', ''], ['bHelp', '說明', 'help', ''], ['bPeople', '切換人物', 'people', '']];
   menu.innerHTML = '<div class="gm-title">MENU</div><button class="gm-x" type="button" aria-label="關閉選單">✕</button>'
     + '<div class="gm-sec">快速功能</div>'
     + ROWS.map(r => '<button class="gm-row" type="button" data-src="' + r[0] + '">' + ICON[r[2]] + '<span>' + r[1] + '</span></button>').join('')
@@ -43,14 +44,16 @@
   }
   btn.onclick = e => { e.stopPropagation(); setOpen(!open); };
   // 面板（圖鑑、說明、角色頁面…）開在選單上面；關掉面板後選單還開著，不會收合
-  const PANELS = ['dexPanel', 'helpPanel', 'drawer', 'cpage', 'fridgeP', 'catP', 'sv'];
+  const PANELS = ['gamesPanel', 'dexPanel', 'helpPanel', 'drawer', 'cpage', 'fridgeP', 'catP', 'sv'];
   const panelOpen = () => PANELS.some(id => { const el = $(id); return el && !el.hidden; });
   mask.onclick = () => { if (!panelOpen()) setOpen(false); }; menu.querySelector('.gm-x').onclick = () => setOpen(false);
+  // 選了遊戲就收起選單，回來時直接看到辦公室
+  const games = $('gamesBody'); if (games) games.addEventListener('click', e => { if (e.target.closest('[data-game]')) setOpen(false); });
   rows.forEach(r => r.onclick = () => { const src = $(r.dataset.src); if (r.dataset.src === 'bDance') setOpen(false);   // 跳舞要看得到人物：收起選單
     if (src) setTimeout(() => src.click(), 60); });
   addEventListener('keydown', e => {
     const t = e.target, typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
-    if (e.key === 'Escape') { const p = ['dexPanel', 'helpPanel', 'drawer'].map($).find(el => el && !el.hidden); if (p) { p.hidden = true; e.stopImmediatePropagation(); return; } }   // Esc 先關最上層的圖鑑／說明／選角面板
+    if (e.key === 'Escape') { const p = ['gamesPanel', 'dexPanel', 'helpPanel', 'drawer'].map($).find(el => el && !el.hidden); if (p) { p.hidden = true; e.stopImmediatePropagation(); return; } }   // Esc 先關最上層的圖鑑／說明／選角面板
     if (e.key === 'Escape' && open && !panelOpen()) { e.stopImmediatePropagation(); setOpen(false); return; }   // 有面板開著時 Esc 先關面板
     if (!typing && !e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 'm' || e.key === 'M') && !($('title') && !$('title').classList.contains('gone'))) { e.preventDefault(); setOpen(!open); }
   }, true);

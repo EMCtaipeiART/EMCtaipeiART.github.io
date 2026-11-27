@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>辦公室翻身記</title>
+<link rel="icon" href="items/s7.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Huninn&family=Noto+Sans+TC:wght@700;900&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="app">
+  <header class="top">
+    <div class="level" title="等級"><b id="level">1</b><i><s id="xp"></s></i></div>
+    <button id="bEnergy" type="button" class="pill energy" title="能量"><i class="zap"></i><b id="energy">100</b><small id="energyTime">已滿</small></button>
+    <div class="pill" title="金幣"><img id="coinIcon" alt="金幣"><b id="coins">0</b></div>
+    <button id="bSound" type="button" class="square" aria-label="聲音設定">♪</button>
+    <button id="bHelp" type="button" class="square" aria-label="說明">?</button>
+  </header>
+  <div class="banner" id="banner" role="button" tabindex="0" title="看同仁闖關榜" aria-label="關卡進度，點開看同仁闖關榜">
+    <b id="stageNo">第 1 關</b>
+    <div class="track"><s id="stageBar"></s><span id="stageName"></span></div>
+    <b id="stageCount">0 / 3</b>
+  </div>
+  <section id="orders" aria-label="訂單"></section>
+  <section class="frame"><div id="board" aria-label="合成棋盤"></div></section>
+  <footer class="bottom">
+    <div class="drawer"><div id="slots"></div><small>暫存</small></div>
+    <div id="info" aria-live="polite"></div>
+    <button id="bDex" type="button" class="square big"><img src="items/s4.png" alt=""><small>圖鑑</small></button>
+  </footer>
+</main>
+<dialog id="home" aria-label="同仁闖關榜">
+  <header><button id="bLeave" type="button" hidden>離開</button><h1>辦公室翻身記</h1><p>同仁闖關榜・越高樓層，關卡越前面</p></header>
+  <div id="tower"></div>
+  <footer>
+    <small id="myRank"></small>
+    <div><b id="whoami">訪客</b><button id="bStart" type="button">開始遊戲</button></div>
+  </footer>
+</dialog>
+<div id="toast" role="status" hidden></div>
+<dialog id="panel">
+  <div class="panel-head"><span id="panelTitle"></span><button type="button" id="panelClose" aria-label="關閉">✕</button></div>
+  <div id="panelBody"></div>
+</dialog>
+<script type="module" src="game.js"></script>
+</body>
+</html>

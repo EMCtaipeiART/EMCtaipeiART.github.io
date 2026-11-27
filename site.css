@@ -1741,6 +1741,11 @@ html[data-theme="dark"] .dr-cls-thumb{background:#26302c;border-color:#2c3431}
     .as-hello-foot button[data-hello="chat"]:hover{background:linear-gradient(135deg,#25c448,#119630)}
     html[data-theme="dark"] .as-hello{background:color-mix(in srgb,#1d2321 88%,transparent);box-shadow:0 18px 44px rgba(0,0,0,.6)}
     html[data-theme="dark"] .as-hello-foot a,html[data-theme="dark"] .as-hello-foot button:not([data-hello="chat"]){color:#8fe0a5}
+    .as-merge{display:flex;align-items:center;justify-content:center;gap:6px;flex:none;margin:6px 12px 2px;height:34px;border-radius:999px;background:linear-gradient(135deg,#ffbd4f,#ff8f1f);color:#fff;font-size:13px;font-weight:900;letter-spacing:.06em;text-decoration:none;transition:transform .2s,filter .2s}
+    .as-merge::before{content:"";width:20px;height:20px;background:url(office-merge/items/s7.png) center/contain no-repeat}
+    .as-merge:hover{transform:translateY(-1px);filter:brightness(1.07)}
+    .as-merge:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+    .as-merge.in-hello{margin:8px 0 0;height:30px;font-size:12px}
     .as-hello-x{position:absolute;top:8px;right:8px;display:grid;place-items:center;width:22px;height:22px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--muted);cursor:pointer;transition:background .2s,color .2s}
     .as-hello-x:hover{background:var(--brand-soft);color:var(--brand-deep)}
     .as-hello-x svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}

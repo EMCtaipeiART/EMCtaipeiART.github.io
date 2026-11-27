@@ -4280,6 +4280,17 @@ describe('凱曜 department prefix', () => {
 });
 
 describe('Pixel Office shared state', () => {
+  it('officeMergeRank：闖關榜只往上記、擋掉不認識的名字與錯誤數值', async () => {
+    const save = (name: string, done: unknown, xp: unknown) => api({ action: 'officeMergeRank', op: 'save', name, done, xp });
+    expect(await save('余采馨', 12, 300)).toMatchObject({ ok: true, ranks: { 余采馨: { done: 12, xp: 300 } } });
+    expect(await save('余采馨', 3, 500)).toMatchObject({ ranks: { 余采馨: { done: 12, xp: 500 } } });
+    expect(await save('路人甲', 1, 1)).toMatchObject({ ok: false });
+    for (const bad of [-1, 1.5, 1e9, 'abc']) expect(await save('Machi', bad, 0)).toMatchObject({ ok: false });
+    const list = await api({ action: 'officeMergeRank', op: 'list' });
+    expect(list).toMatchObject({ ok: true, ranks: { 余采馨: { done: 12 } } });
+    expect((list.ranks as Record<string, unknown>).Machi).toBeUndefined();
+  });
+
   it('3D 辦公室個人進度：圖鑑取聯集、次數取較大值，換裝置讀得回來；未知名字被拒絕', async () => {
     const empty = await api({ action: 'pixelOfficeProgress', name: 'Machi', op: 'get' });
     expect(empty.ok).toBe(true);

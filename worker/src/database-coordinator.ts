@@ -34,6 +34,8 @@ import type {
 const STATE_KEY = 'primary';
 import { COIN_KIND_LABEL, COIN_SPEND_PER_GENERATION, COIN_SPEND_PER_REGENERATION, COIN_START_DATE, coinHash, coinsToTenths, endedOnOrAfterStart, safeEqual, tenthsToCoins, verifyCoinChain, type CoinEntry, type CoinKind } from './coins';
 const PIXEL_OFFICE_NAMES = ['Leona', 'Amber', 'Noise', 'Anna', 'Machi'];
+/** 合成遊戲「辦公室翻身記」闖關榜可上榜的人物（與 office-merge/logic.js 的 PEOPLE 一致）。 */
+const OFFICE_MERGE_NAMES = ['Amber', 'Anna', 'Leona', 'Machi', 'Noise', '余采馨', '吳冠賢', '廖秦葦', '李明庭', '鄭筱舢', '黎子瑄', '王藍庭'];
 const PIXEL_OFFICE_STAFF_EMPTY_SEATS: number[] = [12, 15];   // 要固定空著的座位（2026-10-16 曾指定 3 號空著，後來改成鄭筱舢坐 3 號，現在六個座位都可用）
 const PIXEL_OFFICE_STAFF_SEATS = 18;   // 企劃部、專案部同仁的座位（設計部六張桌子右側再六張，完成「建立你的角色」的人依序入座）
 const PIXEL_OFFICE_MAX_X = 2305, PIXEL_OFFICE_MAX_Y = 2400, PIXEL_OFFICE_MIN_Y = -1900;   // 往上複製的兩組桌子在畫面上方，邏輯 y 是負的
@@ -2894,6 +2896,30 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'pixelOfficeProgress', progress: { dex: { d: dexD, n: dexN }, stat, last } } as ApiResult;
   }
 
+  /** 合成遊戲「辦公室翻身記」闖關榜：每人只存完成訂單數與經驗值，兩者取較大值（舊裝置或重新開始不會蓋掉最佳紀錄）。
+   *  op:'list' 讀全部；op:'save' 記一筆並回傳全部。存 pixel_office_settings 的 merge:<名字>，不寫 GitHub。與其他元宇宙寫入一樣不驗證身分。 */
+  private officeMergeRank(payload: ApiPayload): ApiResult {
+    const sql = this.ctx.storage.sql;
+    const read = (name: string): { done: number; xp: number; at: number } | null => {
+      const row = sql.exec<{ value: string }>('SELECT value FROM pixel_office_settings WHERE key = ?', 'merge:' + name).toArray()[0];
+      if (!row) return null;
+      try { const v = asRow(JSON.parse(row.value)); return { done: Number(v.done) || 0, xp: Number(v.xp) || 0, at: Number(v.at) || 0 }; } catch { return null; }
+    };
+    if (text(payload.op) === 'save') {
+      const name = text(payload.name), done = Number(payload.done), xp = Number(payload.xp);
+      if (!OFFICE_MERGE_NAMES.includes(name)) return { ok: false, action: 'officeMergeRank', error: '找不到這位同仁' } as ApiResult;
+      if (!Number.isInteger(done) || done < 0 || done > 100_000 || !Number.isInteger(xp) || xp < 0 || xp > 10_000_000) return { ok: false, action: 'officeMergeRank', error: '進度格式不正確' } as ApiResult;
+      const old = read(name), next = { done: Math.max(done, old?.done ?? 0), xp: Math.max(xp, old?.xp ?? 0) };
+      if (!old || next.done !== old.done || next.xp !== old.xp) {
+        const at = Date.now();
+        sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', 'merge:' + name, JSON.stringify({ ...next, at }), at);
+      }
+    }
+    const ranks: Record<string, { done: number; xp: number; at: number }> = {};
+    for (const name of OFFICE_MERGE_NAMES) { const v = read(name); if (v) ranks[name] = v; }
+    return { ok: true, action: 'officeMergeRank', ranks } as ApiResult;
+  }
+
   /** 3D 辦公室的流浪貓：辦公室歸屬感（全員共用，cat:office）與每人的信任度（cat:<名字>）。
    *  op:'get' 讀取；op:'care' 記一次有效互動（kind: feed／treat／play／company／pet），每人每天每種互動只有前幾次會增加進度（上限在 CAT_CARE）。
    *  effect:'food'／'water' 會更新共用貓碗的補充時間。不寫 GitHub；信任度與歸屬感只增不減。 */
@@ -5746,6 +5772,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'pixelOfficeStaffBack') return await this.pixelOfficeStaffBack(payload);
       if (action === 'pixelOfficeFun') return await this.pixelOfficeFun(payload);
       if (action === 'pixelOfficeProgress') return this.pixelOfficeProgress(payload);
+      if (action === 'officeMergeRank') return this.officeMergeRank(payload);
       if (action === 'pixelOfficeCat') return this.pixelOfficeCat(payload);
       if (action === 'pixelOfficeHeartbeat') return await this.pixelOfficeHeartbeat(payload);
       if (action === 'pixelOfficeCalendarStatus') return await this.pixelOfficeCalendarStatus(payload);

@@ -5170,6 +5170,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const id=loggedIn()?assistantPick():'';if(!id||id===ASSISTANT_CHARACTER.id)return;
         hideHello(0);applyCharacter(ASSISTANT_CHARACTERS.find(c=>c.id===id));
       }
+      /* 固定的小遊戲入口：帶上登入者的名字，遊戲的闖關榜才認得 */
+      function mergeUrl(){let n='';try{n=String(viewerPayload().name||'')}catch(err){}return 'office-merge/'+(n?'?me='+encodeURIComponent(n):'')}
       function render(){
         if(!loggedIn()||!assistantOn()){const el=document.getElementById('asHelper');if(el)el.remove();const h=document.getElementById('asHello');if(h)h.remove();S.fabShown=false;return}
         applyPick();
@@ -5186,6 +5188,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const oldB=document.getElementById('asBody'),keepTop=oldB?oldB.scrollTop:0,sig=S.msgs.length+'|'+S.busy+'|'+S.farewell,sameSig=oldB&&S._sig===sig;S._sig=sig;
         el.innerHTML=`<section class="as-panel${enter}" role="dialog" aria-label="${ASSISTANT_CHARACTER.name}，${ASSISTANT_CHARACTER.sub}"><header class="as-head"><span class="as-avatar sm">${faceHtml()}</span><div class="as-title"><b>${esc(ASSISTANT_CHARACTER.name)}</b><small>${esc(S.tired?'充電中…明天見':ASSISTANT_CHARACTER.sub)}</small></div>${S.canUsage?'<button type="button" class="as-usage" data-as="usage">用量</button>':''}<button type="button" class="as-x" data-as="close" aria-label="關閉小幫手">${SVG_X}</button></header>
           <div class="as-body" id="asBody">${annHtml}${body}${chips}</div>
+          <a class="as-merge" href="${esc(mergeUrl())}" target="_blank" rel="noopener">辦公室翻身記</a>
           <form class="as-form"><input id="asInput" type="text" maxlength="500" autocomplete="off" placeholder="${S.tired?'明天再來找我':'問我案量、找案件…'}" ${S.tired||S.busy||S.farewell?'disabled':''}><button type="submit" class="as-send" aria-label="送出" ${S.tired||S.busy||S.farewell?'disabled':''}>${SVG_SEND}</button></form></section>`;
         S.msgs.forEach(m=>{m.fresh=false});
         const b=document.getElementById('asBody');if(b){if(sameSig)b.scrollTop=keepTop;/* 只是重畫（沒有新訊息）：留在原本的位置，不要被卷回去 */else if(b.scrollTo)b.scrollTo({top:b.scrollHeight,behavior:'smooth'});else b.scrollTop=b.scrollHeight}
@@ -5310,7 +5313,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const fab=document.querySelector('#asHelper .as-fab');if(!fab)return;
         const el=helloEl(),r=fab.getBoundingClientRect();
         const cta=card.act==='ann'?'<button type="button" data-hello="ann">帶我去看</button>':card.link?`<a href="${esc(card.link)}" target="_blank" rel="noopener noreferrer">看全文</a>`:'';
-        el.innerHTML=`<button type="button" class="as-hello-x" data-hello="close" aria-label="關閉">${SVG_X}</button><span class="as-hello-tag">${esc(card.tag)}</span><p>${esc(card.text)}</p><div class="as-hello-foot">${card.src?`<small>${esc(card.src)}</small>`:'<small></small>'}<span>${cta}<button type="button" data-hello="chat">問問${esc(ASSISTANT_CHARACTER.name)}</button></span></div>`;
+        el.innerHTML=`<button type="button" class="as-hello-x" data-hello="close" aria-label="關閉">${SVG_X}</button><span class="as-hello-tag">${esc(card.tag)}</span><p>${esc(card.text)}</p><div class="as-hello-foot">${card.src?`<small>${esc(card.src)}</small>`:'<small></small>'}<span>${cta}<button type="button" data-hello="chat">問問${esc(ASSISTANT_CHARACTER.name)}</button></span></div><a class="as-merge in-hello" href="${esc(mergeUrl())}" target="_blank" rel="noopener">辦公室翻身記</a>`;
         el.style.right=Math.max(8,innerWidth-r.right)+'px';el.style.bottom=Math.max(8,innerHeight-r.top+12)+'px';
         el.hidden=false;void el.offsetWidth;el.classList.add('show');
         clearTimeout(hello.hideT);talk(1800);hideHello(ms);

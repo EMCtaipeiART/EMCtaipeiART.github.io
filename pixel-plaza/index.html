@@ -172,8 +172,8 @@ button{font-family:inherit}
 #proj canvas{border-radius:8px}
 #proj span{font-family:inherit}
 /* 角色抽屜、圖鑑、說明 */
-#drawer,#dexPanel,#helpPanel{position:fixed;z-index:12;background:var(--glass);border:2px solid var(--line);border-radius:22px;box-shadow:0 24px 50px rgba(4,36,18,.5);color:#fff;backdrop-filter:blur(10px)}
-#drawer[hidden],#dexPanel[hidden],#helpPanel[hidden]{display:none}
+#drawer,#dexPanel,#helpPanel,#gamesPanel{position:fixed;z-index:12;background:var(--glass);border:2px solid var(--line);border-radius:22px;box-shadow:0 24px 50px rgba(4,36,18,.5);color:#fff;backdrop-filter:blur(10px)}
+#drawer[hidden],#dexPanel[hidden],#helpPanel[hidden],#gamesPanel[hidden]{display:none}
 #drawer{left:50%;bottom:70px;transform:translateX(-50%);width:min(560px,94vw);padding:12px}
 .dr-head,.px-head{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:17px;padding:2px 6px 10px}
 #roster{position:static;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;padding:0;background:none;overflow:visible}
@@ -181,7 +181,7 @@ button{font-family:inherit}
 #roster button:hover{background:rgba(255,255,255,.16)}
 #roster button.on{background:rgba(255,199,51,.22);border-color:var(--yellow);color:#fff}
 .dr-av{width:34px;height:34px;flex:none}
-#dexPanel,#helpPanel{left:50%;top:50%;transform:translate(-50%,-50%);width:min(640px,94vw);max-height:84vh;overflow:auto;padding:14px 16px}
+#dexPanel,#helpPanel,#gamesPanel{left:50%;top:50%;transform:translate(-50%,-50%);width:min(640px,94vw);max-height:84vh;overflow:auto;padding:14px 16px}
 .px-x{border:0;background:rgba(255,255,255,.14);color:#fff;border-radius:999px;width:34px;height:34px;font-size:16px;cursor:pointer}
 .px-x:hover{background:rgba(255,255,255,.26)}
 .cp-x.px-x{position:absolute;right:12px;top:12px;z-index:2}
@@ -428,6 +428,12 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 .hp-top #bPeople i,.hp-top #bWheel i,.hp-top #bDex i,.hp-top #bClose i{background-repeat:no-repeat!important;background-position:center!important;background-size:24px 24px!important;image-rendering:pixelated}
 #bPeople i{background-image:url(assets/ui/hp-people.png)!important}#bWheel i{background-image:url(assets/ui/hp-role.png)!important}#bDex i{background-image:url(assets/ui/hp-dex.png)!important}
 .hp-top #bDex i{background-size:28px 28px!important}#bClose i{background-image:url(assets/ui/hp-close.png)!important}
+.hp-top #bGames i{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Cpath fill='%23fff' d='M4 4h8v1h2v2h1v5h-1v1h-2v-1h-1v-1H5v1H4v1H2v-1H1V7h1V5h2z'/%3E%3Cpath fill='%231b6986' d='M4 6h1v1h1v1H5v1H4V8H3V7h1zM11 6h1v1h-1zM12 8h1v1h-1z'/%3E%3C/svg%3E") center/28px 28px no-repeat!important;image-rendering:pixelated}
+#gamesBody{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+#gamesBody button{display:grid;gap:3px;justify-items:start;text-align:left;padding:12px;border-radius:14px;border:2px solid var(--line);background:rgba(255,255,255,.08);color:#fff;font:700 15px 'Fredoka','Noto Sans TC',sans-serif;cursor:pointer}
+#gamesBody button:hover,#gamesBody button:focus-visible{background:rgba(255,255,255,.18);transform:translateY(-2px)}
+#gamesBody button small{font-weight:600;font-size:11px;color:rgba(255,255,255,.72)}
+#gamesBody button.new{grid-column:1/-1;border-color:var(--yellow);background:rgba(255,199,51,.2)}
 
 /* 右上按鈕平常是正圓，滑鼠移過去（或鍵盤聚焦）才展開文字 */
 .hp-top button.pk-orange,.hp-top button.pk-green,.hp-top button.pk-teal,.hp-top button.pk-red{width:48px!important;min-width:48px!important;padding:0 6px!important;gap:0!important;justify-content:flex-start;transition:width .28s ease,padding .28s ease,transform .14s cubic-bezier(.3,1.6,.5,1),box-shadow .14s,filter .15s}
@@ -483,7 +489,7 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
   .hp-info{min-width:0;overflow:hidden}
   .hp-name,.hp-st{max-width:100%;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
-</style><link rel="stylesheet" href="gameui.css?v=20261115c"></head><body>
+</style><link rel="stylesheet" href="gameui.css?v=20261128"></head><body>
 <script>if(/[?&]embed=1/.test(location.search))document.documentElement.classList.add('embed')</script>
 <div id="title">
   <div class="t-inner">
@@ -507,7 +513,7 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 <div id="hud">
   <div class="hp-card"><div class="hp-av" id="pAv"></div><div class="hp-info"><div class="hp-name" id="pName">—</div><div class="hp-st" id="pSt"></div><div class="hp-exp"><i id="pExp"></i></div><div class="hp-lv" id="pLv"></div></div></div>
   <div class="hp-clock" id="pClock">🕒 …</div>
-  <div class="hp-top"><button id="bPeople" type="button" class="pk-teal" hidden title="切換人物"><i data-px="people"></i><span>切換人物</span></button><button id="bWheel" type="button" class="pk-orange" title="角色"><i data-px="role"></i><span>角色</span></button><button id="bDance" type="button" class="pk-purple" title="跳舞" hidden></button><button id="bDex" type="button" class="pk-green" title="圖鑑"><i data-px="dex"></i><span>圖鑑</span></button><button id="bClose" type="button" class="pk-red" title="關閉"><i data-px="close"></i><span>關閉</span></button></div>
+  <div class="hp-top"><button id="bPeople" type="button" class="pk-teal" hidden title="切換人物"><i data-px="people"></i><span>切換人物</span></button><button id="bWheel" type="button" class="pk-orange" title="角色"><i data-px="role"></i><span>角色</span></button><button id="bDance" type="button" class="pk-purple" title="跳舞" hidden></button><button id="bDex" type="button" class="pk-green" title="圖鑑"><i data-px="dex"></i><span>圖鑑</span></button><button id="bGames" type="button" class="pk-teal" title="小遊戲"><i></i><span>小遊戲</span></button><button id="bClose" type="button" class="pk-red" title="關閉"><i data-px="close"></i><span>關閉</span></button></div>
   <div class="hp-br"><button id="bHelp" type="button" class="pk-purple" title="說明"><i data-px="help"></i><span>說明</span></button></div>
 </div>
 <div id="stick"><i></i></div>
@@ -519,6 +525,7 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
   <div class="sv-comments" id="svComments" hidden></div>
   <form class="sv-bar" id="svForm"><button type="button" id="svLike" title="按讚">❤ <span id="svLikeN">0</span></button><input id="svInput" type="text" maxlength="80" placeholder="留言給對方…" autocomplete="off"><button type="submit" class="send">➤</button></form></div></div>
 <div id="drawer" hidden><div class="dr-head"><span>選擇角色</span><button class="px-x" type="button" title="關閉">✕</button></div><div id="roster"></div></div>
+<div id="gamesPanel" hidden><div class="px-head"><span>小遊戲</span><button class="px-x" type="button">✕</button></div><div id="gamesBody"></div></div>
 <div id="dexPanel" hidden><div class="px-head"><span>📖 辦公室圖鑑</span><button class="px-x" type="button">✕</button></div><div id="dexBody"></div></div>
 <div id="helpPanel" hidden><div class="px-head"><span>❓ 操作說明</span><button class="px-x" type="button">✕</button></div>
   <div class="help-list"><div>🕹️ WASD／方向鍵移動，按住 Shift 加速跑步，按 F 跳舞（部分人物），點椅子／馬桶等物件會走過去（手機可點地面走過去，或用左下搖桿）</div><div>🎥 在空地按住滑鼠左鍵或右鍵拖曳（或 Q／E）旋轉視角，R 回正</div><div>🪑 點椅子或馬桶，人物會走過去坐下；要起身直接走動</div><div>🎮 點自己的人物或按「角色頁面」：狀態、心情、想說的話、音樂、限時動態（管理者另有全員上下班與班長工具）</div><div>✨ 撿地上的道具、沖馬桶、點投影機，圖鑑會記錄你的發現，每 5 個升一級</div><div>📡 角色依「凱曜設計部」的即時出勤狀態行動（在座／加班／用餐／廁所／會議／下班…）</div></div></div>
@@ -2308,6 +2315,7 @@ addEventListener('pointerdown', e => {
   const t = e.target; if (!t || !t.closest) return;
   if (!fridgePanel.hidden && !fridgePanel.contains(t)) fridgeClose();
   if (!$('dexPanel').hidden && !$('dexPanel').contains(t) && !t.closest('#bDex')) $('dexPanel').hidden = true;
+  if (!$('gamesPanel').hidden && !$('gamesPanel').contains(t) && !t.closest('#bGames')) $('gamesPanel').hidden = true;
   if (!$('helpPanel').hidden && !$('helpPanel').contains(t) && !t.closest('#bHelp')) $('helpPanel').hidden = true;
 }, true);
 setInterval(() => {
@@ -2445,13 +2453,13 @@ function bgmUI(ctl, css) {
   const hint = document.createElement('span'); hint.textContent = '點一下開啟音樂'; hint.style.cssText = 'font-size:11px;color:#ffd24a;white-space:nowrap'; w.append(b, r, hint); document.body.appendChild(w); sync(); setInterval(() => { hint.style.display = ctl.on ? 'none' : 'inline'; }, 400); return w;
 }
 const metaBgm = emcBgm('bgm-steady.m4a', { vol: .28, dur: 166.7 }); const metaBgmUI = bgmUI(metaBgm, matchMedia('(pointer:coarse)').matches ? 'left:12px;bottom:200px;' : 'left:12px;bottom:12px;');
-const EXP_GAMES = {exp:{title:'設計部遠征隊', fade:'倉庫', url:'../expedition/'}, deadline:{title:'截稿倒數 2', fade:'截稿倒數', url:'../deadline/'}, hoops:{title:'廢紙投籃 3D', fade:'廢紙投籃', url:'../hoops3d/'}, duel:{title:'辦公室對決', fade:'辦公室對決', url:'../duel/'}, soccer:{title:'大顆足球賽', fade:'大顆足球賽', url:'../soccer/'}, kart:{title:'辦公室賽車', fade:'辦公室賽車', url:'../kart/'}, fps:{title:'辦公室槍戰', fade:'辦公室槍戰', url:'../fps/'}};
+const EXP_GAMES = {merge:{title:'辦公室翻身記', fade:'辦公室翻身記', url:'../office-merge/', note:'合成遊戲・同仁闖關榜'}, exp:{title:'設計部遠征隊', fade:'倉庫', url:'../expedition/'}, deadline:{title:'截稿倒數 2', fade:'截稿倒數', url:'../deadline/'}, hoops:{title:'廢紙投籃 3D', fade:'廢紙投籃', url:'../hoops3d/'}, duel:{title:'辦公室對決', fade:'辦公室對決', url:'../duel/'}, soccer:{title:'大顆足球賽', fade:'大顆足球賽', url:'../soccer/'}, kart:{title:'辦公室賽車', fade:'辦公室賽車', url:'../kart/'}, fps:{title:'辦公室槍戰', fade:'辦公室槍戰', url:'../fps/'}};
 function expEnter(kind){
   const gm = EXP_GAMES[kind] || EXP_GAMES.exp;
   if (expBusy) return; expBusy = true; metaBgm.pause(); metaBgmUI.style.display = 'none'; target = null; wantSeat = null; wantElev = false; wheelClose(); fridgeClose();
   expFade.textContent = gm.fade; expFade.classList.add('on');
   setTimeout(() => {
-    expFrame = document.createElement('iframe'); expFrame.id = 'expFrame'; expFrame.title = gm.title; expFrame.allow = 'autoplay; fullscreen'; expFrame.src = gm.url + '?embed=1&t=' + Date.now() + (player && player.name ? '&me=' + encodeURIComponent(player.name) : ''); expFrame.style.display = 'block'; document.body.appendChild(expFrame); expFrame.addEventListener('load', () => { try { expFrame.focus(); expFrame.contentWindow.focus(); } catch (e) {} });
+    expFrame = document.createElement('iframe'); expFrame.id = 'expFrame'; expFrame.title = gm.title; expFrame.allow = 'autoplay; fullscreen'; expFrame.src = gm.url + '?embed=1&t=' + Date.now() + ((kind === 'merge' ? meName() : player && player.name) ? '&me=' + encodeURIComponent(kind === 'merge' ? meName() : player.name) : ''); expFrame.style.display = 'block'; document.body.appendChild(expFrame); expFrame.addEventListener('load', () => { try { expFrame.focus(); expFrame.contentWindow.focus(); } catch (e) {} });
     setTimeout(() => { expFade.textContent = ''; expFade.classList.remove('on'); }, 700);
   }, 1000);
 }
@@ -3444,9 +3452,12 @@ function renderDex(){
   sec('地上的驚喜', DROP_IDS, ITEMS.map(x => x[1]), ITEMS.map(x => x[2]), 'd');
   sec('會議室遺落物', NOTE_IDS, NOTES.map(x => x[0]), NOTES.map(x => x[1]), 'n');
 }
-$('bDex').onclick = () => { renderDex(); $('dexPanel').hidden = false; $('helpPanel').hidden = true; panelAnchor = null; };
-$('bHelp').onclick = () => { $('helpPanel').hidden = false; $('dexPanel').hidden = true; panelAnchor = null; };
-document.querySelectorAll('.px-x').forEach(b => b.onclick = () => { $('dexPanel').hidden = true; $('helpPanel').hidden = true; $('drawer').hidden = true; });
+$('bDex').onclick = () => { renderDex(); $('dexPanel').hidden = false; $('helpPanel').hidden = true; $('gamesPanel').hidden = true; panelAnchor = null; };
+$('bGames').onclick = () => { $('gamesPanel').hidden = false; $('dexPanel').hidden = true; $('helpPanel').hidden = true; panelAnchor = null; };
+$('gamesBody').innerHTML = Object.entries(EXP_GAMES).map(([k, g]) => '<button type="button" data-game="' + k + '"' + (k === 'merge' ? ' class="new"' : '') + '>' + g.title + '<small>' + (g.note || '倉庫小遊戲') + '</small></button>').join('');
+$('gamesBody').onclick = e => { const b = e.target.closest('[data-game]'); if (!b) return; $('gamesPanel').hidden = true; expEnter(b.dataset.game); };
+$('bHelp').onclick = () => { $('helpPanel').hidden = false; $('dexPanel').hidden = true; $('gamesPanel').hidden = true; panelAnchor = null; };
+document.querySelectorAll('.px-x').forEach(b => b.onclick = () => { $('gamesPanel').hidden = true; $('dexPanel').hidden = true; $('helpPanel').hidden = true; $('drawer').hidden = true; });
 // 跳舞：選單的「跳舞」或按 F；走動、坐下、離開座位狀態就停。
 // 同步：跳舞中每 1.5 秒經 WebSocket 送一次 {t:'dance'}，後端轉發給其他人；超過 5 秒沒收到就當作停了（晚進來的人也會在 1.5 秒內看到）
 const danceSent = {on:false, t:0};
@@ -4104,4 +4115,4 @@ function tick(){
   requestAnimationFrame(tick);
 }
 tick();
-</script><script src="gameui.js?v=20261126"></script></body></html>
+</script><script src="gameui.js?v=20261128"></script></body></html>
