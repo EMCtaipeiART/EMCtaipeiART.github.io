@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>凱曜團購平台</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;600;700;800;900&display=swap">
 <style>
 :root{--b:#159E31;--bd:#0f7f27;--bs:#e8f6ec;--b2:#1db843;--bg:#f6f8f7;--c:#fff;--t:#202d25;--m:#637168;--f:#76847b;--l:#e2e9e4;--r:#d63b3b;--sh:0 2px 4px rgba(23,33,29,.025),0 8px 24px rgba(23,33,29,.035);--sh2:0 8px 28px rgba(23,61,34,.09);--rad:14px}
 *{box-sizing:border-box}
-body{margin:0;font:15px/1.6 -apple-system,BlinkMacSystemFont,"SF Pro Display","Inter","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--t);-webkit-font-smoothing:antialiased}
+body{margin:0;font:15px/1.6 -apple-system,BlinkMacSystemFont,"SF Pro Display","Inter","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--t);-webkit-font-smoothing:antialiased}
 a{color:var(--bd)}
 header{background:rgba(255,255,255,.86);border-bottom:1px solid var(--l);position:sticky;top:0;z-index:20}
 .bar{max-width:1120px;margin:auto;padding:10px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
@@ -395,7 +395,7 @@ summary{min-height:40px;padding:8px 0;color:var(--bd)}
 /* 已結束的團購卡牌：整張灰階漸層 */
 .pcd.off{background:linear-gradient(180deg,#f6f6f6 0%,#e6e6e6 100%);border-color:#dcdcdc;filter:grayscale(1)}.pcd.off{transition:filter .25s ease,border-color .15s,box-shadow .15s}@media(hover:hover){.pcd.off:hover,.pcd.off:focus-visible{background:#fff;filter:grayscale(0);border-color:#bdd5c4}.pcd.off:hover .cv,.pcd.off:focus-visible .cv{background:#edf5ef}.pcd.off:hover .cv:has(>.ph),.pcd.off:focus-visible .cv:has(>.ph){background:linear-gradient(135deg,#1db843,#0d6b22)}.pcd.off:hover .cv img,.pcd.off:focus-visible .cv img{opacity:1;mix-blend-mode:normal}.pcd.off:hover .bar2{background:#edf1ee}.pcd.off:hover .who span{background:#f1f3f2}}.pcd.off .cv,.pcd.off .cv:has(>.ph){background:linear-gradient(135deg,#b4b4b4 0%,#6f6f6f 100%)}.pcd.off .cv img{opacity:.75;mix-blend-mode:multiply}.pcd.off .who span{background:#fff}.pcd.off .bar2{background:#d8d8d8}
 /* 金額與數字：Apple 系統字型風格、加粗、等寬數字 */
-.num,.total b,.cb-t b,.pr b,.note b,.tly-bar b,.cdn b,.pct,.cdl,.cdl em,.cdv,.cdv em,.tg-q,.tg-s,.ti-q,.tc b,.sm-h b,.sm-o b,.pcd .amt b,.jn b,#dp{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Inter","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;font-variant-numeric:tabular-nums;font-feature-settings:"tnum";font-weight:700}
+.num,.total b,.cb-t b,.pr b,.note b,.tly-bar b,.cdn b,.pct,.cdl,.cdl em,.cdv,.cdv em,.tg-q,.tg-s,.ti-q,.tc b,.sm-h b,.sm-o b,.pcd .amt b,.jn b,#dp{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Inter","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;font-variant-numeric:tabular-nums;font-feature-settings:"tnum";font-weight:700}
 .total b,.cb-t b,.pr b,.pcd .amt b{letter-spacing:-.4px}
 /* 團購卡牌：金額人數、進度、大倒數、單列名單＋右下分享 */
 .pcd{display:flex;flex-direction:column}.pcd .bd2{flex:1;display:flex;flex-direction:column;padding:18px 18px 14px}
