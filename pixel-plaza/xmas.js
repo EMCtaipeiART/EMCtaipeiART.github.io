@@ -92,6 +92,9 @@ export function createXmas({scene, rects, blocked, chairSeats, U, FX4, floor4, f
       cone:(r, h, color, x, y, z, edge = true, seg = 10, rx = 0, rz = 0) => part(t => new THREE.ConeGeometry(r + t * 1.3, h + t * 2.6, seg), color, x, y, z, edge, rx, 0, rz),
       ball:(r, color, x, y, z, edge = true, sy = 1) => part(t => { const g = new THREE.SphereGeometry(r + t, 12, 9); g.scale(1, sy, 1); return g; }, color, x, y, z, edge),
       torus:(r, tube, color, x, y, z, edge = true) => part(t => new THREE.TorusGeometry(r, tube + t, 7, 18), color, x, y, z, edge),
+      // 扁片（薑餅人用）：正面看是膠囊形（半徑 r、上下長 len），厚度 depth
+      cookie:(r, len, depth, color, x, y, z, edge = true) => part(t => { const R = r + t, d = depth + 2 * t, sh = new THREE.Shape(); sh.absarc(0, len / 2, R, 0, Math.PI, false); sh.absarc(0, -len / 2, R, Math.PI, Math.PI * 2, false);
+        const g = new THREE.ExtrudeGeometry(sh, {depth:d, bevelEnabled:false, curveSegments:12}); g.translate(0, 0, -d / 2); return g; }, color, x, y, z, edge),
       done:() => ({body:mergeGeometries(body), line:line.length ? mergeGeometries(line) : null})
     };
   }
@@ -357,12 +360,16 @@ export function createXmas({scene, rects, blocked, chairSeats, U, FX4, floor4, f
 
   // ---------- 薑餅人（沿走道散步）與麋鹿（滑行）：位置只看伺服器時間，每個人看到一樣；純外觀、沒有碰撞 ----------
   const piece = (parent, k, x = 0, y = 0, z = 0) => { const g = new THREE.Group(); g.position.set(x, y, z); const m = new THREE.Mesh(k.body, solidMat); m.castShadow = !FLAT; g.add(m); if (k.line) { const l = new THREE.Mesh(k.line, outlineMat); l.layers.set(HULL_LAYER); g.add(l); } parent.add(g); return g; };
-  const GB = 0xc47a36, ginger = (() => {
-    const body = kit(); body.ball(.27, GB, 0, .84, 0, true, .95); body.cyl(.17, .21, .38, GB, 0, .45, 0);
-    for (const x of [-.09, .09]) body.ball(.038, C.coal, x, .9, .25, false); for (const x of [-.08, 0, .08]) body.ball(.022, C.white, x, .76 - (x ? 0 : .025), .26, false);
-    for (const [y, c] of [[.55, C.red], [.42, C.green]]) body.ball(.045, c, 0, y, .2, false); body.cyl(.19, .19, .035, C.white, 0, .63, 0, false); body.cyl(.215, .215, .035, C.white, 0, .29, 0, false);
-    const limb = (len, r) => { const k = kit(); k.cyl(r, r, len, GB, 0, -len / 2, 0); k.ball(r * 1.15, GB, 0, -len, 0); k.cyl(r * 1.08, r * 1.08, .035, C.white, 0, -len * .74, 0, false); return k.done(); };
-    return {body:body.done(), arm:limb(.27, .068), leg:limb(.24, .085)}; })();
+  const GB = 0xc47a36, ginger = (() => {   // 薑餅人是一片扁餅乾：正面看是人形、側面看很薄；糖霜與五官前後兩面都有
+    const body = kit(), T = .1;
+    body.cookie(.27, 0, T, GB, 0, .86, 0); body.cookie(.18, .22, T - .008, GB, 0, .46, 0);
+    for (const f of [-1, 1]) { const z = f * (T / 2 + .006);
+      for (const x of [-.095, .095]) body.cookie(.034, .022, .012, C.coal, x, .91, z, false);
+      for (const x of [-.08, -.027, .027, .08]) body.cookie(.019, 0, .012, C.white, x, .785 - (Math.abs(x) < .05 ? .028 : 0), z, false);
+      for (const [y, c] of [[.54, C.red], [.41, C.green]]) body.cookie(.042, 0, .014, c, 0, y, z, false);
+      for (const y of [.625, .3]) body.box(.27, .03, .012, C.white, 0, y, z, false); }
+    const limb = (len, r) => { const k = kit(); k.cookie(r, len, T - .02, GB, 0, -len / 2, 0); for (const f of [-1, 1]) k.box(r * 1.75, .032, .012, C.white, 0, -len * .8, f * (T / 2 - .004), false); return k.done(); };
+    return {body:body.done(), arm:limb(.24, .072), leg:limb(.2, .088)}; })();
   const DEER = 0x9a6336, deer = (() => {
     const body = kit(); body.ball(.38, DEER, 0, .68, -.05, true, .85); body.ball(.3, DEER, 0, .68, -.34, true, .85); body.ball(.2, C.cream, 0, .6, .2, false); body.cyl(.13, .17, .38, DEER, 0, .95, .26); body.ball(.1, C.cream, 0, .76, -.62);
     body.ball(.27, DEER, 0, 1.2, .38); body.ball(.16, 0xd2a679, 0, 1.12, .6); body.ball(.075, 0xff2a2a, 0, 1.16, .76);
@@ -376,8 +383,8 @@ export function createXmas({scene, rects, blocked, chairSeats, U, FX4, floor4, f
   function walker(g, route, speed, offset, pose, tag){ g.userData.noShift = true; g.traverse(o => { o.userData.noShift = o.userData.noMask = true; }); scene.add(g); walkers.push({g, route, speed, offset, pose, tag, ox:0, oz:0}); }
   for (const [list, ox] of [[GINGER5, 0], [GINGER4, FX4]]) list.forEach((pts, i) => {
     const g = new THREE.Group(), hop = new THREE.Group(); g.add(hop); piece(hop, ginger.body);
-    const arms = [-1, 1].map(d => piece(hop, ginger.arm, d * .19, .6, 0)), legs = [-1, 1].map(d => piece(hop, ginger.leg, d * .12, .3, 0));
-    walker(g, loopOf(pts, ox), .85 + (i % 3) * .12, i * 7.3 + (ox ? 3 : 0), t => { const s = Math.sin(t * 7.5 + i); legs[0].rotation.x = s * .6; legs[1].rotation.x = -s * .6; arms.forEach((a, k) => { const d = k ? 1 : -1; a.rotation.set(-d * s * .5, 0, d * 1.15); }); hop.position.y = Math.abs(Math.cos(t * 7.5 + i)) * .07; hop.rotation.z = s * .06; }, 'ginger');
+    const arms = [-1, 1].map(d => piece(hop, ginger.arm, d * .16, .6, 0)), legs = [-1, 1].map(d => piece(hop, ginger.leg, d * .12, .3, 0));
+    walker(g, loopOf(pts, ox), .85 + (i % 3) * .12, i * 7.3 + (ox ? 3 : 0), t => { const s = Math.sin(t * 7.5 + i); legs[0].rotation.x = s * .55; legs[1].rotation.x = -s * .55; legs[0].rotation.z = -.16; legs[1].rotation.z = .16; arms.forEach((a, k) => { const d = k ? 1 : -1; a.rotation.set(0, 0, d * (1.2 + s * d * .3)); }); hop.position.y = Math.abs(Math.cos(t * 7.5 + i)) * .07; hop.rotation.z = s * .06; }, 'ginger');
   });
   function reindeer(route, speed, offset, i, scale, tag){
     const g = new THREE.Group(), slide = new THREE.Group(); slide.scale.setScalar(scale); g.add(slide); piece(slide, deer.body);
