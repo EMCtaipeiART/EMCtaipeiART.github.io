@@ -14,11 +14,13 @@ export interface ChangeLog { sections: ChangeSection[]; commits: ChangeCommit[] 
 export interface GithubSource { owner: string; repo: string; branch: string; token?: string }
 
 export const CHANGES_TTL_MS = 30 * 60 * 1000;
-export const CHANGES_KEY = 'assistantChanges:v4';
+export const CHANGES_KEY = 'assistantChanges:v5';
 /** 白名單：只有標題帶這個記號的修改紀錄，才會當成「系統更新」告訴同仁；沒標記的一律不說（寧可漏說、不可洩漏內部細節）。 */
 export const STAFF_MARK = '【同仁】';
 /** 記號必須在標題的「開頭」（日期或 feat: 之類前綴之後）；標題中間提到這幾個字不算，避免討論這個規則的紀錄自己被放行。 */
 const hasStaffMark = (head: string): boolean => /^(?:[\w-]+:\s*|[0-9-]+\s+)?【同仁】/.test(head.trim());
+/** 標題帶了同仁記號、事後決定不公告的 commit（不改寫 Git 歷史，用 SHA 擋）。2026-11-28：元宇宙聖誕更新不通知同仁。 */
+const HIDDEN_COMMITS = ['7baf4724a', '862ad38db', '8bc379fa1'];
 const SECTION_KEEP = 8;
 const BODY_MAX = 600;
 const COMMIT_KEEP = 12;
@@ -47,7 +49,8 @@ const taipeiDate = (iso: string): string => {
 export function parseCommits(json: unknown): ChangeCommit[] {
   if (!Array.isArray(json)) return [];
   const out: ChangeCommit[] = [];
-  for (const item of json as Array<{ commit?: { message?: string; committer?: { date?: string } } }>) {
+  for (const item of json as Array<{ sha?: string; commit?: { message?: string; committer?: { date?: string } } }>) {
+    if (HIDDEN_COMMITS.some(sha => String(item?.sha || '').startsWith(sha))) continue;
     const subject = String(item?.commit?.message || '').split('\n')[0].trim();
     if (!hasStaffMark(subject) || isAdminOnly(subject.replace(STAFF_MARK, ''))) continue; /* commit 標題多半是工程用語，一樣只收帶同仁記號的 */
     out.push({ date: taipeiDate(String(item?.commit?.committer?.date || '')), subject: subject.replace(STAFF_MARK, '').trim().slice(0, 140) });

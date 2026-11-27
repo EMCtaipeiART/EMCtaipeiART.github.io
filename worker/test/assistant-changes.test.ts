@@ -36,6 +36,12 @@ describe('github changes', () => {
     ]);
   });
 
+  it('skips marked commits that were later withheld from staff', () => {
+    const item = (sha: string, message: string) => ({ sha, commit: { message, committer: { date: '2026-11-28T01:00:00Z' } } });
+    const hidden = ['7baf4724a', '862ad38db', '8bc379fa1'].map(sha => item(sha + '0000', '【同仁】元宇宙：聖誕'));
+    expect(parseCommits([...hidden, item('abc1234', '【同仁】專案頁新增匯出')]).map(c => c.subject)).toEqual(['專案頁新增匯出']);
+  });
+
   it('sends the token only to the GitHub API, caches 30 minutes and keeps old data when fetching fails', async () => {
     const store = memoryStore();
     const seen: Array<{ url: string; auth: string | null }> = [];
