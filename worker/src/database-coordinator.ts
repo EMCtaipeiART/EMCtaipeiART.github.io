@@ -2836,13 +2836,18 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'pixelOfficeHeartbeat', name, status: next, changed };
   }
 
+  /** 元宇宙聖誕節場景開關（全員共用，管理者切換）：沒設定過＝開啟。 */
+  private pixelOfficeXmasOn(): boolean {
+    const row = this.ctx.storage.sql.exec<{ value: string }>('SELECT value FROM pixel_office_settings WHERE key = ?', 'xmasScene').toArray()[0];
+    return row?.value !== 'off';
+  }
   private pixelOfficeState(payload: ApiPayload): ApiResult {
     this.pixelOfficeApplyOffline(Date.now());
     const version = this.pixelOfficeVersion();
     // 全員共用的貓（歸屬感、貓碗）與伺服器時間：每個人（含訪客）每次輪詢都帶回，貓的行程才會在每個人畫面上一致（不依賴各人本機存檔與電腦時鐘）
     const catOfficeOf = (key: string) => { let o: Row = {}; try { const row = this.ctx.storage.sql.exec<{ value: string }>('SELECT value FROM pixel_office_settings WHERE key = ?', key).toArray()[0]; o = asRow(JSON.parse(row?.value || '{}')); } catch { o = {}; } return { belong: Math.max(0, Math.floor(Number(o.belong) || 0)), bowlAt: Math.floor(Number(o.bowlAt) || 0), waterAt: Math.floor(Number(o.waterAt) || 0), act: this.pixelOfficeCatAct(o.act) }; };
     const office = catOfficeOf('cat:office'), office2 = catOfficeOf('cat2:office'), dog1Office = catOfficeOf('dog1:office'), dog2Office = catOfficeOf('dog2:office');
-    if (Number(payload.since) === version && version > 0) return { ok: true, action: 'pixelOfficeState', version, unchanged: true, workday: pixelOfficeIsWorkday(Date.now()), serverNow: Date.now(), catOffice: office, cat2Office: office2, dog1Office, dog2Office };   // 國定假日要在不換版本時也傳到畫面
+    if (Number(payload.since) === version && version > 0) return { ok: true, action: 'pixelOfficeState', version, unchanged: true, workday: pixelOfficeIsWorkday(Date.now()), serverNow: Date.now(), xmas: this.pixelOfficeXmasOn(), catOffice: office, cat2Office: office2, dog1Office, dog2Office };   // 國定假日要在不換版本時也傳到畫面
     const rows = this.ctx.storage.sql.exec<{ name: string; state: string; photo_version: number; updated_at: number }>(
       'SELECT name, state, photo_version, updated_at FROM pixel_office_people'
     ).toArray();
@@ -2854,7 +2859,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     // 稱號跟著狀態一起回：前端不必為了它多打一次 API，改了也會隨輪詢傳到每個人的畫面。
     const avatars: Record<string, number> = {};
     for (const row of this.ctx.storage.sql.exec<{ name: string; updated_at: number }>('SELECT name, updated_at FROM pixel_office_avatar_current').toArray()) avatars[row.name] = Number(row.updated_at) || 0;
-    return { ok: true, action: 'pixelOfficeState', version, serverNow: Date.now(), catOffice: office, cat2Office: office2, dog1Office, dog2Office, people, staff: this.pixelOfficeStaff().map(item => ({ seat: item.seat, name: item.name })), staffMeetings: this.pixelOfficeStaffMeetings(), funClaims: this.pixelOfficeFunClaims(), levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories(), avatars, hours: { dayStart: pixelHours.dayStart, workEnd: pixelHours.workEnd, overtimeStart: pixelHours.overtimeStart, force: pixelForceNow(Date.now()) }, workday: pixelOfficeIsWorkday(Date.now()) };
+    return { ok: true, action: 'pixelOfficeState', version, serverNow: Date.now(), xmas: this.pixelOfficeXmasOn(), catOffice: office, cat2Office: office2, dog1Office, dog2Office, people, staff: this.pixelOfficeStaff().map(item => ({ seat: item.seat, name: item.name })), staffMeetings: this.pixelOfficeStaffMeetings(), funClaims: this.pixelOfficeFunClaims(), levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories(), avatars, hours: { dayStart: pixelHours.dayStart, workEnd: pixelHours.workEnd, overtimeStart: pixelHours.overtimeStart, force: pixelForceNow(Date.now()) }, workday: pixelOfficeIsWorkday(Date.now()) };
   }
 
   /** 辦公室小樂趣（便便、驚喜道具、遺落物、投影機）的「已被處理」紀錄：所有人共用。
@@ -6101,6 +6106,16 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const result = this.pixelOfficeAllWork(nowMs);
         await this.queueAudit([{ t: new Date().toISOString(), kind: '欄位修改', actor: auditActor(who), caseId: '像素辦公室', field: payload.mode === 'off' ? '全員下班' : '全員上班', to: String(result.changed.length) + ' 人' }]);
         return { ok: true, action, ...result };
+      }
+      if (action === 'pixelOfficeXmas') {
+        // 聖誕節場景一鍵開關：只有後台管理者（含 Machi）能改；開著的畫面下一次讀狀態時自動重新整理套用
+        const who = this.requireAccess(database, session, 'database.manage');
+        if (typeof payload.on !== 'boolean') throw new Error('請指定開啟或關閉');
+        const version = Math.max(Date.now(), this.pixelOfficeVersion() + 1);
+        this.ctx.storage.sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', 'xmasScene', payload.on ? 'on' : 'off', version);
+        this.pixelVersionMemo = null;
+        await this.queueAudit([{ t: new Date().toISOString(), kind: '欄位修改', actor: auditActor(who), caseId: '像素辦公室', field: '聖誕節場景', to: payload.on ? '開啟' : '關閉' }]);
+        return { ok: true, action, on: payload.on };
       }
       if (action === 'savePixelHours') {
         // 上下班時段設定：只有後台管理者（含 Machi）能改；enabled=false 代表整個時間規則關閉（測試用）

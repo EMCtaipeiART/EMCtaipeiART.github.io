@@ -376,34 +376,64 @@ export function createXmas({scene, rects, blocked, chairSeats, U, FX4, floor4, f
     for (const d of [-1, 1]) { body.ball(.042, C.coal, d * .13, 1.28, .61, false); body.cone(.075, .2, DEER, d * .27, 1.38, .3, true, 6, 0, -d * 1.1);
       body.box(.065, .46, .065, C.cream, d * .17, 1.62, .3); body.box(.26, .06, .06, C.cream, d * .31, 1.68, .3); body.box(.06, .22, .06, C.cream, d * .43, 1.8, .3); body.box(.06, .17, .06, C.cream, d * .26, 1.88, .3); }
     body.cyl(.2, .2, .08, C.red, 0, .98, .27); body.ball(.07, C.gold, 0, .9, .47);
-    const leg = kit(); leg.cyl(.085, .06, .46, DEER, 0, -.23, 0); leg.cyl(.07, .075, .09, C.coal, 0, -.49, 0);
-    return {body:body.done(), leg:leg.done()}; })();
+    const thigh = kit(); thigh.cyl(.105, .07, .28, DEER, 0, -.13, 0); thigh.ball(.07, DEER, 0, -.27, 0, false);   // 大腿＋小腿兩節，跑起來膝蓋會彎
+    const shin = kit(); shin.cyl(.062, .048, .22, DEER, 0, -.11, 0); shin.cyl(.062, .072, .09, C.coal, 0, -.25, 0);
+    return {body:body.done(), thigh:thigh.done(), shin:shin.done()}; })();
+  // 雪橇：紅色車身＋金色滑板，後面載一袋禮物
+  const sleigh = (() => { const k = kit();
+    for (const d of [-.42, .42]) { k.box(.07, .07, 1.45, C.gold, d, .06, 0); k.box(.07, .07, .26, C.gold, d, .16, .8, true); k.box(.07, .2, .07, C.gold, d, .28, .9); for (const z of [-.45, .4]) k.box(.06, .22, .06, C.gold, d, .19, z, false); }
+    k.box(.92, .12, 1.15, C.darkRed, 0, .36, -.05);
+    for (const d of [-.45, .45]) { k.box(.08, .3, 1.15, C.red, d, .55, -.05); k.box(.1, .05, 1.17, C.gold, d, .72, -.05, false); }
+    k.box(.92, .46, .1, C.red, 0, .63, .5); k.box(.94, .06, .12, C.gold, 0, .88, .5, false);
+    k.box(.92, .68, .1, C.red, 0, .74, -.62); k.box(.94, .06, .12, C.gold, 0, 1.1, -.62, false);
+    k.ball(.36, C.wood, -.08, .78, -.3, true, 1.05); k.cyl(.1, .17, .16, C.wood, -.08, 1.2, -.3); k.cyl(.12, .12, .05, C.gold, -.08, 1.17, -.3, false);
+    for (const [x, z, s, c, r] of [[.24, -.25, .3, C.green, .4], [.1, .12, .34, C.blue, -.3], [-.22, .18, .26, C.cream, .6]]) { k.box(s, s * .8, s, c, x, .42 + s * .4, z, true, r); k.box(s * .22, s * .82, s * 1.02, C.gold, x, .42 + s * .4, z, false, r); }
+    return k.done(); })();
   const walkers = [];
   const loopOf = (pts, ox) => { const P = pts.map(([x, y]) => [(x + ox) * U, y * U]), L = P.map((p, i) => { const q = P[(i + 1) % P.length]; return Math.hypot(q[0] - p[0], q[1] - p[1]); }); return {P, L, len:L.reduce((a, b) => a + b, 0)}; };
-  function walker(g, route, speed, offset, pose, tag){ g.userData.noShift = true; g.traverse(o => { o.userData.noShift = o.userData.noMask = true; }); scene.add(g); walkers.push({g, route, speed, offset, pose, tag, ox:0, oz:0}); }
+  function walker(g, route, speed, offset, pose, tag){ g.userData.noShift = true; g.traverse(o => { o.userData.noShift = o.userData.noMask = true; }); scene.add(g); const w = {g, route, speed, offset, pose, tag, ox:0, oz:0}; walkers.push(w); return w; }
   for (const [list, ox] of [[GINGER5, 0], [GINGER4, FX4]]) list.forEach((pts, i) => {
     const g = new THREE.Group(), hop = new THREE.Group(); g.add(hop); piece(hop, ginger.body);
     const arms = [-1, 1].map(d => piece(hop, ginger.arm, d * .16, .6, 0)), legs = [-1, 1].map(d => piece(hop, ginger.leg, d * .12, .3, 0));
     walker(g, loopOf(pts, ox), .85 + (i % 3) * .12, i * 7.3 + (ox ? 3 : 0), t => { const s = Math.sin(t * 7.5 + i); legs[0].rotation.x = s * .55; legs[1].rotation.x = -s * .55; legs[0].rotation.z = -.16; legs[1].rotation.z = .16; arms.forEach((a, k) => { const d = k ? 1 : -1; a.rotation.set(0, 0, d * (1.2 + s * d * .3)); }); hop.position.y = Math.abs(Math.cos(t * 7.5 + i)) * .07; hop.rotation.z = s * .06; }, 'ginger');
   });
   function reindeer(route, speed, offset, i, scale, tag){
-    const g = new THREE.Group(), slide = new THREE.Group(); slide.scale.setScalar(scale); g.add(slide); piece(slide, deer.body);
-    const legs = [[-.2, .22], [.2, .22], [-.2, -.34], [.2, -.34]].map(([x, z]) => piece(slide, deer.leg, x, .55, z));
-    const spray = [0, 1, 2, 3, 4].map(n => { const m = new THREE.Mesh(mound.body, solidMat); slide.add(m); return m; });
-    walker(g, route, speed, offset, t => { const k = Math.sin(t * 2.6 + i); legs.forEach((l, n) => { const front = n < 2; l.rotation.set((front ? -.85 : .85) + k * .22 * (n % 2 ? 1 : -1), 0, (n % 2 ? 1 : -1) * .12); });
-      slide.position.y = .02 + Math.abs(Math.sin(t * 1.3 + i)) * .07; slide.rotation.set(Math.sin(t * 2.6 + i) * .05, 0, Math.sin(t * 1.3 + i) * .09);
-      spray.forEach((m, n) => { const f = (t * 1.6 + n / 5) % 1; m.position.set(Math.sin(n * 2.4) * (.15 + f * .45), .04 + Math.sin(f * Math.PI) * .3, -.65 - f * 1.1); m.scale.setScalar(.22 * (1 - f) + .02); }); }, tag);
+    const g = new THREE.Group(), run = new THREE.Group(); run.scale.setScalar(scale); g.add(run); const trunk = new THREE.Group(); run.add(trunk); piece(trunk, deer.body);
+    // 四條腿：右前、左前、右後、左後；前後兩對錯開半步，同一對左右再差一點（奔跑步態）
+    const legs = [[-.19, .24, 0], [.19, .24, .55], [-.19, -.34, Math.PI], [.19, -.34, Math.PI + .55]].map(([x, z, lag]) => { const hip = piece(trunk, deer.thigh, x, .57, z); return {hip, knee:piece(hip, deer.shin, 0, -.27, 0), lag}; });
+    const spray = [0, 1, 2, 3, 4].map(n => { const m = new THREE.Mesh(mound.body, solidMat); run.add(m); return m; });
+    return walker(g, route, speed, offset, t => { const beat = t * speed * 2.3 + i * 1.3;
+      for (const {hip, knee, lag} of legs) { const a = beat + lag; hip.rotation.x = -Math.sin(a) * .8; knee.rotation.x = .12 + Math.max(0, Math.cos(a)) * 1.25; }   // 往前擺時收膝、著地時伸直
+      trunk.position.y = .03 + Math.abs(Math.sin(beat)) * .13; trunk.rotation.x = Math.sin(beat + .9) * .09;
+      spray.forEach((m, n) => { const f = (t * 1.8 + n / 5) % 1; m.position.set(Math.sin(n * 2.4) * (.12 + f * .4), .04 + Math.sin(f * Math.PI) * .26, -.55 - f * .9); m.scale.setScalar(.18 * (1 - f) + .02); }); }, tag);
+  }
+  const teams = [];
+  function team(route, speed, offset, i){   // 兩隻麋鹿一前一後拉一台雪橇；韁繩每幀接在三者之間
+    const lead = reindeer(route, speed, offset, i, 1.05, 'deer-team'), wheel = reindeer(route, speed, offset - 1.75, i + 1, 1.05, 'deer-team');
+    const g = new THREE.Group(), body = new THREE.Group(); g.add(body); piece(body, sleigh);
+    const sled = walker(g, route, speed, offset - 3.75, t => { body.position.y = Math.abs(Math.sin(t * 4 + i)) * .025; body.rotation.z = Math.sin(t * 2.1 + i) * .025; }, 'sleigh');
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(8 * 3), 3));
+    const reins = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({color:C.darkRed})); reins.frustumCulled = false; reins.userData.noShift = reins.userData.noMask = true; scene.add(reins);
+    teams.push({sled, wheel, lead, geo});
+  }
+  const rv = new THREE.Vector3();
+  function tieReins(){
+    for (const {sled, wheel, lead, geo} of teams) { const p = geo.attributes.position; let n = 0;
+      const dot = (w, x, y, z) => { rv.set(x, y, z).applyAxisAngle(THREE.Object3D.DEFAULT_UP, w.g.rotation.y).add(w.g.position); p.setXYZ(n++, rv.x, rv.y, rv.z); };
+      for (const d of [-.24, .24]) { dot(sled, d * 1.4, .8, .55); dot(wheel, d, .98, .22); dot(wheel, d, .98, .22); dot(lead, d, .98, .22); }
+      p.needsUpdate = true; }
   }
   FLOORS.forEach(({f:[x0, x1, z0, z1]}, fi) => {
     const a = x0 - LANE, b = x1 + LANE, c = z0 - LANE, d = z1 + LANE, ring = {P:[[a, c], [b, c], [b, d], [a, d]], L:[b - a, d - c, b - a, d - c], len:2 * (b - a + d - c)};
-    for (let i = 0; i < 3; i++) reindeer(ring, 4.2, i * ring.len / 3, i + fi * 3, 1.15, 'deer-out');
+    for (let i = 0; i < 2; i++) team(ring, 4.2, i * ring.len / 2, i * 2 + fi * 5);   // 露台兩隊雪橇
+    reindeer(ring, 4.2, ring.len / 4, fi + 3, 1.15, 'deer-out');                        // 露台落單的一隻
     reindeer(loopOf(DEER_IN[fi], fi ? FX4 : 0), 2.6, 0, fi + 7, .85, 'deer-in');
   });
   const at = new THREE.Vector3();
   function moveWalkers(ms){
     const t = ms / 1000, folk = people();
     for (const w of walkers) {
-      const {P, L, len} = w.route; let d = (t * w.speed + w.offset) % len, i = 0; while (d > L[i]) { d -= L[i]; i++; }
+      const {P, L, len} = w.route; let d = ((t * w.speed + w.offset) % len + len) % len, i = 0; while (d > L[i]) { d -= L[i]; i++; }
       const p = P[i], q = P[(i + 1) % P.length], f = d / L[i], dx = (q[0] - p[0]) / L[i], dz = (q[1] - p[1]) / L[i];
       at.set(p[0] + (q[0] - p[0]) * f, 0, p[1] + (q[1] - p[1]) * f);
       let sx = 0, sz = 0;   // 靠近人物時往旁邊讓一下（只影響自己畫面）
@@ -413,6 +443,7 @@ export function createXmas({scene, rects, blocked, chairSeats, U, FX4, floor4, f
       const turn = Math.atan2(dx, dz) - w.g.rotation.y; w.g.rotation.y += Math.atan2(Math.sin(turn), Math.cos(turn)) * .14;
       w.pose(t);
     }
+    tieReins();
   }
   moveWalkers(now());
 

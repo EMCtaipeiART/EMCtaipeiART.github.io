@@ -526,7 +526,7 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 import * as THREE from 'three';
 import {mergeGeometries, mergeVertices} from '../character-studio/vendor/BufferGeometryUtils.js';
 import {makePet} from './pets3d.js?v=10';
-import {createXmas, santaSuit} from './xmas.js?v=4';
+import {createXmas, santaSuit} from './xmas.js?v=5';
 import {dressPet} from './xmas-pets.js?v=1';
 import {makePet as makeGenPet, hasPet as hasGenPet} from './pets3d-gen.js?v=18';   // 兩隻貓和兩隻狗都用生成版模型
 import {RoundedBoxGeometry} from '../character-studio/vendor/RoundedBoxGeometry.js';
@@ -546,6 +546,18 @@ let clockOff = 0, clockSet = false;   // 本機時鐘與伺服器的差：貓的
 const syncNow = () => Date.now() + clockOff;
 // 開場就同時送出出勤狀態請求（不等場景和角色圖載完）；pollOnce 第一次直接用這份，之後照常輪詢
 let earlyState = fetch('https://machi-design-api.machi-chen.workers.dev/api', {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify({action:'pixelOfficeState', since:0}), cache:'no-store'}).then(r => r.json()).catch(() => null);
+// 聖誕節場景開關：管理者在角色頁面一鍵切換（存後端、全員共用）。網址 ?xmas=0／1 只影響自己這一頁（測試用）
+const XMAS_Q = new URLSearchParams(location.search).get('xmas'), XMAS_FORCED = XMAS_Q === '0' || XMAS_Q === '1';
+let XMAS_ON = XMAS_FORCED ? XMAS_Q === '1' : (() => { try { return localStorage.getItem('pixelXmas') !== '0'; } catch (e) { return true; } })(), xmasReloading = false;
+const xmasRemember = on => { try { localStorage.setItem('pixelXmas', on ? '1' : '0'); } catch (e) {} };
+// 蓋場景前先等後端的開關值（最多 5 秒，等不到就用上次記的）
+const xmasReady = XMAS_FORCED ? Promise.resolve() : Promise.race([earlyState.then(d => { if (d && d.ok && typeof d.xmas === 'boolean') { XMAS_ON = d.xmas; xmasRemember(XMAS_ON); } }), new Promise(r => setTimeout(r, 5000))]);
+function xmasSync(on){   // 開關和目前畫面不一樣：場景、碰撞、人物與寵物造型要整組換，直接重新整理最乾淨
+  if (XMAS_FORCED || typeof on !== 'boolean') return;
+  xmasRemember(on);
+  if (on === XMAS_ON || xmasReloading) return;
+  xmasReloading = true; showQuote('', on ? '聖誕節場景開啟中，畫面即將更新 🎄' : '聖誕節場景已關閉，畫面即將更新'); setTimeout(() => location.reload(), 2500);
+}
 const cloudReady = (localStorage.getItem('noCloudChars') === '1' ? Promise.resolve() : (async () => {   // 角色工坊發佈的額外人物清單：失敗就重試一次，仍失敗就用上次存的，不然傅思凱這類人物會有人看得到、有人看不到
   let j = null;
   for (let k = 0; k < 2 && !j; k++) { try { const r = await fetch(CHAR_API, {signal: AbortSignal.timeout(k ? 8000 : 5000)}); if (r.ok) j = await r.json(); } catch (e) {} }
@@ -1162,7 +1174,8 @@ async function buildOffice(){
     laptop3d(I(224), I(852), 1);
     rects.push([I(85), I(828), I(137), I(930)], [I(137), I(828), I(308), I(873)]); }
   reflow5F(); doors3d(); upgradeMaterials();
-  if (new URLSearchParams(location.search).get('xmas') !== '0') xmas = createXmas({scene, rects, blocked, chairSeats, U, FX4, floor4:[F4_X0, F4_X1, F4_Z0, F4_Z1], fridges, wallBoxes, outlineMat, HULL_LAYER, FLAT, themeHooks, dark:themeNow === 'dark', doors:DOORS, now:syncNow, people:() => Object.values(chars)});   // 聖誕碰撞要在 startGameplay 之前登記
+  await xmasReady;
+  if (XMAS_ON) xmas = createXmas({scene, rects, blocked, chairSeats, U, FX4, floor4:[F4_X0, F4_X1, F4_Z0, F4_Z1], fridges, wallBoxes, outlineMat, HULL_LAYER, FLAT, themeHooks, dark:themeNow === 'dark', doors:DOORS, now:syncNow, people:() => Object.values(chars)});   // 聖誕碰撞要在 startGameplay 之前登記
   dropCache.clear(); noteCache.clear(); startGameplay();   // 場景（含四樓）全部蓋好、碰撞都齊了才開始算道具：否則每個人載入的時間點不同，算出來的位置會不一樣
 }
 // 辦公室細節：依家具／顏色合併幾何，共用材質與貼圖；局部群組保留入座收起與 reflow 語意。
@@ -1943,7 +1956,7 @@ async function attach3d(c){
   } catch (e) { console.warn('3D 人物載入失敗，維持 2D', c.name, e); }
 }
 async function addChar(name, i){
-  await cloudReady;
+  await cloudReady; await xmasReady;
   // 雲端圖集載入失敗（網路、尚未部署）就退回本機靜態檔，不能讓人物消失
   const tex = await loadTex(url(name)).catch(() => { delete cloudChars[name]; return loadTex(url(name)); });
   const sprite = new THREE.Mesh(new THREE.PlaneGeometry(WORLD_H * CELL_W / CELL_H, WORLD_H),
@@ -1965,7 +1978,7 @@ async function addChar(name, i){
   scene.add(holder);
   const c = {name, holder, sprite, tex, face:seat ? (seat[3] === 'top' ? 0 : Math.PI) : -a, moving:0, phase:Math.random() * 9, wander:!seat, t:Math.random() * 5, dir:new THREE.Vector3()};
   chars[name] = c;
-  if (name === '傅思凱' && new URLSearchParams(location.search).get('xmas') !== '0') c.dress = santaSuit;   // 聖誕節：Eric 穿聖誕老人裝
+  if (name === '傅思凱' && XMAS_ON) c.dress = santaSuit;   // 聖誕節：Eric 穿聖誕老人裝
   if (MODEL3D[name] && !(cloudChars[name] > MODEL3D[name].atlas) && !PIXEL_MODE) attach3d(c);
   if (WALK_NAMES.includes(name) || walkVer[name] || cloudWalks[name]) {
     const staticUrl = (HD ? 'sprites-walk-hd/' + name + '.webp' : 'sprites-walk/' + name + '.png') + (walkVer[name] ? '?v=' + walkVer[name] : '');
@@ -2115,6 +2128,7 @@ async function pollOnce(){
     if (!d || !d.ok) { const tq = Date.now(); const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:JSON.stringify({action:'pixelOfficeState', since:live.version}), cache:'no-store'}); d = await r.json(); if (d && d.serverNow) { const off = d.serverNow + (Date.now() - tq) / 2 - Date.now(); clockOff = clockSet ? clockOff + (off - clockOff) * .3 : off; clockSet = true; } } if (!d || !d.ok) throw new Error('bad response');
     live.ok = true; live.at = Date.now(); if (typeof d.workday === 'boolean' && d.workday !== srvWorkday) { srvWorkday = d.workday; for (const c of Object.values(chars)) c.appliedStatus = null; }
     CATS.forEach(c => c.applyState(d));   // 各隻貓的歸屬感、貓碗與互動事件
+    xmasSync(d.xmas);
     if (Array.isArray(d.hidden)) applyHidden(d.hidden);
     if (!d.unchanged) {
       live.version = d.version || live.version;
@@ -3219,11 +3233,13 @@ function renderAdmin(){   // 班長工具：上下班（切換＋時段設定合
   const box = radial.querySelector('#cpAdmin'); if (!box) return; const restoreFocus = keepFocus(box);
   const rows = [['dayStart', '上班開始'], ['lunchStart', '午休開始'], ['lunchEnd', '午休結束'], ['workEnd', '下班'], ['overtimeStart', '加班開始']], cfg = hoursCfg || {};
   box.innerHTML = '<div class="cp-adm-grid">' +
+    '<div class="cp-card"><h4>聖誕節場景</h4><div class="cp-adm-now"><span>目前：<b>' + (XMAS_ON ? '開啟中' : '已關閉') + '</b></span><button type="button" class="primary" id="adXmas">' + (XMAS_ON ? '一鍵關閉' : '一鍵開啟') + '</button></div></div>' +
     '<div class="cp-card"><h4>上下班</h4><div class="cp-adm-now"><span>目前：<b>' + (hoursForce === 'work' ? '全員上班' : hoursForce === 'off' ? '全員下班' : '依時段自動') + '</b></span><button type="button" class="primary" id="adWork">' + (hoursForce === 'work' ? '切換成全員下班' : '切換成全員上班') + '</button></div>' +
       '<div class="cp-adm-chk"><label class="cp-f"><input type="checkbox" id="fhOn"' + (cfg.enabled !== false ? ' checked' : '') + '> 套用上下班時段規則</label><label class="cp-f"><input type="checkbox" id="fhRooms"' + (cfg.meetingRooms !== false ? ' checked' : '') + '> 行事曆有會議時依會議室入座</label></div>' +
       '<div class="cp-hrs">' + rows.map(r => '<label class="cp-f"><span>' + r[1] + '</span><input type="number" min="0" max="23" id="fh_' + r[0] + '" value="' + (cfg[r[0]] ?? '') + '"></label>').join('') + '</div><div class="cp-chips"><button type="button" class="primary" id="fhSave">儲存時段</button></div></div>' +
     '<div class="cp-card"><h4>班長：處罰</h4><label class="cp-f col"><span>對象</span><select id="pnWho">' + NAMES.map(n => '<option>' + n + '</option>').join('') + '</select></label><label class="cp-f col"><span>原因（最多 30 字）</span><input type="text" id="pnWhy" maxlength="30" placeholder="例如：上班時間遲到"></label>' +
       '<label class="cp-f col"><span>天數</span><select id="pnDays">' + [1, 2, 3, 5, 7, 14, 30].map(n => '<option value="' + n + '">' + n + ' 天</option>').join('') + '</select></label><div class="cp-chips"><button type="button" class="primary" id="pnGo">處罰</button><button type="button" id="pnOff">解除處罰</button></div></div></div>';
+  box.querySelector('#adXmas').onclick = async () => { const on = !XMAS_ON; try { await adminCall('pixelOfficeXmas', {on}); radialClose(); xmasSync(on); } catch (e) { showQuote('', '切換失敗：' + e.message); } };
   box.querySelector('#adWork').onclick = async () => { const mode = hoursForce === 'work' ? 'off' : 'work'; try { await adminCall('pixelOfficeAllWork', {mode}); hoursForce = mode; applyForce(); live.version = 0; showQuote('', mode === 'work' ? '已切換：全員上班' : '已切換：全員下班'); radialClose(); } catch (e) { showQuote('', '切換失敗：' + e.message); } };
   box.querySelector('#fhSave').onclick = async () => { const body = {enabled:box.querySelector('#fhOn').checked, meetingRooms:box.querySelector('#fhRooms').checked}; rows.forEach(r => { body[r[0]] = Number(box.querySelector('#fh_' + r[0]).value); }); try { await adminCall('savePixelHours', body); hoursCfg = {...cfg, ...body}; showQuote('', '已儲存上下班時段'); radialClose(); } catch (e) { showQuote('', '儲存失敗：' + e.message); } };
   const punish = async days => { const name = box.querySelector('#pnWho').value, reason = box.querySelector('#pnWhy').value.trim(); if (days && reason.length < 2) { showQuote('', '請先寫處罰原因（至少 2 個字）'); return; } try { await adminCall('pixelOfficePunish', {name, reason, days}); showQuote('', days ? '已處罰 ' + name + '：' + reason + '，' + days + ' 天' : '已解除 ' + name + ' 的處罰'); radialClose(); } catch (e) { showQuote('', '處罰失敗：' + e.message); } };
@@ -3692,7 +3708,7 @@ function catBuild(){
   m.userData.pickRoot = g; m.visible = false; g.add(m); P.sprite = m; P.tex = tex;
   if (!PIXEL_MODE) try {   // 立體模型（pets3d.js）；失敗就維持 2D。平面圖保留當點選範圍，只是不畫出來
     const gen = hasGenPet(DEF.id);   // 生成版模型是載入完才掛上網格，所以 pickRoot 在 ready 再標一次
-    const pet = (gen ? makeGenPet : makePet)(THREE, {mergeGeometries, mergeVertices}, DEF.id, HULL_LAYER, {scale:{dog1:.54, dog2:.62}[DEF.id] || .485, outline:{dog1:.062, dog2:.054}[DEF.id] || .055, ready:() => { m.material.visible = false; if (gen && new URLSearchParams(location.search).get('xmas') !== '0') try { dressPet(DEF.id, pet.group, HULL_LAYER); } catch (e) { console.warn('寵物聖誕裝失敗', DEF.id, e); } pet.group.traverse(o => { o.userData.pickRoot = g; }); }, fail:() => { g.remove(blob, pet.group); P.m3d = null; }}); pet.group.traverse(o => { o.userData.pickRoot = g; });
+    const pet = (gen ? makeGenPet : makePet)(THREE, {mergeGeometries, mergeVertices}, DEF.id, HULL_LAYER, {scale:{dog1:.54, dog2:.62}[DEF.id] || .485, outline:{dog1:.062, dog2:.054}[DEF.id] || .055, ready:() => { m.material.visible = false; if (gen && XMAS_ON) try { dressPet(DEF.id, pet.group, HULL_LAYER); } catch (e) { console.warn('寵物聖誕裝失敗', DEF.id, e); } pet.group.traverse(o => { o.userData.pickRoot = g; }); }, fail:() => { g.remove(blob, pet.group); P.m3d = null; }}); pet.group.traverse(o => { o.userData.pickRoot = g; });
     const blob = new THREE.Mesh(new THREE.PlaneGeometry(.95, .8), new THREE.MeshBasicMaterial({map:shadowTex, transparent:true, opacity:.3, depthWrite:false})); blob.rotation.x = -Math.PI / 2; blob.position.y = .02; blob.raycast = () => {};
     g.add(blob, pet.group); P.m3d = pet; P.ready = true;
   } catch (e) { console.warn('3D 寵物建立失敗，維持 2D', DEF.id, e); }

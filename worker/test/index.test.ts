@@ -5845,6 +5845,25 @@ describe('全員上班', () => {
   });
 });
 
+describe('聖誕節場景開關', () => {
+  it('is on by default, only admins can switch it, and every state poll carries it', async () => {
+    const read = (since = 0) => api({ action: 'pixelOfficeState', since }) as Promise<{ xmas?: boolean; version?: number }>;
+    const before = await read();
+    expect(before.xmas).toBe(true);
+    const admin = await login();
+    expect(await api({ action: 'pixelOfficeXmas', on: false }, admin)).toMatchObject({ ok: true, on: false });
+    const after = await read(before.version);
+    expect(after.xmas).toBe(false);
+    expect((await read(after.version)).xmas).toBe(false);
+    const outsider = await seedSession('anna.hsu@emctaipei.com', 'Anna');
+    expect(await api({ action: 'pixelOfficeXmas', on: true }, outsider)).toMatchObject({ ok: false });
+    expect((await read()).xmas).toBe(false);
+    expect(await api({ action: 'pixelOfficeXmas' }, admin)).toMatchObject({ ok: false });
+    await api({ action: 'pixelOfficeXmas', on: true }, admin);
+    expect((await read()).xmas).toBe(true);
+  });
+});
+
 describe('出氣擂台排行榜', () => {
   it('shows anonymous scores as 未登入使用者, keeps one best per signed-in user and mode, and validates scores', async () => {
     expect(await api({ action: 'ventArenaRanking' })).toMatchObject({ ok: true, items: [] });
