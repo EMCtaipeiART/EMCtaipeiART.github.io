@@ -440,6 +440,8 @@ summary{min-height:40px;padding:8px 0;color:var(--bd)}
 .stp.x,.pcd .bdg.x,.acd .ast.stp.x{background:#f0f3f1!important;color:#6b7771!important;border-color:#e1e7e3!important}
 .pcd .bdg.ok{background:var(--bs)!important;color:var(--bd)!important;border-color:#cbe6d2!important}.pcd .bdg.no{background:#fdecec!important;color:#b42323!important;border-color:#f6cfcf!important}
 .acd .ast.stp{top:16px;right:16px}.atg{font-size:11px;font-weight:700;padding:4px 10px;line-height:1.5}
+/* 已結束的卡牌沒有分享鈕，名單列用滿寬度 */
+.pcd.off .who{padding-right:0}
 </style>
 </head>
 <body>
@@ -976,7 +978,7 @@ function pcCard(c){const goal=c.goal||0,pct=goal?Math.round(c.sum/goal*100):0,ok
   <div class="amt"><b>${nt(c.sum)}</b><span><b>${c.count}</b> 人</span></div>
   <div class="pgb"><div class="bar2"><i style="width:${Math.min(100,pct)}%"></i></div><span class="pct">${pct.toLocaleString('en-US')}%</span></div><div class="sub gl">${goal?'目標 '+nt(goal)+(ok?'　✓ 已達標':'　還差 '+nt(Math.max(0,goal-c.sum))):'本團不設達標門檻'}</div>
   <div class="cdbox"><small>${over?(dtxt?'達標用時':'收單狀態'):c.deadline?'距離收單':'收單狀態'}</small><div class="cdv">${over&&dtxt?dtxt:left}</div></div>
-  ${c.names&&c.names.length?`<div class="who">${c.names.slice(0,2).map(n=>`<span>${esc(n)}</span>`).join('')}${c.nameCount>Math.min(2,c.names.length)?`<span class="more">等 ${c.nameCount} 人</span>`:''}</div>`:'<div class="who none">還沒有人下單，搶頭香！</div>'}</div><button type="button" class="shr" data-share="${esc(c.id)}" data-nm="${esc(c.name)}" title="複製分享連結" aria-label="複製分享連結"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4"/><path d="M8 10H6.5A1.5 1.5 0 0 0 5 11.5v8A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-8a1.5 1.5 0 0 0-1.5-1.5H16"/></svg></button></a>`}
+  ${c.names&&c.names.length?`<div class="who">${c.names.slice(0,2).map(n=>`<span>${esc(n)}</span>`).join('')}${c.nameCount>Math.min(2,c.names.length)?`<span class="more">等 ${c.nameCount} 人</span>`:''}</div>`:'<div class="who none">還沒有人下單，搶頭香！</div>'}</div>${over?'':`<button type="button" class="shr" data-share="${esc(c.id)}" data-nm="${esc(c.name)}" title="複製分享連結" aria-label="複製分享連結"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4"/><path d="M8 10H6.5A1.5 1.5 0 0 0 5 11.5v8A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-8a1.5 1.5 0 0 0-1.5-1.5H16"/></svg></button>`}</a>`}
 async function viewJoined(){
  if(!st.user){$('#app').innerHTML=`<div class="lgp"><div class="lg-h"><div class="lg-ic"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg></div><h3>登入</h3><p class="muted">登入後可查看你參加過的團購。</p></div><div id="lbx"></div></div>`;loginBox($('#lbx'),()=>{renderNav();viewJoined()});return}
  $('#app').innerHTML='<div class="sech"><h2>我參加過的團</h2></div><div class="ld-in"><i></i>載入中…</div>';
