@@ -121,3 +121,12 @@
 ## 填單的設計種類是自動的（2026-11-23）
 - 新增案件表單（非編輯）不顯示「設計種類」；`syncTypeFromDesigner`／`typeOfDesigner` 依設計負責人在「設定」表的「組別」決定種類（平面／影音），選了設計負責人若種類改變會重畫、階段選項跟著換。編輯既有案件（key=edit）仍顯示設計種類。新專案輪替（newProj）時改顯示「輪替組別」，因為後端 applyRotation 要求替代設計師必須同組。新增設計師時務必設好「組別」，否則種類會停在預設（平面）。
 - 教學影片：`tutorial/item-qty.html`（自動播放教學頁）＋ `tutorial/item-qty.webm`（旁白＋背景音樂）。重做流程：`node tools/tutorial-item-qty-voice.mjs <暫存資料夾>`（產生旁白與 item-qty-voice.json）→ `node tools/build-tutorial-item-qty.mjs` → `node tools/record-tutorial-item-qty.mjs`（約 3 分鐘，不需要 ffmpeg，需 macOS 的 say 與 Chrome）。
+
+## 辦公室翻身記（合成遊戲，2026-11-28 上線）
+- 資料夾 `office-merge/`（https://emc-art.com/office-merge/）。**改之前先讀 `office-merge/README.md`**：換電腦步驟、檔案地圖、使用者定的畫風與數值、後端與部署、未完成事項都在那裡。
+- 本機預覽 `node office-merge/serve.mjs`（含假後端）；改規則跑 `node office-merge/test.mjs`。
+- 平台幣扣款與撿道具回饋在 Worker（`officeMergeEnergy`、`pixelOfficeFun`），改了要 `wrangler deploy`；本機測試用假後端，別打正式後端。
+- Higgsfield 生圖／配樂會花點數，先報價取得同意。
+- 2026-11-28 兩次上線使用者都選擇**不加【同仁】**（照上面規則，每次仍要問）。
+- 已知與這個遊戲無關的既有測試失敗（2026-11-28 凌晨，Windows）：`node --test backend/test/*.test.mjs` 35 項、Worker 的「Pixel Office shared state」3 項（跟執行時間有關）。比較前後失敗清單，不要看總數。
+
