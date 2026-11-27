@@ -386,6 +386,10 @@ summary{min-height:40px;padding:8px 0;color:var(--bd)}
 .atg.kc{background:#efe9ff;color:#5b3fc4}.acd .ast:not(.x){background:#FFD25A;color:#5a3d00;padding:3px 10px;border-radius:99px;font-weight:700}
 .jnl{color:#159E31;font-weight:700;text-decoration:none}.jnl:hover{text-decoration:underline}a.card.jn:hover{border-color:#8ec99e}
 .atg.dk{background:#d9efff;color:#0a73b8}
+.tly h3{margin:22px 0 10px}.tly-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.tly-bar span{margin-right:6px}
+.tg{border:1px solid var(--l);border-radius:12px;margin-bottom:8px;background:#fff;overflow:hidden}.tg summary{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;list-style:none}.tg summary::-webkit-details-marker{display:none}.tg summary:before{content:"▸";color:var(--m);width:12px}.tg[open] summary:before{content:"▾"}.tg[open] summary{background:var(--bs)}.tg-q{margin-left:auto;font-weight:800;white-space:nowrap}.tg-s{min-width:96px;text-align:right;color:var(--bd);font-weight:800;white-space:nowrap}
+.ti{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr) auto;gap:6px 14px;align-items:center;padding:10px 14px 10px 36px;border-top:1px solid #eef2f0;font-size:14px}.ti-o{display:flex;flex-wrap:wrap;gap:6px}.tc{display:inline-flex;gap:6px;border:1px solid var(--l);border-radius:8px;padding:2px 9px;font-size:13px;font-variant-numeric:tabular-nums}.tc b{color:var(--bd)}.ti-q{font-weight:700;text-align:right;white-space:nowrap}
+@media(max-width:620px){.tly-bar{width:100%;margin-bottom:10px}.tly-bar span{width:100%}.tly-bar button{flex:1}.ti{grid-template-columns:minmax(0,1fr) auto;padding:10px 12px}.ti-n{grid-column:1;grid-row:1}.ti-q{grid-column:2;grid-row:1}.ti-o{grid-column:1/-1}.ti-o:empty{display:none}.tg summary{padding:12px;gap:8px}.tg-s{min-width:0}}
 </style>
 </head>
 <body>
@@ -752,6 +756,24 @@ async function viewSummary(quiet){const path=location.pathname;const t=new URLSe
  <h3>每人明細</h3><table class="t"><thead><tr><th>姓名</th><th>品項</th><th class="num">金額</th></tr></thead><tbody>${d.orders.map(o=>`<tr><td><b>${esc(o.name)}</b></td><td>${o.items.map(l=>esc(l.name)+(l.opts?'（'+esc(l.opts)+'）':'')+' ×'+l.qty+(l.gift?' 備註：'+esc(l.gift):'')).join('<br>')}</td><td class="num">${nt(o.total)}</td></tr>`).join('')}</tbody></table></div>`
  document.title=d.shopName+' 訂單明細';
  const q=new URLSearchParams(location.search);if(q.get('print')){q.delete('print');history.replaceState(null,'',path+'?'+q);if(d.orders.length)setTimeout(()=>window.print(),400)}}
+// 商品彙總：依品牌分組，同一商品併成一行，度數／選項橫向排開（只算有效訂單）
+function tallyData(o){const B=new Map();let qty=0,sum=0;
+ for(const x of o.orders)if(x.status==='active')for(const l of x.items){const bn=l.brand||'其他';let b=B.get(bn);if(!b){b={name:bn,qty:0,sum:0,items:new Map()};B.set(bn,b)}
+  const k=l.no+'|'+l.name;let it=b.items.get(k);if(!it){it={no:l.no,name:l.name,qty:0,opts:new Map()};b.items.set(k,it)}
+  const op=String(pw(l)||'').replace(/度數 /g,'');it.opts.set(op,(it.opts.get(op)||0)+l.qty);it.qty+=l.qty;b.qty+=l.qty;b.sum+=l.price*l.qty;qty+=l.qty;sum+=l.price*l.qty}
+ const brands=[...B.values()].map(b=>({...b,items:[...b.items.values()].sort((p,q)=>p.no-q.no).map(it=>({...it,opts:[...it.opts].sort((p,q)=>p[0].localeCompare(q[0],'zh-Hant',{numeric:true}))}))})).sort((p,q)=>p.items[0].no-q.items[0].no);
+ return{brands,qty,sum}}
+const tallyUnit=()=>isDrink()?unitW():'盒';
+function tallyHtml(o){const d=tallyData(o),u=tallyUnit(),op=st.tOpen||(st.tOpen={});
+ return `<div class="tly"><div class="sp"><h3>商品彙總（供向廠商叫貨）</h3>${d.qty?`<div class="tly-bar"><span>共 <b>${d.qty}</b> ${u}　<b>${nt(d.sum)}</b></span><button class="sec" id="tall">全部展開</button><button class="sec" id="tcp">複製叫貨清單</button></div>`:''}</div>
+ ${d.brands.map(b=>`<details class="tg" data-b="${esc(b.name)}" ${(op[st.cid+'|'+b.name]??d.brands.length===1)?'open':''}><summary><b>${esc(b.name)}</b><span class="sub">${b.items.length} 項</span><span class="tg-q">${b.qty} ${u}</span><span class="tg-s">${nt(b.sum)}</span></summary>${b.items.map(it=>`<div class="ti"><div class="ti-n">${isDrink()?'':'<span class="no">#'+it.no+'</span> '}${esc(it.name)}</div><div class="ti-o">${it.opts.map(([k,n])=>k?`<span class="tc">${esc(k)}<b>×${n}</b></span>`:'').join('')}</div><div class="ti-q">${it.qty} ${u}</div></div>`).join('')}</details>`).join('')||'<p class="muted">還沒有訂單</p>'}</div>`}
+function tallyText(o){const d=tallyData(o),u=tallyUnit(),NL=String.fromCharCode(10);
+ return d.brands.map(b=>'【'+b.name+'】'+b.qty+' '+u+NL+b.items.map(it=>{const p=it.opts.filter(x=>x[0]).map(([k,n])=>k+' ×'+n).join('、');return (isDrink()?'':'#'+it.no+' ')+it.name+(p?'：'+p+'（共 '+it.qty+'）':' ×'+it.qty)}).join(NL)).join(NL+NL)+NL+NL+'合計 '+d.qty+' '+u+'　'+nt(d.sum)}
+function bindTally(o){const all=[...document.querySelectorAll('.tg')],b=document.getElementById('tall');
+ const lab=()=>{if(b)b.textContent=all.every(x=>x.open)?'全部收合':'全部展開'};
+ all.forEach(x=>x.addEventListener('toggle',()=>{st.tOpen[st.cid+'|'+x.dataset.b]=x.open;lab()}));lab();
+ if(b)b.onclick=()=>{const v=!all.every(x=>x.open);all.forEach(x=>x.open=v)};
+ const c=document.getElementById('tcp');if(c)c.onclick=async()=>{try{await navigator.clipboard.writeText(tallyText(o));toast('已複製叫貨清單')}catch(e){alert('無法複製，請改用電腦瀏覽器再試一次')}}}
 async function viewAdmin(quiet){const path=location.pathname;
  if(!st.admin&&!(st.user&&st.user.canCreate)){$('#app').innerHTML=`<div class="lgp"><div class="lg-h"><div class="lg-ic"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg></div><h3>登入</h3><p class="muted">用 Google 帳號登入即可開團並管理自己的團購。</p></div><div id="lbx"></div></div>`;loginBox($('#lbx'),()=>{renderNav();viewAdmin()});return}
  try{const isAdm=!!st.admin;const cs0=await loadCamps();const cs=isAdm?cs0:cs0.filter(c=>c.mine);const curm=cs.find(c=>c.id===st.cid);
@@ -780,7 +802,7 @@ async function viewAdmin(quiet){const path=location.pathname;
   <p class="muted">下載檔 = 原上傳的 Excel，只把訂單填入「填寫單1」（超過會接續填寫單2～4），原本的公式不會被覆蓋。</p>
   <table class="t ord"><thead><tr><th>編號</th><th>姓名／Email</th><th>內容</th><th class="num">金額</th><th></th></tr></thead><tbody>${o.orders.map(x=>`<tr style="${x.status==='cancelled'?'opacity:.5':''}"><td>${x.id}${x.status==='cancelled'?'<span class="tag x">取消</span>':''}${x.pay?'<br><span class="paid" style="margin:0">✔ 已付款</span>':''}</td><td>${esc(x.name)}<div class="sub">${esc(x.email)}</div></td>
    <td class="sub">${x.items.map(l=>`${isDrink()?'':'#'+l.no+' '}${esc(l.name)} ${esc(pw(l))} ×${l.qty}`).join('<br>')}</td><td class="num">${nt(x.total)}${x.pay?`<div class="sub">後五碼 ${esc(x.pay.last5||'—')}${x.payImg?` <a href="#" data-pi="${x.payImg}">看截圖</a>`:''}<br><a href="#" data-rp="${x.id}">撤銷付款</a></div>`:''}</td><td><button class="sec" data-ua="${x.id}">商品無法下單</button> <button class="sec" data-del="${x.id}">刪除</button></td></tr>`).join('')||'<tr><td colspan=5 class="muted">還沒有訂單</td></tr>'}</tbody></table>
-  <h3>商品彙總（供向廠商叫貨）</h3><table class="t"><thead><tr><th>編號</th><th>品項</th><th class="num">總盒數</th><th class="num">金額</th></tr></thead><tbody>${o.tally.map(t=>`<tr><td>${t.no}</td><td>${esc(t.brand)} ${esc(t.name)}${t.opts?'<div class="sub">'+esc(t.opts)+'</div>':''}</td><td class="num">${t.qty}</td><td class="num">${nt(t.qty*t.price)}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan=2><b>整團金額</b></td><td class="num"><b>${o.tally.reduce((n,t)=>n+t.qty,0)}</b></td><td class="num"><b>${nt(o.sum)}</b></td></tr></tfoot></table></div>
+  ${tallyHtml(o)}</div>
   ${isAdm?'<div class="card" style="margin-top:12px"><h3 style="margin-top:0">帳號與登入設定</h3><div id="acbox"><span class="muted">載入中…</span></div></div>':''}
   ${st.cat&&st.cat.drink&&!st.cat.platform?`<details id="pmbox" class="card" ${st.pmOpen===st.cid?'open':''}><summary style="cursor:pointer;padding:0"><h3 style="display:inline;margin:0 0 0 4px">商品管理（自訂團）</h3><span class="muted" id="pcount" style="margin-left:8px">${(st.cat.items||[]).length} 項</span></summary><div class="sp" style="margin-top:12px"><p class="muted" style="margin:0;flex:1">自己新增這個團購要賣的品項、價格、圖片與選項（例如尺寸、口味、加料）。同事下單看到的就是這份清單。</p><button id="padd">＋ 新增商品</button></div><div id="pbox"></div></details>`:''}
 `;
@@ -836,6 +858,7 @@ async function viewAdmin(quiet){const path=location.pathname;
   fillUI();
   $('#cls').onclick=async()=>{const closing=!s.closed;if(!confirm(closing?'結單後同事無法再下單或修改（訂單保留，可按「重新開單」恢復）。'+(isDrink()?'系統會寄訂單明細信給開團者。':'')+'確定結單？':'重新開放同事下單？'))return;
    try{const r=await api('/admin/settings',{method:'PUT',admin:1,json:{closed:closing}});toast(closing?(r.mail==='sent'?'已結單，訂單明細信已寄給開團者':r.mail==='waiting'?'已結單，系統自動填單中，完成後會寄信給開團者':'已結單'):'已重新開單');await loadCamps();await fetchCat();viewAdmin()}catch(e){alert(e.message)}};
+  bindTally(o);
   const cp=$('#cpy');if(cp)cp.onclick=async()=>{const NL='\n';const act=o.orders.filter(x=>x.status!=='cancelled');const t=act.map(x=>x.name+NL+x.items.map(l=>'  '+l.name+(l.opts?'（'+l.opts+'）':'')+(l.gift?' 備註：'+l.gift:'')+' ×'+l.qty).join(NL)).join(NL+NL)+NL+NL+'— 彙總 —'+NL+o.tally.map(t=>t.name+(t.opts?'（'+t.opts+'）':'')+' ×'+t.qty).join(NL)+NL+'合計 '+o.tally.reduce((n,t)=>n+t.qty,0)+' 杯，NT$ '+o.sum;try{await navigator.clipboard.writeText(t);toast('已複製點餐清單')}catch(e){prompt('請手動複製：',t)}};
   $('#lo').onclick=()=>{if(st.admin){st.admin='';localStorage.removeItem('lensAdmin')}if(st.user){st.user=null;localStorage.removeItem('lensUser')}renderNav();go('/')};
   if(lite)document.querySelectorAll('#app > .card').forEach((c,i)=>{if(i>0)c.style.display='none'});
