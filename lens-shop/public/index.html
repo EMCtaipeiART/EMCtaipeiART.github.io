@@ -416,10 +416,10 @@ summary{min-height:40px;padding:8px 0;color:var(--bd)}
 .hcd .cdn b{color:var(--bd)!important}.hcd .cdn.urgent b,.cdn.urgent b{color:#d9342b!important}.pcd .cdv .cu.hot,.pcd .cdv .cu.hot em{color:#d9342b!important}
 /* 彈窗的返回／關閉列 */
 .modal .xbar{position:sticky;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:#fff;border-bottom:1px solid #edf1ee}.modal .lg-x{display:none}
-.xbar button.xb,.xbar button.xx,.ch-h button.xb{background:#f1f4f2!important;color:#33443a!important;border:0!important;box-shadow:none!important;border-radius:99px;min-height:36px;padding:4px 14px;font-size:14px;font-weight:600;line-height:1.2;cursor:pointer;width:auto;flex:none;margin:0;transform:none}
-.xbar button.xx{width:36px;height:36px;padding:0;font-size:22px;font-weight:400}.xbar button:hover,.ch-h button.xb:hover{background:#e3ebe5!important}
+.xbar button.xb,.xbar button.xx{background:#f1f4f2!important;color:#33443a!important;border:0!important;box-shadow:none!important;border-radius:99px;min-height:36px;padding:4px 14px;font-size:14px;font-weight:600;line-height:1.2;cursor:pointer;width:auto;flex:none;margin:0;transform:none}
+.xbar button.xx{width:36px;height:36px;padding:0;font-size:22px;font-weight:400}.xbar button:hover{background:#e3ebe5!important}
 .xbar.lbx{position:fixed;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top,0px));display:flex;justify-content:space-between;z-index:2}
-.ch-h button.xb{margin-right:10px;font-size:13px}body:has(>.modalbg) #chb,body:has(>#lb) #chb{display:none!important}
+body:has(>.modalbg) #chb,body:has(>#lb) #chb{display:none!important}
 /* 訂單列表：舒適間距的清單，分隔線區分每筆，金額只顯示一次 */
 .olist{background:#fff;border:1px solid var(--l);border-radius:16px;overflow:hidden;box-shadow:var(--sh)}.orow{padding:20px}.orow+.orow{border-top:1px solid #e8eeea}
 .oh{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px}.oh .on{font-size:16.5px;line-height:1.5}.oh .paid,.oh .unpaid{margin-left:0;font-size:12px;padding:2px 11px}.oh .om{font-size:12.5px;color:var(--m);line-height:1.7}.oh .ot{margin-left:auto;font-size:21px;font-weight:800;color:var(--bd);white-space:nowrap;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Inter","Noto Sans TC",sans-serif;font-variant-numeric:tabular-nums}
@@ -444,6 +444,7 @@ summary{min-height:40px;padding:8px 0;color:var(--bd)}
 .pcd.off .who{padding-right:0}
 #nav .ni .n{position:absolute;top:-6px;right:-6px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;min-width:19px;height:19px;margin:0;padding:0 5px;border-radius:999px;background:#e5342b;color:#fff;font-size:11px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;box-shadow:0 0 0 2px #fff;pointer-events:none}
 @media(max-width:480px){#nav .ni .lb{display:none}}
+.ch-f textarea{scrollbar-width:none}.ch-f textarea::-webkit-scrollbar{display:none}
 </style>
 </head>
 <body>
@@ -1019,7 +1020,7 @@ route();setInterval(()=>{document.querySelectorAll('.cdl[data-dl]').forEach(e=>{
  const shut=el=>{if(el.id==='chp'){if(el.classList.contains('on'))chatToggle()}else if(el.id==='lb')el.click();else el.remove()};
  const btn=(cls,label,text,el)=>{const b=document.createElement('button');b.type='button';b.className=cls;b.setAttribute('aria-label',label);b.textContent=text;b.onclick=e=>{e.stopPropagation();if(ask(el))shut(el)};return b};
  function decorate(el){
-  if(el.id==='chp'){const h=el.querySelector('.ch-h');if(h&&!h.querySelector('.xb'))h.prepend(btn('xb','返回','‹ 返回',el));return}
+  if(el.id==='chp')return;   // 聊天室用右上角收起鈕
   if(el.id==='lb'){if(!el.querySelector('.xbar'))el.append(Object.assign(document.createElement('div'),{className:'xbar lbx'})),el.querySelector('.xbar').append(btn('xb','返回','‹ 返回',el),btn('xx','關閉','×',el));return}
   const m=el.querySelector('.modal');if(!m||m.querySelector(':scope>.xbar'))return;
   const d=document.createElement('div');d.className='xbar';d.append(btn('xb','返回','‹ 返回',el),btn('xx','關閉','×',el));
