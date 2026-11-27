@@ -526,7 +526,7 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 import * as THREE from 'three';
 import {mergeGeometries, mergeVertices} from '../character-studio/vendor/BufferGeometryUtils.js';
 import {makePet} from './pets3d.js?v=10';
-import {createXmas} from './xmas.js?v=1';
+import {createXmas} from './xmas.js?v=2';
 import {makePet as makeGenPet, hasPet as hasGenPet} from './pets3d-gen.js?v=18';   // 兩隻貓和兩隻狗都用生成版模型
 import {RoundedBoxGeometry} from '../character-studio/vendor/RoundedBoxGeometry.js';
 import {LineSegments2} from '../character-studio/vendor/lines/LineSegments2.js';
@@ -2714,7 +2714,7 @@ const bootChars = cloudReady.then(() => {
 Promise.all([buildOffice(), loadIcons(), bootChars])
   .then(async () => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); setLoad('讀取出勤狀態', .9); live.version = 0; await Promise.race([pollNow(), new Promise(r => setTimeout(r, 12000))]);   // 人物都建好後才（重新）完整讀一次：先前 WebSocket 等提早的讀取當時人物還沒建完，那次的狀態與位置沒人接，之後讀到「沒變」就一直不補，進站後才慢慢補上
     { let n = 0; const tot = walkLoads.length; walkLoads.forEach(pr => pr.then(() => setLoad('載入走路動畫', .9 + .1 * ++n / tot))); setLoad('載入走路動畫', .9); await Promise.race([Promise.all(walkLoads), new Promise(r => setTimeout(r, 10000))]); }   // 最多等 10 秒，網路太慢就先進站，沒載完的人物走路時先用彈跳搖擺
- settleChars(); startLiveSync(); CATS.forEach(c => c.init()); showTitleCard(); window.__plaza = {wheelOpen: c => wheelOpen(c), updateWheel: () => updateWheel(), get player() { return player; }, remoteFromState, catAt:CATS[0].at, wanderStep, findPath, guestAt, guestGoFloor, updateElev, elevGo, floorOf, elevInteract, fridges, fridgeInteract, get xmas() { return xmas; }, rects, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
+ settleChars(); startLiveSync(); CATS.forEach(c => c.init()); if (xmas) petSites.forEach(([x, z]) => xmas.flatten(x, z, 1.3)); showTitleCard(); window.__plaza = {wheelOpen: c => wheelOpen(c), updateWheel: () => updateWheel(), get player() { return player; }, remoteFromState, catAt:CATS[0].at, wanderStep, findPath, guestAt, guestGoFloor, updateElev, elevGo, floorOf, elevInteract, fridges, fridgeInteract, get xmas() { return xmas; }, rects, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
 
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
 const TILT = 0, STRETCH = 1 / Math.cos(Math.atan(8.4 / 9.4)), _e = new THREE.Euler(0, 0, 0, 'YXZ');   // 垂直站立：不再後傾（避免穿進桌子、牆），高度拉長 STRETCH 倍抵消俯視縮短

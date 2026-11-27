@@ -13,16 +13,15 @@ const EDGE = .018;   // 黑色外框粗細（世界單位）
 const SPOTS5 = [[1137, 62, 1.15, true], [62, 40, 1.0, false], [1141, 1330, 1.05, true], [452, 1450, 1.0, false]];
 const SPOTS4 = [[1335, 135, 1.15, true], [35, 40, 1.0, false], [528, 640, .82, false], [1340, 640, 1.05, true], [1340, 1610, 1.1, false], [470, 1620, 1.0, true]];
 
-// ---------- 室內積雪的「鏟雪走道」（版面 px；五樓＝位移後的實際值，四樓＝本機座標）。整層鋪雪，只有這些地方清出地板 ----------
-// 線段 [x0, y0, x1, y1, 寬(選填，預設 WALK)]；矩形 {r:[x0, y0, x1, y1]}。改家具或搬座位後要回來調走道（椅子周圍會自動清開）
-const WALK = 72;
+// ---------- 室內積雪的「踩出來的走道」（版面 px；五樓＝位移後的實際值，四樓＝本機座標）。整層鋪滿有高低的積雪，沿這些線零星清出幾塊地板 ----------
+// 線段 [x0, y0, x1, y1]；矩形 {r:[x0, y0, x1, y1], full:true＝整塊清乾淨（地面投影），否則只壓薄}。改家具或通道後要回來調
 const PATHS5 = [
   [40, 268, 1142, 268], [40, 512, 1142, 512], [40, 749, 1142, 749], [40, 1010, 1142, 1010],                 // 四條橫走道（桌排之間）
   [40, 268, 40, 1010], [346, 268, 346, 1010], [1142, 100, 1142, 1010],                                      // 三條直走道
   [201, 205, 201, 268], [408, 185, 408, 268], [570, 185, 570, 268], [634, 100, 634, 268], [634, 101, 705, 101],   // 電梯、男廁、女廁、會議室 A 門口
   {r:[305, 5, 425, 195]}, {r:[465, 5, 590, 195]},                                                           // 廁所內
   [440, 1010, 440, 1405], [240, 1177, 440, 1177], [240, 1385, 440, 1385], [440, 1330, 570, 1330], [440, 1300, 340, 1300],   // 茶水間、倉庫、會議室 C
-  [846, 1010, 846, 1150], [650, 1140, 1044, 1140], {r:[738, 1312, 954, 1425]}, [1142, 1010, 1142, 1250]     // 會議室 D（含地面投影範圍）、右下聖誕樹
+  [846, 1010, 846, 1150], [650, 1140, 1044, 1140], {r:[738, 1312, 954, 1425], full:true}, [1142, 1010, 1142, 1250]     // 會議室 D（含地面投影範圍）、右下聖誕樹
 ];
 const PATHS4 = [
   [-30, 305, 1345, 305], [-30, 578, 528, 578], [-30, 810, 528, 810], [-30, 1043, 528, 1043], [-30, 1275, 528, 1275], [-30, 1590, 1345, 1590],
@@ -208,36 +207,77 @@ export function createXmas({scene, rects, blocked, chairSeats, U, FX4, floor4, f
       }
     }
   }
-  // ---------- 室內積雪：整層一張貼圖（走道與椅子周圍挖空），走道兩旁堆小雪堆。純外觀，踩上去不影響走路 ----------
-  const K = small ? .6 : .85;   // 貼圖解析度（貼圖像素／版面 px）
-  const piles = [];
+  // ---------- 室內積雪：整層一片有高低起伏的雪地（格點網格，高度寫在頂點上）。純外觀，踩上去不影響走路 ----------
+  // 高度（世界單位）：家具底下、牆邊堆得高（≤ .34）；走得到的地方薄（≤ .11）；走道上零星清到露出地板；椅子與寵物窩旁壓平，不擋東西
+  const CELL = small ? 10 : 7;   // 格點間距（版面 px）
+  const noise = (x, y) => { const h = (i, j) => { let n = Math.imul(i, 374761393) ^ Math.imul(j, 668265263); n = Math.imul(n ^ (n >>> 13), 1274126177); return ((n ^ (n >>> 16)) >>> 0) / 4294967296; };
+    const i = Math.floor(x), j = Math.floor(y), u = x - i, v = y - j, a = u * u * (3 - 2 * u), b = v * v * (3 - 2 * v);
+    return (h(i, j) * (1 - a) + h(i + 1, j) * a) * (1 - b) + (h(i, j + 1) * (1 - a) + h(i + 1, j + 1) * a) * b; };
+  const clamp = v => v < 0 ? 0 : v > 1 ? 1 : v, ease = v => { v = clamp(v); return v * v * (3 - 2 * v); };
+  const piles = [], fields = [];
   FLOORS.forEach(({f:[x0, x1, z0, z1]}, fi) => {
-    const ox = fi ? FX4 : 0, lx = x0 / U - ox, lz = z0 / U, wpx = (x1 - x0) / U, hpx = (z1 - z0) / U;
-    const c = document.createElement('canvas'); c.width = Math.round(wpx * K); c.height = Math.round(hpx * K); const g = c.getContext('2d');
-    const pat = g.createPattern(snowCanvas, 'repeat'); pat.setTransform(new DOMMatrix().scale(1.3 * K)); g.fillStyle = pat; g.fillRect(0, 0, c.width, c.height);
-    const stamps = [], boxesClear = [];   // 圓形戳章 [x, y, 半徑]：沿線段排一串、半徑微微抖動，邊緣才像鏟出來的
-    const line = (ax, ay, bx, by, w) => { const n = Math.max(1, Math.round(Math.hypot(bx - ax, by - ay) / 11)); for (let i = 0; i <= n; i++) stamps.push([ax + (bx - ax) * i / n, ay + (by - ay) * i / n, w / 2 + (rnd() - .5) * 9]); };
+    const ox = fi ? FX4 : 0, step = CELL * U, W = Math.ceil((x1 - x0) / step) + 1, D = Math.ceil((z1 - z0) / step) + 1, N = W * D, dx = (x1 - x0) / (W - 1), dz = (z1 - z0) / (D - 1);
+    const cut = new Float32Array(N).fill(99), cap = new Float32Array(N).fill(1), solid = new Float32Array(N), height = new Float32Array(N);
+    const near = (px, py, R, fn) => { const wx = (px + ox) * U, wz = py * U, r = R * U;   // 走訪某點（版面 px）周圍的格點，傳回距離（px）
+      for (let j = Math.max(0, Math.floor((wz - r - z0) / dz)); j <= Math.min(D - 1, Math.ceil((wz + r - z0) / dz)); j++) for (let i = Math.max(0, Math.floor((wx - r - x0) / dx)); i <= Math.min(W - 1, Math.ceil((wx + r - x0) / dx)); i++) fn(j * W + i, Math.hypot(x0 + i * dx - wx, z0 + j * dz - wz) / U); };
+    const rectEach = ([a, b, c, d], pad, fn) => { for (let j = 0; j < D; j++) { const y = (z0 + j * dz) / U; if (y < b - pad || y > d + pad) continue; for (let i = 0; i < W; i++) { const x = (x0 + i * dx) / U - ox; if (x < a - pad || x > c + pad) continue; fn(j * W + i, Math.hypot(Math.max(a - x, 0, x - c), Math.max(b - y, 0, y - d))); } } };
+    const stamps = [];
     for (const p of fi ? PATHS4 : PATHS5) {
-      if (p.r) { const [a, b, cc, d] = p.r; boxesClear.push(p.r); for (const [q, w, e, t] of [[a, b, cc, b], [cc, b, cc, d], [cc, d, a, d], [a, d, a, b]]) line(q, w, e, t, 18); }
-      else line(p[0], p[1], p[2], p[3], p[4] || WALK);
+      if (p.r) { if (p.full) rectEach(p.r, 14, (k, d) => { cut[k] = Math.min(cut[k], d - 4); }); else rectEach(p.r, 20, (k, d) => { cap[k] = Math.min(cap[k], .03 + .07 * ease(d / 20)); }); continue; }
+      const [ax, ay, bx, by] = p, len = Math.hypot(bx - ax, by - ay), n = Math.max(1, Math.round(len / 25)), px = -(by - ay) / (len || 1), py = (bx - ax) / (len || 1);
+      for (let i = 0; i <= n; i++) {
+        const x = ax + (bx - ax) * i / n, y = ay + (by - ay) * i / n;
+        near(x, y, 56, (k, d) => { cap[k] = Math.min(cap[k], .042 + .07 * ease((d - 28) / 28)); });   // 走道整條被踩薄
+        if (rnd() < .24) continue;   // 留一些沒清到的段落
+        const off = (rnd() - .5) * 30; stamps.push([x + px * off, y + py * off, 10 + rnd() * 17]);
+        if (rnd() < .3) { const o2 = off + (rnd() < .5 ? -1 : 1) * (20 + rnd() * 14); stamps.push([x + px * o2, y + py * o2, 6 + rnd() * 8]); }
+      }
     }
-    for (const st of chairSeats) { const x = st.x / U - ox, y = st.z / U; if (x > lx && x < lx + wpx) stamps.push([x, y, 27]); }
-    for (const [a, b, cc, d] of zones) { const x = a / U - ox; if (x > lx && x < lx + wpx) boxesClear.push([x - 8, b / U - 8, cc / U - ox + 8, d / U + 8]); }
-    for (const [extra, color] of [[11, '#bdd0f0'], [6, '#dbe7fa'], [0, null]]) {   // 兩圈藍色陰影做出雪的厚度，最後挖空
-      g.globalCompositeOperation = color ? 'source-over' : 'destination-out'; g.fillStyle = color || '#000';
-      for (const [x, y, r] of stamps) { g.beginPath(); g.arc((x - lx) * K, (y - lz) * K, (r + extra) * K, 0, Math.PI * 2); g.fill(); }
-      for (const [a, b, cc, d] of boxesClear) g.fillRect((a - lx - extra) * K, (b - lz - extra) * K, (cc - a + extra * 2) * K, (d - b + extra * 2) * K);
+    for (const [x, y, r] of stamps) near(x, y, r + 34, (k, d) => { cut[k] = Math.min(cut[k], d - r); });
+    for (const st of chairSeats) { const x = st.x / U - ox, y = st.z / U; if ((x + ox) * U > x0 && (x + ox) * U < x1) near(x, y, 58, (k, d) => { cap[k] = Math.min(cap[k], .018 + .1 * ease((d - 28) / 30)); }); }
+    for (const [a, b, c, d] of zones) if (a >= x0 && c <= x1) rectEach([a / U - ox, b / U, c / U - ox, d / U], 24, (k, e) => { cap[k] = Math.min(cap[k], .03 + .09 * ease(e / 24)); });
+    for (let j = 0; j < D; j++) for (let i = 0; i < W; i++) solid[j * W + i] = blocked(x0 + i * dx, z0 + j * dz) ? 1 : 0;
+    const tmp = new Float32Array(N);   // 把「走不到」的範圍抹開，雪堆才是斜坡、不是直角台階
+    for (let pass = 0; pass < 3; pass++) { for (const [src, dst, o, lim] of [[solid, tmp, 1, W], [tmp, solid, W, D]]) for (let k = 0; k < N; k++) { const at = o === 1 ? k % W : (k / W) | 0; dst[k] = (src[k] + src[at > 1 ? k - 2 * o : k] + src[at > 0 ? k - o : k] + src[at < lim - 1 ? k + o : k] + src[at < lim - 2 ? k + 2 * o : k]) / 5; } }
+    for (let j = 0; j < D; j++) for (let i = 0; i < W; i++) {
+      const k = j * W + i, X = x0 + i * dx, Z = z0 + j * dz;
+      const big = noise(X * .55, Z * .55), mid = noise(X * 1.5 + 31, Z * 1.5 + 7), fine = noise(X * 4 + 3, Z * 4 + 19), lump = clamp(big * .62 + mid * .38);
+      const open = .028 + .105 * ease((lump - .22) / .58) + fine * .012, piled = .07 + .3 * ease((lump - .15) / .65) + fine * .016;
+      let h = open + (piled - open) * ease((solid[k] - .35) / .6);
+      h = Math.min(h, cap[k] >= 1 ? 1 : cap[k] + fine * .008 + solid[k] * solid[k] * .1);
+      const d = cut[k] + (noise(X * 2.6 + 11, Z * 2.6 + 5) - .5) * 16;   // 清出範圍的邊緣加雜訊
+      if (d > 0 && d < 26) h += .034 * Math.sin(d / 26 * Math.PI) * (.4 + mid) * Math.min(1, cap[k] / .04);   // 清出來的雪堆在旁邊
+      h = -.02 + (h + .02) * ease((d + 3) / 13);
+      const rim = Math.min(i, W - 1 - i, j, D - 1 - j) * CELL; if (rim < 30) h = .018 + (h - .018) * rim / 30;   // 樓層邊緣接到露台雪地
+      height[k] = h;
     }
-    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
-    const o = {map:tex, alphaTest:.5}, mat = FLAT ? new THREE.MeshLambertMaterial(o) : new THREE.MeshStandardMaterial({...o, roughness:.95, metalness:0});
+    const pos = new Float32Array(N * 3), nor = new Float32Array(N * 3), col = new Float32Array(N * 3), uv = new Float32Array(N * 2), index = new Uint32Array((W - 1) * (D - 1) * 6), v = new THREE.Vector3();
+    const low = new THREE.Color(0xb0c6ec), high = new THREE.Color(0xffffff), c = new THREE.Color();
+    const paintAt = k => {   // 法線把起伏放大一點、凹處染藍，俯視才看得出高低
+      const i = k % W, j = (k / W) | 0, l = height[i > 0 ? k - 1 : k], r = height[i < W - 1 ? k + 1 : k], u = height[j > 0 ? k - W : k], dn = height[j < D - 1 ? k + W : k], h = height[k];
+      v.set(-(r - l) * 2.4 / (2 * dx), 1, -(dn - u) * 2.4 / (2 * dz)).normalize(); v.toArray(nor, k * 3);
+      const wide = (height[i > 2 ? k - 3 : k] + height[i < W - 3 ? k + 3 : k] + height[j > 2 ? k - 3 * W : k] + height[j < D - 3 ? k + 3 * W : k]) / 4;
+      c.copy(low).lerp(high, clamp(.22 + ease(h / .085) * .62 + (h - wide) * 7 + ease((h - .09) / .2) * .2)); c.toArray(col, k * 3);
+      pos[k * 3 + 1] = h;
+    };
+    for (let k = 0; k < N; k++) { const i = k % W, j = (k / W) | 0; pos[k * 3] = x0 + i * dx; pos[k * 3 + 2] = z0 + j * dz; uv[k * 2] = pos[k * 3]; uv[k * 2 + 1] = -pos[k * 3 + 2]; paintAt(k); }
+    let n = 0; for (let j = 0; j < D - 1; j++) for (let i = 0; i < W - 1; i++) { const a = j * W + i, b = a + 1, d = a + W, e = d + 1; if (Math.max(height[a], height[b], height[d], height[e]) < -.005) continue; index.set([a, d, b, b, d, e], n); n += 6; }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); geo.setIndex(new THREE.BufferAttribute(index.slice(0, n), 1)); geo.computeBoundingSphere();
+    const o = {map:snowTex, vertexColors:true}, mat = FLAT ? new THREE.MeshLambertMaterial(o) : new THREE.MeshStandardMaterial({...o, roughness:.93, metalness:0});
     indoorMats.push(mat);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), mat); m.rotation.x = -Math.PI / 2; m.position.set((x0 + x1) / 2, .007, (z0 + z1) / 2); m.userData.noMask = true; m.receiveShadow = !FLAT; add(m); added.push(m);
-    // 走道邊的小雪堆：落在任何走道／清空範圍裡、或家具與牆上的都不放
-    const clear = (x, y, pad) => stamps.some(([a, b, r]) => Math.hypot(a - x, b - y) < r + pad) || boxesClear.some(([a, b, cc, d]) => x > a - pad && x < cc + pad && y > b - pad && y < d + pad);
-    for (let i = 0; i < stamps.length; i += 4) { const [x, y, r] = stamps[i], a = rnd() * Math.PI * 2, px = x + Math.cos(a) * (r + 15), py = y + Math.sin(a) * (r + 15), wx = (px + ox) * U, wz = py * U;
-      if (!clear(px, py, 11) && !blocked(wx, wz)) piles.push([wx, -.01, wz, .24 + rnd() * .26, rnd() * 6.28]); }
+    const m = new THREE.Mesh(geo, mat); m.userData.noMask = true; m.receiveShadow = !FLAT; add(m); added.push(m);
+    fields.push({x0, x1, z0, z1, dx, dz, W, D, height, geo, paintAt});
+    // 散在上面的雪團：牆邊、家具底下放大顆的，空地放小顆的；清出來的地方和椅子旁不放
+    for (let t = 0, got = 0; t < 4000 && got < 150; t++) { const i = 2 + Math.floor(rnd() * (W - 4)), j = 2 + Math.floor(rnd() * (D - 4)), k = j * W + i; if (cut[k] < 24 || cap[k] < .1 || height[k] < .05) continue;
+      got++; piles.push([x0 + i * dx, height[k] - .05, z0 + j * dz, solid[k] > .8 ? .35 + rnd() * .45 : .2 + rnd() * .2, rnd() * 6.28]); }
   });
   scatter(mound, piles, false);
+  function flatten(x, z, r){   // 把某個點周圍的雪壓平（寵物的窩和碗是場景蓋完才擺的）
+    for (const F of fields) { if (x < F.x0 || x > F.x1 || z < F.z0 || z > F.z1) continue; const touched = [];
+      for (let j = Math.max(0, Math.floor((z - r - F.z0) / F.dz)); j <= Math.min(F.D - 1, Math.ceil((z + r - F.z0) / F.dz)); j++) for (let i = Math.max(0, Math.floor((x - r - F.x0) / F.dx)); i <= Math.min(F.W - 1, Math.ceil((x + r - F.x0) / F.dx)); i++) {
+        const k = j * F.W + i, d = Math.hypot(F.x0 + i * F.dx - x, F.z0 + j * F.dz - z); if (d > r) continue; F.height[k] = Math.min(F.height[k], .012 + .09 * ease((d / r - .6) / .4)); touched.push(k); }
+      for (const k of touched) F.paintAt(k); for (const a of ['position', 'normal', 'color']) F.geo.attributes[a].needsUpdate = true; }
+  }
 
   scatter(rug, rugs, false); scatter(bigTree, trees); scatter(snowman, men); gifts.forEach((g, i) => scatter(g, boxes[i]));
   for (const [x, y, z, sc] of pines) treeLights(x, y, z, sc, PINE_TIERS, 11, .85);
@@ -296,7 +336,7 @@ export function createXmas({scene, rects, blocked, chairSeats, U, FX4, floor4, f
       }`}));
   flakes.frustumCulled = false; flakes.visible = !still; add(flakes).userData.noMask = true;
 
-  const theme = isDark => { snowMat.color.set(isDark ? 0x8f9ee0 : 0xffffff); for (const m of indoorMats) m.color.set(isDark ? 0x7d88cc : 0xffffff); sideMat.color.set(isDark ? 0x56589a : 0xb9cbe6); flakeU.edge.value.set(isDark ? 0xa9c8ff : 0x6f9fe0); };
+  const theme = isDark => { snowMat.color.set(isDark ? 0x8f9ee0 : 0xffffff); for (const m of indoorMats) m.color.set(isDark ? 0x7d88cc : 0xf4f7fc); sideMat.color.set(isDark ? 0x56589a : 0xb9cbe6); flakeU.edge.value.set(isDark ? 0xa9c8ff : 0x6f9fe0); };
   themeHooks.push(theme); theme(dark);
 
   const size = new THREE.Vector2();
@@ -308,5 +348,5 @@ export function createXmas({scene, rects, blocked, chairSeats, U, FX4, floor4, f
     flakeU.time.value = (ms / 1000) % 3600; flakeU.center.value.copy(center); flakeU.scale.value = renderer.getDrawingBufferSize(size).y;
     glow.forEach((m, i) => m.color.setScalar(1.05 + .75 * Math.pow(Math.max(0, Math.sin(ms / 520 + i * Math.PI * 2 / 3)), 2)));
   }
-  return {update, zones, flakes, counts:{neon:neonN, piles:piles.length, flakes:N, bulbs:bulbs.reduce((s, b) => s + b.length, 0), meshes:added.length}};
+  return {update, flatten, zones, flakes, counts:{neon:neonN, piles:piles.length, flakes:N, bulbs:bulbs.reduce((s, b) => s + b.length, 0), meshes:added.length}};
 }
