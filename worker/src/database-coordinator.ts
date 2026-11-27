@@ -32,10 +32,13 @@ import type {
 } from './types';
 
 const STATE_KEY = 'primary';
-import { COIN_KIND_LABEL, COIN_SPEND_PER_GENERATION, COIN_SPEND_PER_REGENERATION, COIN_START_DATE, coinHash, coinsToTenths, endedOnOrAfterStart, safeEqual, tenthsToCoins, verifyCoinChain, type CoinEntry, type CoinKind } from './coins';
+import { COIN_KIND_LABEL, COIN_SPEND_PER_GENERATION, COIN_SPEND_PER_REGENERATION, COIN_START_DATE, coinHash, coinsToTenths, endedOnOrAfterStart, safeEqual, COIN_TENTHS, tenthsToCoins, verifyCoinChain, type CoinEntry, type CoinKind } from './coins';
 const PIXEL_OFFICE_NAMES = ['Leona', 'Amber', 'Noise', 'Anna', 'Machi'];
 /** 合成遊戲「辦公室翻身記」闖關榜可上榜的人物（與 office-merge/logic.js 的 PEOPLE 一致）。 */
 const OFFICE_MERGE_NAMES = ['Amber', 'Anna', 'Leona', 'Machi', 'Noise', '余采馨', '吳冠賢', '廖秦葦', '李明庭', '鄭筱舢', '黎子瑄', '王藍庭'];
+const OFFICE_MERGE_ENERGY_PRICE = 15;        // 平台幣
+const OFFICE_MERGE_ENERGY_AMOUNT = 100;      // 換到的能量
+const OFFICE_MERGE_PICKUPS_PER_DAY = 300;    // 撿道具回饋能量的每日上限（防灌點）
 const PIXEL_OFFICE_STAFF_EMPTY_SEATS: number[] = [12, 15];   // 要固定空著的座位（2026-10-16 曾指定 3 號空著，後來改成鄭筱舢坐 3 號，現在六個座位都可用）
 const PIXEL_OFFICE_STAFF_SEATS = 18;   // 企劃部、專案部同仁的座位（設計部六張桌子右側再六張，完成「建立你的角色」的人依序入座）
 const PIXEL_OFFICE_MAX_X = 2305, PIXEL_OFFICE_MAX_Y = 2400, PIXEL_OFFICE_MIN_Y = -1900;   // 往上複製的兩組桌子在畫面上方，邏輯 y 是負的
@@ -2920,6 +2923,79 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'officeMergeRank', ranks } as ApiResult;
   }
 
+  /* ---------- 合成遊戲「辦公室翻身記」的能量：元宇宙撿道具回饋、平台幣兌換。存 pixel_office_settings 的 merge-energy:<名字>。
+     能量先記在 pending，遊戲領取（claim）後才加進它自己的存檔；同一個領取編號重送會拿到同一個數字，不會重複加也不會遺失。 ---------- */
+  private officeMergeName(database: DatabaseSnapshot, session: SessionRecord | null): string {
+    if (!session) return '';
+    const row = settingsRow(database, session.account || session.user);
+    const labels = [row?.['名字'], row?.['顯示名'], session.user, text(session.account).split('@')[0]].map(value => text(value).toLowerCase()).filter(Boolean);
+    return OFFICE_MERGE_NAMES.find(name => labels.includes(name.toLowerCase())) || '';
+  }
+
+  private officeMergeEnergyRead(name: string): { pending: number; claims: Array<[string, number]>; bought: string[]; day: string; picked: number } {
+    const row = this.ctx.storage.sql.exec<{ value: string }>('SELECT value FROM pixel_office_settings WHERE key = ?', 'merge-energy:' + name).toArray()[0];
+    let v: Row = {};
+    try { v = asRow(JSON.parse(row?.value || '{}')); } catch { v = {}; }
+    return { pending: Math.max(0, Math.floor(Number(v.pending) || 0)), claims: Array.isArray(v.claims) ? v.claims as Array<[string, number]> : [], bought: Array.isArray(v.bought) ? v.bought.map(String) : [], day: text(v.day), picked: Math.max(0, Math.floor(Number(v.picked) || 0)) };
+  }
+
+  private officeMergeEnergyWrite(name: string, value: object): void {
+    this.ctx.storage.sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', 'merge-energy:' + name, JSON.stringify(value), Date.now());
+  }
+
+  /** 撿到一個地上道具 → 1 點能量。每天有上限，擋掉直接打 API 灌點。回傳實際給的點數。 */
+  private officeMergePickup(name: string): number {
+    const record = this.officeMergeEnergyRead(name);
+    const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date());
+    if (record.day !== day) { record.day = day; record.picked = 0; }
+    if (record.picked >= OFFICE_MERGE_PICKUPS_PER_DAY) return 0;
+    record.picked += 1; record.pending += 1;
+    this.officeMergeEnergyWrite(name, record);
+    return 1;
+  }
+
+  /** op:'status' 查名字、平台幣餘額；op:'claim'（claimId）領取累積的能量；op:'buy'（requestId）用平台幣兌換。一律要登入。 */
+  private async officeMergeEnergy(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const current = this.requireSession(session);
+    const name = this.officeMergeName(database, current);
+    if (!name) throw new Error('這個帳號沒有對應的遊戲人物');
+    const holder = this.coinHolderName(database, current);
+    const op = text(payload.op), uuid = /^[0-9a-f-]{36}$/;
+    let claimed = 0;
+    if (op === 'claim') {
+      const id = text(payload.claimId);
+      if (!uuid.test(id)) throw new Error('缺少領取編號');
+      const record = this.officeMergeEnergyRead(name);
+      const done = record.claims.find(item => item[0] === id);
+      if (done) claimed = done[1];
+      else if (record.pending > 0) {
+        claimed = record.pending; record.pending = 0;
+        record.claims = [...record.claims, [id, claimed] as [string, number]].slice(-20);
+        this.officeMergeEnergyWrite(name, record);
+      }
+    } else if (op === 'buy') {
+      const id = text(payload.requestId);
+      if (!uuid.test(id)) throw new Error('缺少兌換編號');
+      if (!holder) throw new Error('這個帳號沒有平台幣');
+      const ref = `merge:${id}`, cost = OFFICE_MERGE_ENERGY_PRICE * COIN_TENTHS;
+      let entry = this.ctx.storage.sql.exec<CoinEntry>('SELECT * FROM coin_ledger WHERE kind = ? AND ref = ?', 'merge_energy', ref).toArray()[0];
+      if (entry && entry.holder !== holder) throw new Error('兌換編號重複');
+      if (!entry) {
+        [entry] = await this.coinAppend([{ kind: 'merge_energy', holder, amount: -cost, ref, memo: `翻身記兌換能量 ${OFFICE_MERGE_ENERGY_AMOUNT} 點`, actor: current.account }], () => {
+          const balance = this.coinBalance(holder);
+          if (balance < cost) throw new Error(`平台幣不足：目前 ${tenthsToCoins(balance)} 點，兌換需要 ${OFFICE_MERGE_ENERGY_PRICE} 點`);
+        });
+      }
+      const record = this.officeMergeEnergyRead(name);
+      if (!record.bought.includes(id)) {
+        record.pending += OFFICE_MERGE_ENERGY_AMOUNT;
+        record.bought = [...record.bought, id].slice(-200);
+        this.officeMergeEnergyWrite(name, record);
+      }
+    } else if (op !== 'status') throw new Error('不支援的操作');
+    return { ok: true, action: 'officeMergeEnergy', name, claimed, pending: this.officeMergeEnergyRead(name).pending, wallet: Boolean(holder), balance: holder ? tenthsToCoins(this.coinBalance(holder)) : 0, price: OFFICE_MERGE_ENERGY_PRICE, amount: OFFICE_MERGE_ENERGY_AMOUNT } as ApiResult;
+  }
+
   /** 3D 辦公室的流浪貓：辦公室歸屬感（全員共用，cat:office）與每人的信任度（cat:<名字>）。
    *  op:'get' 讀取；op:'care' 記一次有效互動（kind: feed／treat／play／company／pet），每人每天每種互動只有前幾次會增加進度（上限在 CAT_CARE）。
    *  effect:'food'／'water' 會更新共用貓碗的補充時間。不寫 GitHub；信任度與歸屬感只增不減。 */
@@ -2994,6 +3070,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       this.ctx.storage.sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', 'funClaims', JSON.stringify(claims), now);
       this.pixelVersionMemo = null;
     }
+    // 地上驚喜道具：撿到的人同時得到 1 點翻身記能量（要登入，才知道是誰撿的）
+    let energy = 0;
+    if (won && id.startsWith('d:') && sessionToken(payload)) {
+      try {
+        const name = this.officeMergeName((await this.snapshot()).database, await this.sessionFor(payload));
+        if (name) energy = this.officeMergePickup(name);
+      } catch { energy = 0; }
+    }
     // 地上驚喜道具：撿到的人有 1% 機會獲得系統回饋 1 點平台幣（伺服器抽籤、帳本以道具 id 為 ref 保證同一個道具不會重複發）
     let reward = 0;
     if (won && id.startsWith('d:') && sessionToken(payload) && Math.floor(Math.random() * 100) === 0) {
@@ -3007,7 +3091,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         }
       } catch { reward = 0; }
     }
-    return { ok: true, action: 'pixelOfficeFun', won, reward, funClaims: claims } as ApiResult;
+    return { ok: true, action: 'pixelOfficeFun', won, reward, energy, funClaims: claims } as ApiResult;
   }
 
   private pixelOfficeUpdate(payload: ApiPayload): ApiResult {
@@ -5801,6 +5885,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'characterRoster') return this.characterRoster(database, session);
       if (action === 'characterSeatFor') return this.characterSeatFor(payload, database, session);
       if (action === 'personaAvatarSnapshot') return this.personaAvatarSnapshot(payload, database, session);
+      if (action === 'officeMergeEnergy') return await this.officeMergeEnergy(payload, database, session);
       if (action === 'pixelOfficePunish') return await this.pixelOfficePunish(payload, database, session);
       if (action === 'coinTransfer') return await this.coinTransfer(payload, database, session);
       if (action === 'coinReserve') return await this.coinReserve(payload, database, session);

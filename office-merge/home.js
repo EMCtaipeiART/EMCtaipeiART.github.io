@@ -2,9 +2,9 @@
 import * as G from './logic.js';
 import { me, getRanks, onRanks, sync } from './cloud.js';
 import * as cloud from './cloud.js';
+import { face, onFaces, GHOST } from './chars.js';
 
 const $ = id => document.getElementById(id);
-const face = name => `people/p${G.PEOPLE.indexOf(name) + 1}.png`;
 const TOP = G.STAGES.length + 1;   // 最上層：加班挑戰
 const DECOR = ['s2', 't3', 's4', 't4', 's5', 't5', 's6', 't6', 's7'];
 
@@ -27,8 +27,13 @@ export function ranking(state) {
   return { ranked, waiting: G.PEOPLE.filter(n => !all[n]) };
 }
 
-const person = p => `<figure class="climber${p.name === me ? ' me' : ''}${p.rank <= 3 ? ` top${p.rank}` : ''}">
-  ${p.rank ? `<i>${p.rank}</i>` : ''}<img src="${face(p.name)}" alt=""><figcaption>${p.name}${p.stage ? `<small>${p.stage.have}/${p.stage.goal}</small>` : ''}</figcaption></figure>`;
+// 上榜的人用自己的角色；沒登入（還沒上榜、訪客）一律是透明人
+const person = p => {
+  const mine = me ? p.name === me : p.guest;
+  const look = p.rank ? p.name : GHOST;
+  return `<figure class="climber${mine ? ' me' : ''}${p.rank && p.rank <= 3 ? ` top${p.rank}` : ''}${look === GHOST ? ' ghost' : ''}">
+  ${p.rank ? `<i>${p.rank}</i>` : ''}<img src="${face(look)}" alt=""><figcaption>${p.name}${p.stage ? `<small>${p.stage.have}/${p.stage.goal}</small>` : ''}</figcaption></figure>`;
+};
 
 // 迷宮的走道與隔間牆；奇數層往右走、偶數層往左走，樓梯就接成一條往上的路
 function maze(floor) {
@@ -40,11 +45,13 @@ function maze(floor) {
 
 function tower(state) {
   const { ranked, waiting } = ranking(state);
+  // 訪客以透明人站在自己的樓層，不佔名次
+  const guest = me ? [] : [{ name: '訪客（你）', guest: true, stage: G.stageInfo(state.done) }];
   const floors = [];
   for (let n = TOP; n >= 1; n--) {
-    const here = ranked.filter(p => Math.min(p.stage.no, TOP) === n);
+    const here = [...ranked, ...guest].filter(p => Math.min(p.stage.no, TOP) === n);
     const stage = n === TOP ? G.stageInfo(G.STAGES.reduce((s, x) => s + x.goal, 0)) : G.STAGES[n - 1];
-    floors.push(`<section class="floor${n === TOP ? ' roof' : ''}${here.some(p => p.name === me) ? ' mine' : ''}">${maze(n)}
+    floors.push(`<section class="floor${n === TOP ? ' roof' : ''}${here.some(p => me ? p.name === me : p.guest) ? ' mine' : ''}">${maze(n)}
       <header><b>${n === TOP ? '★' : `${n}F`}</b>${n === TOP ? stage.name : `第 ${n} 關・${stage.name}`}</header>
       <img class="decor" src="items/${DECOR[n - 1]}.png" alt="">
       <div class="crowd">${here.map(person).join('')}</div></section>`);
@@ -69,7 +76,7 @@ function draw(scroll) {
   $('tower').innerHTML = tower(shown);
   const mine = ranking(shown).ranked.find(p => p.name === me);
   $('myRank').textContent = note(mine);
-  $('whoami').textContent = me ? `我是 ${me}` : '訪客';
+  $('whoami').innerHTML = `<img src="${face(me || GHOST)}" alt="">${me ? `我是 ${me}` : '訪客'}`;
   if (!scroll) { $('tower').scrollTop = keep; return; }
   const target = $('tower').querySelector('.floor.mine') || $('tower').lastElementChild;
   $('tower').scrollTop = target.offsetTop + target.offsetHeight / 2 - $('tower').clientHeight / 2;
@@ -88,8 +95,10 @@ onRanks(() => { if (shown && $('home').open) { draw(first); first = false; } });
 $('home').addEventListener('cancel', e => e.preventDefault());
 $('bStart').addEventListener('click', () => $('home').close());
 
-// 從元宇宙開啟時（內嵌）：右上角可以離開，回到辦公室
-if (new URLSearchParams(location.search).has('embed') && parent !== window) {
-  $('bLeave').hidden = false;
-  $('bLeave').addEventListener('click', () => parent.postMessage({ type: 'expeditionExit' }, location.origin));
-}
+onFaces(() => { if (shown && $('home').open) draw(false); });
+
+// 離開遊戲：從元宇宙開啟（內嵌）就回辦公室，直接開網址就回網站首頁
+$('bLeave').addEventListener('click', () => {
+  if (new URLSearchParams(location.search).has('embed') && parent !== window) parent.postMessage({ type: 'expeditionExit' }, location.origin);
+  else location.href = '../index.html';
+});

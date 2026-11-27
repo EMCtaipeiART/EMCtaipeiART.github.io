@@ -5359,6 +5359,33 @@ describe('平台幣', () => {
   const SERVICE = 'test-coin-service-key';
   const uuid = () => crypto.randomUUID();
 
+  it('翻身記能量：撿地上道具 +1、領取不重複、平台幣 15 點換 100 能量', async () => {
+    const who = await seedDesigner('mergee@emctaipei.test', 'Amber');
+    const admin = await login();
+    const spy = vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    try {
+      expect(await api({ action: 'pixelOfficeFun', id: 'd:5:901:0', v: 1, token: who })).toMatchObject({ won: true, energy: 1 });
+      expect(await api({ action: 'pixelOfficeFun', id: 'd:5:901:0', v: 1, token: who })).toMatchObject({ won: false, energy: 0 });
+      expect(await api({ action: 'pixelOfficeFun', id: 'n:901:0', v: 1, token: who })).toMatchObject({ won: true, energy: 0 });
+      expect(await api({ action: 'pixelOfficeFun', id: 'd:5:901:1', v: 1 })).toMatchObject({ won: true, energy: 0 });
+    } finally { spy.mockRestore(); }
+    const first = uuid();
+    expect(await api({ action: 'officeMergeEnergy', op: 'claim', claimId: first }, who)).toMatchObject({ ok: true, name: 'Amber', claimed: 1, pending: 0 });
+    expect(await api({ action: 'officeMergeEnergy', op: 'claim', claimId: first }, who)).toMatchObject({ claimed: 1 });
+    expect(await api({ action: 'officeMergeEnergy', op: 'claim', claimId: uuid() }, who)).toMatchObject({ claimed: 0 });
+    expect(await api({ action: 'officeMergeEnergy', op: 'status' })).toMatchObject({ ok: false });
+
+    const request = uuid();
+    expect(await api({ action: 'officeMergeEnergy', op: 'buy', requestId: request }, who)).toMatchObject({ ok: false });   // 沒有點數
+    await api({ action: 'coinAdjust', holder: 'Amber', amount: 20, reason: '測試加點數' }, admin);
+    expect(await api({ action: 'officeMergeEnergy', op: 'status' }, who)).toMatchObject({ balance: 20, price: 15, amount: 100 });
+    expect(await api({ action: 'officeMergeEnergy', op: 'buy', requestId: request }, who)).toMatchObject({ ok: true, balance: 5, pending: 100 });
+    expect(await api({ action: 'officeMergeEnergy', op: 'buy', requestId: request }, who)).toMatchObject({ ok: true, balance: 5, pending: 100 });   // 重送不重扣
+    expect(await api({ action: 'officeMergeEnergy', op: 'buy', requestId: uuid() }, who)).toMatchObject({ ok: false });
+    expect(await api({ action: 'officeMergeEnergy', op: 'claim', claimId: uuid() }, who)).toMatchObject({ claimed: 100, pending: 0 });
+    expect(await api({ action: 'coinLedger' }, admin)).toMatchObject({ ok: true, chain: { ok: true } });
+  });
+
   it('驚喜道具有 1% 機會回饋 1 點平台幣，同一個道具只會發一次', async () => {
     const who = await seedDesigner('funwin@emctaipei.test', 'Leona');
     const spy = vi.spyOn(Math, 'random').mockReturnValue(0);

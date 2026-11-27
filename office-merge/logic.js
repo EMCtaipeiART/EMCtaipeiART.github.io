@@ -1,8 +1,7 @@
 // 辦公室翻身記｜遊戲規則（不碰畫面，方便測試）。數值要調整都在這個檔案最上面。
 export const COLS = 7, ROWS = 9, SIZE = COLS * ROWS, SLOTS = 2, MAX_LV = 7, GEN_MAX = 3;
 export const ENERGY_MAX = 100, ENERGY_MS = 60000;   // 能量上限；每幾毫秒回 1 點
-// 獎勵能量可以超過上限（超過時不會自然回復，用掉才會繼續回）
-export const BONUS_MAX = 999;
+// 獎勵、撿道具、兌換來的能量可以超過上限、沒有天花板（超過時不會自然回復，用掉才會繼續回）
 export const LEVEL_REWARD = { energy: 30, xp: 10 };                        // 每升一級
 export const clearReward = no => ({ coins: no * 50, energy: 20 + no * 5, xp: 15 + no * 5 });   // 過第 no 關
 export const orderXp = need => need.reduce((s, r) => s + r.lv * 5, 0);     // 交付訂單的經驗值
@@ -28,7 +27,7 @@ export const LINES = {
 };
 // 產生器各等級掉出 1、2、3 級物品的機率
 const DROPS = [[1], [.75, .25], [.55, .35, .1]];
-// 訂單角色＝多元宇宙辦公室的人物；順序對應 people/p1.png～p12.png
+// 訂單角色＝多元宇宙辦公室的人物（圖在 chars.js 載入）
 export const PEOPLE = ['Amber', 'Anna', 'Leona', 'Machi', 'Noise', '余采馨', '吳冠賢', '廖秦葦', '李明庭', '鄭筱舢', '黎子瑄', '王藍庭'];
 
 export const value = lv => 2 ** (lv - 1);
@@ -165,6 +164,16 @@ export function spawn(state, i, rnd = Math.random, now = Date.now()) {
   return { at: empty[0], item };
 }
 
+// 領到雲端發的能量（撿道具、平台幣兌換）。同一個領取編號只加一次
+export function addBonus(state, id, amount, now = Date.now()) {
+  state.claims ||= [];
+  if (!Number.isInteger(amount) || amount <= 0 || state.claims.includes(id)) return 0;
+  refill(state, now);
+  state.energy += amount;
+  state.claims = [...state.claims, id].slice(-20);
+  return amount;
+}
+
 export function sell(state, from) {
   const src = area(state, from.a), o = src[from.i];
   if (!o || o.box || o.gen) return 0;
@@ -200,7 +209,7 @@ export function deliver(state, id, rnd = Math.random, now = Date.now()) {
   const xp = orderXp(order.need);
   state.coins += order.reward; state.xp += xp; state.done++;
   refill(state, now);
-  const give = energy => { state.energy = Math.min(BONUS_MAX, state.energy + energy); };
+  const give = energy => { state.energy += energy; };
   let cleared = null;
   if (stageInfo(state.done).no !== before.no) {
     const reward = clearReward(before.no);
@@ -223,7 +232,7 @@ export function isValidSave(s) {
   return !!s && s.v === 1 && Array.isArray(s.cells) && s.cells.length === SIZE && s.cells.every(cell) &&
     Array.isArray(s.slots) && s.slots.length === SLOTS && s.slots.every(o => o === null || item(o)) &&
     Number.isFinite(s.coins) && Number.isFinite(s.done) && Number.isFinite(s.made) && !!s.seen &&
-    Number.isInteger(s.energy) && s.energy >= 0 && s.energy <= BONUS_MAX && Number.isFinite(s.energyAt) && Number.isFinite(s.xp) &&
+    Number.isInteger(s.energy) && s.energy >= 0 && Number.isFinite(s.energyAt) && Number.isFinite(s.xp) &&
     Array.isArray(s.orders) && s.orders.length === 3 &&
     s.orders.every(o => o && PEOPLE.includes(o.who) && Array.isArray(o.need) && o.need.every(item) && Number.isFinite(o.reward));
 }

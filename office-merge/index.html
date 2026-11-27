@@ -17,10 +17,13 @@
     <button id="bSound" type="button" class="square" aria-label="聲音設定">♪</button>
     <button id="bHelp" type="button" class="square" aria-label="說明">?</button>
   </header>
+  <div class="stagebar">
+  <button id="bMenu" type="button" class="menu" aria-label="回到主選單"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11.5 12 4l8.5 7.5M6 10v10h4.5v-5.5h3V20H18V10"/></svg><span>主選單</span></button>
   <div class="banner" id="banner" role="button" tabindex="0" title="看同仁闖關榜" aria-label="關卡進度，點開看同仁闖關榜">
     <b id="stageNo">第 1 關</b>
     <div class="track"><s id="stageBar"></s><span id="stageName"></span></div>
     <b id="stageCount">0 / 3</b>
+  </div>
   </div>
   <section id="orders" aria-label="訂單"></section>
   <section class="frame"><div id="board" aria-label="合成棋盤"></div></section>
@@ -31,7 +34,7 @@
   </footer>
 </main>
 <dialog id="home" aria-label="同仁闖關榜">
-  <header><button id="bLeave" type="button" hidden>離開</button><h1>辦公室翻身記</h1><p>同仁闖關榜・越高樓層，關卡越前面</p></header>
+  <header><button id="bLeave" type="button">離開</button><h1>辦公室翻身記</h1><p>同仁闖關榜・越高樓層，關卡越前面</p></header>
   <div id="tower"></div>
   <footer>
     <small id="myRank"></small>

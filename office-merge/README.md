@@ -6,13 +6,17 @@
 - 規則與數值：`logic.js`　畫面與操作：`game.js`　金幣與星星向量圖：`art.js`　聲音：`audio.js`（配樂 `art/bgm.mp3`，Higgsfield ElevenLabs Music v2.5 生成 60 秒；音效即時合成）　升級／過關特效：`effects.js`
 - 關卡與能量數值在 `logic.js` 最上面
 - 產生器、紙箱、背景圖：`art/`（`s` 文具櫃、`t` 茶水間、`box` 紙箱、`bg.jpg` 辦公室；Higgsfield GPT Image 2.6 生成，以 `items/t3.png` 為畫風參考）
-- 人物圖：`people/p1–p12`，從 `pixel-plaza/sprites-hd/` 第 2 格（微側面）裁出頭肩，順序同 `logic.js` 的 `PEOPLE`
 - 物品圖：`items/`，複製自 `pixel-plaza/dex/`（`s1–s7` 文具、`t1–t7` 茶水間）
 - 存檔：瀏覽器 `localStorage` 的 `officeMergeSave`
 
 ## 首頁闖關榜（雲端）
 
 `home.js` 畫面、`cloud.js` 身分與連線。後端 `worker/src/database-coordinator.ts` 的 `officeMergeRank`（只往上記完成訂單數與經驗值，不寫 GitHub，改了要 `wrangler deploy`）。身分來自網址 `?me=` 或網站登入的 `pixelViewerHandoff`，沒有身分的訪客不上榜。與其他元宇宙寫入一樣，後端不驗證身分。本機預覽不打正式後端，`?demo` 可看示範版面。
+
+## 人物與能量
+
+- 人物圖：`chars.js`，和元宇宙同一份最新角色（角色工坊雲端圖集，否則 `pixel-plaza/sprites-hd`）；沒登入的人顯示「透明人」。
+- 能量：元宇宙撿地上道具 +1（每天上限 300 點，防直接打 API）；15 平台幣換 100 能量（帳本類型 `merge_energy`）。後端 `officeMergeEnergy`，要登入憑證；點數先記 pending，遊戲領取後才加進存檔，沒有上限。
 
 ## 入口
 

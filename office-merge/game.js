@@ -4,7 +4,9 @@ import { art } from './art.js';
 import * as audio from './audio.js';
 import { celebrate } from './effects.js';
 import { openHome } from './home.js';
-import { me, sync } from './cloud.js';
+import * as cloud from './cloud.js';
+import { face, onFaces } from './chars.js';
+const { me, sync } = cloud;
 
 // 存檔依身分分開，同一台電腦換人登入不會拿到別人的進度
 const BASE_KEY = 'officeMergeSave';
@@ -15,7 +17,6 @@ try {
 } catch (e) {}
 const $ = id => document.getElementById(id);
 const img = o => o.gen ? art(o.line) : `items/${o.line}${o.lv}.png`;
-const face = who => `people/p${G.PEOPLE.indexOf(who) + 1}.png`;
 const coin = () => `<img src="${art('coin')}" alt="金幣">`;
 
 let state = load();
@@ -108,13 +109,67 @@ function tick() {
 setInterval(tick, 1000);
 addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
 
+/* 雲端能量：撿道具與兌換的點數先記在後端，領下來才加進存檔 */
+const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k) || ''; if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) {} return ''; };
+const CLAIM_KEY = `officeMergeClaim:${me}`, BUY_KEY = `officeMergeBuy:${me}`;
+let claiming = null;
+function claimEnergy() {
+  if (!cloud.canUseEnergy()) return Promise.resolve(0);
+  return claiming ||= (async () => {
+    // 編號先存起來：回應遺失時用同一個編號重領，不會漏也不會重複
+    const id = store(CLAIM_KEY) || crypto.randomUUID();
+    store(CLAIM_KEY, id);
+    const d = await cloud.energy('claim', { claimId: id });
+    const got = G.addBonus(state, id, d.claimed);
+    if (got) { save(); render(); audio.play('coin'); toast(`領到能量 +${got}`); }
+    store(CLAIM_KEY, '');
+    return got;
+  })().catch(() => 0).finally(() => { claiming = null; });
+}
+setInterval(() => { if (!document.hidden) claimEnergy(); }, 60000);
+addEventListener('visibilitychange', () => { if (!document.hidden) claimEnergy(); });
+
+async function exchangeBox() {
+  const box = $('exchange');
+  if (!box) return;
+  if (!cloud.canUseEnergy()) { box.textContent = '登入網站後，可以用平台幣兌換能量。'; return; }
+  box.textContent = '平台幣讀取中…';
+  let info;
+  try { info = await cloud.energy('status'); } catch (e) { box.textContent = `暫時無法兌換：${e.message}`; return; }
+  if (!info.wallet) { box.textContent = '這個帳號沒有平台幣。'; return; }
+  const pending = store(BUY_KEY), enough = info.balance >= info.price || pending;
+  box.innerHTML = `<div>目前平台幣 <b>${info.balance}</b> 點</div><button type="button" class="buy" ${enough ? '' : 'disabled'}>用 ${info.price} 平台幣換 ${info.amount} 能量</button>${enough ? '' : '<div>平台幣不足</div>'}`;
+  const button = box.querySelector('button');
+  let armed = false;
+  button.addEventListener('click', async () => {
+    if (!armed) { armed = true; button.textContent = `再按一次確認扣 ${info.price} 平台幣`; button.classList.add('armed'); return; }
+    button.disabled = true; button.textContent = '兌換中…';
+    // 同一次兌換沿用同一個編號：網路中斷後再按不會重複扣款
+    const requestId = store(BUY_KEY) || crypto.randomUUID();
+    store(BUY_KEY, requestId);
+    try {
+      await cloud.energy('buy', { requestId });
+      store(BUY_KEY, '');
+      await claimEnergy();
+      if ($('panel').open) energyPanel();
+    } catch (e) {
+      if (e.refused) store(BUY_KEY, '');
+      toast(e.refused ? e.message : '連線中斷，請再按一次（不會重複扣款）');
+      exchangeBox();
+    }
+  });
+}
+
 function energyPanel() {
   tick();
   const wait = G.nextEnergyIn(state);
   openPanel('能量', `<div class="big-num">${state.energy} / ${G.ENERGY_MAX}</div>
     點一次產生器花 1 點，每分鐘回 1 點（關掉遊戲也會回）。<br>
     ${wait ? `下一點：${clock(wait)}　回滿約 ${G.ENERGY_MAX - state.energy} 分鐘` : '能量已滿！'}<br>
-    升級送 ${G.LEVEL_REWARD.energy} 點、過關也會送能量（可超過上限）。能量用完時，合成、交付和販售都還能做。`);
+    升級送 ${G.LEVEL_REWARD.energy} 點、過關也會送能量（可超過上限）。能量用完時，合成、交付和販售都還能做。<br>
+    在元宇宙撿地上的道具，一個回饋 1 點能量。
+    <div id="exchange"></div>`);
+  exchangeBox();
 }
 
 /* ---------- 物品從產生器蹦出來 ---------- */
@@ -331,7 +386,9 @@ $('bHelp').addEventListener('click', () => {
   });
 });
 
-$('bEnergy').addEventListener('click', energyPanel);
+$('bEnergy').addEventListener('click', () => { energyPanel(); claimEnergy(); });
+$('bMenu').addEventListener('click', () => openHome(state));
+onFaces(render);
 
 function soundPanel() {
   const row = (key, label) => `<button type="button" class="switch${audio.prefs[key] ? ' on' : ''}" data-sound="${key}" aria-pressed="${audio.prefs[key]}">${label}<span>${audio.prefs[key] ? '開' : '關'}</span></button>`;
@@ -354,3 +411,4 @@ G.refill(state);
 save();
 render();
 openHome(state);
+claimEnergy();

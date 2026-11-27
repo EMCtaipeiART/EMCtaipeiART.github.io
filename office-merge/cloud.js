@@ -20,6 +20,36 @@ function identify() {
 }
 export const me = identify();
 
+// 網站登入憑證：領能量、用平台幣兌換時後端靠它認人
+function token() {
+  try {
+    const get = k => localStorage.getItem(k) || sessionStorage.getItem(k) || '';
+    if (localStorage.getItem('designRequestEditorLoggedOut') === '1') return '';
+    const site = get('designRequestEditorToken');
+    if (site) return site;
+    const h = JSON.parse(localStorage.getItem('pixelViewerHandoff') || 'null');
+    return h && Date.now() - Number(h.at) < 86400000 ? String(h.token || '') : '';
+  } catch (e) { return ''; }
+}
+export const canUseEnergy = () => Boolean(API && me && token());
+
+async function post(payload) {
+  const stop = new AbortController(), timer = setTimeout(() => stop.abort(), 15000);
+  try {
+    const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(payload), cache: 'no-store', signal: stop.signal });
+    const d = await r.json();
+    if (!d.ok) throw Object.assign(new Error(d.error || '後端回覆失敗'), { refused: true });
+    return d;
+  } finally { clearTimeout(timer); }
+}
+
+// 能量：後端依登入憑證認人，和目前遊戲的人物不同就不碰（避免加到別人的存檔）
+export async function energy(op, extra = {}) {
+  const d = await post({ action: 'officeMergeEnergy', op, token: token(), ...extra });
+  if (d.name !== me) throw new Error(`目前登入的是 ${d.name}，和遊戲人物 ${me} 不同`);
+  return d;
+}
+
 let ranks = {};
 export let status = API ? 'loading' : 'off';   // loading | ok | error | off
 const listeners = new Set();
@@ -27,19 +57,13 @@ export const onRanks = fn => listeners.add(fn);
 export const getRanks = () => ranks;
 
 async function call(payload) {
-  const stop = new AbortController(), timer = setTimeout(() => stop.abort(), 10000);
   try {
-    const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify({ action: 'officeMergeRank', ...payload }), cache: 'no-store', signal: stop.signal });
-    const d = await r.json();
-    if (!d.ok) throw new Error(d.error || '後端回覆失敗');
-    ranks = d.ranks || {};
+    ranks = (await post({ action: 'officeMergeRank', ...payload })).ranks || {};
     status = 'ok';
   } catch (e) {
     status = 'error';
-  } finally {
-    clearTimeout(timer);
-    listeners.forEach(fn => fn());
   }
+  listeners.forEach(fn => fn());
 }
 
 // 有身分就上傳自己的進度（後端只往上記），順便拿回全部排名

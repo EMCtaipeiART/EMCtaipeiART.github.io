@@ -911,7 +911,7 @@ let progScope = '', progTimer = 0, progCloud = null;   // 雲端存檔：圖鑑�
 const saveStat = () => { try { localStorage.setItem('pixelFun' + progScope, JSON.stringify(stat)); } catch (e) {} progDirty(); };
 const claims = {}, taken = id => !!claims[id];
 // 驚喜道具、遺落物、馬桶便便、投影機開關的「已處理」紀錄和 2D 版共用同一份後端（pixelOfficeFun／funClaims），所有人看到一樣
-function fnClaim(id, v){ if (typeof live !== 'undefined' && live.ok) post({action:'pixelOfficeFun', id, v, token:adminToken()}).catch(() => {}); }
+function fnClaim(id, v){ if (typeof live !== 'undefined' && live.ok) post({action:'pixelOfficeFun', id, v, token:adminToken()}).then(d => { if (d.energy) setTimeout(() => showQuote('', '⚡ 辦公室翻身記能量 +' + d.energy), 1600); }).catch(() => {}); }
 function applyFunClaims(m){ let ch = false; for (const id of Object.keys(m || {})) { const v = m[id]; if (!Array.isArray(v)) continue; const cur = claims[id]; if (!cur || Number(v[1]) > Number(cur[1]) || (cur[0] !== Number(v[0]) && Number(v[1]) >= Number(cur[1]))) { claims[id] = [Number(v[0]), Number(v[1])]; ch = true; } } if (ch) { try { syncFun(); updateProjectors(true); } catch (e) {} } }
 const quoteBox = document.getElementById('quote'); let quoteTimer = 0;
 function showQuote(title, text){ const b = quoteBox.querySelector('b'); b.textContent = title; b.style.display = title ? 'block' : 'none'; quoteBox.querySelector('span').textContent = text; quoteBox.style.display = 'block'; clearTimeout(quoteTimer); quoteTimer = setTimeout(() => { quoteBox.style.display = 'none'; }, 5200); }
