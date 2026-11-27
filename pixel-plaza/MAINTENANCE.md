@@ -8,6 +8,7 @@
 | 位置 | 內容 |
 | --- | --- |
 | `pixel-plaza/index.html` | 整個 3D 版（HTML＋CSS＋一支 `<script type="module">`，three.js 從 `../character-studio/vendor/` 載入）。**所有功能都在這一個檔案**，改完要保持 `node --check` 通過 |
+| `pixel-plaza/xmas.js` | 聖誕節佈置（積雪、飄雪、聖誕樹、串燈等），規格見 UI-SPEC §7.5 |
 | `pixel-plaza/assets/` | 2D 版移過來的圖：`icons-v3.webp`、`icons-status-v4.webp`、`office-fun-v1/v2.webp/json`、`props2/elevator.png` |
 | `pixel-plaza/snacks/` | 保留舊八款零食像素圖；現行櫃面改由 `snackDisplay()` 生成共用直立 Canvas 展示，不載入此處圖片 |
 | `pixel-plaza/fridge/office-foods-v1.webp` | 冰箱食物圖集（28px 一格，順序見 `FOOD_IDX`） |

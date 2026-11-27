@@ -526,12 +526,14 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 import * as THREE from 'three';
 import {mergeGeometries, mergeVertices} from '../character-studio/vendor/BufferGeometryUtils.js';
 import {makePet} from './pets3d.js?v=10';
+import {createXmas} from './xmas.js?v=1';
 import {makePet as makeGenPet, hasPet as hasGenPet} from './pets3d-gen.js?v=18';   // 兩隻貓和兩隻狗都用生成版模型
 import {RoundedBoxGeometry} from '../character-studio/vendor/RoundedBoxGeometry.js';
 import {LineSegments2} from '../character-studio/vendor/lines/LineSegments2.js';
 import {LineSegmentsGeometry} from '../character-studio/vendor/lines/LineSegmentsGeometry.js';
 import {LineMaterial} from '../character-studio/vendor/lines/LineMaterial.js';
 
+let xmas = null;   // 聖誕佈置（xmas.js），場景蓋完才建；網址加 ?xmas=0 關掉
 const PIXEL_MODE = new URLSearchParams(location.search).get('px') === '1';   // ?px=1：復古低解析像素模式
 const HD = !PIXEL_MODE, DPR = Math.min(devicePixelRatio || 1, 2);
 const RH = 300;                        // 復古模式的內部渲染高度（像素）
@@ -1159,6 +1161,7 @@ async function buildOffice(){
     laptop3d(I(224), I(852), 1);
     rects.push([I(85), I(828), I(137), I(930)], [I(137), I(828), I(308), I(873)]); }
   reflow5F(); doors3d(); upgradeMaterials();
+  if (new URLSearchParams(location.search).get('xmas') !== '0') xmas = createXmas({scene, rects, blocked, chairSeats, U, FX4, floor4:[F4_X0, F4_X1, F4_Z0, F4_Z1], fridges, wallBoxes, outlineMat, HULL_LAYER, FLAT, themeHooks, dark:themeNow === 'dark'});   // 聖誕碰撞要在 startGameplay 之前登記
   dropCache.clear(); noteCache.clear(); startGameplay();   // 場景（含四樓）全部蓋好、碰撞都齊了才開始算道具：否則每個人載入的時間點不同，算出來的位置會不一樣
 }
 // 辦公室細節：依家具／顏色合併幾何，共用材質與貼圖；局部群組保留入座收起與 reflow 語意。
@@ -2711,7 +2714,7 @@ const bootChars = cloudReady.then(() => {
 Promise.all([buildOffice(), loadIcons(), bootChars])
   .then(async () => { for (const c of Object.values(chars)) if (SEATS[c.name]) sitDown(c); setLoad('讀取出勤狀態', .9); live.version = 0; await Promise.race([pollNow(), new Promise(r => setTimeout(r, 12000))]);   // 人物都建好後才（重新）完整讀一次：先前 WebSocket 等提早的讀取當時人物還沒建完，那次的狀態與位置沒人接，之後讀到「沒變」就一直不補，進站後才慢慢補上
     { let n = 0; const tot = walkLoads.length; walkLoads.forEach(pr => pr.then(() => setLoad('載入走路動畫', .9 + .1 * ++n / tot))); setLoad('載入走路動畫', .9); await Promise.race([Promise.all(walkLoads), new Promise(r => setTimeout(r, 10000))]); }   // 最多等 10 秒，網路太慢就先進站，沒載完的人物走路時先用彈跳搖擺
- settleChars(); startLiveSync(); CATS.forEach(c => c.init()); showTitleCard(); window.__plaza = {wheelOpen: c => wheelOpen(c), updateWheel: () => updateWheel(), get player() { return player; }, remoteFromState, catAt:CATS[0].at, wanderStep, findPath, guestAt, guestGoFloor, updateElev, elevGo, floorOf, elevInteract, fridges, fridgeInteract, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
+ settleChars(); startLiveSync(); CATS.forEach(c => c.init()); showTitleCard(); window.__plaza = {wheelOpen: c => wheelOpen(c), updateWheel: () => updateWheel(), get player() { return player; }, remoteFromState, catAt:CATS[0].at, wanderStep, findPath, guestAt, guestGoFloor, updateElev, elevGo, floorOf, elevInteract, fridges, fridgeInteract, get xmas() { return xmas; }, rects, stationOf, deskCells, ICON, chars, camera, seats:chairSeats, blocked, toilets, pickables, applyStatus, floorMeshes, projectors, dropsNow, notesNow, poopsNow, claims, toggleProjector, syncFun}; });
 
 const _cam = new THREE.Vector3(), _tilt = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
 const TILT = 0, STRETCH = 1 / Math.cos(Math.atan(8.4 / 9.4)), _e = new THREE.Euler(0, 0, 0, 'YXZ');   // 垂直站立：不再後傾（避免穿進桌子、牆），高度拉長 STRETCH 倍抵消俯視縮短
@@ -4077,6 +4080,7 @@ function tick(){
   } else { const k = 1 - Math.pow(.0005, dt); camPos.lerp(new THREE.Vector3(guestAt.x, 10.9, guestAt.z + 12.2), k); camera.position.copy(camPos); look.lerp(new THREE.Vector3(guestAt.x, 1, guestAt.z), k); camera.lookAt(look); }   // 沒登入：滾輪／左鍵拖曳平移畫面，點電梯換看另一層
   { const cx = player ? player.holder.position : guestAt; sun.target.position.set(cx.x, 0, cx.z); sun.position.set(cx.x - 13, 22, cx.z - 5); /* 光從左後上方斜照：影子落向右前方 */ }
   CATS.forEach(c => c.update(dt)); updateBillboards(); updateLabels(); updateProjectionView(); updateGameplay(); updateTags(); placeRadial(); updateFridge(); updateElev(); updateTheater(); pushPosition(); pushDance(); trackLast();
+  if (xmas) xmas.update(performance.now(), look, renderer);
   renderFrame();
   requestAnimationFrame(tick);
 }
