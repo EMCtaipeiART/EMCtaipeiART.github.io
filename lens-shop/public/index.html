@@ -412,14 +412,20 @@ summary{min-height:40px;padding:8px 0;color:var(--bd)}
 .hcd .cdn b,.cdn b{font-size:clamp(32px,8.6vw,46px)!important;font-weight:800!important;line-height:1.1;letter-spacing:-1px}.hcd .cdn div,.cdn div{padding:14px 2px}.hcd .cdn span,.cdn span{font-size:12.5px;font-weight:600}
 /* 卡牌倒數：X天X時X分X秒 */
 .pcd .cdv .cdl{gap:5px;white-space:nowrap}.pcd .cdv .cu{font-style:normal;display:inline-flex;align-items:baseline;gap:1px;font-size:13px;font-weight:600;color:var(--bd)}.pcd .cdv .cu em{font-size:30px}.pcd .cdv .cu.s em{font-size:22px;letter-spacing:-.8px}.pcd .cdv .cdl:has(.s){gap:4px}.pcd .cdv:has(.s){margin:0 -8px}
-/* 團購頁倒數：數字用品牌深綠（含不到 24 小時時，不再轉紅） */
-.hcd .cdn b,.hcd .cdn.urgent b,.cdn.urgent b{color:var(--bd)!important}
+/* 倒數數字：平常品牌深綠，剩不到 1 小時轉紅 */
+.hcd .cdn b{color:var(--bd)!important}.hcd .cdn.urgent b,.cdn.urgent b{color:#d9342b!important}.pcd .cdv .cu.hot,.pcd .cdv .cu.hot em{color:#d9342b!important}
 /* 彈窗的返回／關閉列 */
 .modal .xbar{position:sticky;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:#fff;border-bottom:1px solid #edf1ee}.modal .lg-x{display:none}
 .xbar button.xb,.xbar button.xx,.ch-h button.xb{background:#f1f4f2!important;color:#33443a!important;border:0!important;box-shadow:none!important;border-radius:99px;min-height:36px;padding:4px 14px;font-size:14px;font-weight:600;line-height:1.2;cursor:pointer;width:auto;flex:none;margin:0;transform:none}
 .xbar button.xx{width:36px;height:36px;padding:0;font-size:22px;font-weight:400}.xbar button:hover,.ch-h button.xb:hover{background:#e3ebe5!important}
 .xbar.lbx{position:fixed;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top,0px));display:flex;justify-content:space-between;z-index:2}
 .ch-h button.xb{margin-right:10px;font-size:13px}body:has(>.modalbg) #chb,body:has(>#lb) #chb{display:none!important}
+/* 訂單列表：合併為一張清單，左側色條與隔行底色區分每筆，金額只顯示一次 */
+.olist{background:#fff;border:1px solid var(--l);border-radius:14px;overflow:hidden;box-shadow:var(--sh)}.orow{padding:10px 14px 10px 12px;border-left:4px solid var(--b)}.orow.u{border-left-color:#f0b429}.orow+.orow{border-top:1px solid var(--l)}.orow:nth-child(even){background:#f4f8f5}
+.oh{display:flex;align-items:center;flex-wrap:wrap;gap:2px 8px}.oh .on{font-size:15px}.oh .paid,.oh .unpaid{margin-left:0;font-size:11.5px}.oh .om{font-size:12px;color:var(--m)}.oh .ot{margin-left:auto;font-size:19px;font-weight:800;color:var(--bd);white-space:nowrap;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Inter","Noto Sans TC",sans-serif;font-variant-numeric:tabular-nums}
+.oi{list-style:none;margin:4px 0 0;padding:0}.oi li{min-width:0;font-size:13.5px;line-height:1.55;padding:2px 0}.oi li>div:first-child{display:flex;align-items:baseline;gap:8px}.oi li>div:first-child>span{min-width:0}.oi small{color:var(--m);font-size:12px}.oi em{margin-left:auto;font-style:normal;font-weight:700;white-space:nowrap}.oi .rv{margin-top:2px}
+@media(max-width:760px){.oh .om{order:4;width:100%}.oi li>div:first-child{flex-wrap:wrap;row-gap:0}}
+@media(min-width:761px){.orow{display:grid;grid-template-columns:104px 112px minmax(0,1fr) 110px;grid-template-areas:"n b i t" "m m i t";align-content:center;align-items:center;column-gap:8px;padding:6px 16px 6px 12px}.oh{display:contents}.oh .on{grid-area:n;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.oh .paid,.oh .unpaid{grid-area:b;justify-self:start}.oh .om{grid-area:m;font-size:11px;white-space:nowrap}.oh .ot{grid-area:t;justify-self:end;font-size:18px}.oi{grid-area:i;margin:0 0 0 14px}}
 </style>
 </head>
 <body>
@@ -726,9 +732,8 @@ async function viewMine(quiet){const path=location.pathname;
  st.osig=JSON.stringify(d);
  $('#app').innerHTML=`${flowHtml([hv,hv,hp,hp])}<h2>訂單列表</h2><div class="note ok">目前共 <b>${d.count}</b> 筆訂單，合計 <b>${nt(d.sum)}</b></div>
  <div class="tools"><input type="search" id="oq" placeholder="搜尋姓名或商品…" value="${esc(st.oq||'')}"></div>
- ${L.map(o=>`<div class="card" style="margin-bottom:10px"><div class="sp"><b>${esc(o.name)}${o.paid?'<span class="paid">✔ 已付款</span>':'<span class="unpaid">未付款</span>'}</b><span class="muted">訂單 ${o.id}｜${tp(o.updatedAt)}</span></div>
- <table class="t order-detail"><tbody>${o.items.map(l=>`<tr><td>${isDrink()?'':'#'+l.no+' '}${esc(l.brand)} ${esc(l.name)}<div class="sub">${esc(pw(l))}${l.gift?' 贈品：'+esc(l.gift):''}</div>${capsules(l.no)}</td><td class="num">${nt(l.price)} × ${l.qty}</td><td class="num">${nt(l.price*l.qty)}</td></tr>`).join('')}</tbody></table>
- <div class="total" style="margin:6px 0 0;font-size:16px">小計 <b>${nt(o.total)}</b></div></div>`).join('')||'<div class="card muted">沒有符合的訂單</div>'}
+ ${L.length?`<div class="olist">${L.map(o=>`<div class="orow ${o.paid?'p':'u'}"><div class="oh"><b class="on">${esc(o.name)}</b>${o.paid?'<span class="paid">✔ 已付款</span>':'<span class="unpaid">未付款</span>'}<span class="om">訂單 ${o.id}｜${tp(o.updatedAt)}</span><b class="ot">${nt(o.total)}</b></div>
+ <ul class="oi">${o.items.map(l=>`<li><div><span>${isDrink()?'':'#'+l.no+' '}${esc(l.brand)} ${esc(l.name)}</span>${pw(l)||l.gift?`<small>${esc(pw(l))}${l.gift?' 贈品：'+esc(l.gift):''}</small>`:''}<em>×${l.qty}</em></div>${capsules(l.no)}</li>`).join('')}</ul></div>`).join('')}</div>`:'<div class="card muted">沒有符合的訂單</div>'}
  <h2 style="margin-top:26px">修改我的訂單</h2>
  ${mine.length?`<div class="card"><p class="muted">這台瀏覽器下過的訂單（截止前可編輯）：</p>${mine.map(m=>`<p><a href="/order/${m.token}">訂單 ${m.id}（查看／修改）</a></p>`).join('')}</div>`:''}
  <div class="card" style="margin-top:12px"><b>找回我的訂單</b><p class="muted">在別台電腦或清除過瀏覽器？輸入下單時的 Email，系統會把修改連結寄給您。</p>
@@ -935,7 +940,7 @@ async function route(){
 }
 async function load(){await fetchCat();route()}
 const fmtT=iso=>{if(!iso)return'';const d=new Date(iso);return isNaN(d)?'':d.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})};
-function cdTxt(ms){if(ms<=0)return'已截止';const d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5),m=Math.floor(ms%36e5/6e4),sc=Math.floor(ms%6e4/1e3),z=n=>String(n).padStart(2,'0'),u=(n,w)=>'<i class="cu'+(d?' s':'')+'"><em>'+n+'</em>'+w+'</i>';return(d?u(d,'天'):'')+u(z(h),'時')+u(z(m),'分')+u(z(sc),'秒')}
+function cdTxt(ms){if(ms<=0)return'已截止';const d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5),m=Math.floor(ms%36e5/6e4),sc=Math.floor(ms%6e4/1e3),z=n=>String(n).padStart(2,'0'),u=(n,w)=>'<i class="cu'+(d?' s':'')+(ms<36e5?' hot':'')+'"><em>'+n+'</em>'+w+'</i>';return(d?u(d,'天'):'')+u(z(h),'時')+u(z(m),'分')+u(z(sc),'秒')}
 function pcCard(c){const goal=c.goal||0,pct=goal?Math.round(c.sum/goal*100):0,ok=goal&&c.sum>=goal,over=c.ended||c.closed;
  const st0=over?['已結束','x']:['團購中','go'];const res=ok?['開團成功','ok']:(goal&&over)?['未達標','no']:null;
  const ms=c.deadline?Date.parse(c.deadline+(c.deadline.length<=16?':00+08:00':''))-Date.now():0;
@@ -976,7 +981,7 @@ addEventListener('popstate',route);
 function go(p){history.pushState(null,'',p);route()}
 document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[href^="/"]');if(!a||e.defaultPrevented||e.metaKey||e.ctrlKey||e.shiftKey||e.button||a.target==='_blank')return;const h=a.getAttribute('href');if(h.startsWith('/api/'))return;e.preventDefault();go(h)});
 if(/^#\//.test(location.hash))history.replaceState(null,'',location.hash.slice(1));
-route();setInterval(()=>{document.querySelectorAll('.cdl[data-dl]').forEach(e=>{e.innerHTML=cdTxt(+e.dataset.dl-Date.now())});$('#dl').innerHTML=dlText();const c=$('#cdn');if(c){c.innerHTML=cdHtml();const dd=st.set?.deadline;const ms=dd?Date.parse(dd+(dd.length<=16?':00+08:00':''))-Date.now():1e12;c.classList.toggle('urgent',!st.set?.closed&&ms<864e5)}},1000);
+route();setInterval(()=>{document.querySelectorAll('.cdl[data-dl]').forEach(e=>{e.innerHTML=cdTxt(+e.dataset.dl-Date.now())});$('#dl').innerHTML=dlText();const c=$('#cdn');if(c){c.innerHTML=cdHtml();const dd=st.set?.deadline;const ms=dd?Date.parse(dd+(dd.length<=16?':00+08:00':''))-Date.now():1e12;c.classList.toggle('urgent',!st.set?.closed&&ms<36e5)}},1000);
 // ───── 彈窗出口：每個彈窗都有「返回」與「×」，並支援 Esc、手機返回鍵／滑動返回 ─────
 (function(){
  const open=[];let seq=0,skip=0;
