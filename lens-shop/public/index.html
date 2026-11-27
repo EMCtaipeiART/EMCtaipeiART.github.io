@@ -414,6 +414,12 @@ summary{min-height:40px;padding:8px 0;color:var(--bd)}
 .pcd .cdv .cdl{gap:5px;white-space:nowrap}.pcd .cdv .cu{font-style:normal;display:inline-flex;align-items:baseline;gap:1px;font-size:13px;font-weight:600;color:var(--bd)}.pcd .cdv .cu em{font-size:30px}.pcd .cdv .cu.s em{font-size:22px;letter-spacing:-.8px}.pcd .cdv .cdl:has(.s){gap:4px}.pcd .cdv:has(.s){margin:0 -8px}
 /* 團購頁倒數：數字用品牌深綠（含不到 24 小時時，不再轉紅） */
 .hcd .cdn b,.hcd .cdn.urgent b,.cdn.urgent b{color:var(--bd)!important}
+/* 彈窗的返回／關閉列 */
+.modal .xbar{position:sticky;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:#fff;border-bottom:1px solid #edf1ee}.modal .lg-x{display:none}
+.xbar button.xb,.xbar button.xx,.ch-h button.xb{background:#f1f4f2!important;color:#33443a!important;border:0!important;box-shadow:none!important;border-radius:99px;min-height:36px;padding:4px 14px;font-size:14px;font-weight:600;line-height:1.2;cursor:pointer;width:auto;flex:none;margin:0;transform:none}
+.xbar button.xx{width:36px;height:36px;padding:0;font-size:22px;font-weight:400}.xbar button:hover,.ch-h button.xb:hover{background:#e3ebe5!important}
+.xbar.lbx{position:fixed;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top,0px));display:flex;justify-content:space-between;z-index:2}
+.ch-h button.xb{margin-right:10px;font-size:13px}body:has(>.modalbg) #chb,body:has(>#lb) #chb{display:none!important}
 </style>
 </head>
 <body>
@@ -971,6 +977,35 @@ function go(p){history.pushState(null,'',p);route()}
 document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[href^="/"]');if(!a||e.defaultPrevented||e.metaKey||e.ctrlKey||e.shiftKey||e.button||a.target==='_blank')return;const h=a.getAttribute('href');if(h.startsWith('/api/'))return;e.preventDefault();go(h)});
 if(/^#\//.test(location.hash))history.replaceState(null,'',location.hash.slice(1));
 route();setInterval(()=>{document.querySelectorAll('.cdl[data-dl]').forEach(e=>{e.innerHTML=cdTxt(+e.dataset.dl-Date.now())});$('#dl').innerHTML=dlText();const c=$('#cdn');if(c){c.innerHTML=cdHtml();const dd=st.set?.deadline;const ms=dd?Date.parse(dd+(dd.length<=16?':00+08:00':''))-Date.now():1e12;c.classList.toggle('urgent',!st.set?.closed&&ms<864e5)}},1000);
+// ───── 彈窗出口：每個彈窗都有「返回」與「×」，並支援 Esc、手機返回鍵／滑動返回 ─────
+(function(){
+ const open=[];let seq=0,skip=0;
+ const found=()=>[...document.querySelectorAll('body>.modalbg,body>#lb,body>#chp.on')];
+ const ask=el=>!el.dataset.dirty||confirm('內容還沒儲存，確定要關閉嗎？');
+ const shut=el=>{if(el.id==='chp'){if(el.classList.contains('on'))chatToggle()}else if(el.id==='lb')el.click();else el.remove()};
+ const btn=(cls,label,text,el)=>{const b=document.createElement('button');b.type='button';b.className=cls;b.setAttribute('aria-label',label);b.textContent=text;b.onclick=e=>{e.stopPropagation();if(ask(el))shut(el)};return b};
+ function decorate(el){
+  if(el.id==='chp'){const h=el.querySelector('.ch-h');if(h&&!h.querySelector('.xb'))h.prepend(btn('xb','返回','‹ 返回',el));return}
+  if(el.id==='lb'){if(!el.querySelector('.xbar'))el.append(Object.assign(document.createElement('div'),{className:'xbar lbx'})),el.querySelector('.xbar').append(btn('xb','返回','‹ 返回',el),btn('xx','關閉','×',el));return}
+  const m=el.querySelector('.modal');if(!m||m.querySelector(':scope>.xbar'))return;
+  const d=document.createElement('div');d.className='xbar';d.append(btn('xb','返回','‹ 返回',el),btn('xx','關閉','×',el));
+  const c=getComputedStyle(m);d.style.margin='-'+c.paddingTop+' -'+c.paddingRight+' 14px -'+c.paddingLeft;d.style.top='-'+c.paddingTop;m.prepend(d)}
+ function sync(){const now=found();
+  const gone=open.filter(o=>!now.includes(o.el));gone.forEach(o=>open.splice(open.indexOf(o),1));
+  const added=now.filter(el=>!open.some(o=>o.el===el));
+  const lost=gone.find(o=>history.state&&history.state.pop===o.id);
+  added.forEach((el,i)=>{const id=Date.now()+'-'+(++seq);open.push({el,id});
+   if(el.classList.contains('modalbg'))['input','change'].forEach(t=>el.addEventListener(t,()=>{el.dataset.dirty='1'}));
+   if(el.id==='chp')delete el.dataset.dirty;
+   if(lost&&i===0)history.replaceState({pop:id},'');else history.pushState({pop:id},'')});
+  if(lost&&!added.length){skip++;history.back()}
+  open.forEach(o=>decorate(o.el))}
+ new MutationObserver(sync).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+ addEventListener('popstate',e=>{if(skip){skip--;e.stopImmediatePropagation();return}
+  const top=open[open.length-1];if(!top||(history.state&&history.state.pop===top.id))return;e.stopImmediatePropagation();
+  if(!ask(top.el)){history.pushState({pop:top.id},'');return}open.pop();shut(top.el)},true);
+ addEventListener('keydown',e=>{if(e.key!=='Escape'||e.isComposing)return;const top=open[open.length-1];if(top&&top.el.id!=='lb'&&ask(top.el))shut(top.el)});
+})();
 </script>
 </body>
 </html>
