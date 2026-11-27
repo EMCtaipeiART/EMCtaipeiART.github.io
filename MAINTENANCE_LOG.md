@@ -4152,3 +4152,7 @@ $126-10-30
 - 不再打包帶回公司。任何電腦開工前，先抓 Cloudflare 的 lens-group-buy 線上版再改，不要用本機舊資料夾直接部署（今天前端和後端都改過）。
 - 後端原始碼：Cloudflare API `workers/scripts/lens-group-buy/content/v2` 取得 index.js.map，從 sourcesContent 還原（`wrangler init --from-dash` 不支援含靜態檔的 Worker）。頁面檔：從線上網址下載 index.html、qrcode.js、ui-2026.css、ui-2026.js、vendor/*。
 - `wrangler.jsonc` 不在線上：iMac 原有的若沿用，請確認含 workers_dev、preview_urls、placement smart、cron `*/30 * * * *`、assets 的 run_worker_first `/api/*` 與 SPA fallback；package.json 需有 fflate。部署前先用 dry-run 比對後端建置結果與線上一致。
+
+## 2026-11-27 全部團購頁：已結束卡牌改灰階漸層（lens-shop）
+- `pcCard()` 對已結束／已結單的團購加 `off` class；整張卡灰階、卡身淺灰漸層、封面深灰漸層（含商品圖）。進行中卡牌不變。
+- 驗證：本機以線上公開團購清單預覽（8 張中 6 張套用灰階）；腳本語法檢查。
