@@ -4147,3 +4147,8 @@ $126-10-30
 - 原因：訂單明細（PDF）的品項彙總是「一個品項＋選項一列」的長表格，太長、不好讀。
 - 改法：`summaryTally()` 同一品項併成一格，選項組合排在下方、標 ×數量，兩欄排版（手機螢幕單欄）；列印用 A4、縮小字級、保留底色、避免跨頁切格、隱藏聊天室按鈕、姓名欄縮窄。後端未改。
 - 驗證：本機假資料預覽螢幕、390px 手機與 A4 寬度模擬列印；腳本語法檢查。未實際輸出 PDF 檔。
+
+## 2026-11-27 lens-group-buy（非本站）之後以雲端最新版為準
+- 不再打包帶回公司。任何電腦開工前，先抓 Cloudflare 的 lens-group-buy 線上版再改，不要用本機舊資料夾直接部署（今天前端和後端都改過）。
+- 後端原始碼：Cloudflare API `workers/scripts/lens-group-buy/content/v2` 取得 index.js.map，從 sourcesContent 還原（`wrangler init --from-dash` 不支援含靜態檔的 Worker）。頁面檔：從線上網址下載 index.html、qrcode.js、ui-2026.css、ui-2026.js、vendor/*。
+- `wrangler.jsonc` 不在線上：iMac 原有的若沿用，請確認含 workers_dev、preview_urls、placement smart、cron `*/30 * * * *`、assets 的 run_worker_first `/api/*` 與 SPA fallback；package.json 需有 fflate。部署前先用 dry-run 比對後端建置結果與線上一致。
