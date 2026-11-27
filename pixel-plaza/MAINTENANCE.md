@@ -207,3 +207,8 @@
 - 要做厚的立體物用 art_puff 的 plump=True（充氣式厚度、邊緣融成背面底色），再配 inset、line。
 - 改臉型／耳朵／髮際線要做「原圖與模型同尺寸疊圖」核對：正面算圖用環境變數 TILT=0（算圖 3 px＝原圖 12 角度圖的 1 px），MACHI_VIEWS 指定角度。Noise 的 12 角度圖第 1～3 格都是 30～50 度的斜角，不是正側面。
 
+## Machi 立體模型改用本機 AI 生成（2026-11-28）
+- `assets/machi3d/machi.glb` 由公司電腦 `E:\AI\Hunyuan3D` 的流程產生，不在 Git：`mv4.py`（四視角白模，來源 `sprites-hd/Machi.png` 第 0/3/6/9 格）→ `paint.py` → `face_fix.py`（臉直接投影原圖）→ `blender_outline.py` → `rig_anim.py`（`FACES=12000`，切開肢體、重做手臂）→ `to_game.py`。
+- 節點名 `machi_<部位>__<材質>_n`（輪廓線是模型自帶的反向外殼，所以全部 `_n`，遊戲不另外描邊）；關節位置寫在 `MODEL3D.Machi.pivot`。換模型要一起改 pivot 與 `?v=`。
+- 舊的手工建模版仍可用 `models/machi/build_machi.py` 重建；要換回去：還原 glb、拿掉 pivot、`?v=` 加一。
+- Hunyuan3D 社群授權不含歐盟、英國、南韓。

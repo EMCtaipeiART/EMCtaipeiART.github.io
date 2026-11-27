@@ -1805,8 +1805,9 @@ const loadTex = src => new Promise((res, rej) => { const ld = new THREE.TextureL
 const shadowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), r = g.createRadialGradient(64, 64, 4, 64, 64, 62); r.addColorStop(0, 'rgba(0,0,0,1)'); r.addColorStop(.55, 'rgba(0,0,0,.65)'); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 128, 128); const t = new THREE.CanvasTexture(c); t.anisotropy = 4; t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter; return t; })();
 
 // ---------- 3D 人物（目前只有 Machi）：走路、跑步、坐下都用立體模型；模型載入失敗或本人在角色工坊換了造型就維持 2D ----------
-// 模型由 models/machi/build_machi.py（MACHI_LITE=1）產生，節點名稱 machi_<肢體>__<材質>[_n]（_n＝不描外框）；貼圖自帶陰影，用不受光材質。
-const MODEL3D = {Machi:{url:'assets/machi3d/machi.glb?v=2', atlas:5, dance:true}, Noise:{url:'assets/people3d/noise.glb?v=4', atlas:0}, Leona:{url:'assets/people3d/leona.glb?v=6', atlas:8},
+// Machi 由本機 Hunyuan3D 生成（流程見 MAINTENANCE.md），關節位置和其他人不同，寫在 MODEL3D 的 pivot；其他人沿用 PIVOT3D。
+// 手工建模版由 models/machi/build_machi.py（MACHI_LITE=1）產生，節點名稱 machi_<肢體>__<材質>[_n]（_n＝不描外框）；貼圖自帶陰影，用不受光材質。
+const MODEL3D = {Machi:{url:'assets/machi3d/machi.glb?v=3', atlas:5, dance:true, pivot:{hips:[0, 1.329, -0.06], legL:[0.453, 1.208, -0.06], legR:[-0.453, 1.208, -0.06], armL:[0.709, 2.37, 0.273], armR:[-0.709, 2.37, 0.273], head:[0, 3.2, -0.06]}}, Noise:{url:'assets/people3d/noise.glb?v=4', atlas:0}, Leona:{url:'assets/people3d/leona.glb?v=6', atlas:8},
   Amber:{url:'assets/people3d/amber.glb?v=4', atlas:0}, Anna:{url:'assets/people3d/anna.glb?v=5', atlas:3},
   傅思凱:{url:'assets/people3d/eric.glb?v=1', atlas:3}};   // atlas：模型對應的角色工坊造型版本；之後發佈了更新的造型就改回 2D
 const EDGE_W = .0336;   // 人物與寵物的黑色外框粗細（世界單位），以兩隻狗為準
@@ -1870,6 +1871,7 @@ function danceMove(b){
 }
 async function attach3d(c){
   try {
+    const PV = MODEL3D[c.name].pivot || PIVOT3D;
     const {GLTFLoader} = await import('../character-studio/vendor/GLTFLoader.js');
     const gltf = await new GLTFLoader().loadAsync(MODEL3D[c.name].url);
     if (c.dress) c.dress(gltf.scene);   // 節日造型：拆關節前先改衣服、加配件
@@ -1901,7 +1903,7 @@ async function attach3d(c){
       if (outline) P.ink.push(inked());
     });
     // 關節：每個肢體一個以關節為原點的群組
-    const joint = (id, parent, from = [0, 0, 0]) => { const g = new THREE.Group(), p = PIVOT3D[id]; g.position.set(p[0] - from[0], p[1] - from[1], p[2] - from[2]); parent.add(g); return g; };
+    const joint = (id, parent, from = [0, 0, 0]) => { const g = new THREE.Group(), p = PV[id]; g.position.set(p[0] - from[0], p[1] - from[1], p[2] - from[2]); parent.add(g); return g; };
     const fill = (g, id, at) => { const P = parts[id]; if (!P) return; const add = m => { m.position.set(-at[0], -at[1], -at[2]); g.add(m); };
       if (P.solid.length) add(new THREE.Mesh(mergeGeometries(P.solid), flatMat));
       if (P.ink.length) { const m = new THREE.Mesh(mergeGeometries(P.ink), inkMat); m.layers.set(HULL_LAYER); add(m); }
@@ -1910,9 +1912,9 @@ async function attach3d(c){
     rig.add(lean); lean.add(scaler); scaler.add(yaw); yaw.add(root);
     const k = WORLD_H * 224 / 240 / 6; scaler.scale.set(k, k * 1.12, k);   // 高度對齊 2D 人物；鏡頭俯視，稍微拉高
     const J = {legL:joint('legL', root), legR:joint('legR', root), upper:joint('hips', root)};
-    for (const id of ['armL', 'armR', 'head']) J[id] = joint(id, J.upper, PIVOT3D.hips);
-    fill(J.upper, 'body', PIVOT3D.hips);
-    for (const id of ['legL', 'legR', 'armL', 'armR', 'head']) fill(J[id], id, PIVOT3D[id]);
+    for (const id of ['armL', 'armR', 'head']) J[id] = joint(id, J.upper, PV.hips);
+    fill(J.upper, 'body', PV.hips);
+    for (const id of ['legL', 'legR', 'armL', 'armR', 'head']) fill(J[id], id, PV[id]);
     c.holder.add(rig); c.sprite.material.visible = false;   // 原本的平面圖保留當點選範圍，只是不畫出來
     const st = {walk:0, run:0, sit:0, dance:0, beat:0, pose:null, ki:null, ph:0, yaw:c.face, x:c.holder.position.x, z:c.holder.position.z};
     const qy = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), e = new THREE.Euler(0, 0, 0, 'YXZ');
@@ -1929,7 +1931,7 @@ async function attach3d(c){
       const t = performance.now() / 1000, w = st.walk, r = st.run, q = st.sit, s = Math.sin(st.ph), co = Math.cos(st.ph), mix = (a, b) => a + (b - a) * r;
       const leg = mix(.62, 1.05) * w, arm = mix(.6, 1.15) * w, lift = mix(.14, .42) * w, typing = c.sitting && !c.sitting.kind ? Math.sin(t * 11) * .07 : 0;
       J.legL.rotation.x = -s * leg + .12 * r * w - 1.45 * q; J.legR.rotation.x = s * leg + .12 * r * w - 1.45 * q;
-      J.legL.position.y = PIVOT3D.legL[1] + Math.max(0, co) * lift; J.legR.position.y = PIVOT3D.legR[1] + Math.max(0, -co) * lift;
+      J.legL.position.y = PV.legL[1] + Math.max(0, co) * lift; J.legR.position.y = PV.legR[1] + Math.max(0, -co) * lift;
       J.armL.rotation.x = s * arm - .35 * r * w - (.62 + typing) * q; J.armR.rotation.x = -s * arm - .35 * r * w - (.62 - typing) * q;
       J.armL.rotation.z = .16 * r * w; J.armR.rotation.z = -.16 * r * w;
       root.position.y = (Math.abs(co) * mix(.16, .34) - mix(.07, .05)) * w - .12 * q;
@@ -1948,10 +1950,10 @@ async function attach3d(c){
       on(J.upper.rotation, 'x', P.bx); on(J.upper.rotation, 'y', P.by); on(J.upper.rotation, 'z', P.bz);
       on(J.head.rotation, 'x', P.hx); on(J.head.rotation, 'y', P.hy); on(J.head.rotation, 'z', P.hz);
       for (const [id, sg, k] of [['armL', 1, 'aL'], ['armR', -1, 'aR']]) {
-        const g = J[id], base = PIVOT3D[id];
+        const g = J[id], base = PV[id];
         on(g.rotation, 'x', P[k + 'x']); g.rotation.y = P[k + 'y'] * D; on(g.rotation, 'z', P[k + 'z']);
         const h = D * Math.min(1, Math.max(0, Math.abs(g.rotation.z) - 1.15) / .85);   // 頭大手短：手舉高時肩膀往前挪並拉長一點，才不會藏進頭後面
-        g.position.set(base[0] - PIVOT3D.hips[0] + sg * .12 * h, base[1] - PIVOT3D.hips[1] + .04 * h + P[k + 'u'] * D, base[2] - PIVOT3D.hips[2] + .66 * h + P[k + 'f'] * D); g.scale.setScalar(1 + .24 * h);
+        g.position.set(base[0] - PV.hips[0] + sg * .12 * h, base[1] - PV.hips[1] + .04 * h + P[k + 'u'] * D, base[2] - PV.hips[2] + .66 * h + P[k + 'f'] * D); g.scale.setScalar(1 + .24 * h);
       }
       for (const [id, k] of [['legL', 'lL'], ['legR', 'lR']]) { const g = J[id]; on(g.rotation, 'x', P[k + 'x']); g.rotation.z = P[k + 'z'] * D; g.position.y += P[k + 'u'] * D; }
       // 氣功球：第一次用到才建立
