@@ -526,7 +526,7 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
 import * as THREE from 'three';
 import {mergeGeometries, mergeVertices} from '../character-studio/vendor/BufferGeometryUtils.js';
 import {makePet} from './pets3d.js?v=10';
-import {createXmas} from './xmas.js?v=2';
+import {createXmas, santaSuit} from './xmas.js?v=3';
 import {makePet as makeGenPet, hasPet as hasGenPet} from './pets3d-gen.js?v=18';   // 兩隻貓和兩隻狗都用生成版模型
 import {RoundedBoxGeometry} from '../character-studio/vendor/RoundedBoxGeometry.js';
 import {LineSegments2} from '../character-studio/vendor/lines/LineSegments2.js';
@@ -1161,7 +1161,7 @@ async function buildOffice(){
     laptop3d(I(224), I(852), 1);
     rects.push([I(85), I(828), I(137), I(930)], [I(137), I(828), I(308), I(873)]); }
   reflow5F(); doors3d(); upgradeMaterials();
-  if (new URLSearchParams(location.search).get('xmas') !== '0') xmas = createXmas({scene, rects, blocked, chairSeats, U, FX4, floor4:[F4_X0, F4_X1, F4_Z0, F4_Z1], fridges, wallBoxes, outlineMat, HULL_LAYER, FLAT, themeHooks, dark:themeNow === 'dark'});   // 聖誕碰撞要在 startGameplay 之前登記
+  if (new URLSearchParams(location.search).get('xmas') !== '0') xmas = createXmas({scene, rects, blocked, chairSeats, U, FX4, floor4:[F4_X0, F4_X1, F4_Z0, F4_Z1], fridges, wallBoxes, outlineMat, HULL_LAYER, FLAT, themeHooks, dark:themeNow === 'dark', doors:DOORS, now:syncNow, people:() => Object.values(chars)});   // 聖誕碰撞要在 startGameplay 之前登記
   dropCache.clear(); noteCache.clear(); startGameplay();   // 場景（含四樓）全部蓋好、碰撞都齊了才開始算道具：否則每個人載入的時間點不同，算出來的位置會不一樣
 }
 // 辦公室細節：依家具／顏色合併幾何，共用材質與貼圖；局部群組保留入座收起與 reflow 語意。
@@ -1851,6 +1851,7 @@ async function attach3d(c){
   try {
     const {GLTFLoader} = await import('../character-studio/vendor/GLTFLoader.js');
     const gltf = await new GLTFLoader().loadAsync(MODEL3D[c.name].url);
+    if (c.dress) c.dress(gltf.scene);   // 節日造型：拆關節前先改衣服、加配件
     gltf.scene.updateMatrixWorld(true);
     const light = new THREE.Vector3(-.4, .75, .55).normalize(), tinted = [], parts = {};
     const flatMat = new THREE.MeshBasicMaterial({vertexColors:true}), inkMat = new THREE.MeshBasicMaterial({color:0x0b0807, side:THREE.BackSide});
@@ -1963,6 +1964,7 @@ async function addChar(name, i){
   scene.add(holder);
   const c = {name, holder, sprite, tex, face:seat ? (seat[3] === 'top' ? 0 : Math.PI) : -a, moving:0, phase:Math.random() * 9, wander:!seat, t:Math.random() * 5, dir:new THREE.Vector3()};
   chars[name] = c;
+  if (name === '傅思凱' && new URLSearchParams(location.search).get('xmas') !== '0') c.dress = santaSuit;   // 聖誕節：Eric 穿聖誕老人裝
   if (MODEL3D[name] && !(cloudChars[name] > MODEL3D[name].atlas) && !PIXEL_MODE) attach3d(c);
   if (WALK_NAMES.includes(name) || walkVer[name] || cloudWalks[name]) {
     const staticUrl = (HD ? 'sprites-walk-hd/' + name + '.webp' : 'sprites-walk/' + name + '.png') + (walkVer[name] ? '?v=' + walkVer[name] : '');

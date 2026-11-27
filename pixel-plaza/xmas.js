@@ -13,6 +13,39 @@ const EDGE = .018;   // 黑色外框粗細（世界單位）
 const SPOTS5 = [[1137, 62, 1.15, true], [62, 40, 1.0, false], [1141, 1330, 1.05, true], [452, 1450, 1.0, false]];
 const SPOTS4 = [[1335, 135, 1.15, true], [35, 40, 1.0, false], [528, 640, .82, false], [1340, 640, 1.05, true], [1340, 1610, 1.1, false], [470, 1620, 1.0, true]];
 
+// ---------- 聖誕老人裝（傅思凱 Eric 的立體模型）：模型載入後、拆關節前呼叫，改衣服顏色並加上帽子、鬍子、毛邊、腰帶扣 ----------
+// 座標是模型單位（身高約 6，臉朝 +z）；零件名稱沿用 machi_<部位>__<材質>，遊戲的外框與動作才會自動套用
+export function santaSuit(root){
+  const mats = {}, mat = (name, color) => mats[name] ||= Object.assign(new THREE.MeshStandardMaterial({color}), {name});
+  const RED = 0xd42a33, DARK = 0x9c1c26, FUR = 0xfbfdff, GOLD = 0xffc733;
+  const recolor = {shirt:RED, pants:RED, shirt_cuff:FUR, shirt_line:DARK, pants_line:DARK, button:GOLD, shoe:0x17181c};
+  root.traverse(o => { if (!o.isMesh) return; const n = o.material.name, body = o.name.startsWith('machi_body__'), c = n === 'silver' && body ? GOLD : recolor[n];
+    if (c !== undefined) o.material = mat(n + (n === 'silver' ? '_gold' : '_santa'), c); });
+  let id = 0;
+  const add = (part, key, color, geo, x, y, z) => { geo.translate(x, y, z); const m = new THREE.Mesh(geo, mat(key, color)); m.name = 'machi_' + part + '__' + key + '_' + (id++); root.add(m); };
+  const fluff = (part, x, y, z, r, sx = 1, sy = 1, sz = 1) => { const g = new THREE.SphereGeometry(r, 12, 9); g.scale(sx, sy, sz); add(part, 'santa_fur', FUR, g, x, y, z); };
+  // 帽子：沿著往右後方垂下的曲線一圈圈疊成的軟帽
+  { const path = new THREE.CatmullRomCurve3([[0, 5.0, -.05], [.05, 5.75, -.15], [.35, 6.4, -.35], [1.05, 6.55, -.55], [1.75, 6.0, -.6]].map(p => new THREE.Vector3(...p)));
+    const R = 18, S = 24, pos = [], ix = [], frames = path.computeFrenetFrames(R, false), v = new THREE.Vector3();
+    for (let i = 0; i <= R; i++) { const t = i / R, c = path.getPointAt(t), r = .1 + 1.4 * Math.pow(1 - t, 1.35);
+      for (let j = 0; j <= S; j++) { const a = j / S * Math.PI * 2; v.copy(c).addScaledVector(frames.normals[i], Math.cos(a) * r).addScaledVector(frames.binormals[i], Math.sin(a) * r); pos.push(v.x, v.y, v.z); } }
+    for (let i = 0; i < R; i++) for (let j = 0; j < S; j++) { const a = i * (S + 1) + j, b = a + S + 1; ix.push(a, a + 1, b, b, a + 1, b + 1); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(ix); g.computeVertexNormals(); add('head', 'santa_hat', RED, g, 0, 0, 0);
+    const brim = new THREE.TorusGeometry(1.44, .25, 10, 36); brim.rotateX(Math.PI / 2 - .12); add('head', 'santa_fur', FUR, brim, 0, 5.03, -.04);
+    fluff('head', 1.82, 5.9, -.6, .36); }
+  // 鬍子：沿下巴一圈毛球＋兩撇小鬍子（不蓋到眼鏡與眼睛）
+  for (let i = 0; i <= 8; i++) { const a = (i / 8 - .5) * 2.5, side = Math.abs(i - 4) / 4; fluff('head', Math.sin(a) * 1.18, 2.78 + side * side * .72, Math.cos(a) * 1.08 + .12, .34 - side * .13); }
+  for (const x of [-.34, 0, .34]) fluff('head', x, 2.55 - (x ? 0 : .14), 1.12, .3);
+  for (const k of [-1, 1]) fluff('head', k * .27, 3.4, 1.5, .17, 1.7, .7, .6);
+  // 衣服：領口與下襬毛邊、前襟、金色腰帶扣
+  const ring = (part, x, y, z, r, tube, sz = 1) => { const g = new THREE.TorusGeometry(r, tube, 8, 32); g.rotateX(Math.PI / 2); g.scale(1, 1, sz); add(part, 'santa_fur', FUR, g, x, y, z); };
+  ring('body', 0, 1.7, .07, .84, .1, .92);
+  add('body', 'santa_fur', FUR, new THREE.BoxGeometry(.2, .98, .08), 0, 2.2, .82);
+  add('body', 'santa_buckle', GOLD, new THREE.BoxGeometry(.5, .36, .09), 0, 1.47, .92);
+  add('body', 'santa_belthole', 0x17181c, new THREE.BoxGeometry(.28, .17, .06), 0, 1.47, .96);
+  for (const k of [-1, 1]) ring('leg' + (k > 0 ? 'L' : 'R'), k * .5, .55, .1, .4, .1);
+}
+
 // ---------- 室內積雪的「踩出來的走道」（版面 px；五樓＝位移後的實際值，四樓＝本機座標）。整層鋪滿有高低的積雪，沿這些線零星清出幾塊地板 ----------
 // 線段 [x0, y0, x1, y1]；矩形 {r:[x0, y0, x1, y1], full:true＝整塊清乾淨（地面投影），否則只壓薄}。改家具或通道後要回來調
 const PATHS5 = [
@@ -33,7 +66,13 @@ const PATHS4 = [
   [872, 1433, 790, 1433], [872, 1433, 955, 1433]                                                            // 會議室 F、G
 ];
 
-export function createXmas({scene, rects, blocked, chairSeats, U, FX4, floor4, fridges, wallBoxes, outlineMat, HULL_LAYER, FLAT, themeHooks, dark}){
+// 薑餅人散步路線與室內麋鹿滑行路線（版面 px，繞圈）；改家具後要確認路線沒有穿過桌子和牆
+const GINGER5 = [[[40, 268], [346, 268], [346, 749], [40, 749]], [[346, 512], [1142, 512], [1142, 749], [346, 749]], [[346, 268], [1142, 268], [1142, 512], [346, 512]], [[452, 1060], [570, 1060], [570, 1330], [452, 1330]]];
+const GINGER4 = [[[-30, 305], [528, 305], [528, 578], [-30, 578]], [[-30, 810], [528, 810], [528, 1275], [-30, 1275]], [[528, 738], [1345, 738], [1345, 1298], [528, 1298]], [[820, 305], [1320, 305], [1320, 270], [820, 270]]];
+const DEER_IN = [[[40, 1010], [1142, 1010], [1142, 749], [40, 749]], [[478, 305], [1250, 305], [1250, 738], [478, 738]]];
+const F_ELEV = 160;   // 四樓電梯中心（本機 px）
+
+export function createXmas({scene, rects, blocked, chairSeats, U, FX4, floor4, fridges, wallBoxes, outlineMat, HULL_LAYER, FLAT, themeHooks, dark, doors, now, people}){
   let seed = 20261225; const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const small = Math.min(innerWidth, innerHeight) <= 640 || matchMedia('(pointer: coarse)').matches;   // 手機：雪花少一點
@@ -169,7 +208,8 @@ export function createXmas({scene, rects, blocked, chairSeats, U, FX4, floor4, f
   const snowTex = new THREE.CanvasTexture(snowCanvas); snowTex.wrapS = snowTex.wrapT = THREE.RepeatWrapping; snowTex.colorSpace = THREE.SRGBColorSpace; snowTex.repeat.set(1 / 5, 1 / 5);
   const snowMat = FLAT ? new THREE.MeshLambertMaterial({map:snowTex}) : new THREE.MeshStandardMaterial({map:snowTex, roughness:.92, metalness:0});
   const sideMat = new THREE.MeshLambertMaterial({color:0xb9cbe6});
-  const OUT = 6.5;   // 露台往樓層外延伸多遠
+  const LANE = 1.5;   // 麋鹿滑行道：樓層外緣往外幾單位（這一圈不放樹和雪人）
+  const OUT = 7.5;   // 露台往樓層外延伸多遠
   const pines = [], mounds = [], posts = [], indoorMats = [];
   // [樓層外緣 x0,x1,z0,z1], [雪線（內緣）x0,x1,z0,z1]
   const FLOORS = [
@@ -198,10 +238,10 @@ export function createXmas({scene, rects, blocked, chairSeats, U, FX4, floor4, f
     const along = (side, d, out) => side === 0 ? [x0 + d, z0 - out] : side === 1 ? [x1 + out, z0 + d] : side === 2 ? [x0 + d, z1 + out] : [x0 - out, z0 + d];
     for (let side = 0; side < 4; side++) {
       const len = side % 2 ? z1 - z0 : x1 - x0, south = side === 2;
-      for (let d = 1.5; d < len; d += 3.1 + rnd() * 1.6) { const [x, z] = along(side, d, (south ? 1.6 : .7) + rnd() * 3.6); pines.push([x, 0, z, south ? .6 + rnd() * .25 : .95 + rnd() * .75, rnd() * 6.28]); }
-      for (let d = .8; d < len; d += 1.7 + rnd() * 1.4) { const [x, z] = along(side, d, rnd() * 5.4 - .1); mounds.push([x, -.02, z, .5 + rnd() * .9, rnd() * 6.28]); }
+      for (let d = 1.5; d < len; d += 3.1 + rnd() * 1.6) { const [x, z] = along(side, d, LANE + (south ? 2 : 1.4) + rnd() * 2.6); pines.push([x, 0, z, south ? .6 + rnd() * .25 : .95 + rnd() * .75, rnd() * 6.28]); }
+      for (let d = .8; d < len; d += 1.7 + rnd() * 1.4) { const [x, z] = along(side, d, rnd() < .35 ? rnd() * .5 : LANE + 1 + rnd() * 3.2); mounds.push([x, -.02, z, .5 + rnd() * .9, rnd() * 6.28]); }
       for (let d = 5 + rnd() * 3; d < len - 2; d += 10 + rnd() * 4) {
-        const [x, z] = along(side, d, side === 0 ? .3 : .15);
+        const [x, z] = along(side, d, LANE + 1.35);
         men.push([x, 0, z, south ? .8 : 1.05, (rnd() - .5) * .7]);
         giftAt(x + 1.0, .02, z + .25, .9); giftAt(x + 1.5, .02, z - .15, .65);
       }
@@ -284,6 +324,91 @@ export function createXmas({scene, rects, blocked, chairSeats, U, FX4, floor4, f
   for (const [x, y, z, sc] of minis) treeLights(x, y, z, sc, MINI_TIERS, 20, .55);
   scatter(miniTree, minis); scatter(wreath, wreaths); scatter(pine, pines); scatter(mound, mounds, false); scatter(post, posts);
 
+  // ---------- 鈴鐺、聖誕襪、拐杖糖 ----------
+  const bell = (() => { const k = kit(); k.cyl(.035, .035, .1, C.darkRed, 0, -.03, 0, false); k.cyl(.07, .13, .17, C.gold, 0, -.19, 0); k.ball(.075, C.gold, 0, -.11, 0); k.cyl(.17, .17, .035, C.gold, 0, -.29, 0); k.ball(.05, C.darkRed, 0, -.35, 0);
+    for (const d of [-1, 1]) k.cone(.075, .18, C.red, d * .1, .02, .02, true, 5, 0, d * Math.PI / 2); k.ball(.05, C.red, 0, .02, .03, false); return k.done(); })();
+  const stocking = (paper, trim) => { const k = kit(); k.box(.2, .32, .1, paper, 0, -.24, 0); k.box(.3, .15, .1, paper, .07, -.44, 0); k.ball(.08, trim, .2, -.46, 0, false); k.box(.07, .08, .115, trim, -.07, -.47, 0, false);
+    k.box(.26, .11, .14, C.white, 0, -.05, 0); k.box(.2, .05, .115, trim, 0, -.19, 0, false); k.box(.025, .09, .025, C.gold, -.08, .03, 0, false); return k.done(); };
+  const stockings = [stocking(C.red, C.green), stocking(C.green, C.red), stocking(C.red, C.gold)];
+  const cane = (() => { const path = new THREE.CatmullRomCurve3([[0, 0, 0], [0, .35, 0], [0, .68, 0], [.07, .83, 0], [.19, .84, 0], [.27, .74, 0], [.27, .63, 0]].map(p => new THREE.Vector3(...p)));
+    const make = r => { const g = new THREE.TubeGeometry(path, 36, r, 8, false).toNonIndexed(); g.deleteAttribute('uv'); return g; };
+    const body = make(.055), p = body.attributes.position, col = new Float32Array(p.count * 3), a = new THREE.Color(C.red), b = new THREE.Color(C.white);
+    for (let i = 0; i < p.count; i++) (Math.floor(Math.floor(i / 48) / 3) % 2 ? b : a).toArray(col, i * 3);   // 每段 8 格×6 頂點＝48，三段換一次顏色
+    body.setAttribute('color', new THREE.BufferAttribute(col, 3)); return {body, line:make(.055 + EDGE)}; })();
+  const bells = [], hung = [[], [], []], canes = [];
+  const hang = (x, y, z, s) => hung[Math.floor(rnd() * 3)].push([x, y, z, s, (rnd() - .5) * .25]);
+  doors.forEach(o => { for (const [al, k] of [[o.a - 1, -1], [o.b + 1, 1]]) {   // 門柱上掛鈴鐺、柱腳靠一支拐杖糖
+    const x = (o.horiz ? al : o.c) * U, z = (o.horiz ? o.c : al) * U;
+    bells.push([x, 1.76, z + .2, 1]);
+    canes.push([o.horiz ? x + k * .24 : x - .2, 0, o.horiz ? z + .2 : z + k * .22, .95, o.horiz ? (k > 0 ? Math.PI : 0) : 0]); } });
+  for (const [x, y, w, h] of wallBoxes) {   // 朝鏡頭（南面）的長玻璃牆掛一排聖誕襪
+    if (w < h || w * U < 3) continue; const n = Math.floor(w * U / 2.2); for (let i = 0; i < n; i++) hang((x + w * (i + .5) / n) * U, 1.2, (y + h) * U + .08, .85); }
+  for (const [cx, w, top] of [[725.5, 33, 355], [725.5, 55, 828]]) { const z = (top + 94) * U + .1; for (const d of [-.28, .28]) hang((cx + w / 2) * U + d, 1.35, z, 1); bells.push([(cx + w / 2) * U, 1.82, z + .06, 1.15]); }
+  for (const [x0, y, w] of [[305, 1301, 125], [862 + FX4, 87, 140]]) for (let i = 0; i < 4; i++) hang((x0 + w * (i + .5) / 4) * U, .84, y * U + .09, .9);   // 兩層樓的茶水檯
+  for (const x of [201, F_ELEV + FX4]) for (const d of [-1.45, 1.45]) { const z = (x === 201 ? 196 : 252) * U; canes.push([x * U + d, 0, z, 1.6, d > 0 ? Math.PI : 0]); }
+  for (const [x, , z, sc] of trees) { canes.push([x - .68 * sc, 0, z + .42 * sc, .9, 0], [x + .5 * sc, 0, z + .72 * sc, .8, Math.PI]); bells.push([x - .3 * sc, 1.25 * sc, z + .84 * sc, .75], [x + .32 * sc, 1.65 * sc, z + .6 * sc, .65]); }
+  posts.forEach(([x, , z], i) => { if (i % 2 === 0) bells.push([x, .84, z + .12, .85]); else canes.push([x + .5, 0, z, 1.15, i % 4 === 1 ? 0 : Math.PI]); });
+  stockings.forEach((k, i) => scatter(k, hung[i])); scatter(cane, canes);
+  // 鈴鐺會輕輕擺動：同一個 InstancedMesh，每幀更新角度
+  const swing = [];
+  for (const [geo, matr, isLine] of [[bell.body, solidMat, false], [bell.line, outlineMat, true]]) { const m = new THREE.InstancedMesh(geo, matr, bells.length); if (isLine) m.layers.set(HULL_LAYER); m.frustumCulled = false; add(m); swing.push(m); added.push(m); }
+  const swingBells = t => { bells.forEach(([x, y, z, sc], i) => { dummy.position.set(x, y, z); dummy.rotation.set(0, 0, Math.sin(t * 2.3 + i * 1.9) * .26); dummy.scale.setScalar(sc); dummy.updateMatrix(); for (const m of swing) m.setMatrixAt(i, dummy.matrix); }); for (const m of swing) m.instanceMatrix.needsUpdate = true; };
+  swingBells(0);
+
+  // ---------- 薑餅人（沿走道散步）與麋鹿（滑行）：位置只看伺服器時間，每個人看到一樣；純外觀、沒有碰撞 ----------
+  const piece = (parent, k, x = 0, y = 0, z = 0) => { const g = new THREE.Group(); g.position.set(x, y, z); const m = new THREE.Mesh(k.body, solidMat); m.castShadow = !FLAT; g.add(m); if (k.line) { const l = new THREE.Mesh(k.line, outlineMat); l.layers.set(HULL_LAYER); g.add(l); } parent.add(g); return g; };
+  const GB = 0xc47a36, ginger = (() => {
+    const body = kit(); body.ball(.27, GB, 0, .84, 0, true, .95); body.cyl(.17, .21, .38, GB, 0, .45, 0);
+    for (const x of [-.09, .09]) body.ball(.038, C.coal, x, .9, .25, false); for (const x of [-.08, 0, .08]) body.ball(.022, C.white, x, .76 - (x ? 0 : .025), .26, false);
+    for (const [y, c] of [[.55, C.red], [.42, C.green]]) body.ball(.045, c, 0, y, .2, false); body.cyl(.19, .19, .035, C.white, 0, .63, 0, false); body.cyl(.215, .215, .035, C.white, 0, .29, 0, false);
+    const limb = (len, r) => { const k = kit(); k.cyl(r, r, len, GB, 0, -len / 2, 0); k.ball(r * 1.15, GB, 0, -len, 0); k.cyl(r * 1.08, r * 1.08, .035, C.white, 0, -len * .74, 0, false); return k.done(); };
+    return {body:body.done(), arm:limb(.27, .068), leg:limb(.24, .085)}; })();
+  const DEER = 0x9a6336, deer = (() => {
+    const body = kit(); body.ball(.38, DEER, 0, .68, -.05, true, .85); body.ball(.3, DEER, 0, .68, -.34, true, .85); body.ball(.2, C.cream, 0, .6, .2, false); body.cyl(.13, .17, .38, DEER, 0, .95, .26); body.ball(.1, C.cream, 0, .76, -.62);
+    body.ball(.27, DEER, 0, 1.2, .38); body.ball(.16, 0xd2a679, 0, 1.12, .6); body.ball(.075, 0xff2a2a, 0, 1.16, .76);
+    for (const d of [-1, 1]) { body.ball(.042, C.coal, d * .13, 1.28, .61, false); body.cone(.075, .2, DEER, d * .27, 1.38, .3, true, 6, 0, -d * 1.1);
+      body.box(.065, .46, .065, C.cream, d * .17, 1.62, .3); body.box(.26, .06, .06, C.cream, d * .31, 1.68, .3); body.box(.06, .22, .06, C.cream, d * .43, 1.8, .3); body.box(.06, .17, .06, C.cream, d * .26, 1.88, .3); }
+    body.cyl(.2, .2, .08, C.red, 0, .98, .27); body.ball(.07, C.gold, 0, .9, .47);
+    const leg = kit(); leg.cyl(.085, .06, .46, DEER, 0, -.23, 0); leg.cyl(.07, .075, .09, C.coal, 0, -.49, 0);
+    return {body:body.done(), leg:leg.done()}; })();
+  const walkers = [];
+  const loopOf = (pts, ox) => { const P = pts.map(([x, y]) => [(x + ox) * U, y * U]), L = P.map((p, i) => { const q = P[(i + 1) % P.length]; return Math.hypot(q[0] - p[0], q[1] - p[1]); }); return {P, L, len:L.reduce((a, b) => a + b, 0)}; };
+  function walker(g, route, speed, offset, pose, tag){ g.userData.noShift = true; g.traverse(o => { o.userData.noShift = o.userData.noMask = true; }); scene.add(g); walkers.push({g, route, speed, offset, pose, tag, ox:0, oz:0}); }
+  for (const [list, ox] of [[GINGER5, 0], [GINGER4, FX4]]) list.forEach((pts, i) => {
+    const g = new THREE.Group(), hop = new THREE.Group(); g.add(hop); piece(hop, ginger.body);
+    const arms = [-1, 1].map(d => piece(hop, ginger.arm, d * .19, .6, 0)), legs = [-1, 1].map(d => piece(hop, ginger.leg, d * .12, .3, 0));
+    walker(g, loopOf(pts, ox), .85 + (i % 3) * .12, i * 7.3 + (ox ? 3 : 0), t => { const s = Math.sin(t * 7.5 + i); legs[0].rotation.x = s * .6; legs[1].rotation.x = -s * .6; arms.forEach((a, k) => { const d = k ? 1 : -1; a.rotation.set(-d * s * .5, 0, d * 1.15); }); hop.position.y = Math.abs(Math.cos(t * 7.5 + i)) * .07; hop.rotation.z = s * .06; }, 'ginger');
+  });
+  function reindeer(route, speed, offset, i, scale, tag){
+    const g = new THREE.Group(), slide = new THREE.Group(); slide.scale.setScalar(scale); g.add(slide); piece(slide, deer.body);
+    const legs = [[-.2, .22], [.2, .22], [-.2, -.34], [.2, -.34]].map(([x, z]) => piece(slide, deer.leg, x, .55, z));
+    const spray = [0, 1, 2, 3, 4].map(n => { const m = new THREE.Mesh(mound.body, solidMat); slide.add(m); return m; });
+    walker(g, route, speed, offset, t => { const k = Math.sin(t * 2.6 + i); legs.forEach((l, n) => { const front = n < 2; l.rotation.set((front ? -.85 : .85) + k * .22 * (n % 2 ? 1 : -1), 0, (n % 2 ? 1 : -1) * .12); });
+      slide.position.y = .02 + Math.abs(Math.sin(t * 1.3 + i)) * .07; slide.rotation.set(Math.sin(t * 2.6 + i) * .05, 0, Math.sin(t * 1.3 + i) * .09);
+      spray.forEach((m, n) => { const f = (t * 1.6 + n / 5) % 1; m.position.set(Math.sin(n * 2.4) * (.15 + f * .45), .04 + Math.sin(f * Math.PI) * .3, -.65 - f * 1.1); m.scale.setScalar(.22 * (1 - f) + .02); }); }, tag);
+  }
+  FLOORS.forEach(({f:[x0, x1, z0, z1]}, fi) => {
+    const a = x0 - LANE, b = x1 + LANE, c = z0 - LANE, d = z1 + LANE, ring = {P:[[a, c], [b, c], [b, d], [a, d]], L:[b - a, d - c, b - a, d - c], len:2 * (b - a + d - c)};
+    for (let i = 0; i < 3; i++) reindeer(ring, 4.2, i * ring.len / 3, i + fi * 3, 1.15, 'deer-out');
+    reindeer(loopOf(DEER_IN[fi], fi ? FX4 : 0), 2.6, 0, fi + 7, .85, 'deer-in');
+  });
+  const at = new THREE.Vector3();
+  function moveWalkers(ms){
+    const t = ms / 1000, folk = people();
+    for (const w of walkers) {
+      const {P, L, len} = w.route; let d = (t * w.speed + w.offset) % len, i = 0; while (d > L[i]) { d -= L[i]; i++; }
+      const p = P[i], q = P[(i + 1) % P.length], f = d / L[i], dx = (q[0] - p[0]) / L[i], dz = (q[1] - p[1]) / L[i];
+      at.set(p[0] + (q[0] - p[0]) * f, 0, p[1] + (q[1] - p[1]) * f);
+      let sx = 0, sz = 0;   // 靠近人物時往旁邊讓一下（只影響自己畫面）
+      for (const c of folk) { if (!c.holder.visible) continue; const ex = at.x - c.holder.position.x, ez = at.z - c.holder.position.z, near = 1.3 - Math.hypot(ex, ez); if (near > 0) { const side = (ex * -dz + ez * dx) >= 0 ? 1 : -1; sx += -dz * side * near * .8; sz += dx * side * near * .8; } }
+      w.ox += (Math.max(-.8, Math.min(.8, sx)) - w.ox) * .08; w.oz += (Math.max(-.8, Math.min(.8, sz)) - w.oz) * .08;
+      w.g.position.set(at.x + w.ox, 0, at.z + w.oz);
+      const turn = Math.atan2(dx, dz) - w.g.rotation.y; w.g.rotation.y += Math.atan2(Math.sin(turn), Math.cos(turn)) * .14;
+      w.pose(t);
+    }
+  }
+  moveWalkers(now());
+
   // ---------- 燈泡與電線 ----------
   const bulbGeo = new THREE.IcosahedronGeometry(.07, 0), glow = [];
   bulbs.forEach(list => {
@@ -342,11 +467,12 @@ export function createXmas({scene, rects, blocked, chairSeats, U, FX4, floor4, f
   const size = new THREE.Vector2();
   function update(ms, center, renderer){
     if (still) { for (const m of glow) m.color.setScalar(1.35); neonGlow.forEach((n, i) => neonSet(i, .8)); return; }
+    swingBells(ms / 1000); moveWalkers(now());
     // 霓虹燈：每 6 秒換一種閃法（交錯對閃 → 跑馬追逐 → 全體呼吸）；每顆每秒最多閃 2 次，不做刺眼的高頻閃爍
     const t = ms / 1000, mode = Math.floor(t / 6) % 3, beat = Math.floor(t * 3.2);
     for (let i = 0; i < 4; i++) neonSet(i, mode === 0 ? ((Math.floor(t * 2.4) + i) % 2 ? 1 : 0) : mode === 1 ? ((beat + i) % 4 < 2 ? 1 : .05) : .5 + .5 * Math.sin(t * 5 + i * .8));
     flakeU.time.value = (ms / 1000) % 3600; flakeU.center.value.copy(center); flakeU.scale.value = renderer.getDrawingBufferSize(size).y;
     glow.forEach((m, i) => m.color.setScalar(1.05 + .75 * Math.pow(Math.max(0, Math.sin(ms / 520 + i * Math.PI * 2 / 3)), 2)));
   }
-  return {update, flatten, zones, flakes, counts:{neon:neonN, piles:piles.length, flakes:N, bulbs:bulbs.reduce((s, b) => s + b.length, 0), meshes:added.length}};
+  return {update, flatten, walkers, routes:{ginger:[...GINGER5.map(r => r), ...GINGER4.map(r => r.map(([x, y]) => [x + FX4, y]))], deer:[DEER_IN[0], DEER_IN[1].map(([x, y]) => [x + FX4, y])]}, zones, flakes, counts:{neon:neonN, piles:piles.length, flakes:N, bulbs:bulbs.reduce((s, b) => s + b.length, 0), meshes:added.length}};
 }
