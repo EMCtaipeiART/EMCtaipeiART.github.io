@@ -445,6 +445,8 @@ body:has(>.modalbg) #chb,body:has(>#lb) #chb{display:none!important}
 #nav .ni .n{position:absolute;top:-6px;right:-6px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;min-width:19px;height:19px;margin:0;padding:0 5px;border-radius:999px;background:#e5342b;color:#fff;font-size:11px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;box-shadow:0 0 0 2px #fff;pointer-events:none}
 @media(max-width:480px){#nav .ni .lb{display:none}}
 .ch-f textarea{scrollbar-width:none}.ch-f textarea::-webkit-scrollbar{display:none}
+/* 頁面內已有讀取圖示時不再疊一層讀取畫面 */
+body:has(#app .ld-in) #ldg:not(.send){display:none}
 </style>
 </head>
 <body>
@@ -485,7 +487,7 @@ const LD={n:0,act:Date.now(),end:0,show:0,hide:0};
 addEventListener('keydown',e=>{if(e.key==='Enter')LD.act=Date.now()},true);
 function ldEl(){let e=document.getElementById('ldg');if(!e){e=document.createElement('div');e.id='ldg';e.setAttribute('role','status');e.setAttribute('aria-live','polite');e.innerHTML='<div class="ld-box"><i></i><span></span></div>';document.body.appendChild(e)}return e}
 function ldStart(send){LD.n++;clearTimeout(LD.hide);const t=send?'處理中…':'載入中…';
- if(LD.n===1||send){clearTimeout(LD.show);LD.show=setTimeout(()=>{if(!LD.n)return;const e=ldEl();e.querySelector('span').textContent=t;e.classList.add('on')},250)}}
+ if(LD.n===1||send){clearTimeout(LD.show);LD.show=setTimeout(()=>{if(!LD.n)return;const e=ldEl();e.querySelector('span').textContent=t;e.classList.toggle('send',send);e.classList.add('on')},250)}}
 function ldStop(){LD.n=Math.max(0,LD.n-1);LD.end=Date.now();if(LD.n)return;clearTimeout(LD.show);LD.hide=setTimeout(()=>{const e=document.getElementById('ldg');if(e)e.classList.remove('on')},180)}
 async function api(p,o={}){const send=!!o.method&&o.method!=='GET',a=document.activeElement,now=Date.now();
  const fg=!p.startsWith('/chat')&&!p.startsWith('/admin/fill')&&!(a&&a.type==='search')&&(send||now-LD.act<1000||now-LD.end<300);
@@ -642,6 +644,10 @@ function chatToggle(){CH.open=!CH.open;CH.unread=0;try{localStorage.setItem('len
  document.getElementById('chs').onclick=()=>send();t.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();send()}};t.oninput=()=>{t.style.height='40px';t.style.height=Math.min(96,t.scrollHeight)+'px'};
  document.getElementById('chi').onclick=()=>document.getElementById('chf').click();
  document.getElementById('chf').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{const bl=await chatShrink(f);const r=await api('/chat/image',{method:'POST',body:bl,headers:{'content-type':'image/jpeg'}});await send(r.img)}catch(x){alert(x.message||'圖片傳送失敗')}}}
+// 點聊天室外面就收合；等該次點擊處理完再收，避免影響外面按鈕或連結
+{let inDown=false;const inside=t=>!!(t&&t.closest&&t.closest('#chp,#chb,#lb,.modalbg,#ldg'));
+ addEventListener('pointerdown',e=>{inDown=inside(e.target)},true);
+ addEventListener('click',e=>{const was=inDown;inDown=false;if(!e.isTrusted||!CH.open||was||inside(e.target))return;setTimeout(()=>{if(CH.open&&document.getElementById('chp'))chatToggle()},0)},true);}
 function chatShrink(f){return new Promise((ok,no)=>{const im=new Image(),u=URL.createObjectURL(f);im.onload=()=>{const k=Math.min(1,1000/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);c.toBlob(b=>b?ok(b):no(new Error('圖片處理失敗')),'image/jpeg',.78)};im.onerror=()=>no(new Error('無法讀取這張圖片'));im.src=u})}
 function chatRender(bottom){const l=document.getElementById('chl');if(!l)return;const near=bottom||l.scrollHeight-l.scrollTop-l.clientHeight<80;let day='',h='';
  for(const m of CH.msgs){const d=chDay(m.at);if(d!==day){day=d;h+=`<div class="ch-d">${esc(d)}</div>`}const mine=m.m;
