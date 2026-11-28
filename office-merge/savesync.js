@@ -7,7 +7,7 @@
 const progress = (a, b) => (a.done - b.done) || (a.xp - b.xp);
 
 export function createCloudSave({ enabled, request, readMeta, writeMeta, getState, adopt, onStatus = () => {}, delay = 1500, retry = 20000 }) {
-  let status = enabled ? 'loading' : 'off';   // off | loading | saving | saved | offline | login
+  let status = enabled ? 'loading' : 'off';   // off | loading | saving | saved | offline | login | old
   let chain = Promise.resolve(true), pushTimer = null, retryTimer = null;
   const set = s => { status = s; onStatus(s); };
   const meta = () => { const m = readMeta(); return { rev: Number.isInteger(m?.rev) ? m.rev : null, dirty: Boolean(m?.dirty) }; };
@@ -27,7 +27,11 @@ export function createCloudSave({ enabled, request, readMeta, writeMeta, getStat
     if (dirty) changed();
   }
   async function take(server) {
-    if (!adopt(server.state)) return push(server.rev, 2);   // 雲端那份讀不出來：用這台的蓋掉
+    if (!adopt(server.state)) {
+      // 雲端是比較新版的遊戲存的：這台太舊，不能蓋掉
+      if ((server.state?.ver || 1) > (getState().ver || 1)) throw Object.assign(new Error('遊戲版本太舊，請重新整理'), { refused: true });
+      return push(server.rev, 2);   // 雲端那份壞了：用這台的蓋掉
+    }
     writeMeta({ rev: server.rev, dirty: false });
   }
   async function load() {
@@ -54,9 +58,10 @@ export function createCloudSave({ enabled, request, readMeta, writeMeta, getStat
         return true;
       } catch (e) {
         const login = e.refused && /登入/.test(e.message);
-        set(login ? 'login' : 'offline');
+        const old = e.refused && /版本太舊/.test(e.message);
+        set(login ? 'login' : old ? 'old' : 'offline');
         clearTimeout(retryTimer);
-        if (!login) retryTimer = setTimeout(() => run(true), retry);
+        if (!login && !old) retryTimer = setTimeout(() => run(true), retry);
         return false;
       }
     });

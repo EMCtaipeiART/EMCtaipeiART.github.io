@@ -5372,6 +5372,9 @@ describe('平台幣', () => {
     expect(await api({ action: 'officeMergeSave', op: 'load' }, who)).toMatchObject({ rev: 2, state: { done: 2 } });
     expect(await api({ action: 'officeMergeSave', op: 'load' }, other)).toMatchObject({ name: 'Anna', rev: 0, state: null });
     for (const bad of [null, { v: 1 }, { ...state(3), cells: [] }, { ...state(3), junk: 'x'.repeat(50_000) }]) expect(await save(who, 2, bad)).toMatchObject({ ok: false });
+    expect(await save(who, 2, { ...state(4), ver: 2 })).toMatchObject({ ok: true, rev: 3 });
+    expect(await save(who, 3, state(9))).toMatchObject({ ok: false });   // 舊版遊戲不能蓋掉新版存檔
+    expect(await api({ action: 'officeMergeSave', op: 'load' }, who)).toMatchObject({ rev: 3, state: { ver: 2, done: 4 } });
   });
 
   it('翻身記能量：撿地上道具 +1、領取不重複、平台幣 15 點換 100 能量', async () => {
@@ -5383,10 +5386,12 @@ describe('平台幣', () => {
       expect(await api({ action: 'pixelOfficeFun', id: 'd:5:901:0', v: 1, token: who })).toMatchObject({ won: false, energy: 0 });
       expect(await api({ action: 'pixelOfficeFun', id: 'n:901:0', v: 1, token: who })).toMatchObject({ won: true, energy: 0 });
       expect(await api({ action: 'pixelOfficeFun', id: 'd:5:901:1', v: 1 })).toMatchObject({ won: true, energy: 0 });
+      expect(await api({ action: 'pixelOfficeFun', id: 'p:901:0', v: 1, token: who })).toMatchObject({ won: true, energy: 2 });
+      expect(await api({ action: 'pixelOfficeFun', id: 'p:901:0', v: 1, token: who })).toMatchObject({ won: false, energy: 0 });
     } finally { spy.mockRestore(); }
     const first = uuid();
-    expect(await api({ action: 'officeMergeEnergy', op: 'claim', claimId: first }, who)).toMatchObject({ ok: true, name: 'Amber', claimed: 1, pending: 0 });
-    expect(await api({ action: 'officeMergeEnergy', op: 'claim', claimId: first }, who)).toMatchObject({ claimed: 1 });
+    expect(await api({ action: 'officeMergeEnergy', op: 'claim', claimId: first }, who)).toMatchObject({ ok: true, name: 'Amber', claimed: 3, pending: 0 });
+    expect(await api({ action: 'officeMergeEnergy', op: 'claim', claimId: first }, who)).toMatchObject({ claimed: 3 });
     expect(await api({ action: 'officeMergeEnergy', op: 'claim', claimId: uuid() }, who)).toMatchObject({ claimed: 0 });
     expect(await api({ action: 'officeMergeEnergy', op: 'status' })).toMatchObject({ ok: false });
 

@@ -11,5 +11,5 @@ const coin = url(`<defs>${grad('c', '#ffe875', '#ffad1f')}</defs><circle cx="50"
 
 const star = url('<path d="M50 6l13 28 31 4-23 21 6 31-27-15-27 15 6-31L6 38l31-4z" fill="#ffd93b" stroke="#c8780a" stroke-width="7" stroke-linejoin="round"/>');
 
-const ICONS = { s: 'art/s.png', t: 'art/t.png', box: 'art/box.png', coin, star };
+const ICONS = { s: 'art/s.png', t: 'art/t.png', i: 'art/i.png', m: 'art/m.png', d: 'art/d.png', w: 'art/w.png', box: 'art/box.png', coin, star };
 export const art = name => ICONS[name];

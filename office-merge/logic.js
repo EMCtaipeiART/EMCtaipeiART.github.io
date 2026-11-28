@@ -1,6 +1,14 @@
 // 辦公室翻身記｜遊戲規則（不碰畫面，方便測試）。數值要調整都在這個檔案最上面。
+import { CHAPTERS } from './story.js';
+export { CHAPTERS };
 export const COLS = 7, ROWS = 9, SIZE = COLS * ROWS, SLOTS = 2, MAX_LV = 7, GEN_MAX = 3;
 export const ENERGY_MAX = 100, ENERGY_MS = 60000;   // 能量上限；每幾毫秒回 1 點
+export const COIN_PRICE = 1000, COIN_ENERGY = 100;   // 金幣換能量
+export const SAVE_VERSION = 2;                      // 存檔格式版本；舊版遊戲讀不懂新版，雲端會擋住它覆蓋
+export const RANK_MAX = 3;                          // 每條物品線的圖鑑等級上限（靠劇情提升）
+export const RANK_BONUS = { reward: .2, lucky: .1 };   // 每升一級：該線訂單金幣 +20%、產生器多掉一階的機率 +10%
+export const START_LINES = ['s', 't'];
+export const chapterReward = n => ({ coins: 200 + n * 50, energy: 30, xp: 30 + n * 5 });   // 完成第 n 章（從 0 起算）
 // 獎勵、撿道具、兌換來的能量可以超過上限、沒有天花板（超過時不會自然回復，用掉才會繼續回）
 export const LEVEL_REWARD = { energy: 30, xp: 10 };                        // 每升一級
 export const clearReward = no => ({ coins: no * 50, energy: 20 + no * 5, xp: 15 + no * 5 });   // 過第 no 關
@@ -24,6 +32,10 @@ const EXTRA = { name: '加班挑戰', goal: 10, range: [4, 6] };
 export const LINES = {
   s: { gen: '文具櫃', items: ['迴紋針盒', '原子筆', '便利貼', '筆記本', '訂書機', '計算機', '豪華辦公禮盒'] },
   t: { gen: '茶水間', items: ['零食糖', '茶包', '熱咖啡', '珍珠奶茶', '甜甜圈', '草莓蛋糕', '豪華便當'] },
+  i: { gen: 'IT 倉庫', items: ['充電線', '隨身碟', '滑鼠', '鍵盤', '耳機', '平板', '空拍機'] },
+  m: { gen: '會議室', items: ['白板筆', '板擦', '簡報翻頁筆', '遙控器', '無線麥克風', '投影布捲', '手持相機'] },
+  d: { gen: '設計桌', items: ['橡皮擦', '螢光筆', '手寫筆', '麥克筆組', '色票', '色票本', '地板樣品'] },
+  w: { gen: '福利櫃', items: ['發票', '悠遊卡', '加班餐券', '優良員工貼紙', '置物櫃鑰匙', '員工證', '尾牙抽獎券'] },
 };
 // 產生器各等級掉出 1、2、3 級物品的機率
 const DROPS = [[1], [.75, .25], [.55, .35, .1]];
@@ -65,7 +77,7 @@ export function newGame(rnd = Math.random, now = Date.now()) {
   const cells = Array.from({ length: SIZE }, (_, i) => {
     const x = i % COLS, y = Math.floor(i / COLS);
     if (x >= 1 && x <= 5 && y >= 2 && y <= 5) return null;
-    const line = pick(['s', 't'], rnd);
+    const line = pick(START_LINES, rnd);
     return { box: true, hold: rnd() < .45 ? { line, lv: rnd() < .75 ? 1 : 2 } : null };
   });
   cells[at(1, 2)] = { gen: true, line: 's', lv: 1 };
@@ -74,7 +86,7 @@ export function newGame(rnd = Math.random, now = Date.now()) {
   cells[at(1, 6)] = { box: true, hold: { gen: true, line: 's', lv: 1 } };
   cells[at(5, 6)] = { box: true, hold: { gen: true, line: 't', lv: 1 } };
   for (const [x, y, line] of [[2, 4, 's'], [3, 4, 's'], [3, 3, 't'], [4, 4, 't']]) cells[at(x, y)] = { line, lv: 1 };
-  const state = { v: 1, cells, slots: Array(SLOTS).fill(null), coins: 0, done: 0, xp: 0, made: 0, seen: {}, orders: [], energy: ENERGY_MAX, energyAt: now };
+  const state = { v: 1, ver: SAVE_VERSION, lines: [...START_LINES], rank: {}, chapter: 0, cells, slots: Array(SLOTS).fill(null), coins: 0, done: 0, xp: 0, made: 0, seen: {}, orders: [], energy: ENERGY_MAX, energyAt: now };
   for (const c of cells) if (c && !c.box) see(state, c);
   while (state.orders.length < 3) state.orders.push(makeOrder(state, rnd));
   return state;
@@ -93,6 +105,8 @@ export function refill(state, now = Date.now()) {
 // 距離下一點還有幾毫秒（滿了回 0）
 export const nextEnergyIn = (state, now = Date.now()) => state.energy >= ENERGY_MAX ? 0 : Math.max(0, state.energyAt + ENERGY_MS - now);
 
+export const rankOf = (state, line) => state.rank?.[line] || 1;
+
 // 目前關卡決定難度；每第 5 張是急件大單
 export function makeOrder(state, rnd = Math.random) {
   state.made++;
@@ -102,10 +116,10 @@ export function makeOrder(state, rnd = Math.random) {
   const who = pick(PEOPLE.filter(name => !taken.includes(name)), rnd);
   const count = rush || n < 2 ? 1 : rnd() < .5 ? 2 : 1;
   const need = Array.from({ length: count }, () => ({
-    line: pick(Object.keys(LINES), rnd),
+    line: pick(state.lines, rnd),
     lv: rush ? Math.min(MAX_LV, hi + 1) : lo + Math.floor(rnd() * (hi - lo + 1)),
   }));
-  const reward = need.reduce((s, r) => s + value(r.lv) * 5, 0) * (rush ? 2 : 1);
+  const reward = Math.round(need.reduce((s, r) => s + value(r.lv) * 5 * (1 + RANK_BONUS.reward * (rankOf(state, r.line) - 1)), 0)) * (rush ? 2 : 1);
   return { id: state.made, who, need, reward, rush };
 }
 
@@ -113,6 +127,10 @@ export function makeOrder(state, rnd = Math.random) {
 export function upgradeSave(s, rnd = Math.random, now = Date.now()) {
   if (!s) return s;
   if (!Number.isFinite(s.energy) || !Number.isFinite(s.energyAt)) { s.energy = ENERGY_MAX; s.energyAt = now; }
+  s.ver = SAVE_VERSION;
+  if (!Array.isArray(s.lines)) s.lines = [...START_LINES];
+  s.rank ||= {};
+  if (!Number.isInteger(s.chapter)) s.chapter = 0;
   if (!Number.isFinite(s.xp)) s.xp = xpForLevel(1 + Math.floor((s.done || 0) / 3));
   if (Array.isArray(s.orders) && s.orders.some(o => !PEOPLE.includes(o?.who))) {
     s.orders = [];
@@ -158,6 +176,8 @@ export function spawn(state, i, rnd = Math.random, now = Date.now()) {
   const odds = DROPS[g.lv - 1];
   let r = rnd(), lv = 1;
   for (let k = 0; k < odds.length; k++) { if (r < odds[k]) { lv = k + 1; break; } r -= odds[k]; }
+  const rank = rankOf(state, g.line);
+  if (rank > 1 && rnd() < RANK_BONUS.lucky * (rank - 1)) lv = Math.min(MAX_LV, lv + 1);
   const item = { line: g.line, lv };
   state.cells[empty[0]] = item; see(state, item);
   state.energy--;
@@ -172,6 +192,14 @@ export function addBonus(state, id, amount, now = Date.now()) {
   state.energy += amount;
   state.claims = [...state.claims, id].slice(-20);
   return amount;
+}
+
+// 金幣換能量
+export function buyEnergy(state, now = Date.now()) {
+  if (state.coins < COIN_PRICE) return false;
+  refill(state, now);
+  state.coins -= COIN_PRICE; state.energy += COIN_ENERGY;
+  return true;
 }
 
 export function sell(state, from) {
@@ -197,6 +225,17 @@ export function findNeed(state, order) {
   return used;
 }
 
+// 發獎勵（金幣、經驗、能量），回傳這次升到的各級
+function grant(state, { coins = 0, xp = 0, energy = 0 }, level) {
+  state.coins += coins; state.xp += xp; state.energy += energy;
+  const ups = [];
+  while (level < levelInfo(state.xp).level) {
+    level++; state.xp += LEVEL_REWARD.xp; state.energy += LEVEL_REWARD.energy;
+    ups.push({ level, ...LEVEL_REWARD });
+  }
+  return ups;
+}
+
 // 交付訂單。回傳 { order, xp, cleared（剛過的關卡或 null）, levelUps（這次升到的各級） }
 export function deliver(state, id, rnd = Math.random, now = Date.now()) {
   const k = state.orders.findIndex(o => o.id === id);
@@ -204,26 +243,51 @@ export function deliver(state, id, rnd = Math.random, now = Date.now()) {
   const order = state.orders[k], used = findNeed(state, order);
   if (!used) return null;
   for (const u of used) area(state, u.a)[u.i] = null;
-  const before = stageInfo(state.done);
-  let level = levelInfo(state.xp).level;
-  const xp = orderXp(order.need);
-  state.coins += order.reward; state.xp += xp; state.done++;
+  const before = stageInfo(state.done), level = levelInfo(state.xp).level;
+  const xp = orderXp(order.need), total = { coins: order.reward, xp, energy: 0 };
+  state.done++;
   refill(state, now);
-  const give = energy => { state.energy += energy; };
   let cleared = null;
   if (stageInfo(state.done).no !== before.no) {
     const reward = clearReward(before.no);
-    state.coins += reward.coins; state.xp += reward.xp; give(reward.energy);
+    for (const key of Object.keys(total)) total[key] += reward[key];
     cleared = { no: before.no, name: before.name, ...reward, next: stageInfo(state.done) };
   }
-  const levelUps = [];
-  while (level < levelInfo(state.xp).level) {
-    level++; state.xp += LEVEL_REWARD.xp; give(LEVEL_REWARD.energy);
-    levelUps.push({ level, ...LEVEL_REWARD });
-  }
+  const levelUps = grant(state, total, level);
   state.orders.splice(k, 1);
   state.orders.splice(k, 0, makeOrder(state, rnd));
   return { order, xp, cleared, levelUps };
+}
+
+/* ---------- 劇情 ---------- */
+// 目前章節；全部完成回傳 null
+export function chapter(state) {
+  const c = CHAPTERS[state.chapter];
+  return c ? { ...c, no: state.chapter + 1, need: c.need.map(code => ({ line: code[0], lv: Number(code.slice(1)) })) } : null;
+}
+// 解鎖新物品線的章節要有地方放產生器（交出去的物品空出來的格子也算）
+export function chapterBlocked(state) {
+  const c = chapter(state);
+  if (!c) return 'done';
+  const used = findNeed(state, c);
+  if (!used) return 'need';
+  if (c.unlock && !state.cells.some(o => !o) && !used.some(u => u.a === 'cell')) return 'space';
+  return '';
+}
+// 完成目前章節。回傳 { chapter, reward, placed（新產生器的格子）, levelUps }
+export function finishChapter(state, now = Date.now()) {
+  if (chapterBlocked(state)) return null;
+  const c = chapter(state), reward = chapterReward(state.chapter), level = levelInfo(state.xp).level;
+  for (const u of findNeed(state, c)) area(state, u.a)[u.i] = null;
+  refill(state, now);
+  let placed = null;
+  if (c.unlock) {
+    state.lines = [...state.lines, c.unlock];
+    placed = state.cells.findIndex(o => !o);
+    state.cells[placed] = { gen: true, line: c.unlock, lv: 1 };
+  } else state.rank = { ...state.rank, [c.rank]: Math.min(RANK_MAX, rankOf(state, c.rank) + 1) };
+  state.chapter++;
+  return { chapter: c, reward, placed, levelUps: grant(state, reward, level) };
 }
 
 export function isValidSave(s) {
@@ -232,6 +296,7 @@ export function isValidSave(s) {
   return !!s && s.v === 1 && Array.isArray(s.cells) && s.cells.length === SIZE && s.cells.every(cell) &&
     Array.isArray(s.slots) && s.slots.length === SLOTS && s.slots.every(o => o === null || item(o)) &&
     Number.isFinite(s.coins) && Number.isFinite(s.done) && Number.isFinite(s.made) && !!s.seen &&
+    Array.isArray(s.lines) && s.lines.every(k => !!LINES[k]) && !!s.rank && Number.isInteger(s.chapter) && s.chapter >= 0 && s.chapter <= CHAPTERS.length &&
     Number.isInteger(s.energy) && s.energy >= 0 && Number.isFinite(s.energyAt) && Number.isFinite(s.xp) &&
     Array.isArray(s.orders) && s.orders.length === 3 &&
     s.orders.every(o => o && PEOPLE.includes(o.who) && Array.isArray(o.need) && o.need.every(item) && Number.isFinite(o.reward));

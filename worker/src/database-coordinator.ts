@@ -39,7 +39,8 @@ const OFFICE_MERGE_NAMES = ['Amber', 'Anna', 'Leona', 'Machi', 'Noise', '余采�
 const OFFICE_MERGE_ENERGY_PRICE = 15;        // 平台幣
 const OFFICE_MERGE_ENERGY_AMOUNT = 100;      // 換到的能量
 const OFFICE_MERGE_SAVE_LIMIT = 40_000;         // 一份存檔最多幾個字（正常約 4,000）
-const OFFICE_MERGE_PICKUPS_PER_DAY = 300;    // 撿道具回饋能量的每日上限（防灌點）
+const OFFICE_MERGE_FUN_ENERGY: Record<string, number> = { 'd:': 1, 'p:': 2 };   // 元宇宙：撿地上道具、清大便回饋的能量
+const OFFICE_MERGE_PICKUPS_PER_DAY = 300;    // 撿道具＋清大便回饋能量的每日上限（防灌點）
 const PIXEL_OFFICE_STAFF_EMPTY_SEATS: number[] = [12, 15];   // 要固定空著的座位（2026-10-16 曾指定 3 號空著，後來改成鄭筱舢坐 3 號，現在六個座位都可用）
 const PIXEL_OFFICE_STAFF_SEATS = 18;   // 企劃部、專案部同仁的座位（設計部六張桌子右側再六張，完成「建立你的角色」的人依序入座）
 const PIXEL_OFFICE_MAX_X = 2305, PIXEL_OFFICE_MAX_Y = 2400, PIXEL_OFFICE_MIN_Y = -1900;   // 往上複製的兩組桌子在畫面上方，邏輯 y 是負的
@@ -2944,15 +2945,16 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     this.ctx.storage.sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', 'merge-energy:' + name, JSON.stringify(value), Date.now());
   }
 
-  /** 撿到一個地上道具 → 1 點能量。每天有上限，擋掉直接打 API 灌點。回傳實際給的點數。 */
-  private officeMergePickup(name: string): number {
+  /** 撿到一個地上道具、清掉一坨大便 → 回饋能量（點數見 OFFICE_MERGE_FUN_ENERGY）。每天有上限，擋掉直接打 API 灌點。回傳實際給的點數。 */
+  private officeMergePickup(name: string, points: number): number {
     const record = this.officeMergeEnergyRead(name);
     const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date());
     if (record.day !== day) { record.day = day; record.picked = 0; }
-    if (record.picked >= OFFICE_MERGE_PICKUPS_PER_DAY) return 0;
-    record.picked += 1; record.pending += 1;
+    const got = Math.min(points, OFFICE_MERGE_PICKUPS_PER_DAY - record.picked);
+    if (got <= 0) return 0;
+    record.picked += got; record.pending += got;
     this.officeMergeEnergyWrite(name, record);
-    return 1;
+    return got;
   }
 
   /** op:'status' 查名字、平台幣餘額；op:'claim'（claimId）領取累積的能量；op:'buy'（requestId）用平台幣兌換。一律要登入。 */
@@ -3017,6 +3019,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       && Number.isFinite(state.done) && Number.isFinite(state.xp) && Number.isFinite(state.energy) && Number.isFinite(state.savedAt);
     const json = valid ? JSON.stringify(state) : '';
     if (!valid || json.length > OFFICE_MERGE_SAVE_LIMIT) throw new Error('存檔格式不正確');
+    if ((Number(asRow(saved.state).ver) || 1) > (Number(state.ver) || 1)) throw new Error('遊戲版本太舊，請重新整理頁面');
     if (Number(payload.baseRev) !== rev) return { ...stored(), conflict: true } as ApiResult;
     sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', key, JSON.stringify({ rev: rev + 1, state }), Date.now());
     return { ok: true, action: 'officeMergeSave', name, rev: rev + 1 } as ApiResult;
@@ -3096,12 +3099,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       this.ctx.storage.sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', 'funClaims', JSON.stringify(claims), now);
       this.pixelVersionMemo = null;
     }
-    // 地上驚喜道具：撿到的人同時得到 1 點翻身記能量（要登入，才知道是誰撿的）
+    // 地上驚喜道具 +1、清大便 +2 點翻身記能量（要登入，才知道是誰做的；同一個只算第一個人）
     let energy = 0;
-    if (won && id.startsWith('d:') && sessionToken(payload)) {
+    const points = OFFICE_MERGE_FUN_ENERGY[id.slice(0, 2)] || 0;
+    if (won && v === 1 && points && sessionToken(payload)) {
       try {
         const name = this.officeMergeName((await this.snapshot()).database, await this.sessionFor(payload));
-        if (name) energy = this.officeMergePickup(name);
+        if (name) energy = this.officeMergePickup(name, points);
       } catch { energy = 0; }
     }
     // 地上驚喜道具：撿到的人有 1% 機會獲得系統回饋 1 點平台幣（伺服器抽籤、帳本以道具 id 為 ref 保證同一個道具不會重複發）

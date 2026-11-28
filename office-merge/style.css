@@ -92,8 +92,10 @@ button{font:inherit;color:inherit;cursor:pointer}
 .sell{display:flex;flex-direction:column;align-items:center;gap:0;padding:2px 8px;border-radius:12px;border:2px solid #fff;background:linear-gradient(#69cbff,#2284e0);box-shadow:0 3px 0 #17609f;color:#fff;font-size:11px;text-shadow:0 1px 0 #14579b}
 .sell span{display:flex;align-items:center;gap:2px;font-size:15px}
 .sell img{width:17px;height:17px}
-.square.big{width:60px;height:auto;align-content:center;font-size:12px;border-radius:16px}
-.square.big img{width:36px;height:36px}
+.books{display:grid;grid-template-rows:1fr 1fr;gap:6px;width:62px}
+.books .square{position:relative;display:flex;align-items:center;justify-content:center;gap:1px;width:100%;height:100%;min-height:33px;border-radius:12px;font-size:12px}
+.books img{width:24px;height:24px}
+.books i{position:absolute;right:-5px;top:-7px;display:grid;place-items:center;width:19px;height:19px;border-radius:50%;border:2px solid #fff;background:#e8442e;color:#fff;font-style:normal;font-size:12px;animation:glow 1s ease-in-out infinite}
 
 #toast{position:fixed;left:50%;top:46%;transform:translate(-50%,-50%);z-index:40;pointer-events:none;width:max-content;max-width:86vw;text-align:center;padding:9px 18px;border-radius:99px;background:rgba(70,35,12,.9);border:3px solid #ffd27a;color:#fff;font-size:14px;animation:toast .25s}
 @keyframes toast{from{opacity:0;scale:.6}}
@@ -142,6 +144,33 @@ button.pill{cursor:pointer}
 .chain i{position:absolute;right:-3px;bottom:16px;padding:0 5px;border-radius:99px;border:2px solid #fff;background:#2fae3b;color:#fff;font-style:normal;font-size:11px}
 .lack{text-align:center}
 .lack b{color:#e07a00;font-size:18px}
+
+/* 圖鑑與劇情 */
+.hint{margin:0 0 10px;font-size:12px;line-height:1.6}
+.dex-head{display:flex;align-items:center;gap:6px}
+.dex-head img{width:34px;height:34px;object-fit:contain}
+.dex-head span{margin-left:auto;font-size:11px;color:var(--brown)}
+.dex-head em{font-style:normal;color:#ffab00;font-size:15px;letter-spacing:1px}
+.dex-head.locked img{filter:grayscale(1) opacity(.5)}
+.talk{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
+.talk img{width:46px;height:46px;object-fit:contain}
+.talk div{flex:1;padding:6px 10px;border-radius:4px 14px 14px 14px;background:#fff;border:2px solid #e8d3a8;line-height:1.6}
+.talk b{display:block;font-size:11px;color:#d96c0b}
+.goal{display:grid;justify-items:center;gap:8px;margin:12px 0;padding:10px;border-radius:14px;background:var(--tile);border:2px solid #ffb648;text-align:center}
+.goal>b{color:#d96c0b;font-size:15px}
+.goal-items{display:flex;gap:10px}
+.goal-items button{position:relative;display:grid;justify-items:center;min-width:100px;padding:6px;border-radius:12px;border:2px solid #e8d3a8;background:#fff;font-size:12px;line-height:1.4}
+.goal-items button.has{border-color:#2fae3b;background:#e6fbe0}
+.goal-items button.has::after{content:'✓';position:absolute;right:4px;top:0;color:#25a334;font-size:18px}
+.goal-items img{width:54px;height:54px;object-fit:contain}
+.goal-items small{font-size:10px;opacity:.7}
+.finish{padding:8px 26px;border-radius:99px;border:3px solid #fff;background:linear-gradient(#7eea6b,#2fae3b);box-shadow:0 4px 0 #1c7a27;color:#fff;font-size:16px;text-shadow:0 1px 0 #17661f}
+.finish:disabled{background:#b9c4cc;box-shadow:none;text-shadow:none;cursor:default}
+#panelBody details{margin-top:6px}
+#panelBody summary{cursor:pointer;margin-bottom:6px;color:#8a6a45}
+.card .gain{font-size:13px;color:#d96c0b}
+.shop{display:grid;gap:6px;justify-items:center;margin-bottom:10px;padding:10px;border-radius:14px;border:2px solid #e8d3a8;background:var(--tile);text-align:center}
+.shop b{color:#e07a00;font-size:17px}
 
 /* 升級與過關特效 */
 dialog.party{width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;border:0;border-radius:0;box-shadow:none;background:transparent;overflow:hidden}
