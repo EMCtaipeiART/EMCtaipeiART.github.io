@@ -1,6 +1,6 @@
 // 背景音樂播放 art/bgm.mp3（Higgsfield 生成）；音效用 Web Audio 即時合成。
 const KEY = 'officeMergeSound';
-export const prefs = { music: true, sfx: true };
+export const prefs = { music: true, sfx: true, musicVol: 70, sfxVol: 70 };
 try { Object.assign(prefs, JSON.parse(localStorage.getItem(KEY))); } catch (e) {}
 
 let ctx, musicBus, sfxBus, track = null, loading = null, source = null;
@@ -11,9 +11,23 @@ function init() {
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return false;
   ctx = new AC();
-  musicBus = ctx.createGain(); musicBus.gain.value = .38; musicBus.connect(ctx.destination);
-  sfxBus = ctx.createGain(); sfxBus.gain.value = .5; sfxBus.connect(ctx.destination);
+  musicBus = ctx.createGain(); musicBus.connect(ctx.destination);
+  sfxBus = ctx.createGain(); sfxBus.connect(ctx.destination);
+  applyVolume();
   return true;
+}
+
+// 70（預設）＝原本調好的大小，往上最多約 1.4 倍
+const BASE = { music: .38, sfx: .5 };
+const level = name => { const v = Number(prefs[name + 'Vol']); return BASE[name] * (Number.isFinite(v) ? Math.min(100, Math.max(0, v)) : 70) / 70; };
+function applyVolume() {
+  if (!ctx) return;
+  musicBus.gain.value = level('music'); sfxBus.gain.value = level('sfx');
+}
+function savePrefs() { try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch (e) {} }
+export function setVolume(name, value) {
+  prefs[name + 'Vol'] = value;
+  savePrefs(); applyVolume(); unlock();
 }
 
 function tone(bus, midi, at, len, vol, type = 'triangle', slide = 0) {
@@ -82,7 +96,7 @@ export function unlock() {
 }
 export function setPref(name, on) {
   prefs[name] = on;
-  try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch (e) {}
+  savePrefs();
   if (on) unlock(); else syncMusic();
 }
 document.addEventListener('visibilitychange', () => {

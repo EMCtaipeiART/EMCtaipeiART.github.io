@@ -217,11 +217,11 @@ function energyPanel() {
   tick();
   const wait = G.nextEnergyIn(state);
   openPanel('能量', `<div class="big-num">${state.energy} / ${G.ENERGY_MAX}</div>
+    <div id="exchange"></div>
     點一次產生器花 1 點，每分鐘回 1 點（關掉遊戲也會回）。<br>
     ${wait ? `下一點：${clock(wait)}　回滿約 ${G.ENERGY_MAX - state.energy} 分鐘` : '能量已滿！'}<br>
     升級送 ${G.LEVEL_REWARD.energy} 點、過關也會送能量（可超過上限）。能量用完時，合成、交付和販售都還能做。<br>
-    在元宇宙撿地上的道具，一個回饋 1 點能量。
-    <div id="exchange"></div>`);
+    在元宇宙撿地上的道具，一個回饋 1 點能量。`);
   exchangeBox();
 }
 
@@ -356,7 +356,7 @@ function tap(p) {
   let born = null;
   if (o.gen && p.a === 'cell') {
     const res = G.spawn(state, p.i);
-    if (res.tired) { audio.play('no'); toast(`能量用完了！${clock(G.nextEnergyIn(state))} 後回 1 點`); }
+    if (res.tired) { audio.play('no'); toast(`能量用完了！${clock(G.nextEnergyIn(state))} 後回 1 點`); energyPanel(); }
     else if (res.full) { audio.play('no'); toast('棋盤滿了！合成或賣掉一些物品'); }
     else { born = res.at; audio.play('pop'); save(); }
   }
@@ -445,12 +445,25 @@ $('bMenu').addEventListener('click', () => openHome(state));
 onFaces(render);
 
 function soundPanel() {
-  const row = (key, label) => `<button type="button" class="switch${audio.prefs[key] ? ' on' : ''}" data-sound="${key}" aria-pressed="${audio.prefs[key]}">${label}<span>${audio.prefs[key] ? '開' : '關'}</span></button>`;
+  const row = (key, label) => {
+    const on = audio.prefs[key], vol = audio.prefs[key + 'Vol'];
+    return `<div class="sound${on ? '' : ' muted'}">
+      <button type="button" class="switch${on ? ' on' : ''}" data-sound="${key}" aria-pressed="${on}">${label}<span>${on ? '開' : '關'}</span></button>
+      <label>音量<input type="range" min="0" max="100" step="5" value="${vol}" data-vol="${key}" aria-label="${label}音量" ${on ? '' : 'disabled'}><output>${vol}</output></label></div>`;
+  };
   openPanel('聲音', row('music', '背景音樂') + row('sfx', '音效'));
-  $('panelBody').querySelectorAll('[data-sound]').forEach(b => b.addEventListener('click', () => {
-    audio.setPref(b.dataset.sound, !audio.prefs[b.dataset.sound]);
+  $('panelBody').querySelectorAll('[data-sound]').forEach(button => button.addEventListener('click', () => {
+    audio.setPref(button.dataset.sound, !audio.prefs[button.dataset.sound]);
     $('panel').close(); syncSoundIcon(); soundPanel();
   }));
+  $('panelBody').querySelectorAll('[data-vol]').forEach(slider => {
+    slider.addEventListener('input', () => {
+      audio.setVolume(slider.dataset.vol, Number(slider.value));
+      slider.nextElementSibling.textContent = slider.value;
+    });
+    // 放開音效拉桿時放一聲，聽得到調到多大
+    if (slider.dataset.vol === 'sfx') slider.addEventListener('change', () => audio.play('merge', 2));
+  });
 }
 const syncSoundIcon = () => $('bSound').classList.toggle('off', !audio.prefs.music && !audio.prefs.sfx);
 $('bSound').addEventListener('click', soundPanel);
