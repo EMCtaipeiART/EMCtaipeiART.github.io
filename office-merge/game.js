@@ -80,8 +80,9 @@ const at = p => (p.a === 'slot' ? state.slots : state.cells)[p.i];
 
 function pieceHTML(o, anim) {
   const cls = ['item', o.gen ? 'gen' : '', !o.gen && o.lv === G.MAX_LV ? 'max' : '', anim || ''].filter(Boolean).join(' ');
-  const badge = o.gen ? `<i class="lv"><img src="${art('star')}" alt=""><b>${o.lv}</b></i>` : '';
-  return `<div class="${cls}"><img src="${img(o)}" alt="${G.nameOf(o)}">${badge}</div>`;
+  const wait = o.gen ? G.genStatus(o).wait : 0;
+  const badge = o.gen ? `<i class="lv"><img src="${art('star')}" alt=""><b>${o.lv}</b></i>${wait ? `<u class="cd">${clock(wait)}</u>` : ''}` : '';
+  return `<div class="${cls}${wait ? ' cooling' : ''}"><img src="${img(o)}" alt="${G.nameOf(o)}">${badge}</div>`;
 }
 
 const same = (a, b) => a && !a.box && !a.gen && a.line === b.line && a.lv === b.lv;
@@ -125,12 +126,35 @@ function render() {
   fx = {};
 }
 
+function genTip(o) {
+  const { cap, left, wait } = G.genStatus(o);
+  const merge = o.lv < G.GEN_MAX ? '兩台同級可合成升級' : '已最高級';
+  return wait ? `冷卻中 ${clock(wait)}，之後可再點 ${cap} 次` : `還可點 ${left} / ${cap} 次・${merge}`;
+}
+
+// 每秒更新冷卻倒數；有產生器冷卻好了就重畫
+const wasCooling = new WeakSet();
+function renderCooling() {
+  let ready = false, busy = false;
+  for (const o of [...state.cells, ...state.slots]) {
+    if (!o?.gen) continue;
+    if (G.genStatus(o).wait) { wasCooling.add(o); busy = true; } else if (wasCooling.delete(o)) ready = true;
+  }
+  if (drag) return;
+  if (ready) { render(); audio.play('merge', 1); return; }
+  if (!busy) return;
+  document.querySelectorAll('[data-a]').forEach(el => {
+    const o = at({ a: el.dataset.a, i: +el.dataset.i }), label = el.querySelector('.cd');
+    if (o?.gen && label) label.textContent = clock(G.genStatus(o).wait);
+  });
+  if (sel && at(sel)?.gen) renderInfo();
+}
+
 function renderInfo() {
   const o = sel && at(sel);
   if (!o) { $('info').innerHTML = '<div class="txt">點產生器拿物品，把兩個一樣的拖在一起合成。</div>'; return; }
   // 物品：一顆按鈕告訴你是哪個產生器（哪條圖鑑）生出來的
-  const tip = o.gen ? (o.lv < G.GEN_MAX ? '點一下產出物品；兩台同級可合成升級' : '點一下產出物品（已最高級）')
-    : `<button type="button" class="from" id="bFrom" title="看這條圖鑑"><img src="${art(o.line)}" alt=""><span>${G.LINES[o.line].gen}</span>›</button>`;
+  const tip = o.gen ? genTip(o) : `<button type="button" class="from" id="bFrom" title="看這條圖鑑"><img src="${art(o.line)}" alt=""><span>${G.LINES[o.line].gen}</span>›</button>`;
   $('info').innerHTML = `${o.gen ? `<img src="${img(o)}" alt="">` : ''}<div class="txt"><b>${G.nameOf(o)}</b>${tip}</div>` +
     (o.gen ? '' : `<button type="button" class="sell" id="bSell">出售<span>${coin()}${G.value(o.lv)}</span></button>`);
 }
@@ -154,6 +178,7 @@ function tick() {
   G.refill(state);
   if (state.energy !== before) save(false);
   renderEnergy();
+  renderCooling();
 }
 setInterval(tick, 1000);
 addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
@@ -374,7 +399,8 @@ function tap(p) {
   let born = null;
   if (o.gen && p.a === 'cell') {
     const res = G.spawn(state, p.i);
-    if (res.tired) { audio.play('no'); toast(`能量用完了！${clock(G.nextEnergyIn(state))} 後回 1 點`); energyPanel(); }
+    if (res.cooling) { audio.play('no'); toast(`${G.LINES[o.line].gen}冷卻中，${clock(res.cooling)} 後可以再點`); }
+    else if (res.tired) { audio.play('no'); toast(`能量用完了！${clock(G.nextEnergyIn(state))} 後回 1 點`); energyPanel(); }
     else if (res.full) { audio.play('no'); toast('棋盤滿了！合成或賣掉一些物品'); }
     else { born = res.at; audio.play('pop'); save(); }
   }
@@ -492,6 +518,7 @@ $('bHelp').addEventListener('click', () => {
   openPanel('怎麼玩', `<h3>目標</h3>幫同事準備他們要的東西，賺金幣。
     每一關先完成指定張數的一般訂單，再交紫色「過關任務」卡。<br>點訂單上的物品圖示，可以看它的合成階段。
     <h3>劇情與圖鑑</h3>共 ${G.CHAPTERS.length} 關，一關一段劇情；點過關任務卡上的同事頭像看對話。部分關卡過關後解鎖新物品線或提升圖鑑等級。
+    <h3>冷卻</h3>每台產生器連點到上限（Lv.1 ${G.GEN_CAP[0]} 次、Lv.2 ${G.GEN_CAP[1]} 次、Lv.3 ${G.GEN_CAP[2]} 次）要冷卻 ${G.GEN_COOL_MS[0] / 60000} 分鐘。
     <h3>能量</h3>上限 100 點，點一次產生器花 1 點，每分鐘回 1 點。
     <h3>操作</h3>點產生器拿物品。<br>把兩個一樣的拖在一起，合成高一級。<br>在紙箱旁邊合成，紙箱就會打開。<br>紙箱裡藏著第二台產生器，合成後更容易掉高級物品。<br>訂單湊齊後按「交付」。用不到的可以點選後賣掉，或放到左下暫存格。
     <h3>存檔</h3>登入後每一步都會存到雲端，換手機或電腦登入同一帳號就能接著玩。<br>目前：${SAVE_TEXT[cloudSave.status]}

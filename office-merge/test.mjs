@@ -72,6 +72,19 @@ const gen = s => s.cells.findIndex(c => c?.gen);
   console.log('通過：雲端存檔跨裝置情境');
 }
 
+{ // 產生器冷卻
+  const s = G.newGame(Math.random, 0), i = s.cells.findIndex(c => c?.gen);
+  s.energy = 100;
+  const clear = () => { s.cells = s.cells.map(c => c && !c.gen && !c.box ? null : c); };
+  for (let n = 0; n < G.GEN_CAP[0]; n++) { clear(); assert(G.spawn(s, i, Math.random, 0).item); }
+  clear(); const hit = G.spawn(s, i, Math.random, 1000); assert.equal(hit.cooling, G.GEN_COOL_MS[0] - 1000); assert.equal(s.energy, 100 - G.GEN_CAP[0]);
+  assert.equal(G.spawn(s, i, Math.random, -9e9).cooling, G.GEN_COOL_MS[0]);   // 時鐘倒退
+  s.cells[i].readyAt = G.GEN_COOL_MS[0];
+  assert(G.spawn(s, i, Math.random, G.GEN_COOL_MS[0]).item); assert.equal(G.genStatus(s.cells[i], G.GEN_COOL_MS[0]).left, G.GEN_CAP[0] - 1);
+  s.cells[20] = { gen: true, line: 's', lv: 1, used: 20, readyAt: 9e12 }; s.cells[21] = { gen: true, line: 's', lv: 1, used: 5 };
+  G.move(s, { a: 'cell', i: 20 }, { a: 'cell', i: 21 }); assert.deepEqual(s.cells[21], { gen: true, line: 's', lv: 2 });
+  assert(G.isValidSave(s));
+}
 { // 金幣換能量
   const s = G.newGame(Math.random, 0);
   s.coins = 999; assert.equal(G.buyEnergy(s, 0), false); assert.equal(s.energy, 100);
@@ -139,8 +152,10 @@ for (let run = 0; run < RUNS; run++) {
     if (merged) continue;
     const gens = s.cells.map((c, i) => c?.gen ? i : -1).filter(i => i >= 0);
     const need = wanted[Math.floor(Math.random() * wanted.length)].line;
-    const res = G.spawn(s, gens.find(i => s.cells[i].line === need), Math.random, now += 60000);
+    const g = gens.find(i => s.cells[i].line === need && !G.genStatus(s.cells[i], now + 60000).wait) ?? gens.find(i => s.cells[i].line === need);
+    const res = G.spawn(s, g, Math.random, now += 60000);
     assert(!res.tired);
+    if (res.cooling) { now += res.cooling; continue; }
     if (res.full) {
       const loose = s.cells.map((c, i) => c && !c.box && !c.gen ? i : -1).filter(i => i >= 0);
       const spare = loose.filter(i => !wanted.some(r => r.line === s.cells[i].line && r.lv === s.cells[i].lv));

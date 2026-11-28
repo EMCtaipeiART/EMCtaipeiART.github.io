@@ -4,7 +4,7 @@ export { CHAPTERS };
 export const COLS = 7, ROWS = 9, SIZE = COLS * ROWS, SLOTS = 2, MAX_LV = 7, GEN_MAX = 3;
 export const ENERGY_MAX = 100, ENERGY_MS = 60000;   // 能量上限；每幾毫秒回 1 點
 export const COIN_PRICE = 1000, COIN_ENERGY = 100;   // 金幣換能量
-export const SAVE_VERSION = 4;                      // 存檔格式版本；舊版遊戲讀不懂新版，雲端會擋住它覆蓋
+export const SAVE_VERSION = 5;                      // 存檔格式版本；舊版遊戲讀不懂新版，雲端會擋住它覆蓋
 export const RANK_MAX = 5;                          // 每條物品線的圖鑑等級上限（靠劇情提升）
 export const RANK_BONUS = { reward: .15, lucky: .07 };   // 每升一級：該線訂單金幣 +20%、產生器多掉一階的機率 +10%
 export const START_LINES = ['s', 't'];
@@ -33,6 +33,16 @@ export const LINES = {
 };
 // 產生器各等級掉出 1、2、3 級物品的機率
 const DROPS = [[1], [.75, .25], [.55, .35, .1]];
+// 產生器各等級連續可點幾次，點完要冷卻多久（毫秒）
+export const GEN_CAP = [20, 30, 40];
+export const GEN_COOL_MS = [30, 30, 30].map(min => min * 60000);
+// 這台產生器現在剩幾次、還要冷卻多久
+export function genStatus(g, now = Date.now()) {
+  const cap = GEN_CAP[g.lv - 1], full = GEN_COOL_MS[g.lv - 1];
+  const wait = g.readyAt ? Math.max(0, Math.min(full, g.readyAt - now)) : 0;
+  const used = g.readyAt && !wait ? 0 : Math.min(cap, g.used || 0);
+  return { cap, left: cap - used, wait };
+}
 // 訂單角色＝多元宇宙辦公室的人物（圖在 chars.js 載入）
 export const PEOPLE = ['Amber', 'Anna', 'Leona', 'Machi', 'Noise', '余采馨', '吳冠賢', '廖秦葦', '李明庭', '鄭筱舢', '黎子瑄', '王藍庭'];
 
@@ -162,7 +172,8 @@ export function move(state, from, to) {
   const a = src[from.i], b = dst[to.i];
   if (!a || a.box || (b && b.box)) return null;
   if (to.a === 'cell' && canMerge(a, b)) {
-    const next = { ...b, lv: b.lv + 1 };
+    // 合出來的產生器是全新的：次數和冷卻重算
+    const next = b.gen ? { gen: true, line: b.line, lv: b.lv + 1 } : { ...b, lv: b.lv + 1 };
     dst[to.i] = next; src[from.i] = null; see(state, next);
     const opened = [];
     for (const j of neighbors(to.i)) {
@@ -175,11 +186,16 @@ export function move(state, from, to) {
   return { type: 'move' };
 }
 
-// 點產生器：花 1 點能量，把物品放到最近的空格
+// 點產生器：花 1 點能量，把物品放到最近的空格。點滿上限的產生器要冷卻
 export function spawn(state, i, rnd = Math.random, now = Date.now()) {
   const g = state.cells[i];
   if (!g || !g.gen) return null;
   refill(state, now);
+  if (g.readyAt) {
+    const { wait } = genStatus(g, now);
+    if (wait) { g.readyAt = now + wait; return { cooling: wait }; }   // 時鐘被往回調也最多等一輪
+    delete g.readyAt; delete g.used;
+  }
   if (state.energy <= 0) return { tired: true };
   const x = i % COLS, y = Math.floor(i / COLS);
   const dist = j => Math.abs(j % COLS - x) + Math.abs(Math.floor(j / COLS) - y);
@@ -193,6 +209,8 @@ export function spawn(state, i, rnd = Math.random, now = Date.now()) {
   const item = { line: g.line, lv };
   state.cells[empty[0]] = item; see(state, item);
   state.energy--;
+  g.used = (g.used || 0) + 1;
+  if (g.used >= GEN_CAP[g.lv - 1]) g.readyAt = now + GEN_COOL_MS[g.lv - 1];
   return { at: empty[0], item };
 }
 
