@@ -137,7 +137,7 @@ function render() {
   const gift = state.gifts[0];
   $('bGift').hidden = !gift;
   $('slotLabel').hidden = !!gift;
-  if (gift) $('bGift').innerHTML = `<img src="${img(gift)}" alt="">領材料 ×${state.gifts.length}`;
+  if (gift) $('bGift').innerHTML = `<img src="${img(gift)}" alt="">領獎勵 ×${state.gifts.length}`;
   $('bDex').classList.toggle('new', state.lines.some(k => G.shardCost(state, k) && (state.shards[k] || 0) >= G.shardCost(state, k)));
   syncFlights();
   renderInfo();
@@ -471,7 +471,14 @@ function onUp(e) {
         navigator.vibrate?.(15);
       }
       save();
-      if (res.type === 'merge') tutorialEvent('merge');
+      if (res.type === 'merge') {
+        tutorialEvent('merge');
+        if (res.item.gen) {
+          const { line, lv } = res.item, now = G.genPerk(lv), was = G.genPerk(lv - 1);
+          celebrate({ kind: 'level', medal: lv, title: '機台升級！', text: `${G.LINES[line].gen}升到機台 ${lv} 級`,
+            extra: `<small>冷卻前可點 ${was.cap} → <b>${now.cap}</b> 次<br>掉出高階物品的機率 ${was.high}% → <b>${now.high}%</b></small>`, button: '太好了' });
+        }
+      }
     }
   }
   render();
@@ -519,7 +526,7 @@ $('orders').addEventListener('click', e => {
       if (c?.chapter) scene(() => talk([c.chapter.end], `第 ${c.no} 關・${c.chapter.title}`));
       if (c) celebrate({ kind: 'clear', medal: c.no, title: '過關！',
         text: c.chapter ? `第 ${c.no} 關「${c.chapter.title}」完成` : '加班挑戰完成一輪',
-        extra: `${c.chapter ? `<small class="gain">${gainText(c.chapter)}</small>` : ''}${prize(c, c.coins)}${loot(c)}${c.kept ? `<small>棋盤放不下的材料先寄放著（${c.kept} 個），左下角可以領</small>` : ''}<small>下一關：第 ${c.next.no} 關「${c.next.name}」</small>`, button: '前往下一關' });
+        extra: `${c.chapter ? `<small class="gain">${gainText(c.chapter)}</small>` : ''}${prize(c, c.coins)}${loot(c)}${c.kept ? `<small>棋盤放不下的獎勵先寄放著（${c.kept} 個），左下角可以領</small>` : ''}<small>下一關：第 ${c.next.no} 關「${c.next.name}」</small>`, button: '前往下一關' });
       for (const up of res.levelUps) celebrate({ kind: 'level', medal: up.level, title: '升級！', text: `你升到 Lv.${up.level} 了`, extra: prize(up), button: '太好了' });
       // 獎勵播完，接著講下一章
       if (c?.chapter && G.chapter(state)) { scene(playIntro); afterParty(storyPanel); }
@@ -538,7 +545,7 @@ function gainText(c) {
 }
 
 // 過關禮：材料和圖鑑碎片
-const loot = r => `<div class="loot">${r.materials.map(m => `<figure><img src="${img(m)}" alt="${G.nameOf(m)}"><figcaption>${G.nameOf(m)}</figcaption></figure>`).join('')}${Object.entries(r.shards).map(([line, n]) => `<figure class="shard"><span><img src="${art(line)}" alt=""></span><figcaption>${G.LINES[line].gen}碎片 ×${n}</figcaption></figure>`).join('')}</div>`;
+const loot = r => `<div class="loot">${r.gen ? `<figure class="shard"><img src="${art(r.gen)}" alt=""><figcaption>${G.LINES[r.gen].gen}產生器 ×1</figcaption></figure>` : ''}${r.materials.map(m => `<figure><img src="${img(m)}" alt="${G.nameOf(m)}"><figcaption>${G.nameOf(m)}</figcaption></figure>`).join('')}${Object.entries(r.shards).map(([line, n]) => `<figure class="shard"><span><img src="${art(line)}" alt=""></span><figcaption>${G.LINES[line].gen}碎片 ×${n}</figcaption></figure>`).join('')}</div>`;
 const prize = (r, coins) => `<div class="prize">${coins ? `<span>${coin()}+${coins}</span>` : ''}<span title="經驗值"><i class="xp">XP</i>+${r.xp}</span><span title="能量"><i class="zap"></i>+${r.energy}</span></div>`;
 
 // 任務物品提示：整條合成路線，標出要的是第幾階、手上有幾個
@@ -667,7 +674,8 @@ $('bHelp').addEventListener('click', () => {
   openPanel('怎麼玩', `<h3>目標</h3>幫同事準備他們要的東西，賺金幣。
     每一關先完成指定張數的一般訂單，再交紫色「過關任務」卡。<br>點訂單上的物品圖示，可以看它的合成階段。
     <h3>劇情與圖鑑</h3>共 ${G.CHAPTERS.length} 關，一關一段劇情；點過關任務卡上的同事頭像看對話。部分關卡過關後解鎖新物品線。遊戲裡第一次拿到的物件，元宇宙圖鑑沒有的會一起解鎖。每次過關還會拿到材料和圖鑑碎片，碎片集滿到「圖鑑」按升級。
-    <h3>冷卻</h3>每台產生器連點到上限（機台 1 級 ${G.GEN_CAP[0]} 次、2 級 ${G.GEN_CAP[1]} 次、3 級 ${G.GEN_CAP[2]} 次）要冷卻 ${G.GEN_COOL_MS[0] / 60000} 分鐘。點選冷卻中的產生器，按「解除冷卻」可花 ${G.COOL_PRICE} 金幣或平台幣立刻解除。
+    <h3>冷卻</h3>每台產生器連點到上限（機台 1 級 ${G.GEN_CAP[0]} 次、2 級 ${G.GEN_CAP[1]} 次、3 級 ${G.GEN_CAP[2]} 次）要冷卻 ${G.GEN_COOL_MS[0] / 60000} 分鐘。
+    <h3>產生器升級</h3>兩台同款同級拖在一起升一級（最高 ${G.GEN_MAX} 級）：可點次數更多、更常掉高階物品，次數和冷卻也會重算。部分關卡過關會再送一台。點選冷卻中的產生器，按「解除冷卻」可花 ${G.COOL_PRICE} 金幣或平台幣立刻解除。
     <h3>產生器的標記</h3>右下星星＝圖鑑等級（集碎片升級）。機台等級點選產生器看下方說明，兩台同級可合成升級。
     <h3>能量</h3>上限 100 點，點一次產生器花 1 點，每分鐘回 1 點。
     <h3>操作</h3>點產生器拿物品。<br>把兩個一樣的拖在一起，合成高一級。<br>在紙箱旁邊合成，紙箱就會打開。<br>紙箱裡藏著第二台產生器，合成後更容易掉高級物品。<br>訂單湊齊後按「交付」。用不到的可以點選後賣掉，或放到左下暫存格。

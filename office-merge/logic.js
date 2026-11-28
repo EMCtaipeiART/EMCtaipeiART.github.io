@@ -39,8 +39,12 @@ export const LINES = {
 // 產生器各等級掉出 1、2、3 級物品的機率
 const DROPS = [[1], [.75, .25], [.55, .35, .1]];
 // 產生器各等級連續可點幾次，點完要冷卻多久（毫秒）
-export const GEN_CAP = [40, 60, 80];
+export const GEN_CAP = [40, 100, 200];   // 合成要划算：一台的上限比兩台低一級的加起來多
+// 過關加送的產生器：[第幾關（1 起算）, 物品線]。加上開局／解鎖的，每條線剛好湊滿 4 台（可合到機台 3 級）。只能接在後面、不要調順序
+export const BONUS_GENS = [[8, 'i'], [12, 'm'], [16, 'd'], [20, 'w'], [30, 's'], [35, 't'], [45, 'i'], [50, 'm'], [55, 'd'], [60, 'w'], [70, 's'], [75, 't'], [85, 'i'], [90, 'm'], [95, 'd'], [100, 'w']];
 export const GEN_COOL_MS = [30, 30, 30].map(min => min * 60000);
+// 這一級產生器的能力：冷卻前可點幾次、掉出第 2 階以上的機率（%）
+export const genPerk = lv => ({ cap: GEN_CAP[lv - 1], high: Math.round((1 - DROPS[lv - 1][0]) * 100) });
 // 這台產生器現在剩幾次、還要冷卻多久
 export function genStatus(g, now = Date.now()) {
   const cap = GEN_CAP[g.lv - 1], full = GEN_COOL_MS[g.lv - 1];
@@ -96,7 +100,7 @@ export function newGame(rnd = Math.random, now = Date.now()) {
   cells[at(1, 6)] = { box: true, hold: { gen: true, line: 's', lv: 1 } };
   cells[at(5, 6)] = { box: true, hold: { gen: true, line: 't', lv: 1 } };
   for (const [x, y, line] of [[2, 4, 's'], [3, 4, 's'], [3, 3, 't'], [4, 4, 't']]) cells[at(x, y)] = { line, lv: 1 };
-  const state = { v: 1, ver: SAVE_VERSION, lines: [...START_LINES], rank: {}, shards: {}, gifts: [], chapter: 0, progress: 0, overtime: 0, tut: false, heard: -1, cells, slots: Array(SLOTS).fill(null), coins: 0, done: 0, xp: 0, made: 0, seen: {}, orders: [], energy: ENERGY_MAX, energyAt: now };
+  const state = { v: 1, ver: SAVE_VERSION, lines: [...START_LINES], rank: {}, shards: {}, gifts: [], chapter: 0, progress: 0, overtime: 0, tut: false, heard: -1, spare: 0, cells, slots: Array(SLOTS).fill(null), coins: 0, done: 0, xp: 0, made: 0, seen: {}, orders: [], energy: ENERGY_MAX, energyAt: now };
   for (const c of cells) if (c && !c.box) see(state, c);
   fillOrders(state, rnd);
   return state;
@@ -130,7 +134,14 @@ export function chapterLoot(n) {
   const materials = c.need.map(code => ({ line: code[0], lv: Math.max(1, Number(code.slice(1)) - 2) }));
   for (const m of materials) shards[m.line] = (shards[m.line] || 0) + SHARDS_PER_NEED;
   if (c.rank) shards[c.rank] = (shards[c.rank] || 0) + SHARDS_BONUS;
-  return { shards, materials };
+  return { shards, materials, gen: BONUS_GENS.find(g => g[0] === n + 1)?.[1] || '' };
+}
+// 過關數到了就把加送的產生器放進寄放區；spare 記已經發到第幾台（舊存檔第一次讀進來會一次補齊）
+function grantGens(state) {
+  while (state.spare < BONUS_GENS.length && BONUS_GENS[state.spare][0] <= state.chapter) {
+    state.gifts = [...state.gifts, { gen: true, line: BONUS_GENS[state.spare][1], lv: 1 }];
+    state.spare++;
+  }
 }
 function addShards(state, shards) {
   state.shards = { ...state.shards };
@@ -189,6 +200,8 @@ export function upgradeSave(s, rnd = Math.random, now = Date.now()) {
   if (!Number.isInteger(s.chapter)) s.chapter = 0;
   if (!Number.isInteger(s.progress)) s.progress = 0;
   if (!Number.isInteger(s.overtime)) s.overtime = 0;
+  if (!Number.isInteger(s.spare)) s.spare = 0;
+  grantGens(s);
   if (!Number.isFinite(s.xp)) s.xp = xpForLevel(1 + Math.floor((s.done || 0) / 3));
   // tut：看過新手教學；heard：看過開場對話的章節。玩過的舊存檔不用重看
   if (typeof s.tut !== 'boolean') s.tut = s.done > 0 || s.chapter > 0;
@@ -337,9 +350,10 @@ export function deliver(state, id, rnd = Math.random, now = Date.now()) {
     const loot = chapterLoot(order.story);
     addShards(state, loot.shards);
     state.gifts = [...state.gifts, ...loot.materials];
+    state.chapter++; state.progress = 0;
+    grantGens(state);
     const dropped = [];
     for (let got = claimGift(state); got; got = claimGift(state)) dropped.push(got.at);
-    state.chapter++; state.progress = 0;
     cleared = { no: before.no, name: before.name, chapter: c, placed, ...reward, ...loot, dropped, kept: state.gifts.length, next: stageInfo(state) };
   } else if (!before.extra) state.progress = Math.min(before.goal, state.progress + 1);
   else {

@@ -84,6 +84,20 @@ const gen = s => s.cells.findIndex(c => c?.gen);
   for (const area of ['d', 'n']) { const all = keys.flatMap(k => DEX[k][area] || []); assert(all.every(n => n >= 0 && n < 50)); assert.equal(new Set(all).size, all.length); }
   assert.deepEqual(dexIds(['s5', 'w3', 'zz']), { d: [10, 0], n: [8] });
 }
+{ // 加送產生器：每條線湊滿 4 台；過關時發、舊存檔補發、不重複發
+  for (const k of Object.keys(G.LINES)) {
+    const base = G.START_LINES.includes(k) ? 2 : 1;
+    assert.equal(base + G.BONUS_GENS.filter(g => g[1] === k).length, 4, k);
+    assert(G.BONUS_GENS.every(([no]) => no <= G.CHAPTERS.length));
+  }
+  for (let lv = 2; lv <= G.GEN_MAX; lv++) assert(G.GEN_CAP[lv - 1] >= 2 * G.GEN_CAP[lv - 2]);
+  const s = G.newGame(Math.random, 0); s.chapter = 21; delete s.spare;
+  const u = G.upgradeSave(s);
+  assert.deepEqual(u.gifts.map(g => g.line), ['i', 'm', 'd', 'w']); assert(G.isValidSave(u));
+  assert.equal(G.upgradeSave(u).gifts.length, 4);
+  const at = G.claimGift(u).at; assert.deepEqual(u.cells[at], { gen: true, line: 'i', lv: 1 });
+  assert.equal(G.chapterLoot(7).gen, 'i'); assert.equal(G.chapterLoot(0).gen, '');
+}
 { // 解除冷卻
   const s = G.newGame(Math.random, 0), i = s.cells.findIndex(c => c?.gen), at = { a: 'cell', i };
   s.coins = 600;
