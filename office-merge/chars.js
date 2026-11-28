@@ -6,9 +6,10 @@ export const GHOST = '透明人';   // 沒有登入的人
 const CHAR_API = 'https://emc-ai-stage-classifier.machi-chen.workers.dev/api/public/characters';
 const CACHE = 'plazaCloudChars';  // 和元宇宙共用的人物清單快取
 const BLANK = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-const faces = {}, listeners = new Set();
+const faces = {}, busts = {}, listeners = new Set();
 
 export const face = name => faces[name] || BLANK;
+export const bust = name => busts[name] || BLANK;   // 劇情對話用的半身
 export const onFaces = fn => listeners.add(fn);
 
 async function cloudList() {
@@ -38,11 +39,19 @@ function crop(atlas) {
   return c.toDataURL();
 }
 
+// 同一格裁半身（頭到腰）
+function half(atlas) {
+  const k = atlas.height / 240, c = document.createElement('canvas');
+  c.width = Math.round(192 * k); c.height = Math.round(180 * k);
+  c.getContext('2d').drawImage(atlas, 24 * k, 4 * k, 192 * k, 180 * k, 0, 0, c.width, c.height);
+  return c.toDataURL();
+}
+
 async function load(name, cloud) {
   const local = `../pixel-plaza/sprites-hd/${encodeURIComponent(name)}.webp`;
   const sources = cloud[name] ? [`${CHAR_API}/${encodeURIComponent(name)}/atlas-hd.png?v=${cloud[name]}`, local] : [local];
   for (const src of sources) {
-    try { faces[name] = crop(await image(src)); return; } catch (e) {}
+    try { const atlas = await image(src); faces[name] = crop(atlas); busts[name] = half(atlas); return; } catch (e) {}
   }
 }
 

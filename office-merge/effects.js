@@ -27,6 +27,7 @@ function next() {
   const job = queue.shift();
   busy = !!job;
   if (!job) { const then = waiting.splice(0); then.forEach(fn => fn()); return; }
+  if (job.run) { job.run().finally(next); return; }
   const el = document.createElement('dialog');
   el.className = `party ${job.kind}-party`;
   el.innerHTML = `<div class="rays"></div><div class="card">
@@ -53,3 +54,5 @@ export function celebrate(job) {
   queue.push(job);
   if (!busy) next();
 }
+// 排進同一條隊伍的其他演出（劇情對話）：run 回傳 Promise
+export const scene = run => celebrate({ run });

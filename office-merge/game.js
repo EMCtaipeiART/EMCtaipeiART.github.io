@@ -2,7 +2,9 @@
 import * as G from './logic.js';
 import { art } from './art.js';
 import * as audio from './audio.js';
-import { celebrate, afterParty } from './effects.js';
+import { celebrate, afterParty, scene } from './effects.js';
+import { talk } from './talk.js';
+import { startTutorial, tutorialEvent, stopTutorial, tutorialOn } from './tutorial.js';
 import { openHome, refreshHome, setSaveState } from './home.js';
 import { createCloudSave } from './savesync.js';
 import * as cloud from './cloud.js';
@@ -469,6 +471,7 @@ function onUp(e) {
         navigator.vibrate?.(15);
       }
       save();
+      if (res.type === 'merge') tutorialEvent('merge');
     }
   }
   render();
@@ -486,7 +489,7 @@ function tap(p) {
     else { born = res.at; audio.play('pop'); save(); }
   }
   render();
-  if (born !== null) { popOut(p.i, born); navigator.vibrate?.(8); }
+  if (born !== null) { popOut(p.i, born); navigator.vibrate?.(8); tutorialEvent('spawn'); }
 }
 
 for (const id of ['board', 'slots']) $(id).addEventListener('pointerdown', onDown);
@@ -513,16 +516,17 @@ $('orders').addEventListener('click', e => {
       sel = null; save(); render(); audio.play('coin'); sync(state);
       const c = res.cleared;
       if (!res.cleared?.chapter) toast(`${res.order.who}：謝啦！+${res.order.reward} 金幣・+${res.xp} 經驗`);
+      if (c?.chapter) scene(() => talk([c.chapter.end], `第 ${c.no} 關・${c.chapter.title}`));
       if (c) celebrate({ kind: 'clear', medal: c.no, title: '過關！',
         text: c.chapter ? `第 ${c.no} 關「${c.chapter.title}」完成` : '加班挑戰完成一輪',
-        extra: `${c.chapter ? `${bubble(c.chapter.end)}<small class="gain">${gainText(c.chapter)}</small>` : ''}${prize(c, c.coins)}${loot(c)}${c.kept ? `<small>棋盤放不下的材料先寄放著（${c.kept} 個），左下角可以領</small>` : ''}<small>下一關：第 ${c.next.no} 關「${c.next.name}」</small>`, button: '前往下一關' });
+        extra: `${c.chapter ? `<small class="gain">${gainText(c.chapter)}</small>` : ''}${prize(c, c.coins)}${loot(c)}${c.kept ? `<small>棋盤放不下的材料先寄放著（${c.kept} 個），左下角可以領</small>` : ''}<small>下一關：第 ${c.next.no} 關「${c.next.name}」</small>`, button: '前往下一關' });
       for (const up of res.levelUps) celebrate({ kind: 'level', medal: up.level, title: '升級！', text: `你升到 Lv.${up.level} 了`, extra: prize(up), button: '太好了' });
-      // 特效播完，接著講下一章
-      if (c?.chapter && G.chapter(state)) afterParty(storyPanel);
+      // 獎勵播完，接著講下一章
+      if (c?.chapter && G.chapter(state)) { scene(playIntro); afterParty(storyPanel); }
     }
     return;
   }
-  if (e.target.closest('[data-story]')) { storyPanel(); return; }
+  if (e.target.closest('[data-story]')) { replayChapter(state.chapter).then(storyPanel); return; }
   const n = e.target.closest('[data-line]');
   if (n) chainPanel(n.dataset.line, +n.dataset.lv);
 });
@@ -588,23 +592,76 @@ function dexPanel() {
 $('bDex').addEventListener('click', dexPanel);
 
 /* ---------- 劇情模式 ---------- */
-const bubble = ([who, text]) => `<div class="talk"><img src="${face(who)}" alt=""><div><b>${who}</b>${text}</div></div>`;
+const chapterTitle = n => `第 ${n + 1} 關・${G.CHAPTERS[n].title}`;
+const replayChapter = n => G.CHAPTERS[n] ? talk(G.CHAPTERS[n].say, chapterTitle(n)) : Promise.resolve();
+// 這一章的開場對話還沒看過就播
+async function playIntro() {
+  const n = state.chapter;
+  if (!G.chapter(state) || state.heard === n) return;
+  await replayChapter(n);
+  state.heard = n; save();
+}
 function storyPanel() {
   const c = G.chapter(state);
-  const past = G.CHAPTERS.slice(0, state.chapter).map((p, i) => `<details><summary>第 ${i + 1} 關・${p.title} ✓</summary>${[...p.say, p.end].map(bubble).join('')}</details>`).reverse().join('');
-  if (!c) { openPanel('劇情', `<p class="hint">全部 ${G.CHAPTERS.length} 關完成！現在是無限的加班挑戰。</p>${past}`); return; }
+  const past = state.chapter ? `<details><summary>回顧劇情（${state.chapter} 關）</summary><div class="replays">${G.CHAPTERS.slice(0, state.chapter).map((p, i) => `<button type="button" data-replay="${i}">▶ ${chapterTitle(i)}</button>`).reverse().join('')}</div></details>` : '';
+  const bindReplays = () => $('panelBody').querySelectorAll('[data-replay]').forEach(b => b.addEventListener('click', () => { const n = Number(b.dataset.replay), p = G.CHAPTERS[n]; talk([...p.say, p.end], chapterTitle(n)); }));
+  if (!c) { openPanel('劇情', `<p class="hint">全部 ${G.CHAPTERS.length} 關完成！現在是無限的加班挑戰。</p>${past}`); bindReplays(); return; }
   const items = c.need.map(r => {
     const has = [...state.cells, ...state.slots].some(o => same(o, r));
     return `<button type="button" class="${has ? 'has' : ''}" data-line="${r.line}" data-lv="${r.lv}"><img src="${img(r)}" alt="">${G.nameOf(r)}<small>${G.LINES[r.line].gen} ${r.lv} 階</small></button>`;
   }).join('');
   const reward = G.chapterReward(state.chapter);
   const stage = G.stageInfo(state);
-  openPanel(`第 ${c.no} / ${G.CHAPTERS.length} 關・${c.title}`, `${c.say.map(bubble).join('')}
+  openPanel(`第 ${c.no} / ${G.CHAPTERS.length} 關・${c.title}`, `<button type="button" class="replay" id="bReplay"><img src="${face(c.say[0][0])}" alt="">▶ 再看一次對話</button>
     <div class="goal"><b>${gainText(c)}</b><div class="goal-items">${items}</div>${prize(reward, reward.coins)}${loot(G.chapterLoot(state.chapter))}
     <small>${stage.ready ? '湊齊後，在上方的「過關任務」卡按交付' : `先完成一般訂單 ${stage.have} / ${stage.goal} 張，再交過關任務`}</small><button type="button" class="finish" id="bGo">開始任務</button></div>${past}`);
   $('panelBody').querySelectorAll('[data-line]').forEach(b => b.addEventListener('click', () => chainPanel(b.dataset.line, +b.dataset.lv)));
   $('bGo').addEventListener('click', () => $('panel').close());
+  $('bReplay').addEventListener('click', () => replayChapter(state.chapter));
+  bindReplays();
 }
+
+/* ---------- 新手教學 ---------- */
+const cellsWhere = test => state.cells.map((o, i) => o && !o.box && test(o, i) ? $('board').children[i] : null).filter(Boolean);
+// 可以點的文具櫃（沒冷卻、有能量、有空格）
+const readyGen = () => state.energy > 0 && state.cells.some(o => !o) ? cellsWhere(o => o.gen && !G.genStatus(o).wait).slice(0, 1) : [];
+// 最靠近的一組可合成物品
+function mergePair() {
+  let best = null;
+  state.cells.forEach((a, i) => state.cells.forEach((b, j) => {
+    if (j <= i || !a || a.box || a.gen || !G.canMerge(a, b)) return;
+    const d = Math.abs(i % G.COLS - j % G.COLS) + Math.abs(Math.floor(i / G.COLS) - Math.floor(j / G.COLS));
+    if (!best || d < best.d) best = { d, i, j };
+  }));
+  return best ? [$('board').children[best.i], $('board').children[best.j]] : [];
+}
+const one = selector => () => [document.querySelector(selector)];
+const TUTORIAL = [
+  { text: '歡迎加入！點一下發亮的產生器，拿出一個物品（花 1 點能量）。', target: readyGen, wait: 'spawn' },
+  { text: '把兩個一樣的物品拖在一起，就會合成高一級。試試看！', target: mergePair, wait: 'merge' },
+  { text: '紙箱裡藏著東西。在紙箱旁邊合成，紙箱就會打開。', target: () => cellsWhere(() => false).concat([...document.querySelectorAll('.cell.boxed')].slice(0, 7)) },
+  { text: '上面是同事的訂單。湊齊物品後按「交付」拿金幣和經驗；點物品圖示可以看怎麼合出來。', target: one('#orders') },
+  { text: '紫色卡片是「過關任務」。先完成指定張數的一般訂單，再交出它就能過關。', target: one('.order.story') },
+  { text: '這裡是本關進度。左邊「主選單」可以看同仁闖關榜。', target: one('.stagebar') },
+  { text: '能量每分鐘回 1 點，用完了可以點這裡用金幣或平台幣兌換。', target: one('#bEnergy') },
+  { text: '產生器連點到上限會冷卻 30 分鐘。點選它可以花金幣或平台幣解除。', target: () => cellsWhere(o => o.gen) },
+  { text: '左邊是暫存格；中間顯示點選物品的說明，用不到的可以出售。', target: () => [document.querySelector('.drawer'), $('info')] },
+  { text: '圖鑑收集你合出的物品，過關拿到碎片就能升級。祝你翻身成功！', target: one('#bDex') },
+];
+function beginTutorial() {
+  sel = null; render();
+  startTutorial(TUTORIAL, () => { state.tut = true; save(); });
+}
+// 進入棋盤：先看本章開場對話，新手接著上教學
+let entering = false;
+async function enterBoard() {
+  if (entering || tutorialOn()) return;
+  entering = true;
+  await playIntro();
+  entering = false;
+  if (!state.tut && !$('home').open) beginTutorial();
+}
+$('home').addEventListener('close', () => scene(enterBoard));
 
 $('bHelp').addEventListener('click', () => {
   openPanel('怎麼玩', `<h3>目標</h3>幫同事準備他們要的東西，賺金幣。
@@ -615,10 +672,11 @@ $('bHelp').addEventListener('click', () => {
     <h3>能量</h3>上限 100 點，點一次產生器花 1 點，每分鐘回 1 點。
     <h3>操作</h3>點產生器拿物品。<br>把兩個一樣的拖在一起，合成高一級。<br>在紙箱旁邊合成，紙箱就會打開。<br>紙箱裡藏著第二台產生器，合成後更容易掉高級物品。<br>訂單湊齊後按「交付」。用不到的可以點選後賣掉，或放到左下暫存格。
     <h3>存檔</h3>登入後每一步都會存到雲端，換手機或電腦登入同一帳號就能接著玩。<br>目前：${SAVE_TEXT[cloudSave.status]}
-    <div class="row"><button type="button" class="danger" id="bReset">重新開始</button></div>`);
+    <div class="row"><button type="button" class="buy" id="bTutorial">重看新手教學</button><button type="button" class="danger" id="bReset">重新開始</button></div>`);
+  $('bTutorial').addEventListener('click', () => { $('panel').close(); beginTutorial(); });
   $('bReset').addEventListener('click', () => {
     if (!confirm('確定重新開始？目前進度會清掉。')) return;
-    state = G.newGame(); sel = null; save(); render(); $('panel').close();
+    stopTutorial(); state = G.newGame(); sel = null; save(); render(); $('panel').close(); enterBoard();
   });
 });
 

@@ -115,6 +115,7 @@ export const isPlaying = () => !!el && !el.paused && ctx.state === 'running';
 const run = (notes, gap, len, vol, type) => notes.forEach((n, i) => tone(sfxBus, n, ctx.currentTime + i * gap, len, vol, type));
 const SOUNDS = {
   pop: () => tone(sfxBus, 62, ctx.currentTime, .14, .5, 'sine', 17),
+  type: () => tone(sfxBus, 79, ctx.currentTime, .035, .09, 'triangle'),   // 對話逐字的輕敲聲
   merge: (lv = 1) => run([67 + lv * 2, 74 + lv * 2, 79 + lv * 2], .055, .22, .35),
   coin: () => run([83, 88], .08, .28, .22, 'square'),
   no: () => run([55, 50], .11, .18, .35, 'sine'),

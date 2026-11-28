@@ -96,7 +96,7 @@ export function newGame(rnd = Math.random, now = Date.now()) {
   cells[at(1, 6)] = { box: true, hold: { gen: true, line: 's', lv: 1 } };
   cells[at(5, 6)] = { box: true, hold: { gen: true, line: 't', lv: 1 } };
   for (const [x, y, line] of [[2, 4, 's'], [3, 4, 's'], [3, 3, 't'], [4, 4, 't']]) cells[at(x, y)] = { line, lv: 1 };
-  const state = { v: 1, ver: SAVE_VERSION, lines: [...START_LINES], rank: {}, shards: {}, gifts: [], chapter: 0, progress: 0, overtime: 0, cells, slots: Array(SLOTS).fill(null), coins: 0, done: 0, xp: 0, made: 0, seen: {}, orders: [], energy: ENERGY_MAX, energyAt: now };
+  const state = { v: 1, ver: SAVE_VERSION, lines: [...START_LINES], rank: {}, shards: {}, gifts: [], chapter: 0, progress: 0, overtime: 0, tut: false, heard: -1, cells, slots: Array(SLOTS).fill(null), coins: 0, done: 0, xp: 0, made: 0, seen: {}, orders: [], energy: ENERGY_MAX, energyAt: now };
   for (const c of cells) if (c && !c.box) see(state, c);
   fillOrders(state, rnd);
   return state;
@@ -190,6 +190,9 @@ export function upgradeSave(s, rnd = Math.random, now = Date.now()) {
   if (!Number.isInteger(s.progress)) s.progress = 0;
   if (!Number.isInteger(s.overtime)) s.overtime = 0;
   if (!Number.isFinite(s.xp)) s.xp = xpForLevel(1 + Math.floor((s.done || 0) / 3));
+  // tut：看過新手教學；heard：看過開場對話的章節。玩過的舊存檔不用重看
+  if (typeof s.tut !== 'boolean') s.tut = s.done > 0 || s.chapter > 0;
+  if (!Number.isInteger(s.heard)) s.heard = s.tut ? s.chapter : -1;
   if (Array.isArray(s.orders)) {
     if (s.orders.some(o => !PEOPLE.includes(o?.who))) s.orders = [];
     fillOrders(s, rnd);

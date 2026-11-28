@@ -24,7 +24,9 @@
 | `savesync.js` | 跨裝置同步與版本衝突規則 |
 | `chars.js` | 人物圖（和元宇宙同一份最新角色） |
 | `audio.js` | 配樂 `art/bgm1.mp3`、`bgm2.mp3` 輪播（新增曲目：放進 `art/`、加到 `TRACKS`）、即時合成音效 |
-| `effects.js` | 升級／過關特效 |
+| `effects.js` | 升級／過關特效，以及演出排隊（`scene`） |
+| `talk.js` | 劇情對話：單人半身立繪＋對話框逐字出現、點一下換句；過關順序＝完成對話→獎勵→升級→下一章開場 |
+| `tutorial.js` | 新手教學的打亮與步驟推進；步驟內容在 `game.js` 的 `TUTORIAL`（存檔 `tut`、`heard` 記看過沒） |
 | `art.js` | 金幣與星星向量圖、產生器／紙箱圖檔路徑 |
 | `style.css`、`index.html` | 版面 |
 | `art/` | 文具櫃 `s`、茶水間 `t`、紙箱 `box`、背景 `bg.jpg`、配樂 |

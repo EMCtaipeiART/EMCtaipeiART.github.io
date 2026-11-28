@@ -309,3 +309,40 @@ dialog#home::backdrop{background:#0d3a22}
 #bStart{flex:1;max-width:200px;padding:9px 0;border-radius:99px;border:3px solid #fff;background:linear-gradient(#7eea6b,#2fae3b);box-shadow:0 4px 0 #1c7a27;color:#fff;font-size:19px;text-shadow:0 1px 0 #17661f}
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important}}
+
+/* ---------- 劇情對話 ---------- */
+dialog.scene{width:100vw;height:100dvh;max-width:480px;max-height:none;margin:0 auto;padding:0 10px calc(14px + env(safe-area-inset-bottom));border:0;border-radius:0;box-shadow:none;background:transparent;overflow:hidden;user-select:none;cursor:pointer}
+dialog.scene[open]{display:flex;flex-direction:column;justify-content:flex-end;animation:scene-in .22s ease-out}
+dialog.scene::backdrop{background:linear-gradient(rgba(20,12,30,.55),rgba(20,12,30,.86))}
+@keyframes scene-in{from{opacity:0}}
+.scene-top{position:absolute;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top));display:flex;justify-content:space-between;align-items:center;gap:8px}
+.scene-top b{padding:3px 14px;border-radius:99px;background:#7c52e0;border:2px solid #fff;color:#fff;font-size:13px}
+.scene-top b:empty{visibility:hidden}
+.scene-skip{padding:5px 14px;border-radius:99px;border:2px solid #fff;background:rgba(255,255,255,.18);color:#fff;font-size:13px}
+.bust{align-self:center;width:min(330px,82vw,50dvh);aspect-ratio:192/180;object-fit:contain;object-position:bottom;margin-bottom:-14px;filter:drop-shadow(0 10px 12px rgba(0,0,0,.45));pointer-events:none}
+.say-box{position:relative;z-index:1;min-height:132px;padding:24px 18px 26px;border-radius:22px;border:4px solid #fff;background:var(--cream);color:var(--brown);box-shadow:0 8px 0 rgba(40,15,0,.4);text-align:left}
+.say-name{position:absolute;left:16px;top:-17px;padding:3px 20px;border-radius:99px;border:3px solid #fff;background:linear-gradient(#ffbd4f,#ff8f1f);color:#fff;font-size:17px;text-shadow:0 1px 0 #a85600}
+.say-box p{margin:0;font-size:18px;line-height:1.75}
+.say-box .rest{visibility:hidden}
+.say-box i{position:absolute;right:16px;bottom:8px;color:#ff8f1f;font-style:normal;visibility:hidden;animation:nudge .7s ease-in-out infinite alternate}
+.say-box.done i{visibility:visible}
+.say-box small{position:absolute;left:18px;bottom:6px;font-size:11px;opacity:.55}
+@keyframes nudge{to{transform:translateY(4px)}}
+.replay{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 auto;padding:3px 18px 3px 6px;border-radius:99px;border:2px solid #fff;background:linear-gradient(#a98af0,#7c52e0);box-shadow:0 3px 0 #55359f;color:#fff;font-size:14px}
+.replay img{width:38px;height:38px;object-fit:contain}
+.replays{display:grid;gap:6px}
+.replays button{padding:6px 12px;border-radius:12px;border:2px solid #e8d3a8;background:#fff;color:var(--brown);text-align:left;font-size:13px}
+
+/* ---------- 新手教學 ---------- */
+.tut{position:fixed;inset:0;z-index:50;pointer-events:none}
+.tut .shade{position:fixed;pointer-events:auto;touch-action:none}
+.tut .ring{position:fixed;border-radius:14px;border:3px solid #ffe45c;box-shadow:0 0 0 9999px rgba(20,12,4,.62),0 0 14px 4px rgba(255,220,60,.8);animation:ring 0.9s ease-in-out infinite alternate}
+@keyframes ring{to{border-color:#fff;box-shadow:0 0 0 9999px rgba(20,12,4,.62),0 0 22px 8px rgba(255,220,60,.55)}}
+.tip-card{position:fixed;left:50%;transform:translateX(-50%);z-index:1;display:flex;gap:8px;align-items:flex-start;width:min(360px,calc(100vw - 20px));padding:10px 12px;border-radius:18px;border:4px solid #fff;background:var(--cream);color:var(--brown);box-shadow:0 8px 0 rgba(40,15,0,.35);pointer-events:auto}
+.tip-card>img{width:56px;height:56px;flex:none;object-fit:contain}
+.tip-card>div{flex:1;min-width:0}
+.tip-card p{margin:0 0 6px;font-size:15px;line-height:1.6}
+.tip-card .acts{display:flex;align-items:center;gap:8px}
+.tip-card small{margin-right:auto;font-size:11px;opacity:.6}
+.tip-card .skip{border:0;background:none;padding:4px;color:#8a6a45;font-size:12px;text-decoration:underline}
+.tip-card .next{padding:5px 18px;border-radius:99px;border:2px solid #fff;background:linear-gradient(#7eea6b,#2fae3b);box-shadow:0 3px 0 #1d7a27;color:#fff;font-size:14px}
