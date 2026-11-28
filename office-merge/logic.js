@@ -4,30 +4,24 @@ export { CHAPTERS };
 export const COLS = 7, ROWS = 9, SIZE = COLS * ROWS, SLOTS = 2, MAX_LV = 7, GEN_MAX = 3;
 export const ENERGY_MAX = 100, ENERGY_MS = 60000;   // 能量上限；每幾毫秒回 1 點
 export const COIN_PRICE = 1000, COIN_ENERGY = 100;   // 金幣換能量
-export const SAVE_VERSION = 3;                      // 存檔格式版本；舊版遊戲讀不懂新版，雲端會擋住它覆蓋
-export const RANK_MAX = 3;                          // 每條物品線的圖鑑等級上限（靠劇情提升）
-export const RANK_BONUS = { reward: .2, lucky: .1 };   // 每升一級：該線訂單金幣 +20%、產生器多掉一階的機率 +10%
+export const SAVE_VERSION = 4;                      // 存檔格式版本；舊版遊戲讀不懂新版，雲端會擋住它覆蓋
+export const RANK_MAX = 5;                          // 每條物品線的圖鑑等級上限（靠劇情提升）
+export const RANK_BONUS = { reward: .15, lucky: .07 };   // 每升一級：該線訂單金幣 +20%、產生器多掉一階的機率 +10%
 export const START_LINES = ['s', 't'];
-export const chapterReward = n => ({ coins: 200 + n * 50, energy: 30, xp: 30 + n * 5 });   // 完成第 n 章（從 0 起算）
+export const chapterReward = n => ({ coins: 200 + n * 60, energy: 30 + n, xp: 30 + n * 5 });   // 過第 n+1 關（n 從 0 起算）
 // 獎勵、撿道具、兌換來的能量可以超過上限、沒有天花板（超過時不會自然回復，用掉才會繼續回）
 export const LEVEL_REWARD = { energy: 30, xp: 10 };                        // 每升一級
-export const clearReward = no => ({ coins: no * 50, energy: 20 + no * 5, xp: 15 + no * 5 });   // 過第 no 關
 export const orderXp = need => need.reduce((s, r) => s + r.lv * 5, 0);     // 交付訂單的經驗值
 const levelCost = level => 40 + (level - 1) * 20;                          // 從 level 升下一級要多少經驗
 
-// 關卡：goal＝要完成幾張訂單；range＝訂單要求的物品等級
-export const STAGES = [
-  { name: '櫃台大掃除', goal: 3, range: [2, 3] },
-  { name: '工作區整理', goal: 4, range: [2, 3] },
-  { name: '茶水間開張', goal: 5, range: [2, 4] },
-  { name: '會議室改造', goal: 6, range: [3, 4] },
-  { name: '創意工作室', goal: 7, range: [3, 5] },
-  { name: '員工休息區', goal: 8, range: [4, 5] },
-  { name: '主管辦公室', goal: 8, range: [4, 6] },
-  { name: '頂樓花園', goal: 10, range: [5, 6] },
-];
-// 全部過完後是無限的「加班挑戰」
-const EXTRA = { name: '加班挑戰', goal: 10, range: [4, 6] };
+/* ---------- 關卡＝劇情章節（story.js）。每關先做幾張一般訂單，再交劇情任務過關 ---------- */
+// 一般訂單張數：前面 2 張，每 8 關多 1 張，最多 6 張
+export const levelGoal = n => Math.min(6, 2 + Math.floor(n / 8));
+// 一般訂單要求的物品等級：[從第幾關起（0 起算）, 最低, 最高]
+const RANGES = [[40, 4, 6], [30, 4, 5], [20, 3, 5], [12, 3, 4], [5, 2, 4], [0, 2, 3]];
+// 全部過完後的「加班挑戰」：每幾張訂單算一輪、每輪獎勵
+export const EXTRA_GOAL = 10;
+export const extraReward = round => ({ coins: 500 + round * 50, energy: 50, xp: 80 });
 
 export const LINES = {
   s: { gen: '文具櫃', items: ['迴紋針盒', '原子筆', '便利貼', '筆記本', '訂書機', '計算機', '豪華辦公禮盒'] },
@@ -52,16 +46,17 @@ export function levelInfo(xp) {
 // 舊存檔沒有經驗值：換算成原本顯示的等級
 const xpForLevel = level => Array.from({ length: level - 1 }, (_, i) => levelCost(i + 1)).reduce((a, b) => a + b, 0);
 
-// 依完成訂單總數算出目前第幾關、進度多少
-export function stageInfo(done) {
-  let left = done;
-  for (let i = 0; i < STAGES.length; i++) {
-    if (left < STAGES[i].goal) return { ...STAGES[i], no: i + 1, have: left };
-    left -= STAGES[i].goal;
+// 目前第幾關、一般訂單做了幾張（存檔或排行紀錄都能算）
+export function stageInfo(state) {
+  const n = state.chapter || 0;
+  if (n < CHAPTERS.length) {
+    const goal = levelGoal(n), have = Math.min(goal, state.progress || 0);
+    const [, lo, hi] = RANGES.find(r => n >= r[0]);
+    return { no: n + 1, name: CHAPTERS[n].title, goal, have, ready: have >= goal, range: [lo, hi], extra: false };
   }
-  return { ...EXTRA, no: STAGES.length + 1 + Math.floor(left / EXTRA.goal), have: left % EXTRA.goal };
+  const extra = state.overtime || 0;
+  return { no: CHAPTERS.length + 1 + Math.floor(extra / EXTRA_GOAL), name: '加班挑戰', goal: EXTRA_GOAL, have: extra % EXTRA_GOAL, ready: false, range: [4, 6], extra: true };
 }
-
 const pick = (a, rnd) => a[Math.floor(rnd() * a.length)];
 export const neighbors = i => {
   const x = i % COLS, y = Math.floor(i / COLS), out = [];
@@ -86,7 +81,7 @@ export function newGame(rnd = Math.random, now = Date.now()) {
   cells[at(1, 6)] = { box: true, hold: { gen: true, line: 's', lv: 1 } };
   cells[at(5, 6)] = { box: true, hold: { gen: true, line: 't', lv: 1 } };
   for (const [x, y, line] of [[2, 4, 's'], [3, 4, 's'], [3, 3, 't'], [4, 4, 't']]) cells[at(x, y)] = { line, lv: 1 };
-  const state = { v: 1, ver: SAVE_VERSION, lines: [...START_LINES], rank: {}, chapter: 0, cells, slots: Array(SLOTS).fill(null), coins: 0, done: 0, xp: 0, made: 0, seen: {}, orders: [], energy: ENERGY_MAX, energyAt: now };
+  const state = { v: 1, ver: SAVE_VERSION, lines: [...START_LINES], rank: {}, chapter: 0, progress: 0, overtime: 0, cells, slots: Array(SLOTS).fill(null), coins: 0, done: 0, xp: 0, made: 0, seen: {}, orders: [], energy: ENERGY_MAX, energyAt: now };
   for (const c of cells) if (c && !c.box) see(state, c);
   fillOrders(state, rnd);
   return state;
@@ -111,7 +106,7 @@ export const rankOf = (state, line) => state.rank?.[line] || 1;
 export function makeOrder(state, rnd = Math.random) {
   state.made++;
   const n = state.done, rush = state.made % 5 === 0;
-  const [lo, hi] = stageInfo(n).range;
+  const [lo, hi] = stageInfo(state).range;
   const taken = state.orders.map(o => o.who);
   const who = pick(PEOPLE.filter(name => !taken.includes(name)), rnd);
   const count = rush || n < 2 ? 1 : rnd() < .5 ? 2 : 1;
@@ -146,6 +141,8 @@ export function upgradeSave(s, rnd = Math.random, now = Date.now()) {
   if (!Array.isArray(s.lines)) s.lines = [...START_LINES];
   s.rank ||= {};
   if (!Number.isInteger(s.chapter)) s.chapter = 0;
+  if (!Number.isInteger(s.progress)) s.progress = 0;
+  if (!Number.isInteger(s.overtime)) s.overtime = 0;
   if (!Number.isFinite(s.xp)) s.xp = xpForLevel(1 + Math.floor((s.done || 0) / 3));
   if (Array.isArray(s.orders)) {
     if (s.orders.some(o => !PEOPLE.includes(o?.who))) s.orders = [];
@@ -238,44 +235,47 @@ export function needsSpace(state, order) {
   return !!used && !state.cells.some(o => !o) && !used.some(u => u.a === 'cell');
 }
 
-// 交付訂單（劇情任務也走這裡，同樣算進關卡進度）。
-// 回傳 { order, xp, cleared（剛過的關卡或 null）, levelUps, story（完成的章節與新產生器位置，或 null） }；放不下回傳 { blocked: 'space' }
+// 交付訂單。一般訂單推進本關進度；劇情任務要進度滿了才能交，交了就過關。
+// 回傳 { order, xp, levelUps, cleared（過了哪一關：章節、獎勵、下一關；或 null） }；不能交回傳 { blocked: 'locked' | 'space' }
 export function deliver(state, id, rnd = Math.random, now = Date.now()) {
   const k = state.orders.findIndex(o => o.id === id);
   if (k < 0) return null;
   const order = state.orders[k], used = findNeed(state, order);
   if (!used) return null;
+  const isStory = order.story !== undefined, before = stageInfo(state);
+  if (isStory && !before.ready) return { blocked: 'locked', left: before.goal - before.have };
   if (needsSpace(state, order)) return { blocked: 'space' };
   for (const u of used) area(state, u.a)[u.i] = null;
-  const before = stageInfo(state.done), level = levelInfo(state.xp).level;
-  const isStory = order.story !== undefined;
-  const reward = isStory ? chapterReward(order.story) : { coins: order.reward, xp: orderXp(order.need), energy: 0 };
-  const total = { ...reward };
+  const level = levelInfo(state.xp).level;
+  const total = isStory ? { ...chapterReward(order.story) } : { coins: order.reward, xp: orderXp(order.need), energy: 0 };
+  const xp = total.xp;
   state.done++;
   refill(state, now);
-  let story = null;
+  let cleared = null;
   if (isStory) {
-    const c = chapter(state);
+    const c = chapter(state), reward = chapterReward(order.story);
     let placed = null;
     if (c.unlock) {
       state.lines = [...state.lines, c.unlock];
       placed = state.cells.findIndex(o => !o);
       state.cells[placed] = { gen: true, line: c.unlock, lv: 1 };
-    } else state.rank = { ...state.rank, [c.rank]: Math.min(RANK_MAX, rankOf(state, c.rank) + 1) };
-    state.chapter++;
-    story = { chapter: c, reward, placed };
-  }
-  let cleared = null;
-  if (stageInfo(state.done).no !== before.no) {
-    const bonus = clearReward(before.no);
-    for (const key of Object.keys(total)) total[key] += bonus[key];
-    cleared = { no: before.no, name: before.name, ...bonus, next: stageInfo(state.done) };
+    } else if (c.rank) state.rank = { ...state.rank, [c.rank]: Math.min(RANK_MAX, rankOf(state, c.rank) + 1) };
+    state.chapter++; state.progress = 0;
+    cleared = { no: before.no, name: before.name, chapter: c, placed, ...reward, next: stageInfo(state) };
+  } else if (!before.extra) state.progress = Math.min(before.goal, state.progress + 1);
+  else {
+    state.overtime++;
+    if (state.overtime % EXTRA_GOAL === 0) {
+      const bonus = extraReward(state.overtime / EXTRA_GOAL);
+      for (const key of Object.keys(total)) total[key] += bonus[key];
+      cleared = { no: before.no, name: before.name, chapter: null, ...bonus, next: stageInfo(state) };
+    }
   }
   const levelUps = grant(state, total, level);
   state.orders.splice(k, 1);
   if (isStory && chapter(state)) state.orders.splice(k, 0, storyOrder(state));
   else state.orders.splice(k, 0, makeOrder(state, rnd));
-  return { order, xp: reward.xp, cleared, levelUps, story };
+  return { order, xp, cleared, levelUps };
 }
 
 // 發獎勵（金幣、經驗、能量），回傳這次升到的各級
@@ -310,7 +310,7 @@ export function isValidSave(s) {
   return !!s && s.v === 1 && Array.isArray(s.cells) && s.cells.length === SIZE && s.cells.every(cell) &&
     Array.isArray(s.slots) && s.slots.length === SLOTS && s.slots.every(o => o === null || item(o)) &&
     Number.isFinite(s.coins) && Number.isFinite(s.done) && Number.isFinite(s.made) && !!s.seen &&
-    Array.isArray(s.lines) && s.lines.every(k => !!LINES[k]) && !!s.rank && Number.isInteger(s.chapter) && s.chapter >= 0 && s.chapter <= CHAPTERS.length &&
+    Array.isArray(s.lines) && s.lines.every(k => !!LINES[k]) && !!s.rank && Number.isInteger(s.chapter) && s.chapter >= 0 && s.chapter <= CHAPTERS.length && Number.isInteger(s.progress) && Number.isInteger(s.overtime) &&
     Number.isInteger(s.energy) && s.energy >= 0 && Number.isFinite(s.energyAt) && Number.isFinite(s.xp) &&
     Array.isArray(s.orders) && s.orders.length === 3 &&
     s.orders.every(o => o && PEOPLE.includes(o.who) && Array.isArray(o.need) && o.need.every(item) && Number.isFinite(o.reward));

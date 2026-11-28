@@ -148,6 +148,7 @@ button.pill{cursor:pointer}
 .lack b{color:#e07a00;font-size:18px}
 
 /* 圖鑑與劇情 */
+.order.locked .deliver{background:linear-gradient(#e8e0fb,#c9b8f0);box-shadow:0 3px 0 #8a6fc4;color:#4d2f94;font-size:13px}
 .order.story{background:linear-gradient(#f3ecff,#d9c6ff);box-shadow:0 4px 0 rgba(80,45,140,.4),0 0 0 3px #8f6ae8,0 0 14px 4px rgba(170,130,255,.7)}
 .order.story.ready{background:linear-gradient(#f4fff0,#cdf5bd);box-shadow:0 4px 0 rgba(30,110,40,.4),0 0 0 3px var(--green),0 0 14px 4px rgba(140,255,120,.65)}
 .order.story em{left:-5px;right:auto;background:#7c52e0}
@@ -229,6 +230,7 @@ dialog#home::backdrop{background:#0d3a22}
 #tower{position:relative;flex:1;overflow-y:auto;overscroll-behavior:contain;background:#6fc7ff}
 .floor{position:relative;display:flex;flex-direction:column;min-height:150px;padding:6px 8px 10px;background:#fbe7c2;border-bottom:9px solid #a8642f;box-shadow:inset 0 0 0 4px #e3b878}
 .floor:nth-child(even){background:#e4f4d8;box-shadow:inset 0 0 0 4px #b5d89c}
+.floor.empty{min-height:76px}
 .floor.roof{min-height:170px;background:linear-gradient(#8fd6ff,#ffe9a8);box-shadow:inset 0 0 0 4px #ffc733}
 .floor.lobby{background:#d9e2ea;box-shadow:inset 0 0 0 4px #b3c1ce;border-bottom:0}
 .floor.mine{box-shadow:inset 0 0 0 5px #ff8f1f}

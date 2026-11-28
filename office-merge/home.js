@@ -5,24 +5,27 @@ import * as cloud from './cloud.js';
 import { face, onFaces, GHOST } from './chars.js';
 
 const $ = id => document.getElementById(id);
-const TOP = G.STAGES.length + 1;   // 最上層：加班挑戰
-const DECOR = ['s2', 't3', 's4', 't4', 's5', 't5', 's6', 't6', 's7'];
-
+const TOP = G.CHAPTERS.length + 1;   // 最上層：加班挑戰
+const DECOR = Object.keys(G.LINES).flatMap(k => [2, 3, 4, 5, 6].map(n => k + n));
 // 本機網址加 ?demo 可以看有人分布在各樓層的版面，畫面上會標明是示範資料
 const demo = /(^|\.)(localhost|127\.0\.0\.1)$/.test(location.hostname) && new URLSearchParams(location.search).has('demo');
-const others = () => demo ? Object.fromEntries(G.PEOPLE.slice(0, 10).map((n, i) => [n, { done: [58, 41, 33, 27, 20, 15, 13, 8, 4, 1][i], xp: 0 }])) : getRanks();
+const others = () => demo ? Object.fromEntries(G.PEOPLE.slice(0, 10).map((n, i) => [n, { done: 200 - i * 17, xp: 0, level: [51, 44, 33, 27, 20, 15, 12, 8, 4, 1][i], progress: i % 2 }])) : getRanks();
+// 排行紀錄（或自己的存檔）換成樓層資訊
+const stageOf = p => G.stageInfo({ chapter: Math.min((p.level || 1) - 1, G.CHAPTERS.length), progress: p.progress || 0, overtime: 0 });
+const ahead = (a, b) => ((a.level || 1) - (b.level || 1)) || ((a.progress || 0) - (b.progress || 0)) || (a.xp - b.xp);
 
 export function ranking(state) {
   const all = {};
-  for (const [name, p] of Object.entries(others())) if (G.PEOPLE.includes(name)) all[name] = { done: p.done, xp: p.xp };
+  for (const [name, p] of Object.entries(others())) if (G.PEOPLE.includes(name)) all[name] = p;
   // 自己的樓層：取雲端最佳紀錄與這台裝置較前面的那個
-  if (me && !(all[me] && (all[me].done > state.done || (all[me].done === state.done && all[me].xp > state.xp)))) all[me] = { done: state.done, xp: state.xp };
+  const mine = { level: G.stageInfo(state).no, progress: G.stageInfo(state).have, done: state.done, xp: state.xp };
+  if (me && !(all[me] && ahead(all[me], mine) > 0)) all[me] = mine;
   const ranked = Object.entries(all)
-    .map(([name, p]) => ({ name, ...p, stage: G.stageInfo(p.done) }))
-    .sort((a, b) => b.done - a.done || b.xp - a.xp);
+    .map(([name, p]) => ({ name, ...p, level: p.level || 1, stage: stageOf(p) }))
+    .sort((a, b) => ahead(b, a));
   ranked.forEach((p, i) => {
     const prev = ranked[i - 1];
-    p.rank = prev && prev.done === p.done && prev.xp === p.xp ? prev.rank : i + 1;
+    p.rank = prev && !ahead(prev, p) ? prev.rank : i + 1;
   });
   return { ranked, waiting: G.PEOPLE.filter(n => !all[n]) };
 }
@@ -46,14 +49,13 @@ function maze(floor) {
 function tower(state) {
   const { ranked, waiting } = ranking(state);
   // 訪客以透明人站在自己的樓層，不佔名次
-  const guest = me ? [] : [{ name: '訪客（你）', guest: true, stage: G.stageInfo(state.done) }];
+  const guest = me ? [] : [{ name: '訪客（你）', guest: true, level: G.stageInfo(state).no, stage: G.stageInfo(state) }];
   const floors = [];
   for (let n = TOP; n >= 1; n--) {
-    const here = [...ranked, ...guest].filter(p => Math.min(p.stage.no, TOP) === n);
-    const stage = n === TOP ? G.stageInfo(G.STAGES.reduce((s, x) => s + x.goal, 0)) : G.STAGES[n - 1];
-    floors.push(`<section class="floor${n === TOP ? ' roof' : ''}${here.some(p => me ? p.name === me : p.guest) ? ' mine' : ''}">${maze(n)}
-      <header><b>${n === TOP ? '★' : `${n}F`}</b>${n === TOP ? stage.name : `第 ${n} 關・${stage.name}`}</header>
-      <img class="decor" src="items/${DECOR[n - 1]}.png" alt="">
+    const here = [...ranked, ...guest].filter(p => Math.min(p.level, TOP) === n);
+    floors.push(`<section class="floor${here.length ? '' : ' empty'}${n === TOP ? ' roof' : ''}${here.some(p => me ? p.name === me : p.guest) ? ' mine' : ''}">${maze(n)}
+      <header><b>${n === TOP ? '★' : `${n}F`}</b>${n === TOP ? '加班挑戰' : `第 ${n} 關・${G.CHAPTERS[n - 1].title}`}</header>
+      <img class="decor" loading="lazy" src="items/${DECOR[(n - 1) % DECOR.length]}.png" alt="">
       <div class="crowd">${here.map(person).join('')}</div></section>`);
   }
   floors.push(`<section class="floor lobby">${maze(0)}<header><b>大廳</b>尚未上榜</header>

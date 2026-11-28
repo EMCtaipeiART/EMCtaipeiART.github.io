@@ -1,5 +1,5 @@
 // 身分與雲端闖關榜。後端是設計需求系統的 Worker（action: officeMergeRank）。
-import { PEOPLE } from './logic.js';
+import { PEOPLE, stageInfo } from './logic.js';
 
 const local = /(^|\.)(localhost|127\.0\.0\.1)$/.test(location.hostname);
 const query = new URLSearchParams(location.search);
@@ -80,5 +80,6 @@ async function call(payload) {
 // 有身分就上傳自己的進度（後端只往上記），順便拿回全部排名
 export function sync(state) {
   if (!API) return;
-  return call(me && state.done > 0 ? { op: 'save', name: me, done: state.done, xp: state.xp } : { op: 'list' });
+  const at = stageInfo(state);
+  return call(me && state.done > 0 ? { op: 'save', name: me, done: state.done, xp: state.xp, level: at.no, progress: at.have } : { op: 'list' });
 }

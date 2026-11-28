@@ -4289,6 +4289,10 @@ describe('Pixel Office shared state', () => {
     const list = await api({ action: 'officeMergeRank', op: 'list' });
     expect(list).toMatchObject({ ok: true, ranks: { 余采馨: { done: 12 } } });
     expect((list.ranks as Record<string, unknown>).Machi).toBeUndefined();
+    const at = (level: number, progress: number) => api({ action: 'officeMergeRank', op: 'save', name: 'Anna', done: 1, xp: 1, level, progress });
+    expect(await at(12, 2)).toMatchObject({ ranks: { Anna: { level: 12, progress: 2 } } });
+    expect(await at(11, 5)).toMatchObject({ ranks: { Anna: { level: 12, progress: 2 } } });
+    expect(await at(13, 0)).toMatchObject({ ranks: { Anna: { level: 13, progress: 0 }, 余采馨: { level: 1 } } });
   });
 
   it('3D 辦公室個人進度：圖鑑取聯集、次數取較大值，換裝置讀得回來；未知名字被拒絕', async () => {

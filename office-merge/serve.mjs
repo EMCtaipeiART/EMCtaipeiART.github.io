@@ -12,7 +12,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.json': 'application/json' };
 
 /* 假後端（重開就清空） */
-const ranks = { Anna: { done: 22, xp: 700 }, 余采馨: { done: 8, xp: 200 } };
+const ranks = { Anna: { done: 60, xp: 1700, level: 14, progress: 1 }, 余采馨: { done: 8, xp: 200, level: 4, progress: 0 } };
 const wallet = { pending: 3, balance: 40, claims: {}, bought: new Set() };
 const cloudSave = { rev: 0, state: null };
 function mock(p) {
@@ -23,7 +23,7 @@ function mock(p) {
     return { ok: true, name: 'Machi', rev: cloudSave.rev };
   }
   if (p.action === 'officeMergeRank') {
-    if (p.op === 'save') ranks[p.name] = { done: Math.max(p.done, ranks[p.name]?.done || 0), xp: Math.max(p.xp, ranks[p.name]?.xp || 0) };
+    if (p.op === 'save') ranks[p.name] = { done: p.done, xp: p.xp, level: p.level, progress: p.progress };
     return { ok: true, ranks };
   }
   if (p.action === 'officeMergeEnergy') {

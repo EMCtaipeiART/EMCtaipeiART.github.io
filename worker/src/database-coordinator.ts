@@ -2901,26 +2901,39 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'pixelOfficeProgress', progress: { dex: { d: dexD, n: dexN }, stat, last } } as ApiResult;
   }
 
-  /** 合成遊戲「辦公室翻身記」闖關榜：每人只存完成訂單數與經驗值，兩者取較大值（舊裝置或重新開始不會蓋掉最佳紀錄）。
+  /** 合成遊戲「辦公室翻身記」闖關榜：每人存關卡、本關進度、完成訂單數與經驗值，只往前記（舊裝置或重新開始不會蓋掉最佳紀錄）。
    *  op:'list' 讀全部；op:'save' 記一筆並回傳全部。存 pixel_office_settings 的 merge:<名字>，不寫 GitHub。與其他元宇宙寫入一樣不驗證身分。 */
   private officeMergeRank(payload: ApiPayload): ApiResult {
     const sql = this.ctx.storage.sql;
-    const read = (name: string): { done: number; xp: number; at: number } | null => {
-      const row = sql.exec<{ value: string }>('SELECT value FROM pixel_office_settings WHERE key = ?', 'merge:' + name).toArray()[0];
+    const json = (key: string): Row | null => {
+      const row = sql.exec<{ value: string }>('SELECT value FROM pixel_office_settings WHERE key = ?', key).toArray()[0];
       if (!row) return null;
-      try { const v = asRow(JSON.parse(row.value)); return { done: Number(v.done) || 0, xp: Number(v.xp) || 0, at: Number(v.at) || 0 }; } catch { return null; }
+      try { return asRow(JSON.parse(row.value)); } catch { return null; }
+    };
+    type Rank = { done: number; xp: number; level: number; progress: number; at: number };
+    const read = (name: string): Rank | null => {
+      const v = json('merge:' + name);
+      if (!v) return null;
+      // 舊紀錄沒有關卡：用雲端存檔的章節推算（過加班挑戰以前，關卡＝章節＋1）
+      const level = Number(v.level) || (Number(asRow(json('merge-save:' + name)?.state).chapter) || 0) + 1;
+      return { done: Number(v.done) || 0, xp: Number(v.xp) || 0, level, progress: Number(v.progress) || 0, at: Number(v.at) || 0 };
     };
     if (text(payload.op) === 'save') {
       const name = text(payload.name), done = Number(payload.done), xp = Number(payload.xp);
+      const level = Number(payload.level ?? 0), progress = Number(payload.progress ?? 0);
       if (!OFFICE_MERGE_NAMES.includes(name)) return { ok: false, action: 'officeMergeRank', error: '找不到這位同仁' } as ApiResult;
-      if (!Number.isInteger(done) || done < 0 || done > 100_000 || !Number.isInteger(xp) || xp < 0 || xp > 10_000_000) return { ok: false, action: 'officeMergeRank', error: '進度格式不正確' } as ApiResult;
-      const old = read(name), next = { done: Math.max(done, old?.done ?? 0), xp: Math.max(xp, old?.xp ?? 0) };
-      if (!old || next.done !== old.done || next.xp !== old.xp) {
+      const whole = (value: number, max: number) => Number.isInteger(value) && value >= 0 && value <= max;
+      if (!whole(done, 100_000) || !whole(xp, 10_000_000) || !whole(level, 10_000) || !whole(progress, 100)) return { ok: false, action: 'officeMergeRank', error: '進度格式不正確' } as ApiResult;
+      const old = read(name);
+      // 關卡與本關進度成對比較：比較前面才換掉
+      const further = !old || level > old.level || (level === old.level && progress > old.progress);
+      const next = { done: Math.max(done, old?.done ?? 0), xp: Math.max(xp, old?.xp ?? 0), level: further && level ? level : old?.level ?? 1, progress: further ? progress : old?.progress ?? 0 };
+      if (!old || next.done !== old.done || next.xp !== old.xp || next.level !== old.level || next.progress !== old.progress) {
         const at = Date.now();
         sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', 'merge:' + name, JSON.stringify({ ...next, at }), at);
       }
     }
-    const ranks: Record<string, { done: number; xp: number; at: number }> = {};
+    const ranks: Record<string, Rank> = {};
     for (const name of OFFICE_MERGE_NAMES) { const v = read(name); if (v) ranks[name] = v; }
     return { ok: true, action: 'officeMergeRank', ranks } as ApiResult;
   }
