@@ -19,7 +19,8 @@
 | `logic.js` | 規則與**所有數值**（能量、關卡、經驗值、物品線、掉落率、人物名單），不碰畫面 |
 | `game.js` | 棋盤、拖曳、訂單、能量面板、兌換、任務物品提示、蹦出動畫 |
 | `home.js` | 首頁迷宮塔闖關榜 |
-| `cloud.js` | 登入身分、排行與能量 API |
+| `cloud.js` | 登入身分、排行、能量與存檔 API |
+| `savesync.js` | 跨裝置同步與版本衝突規則 |
 | `chars.js` | 人物圖（和元宇宙同一份最新角色） |
 | `audio.js` | 配樂 `art/bgm.mp3` 循環播放、即時合成音效 |
 | `effects.js` | 升級／過關特效 |
@@ -41,7 +42,8 @@
 
 ## 後端與身分
 
-- 身分來自網址 `?me=` 或網站登入的 `pixelViewerHandoff`，不能自己挑名字；訪客不上榜。存檔依身分分開（`officeMergeSave:<名字>`）。
+- 身分來自網址 `?me=`、網站登入的 `pixelViewerHandoff` 或網站目前的登入狀態，不能自己挑名字；訪客不上榜。本機存檔依身分分開（`officeMergeSave:<名字>`）。
+- **雲端存檔**（`savesync.js` ＋ Worker `officeMergeSave`）：登入者每個動作 1.5 秒後上傳，離開畫面立刻上傳，開啟與切回畫面時先讀雲端。雲端有版本號，撞版本的取捨規則寫在 `savesync.js` 開頭；改它要跑 `test.mjs`。訪客只存本機。使用者要求「玩到哪記錄到哪」。
 - `officeMergeRank`：只往上記完成訂單數與經驗值，不寫 GitHub，**不驗證身分**（與其他元宇宙寫入一樣）。
 - `officeMergeEnergy`（status／claim／buy）：要登入憑證；點數先記 pending，遊戲領取後才加進存檔；領取與兌換都用編號防重複。撿道具每人每天上限 300（防直接打 API，Claude 設的，使用者尚未表示意見）。
 - 可上榜名單：`logic.js` 的 `PEOPLE` 和 Worker 的 `OFFICE_MERGE_NAMES` 要一起改。

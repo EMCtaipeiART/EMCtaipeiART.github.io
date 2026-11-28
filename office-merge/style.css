@@ -213,6 +213,8 @@ dialog#home::backdrop{background:#0d3a22}
 #home footer small{font-size:11px}
 #home footer div{display:flex;gap:10px;align-items:center;justify-content:center}
 #whoami{padding:6px 12px;border-radius:12px;border:2px solid #d9a560;background:#fff;font-size:14px;white-space:nowrap}
+#saveState{color:#16794a}
+#bStart:disabled{background:#b9c4cc;box-shadow:0 4px 0 #87949e;cursor:wait;text-shadow:none}
 #bStart{flex:1;max-width:200px;padding:9px 0;border-radius:99px;border:3px solid #fff;background:linear-gradient(#7eea6b,#2fae3b);box-shadow:0 4px 0 #1c7a27;color:#fff;font-size:19px;text-shadow:0 1px 0 #17661f}
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important}}

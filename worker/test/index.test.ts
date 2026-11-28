@@ -5359,6 +5359,21 @@ describe('平台幣', () => {
   const SERVICE = 'test-coin-service-key';
   const uuid = () => crypto.randomUUID();
 
+  it('翻身記雲端存檔：要登入、版本對不上不覆蓋、擋掉壞資料', async () => {
+    const who = await seedDesigner('mergesave@emctaipei.test', 'Noise');
+    const other = await seedDesigner('mergesave2@emctaipei.test', 'Anna');
+    const state = (done: number) => ({ v: 1, cells: Array(63).fill(null), slots: [null, null], orders: [], done, xp: 0, energy: 100, savedAt: done });
+    const save = (token: string, baseRev: number, body: unknown) => api({ action: 'officeMergeSave', op: 'save', baseRev, state: body }, token);
+    expect(await api({ action: 'officeMergeSave', op: 'load' })).toMatchObject({ ok: false });
+    expect(await api({ action: 'officeMergeSave', op: 'load' }, who)).toMatchObject({ ok: true, name: 'Noise', rev: 0, state: null });
+    expect(await save(who, 0, state(1))).toMatchObject({ ok: true, rev: 1 });
+    expect(await save(who, 1, state(2))).toMatchObject({ rev: 2 });
+    expect(await save(who, 1, state(9))).toMatchObject({ conflict: true, rev: 2, state: { done: 2 } });
+    expect(await api({ action: 'officeMergeSave', op: 'load' }, who)).toMatchObject({ rev: 2, state: { done: 2 } });
+    expect(await api({ action: 'officeMergeSave', op: 'load' }, other)).toMatchObject({ name: 'Anna', rev: 0, state: null });
+    for (const bad of [null, { v: 1 }, { ...state(3), cells: [] }, { ...state(3), junk: 'x'.repeat(50_000) }]) expect(await save(who, 2, bad)).toMatchObject({ ok: false });
+  });
+
   it('翻身記能量：撿地上道具 +1、領取不重複、平台幣 15 點換 100 能量', async () => {
     const who = await seedDesigner('mergee@emctaipei.test', 'Amber');
     const admin = await login();

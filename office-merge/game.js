@@ -3,7 +3,8 @@ import * as G from './logic.js';
 import { art } from './art.js';
 import * as audio from './audio.js';
 import { celebrate } from './effects.js';
-import { openHome } from './home.js';
+import { openHome, refreshHome, setSaveState } from './home.js';
+import { createCloudSave } from './savesync.js';
 import * as cloud from './cloud.js';
 import { face, onFaces } from './chars.js';
 const { me, sync } = cloud;
@@ -28,7 +29,52 @@ function load() {
   try { const s = G.upgradeSave(JSON.parse(localStorage.getItem(KEY))); if (G.isValidSave(s)) return s; } catch (e) {}
   return G.newGame();
 }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+// player＝玩家做了動作（要上雲端）；回能量、開啟遊戲這類只寫本機
+function save(player = true) {
+  if (player) state.savedAt = Date.now();
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  if (player) cloudSave.changed();
+}
+
+/* ---------- 雲端存檔：玩到哪記到哪，換裝置接著玩 ---------- */
+const SYNC_KEY = `officeMergeSync:${me}`;
+const SAVE_TEXT = {
+  off: me ? '進度只存在這台裝置：請回網站登入' : '訪客：進度只存在這台裝置',
+  loading: '正在讀取雲端進度…', saving: '進度上傳中…', saved: '進度已存到雲端',
+  offline: '連不上雲端，進度先存在這台裝置，會自動重傳', login: '登入已過期：請回網站重新登入，進度先存在這台裝置',
+};
+// 本機預覽沒接假後端時 API 是空的
+let lastSaveStatus = '';
+const cloudSave = createCloudSave({
+  enabled: cloud.canUseEnergy(),
+  request: cloud.saveData,
+  readMeta: () => { try { return JSON.parse(localStorage.getItem(SYNC_KEY) || 'null'); } catch (e) { return null; } },
+  writeMeta: m => { try { localStorage.setItem(SYNC_KEY, JSON.stringify(m)); } catch (e) {} },
+  getState: () => state,
+  adopt,
+  onStatus: s => {
+    if (s !== lastSaveStatus && (s === 'offline' || s === 'login') && !$('home').open) toast(SAVE_TEXT[s]);
+    lastSaveStatus = s;
+    setSaveState(SAVE_TEXT[s], !ready && s === 'loading');
+  },
+});
+let ready = false;   // 第一次讀檔完成前不能開始玩，免得剛玩的幾步被雲端蓋掉
+
+// 換成雲端那份進度
+function adopt(data) {
+  const next = G.upgradeSave(data);
+  if (!G.isValidSave(next)) return false;
+  const changedBoard = JSON.stringify(next.cells) !== JSON.stringify(state.cells) || next.done !== state.done;
+  if (drag) { drag.ghost?.remove(); drag = null; }
+  [...flights.keys()].forEach(land);
+  state = next; sel = null;
+  G.refill(state);
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  render();
+  refreshHome(state);
+  if (changedBoard && ready) toast('已接續雲端上較新的進度');
+  return true;
+}
 
 const at = p => (p.a === 'slot' ? state.slots : state.cells)[p.i];
 
@@ -103,7 +149,7 @@ function renderEnergy() {
 function tick() {
   const before = state.energy;
   G.refill(state);
-  if (state.energy !== before) save();
+  if (state.energy !== before) save(false);
   renderEnergy();
 }
 setInterval(tick, 1000);
@@ -122,12 +168,19 @@ function claimEnergy() {
     const d = await cloud.energy('claim', { claimId: id });
     const got = G.addBonus(state, id, d.claimed);
     if (got) { save(); render(); audio.play('coin'); toast(`領到能量 +${got}`); }
-    store(CLAIM_KEY, '');
+    // 確定這筆已經進到雲端存檔才丟掉編號；否則下次用同一個編號再領一次（重複的不會加兩次）
+    const stored = await cloudSave.flush();
+    if (!d.claimed || (stored && state.claims?.includes(id))) store(CLAIM_KEY, '');
     return got;
   })().catch(() => 0).finally(() => { claiming = null; });
 }
 setInterval(() => { if (!document.hidden) claimEnergy(); }, 60000);
-addEventListener('visibilitychange', () => { if (!document.hidden) claimEnergy(); });
+// 離開畫面立刻上傳；回來先看別台裝置有沒有玩過
+addEventListener('visibilitychange', () => {
+  if (document.hidden) cloudSave.flush(); else cloudSave.load().then(claimEnergy);
+});
+addEventListener('pagehide', () => cloudSave.flush());
+addEventListener('online', () => cloudSave.load());
 
 async function exchangeBox() {
   const box = $('exchange');
@@ -379,6 +432,7 @@ $('bHelp').addEventListener('click', () => {
     完成指定張數的訂單就過關。<br>點訂單上的物品圖示，可以看它的合成階段。
     <h3>能量</h3>上限 100 點，點一次產生器花 1 點，每分鐘回 1 點。
     <h3>操作</h3>點產生器（文具櫃、茶水間）拿物品。<br>把兩個一樣的拖在一起，合成高一級。<br>在紙箱旁邊合成，紙箱就會打開。<br>紙箱裡藏著第二台產生器，合成後更容易掉高級物品。<br>訂單湊齊後按「交付」。用不到的可以點選後賣掉，或放到左下暫存格。
+    <h3>存檔</h3>登入後每一步都會存到雲端，換手機或電腦登入同一帳號就能接著玩。<br>目前：${SAVE_TEXT[cloudSave.status]}
     <div class="row"><button type="button" class="danger" id="bReset">重新開始</button></div>`);
   $('bReset').addEventListener('click', () => {
     if (!confirm('確定重新開始？目前進度會清掉。')) return;
@@ -408,7 +462,12 @@ $('banner').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key ==
 
 $('coinIcon').src = art('coin');
 G.refill(state);
-save();
+save(false);
 render();
 openHome(state);
-claimEnergy();
+setSaveState(SAVE_TEXT[cloudSave.status], cloudSave.status === 'loading');
+cloudSave.load().finally(() => {
+  ready = true;
+  setSaveState(SAVE_TEXT[cloudSave.status], false);
+  claimEnergy();
+});

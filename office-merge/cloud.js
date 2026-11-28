@@ -14,7 +14,11 @@ function identify() {
   if (fromUrl) return fromUrl;
   try {
     const h = JSON.parse(localStorage.getItem('pixelViewerHandoff') || 'null');
-    if (h && Date.now() - Number(h.at) < 86400000) return match(h.name);
+    if (h && Date.now() - Number(h.at) < 86400000 && match(h.name)) return match(h.name);
+    // 直接開網址（手機、書籤）：沿用網站目前的登入
+    const get = k => localStorage.getItem(k) || sessionStorage.getItem(k) || '';
+    if (localStorage.getItem('designRequestEditorLoggedOut') !== '1' && get('designRequestEditorToken'))
+      return match(get('designRequestEditorDisplayName')) || match(get('designRequestEditorUser'));
   } catch (e) {}
   return '';
 }
@@ -33,10 +37,10 @@ function token() {
 }
 export const canUseEnergy = () => Boolean(API && me && token());
 
-async function post(payload) {
+async function post(payload, keepalive = false) {
   const stop = new AbortController(), timer = setTimeout(() => stop.abort(), 15000);
   try {
-    const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(payload), cache: 'no-store', signal: stop.signal });
+    const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(payload), cache: 'no-store', signal: stop.signal, keepalive });
     const d = await r.json();
     if (!d.ok) throw Object.assign(new Error(d.error || '後端回覆失敗'), { refused: true });
     return d;
@@ -47,6 +51,13 @@ async function post(payload) {
 export async function energy(op, extra = {}) {
   const d = await post({ action: 'officeMergeEnergy', op, token: token(), ...extra });
   if (d.name !== me) throw new Error(`目前登入的是 ${d.name}，和遊戲人物 ${me} 不同`);
+  return d;
+}
+
+// 雲端存檔。keepalive：關掉分頁的瞬間送出的存檔也能送達
+export async function saveData(op, extra = {}) {
+  const d = await post({ action: 'officeMergeSave', op, token: token(), ...extra }, op === 'save');
+  if (d.name !== me) throw Object.assign(new Error(`登入的是 ${d.name}，請重新登入`), { refused: true });
   return d;
 }
 

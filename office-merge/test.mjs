@@ -2,6 +2,7 @@
 // 檢查能量、關卡、舊存檔升級，再讓機器人玩家打通全部關卡，確認不會卡死。
 import * as G from './logic.js';
 import assert from 'node:assert';
+import { createCloudSave } from './savesync.js';
 
 const gen = s => s.cells.findIndex(c => c?.gen);
 {
@@ -31,6 +32,38 @@ const gen = s => s.cells.findIndex(c => c?.gen);
 assert.deepEqual([0, 2, 3, 7, 10].map(n => { const s = G.stageInfo(n); return [s.no, s.have]; }), [[1, 0], [1, 2], [2, 0], [3, 0], [3, 3]]);
 const total = G.STAGES.reduce((n, s) => n + s.goal, 0), stages = G.STAGES.length;
 assert.equal(G.stageInfo(total).no, stages + 1);
+
+{ // 雲端存檔：兩台裝置輪流玩
+  const server = { rev: 0, state: null, down: false };
+  const request = async (op, { baseRev, state } = {}) => {
+    await null;
+    if (server.down) throw new Error('network');
+    if (op === 'load') return { rev: server.rev, state: structuredClone(server.state) };
+    if (baseRev !== server.rev) return { conflict: true, rev: server.rev, state: structuredClone(server.state) };
+    server.rev++; server.state = structuredClone(state); return { rev: server.rev };
+  };
+  const device = () => {
+    const d = { state: { done: 0, xp: 0, savedAt: 0, mark: 'new' }, meta: null };
+    d.sync = createCloudSave({ enabled: true, request, delay: 1e9, retry: 1e9, readMeta: () => d.meta, writeMeta: m => { d.meta = m; }, getState: () => d.state, adopt: s => { d.state = structuredClone(s); return true; } });
+    d.play = (mark, at, done = d.state.done) => { d.state = { ...d.state, mark, done, savedAt: at }; d.sync.changed(); };
+    return d;
+  };
+  const pc = device(); pc.state = { done: 5, xp: 50, savedAt: 1, mark: 'old-local' };
+  await pc.sync.load(); assert.equal(server.state.mark, 'old-local');                 // 原本只在本機的進度傳上去
+  const phone = device(); await phone.sync.load(); assert.equal(phone.state.mark, 'old-local');   // 新裝置接著玩
+  phone.play('phone-1', 10); await phone.sync.flush(); assert.equal(server.state.mark, 'phone-1');
+  await pc.sync.load(); assert.equal(pc.state.mark, 'phone-1');                       // 回到電腦接續手機
+  phone.play('phone-2', 20); await phone.sync.flush();
+  pc.play('pc-stale', 30); await pc.sync.flush();                                     // 舊畫面不能蓋掉手機剛玩的
+  assert.equal(server.state.mark, 'phone-2'); assert.equal(pc.state.mark, 'phone-2');
+  server.down = true; pc.play('pc-offline', 40); assert.equal(await pc.sync.flush(), false); assert.equal(pc.sync.status, 'offline');
+  server.down = false; await pc.sync.flush(); assert.equal(server.state.mark, 'pc-offline');       // 斷線時玩的，連上後補傳
+  server.down = true; phone.play('phone-old', 35); await phone.sync.flush(); server.down = false;
+  await phone.sync.load(); assert.equal(phone.state.mark, 'pc-offline'); assert.equal(server.state.mark, 'pc-offline');   // 較早的離線進度讓位
+  const slow = pc.sync.load(); pc.play('during-load', 99); await slow; await pc.sync.flush();
+  assert.equal(server.state.mark, 'during-load');                                     // 版本沒變時，讀檔途中的操作照常上傳
+  console.log('通過：雲端存檔跨裝置情境');
+}
 
 const RUNS = 100;
 let now = 0, taps = 0, top = 0;

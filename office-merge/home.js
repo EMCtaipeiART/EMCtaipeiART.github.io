@@ -82,6 +82,19 @@ function draw(scroll) {
   $('tower').scrollTop = target.offsetTop + target.offsetHeight / 2 - $('tower').clientHeight / 2;
 }
 
+// 雲端進度讀回來後換掉畫面上的資料
+export function refreshHome(state) {
+  shown = state;
+  if ($('home').open) draw(true);
+  sync(state);
+}
+export function setSaveState(text, busy) {
+  $('saveState').textContent = text;
+  $('bStart').disabled = busy;
+  $('bStart').textContent = busy ? '讀取進度中…' : '開始遊戲';
+  if (!busy && $('home').open) $('bStart').focus();
+}
+
 export function openHome(state) {
   shown = state;
   const dlg = $('home');

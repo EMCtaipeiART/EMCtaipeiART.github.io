@@ -38,6 +38,7 @@ const PIXEL_OFFICE_NAMES = ['Leona', 'Amber', 'Noise', 'Anna', 'Machi'];
 const OFFICE_MERGE_NAMES = ['Amber', 'Anna', 'Leona', 'Machi', 'Noise', '余采馨', '吳冠賢', '廖秦葦', '李明庭', '鄭筱舢', '黎子瑄', '王藍庭'];
 const OFFICE_MERGE_ENERGY_PRICE = 15;        // 平台幣
 const OFFICE_MERGE_ENERGY_AMOUNT = 100;      // 換到的能量
+const OFFICE_MERGE_SAVE_LIMIT = 40_000;         // 一份存檔最多幾個字（正常約 4,000）
 const OFFICE_MERGE_PICKUPS_PER_DAY = 300;    // 撿道具回饋能量的每日上限（防灌點）
 const PIXEL_OFFICE_STAFF_EMPTY_SEATS: number[] = [12, 15];   // 要固定空著的座位（2026-10-16 曾指定 3 號空著，後來改成鄭筱舢坐 3 號，現在六個座位都可用）
 const PIXEL_OFFICE_STAFF_SEATS = 18;   // 企劃部、專案部同仁的座位（設計部六張桌子右側再六張，完成「建立你的角色」的人依序入座）
@@ -2996,6 +2997,31 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'officeMergeEnergy', name, claimed, pending: this.officeMergeEnergyRead(name).pending, wallet: Boolean(holder), balance: holder ? tenthsToCoins(this.coinBalance(holder)) : 0, price: OFFICE_MERGE_ENERGY_PRICE, amount: OFFICE_MERGE_ENERGY_AMOUNT } as ApiResult;
   }
 
+  /** 「辦公室翻身記」雲端存檔：整份遊戲進度，換裝置接著玩。要登入，只能讀寫自己的。存 pixel_office_settings 的 merge-save:<名字>，不寫 GitHub。
+   *  op:'load' 讀取；op:'save' 帶 baseRev（上次同步到的版本）。版本對不上代表別台裝置存過了：不覆蓋，回傳雲端那份讓遊戲決定。 */
+  private officeMergeSave(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): ApiResult {
+    const current = this.requireSession(session);
+    const name = this.officeMergeName(database, current);
+    if (!name) throw new Error('這個帳號沒有對應的遊戲人物');
+    const key = 'merge-save:' + name, sql = this.ctx.storage.sql;
+    // 讀與寫之間沒有 await，兩台裝置同時存也不會互相蓋掉
+    const row = sql.exec<{ value: string }>('SELECT value FROM pixel_office_settings WHERE key = ?', key).toArray()[0];
+    let saved: Row = {};
+    try { saved = asRow(JSON.parse(row?.value || '{}')); } catch { saved = {}; }
+    const rev = Number(saved.rev) || 0;
+    const stored = () => ({ ok: true, action: 'officeMergeSave', name, rev, state: saved.state ?? null }) as ApiResult;
+    if (text(payload.op) === 'load') return stored();
+    if (text(payload.op) !== 'save') throw new Error('不支援的操作');
+    const state = asRow(payload.state);
+    const valid = state.v === 1 && Array.isArray(state.cells) && state.cells.length === 63 && Array.isArray(state.slots) && Array.isArray(state.orders)
+      && Number.isFinite(state.done) && Number.isFinite(state.xp) && Number.isFinite(state.energy) && Number.isFinite(state.savedAt);
+    const json = valid ? JSON.stringify(state) : '';
+    if (!valid || json.length > OFFICE_MERGE_SAVE_LIMIT) throw new Error('存檔格式不正確');
+    if (Number(payload.baseRev) !== rev) return { ...stored(), conflict: true } as ApiResult;
+    sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', key, JSON.stringify({ rev: rev + 1, state }), Date.now());
+    return { ok: true, action: 'officeMergeSave', name, rev: rev + 1 } as ApiResult;
+  }
+
   /** 3D 辦公室的流浪貓：辦公室歸屬感（全員共用，cat:office）與每人的信任度（cat:<名字>）。
    *  op:'get' 讀取；op:'care' 記一次有效互動（kind: feed／treat／play／company／pet），每人每天每種互動只有前幾次會增加進度（上限在 CAT_CARE）。
    *  effect:'food'／'water' 會更新共用貓碗的補充時間。不寫 GitHub；信任度與歸屬感只增不減。 */
@@ -5885,6 +5911,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'characterRoster') return this.characterRoster(database, session);
       if (action === 'characterSeatFor') return this.characterSeatFor(payload, database, session);
       if (action === 'personaAvatarSnapshot') return this.personaAvatarSnapshot(payload, database, session);
+      if (action === 'officeMergeSave') return this.officeMergeSave(payload, database, session);
       if (action === 'officeMergeEnergy') return await this.officeMergeEnergy(payload, database, session);
       if (action === 'pixelOfficePunish') return await this.pixelOfficePunish(payload, database, session);
       if (action === 'coinTransfer') return await this.coinTransfer(payload, database, session);
