@@ -43,6 +43,12 @@
     if (v) setTimeout(() => { const f = rows.find(r => !r.hidden); if (f) f.focus({ preventScroll: true }); }, 60); else if (lastFocus && lastFocus.focus) { try { lastFocus.blur(); } catch (e) {} }
   }
   btn.onclick = e => { e.stopPropagation(); setOpen(!open); };
+  // 圖鑑有新解鎖（原按鈕掛 has-new）：右上「選單」鈕和選單裡的「圖鑑」一起標 NEW
+  const dexSrc = $('bDex');
+  if (dexSrc) {
+    const mark = () => { const on = dexSrc.classList.contains('has-new'); btn.classList.toggle('has-new', on); rows.find(r => r.dataset.src === 'bDex').classList.toggle('has-new', on); };
+    new MutationObserver(mark).observe(dexSrc, { attributes: true, attributeFilter: ['class'] }); mark();
+  }
   // 面板（圖鑑、說明、角色頁面…）開在選單上面；關掉面板後選單還開著，不會收合
   const PANELS = ['gamesPanel', 'dexPanel', 'helpPanel', 'drawer', 'cpage', 'fridgeP', 'catP', 'sv'];
   const panelOpen = () => PANELS.some(id => { const el = $(id); return el && !el.hidden; });

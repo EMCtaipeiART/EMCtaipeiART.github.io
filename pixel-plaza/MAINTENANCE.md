@@ -218,3 +218,7 @@
 - 每人的關節位置寫在 `MODEL3D.<名字>.pivot`，換模型要一起改 pivot 與 `?v=`（`index.html` 與 `viewer.html`）。傅思凱（eric.glb）仍是手工建模版。
 - 長髮三位沒有獨立的頭部零件（整個上身一起動）；Anna 背包那側、Leona 抱布丁狗那隻手不會擺動。
 - 舊手工建模版在 git 歷史，腳本在 `models/people/`；要換回去：還原 glb、拿掉 pivot、`?v=` 加一。
+
+## 圖鑑與合成遊戲連動（2026-11-28）
+
+- 「辦公室翻身記」拿到的物件用 `pixelOfficeProgress`（`from:'merge'`）解鎖本圖鑑；後端回 `progress.fresh`，`dexBadge()` 在 `#bDex` 掛 `has-new`（`gameui.js` 同步到「選單」鈕與選單列），格子右上顯示 NEW。關閉圖鑑面板後以 `seen` 回報清除。對照表在 `office-merge/dexmap.js`：`DEX_FLOOR`／`DEX_MEET` 只能接在最後面。

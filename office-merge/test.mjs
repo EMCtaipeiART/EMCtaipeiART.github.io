@@ -77,6 +77,13 @@ const gen = s => s.cells.findIndex(c => c?.gen);
   console.log('通過：雲端存檔跨裝置情境');
 }
 
+{ // 元宇宙圖鑑對照：每個物件都有，編號在範圍內、不重複指到同一格
+  const keys = Object.entries(G.LINES).flatMap(([k, l]) => l.items.map((_, i) => k + (i + 1)));
+  const { DEX, dexIds } = await import('./dexmap.js');
+  assert.deepEqual(Object.keys(DEX).sort(), [...keys].sort());
+  for (const area of ['d', 'n']) { const all = keys.flatMap(k => DEX[k][area] || []); assert(all.every(n => n >= 0 && n < 50)); assert.equal(new Set(all).size, all.length); }
+  assert.deepEqual(dexIds(['s5', 'w3', 'zz']), { d: [10, 0], n: [8] });
+}
 { // 解除冷卻
   const s = G.newGame(Math.random, 0), i = s.cells.findIndex(c => c?.gen), at = { a: 'cell', i };
   s.coins = 600;

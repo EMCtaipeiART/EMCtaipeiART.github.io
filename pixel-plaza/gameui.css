@@ -114,3 +114,7 @@ html.embed #gMenuBtn,html.embed #gMenu,html.embed #gMask,html.embed #gWipe{displ
   @keyframes gSlideT{from{opacity:0;transform:translateY(-40px)}to{opacity:1;transform:none}}
   #gMenuBtn{height:44px;padding:0 14px 0 10px}#gMenuBtn kbd{display:none}
 }
+/* 圖鑑新解鎖提示 */
+#gMenuBtn.has-new::after,#gMenu .gm-row.has-new::after{content:'NEW';padding:3px 6px;border-radius:99px;background:#ff2f45;border:1.5px solid #fff;color:#fff;font:700 10px/1 'Fredoka',sans-serif;letter-spacing:.5px;text-shadow:none;pointer-events:none}
+#gMenuBtn.has-new::after{position:absolute;right:6px;top:-6px}
+#gMenu .gm-row.has-new::after{margin-left:auto}

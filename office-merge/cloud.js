@@ -1,5 +1,6 @@
 // 身分與雲端闖關榜。後端是設計需求系統的 Worker（action: officeMergeRank）。
 import { PEOPLE, stageInfo } from './logic.js';
+import { DEX, dexIds } from './dexmap.js';
 
 const local = /(^|\.)(localhost|127\.0\.0\.1)$/.test(location.hostname);
 const query = new URLSearchParams(location.search);
@@ -59,6 +60,24 @@ export async function saveData(op, extra = {}) {
   const d = await post({ action: 'officeMergeSave', op, token: token(), ...extra }, op === 'save');
   if (d.name !== me) throw Object.assign(new Error(`登入的是 ${d.name}，請重新登入`), { refused: true });
   return d;
+}
+
+// 遊戲裡第一次拿到的物件，記到元宇宙的圖鑑（沒有的才會新增，元宇宙那邊標紅色 NEW）。回傳這次元宇宙新增幾款。
+const DEX_KEY = `officeMergeDex:${me}`;
+let dexBusy = false;
+export async function syncDex(seen, keepalive = false) {
+  if (!API || !me || dexBusy) return 0;
+  let sent = [];
+  try { sent = JSON.parse(localStorage.getItem(DEX_KEY) || '[]'); } catch (e) {}
+  const keys = Object.keys(seen || {}).filter(k => DEX[k] && !sent.includes(k));
+  if (!keys.length) return 0;
+  dexBusy = true;
+  try {
+    const d = await post({ action: 'pixelOfficeProgress', name: me, op: 'save', progress: { from: 'merge', dex: dexIds(keys) } }, keepalive);
+    if (!Number.isInteger(d.added)) return 0;   // 後端還是舊版：下次再送
+    try { localStorage.setItem(DEX_KEY, JSON.stringify([...sent, ...keys])); } catch (e) {}
+    return d.added;
+  } catch (e) { return 0; } finally { dexBusy = false; }
 }
 
 let ranks = {};

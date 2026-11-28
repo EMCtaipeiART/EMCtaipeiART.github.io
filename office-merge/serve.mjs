@@ -15,12 +15,18 @@ const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; ch
 const ranks = { Anna: { done: 60, xp: 1700, level: 14, progress: 1 }, 余采馨: { done: 8, xp: 200, level: 4, progress: 0 } };
 const wallet = { pending: 3, balance: 40, claims: {}, bought: new Set() };
 const cloudSave = { rev: 0, state: null };
+const metaDex = { d: [], n: [] };
 function mock(p) {
   if (p.action === 'officeMergeSave') {
     if (p.op === 'load') return { ok: true, name: 'Machi', ...cloudSave };
     if (p.baseRev !== cloudSave.rev) return { ok: true, name: 'Machi', conflict: true, ...cloudSave };
     cloudSave.rev++; cloudSave.state = p.state;
     return { ok: true, name: 'Machi', rev: cloudSave.rev };
+  }
+  if (p.action === 'pixelOfficeProgress') {
+    let added = 0;
+    for (const k of ['d', 'n']) for (const n of p.progress?.dex?.[k] || []) if (!metaDex[k].includes(n)) { metaDex[k].push(n); added++; }
+    return { ok: true, added, progress: { dex: metaDex, fresh: metaDex } };
   }
   if (p.action === 'officeMergeRank') {
     if (p.op === 'save') ranks[p.name] = { done: p.done, xp: p.xp, level: p.level, progress: p.progress };

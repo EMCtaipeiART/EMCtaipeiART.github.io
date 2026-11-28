@@ -4307,6 +4307,13 @@ describe('Pixel Office shared state', () => {
     await api({ action: 'pixelOfficeProgress', name: 'Machi', op: 'save', progress: { last: { x: 100, z: 100, at: now - 9000 } } });   // 較舊的不會蓋掉
     expect(((await api({ action: 'pixelOfficeProgress', name: 'Machi', op: 'get' })).progress as { last: { x: number } }).last.x).toBe(800);
     expect((await api({ action: 'pixelOfficeProgress', name: '路人甲', op: 'save', progress: {} })).ok).toBe(false);
+    // 合成遊戲解鎖：只有原本沒有的算新增並標記 fresh，看過就清掉；原本的次數與位置不受影響
+    const fromGame = await api({ action: 'pixelOfficeProgress', name: 'Machi', op: 'save', progress: { from: 'merge', dex: { d: [3, 9], n: [2, 7] } } });
+    expect(fromGame).toMatchObject({ added: 2, progress: { dex: { d: [1, 3, 4, 9], n: [2, 7] }, fresh: { d: [9], n: [7] }, stat: { found: 5, notes: 7, flush: 2 }, last: { x: 800 } } });
+    expect((await api({ action: 'pixelOfficeProgress', name: 'Machi', op: 'save', progress: { from: 'merge', dex: { d: [9], n: [] } } })).added).toBe(0);
+    expect(((await api({ action: 'pixelOfficeProgress', name: 'Machi', op: 'save', progress: { seen: { d: [9] } } })).progress as { fresh: unknown }).fresh).toEqual({ d: [], n: [7] });
+    await api({ action: 'pixelOfficeProgress', name: 'Machi', op: 'save', progress: { seen: { n: [7] } } });
+    expect((await api({ action: 'pixelOfficeProgress', name: 'Machi', op: 'get' })).progress).not.toHaveProperty('fresh');
   });
 
   it('辦公室小樂趣：先到先得、投影機可反覆切換、狀態回傳所有人共用的紀錄', async () => {

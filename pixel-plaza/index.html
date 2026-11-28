@@ -192,6 +192,9 @@ button{font-family:inherit}
 .dex-it img{width:44px;height:44px;object-fit:contain}
 .dex-it.unk img{filter:brightness(0) opacity(.5)}
 .dex-it.unk::after{content:'?';position:absolute;inset:0;display:grid;place-items:center;font-weight:700;color:rgba(255,255,255,.55);font-size:20px}
+.dex-it .nw{position:absolute;top:-5px;right:-4px;z-index:1;padding:2px 5px;border-radius:99px;background:#ff2f45;border:1.5px solid #fff;color:#fff;font:700 9px/1 'Fredoka',sans-serif;letter-spacing:.3px;text-shadow:none;pointer-events:none}
+.dex-grid{padding-top:5px}
+.hp-top #bDex.has-new::after{content:'NEW';position:absolute;top:-6px;right:-6px;padding:2px 5px;border-radius:99px;background:#ff2f45;border:1.5px solid #fff;color:#fff;font:700 9px/1 'Fredoka',sans-serif;text-shadow:none;pointer-events:none}
 .help-list{display:grid;gap:8px;font-size:14px;font-weight:600;line-height:1.5}
 .help-list div{background:rgba(255,255,255,.07);border-radius:12px;padding:8px 12px}
 /* 提示框與浮動文字 */
@@ -489,7 +492,7 @@ button,summary,select,label[for],input[type=file],.cui-story,.mplay,.cp-story .t
   .hp-info{min-width:0;overflow:hidden}
   .hp-name,.hp-st{max-width:100%;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
-</style><link rel="stylesheet" href="gameui.css?v=20261128"></head><body>
+</style><link rel="stylesheet" href="gameui.css?v=20261128b"></head><body>
 <script>if(/[?&]embed=1/.test(location.search))document.documentElement.classList.add('embed')</script>
 <div id="title">
   <div class="t-inner">
@@ -2466,7 +2469,7 @@ function expEnter(kind){
   }, 1000);
 }
 function expLeave(){
-  if (!expFrame) return; metaBgm.resume(); metaBgmUI.style.display = 'flex'; expFade.textContent = ''; expFade.classList.add('fast', 'on');
+  if (!expFrame) return; setTimeout(progRefresh, 1500); metaBgm.resume(); metaBgmUI.style.display = 'flex'; expFade.textContent = ''; expFade.classList.add('fast', 'on');
   setTimeout(() => { expFrame.remove(); expFrame = null; expArmed = false; setTimeout(() => { expFade.classList.remove('on'); expBusy = false; }, 150); setTimeout(() => expFade.classList.remove('fast'), 700); }, 560);
 }
 // 遊戲開著時，外層收到的按鍵（焦點還在外層時）轉給遊戲，並擋掉外層的走路等操作
@@ -3411,7 +3414,22 @@ function progApply(p, atLogin){   // 與雲端合併：圖鑑取聯集、次數�
   if (!p) return; if (atLogin && p.last && Number.isFinite(p.last.x) && Date.now() - Number(p.last.at) < LAST_TTL && (!pendingRestore || p.last.at > pendingRestore.at)) pendingRestore = p.last; for (const kind of ['d', 'n']) for (const id of ((p.dex || {})[kind] || [])) if (!dex[kind].includes(id)) dex[kind].push(id);
   for (const k of ['flush', 'found', 'notes']) stat[k] = Math.max(stat[k] || 0, Number((p.stat || {})[k]) || 0);
   try { localStorage.setItem('pixelDex' + progScope, JSON.stringify(dex)); localStorage.setItem('pixelFun' + progScope, JSON.stringify(stat)); } catch (e) {}
+  for (const kind of ['d', 'n']) dexFresh[kind] = (((p.fresh || {})[kind]) || []).filter(id => !dexSeen[kind].includes(id));
+  dexBadge();
 }
+// 合成遊戲「辦公室翻身記」解鎖的新圖鑑：圖鑑按鈕與格子標紅色 NEW，打開圖鑑看過、關掉後清除
+const dexFresh = {d:[], n:[]}, dexSeen = {d:[], n:[]};
+function dexBadge(){ $('bDex').classList.toggle('has-new', dexFresh.d.length + dexFresh.n.length > 0); }
+async function progRefresh(){   // 重新讀雲端（玩完小遊戲、切回分頁、打開圖鑑時）
+  const name = meName(); if (!name || !progCloud) return;
+  try { const r = await post({action:'pixelOfficeProgress', name, op:'get'}); progApply(r.progress); if (!$('dexPanel').hidden) renderDex(); } catch (e) {}
+}
+addEventListener('visibilitychange', () => { if (!document.hidden) progRefresh(); });
+new MutationObserver(() => {
+  if (!$('dexPanel').hidden || !$('dexBody').querySelector('.nw')) return;
+  for (const el of $('dexBody').querySelectorAll('.nw')) { const kind = el.dataset.kind, id = Number(el.dataset.id); dexSeen[kind].push(id); dexFresh[kind] = dexFresh[kind].filter(x => x !== id); el.remove(); }
+  dexBadge(); progDirty();
+}).observe($('dexPanel'), {attributes:true, attributeFilter:['hidden']});
 // 最後停留的位置（一天內有效）：存雲端（跟個人進度一起）與本機；重新登入（換手機也一樣）回到那裡
 const LAST_TTL = 86400000; let lastSaved = {x:-999, z:-999}, lastTimer = 0, pendingRestore = null;
 function lastPos(){ const c = player; if (!c || AWAY.has(c.status)) return null; return {x:Math.round(c.holder.position.x / U), z:Math.round(c.holder.position.z / U), at:Date.now()}; }
@@ -3430,7 +3448,7 @@ function restoreLast(){
 }
 async function progSave(){
   const name = meName(); if (!name || !live.ok || progCloud === false) return;
-  try { const r = await post({action:'pixelOfficeProgress', name, op:'save', progress:{dex, stat, last:lastPos()}}); progApply(r.progress); progCloud = true; }
+  try { const r = await post({action:'pixelOfficeProgress', name, op:'save', progress:{dex, stat, last:lastPos(), seen:dexSeen}}); progApply(r.progress); progCloud = true; }
   catch (e) { if (progCloud === null) showQuote('', '雲端存檔尚未啟用，圖鑑與等級先暫存在這台電腦'); progCloud = false; }
 }
 async function progLoad(){
@@ -3447,14 +3465,14 @@ function renderDex(){
     const h = document.createElement('div'); h.className = 'dex-sec'; h.textContent = title + '　' + dex[kind].length + '/' + ids.length; body.appendChild(h);
     const g = document.createElement('div'); g.className = 'dex-grid';
     ids.forEach((id, i) => { const cv = spriteCanvas(id), found = dex[kind].includes(i), d = document.createElement('div'); d.className = 'dex-it' + (found ? '' : ' unk');
-      d.innerHTML = '<img alt="" src="' + (cv ? cv.toDataURL() : '') + '">'; d.onclick = () => showQuote(found ? names[i] : '？？？', found ? quotes[i] : '還沒發現，到辦公室裡找找看'); g.appendChild(d); });
+      d.innerHTML = '<img alt="" src="' + (cv ? cv.toDataURL() : '') + '">' + (dexFresh[kind].includes(i) ? '<b class="nw" data-kind="' + kind + '" data-id="' + i + '">NEW</b>' : ''); d.onclick = () => showQuote(found ? names[i] : '？？？', found ? quotes[i] : '還沒發現，到辦公室裡找找看'); g.appendChild(d); });
     body.appendChild(g);
   };
   const cl = document.createElement('div'); cl.className = 'dex-sec'; cl.style.cssText = 'font-size:12px;opacity:.85'; cl.textContent = !meName() ? '訪客不會存圖鑑，登入後才會記錄' : progCloud === true ? '☁ 已和帳號同步，換裝置登入也在' : progCloud === false ? '⚠ 雲端存檔尚未啟用，目前只存在這台裝置' : '☁ 同步中…'; body.appendChild(cl);
   sec('地上的驚喜', DROP_IDS, ITEMS.map(x => x[1]), ITEMS.map(x => x[2]), 'd');
   sec('會議室遺落物', NOTE_IDS, NOTES.map(x => x[0]), NOTES.map(x => x[1]), 'n');
 }
-$('bDex').onclick = () => { renderDex(); $('dexPanel').hidden = false; $('helpPanel').hidden = true; $('gamesPanel').hidden = true; panelAnchor = null; };
+$('bDex').onclick = () => { renderDex(); $('dexPanel').hidden = false; $('helpPanel').hidden = true; $('gamesPanel').hidden = true; panelAnchor = null; progRefresh(); };
 $('bGames').onclick = () => { $('gamesPanel').hidden = false; $('dexPanel').hidden = true; $('helpPanel').hidden = true; panelAnchor = null; };
 $('gamesBody').innerHTML = Object.entries(EXP_GAMES).map(([k, g]) => '<button type="button" data-game="' + k + '"' + (k === 'merge' ? ' class="new"' : '') + '>' + g.title + '<small>' + (g.note || '倉庫小遊戲') + '</small></button>').join('');
 $('gamesBody').onclick = e => { const b = e.target.closest('[data-game]'); if (!b) return; $('gamesPanel').hidden = true; expEnter(b.dataset.game); };
@@ -4117,4 +4135,4 @@ function tick(){
   requestAnimationFrame(tick);
 }
 tick();
-</script><script src="gameui.js?v=20261128"></script></body></html>
+</script><script src="gameui.js?v=20261128b"></script></body></html>

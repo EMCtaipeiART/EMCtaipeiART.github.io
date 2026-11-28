@@ -33,7 +33,17 @@ function load() {
 function save(player = true) {
   if (player) state.savedAt = Date.now();
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
-  if (player) cloudSave.changed();
+  if (player) { cloudSave.changed(); queueDex(); }
+}
+
+// 新拿到的物件同步到元宇宙圖鑑
+let dexTimer;
+function queueDex() {
+  clearTimeout(dexTimer);
+  dexTimer = setTimeout(async () => {
+    const added = await cloud.syncDex(state.seen);
+    if (added && !$('home').open) toast(`元宇宙圖鑑新增 ${added} 款！`);
+  }, 600);
 }
 
 /* ---------- 雲端存檔：玩到哪記到哪，換裝置接著玩 ---------- */
@@ -219,7 +229,7 @@ setInterval(() => { if (!document.hidden) claimEnergy(); }, 60000);
 addEventListener('visibilitychange', () => {
   if (document.hidden) cloudSave.flush(); else cloudSave.load().then(claimEnergy);
 });
-addEventListener('pagehide', () => cloudSave.flush());
+addEventListener('pagehide', () => { cloudSave.flush(); cloud.syncDex(state.seen, true); });
 addEventListener('online', () => cloudSave.load());
 
 async function exchangeBox() {
@@ -599,7 +609,7 @@ function storyPanel() {
 $('bHelp').addEventListener('click', () => {
   openPanel('怎麼玩', `<h3>目標</h3>幫同事準備他們要的東西，賺金幣。
     每一關先完成指定張數的一般訂單，再交紫色「過關任務」卡。<br>點訂單上的物品圖示，可以看它的合成階段。
-    <h3>劇情與圖鑑</h3>共 ${G.CHAPTERS.length} 關，一關一段劇情；點過關任務卡上的同事頭像看對話。部分關卡過關後解鎖新物品線。每次過關還會拿到材料和圖鑑碎片，碎片集滿到「圖鑑」按升級。
+    <h3>劇情與圖鑑</h3>共 ${G.CHAPTERS.length} 關，一關一段劇情；點過關任務卡上的同事頭像看對話。部分關卡過關後解鎖新物品線。遊戲裡第一次拿到的物件，元宇宙圖鑑沒有的會一起解鎖。每次過關還會拿到材料和圖鑑碎片，碎片集滿到「圖鑑」按升級。
     <h3>冷卻</h3>每台產生器連點到上限（機台 1 級 ${G.GEN_CAP[0]} 次、2 級 ${G.GEN_CAP[1]} 次、3 級 ${G.GEN_CAP[2]} 次）要冷卻 ${G.GEN_COOL_MS[0] / 60000} 分鐘。點選冷卻中的產生器，按「解除冷卻」可花 ${G.COOL_PRICE} 金幣或平台幣立刻解除。
     <h3>產生器的標記</h3>右下星星＝圖鑑等級（集碎片升級）。機台等級點選產生器看下方說明，兩台同級可合成升級。
     <h3>能量</h3>上限 100 點，點一次產生器花 1 點，每分鐘回 1 點。
@@ -669,6 +679,7 @@ openHome(state);
 setSaveState(SAVE_TEXT[cloudSave.status], cloudSave.status === 'loading');
 cloudSave.load().finally(() => {
   ready = true;
+  queueDex();
   setSaveState(SAVE_TEXT[cloudSave.status], false);
   claimEnergy();
 });

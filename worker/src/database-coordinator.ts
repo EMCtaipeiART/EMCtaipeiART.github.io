@@ -2892,14 +2892,24 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const cleanLast = (value: unknown): { x: number; z: number; at: number } | null => { const v = asRow(value), x = Number(v.x), z = Number(v.z), at = Number(v.at), now = Date.now(); return Number.isFinite(x) && Number.isFinite(z) && Number.isFinite(at) && x >= 0 && x <= 6000 && z >= -300 && z <= 2000 && at <= now + 60_000 && now - at < 7 * 86_400_000 ? { x: Math.round(x), z: Math.round(z), at: Math.round(at) } : null; };
     let last = cleanLast(saved.last);
     let dexD = ids(dexOld.d), dexN = ids(dexOld.n), stat = { flush: count(statOld.flush), found: count(statOld.found), notes: count(statOld.notes) };
+    // fresh：從合成遊戲解鎖、本人還沒在圖鑑看過的格子（元宇宙標紅色 NEW）
+    const freshOld = asRow(saved.fresh);
+    let freshD = ids(freshOld.d), freshN = ids(freshOld.n), added: number | undefined;
     if (text(payload.op) === 'save') {
-      const incoming = asRow(payload.progress), dexIn = asRow(incoming.dex), statIn = asRow(incoming.stat);
+      const incoming = asRow(payload.progress), dexIn = asRow(incoming.dex), statIn = asRow(incoming.stat), seenIn = asRow(incoming.seen);
+      if (text(incoming.from) === 'merge') {
+        const newD = ids(dexIn.d).filter(n => !dexD.includes(n)), newN = ids(dexIn.n).filter(n => !dexN.includes(n));
+        freshD = ids([...freshD, ...newD]); freshN = ids([...freshN, ...newN]); added = newD.length + newN.length;
+      }
+      const seenD = ids(seenIn.d), seenN = ids(seenIn.n);
+      freshD = freshD.filter(n => !seenD.includes(n)); freshN = freshN.filter(n => !seenN.includes(n));
       dexD = ids([...dexD, ...ids(dexIn.d)]); dexN = ids([...dexN, ...ids(dexIn.n)]);
       stat = { flush: Math.max(stat.flush, count(statIn.flush)), found: Math.max(stat.found, count(statIn.found)), notes: Math.max(stat.notes, count(statIn.notes)) };
       const lastIn = cleanLast(incoming.last); if (lastIn && (!last || lastIn.at > last.at)) last = lastIn;   // 最後停留的位置：取較新的（一天內有效由前端判斷）
-      sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', key, JSON.stringify({ dex: { d: dexD, n: dexN }, stat, last }), Date.now());
+      sql.exec('INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at', key, JSON.stringify({ dex: { d: dexD, n: dexN }, stat, last, fresh: { d: freshD, n: freshN } }), Date.now());
     }
-    return { ok: true, action: 'pixelOfficeProgress', progress: { dex: { d: dexD, n: dexN }, stat, last } } as ApiResult;
+    const fresh = freshD.length || freshN.length ? { fresh: { d: freshD, n: freshN } } : {};
+    return { ok: true, action: 'pixelOfficeProgress', progress: { dex: { d: dexD, n: dexN }, stat, last, ...fresh }, ...(added === undefined ? {} : { added }) } as ApiResult;
   }
 
   /** 合成遊戲「辦公室翻身記」闖關榜：每人存關卡、本關進度、完成訂單數與經驗值，只往前記（舊裝置或重新開始不會蓋掉最佳紀錄）。

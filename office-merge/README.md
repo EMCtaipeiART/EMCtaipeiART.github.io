@@ -30,6 +30,8 @@
 | `art/` | 文具櫃 `s`、茶水間 `t`、紙箱 `box`、背景 `bg.jpg`、配樂 |
 | `items/` | 物品圖 6 條線各 9 張（`s` 文具、`t` 茶水、`i` IT、`m` 會議、`d` 設計、`w` 福利），複製自 `pixel-plaza/dex/` |
 
+元宇宙圖鑑連動：`dexmap.js` 把 54 個物件對到 `pixel-plaza` 的圖鑑格（地上 d／會議室 n）；`cloud.js` `syncDex` 用 `pixelOfficeProgress`（`from:'merge'`）寫入，後端只把原本沒有的記進 `fresh`，元宇宙的圖鑑按鈕與格子顯示紅色 NEW，看過後用 `seen` 清掉。換遊戲物件圖時要一起改對照表。
+
 遊戲以外的相關程式：`worker/src/database-coordinator.ts`（`officeMergeRank`、`officeMergeEnergy`、`pixelOfficeFun` 撿道具）、`worker/src/coins.ts`（帳本類型 `merge_energy`）、`pixel-plaza/index.html`（`EXP_GAMES.merge`、右上小遊戲面板、撿道具提示）、`pixel-plaza/gameui.js`（右側選單的小遊戲）、`site.js`／`site.css`（小幫手固定按鈕 `.as-merge`）、`worker/src/assistant-knowledge.ts`。
 
 ## 使用者定的規範（照做，別擅自改）
