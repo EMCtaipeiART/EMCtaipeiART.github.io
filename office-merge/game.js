@@ -81,8 +81,8 @@ const at = p => (p.a === 'slot' ? state.slots : state.cells)[p.i];
 function pieceHTML(o, anim) {
   const cls = ['item', o.gen ? 'gen' : '', !o.gen && o.lv === G.MAX_LV ? 'max' : '', anim || ''].filter(Boolean).join(' ');
   const wait = o.gen ? G.genStatus(o).wait : 0;
-  // 星星＝圖鑑等級（和圖鑑頁同一個數字）；左下圓點＝機台等級（兩台同級合成會多一點）
-  const badge = o.gen ? `<i class="lv"><img src="${art('star')}" alt=""><b>${G.rankOf(state, o.line)}</b></i><span class="tier">${'<s></s>'.repeat(o.lv)}</span>${wait ? `<u class="cd">${clock(wait)}</u>` : ''}` : '';
+  // 星星＝圖鑑等級（和圖鑑頁同一個數字）。機台等級只寫在下方說明欄
+  const badge = o.gen ? `<i class="lv"><img src="${art('star')}" alt=""><b>${G.rankOf(state, o.line)}</b></i>${wait ? `<u class="cd">${clock(wait)}</u>` : ''}` : '';
   return `<div class="${cls}${wait ? ' cooling' : ''}"><img src="${img(o)}" alt="${G.nameOf(o)}">${badge}</div>`;
 }
 
@@ -601,7 +601,7 @@ $('bHelp').addEventListener('click', () => {
     每一關先完成指定張數的一般訂單，再交紫色「過關任務」卡。<br>點訂單上的物品圖示，可以看它的合成階段。
     <h3>劇情與圖鑑</h3>共 ${G.CHAPTERS.length} 關，一關一段劇情；點過關任務卡上的同事頭像看對話。部分關卡過關後解鎖新物品線。每次過關還會拿到材料和圖鑑碎片，碎片集滿到「圖鑑」按升級。
     <h3>冷卻</h3>每台產生器連點到上限（機台 1 級 ${G.GEN_CAP[0]} 次、2 級 ${G.GEN_CAP[1]} 次、3 級 ${G.GEN_CAP[2]} 次）要冷卻 ${G.GEN_COOL_MS[0] / 60000} 分鐘。點選冷卻中的產生器，按「解除冷卻」可花 ${G.COOL_PRICE} 金幣或平台幣立刻解除。
-    <h3>產生器的標記</h3>右下星星＝圖鑑等級（集碎片升級）；左下圓點＝機台等級（兩台同級合成升級）。
+    <h3>產生器的標記</h3>右下星星＝圖鑑等級（集碎片升級）。機台等級點選產生器看下方說明，兩台同級可合成升級。
     <h3>能量</h3>上限 100 點，點一次產生器花 1 點，每分鐘回 1 點。
     <h3>操作</h3>點產生器拿物品。<br>把兩個一樣的拖在一起，合成高一級。<br>在紙箱旁邊合成，紙箱就會打開。<br>紙箱裡藏著第二台產生器，合成後更容易掉高級物品。<br>訂單湊齊後按「交付」。用不到的可以點選後賣掉，或放到左下暫存格。
     <h3>存檔</h3>登入後每一步都會存到雲端，換手機或電腦登入同一帳號就能接著玩。<br>目前：${SAVE_TEXT[cloudSave.status]}
