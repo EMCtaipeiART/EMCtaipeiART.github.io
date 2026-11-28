@@ -252,13 +252,17 @@ dialog#home::backdrop{background:#0d3a22}
 #home header p{margin:2px 0 0;font-size:12px}
 #tower{position:relative;flex:1;overflow-y:auto;overscroll-behavior:contain;background:#6fc7ff}
 .map{position:relative;background:
-  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' fill='none' stroke='%237a4524' stroke-opacity='.17' stroke-width='9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 20H44V44M72 8V40H108M20 66V104H52M70 70H104V96M62 112H88M8 44V48'/%3E%3C/svg%3E"),
-  repeating-linear-gradient(180deg,#fbe7c2 0 720px,#e4f4d8 720px 1440px)}
+  radial-gradient(ellipse 70px 24px at 18% 90px,rgba(255,255,255,.55) 60%,transparent 62%) 0 0/100% 430px,
+  radial-gradient(ellipse 56px 19px at 84% 300px,rgba(255,255,255,.42) 60%,transparent 62%) 0 0/100% 560px,
+  radial-gradient(circle at 62% 210px,rgba(255,255,255,.7) 2px,transparent 3px) 0 0/130px 250px,
+  var(--sky)}
 .map>svg{position:absolute;left:0;top:0;width:100%;height:100%;fill:none;stroke-linecap:round;stroke-linejoin:round}
 .map path{vector-effect:non-scaling-stroke}
-.map .road{stroke:#fffdf5;stroke-width:24}
-.map .walked{stroke:#9be27f;stroke-width:24}
-.map .dash{stroke:#ffab36;stroke-width:4;stroke-dasharray:2 10}
+.map .edge{stroke:rgba(110,70,35,.28);stroke-width:34}
+.map .road{stroke:#fff3d9;stroke-width:26}
+.map .walked{stroke:#ffd25e;stroke-width:26}
+.map .dash{stroke:#fff;stroke-width:5;stroke-dasharray:1 15}
+.map .decor{position:absolute;width:42px;height:42px;margin:-21px 0 0 -21px;object-fit:contain;filter:drop-shadow(0 5px 3px rgba(60,40,20,.25));pointer-events:none}
 .stop{position:absolute;z-index:2;display:grid;place-items:center;width:52px;height:52px;margin:-26px 0 0 -26px;padding:0;border-radius:50%;border:4px solid #fff;color:#fff;font-size:19px;text-shadow:0 2px 0 rgba(0,0,0,.28);box-shadow:0 5px 0 rgba(90,50,20,.35)}
 .stop.done{background:linear-gradient(#7eea6b,#2fae3b)}
 .stop.now{background:linear-gradient(#ffd75e,#ff8f1f)}

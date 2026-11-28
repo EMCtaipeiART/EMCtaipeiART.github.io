@@ -1,4 +1,4 @@
-// 首頁：辦公室迷宮地圖。一關一站，沿著轉來轉去的走道由下往上走；同仁站在自己目前那一關。
+// 首頁：蜿蜒闖關地圖。一關一站，沿著彎曲的小路由下往上走，越後面站與站隔得越遠；同仁站在自己目前那一關。
 import * as G from './logic.js';
 import { me, getRanks, onRanks, sync } from './cloud.js';
 import * as cloud from './cloud.js';
@@ -37,10 +37,27 @@ const person = p => {
   ${p.rank ? `<i>${p.rank}</i>` : ''}<img src="${face(look)}" alt=""><figcaption>${p.name}${p.stage ? `<small>${p.stage.have}/${p.stage.goal}</small>` : ''}</figcaption></figure>`;
 };
 
-// 版面（高度單位 px，左右用百分比）：關卡站左右蛇行，有人站的那一關留高一點
-const XS = [24, 50, 76, 50];
-const xOf = n => XS[(n - 1) % XS.length];
-const ROW = 88, CROWD_ROW = 158, NODE_UP = 36;   // NODE_UP：站點中心離該列底部多高
+// 版面：高度單位 px，左右用百分比。蛇行幅度不固定，看起來比較自然
+const xOf = n => Math.round(50 + 26 * Math.sin(n * 1.15) + 5 * Math.sin(n * .47));
+// 第 n 關和下一站（往下）之間的距離：越後面越遠
+const gapOf = n => Math.round(78 + n * .8);
+const CROWD = 150, NODE_UP = 40;   // 有人站的那一關上方至少留的高度；最底站離地圖底部
+const DECOR = Object.keys(G.LINES).flatMap(k => [3, 5, 7, 4, 6].map(n => k + n));
+// 小路：每兩站中間多放一個往旁邊盪的轉折點（距離越長盪得越開），再用平滑曲線串起來。
+// 回傳每一段的 SVG 指令，rows[i] 的起點是第 i*2 段。
+function curve(rows) {
+  const pts = rows.flatMap((a, i) => {
+    const b = rows[i + 1];
+    if (!b) return [a];
+    const sway = (a.n % 2 ? 1 : -1) * Math.min(20, Math.max(0, b.y - a.y - 80) * .2);
+    return [a, { x: Math.max(8, Math.min(92, (a.x + b.x) / 2 + sway)), y: (a.y + b.y) / 2 }];
+  });
+  const c = v => Math.round(v * 10) / 10;
+  return pts.slice(1).map((q, i) => {
+    const p = pts[i], o = pts[i - 1] || p, r = pts[i + 2] || q;
+    return `C${c(p.x + (q.x - o.x) / 6)} ${c(p.y + (q.y - o.y) / 6)} ${c(q.x - (r.x - p.x) / 6)} ${c(q.y - (r.y - p.y) / 6)} ${q.x} ${q.y}`;
+  });
+}
 
 function tower(state) {
   const { ranked, waiting } = ranking(state);
@@ -49,31 +66,35 @@ function tower(state) {
   // 自己站的位置以排行紀錄與這台裝置較前面的為準
   const mineNo = Math.min(ranked.find(p => p.name === me)?.level || G.stageInfo(state).no, TOP);
   const rows = [];
-  let top = 16;
+  let y = 0;
   for (let n = TOP; n >= 1; n--) {
     const here = [...ranked, ...guest].filter(p => Math.min(p.level, TOP) === n);
-    const height = here.length ? CROWD_ROW + Math.floor((here.length - 1) / 4) * 84 : ROW;
-    rows.push({ n, here, top, height, x: xOf(n), y: top + height - NODE_UP });
-    top += height;
+    const above = n === TOP ? 60 : gapOf(n);   // 和上一站的距離
+    const need = here.length ? CROWD + Math.floor((here.length - 1) / 4) * 84 : 0;
+    y += Math.max(above, need);
+    rows.push({ n, here, x: xOf(n), y });
   }
-  // 走道：兩站之間轉兩個直角，像在隔間裡繞；走過的路另外上色
-  const path = list => list.map((r, i) => {
-    if (!i) return `M${r.x} ${r.y}`;
-    const prev = list[i - 1], turn = prev.y + 34;
-    return `V${turn}H${r.x}V${r.y}`;
-  }).join('');
-  const passed = rows.filter(r => r.n <= mineNo);
-  const height = top + 8;
-  const stops = rows.map(r => {
+  // 小路：由上往下連；走過的段落另外上色
+  const segs = curve(rows);
+  const path = from => `M${rows[from].x} ${rows[from].y}${segs.slice(from * 2).join('')}`;
+  const mineAt = rows.findIndex(r => r.n === mineNo);
+  const height = y + NODE_UP;
+  const stops = rows.map((r, i) => {
     const mine = r.here.some(p => me ? p.name === me : p.guest);
     const status = r.n < mineNo ? 'done' : r.n === mineNo ? 'now' : 'locked';
     const title = r.n === TOP ? '加班挑戰' : G.CHAPTERS[r.n - 1].title;
     const crowd = r.here.length ? `<div class="crowd" style="left:clamp(132px,${r.x}%,calc(100% - 132px));bottom:${height - r.y + 24}px">${r.here.map(person).join('')}</div>` : '';
-    return `<button type="button" class="stop ${status}${r.n % 10 === 0 ? ' big' : ''}${r.n === TOP ? ' roof' : ''}${mine ? ' mine' : ''}" data-level="${r.n}" style="left:${r.x}%;top:${r.y}px" aria-label="第 ${r.n} 關 ${title}">${r.n === TOP ? '★' : r.n}</button>
+    // 站與站之間的路邊擺設：放在路的另一側
+    const below = rows[i + 1];
+    const decor = below && r.n % 3 === 0 ? `<img class="decor" loading="lazy" alt="" src="items/${DECOR[(r.n / 3) % DECOR.length]}.png" style="left:${(r.x + below.x) / 2 > 50 ? 12 + r.n % 7 : 82 - r.n % 7}%;top:${Math.round((r.y + below.y) / 2)}px">` : '';
+    return `${decor}<button type="button" class="stop ${status}${r.n % 10 === 0 ? ' big' : ''}${r.n === TOP ? ' roof' : ''}${mine ? ' mine' : ''}" data-level="${r.n}" style="left:${r.x}%;top:${r.y}px" aria-label="第 ${r.n} 關 ${title}">${r.n === TOP ? '★' : r.n}</button>
       <span class="stop-name ${status}${r.x > 50 ? ' left' : ''}" style="left:${r.x}%;top:${r.y}px">${status === 'locked' ? '🔒 ' : status === 'done' ? '✓ ' : ''}${title}</span>${crowd}`;
   }).join('');
-  return `<div class="map" style="height:${height}px"><svg viewBox="0 0 100 ${height}" preserveAspectRatio="none" aria-hidden="true">
-      <path class="road" d="${path(rows)}"/><path class="walked" d="${passed.length > 1 ? path(passed) : ''}"/><path class="dash" d="${path(rows)}"/></svg>${stops}</div>
+  // 背景由下往上換色：草地 → 晴空 → 黃昏 → 夜空
+  const at = n => Math.round(rows[TOP - n].y);
+  const sky = `linear-gradient(180deg,#4b3f8f 0,#8a6fd1 ${at(125)}px,#ffb08a ${at(95)}px,#ffe3a6 ${at(70)}px,#9fdcff ${at(40)}px,#cdf0ff ${at(20)}px,#d9f6bf ${at(8)}px,#c4ec9c 100%)`;
+  return `<div class="map" style="height:${height}px;--sky:${sky}"><svg viewBox="0 0 100 ${height}" preserveAspectRatio="none" aria-hidden="true">
+      <path class="edge" d="${path(0)}"/><path class="road" d="${path(0)}"/><path class="walked" d="${mineNo > 1 ? path(mineAt) : ''}"/><path class="dash" d="${path(0)}"/></svg>${stops}</div>
     <section class="lobby"><header><b>大廳</b>尚未上榜</header><div class="row">${waiting.map(name => person({ name })).join('')}</div></section>`;
 }
 
