@@ -36,6 +36,8 @@ on:
       - 'soccer/**'
       - 'kart/**'
       - 'fps/**'
+      # 合成遊戲「辦公室翻身記」（2026-11-28：漏了這行，只改遊戲時不會上線）。
+      - 'office-merge/**'
   repository_dispatch:
     types:
       - database_changed

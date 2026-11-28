@@ -50,7 +50,7 @@
 
 ## 部署
 
-1. 網站：push 到 `main` 就上線。瀏覽器快取約 10 分鐘，剛上線看到舊畫面或新舊混在一起時按 Ctrl+F5。
+1. 網站：push 到 `main` 後由 `.github/workflows/update-database-archive.yml` 發布（路徑清單要含 `office-merge/**`；遊戲用到清單外的新資料夾時要一起加），約一兩分鐘上線。瀏覽器快取約 10 分鐘，剛上線看到舊畫面或新舊混在一起時按 Ctrl+F5。
 2. 後端有改才需要：這台電腦要先 `wrangler login`。部署前先確認 `origin/main` 是線上最新（`wrangler deployments list` 的時間對得上最後一次 worker 提交），再 `cd worker && wrangler deploy`。剛部署完幾秒內可能回 `Unknown action`，重打一次。
 
 ## 目前狀態（2026-11-28）
