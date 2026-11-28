@@ -78,15 +78,23 @@ assert.equal(G.stageInfo(total).no, stages + 1);
   for (const c of G.CHAPTERS) { for (const code of c.need) assert(open.includes(code[0]), c.title); if (c.rank) assert(open.includes(c.rank)); if (c.unlock) open.push(c.unlock); }
   assert.equal(open.length, Object.keys(G.LINES).length);
   const s = G.newGame(Math.random, 0);
-  assert.equal(G.chapterBlocked(s), 'need'); assert.equal(G.finishChapter(s, 0), null);
-  const empty = () => s.cells.findIndex(o => !o);
-  for (const code of G.CHAPTERS[0].need) s.cells[empty()] = { line: code[0], lv: Number(code.slice(1)) };
-  const r = G.finishChapter(s, 0);
-  assert(r && s.lines.includes('i') && s.chapter === 1 && s.cells[r.placed].line === 'i' && s.cells[r.placed].gen && s.energy >= 130);
-  s.chapter = 4; for (const code of G.CHAPTERS[4].need) s.cells[empty()] = { line: code[0], lv: Number(code.slice(1)) };
-  const before = G.makeOrder({ ...s, orders: [], lines: ['s'], rank: {}, made: 0 }, () => 0).reward;
-  assert(G.finishChapter(s, 0)); assert.equal(G.rankOf(s, 's'), 2);
-  assert(G.makeOrder({ ...s, orders: [], lines: ['s'], made: 0 }, () => 0).reward > before);
+  const story = () => s.orders[0], empty = () => s.cells.findIndex(o => !o);
+  const give = () => { for (const r of story().need) s.cells[empty()] = { ...r }; };
+  assert.equal(story().story, 0); assert.equal(s.orders.filter(o => o.story !== undefined).length, 1);
+  assert.equal(G.deliver(s, story().id, Math.random, 0), null);
+  give();
+  const r = G.deliver(s, story().id, Math.random, 0);
+  assert(r.story && s.lines.includes('i') && s.chapter === 1 && s.done === 1 && s.cells[r.story.placed].line === 'i' && s.energy >= 130);
+  assert.equal(story().story, 1);
+  // 棋盤滿、物品都在暫存格：放不下新產生器就不能交
+  const full = JSON.parse(JSON.stringify(s));
+  full.cells = full.cells.map(c => c && !c.box ? c : { line: 's', lv: 7 }); full.slots = full.orders[0].need.map(n => ({ ...n }));
+  assert.equal(G.deliver(full, full.orders[0].id, Math.random, 0).blocked, 'space'); assert.equal(full.chapter, 1);
+  s.chapter = 4; G.upgradeSave(s); assert.equal(story().story, 4);
+  const normal = () => G.makeOrder({ ...s, orders: [], lines: ['s'], made: 0 }, () => 0).reward, base = G.makeOrder({ ...s, orders: [], lines: ['s'], rank: {}, made: 0 }, () => 0).reward;
+  give(); assert(G.deliver(s, story().id, Math.random, 0)); assert.equal(G.rankOf(s, 's'), 2); assert(normal() > base);
+  s.chapter = G.CHAPTERS.length - 1; G.upgradeSave(s); give(); assert(G.deliver(s, story().id, Math.random, 0));
+  assert(!G.chapter(s) && s.orders.length === 3 && s.orders.every(o => o.story === undefined));
   assert(G.isValidSave(s));
   // 舊版存檔（兩條線、沒有劇情欄位）照樣能讀
   const old = JSON.parse(JSON.stringify(G.newGame(Math.random, 0))); delete old.lines; delete old.rank; delete old.chapter; delete old.ver;
@@ -104,10 +112,8 @@ for (let run = 0; run < RUNS; run++) {
   const s = G.newGame(Math.random, now);
   let steps = 0, cleared = 0, ups = 0;
   while ((s.done < total + 3 || G.chapter(s)) && steps++ < 200000) {
-    const story = G.finishChapter(s, now);
-    if (story) { ups += story.levelUps.length; continue; }
-    const wanted = [...s.orders.flatMap(o => o.need), ...(G.chapter(s)?.need || [])];
-    const o = s.orders.find(o => G.findNeed(s, o));
+    const wanted = s.orders.flatMap(o => o.need);
+    const o = s.orders.find(o => G.findNeed(s, o) && !G.needsSpace(s, o));
     if (o) {
       const r = G.deliver(s, o.id, Math.random, now); assert(r.order && r.xp > 0);
       if (r.cleared) cleared++;

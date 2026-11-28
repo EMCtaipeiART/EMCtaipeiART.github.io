@@ -2,7 +2,7 @@
 import * as G from './logic.js';
 import { art } from './art.js';
 import * as audio from './audio.js';
-import { celebrate } from './effects.js';
+import { celebrate, afterParty } from './effects.js';
 import { openHome, refreshHome, setSaveState } from './home.js';
 import { createCloudSave } from './savesync.js';
 import * as cloud from './cloud.js';
@@ -103,9 +103,11 @@ function render() {
       const has = [...state.cells, ...state.slots].some(c => same(c, r));
       return `<button type="button" class="${has ? 'has' : ''}" data-line="${r.line}" data-lv="${r.lv}" title="看看 ${G.nameOf(r)} 的圖鑑階段"><img src="${img(r)}" alt="${G.nameOf(r)}"></button>`;
     }).join('');
-    return `<article class="order${o.rush ? ' rush' : ''}${ready ? ' ready' : ''}">
-      ${o.rush ? '<em>急件×2</em>' : ''}<img class="face" src="${face(o.who)}" alt=""><div class="who">${o.who}</div><div class="need">${wants}</div>
-      <button type="button" class="deliver" data-order="${o.id}" ${ready ? '' : 'disabled'}>${ready ? '交付 ' : ''}${coin()}${o.reward}</button></article>`;
+    const story = o.story !== undefined, blocked = ready && G.needsSpace(state, o);
+    const person = `<img class="face" src="${face(o.who)}" alt=""><div class="who">${o.who}</div>`;
+    return `<article class="order${o.rush ? ' rush' : ''}${story ? ' story' : ''}${ready ? ' ready' : ''}">
+      ${o.rush ? '<em>急件×2</em>' : ''}${story ? `<em>劇情 ${o.story + 1}</em><button type="button" class="teller" data-story aria-label="看這一章的劇情">${person}</button>` : person}<div class="need">${wants}</div>
+      <button type="button" class="deliver" data-order="${o.id}" ${ready ? '' : 'disabled'}>${blocked ? '需空位 ' : ready ? '交付 ' : ''}${coin()}${o.reward}</button></article>`;
   }).join('');
   $('coins').textContent = state.coins;
   const stage = G.stageInfo(state.done);
@@ -117,7 +119,6 @@ function render() {
   $('level').textContent = lv.level;
   $('xp').style.width = lv.have / lv.need * 100 + '%';
   renderEnergy();
-  $('storyDot').hidden = G.chapterBlocked(state) !== '';
   syncFlights();
   renderInfo();
   fx = {};
@@ -397,19 +398,36 @@ $('orders').addEventListener('click', e => {
   const go = e.target.closest('[data-order]');
   if (go) {
     const res = G.deliver(state, +go.dataset.order);
+    if (res?.blocked) { audio.play('no'); toast('棋盤要空出一格放新的產生器'); return; }
     if (res) {
       sel = null; save(); render(); audio.play('coin'); sync(state);
-      toast(`${res.order.who}：謝啦！+${res.order.reward} 金幣・+${res.xp} 經驗`);
+      const story = res.story;
+      if (story) {
+        const c = story.chapter;
+        celebrate({ kind: 'clear', medal: c.no, title: '劇情完成！', text: `${c.end[0]}：${c.end[1]}`,
+          extra: `<small class="gain">${gainText(c)}</small>${prize(story.reward, story.reward.coins)}`, button: '太棒了' });
+      } else toast(`${res.order.who}：謝啦！+${res.order.reward} 金幣・+${res.xp} 經驗`);
       const c = res.cleared;
       if (c) celebrate({ kind: 'clear', medal: c.no, title: '過關！', text: `第 ${c.no} 關「${c.name}」完成`,
         extra: `${prize(c, c.coins)}<small>下一關：${c.next.name}（${c.next.goal} 張訂單）</small>`, button: '前往下一關' });
       for (const up of res.levelUps) celebrate({ kind: 'level', medal: up.level, title: '升級！', text: `你升到 Lv.${up.level} 了`, extra: prize(up), button: '太好了' });
+      // 特效播完，接著講下一章
+      if (story && G.chapter(state)) afterParty(storyPanel);
     }
     return;
   }
+  if (e.target.closest('[data-story]')) { storyPanel(); return; }
   const n = e.target.closest('[data-line]');
   if (n) chainPanel(n.dataset.line, +n.dataset.lv);
 });
+
+// 完成章節得到什麼（要在升級前後都說得對：用章節本身推算）
+function gainText(c) {
+  const line = c.unlock || c.rank;
+  if (c.unlock) return `解鎖新物品線「${G.LINES[line].gen}」`;
+  const level = 1 + G.CHAPTERS.slice(0, c.no).filter(x => x.rank === line).length;
+  return `${G.LINES[line].gen}圖鑑升到 Lv.${level}`;
+}
 
 const prize = (r, coins) => `<div class="prize">${coins ? `<span>${coin()}+${coins}</span>` : ''}<span title="經驗值"><i class="xp">XP</i>+${r.xp}</span><span title="能量"><i class="zap"></i>+${r.energy}</span></div>`;
 
@@ -454,32 +472,22 @@ function storyPanel() {
   const c = G.chapter(state);
   const past = G.CHAPTERS.slice(0, state.chapter).map((p, i) => `<details><summary>第 ${i + 1} 章・${p.title} ✓</summary>${[...p.say, p.end].map(bubble).join('')}</details>`).reverse().join('');
   if (!c) { openPanel('劇情', `<p class="hint">全部 ${G.CHAPTERS.length} 章完成！</p>${past}`); return; }
-  const target = G.LINES[c.unlock || c.rank], reward = G.chapterReward(state.chapter), blocked = G.chapterBlocked(state);
-  const gain = c.unlock ? `解鎖新物品線「${target.gen}」` : `${target.gen}圖鑑升到 Lv.${G.rankOf(state, c.rank) + 1}`;
   const items = c.need.map(r => {
     const has = [...state.cells, ...state.slots].some(o => same(o, r));
     return `<button type="button" class="${has ? 'has' : ''}" data-line="${r.line}" data-lv="${r.lv}"><img src="${img(r)}" alt="">${G.nameOf(r)}<small>${G.LINES[r.line].gen} ${r.lv} 階</small></button>`;
   }).join('');
+  const reward = G.chapterReward(state.chapter);
   openPanel(`第 ${c.no} / ${G.CHAPTERS.length} 章・${c.title}`, `${c.say.map(bubble).join('')}
-    <div class="goal"><b>${gain}</b><div class="goal-items">${items}</div>${prize(reward, reward.coins)}
-    <button type="button" class="finish" id="bFinish" ${blocked ? 'disabled' : ''}>${blocked === 'space' ? '先空出一格放產生器' : blocked ? '物品還沒湊齊' : '交付，完成章節'}</button></div>${past}`);
+    <div class="goal"><b>${gainText(c)}</b><div class="goal-items">${items}</div>${prize(reward, reward.coins)}
+    <small>湊齊後，在上方的「劇情」卡按交付</small><button type="button" class="finish" id="bGo">開始任務</button></div>${past}`);
   $('panelBody').querySelectorAll('[data-line]').forEach(b => b.addEventListener('click', () => chainPanel(b.dataset.line, +b.dataset.lv)));
-  $('bFinish').addEventListener('click', () => {
-    const res = G.finishChapter(state);
-    if (!res) return;
-    $('panel').close(); sel = null; save(); render(); audio.play('coin'); sync(state);
-    const done = res.chapter;
-    celebrate({ kind: 'clear', medal: done.no, title: '劇情完成！', text: `${done.end[0]}：${done.end[1]}`,
-      extra: `<small class="gain">${gain}</small>${prize(res.reward, res.reward.coins)}`, button: '太棒了' });
-    for (const up of res.levelUps) celebrate({ kind: 'level', medal: up.level, title: '升級！', text: `你升到 Lv.${up.level} 了`, extra: prize(up), button: '太好了' });
-  });
+  $('bGo').addEventListener('click', () => $('panel').close());
 }
-$('bStory').addEventListener('click', storyPanel);
 
 $('bHelp').addEventListener('click', () => {
   openPanel('怎麼玩', `<h3>目標</h3>幫同事準備他們要的東西，賺金幣。
     完成指定張數的訂單就過關。<br>點訂單上的物品圖示，可以看它的合成階段。
-    <h3>劇情與圖鑑</h3>左下方「劇情」交出指定物品完成章節，解鎖新物品線或提升圖鑑等級。
+    <h3>劇情與圖鑑</h3>上方第一張橘色「劇情」卡就是目前的任務，點同事頭像看對話；交付後解鎖新物品線或提升圖鑑等級，也算進關卡進度。
     <h3>能量</h3>上限 100 點，點一次產生器花 1 點，每分鐘回 1 點。
     <h3>操作</h3>點產生器拿物品。<br>把兩個一樣的拖在一起，合成高一級。<br>在紙箱旁邊合成，紙箱就會打開。<br>紙箱裡藏著第二台產生器，合成後更容易掉高級物品。<br>訂單湊齊後按「交付」。用不到的可以點選後賣掉，或放到左下暫存格。
     <h3>存檔</h3>登入後每一步都會存到雲端，換手機或電腦登入同一帳號就能接著玩。<br>目前：${SAVE_TEXT[cloudSave.status]}

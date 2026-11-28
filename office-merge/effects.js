@@ -2,7 +2,7 @@
 import { art } from './art.js';
 import { play } from './audio.js';
 
-const queue = [];
+const queue = [], waiting = [];
 let busy = false;
 const calm = matchMedia('(prefers-reduced-motion: reduce)');
 const COLORS = ['#ff6b6b', '#ffd93b', '#5fdc72', '#58b8ff', '#c58bff', '#ff9d2e'];
@@ -26,7 +26,7 @@ function confetti(root, count) {
 function next() {
   const job = queue.shift();
   busy = !!job;
-  if (!job) return;
+  if (!job) { const then = waiting.splice(0); then.forEach(fn => fn()); return; }
   const el = document.createElement('dialog');
   el.className = `party ${job.kind}-party`;
   el.innerHTML = `<div class="rays"></div><div class="card">
@@ -45,6 +45,9 @@ function next() {
     el.close(); el.remove(); next();
   });
 }
+
+// 全部特效播完後執行
+export const afterParty = fn => { if (busy) waiting.push(fn); else fn(); };
 
 export function celebrate(job) {
   queue.push(job);
