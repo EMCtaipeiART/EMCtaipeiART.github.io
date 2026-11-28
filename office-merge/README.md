@@ -23,7 +23,7 @@
 | `cloud.js` | 登入身分、排行、能量與存檔 API |
 | `savesync.js` | 跨裝置同步與版本衝突規則 |
 | `chars.js` | 人物圖（和元宇宙同一份最新角色） |
-| `audio.js` | 配樂 `art/bgm.mp3` 循環播放、即時合成音效 |
+| `audio.js` | 配樂 `art/bgm1.mp3`、`bgm2.mp3` 輪播（新增曲目：放進 `art/`、加到 `TRACKS`）、即時合成音效 |
 | `effects.js` | 升級／過關特效 |
 | `art.js` | 金幣與星星向量圖、產生器／紙箱圖檔路徑 |
 | `style.css`、`index.html` | 版面 |

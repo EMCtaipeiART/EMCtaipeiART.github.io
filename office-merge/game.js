@@ -623,7 +623,17 @@ function soundPanel() {
       <button type="button" class="switch${on ? ' on' : ''}" data-sound="${key}" aria-pressed="${on}">${label}<span>${on ? '開' : '關'}</span></button>
       <label>音量<input type="range" min="0" max="100" step="5" value="${vol}" data-vol="${key}" aria-label="${label}音量" ${on ? '' : 'disabled'}><output>${vol}</output></label></div>`;
   };
-  openPanel('聲音', row('music', '背景音樂') + row('sfx', '音效'));
+  const songs = `<div class="tracks"><div>${[0, ...audio.TRACKS.map((_, i) => i + 1)].map(n => `<button type="button" data-track="${n}" aria-pressed="${(audio.prefs.pick || 0) === n}" ${audio.prefs.music ? '' : 'disabled'}>${n ? `第 ${n} 首` : '輪播'}</button>`).join('')}<button type="button" class="skip" data-skip ${audio.prefs.music ? '' : 'disabled'}>下一首 ›</button></div><small id="nowPlaying"></small></div>`;
+  openPanel('聲音', row('music', '背景音樂') + songs + row('sfx', '音效'));
+  const showTrack = () => {
+    const label = $('nowPlaying');
+    if (!label) return;
+    label.textContent = audio.prefs.music && audio.trackNo() ? `正在播放：第 ${audio.trackNo()} 首` : '';
+    $('panelBody').querySelectorAll('[data-track]').forEach(b => b.setAttribute('aria-pressed', String((audio.prefs.pick || 0) === Number(b.dataset.track))));
+  };
+  audio.watchTrack(showTrack); showTrack();
+  $('panelBody').querySelectorAll('[data-track]').forEach(b => b.addEventListener('click', () => audio.setTrack(Number(b.dataset.track))));
+  $('panelBody').querySelector('[data-skip]').addEventListener('click', () => audio.skip());
   $('panelBody').querySelectorAll('[data-sound]').forEach(button => button.addEventListener('click', () => {
     audio.setPref(button.dataset.sound, !audio.prefs[button.dataset.sound]);
     $('panel').close(); syncSoundIcon(); soundPanel();

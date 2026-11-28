@@ -1,9 +1,10 @@
-// 背景音樂播放 art/bgm.mp3（Higgsfield 生成）；音效用 Web Audio 即時合成。
+// 背景音樂輪播 art/bgm*.mp3（使用者用 Suno 生成）；音效用 Web Audio 即時合成。
 const KEY = 'officeMergeSound';
-export const prefs = { music: true, sfx: true, musicVol: 70, sfxVol: 70 };
+// pick：0＝輪播，n＝只放第 n 首；last：上次放到哪一首，下次開遊戲從下一首開始
+export const prefs = { music: true, sfx: true, musicVol: 70, sfxVol: 70, pick: 0, last: -1 };
 try { Object.assign(prefs, JSON.parse(localStorage.getItem(KEY))); } catch (e) {}
 
-let ctx, musicBus, sfxBus, track = null, loading = null, source = null;
+let ctx, musicBus, sfxBus;
 const hz = m => 440 * 2 ** ((m - 69) / 12);
 
 function init() {
@@ -40,52 +41,57 @@ function tone(bus, midi, at, len, vol, type = 'triangle', slide = 0) {
   o.connect(g).connect(bus); o.start(at); o.stop(at + len + .02);
 }
 /* ---------- 背景音樂 ---------- */
-// 曲子結尾是淡出的：裁掉淡出段，長度對齊整數小節，再把接下來的一段和開頭交叉淡接，循環才聽不出接縫
-const BAR = 4 * 60 / 105, FADE = 1.2;
-function makeLoop(buf) {
-  const sr = buf.sampleRate, d = buf.getChannelData(0), win = sr >> 1;
-  const loud = [];
-  for (let a = 0; a + win <= d.length; a += win) {
-    let sum = 0;
-    for (let k = a; k < a + win; k++) sum += d[k] * d[k];
-    loud.push(Math.sqrt(sum / win));
-  }
-  const floor = [...loud].sort((a, b) => a - b)[loud.length >> 1] * .7;
-  let last = loud.length - 1;
-  while (last > 0 && loud[last] < floor) last--;
-  const end = (last + 1) * win / sr;                                  // 淡出開始前
-  const len = Math.floor(Math.floor((end - FADE) / BAR) * BAR * sr);  // 循環長度
-  const fade = Math.floor(FADE * sr);
-  if (len <= fade) return buf;
-  const out = ctx.createBuffer(buf.numberOfChannels, len, sr);
-  for (let c = 0; c < buf.numberOfChannels; c++) {
-    const src = buf.getChannelData(c), dst = out.getChannelData(c);
-    dst.set(src.subarray(0, len));
-    for (let k = 0; k < fade; k++) {
-      const t = k / fade * Math.PI / 2;
-      dst[k] = src[k] * Math.sin(t) + src[len + k] * Math.cos(t);
-    }
-  }
-  return out;
+// 要加曲子：檔案放進 art/，在這裡加一行（音量先調到約 -15.5 LUFS）
+export const TRACKS = ['art/bgm1.mp3', 'art/bgm2.mp3'];
+const FADE_IN = 1.5, FADE_OUT = 3;
+// 全程只用同一個 <audio>：手機只放行使用者點過後播起來的那一個，換歌換 src 就好
+let el = null, fader = null, index = -1, tail = false, onTrack = () => {};
+const picked = () => Number.isInteger(prefs.pick) && prefs.pick >= 1 && prefs.pick <= TRACKS.length ? prefs.pick - 1 : -1;
+function fade(from, to, sec) {
+  const t = ctx.currentTime;
+  fader.gain.cancelScheduledValues(t);
+  fader.gain.setValueAtTime(from, t);
+  fader.gain.linearRampToValueAtTime(to, t + sec);
 }
-function load() {
-  loading ||= fetch('art/bgm.mp3')
-    .then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
-    .then(data => new Promise((ok, bad) => ctx.decodeAudioData(data, ok, bad)))
-    .then(buf => { track = makeLoop(buf); syncMusic(); })
-    .catch(() => { loading = null; });   // 下次點畫面再試
+function start(i) {
+  index = i; tail = false; prefs.last = i; savePrefs();
+  el.src = TRACKS[i];
+  fade(0, 1, FADE_IN);
+  el.play().catch(() => {});   // 被瀏覽器擋下就等下次點畫面
+  onTrack();
+}
+const following = () => picked() >= 0 ? picked() : (index + 1) % TRACKS.length;
+function player() {
+  if (el) return;
+  el = new Audio(); el.preload = 'auto';
+  fader = ctx.createGain();
+  ctx.createMediaElementSource(el).connect(fader).connect(musicBus);
+  el.addEventListener('ended', () => start(following()));
+  el.addEventListener('timeupdate', () => {
+    const left = el.duration - el.currentTime;
+    if (!tail && left > 0 && left < FADE_OUT) { tail = true; fade(fader.gain.value, 0, left); }
+  });
 }
 function syncMusic() {
   if (!ctx) return;
-  const on = prefs.music;
-  if (on && !track) { load(); return; }
-  if (on && !source) {
-    source = ctx.createBufferSource();
-    source.buffer = track; source.loop = true;
-    source.connect(musicBus); source.start();
-  }
-  if (!on && source) { source.stop(); source = null; }
+  if (!prefs.music || document.hidden) { el?.pause(); return; }
+  player();
+  // 第一次播：接著上次的下一首（沒播過就從第 1 首）
+  if (index < 0 || el.error) start(picked() >= 0 ? picked() : Number.isInteger(prefs.last) && prefs.last >= 0 ? (prefs.last + 1) % TRACKS.length : 0);
+  else if (el.paused) el.play().catch(() => {});
 }
+// 聲音面板用：選曲（0＝輪播）、跳下一首、目前第幾首
+export function setTrack(n) {
+  prefs.pick = n; savePrefs(); unlock();
+  if (el && prefs.music && picked() >= 0 && picked() !== index) start(picked());
+  onTrack();
+}
+export function skip() {
+  prefs.pick = 0; savePrefs(); unlock();
+  if (el && prefs.music) start(following());
+}
+export const trackNo = () => index + 1;
+export const watchTrack = fn => { onTrack = fn; };
 
 // 瀏覽器要使用者先碰過畫面才能出聲
 export function unlock() {
@@ -101,10 +107,9 @@ export function setPref(name, on) {
 }
 document.addEventListener('visibilitychange', () => {
   if (!ctx) return;
-  if (document.hidden) ctx.suspend(); else ctx.resume().then(syncMusic);
+  if (document.hidden) { el?.pause(); ctx.suspend(); } else ctx.resume().then(syncMusic);
 });
-export const isPlaying = () => !!source && ctx.state === 'running';
-export const loopSeconds = () => track?.duration || 0;
+export const isPlaying = () => !!el && !el.paused && ctx.state === 'running';
 
 /* ---------- 音效 ---------- */
 const run = (notes, gap, len, vol, type) => notes.forEach((n, i) => tone(sfxBus, n, ctx.currentTime + i * gap, len, vol, type));
