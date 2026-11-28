@@ -121,6 +121,11 @@ function render() {
   $('level').textContent = lv.level;
   $('xp').style.width = lv.have / lv.need * 100 + '%';
   renderEnergy();
+  const gift = state.gifts[0];
+  $('bGift').hidden = !gift;
+  $('slotLabel').hidden = !!gift;
+  if (gift) $('bGift').innerHTML = `<img src="${img(gift)}" alt="">領材料 ×${state.gifts.length}`;
+  $('bDex').classList.toggle('new', state.lines.some(k => G.shardCost(state, k) && (state.shards[k] || 0) >= G.shardCost(state, k)));
   syncFlights();
   renderInfo();
   fx = {};
@@ -256,9 +261,9 @@ function energyPanel() {
 }
 
 function coinBox() {
-  const box = $('coinShop'), enough = state.coins >= G.COIN_PRICE;
+  const box = $('coinShop'), left = G.shopLeft(state), enough = state.coins >= G.COIN_PRICE && left > 0;
   box.className = 'shop';
-  box.innerHTML = `<div>目前金幣 <b>${state.coins}</b></div><button type="button" class="buy" ${enough ? '' : 'disabled'}>用 ${G.COIN_PRICE} 金幣換 ${G.COIN_ENERGY} 能量</button>${enough ? '' : '<div>金幣不足</div>'}`;
+  box.innerHTML = `<div>目前金幣 <b>${state.coins}</b></div><button type="button" class="buy" ${enough ? '' : 'disabled'}>用 ${G.COIN_PRICE} 金幣換 ${G.COIN_ENERGY} 能量</button><div>${left <= 0 ? '今天的次數用完了，明天再來' : `今天還可換 ${left} / ${G.COIN_DAILY} 次${enough ? '' : '・金幣不足'}`}</div>`;
   const button = box.querySelector('button');
   let armed = false;
   button.addEventListener('click', () => {
@@ -432,8 +437,8 @@ $('orders').addEventListener('click', e => {
       const c = res.cleared;
       if (!res.cleared?.chapter) toast(`${res.order.who}：謝啦！+${res.order.reward} 金幣・+${res.xp} 經驗`);
       if (c) celebrate({ kind: 'clear', medal: c.no, title: '過關！',
-        text: c.chapter ? `${c.chapter.end[0]}：${c.chapter.end[1]}` : `加班挑戰完成一輪`,
-        extra: `${c.chapter ? `<small class="gain">${gainText(c.chapter)}</small>` : ''}${prize(c, c.coins)}<small>下一關：第 ${c.next.no} 關「${c.next.name}」</small>`, button: '前往下一關' });
+        text: c.chapter ? `第 ${c.no} 關「${c.chapter.title}」完成` : '加班挑戰完成一輪',
+        extra: `${c.chapter ? `${bubble(c.chapter.end)}<small class="gain">${gainText(c.chapter)}</small>` : ''}${prize(c, c.coins)}${loot(c)}${c.kept ? `<small>棋盤放不下的材料先寄放著（${c.kept} 個），左下角可以領</small>` : ''}<small>下一關：第 ${c.next.no} 關「${c.next.name}」</small>`, button: '前往下一關' });
       for (const up of res.levelUps) celebrate({ kind: 'level', medal: up.level, title: '升級！', text: `你升到 Lv.${up.level} 了`, extra: prize(up), button: '太好了' });
       // 特效播完，接著講下一章
       if (c?.chapter && G.chapter(state)) afterParty(storyPanel);
@@ -447,13 +452,12 @@ $('orders').addEventListener('click', e => {
 
 // 完成章節得到什麼（要在升級前後都說得對：用章節本身推算）
 function gainText(c) {
-  const line = c.unlock || c.rank;
-  if (!line) return '過關獎勵';
-  if (c.unlock) return `解鎖新物品線「${G.LINES[line].gen}」`;
-  const level = 1 + G.CHAPTERS.slice(0, c.no).filter(x => x.rank === line).length;
-  return `${G.LINES[line].gen}圖鑑升到 Lv.${level}`;
+  if (!c.unlock) return c.rank ? `圖鑑碎片加碼：${G.LINES[c.rank].gen}` : '過關獎勵';
+  return `解鎖新物品線「${G.LINES[c.unlock].gen}」`;
 }
 
+// 過關禮：材料和圖鑑碎片
+const loot = r => `<div class="loot">${r.materials.map(m => `<figure><img src="${img(m)}" alt="${G.nameOf(m)}"><figcaption>${G.nameOf(m)}</figcaption></figure>`).join('')}${Object.entries(r.shards).map(([line, n]) => `<figure class="shard"><span><img src="${art(line)}" alt=""></span><figcaption>${G.LINES[line].gen}碎片 ×${n}</figcaption></figure>`).join('')}</div>`;
 const prize = (r, coins) => `<div class="prize">${coins ? `<span>${coin()}+${coins}</span>` : ''}<span title="經驗值"><i class="xp">XP</i>+${r.xp}</span><span title="能量"><i class="zap"></i>+${r.energy}</span></div>`;
 
 // 任務物品提示：整條合成路線，標出要的是第幾階、手上有幾個
@@ -484,16 +488,27 @@ $('panelClose').addEventListener('click', () => $('panel').close());
 
 const stars = n => '★'.repeat(n) + '☆'.repeat(G.RANK_MAX - n);
 const unlockChapter = line => G.CHAPTERS.findIndex(c => c.unlock === line) + 1;
-$('bDex').addEventListener('click', () => {
+function dexPanel() {
   const keys = Object.keys(G.LINES);
-  openPanel(`圖鑑 ${Object.keys(state.seen).length} / ${keys.length * G.MAX_LV}`, `<p class="hint">過關可以解鎖新的物品線、提升圖鑑等級。每升一級：該線訂單金幣 +${G.RANK_BONUS.reward * 100}%、產生器多掉一階的機率 +${G.RANK_BONUS.lucky * 100}%。</p>` + keys.map(k => {
+  openPanel(`圖鑑 ${Object.keys(state.seen).length} / ${keys.length * G.MAX_LV}`, `<p class="hint">過關會拿到圖鑑碎片，集滿就能按「升級」。每升一級：該線訂單金幣 +${G.RANK_BONUS.reward * 100}%、產生器多掉一階的機率 +${Math.round(G.RANK_BONUS.lucky * 100)}%。</p>` + keys.map(k => {
     const line = G.LINES[k], open = state.lines.includes(k), rank = G.rankOf(state, k);
-    return `<h3 class="dex-head${open ? '' : ' locked'}"><img src="${art(k)}" alt="">${line.gen}<span>${open ? `<em>${stars(rank)}</em> 圖鑑 Lv.${rank}` : `🔒 第 ${unlockChapter(k)} 關過關解鎖`}</span></h3><div class="dex">${line.items.map((name, n) => {
+    const cost = G.shardCost(state, k), have = state.shards[k] || 0;
+    const upgrade = !open || !cost ? '' : `<div class="upgrade"><div class="bar"><s style="width:${Math.min(100, have / cost * 100)}%"></s><span>碎片 ${have} / ${cost}</span></div><button type="button" class="buy" data-upgrade="${k}" ${have >= cost ? '' : 'disabled'}>升級</button></div>`;
+    return `<h3 class="dex-head${open ? '' : ' locked'}"><img src="${art(k)}" alt="">${line.gen}<span>${open ? `<em>${stars(rank)}</em> 圖鑑 Lv.${rank}` : `🔒 第 ${unlockChapter(k)} 關過關解鎖`}</span></h3>${upgrade}<div class="dex">${line.items.map((name, n) => {
       const ok = state.seen[k + (n + 1)];
       return `<figure class="${ok ? '' : 'unk'}"><img src="items/${k}${n + 1}.png" alt="">${n + 1}. ${ok ? name : '？？？'}</figure>`;
     }).join('')}</div>`;
   }).join(''));
-});
+  $('panelBody').querySelectorAll('[data-upgrade]').forEach(button => button.addEventListener('click', () => {
+    const line = button.dataset.upgrade;
+    if (!G.upgradeRank(state, line)) return;
+    const top = $('panel').scrollTop;
+    save(); render(); $('panel').close(); dexPanel(); $('panel').scrollTop = top;
+    celebrate({ kind: 'level', medal: G.rankOf(state, line), title: '圖鑑升級！', text: `${G.LINES[line].gen}圖鑑升到 Lv.${G.rankOf(state, line)}`,
+      extra: `<small>該線訂單金幣 +${Math.round(G.RANK_BONUS.reward * 100 * (G.rankOf(state, line) - 1))}%、掉高一階機率 +${Math.round(G.RANK_BONUS.lucky * 100 * (G.rankOf(state, line) - 1))}%</small>`, button: '太好了' });
+  }));
+}
+$('bDex').addEventListener('click', dexPanel);
 
 /* ---------- 劇情模式 ---------- */
 const bubble = ([who, text]) => `<div class="talk"><img src="${face(who)}" alt=""><div><b>${who}</b>${text}</div></div>`;
@@ -508,7 +523,7 @@ function storyPanel() {
   const reward = G.chapterReward(state.chapter);
   const stage = G.stageInfo(state);
   openPanel(`第 ${c.no} / ${G.CHAPTERS.length} 關・${c.title}`, `${c.say.map(bubble).join('')}
-    <div class="goal"><b>${gainText(c)}</b><div class="goal-items">${items}</div>${prize(reward, reward.coins)}
+    <div class="goal"><b>${gainText(c)}</b><div class="goal-items">${items}</div>${prize(reward, reward.coins)}${loot(G.chapterLoot(state.chapter))}
     <small>${stage.ready ? '湊齊後，在上方的「過關任務」卡按交付' : `先完成一般訂單 ${stage.have} / ${stage.goal} 張，再交過關任務`}</small><button type="button" class="finish" id="bGo">開始任務</button></div>${past}`);
   $('panelBody').querySelectorAll('[data-line]').forEach(b => b.addEventListener('click', () => chainPanel(b.dataset.line, +b.dataset.lv)));
   $('bGo').addEventListener('click', () => $('panel').close());
@@ -517,7 +532,7 @@ function storyPanel() {
 $('bHelp').addEventListener('click', () => {
   openPanel('怎麼玩', `<h3>目標</h3>幫同事準備他們要的東西，賺金幣。
     每一關先完成指定張數的一般訂單，再交紫色「過關任務」卡。<br>點訂單上的物品圖示，可以看它的合成階段。
-    <h3>劇情與圖鑑</h3>共 ${G.CHAPTERS.length} 關，一關一段劇情；點過關任務卡上的同事頭像看對話。部分關卡過關後解鎖新物品線或提升圖鑑等級。
+    <h3>劇情與圖鑑</h3>共 ${G.CHAPTERS.length} 關，一關一段劇情；點過關任務卡上的同事頭像看對話。部分關卡過關後解鎖新物品線。每次過關還會拿到材料和圖鑑碎片，碎片集滿到「圖鑑」按升級。
     <h3>冷卻</h3>每台產生器連點到上限（Lv.1 ${G.GEN_CAP[0]} 次、Lv.2 ${G.GEN_CAP[1]} 次、Lv.3 ${G.GEN_CAP[2]} 次）要冷卻 ${G.GEN_COOL_MS[0] / 60000} 分鐘。
     <h3>能量</h3>上限 100 點，點一次產生器花 1 點，每分鐘回 1 點。
     <h3>操作</h3>點產生器拿物品。<br>把兩個一樣的拖在一起，合成高一級。<br>在紙箱旁邊合成，紙箱就會打開。<br>紙箱裡藏著第二台產生器，合成後更容易掉高級物品。<br>訂單湊齊後按「交付」。用不到的可以點選後賣掉，或放到左下暫存格。
@@ -558,6 +573,12 @@ const syncSoundIcon = () => $('bSound').classList.toggle('off', !audio.prefs.mus
 $('bSound').addEventListener('click', soundPanel);
 for (const type of ['pointerdown', 'pointerup', 'keydown']) addEventListener(type, audio.unlock, { capture: true });
 syncSoundIcon();
+
+$('bGift').addEventListener('click', () => {
+  const got = G.claimGift(state);
+  if (!got) { audio.play('no'); toast('棋盤沒有空格，先合成或賣掉一些物品'); return; }
+  fx[got.at] = 'pop-in'; sel = null; save(); render(); audio.play('pop');
+});
 
 $('banner').addEventListener('click', () => openHome(state));
 $('banner').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openHome(state); } });

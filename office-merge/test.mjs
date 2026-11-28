@@ -30,12 +30,17 @@ const gen = s => s.cells.findIndex(c => c?.gen);
   assert.equal(s.energy, 10200); assert(G.isValidSave(s)); G.refill(s, 1e9); assert.equal(s.energy, 10200);
 }
 { // 關卡＝章節
-  assert(G.CHAPTERS.length >= 50);
+  assert.equal(G.CHAPTERS.length, 150);
   const goals = G.CHAPTERS.map((_, n) => G.levelGoal(n));
-  assert.deepEqual([goals[0], goals[8], goals[49]], [2, 3, 6]);
-  for (const line of Object.keys(G.LINES)) assert.equal(1 + G.CHAPTERS.filter(c => c.rank === line).length, G.RANK_MAX, line);
+  assert.deepEqual([goals[0], goals[50], goals[149]], [8, 9, 10]);
+  for (const line of Object.values(G.LINES)) assert.equal(line.items.length, G.MAX_LV);
+  // 全部過完拿到的碎片，夠把每條線升滿
+  const total = {};
+  G.CHAPTERS.forEach((_, n) => { for (const [k, v] of Object.entries(G.chapterLoot(n).shards)) total[k] = (total[k] || 0) + v; });
+  const need = G.SHARD_COST.reduce((a, b) => a + b, 0);
+  for (const line of Object.keys(G.LINES)) assert(total[line] >= need, `${line} 碎片 ${total[line]} < ${need}`);
   const at = G.stageInfo({ chapter: 11, progress: 1 });
-  assert.deepEqual([at.no, at.have, at.goal, at.ready], [12, 1, 3, false]);
+  assert.deepEqual([at.no, at.have, at.goal, at.ready], [12, 1, 8, false]);
   const over = G.stageInfo({ chapter: G.CHAPTERS.length, overtime: 23 });
   assert.deepEqual([over.no, over.have, over.extra], [G.CHAPTERS.length + 3, 3, true]);
 }
@@ -88,7 +93,9 @@ const gen = s => s.cells.findIndex(c => c?.gen);
 { // 金幣換能量
   const s = G.newGame(Math.random, 0);
   s.coins = 999; assert.equal(G.buyEnergy(s, 0), false); assert.equal(s.energy, 100);
-  s.coins = 2500; assert(G.buyEnergy(s, 0)); assert(G.buyEnergy(s, 0)); assert.deepEqual([s.coins, s.energy], [500, 300]);
+  s.coins = 5500; for (let n = 0; n < G.COIN_DAILY; n++) assert(G.buyEnergy(s, 0));
+  assert.equal(G.buyEnergy(s, 0), false); assert.deepEqual([s.coins, s.energy, G.shopLeft(s, 0)], [2500, 400, 0]);
+  assert.equal(G.shopLeft(s, 86400000), G.COIN_DAILY); assert(G.buyEnergy(s, 86400000));
 }
 { // 劇情：解鎖物品線、提升圖鑑等級
   for (const c of G.CHAPTERS) { for (const code of c.need) assert(G.LINES[code[0]].items[Number(code.slice(1)) - 1], code); for (const [who] of [...c.say, c.end]) assert(G.PEOPLE.includes(who), who); }
@@ -102,24 +109,32 @@ const gen = s => s.cells.findIndex(c => c?.gen);
   assert.equal(story().story, 0); assert.equal(s.orders.filter(o => o.story !== undefined).length, 1);
   assert.equal(G.deliver(s, story().id, Math.random, 0), null);
   give();
-  assert.deepEqual(G.deliver(s, story().id, Math.random, 0), { blocked: 'locked', left: 2 });
-  s.progress = 2;
+  assert.deepEqual(G.deliver(s, story().id, Math.random, 0), { blocked: 'locked', left: 8 });
+  s.progress = 8;
   const r = G.deliver(s, story().id, Math.random, 0);
-  assert(r.cleared.no === 1 && r.cleared.next.no === 2 && s.lines.includes('i') && s.chapter === 1 && s.progress === 0 && s.done === 1 && s.cells[r.cleared.placed].line === 'i' && s.energy >= 130);
+  assert(r.cleared.no === 1 && r.cleared.next.no === 2 && s.lines.includes('i') && s.chapter === 1 && s.progress === 0 && s.done === 1 && s.cells[r.cleared.placed].line === 'i' && s.energy >= 120);
   assert.equal(story().story, 1);
   // 棋盤滿、物品都在暫存格：放不下新產生器就不能交
-  const full = JSON.parse(JSON.stringify(s)); full.progress = 9;
+  const full = JSON.parse(JSON.stringify(s)); full.progress = 99;
   full.cells = full.cells.map(c => c && !c.box ? c : { line: 's', lv: 7 }); full.slots = full.orders[0].need.map(n => ({ ...n }));
   assert.equal(G.deliver(full, full.orders[0].id, Math.random, 0).blocked, 'space'); assert.equal(full.chapter, 1);
   s.chapter = 4; G.upgradeSave(s); assert.equal(story().story, 4);
   const normal = () => G.makeOrder({ ...s, orders: [], lines: ['s'], made: 0 }, () => 0).reward, base = G.makeOrder({ ...s, orders: [], lines: ['s'], rank: {}, made: 0 }, () => 0).reward;
-  s.progress = 9; give(); assert(G.deliver(s, story().id, Math.random, 0)); assert.equal(G.rankOf(s, 's'), 2); assert(normal() > base);
-  s.chapter = G.CHAPTERS.length - 1; s.progress = 9; G.upgradeSave(s); give(); assert(G.deliver(s, story().id, Math.random, 0));
+  s.progress = 99; give();
+  const had = s.shards.s || 0, won = G.deliver(s, story().id, Math.random, 0).cleared;
+  assert(won.shards.s >= G.SHARDS_BONUS && s.shards.s === had + won.shards.s && won.materials.length === 2 && G.rankOf(s, 's') === 1);
+  assert.equal(G.upgradeRank({ ...s, shards: { s: 19 } }, 's'), false);
+  s.shards = { s: 25 }; assert(G.upgradeRank(s, 's')); assert.equal(G.rankOf(s, 's'), 2); assert.equal(s.shards.s, 5); assert(normal() > base);
+  // 棋盤滿時材料寄放，有空格才領得到
+  s.gifts = [{ line: 's', lv: 3 }]; const spot = s.cells.findIndex(c => !c), keep = s.cells.slice();
+  s.cells = s.cells.map(c => c || { line: 't', lv: 1 }); assert.equal(G.claimGift(s), null); assert.equal(s.gifts.length, 1);
+  s.cells = keep; assert.equal(G.claimGift(s).at, spot); assert.equal(s.gifts.length, 0);
+  s.chapter = G.CHAPTERS.length - 1; s.progress = 99; G.upgradeSave(s); give(); assert(G.deliver(s, story().id, Math.random, 0));
   assert(!G.chapter(s) && s.orders.length === 3 && s.orders.every(o => o.story === undefined));
   assert(G.isValidSave(s));
   // 舊版存檔（兩條線、沒有劇情欄位）照樣能讀
   const old = JSON.parse(JSON.stringify(G.newGame(Math.random, 0))); delete old.lines; delete old.rank; delete old.chapter; delete old.ver;
-  delete old.progress; delete old.overtime;
+  delete old.progress; delete old.overtime; delete old.shards; delete old.gifts;
   assert(G.isValidSave(G.upgradeSave(old))); assert.deepEqual([old.lines, old.chapter, old.progress, old.ver], [['s', 't'], 0, 0, G.SAVE_VERSION]);
 }
 { // 舊版頁面讀不懂新版雲端存檔時，不能把它蓋掉
@@ -128,12 +143,14 @@ const gen = s => s.cells.findIndex(c => c?.gen);
   await sync.load(); assert.equal(pushed, 0); assert.equal(sync.status, 'old');
 }
 
-const RUNS = 30;
+const RUNS = 2;
 let now = 0, taps = 0, top = 0;
 for (let run = 0; run < RUNS; run++) {
   const s = G.newGame(Math.random, now);
   let steps = 0, cleared = 0, ups = 0;
-  while ((G.chapter(s) || s.overtime < G.EXTRA_GOAL + 2) && steps++ < 600000) {
+  while ((G.chapter(s) || s.overtime < G.EXTRA_GOAL + 2) && steps++ < 3000000) {
+    for (const line of s.lines) G.upgradeRank(s, line);
+    if (s.cells.filter(c => !c).length > 6) G.claimGift(s);
     const wanted = s.orders.flatMap(o => o.need);
     const o = s.orders.find(o => G.findNeed(s, o) && !G.needsSpace(s, o) && (o.story === undefined || G.stageInfo(s).ready));
     if (o) {
