@@ -38,7 +38,7 @@ export const LINES = {
 // 產生器各等級掉出 1、2、3 級物品的機率
 const DROPS = [[1], [.75, .25], [.55, .35, .1]];
 // 產生器各等級連續可點幾次，點完要冷卻多久（毫秒）
-export const GEN_CAP = [20, 30, 40];
+export const GEN_CAP = [40, 60, 80];
 export const GEN_COOL_MS = [30, 30, 30].map(min => min * 60000);
 // 這台產生器現在剩幾次、還要冷卻多久
 export function genStatus(g, now = Date.now()) {
