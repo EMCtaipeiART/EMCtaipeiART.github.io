@@ -1,4 +1,4 @@
-// 首頁：辦公室迷宮塔。一關一層樓，由下往上爬；同仁站在自己目前的樓層。
+// 首頁：辦公室迷宮地圖。一關一站，沿著轉來轉去的走道由下往上走；同仁站在自己目前那一關。
 import * as G from './logic.js';
 import { me, getRanks, onRanks, sync } from './cloud.js';
 import * as cloud from './cloud.js';
@@ -6,7 +6,6 @@ import { face, onFaces, GHOST } from './chars.js';
 
 const $ = id => document.getElementById(id);
 const TOP = G.CHAPTERS.length + 1;   // 最上層：加班挑戰
-const DECOR = Object.keys(G.LINES).flatMap(k => [2, 3, 4, 5, 6].map(n => k + n));
 // 本機網址加 ?demo 可以看有人分布在各樓層的版面，畫面上會標明是示範資料
 const demo = /(^|\.)(localhost|127\.0\.0\.1)$/.test(location.hostname) && new URLSearchParams(location.search).has('demo');
 const others = () => demo ? Object.fromEntries(G.PEOPLE.slice(0, 10).map((n, i) => [n, { done: 200 - i * 17, xp: 0, level: [51, 44, 33, 27, 20, 15, 12, 8, 4, 1][i], progress: i % 2 }])) : getRanks();
@@ -38,29 +37,51 @@ const person = p => {
   ${p.rank ? `<i>${p.rank}</i>` : ''}<img src="${face(look)}" alt=""><figcaption>${p.name}${p.stage ? `<small>${p.stage.have}/${p.stage.goal}</small>` : ''}</figcaption></figure>`;
 };
 
-// 迷宮的走道與隔間牆；奇數層往右走、偶數層往左走，樓梯就接成一條往上的路
-function maze(floor) {
-  const route = 'M12 100V74H30V56H50V78H70V52H88V0';
-  const walls = 'M0 30H22V44M36 0V36H46M60 20H78V34M60 20V40M0 62H4M20 100V88H42V94M40 70V62M60 100V66M78 100V90H96M96 66H100M4 12H14';
-  return `<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"${floor % 2 ? '' : ' class="flip"'}>
-    <path class="wall" d="${walls}"/><path class="road" d="${floor === 0 ? 'M50 78H70V52H88V0' : route}"/><path class="dash" d="${floor === 0 ? 'M50 78H70V52H88V0' : route}"/></svg>`;
-}
+// 版面（高度單位 px，左右用百分比）：關卡站左右蛇行，有人站的那一關留高一點
+const XS = [24, 50, 76, 50];
+const xOf = n => XS[(n - 1) % XS.length];
+const ROW = 88, CROWD_ROW = 158, NODE_UP = 36;   // NODE_UP：站點中心離該列底部多高
 
 function tower(state) {
   const { ranked, waiting } = ranking(state);
-  // 訪客以透明人站在自己的樓層，不佔名次
+  // 訪客以透明人站在自己的那一關，不佔名次
   const guest = me ? [] : [{ name: '訪客（你）', guest: true, level: G.stageInfo(state).no, stage: G.stageInfo(state) }];
-  const floors = [];
+  // 自己站的位置以排行紀錄與這台裝置較前面的為準
+  const mineNo = Math.min(ranked.find(p => p.name === me)?.level || G.stageInfo(state).no, TOP);
+  const rows = [];
+  let top = 16;
   for (let n = TOP; n >= 1; n--) {
     const here = [...ranked, ...guest].filter(p => Math.min(p.level, TOP) === n);
-    floors.push(`<section class="floor${here.length ? '' : ' empty'}${n === TOP ? ' roof' : ''}${here.some(p => me ? p.name === me : p.guest) ? ' mine' : ''}">${maze(n)}
-      <header><b>${n === TOP ? '★' : `${n}F`}</b>${n === TOP ? '加班挑戰' : `第 ${n} 關・${G.CHAPTERS[n - 1].title}`}</header>
-      <img class="decor" loading="lazy" src="items/${DECOR[(n - 1) % DECOR.length]}.png" alt="">
-      <div class="crowd">${here.map(person).join('')}</div></section>`);
+    const height = here.length ? CROWD_ROW + Math.floor((here.length - 1) / 4) * 84 : ROW;
+    rows.push({ n, here, top, height, x: xOf(n), y: top + height - NODE_UP });
+    top += height;
   }
-  floors.push(`<section class="floor lobby">${maze(0)}<header><b>大廳</b>尚未上榜</header>
-    <div class="crowd">${waiting.map(name => person({ name })).join('')}</div></section>`);
-  return floors.join('');
+  // 走道：兩站之間轉兩個直角，像在隔間裡繞；走過的路另外上色
+  const path = list => list.map((r, i) => {
+    if (!i) return `M${r.x} ${r.y}`;
+    const prev = list[i - 1], turn = prev.y + 34;
+    return `V${turn}H${r.x}V${r.y}`;
+  }).join('');
+  const passed = rows.filter(r => r.n <= mineNo);
+  const height = top + 8;
+  const stops = rows.map(r => {
+    const mine = r.here.some(p => me ? p.name === me : p.guest);
+    const status = r.n < mineNo ? 'done' : r.n === mineNo ? 'now' : 'locked';
+    const title = r.n === TOP ? '加班挑戰' : G.CHAPTERS[r.n - 1].title;
+    const crowd = r.here.length ? `<div class="crowd" style="left:clamp(132px,${r.x}%,calc(100% - 132px));bottom:${height - r.y + 24}px">${r.here.map(person).join('')}</div>` : '';
+    return `<button type="button" class="stop ${status}${r.n % 10 === 0 ? ' big' : ''}${r.n === TOP ? ' roof' : ''}${mine ? ' mine' : ''}" data-level="${r.n}" style="left:${r.x}%;top:${r.y}px" aria-label="第 ${r.n} 關 ${title}">${r.n === TOP ? '★' : r.n}</button>
+      <span class="stop-name ${status}${r.x > 50 ? ' left' : ''}" style="left:${r.x}%;top:${r.y}px">${status === 'locked' ? '🔒 ' : status === 'done' ? '✓ ' : ''}${title}</span>${crowd}`;
+  }).join('');
+  return `<div class="map" style="height:${height}px"><svg viewBox="0 0 100 ${height}" preserveAspectRatio="none" aria-hidden="true">
+      <path class="road" d="${path(rows)}"/><path class="walked" d="${passed.length > 1 ? path(passed) : ''}"/><path class="dash" d="${path(rows)}"/></svg>${stops}</div>
+    <section class="lobby"><header><b>大廳</b>尚未上榜</header><div class="row">${waiting.map(name => person({ name })).join('')}</div></section>`;
+}
+
+// 點站點：下方說明這一關
+function describe(n) {
+  if (n >= TOP) return `加班挑戰：${G.CHAPTERS.length} 關全部完成後開放`;
+  const c = G.CHAPTERS[n - 1];
+  return `第 ${n} 關・${c.title}｜一般訂單 ${G.levelGoal(n - 1)} 張，任務：${c.need.map(code => G.LINES[code[0]].items[Number(code.slice(1)) - 1]).join('＋')}`;
 }
 
 let shown = null;   // 目前畫面對應的遊戲狀態
@@ -80,8 +101,8 @@ function draw(scroll) {
   $('myRank').textContent = note(mine);
   $('whoami').innerHTML = `<img src="${face(me || GHOST)}" alt="">${me ? `我是 ${me}` : '訪客'}`;
   if (!scroll) { $('tower').scrollTop = keep; return; }
-  const target = $('tower').querySelector('.floor.mine') || $('tower').lastElementChild;
-  $('tower').scrollTop = target.offsetTop + target.offsetHeight / 2 - $('tower').clientHeight / 2;
+  const target = $('tower').querySelector('.stop.mine') || $('tower').querySelector('.lobby');
+  $('tower').scrollTop = target.offsetTop - $('tower').clientHeight * .55;
 }
 
 // 雲端進度讀回來後換掉畫面上的資料
@@ -108,6 +129,10 @@ export function openHome(state) {
 let first = true;
 onRanks(() => { if (shown && $('home').open) { draw(first); first = false; } });
 $('home').addEventListener('cancel', e => e.preventDefault());
+$('tower').addEventListener('click', e => {
+  const stop = e.target.closest('[data-level]');
+  if (stop) $('myRank').textContent = describe(Number(stop.dataset.level));
+});
 $('bStart').addEventListener('click', () => $('home').close());
 
 onFaces(() => { if (shown && $('home').open) draw(false); });
