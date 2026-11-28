@@ -88,7 +88,11 @@ button{font:inherit;color:inherit;cursor:pointer}
 #info{flex:1;display:flex;align-items:center;gap:6px;min-width:0;padding:5px 8px;border-radius:16px;background:var(--cream);border:3px solid #fff;box-shadow:0 4px 0 #c08a3e;font-size:11px;line-height:1.45}
 #info .txt{flex:1;min-width:0}
 #info b{display:block;font-size:14px;color:#a0451a}
+#info .txt:has(.from) b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
 #info>img{width:34px;height:34px;object-fit:contain}
+.from{display:flex;align-items:center;gap:3px;max-width:100%;margin-top:1px;padding:1px 9px 1px 3px;border-radius:99px;border:2px solid #f0b95f;background:linear-gradient(#fff7e0,#ffe2a8);box-shadow:0 2px 0 #d9993f;color:#8a4a10;font-size:11px;white-space:nowrap}
+.from img{width:20px;height:20px;object-fit:contain}
+.from span{overflow:hidden;text-overflow:ellipsis}
 .sell{display:flex;flex-direction:column;align-items:center;gap:0;padding:2px 8px;border-radius:12px;border:2px solid #fff;background:linear-gradient(#69cbff,#2284e0);box-shadow:0 3px 0 #17609f;color:#fff;font-size:11px;text-shadow:0 1px 0 #14579b}
 .sell span{display:flex;align-items:center;gap:2px;font-size:15px}
 .sell img{width:17px;height:17px}

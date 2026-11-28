@@ -127,10 +127,10 @@ function render() {
 function renderInfo() {
   const o = sel && at(sel);
   if (!o) { $('info').innerHTML = '<div class="txt">點產生器拿物品，把兩個一樣的拖在一起合成。</div>'; return; }
-  let tip;
-  if (o.gen) tip = o.lv < G.GEN_MAX ? '點一下產出物品；兩台同級可合成升級' : '點一下產出物品（已最高級）';
-  else tip = o.lv < G.MAX_LV ? `下一級：${state.seen[o.line + (o.lv + 1)] ? G.LINES[o.line].items[o.lv] : '？？？'}` : '已是最高級';
-  $('info').innerHTML = `<img src="${img(o)}" alt=""><div class="txt"><b>${G.nameOf(o)}</b>${tip}</div>` +
+  // 物品：一顆按鈕告訴你是哪個產生器（哪條圖鑑）生出來的
+  const tip = o.gen ? (o.lv < G.GEN_MAX ? '點一下產出物品；兩台同級可合成升級' : '點一下產出物品（已最高級）')
+    : `<button type="button" class="from" id="bFrom" title="看這條圖鑑"><img src="${art(o.line)}" alt=""><span>${G.LINES[o.line].gen}</span>›</button>`;
+  $('info').innerHTML = `${o.gen ? `<img src="${img(o)}" alt="">` : ''}<div class="txt"><b>${G.nameOf(o)}</b>${tip}</div>` +
     (o.gen ? '' : `<button type="button" class="sell" id="bSell">出售<span>${coin()}${G.value(o.lv)}</span></button>`);
 }
 
@@ -387,6 +387,7 @@ addEventListener('pointerup', onUp);
 addEventListener('pointercancel', onUp);
 
 $('info').addEventListener('click', e => {
+  if (sel && e.target.closest('#bFrom')) { const item = at(sel); chainPanel(item.line, item.lv, true); return; }
   if (!e.target.closest('#bSell') || !sel) return;
   const o = at(sel);
   if (o.lv >= 4 && !confirm(`確定賣掉「${G.nameOf(o)}」？`)) return;
@@ -432,21 +433,25 @@ function gainText(c) {
 const prize = (r, coins) => `<div class="prize">${coins ? `<span>${coin()}+${coins}</span>` : ''}<span title="經驗值"><i class="xp">XP</i>+${r.xp}</span><span title="能量"><i class="zap"></i>+${r.energy}</span></div>`;
 
 // 任務物品提示：整條合成路線，標出要的是第幾階、手上有幾個
-function chainPanel(line, lv) {
+// fromBoard：從下方說明欄點進來（看來源），不是看任務要什麼
+function chainPanel(line, lv, fromBoard = false) {
   const L = G.LINES[line], have = Array(G.MAX_LV + 1).fill(0);
   for (const c of [...state.cells, ...state.slots]) if (c && !c.box && !c.gen && c.line === line) have[c.lv]++;
   const steps = L.items.map((name, i) => {
     const n = i + 1, known = n === lv || have[n] || state.seen[line + n];
     return `<figure class="${[known ? '' : 'unk', n === lv ? 'target' : '', n > lv ? 'beyond' : ''].join(' ')}">
-      ${n === lv ? '<em>任務要這個</em>' : ''}${have[n] ? `<i>×${have[n]}</i>` : ''}
+      ${n === lv ? `<em>${fromBoard ? '目前這個' : '任務要這個'}</em>` : ''}${have[n] ? `<i>×${have[n]}</i>` : ''}
       <img src="items/${line}${n}.png" alt=""><b>第 ${n} 階</b>${known ? name : '？？？'}</figure>`;
   }).join('');
   // 手上的低階物品折算成 1 級，算出還差多少
   const owned = have.reduce((s, count, n) => n && n <= lv ? s + count * G.value(n) : s, 0);
   const lack = Math.max(0, G.value(lv) - owned);
-  openPanel(`${L.items[lv - 1]}・第 ${lv} 階`, `<div class="source"><img src="${art(line)}" alt=""><div>點 <b>${L.gen}</b> 取得第 1 階，兩個相同的合成下一階。</div></div>
+  const rank = G.rankOf(state, line);
+  const foot = fromBoard ? (lv < G.MAX_LV ? `再合一個相同的，升到第 ${lv + 1} 階` : '已是最高階')
+    : have[lv] ? '已經有了，回到訂單按「交付」就能交件（兩樣物品都要湊齊）。' : lack ? `還差約 <b>${lack}</b> 個第 1 階的量` : '材料夠了，合起來就好！';
+  openPanel(`${L.items[lv - 1]}・第 ${lv} 階`, `<div class="source"><img src="${art(line)}" alt=""><div>來自「<b>${L.gen}</b>」圖鑑 Lv.${rank}<br>點${L.gen}取得第 1 階，兩個相同的合成下一階。</div></div>
     <div class="dex chain">${steps}</div>
-    <div class="lack">${have[lv] ? '已經有了，回到訂單按「交付」就能交件（兩樣物品都要湊齊）。' : lack ? `還差約 <b>${lack}</b> 個第 1 階的量` : '材料夠了，合起來就好！'}</div>`);
+    <div class="lack">${foot}</div>`);
 }
 
 /* ---------- 圖鑑與說明 ---------- */
