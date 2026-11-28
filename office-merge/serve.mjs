@@ -29,11 +29,13 @@ function mock(p) {
   if (p.action === 'officeMergeEnergy') {
     let claimed = 0;
     if (p.op === 'claim') { if (!(p.claimId in wallet.claims)) { wallet.claims[p.claimId] = wallet.pending; wallet.pending = 0; } claimed = wallet.claims[p.claimId]; }
-    if (p.op === 'buy' && !wallet.bought.has(p.requestId)) {
+    if (p.op === 'buy' && p.item === 'cool') {
+      if (!wallet.bought.has(p.requestId)) { if (wallet.balance < 5) return { ok: false, error: '平台幣不足' }; wallet.bought.add(p.requestId); wallet.balance -= 5; }
+    } else if (p.op === 'buy' && !wallet.bought.has(p.requestId)) {
       if (wallet.balance < 15) return { ok: false, error: '平台幣不足' };
       wallet.bought.add(p.requestId); wallet.balance -= 15; wallet.pending += 100;
     }
-    return { ok: true, name: 'Machi', claimed, pending: wallet.pending, wallet: true, balance: wallet.balance, price: 15, amount: 100 };
+    return { ok: true, name: 'Machi', claimed, pending: wallet.pending, wallet: true, balance: wallet.balance, price: 15, amount: 100, coolPrice: 5 };
   }
   return { ok: false, error: 'Unknown action' };
 }

@@ -81,7 +81,8 @@ const at = p => (p.a === 'slot' ? state.slots : state.cells)[p.i];
 function pieceHTML(o, anim) {
   const cls = ['item', o.gen ? 'gen' : '', !o.gen && o.lv === G.MAX_LV ? 'max' : '', anim || ''].filter(Boolean).join(' ');
   const wait = o.gen ? G.genStatus(o).wait : 0;
-  const badge = o.gen ? `<i class="lv"><img src="${art('star')}" alt=""><b>${o.lv}</b></i>${wait ? `<u class="cd">${clock(wait)}</u>` : ''}` : '';
+  // 星星＝圖鑑等級（和圖鑑頁同一個數字）；左下圓點＝機台等級（兩台同級合成會多一點）
+  const badge = o.gen ? `<i class="lv"><img src="${art('star')}" alt=""><b>${G.rankOf(state, o.line)}</b></i><span class="tier">${'<s></s>'.repeat(o.lv)}</span>${wait ? `<u class="cd">${clock(wait)}</u>` : ''}` : '';
   return `<div class="${cls}${wait ? ' cooling' : ''}"><img src="${img(o)}" alt="${G.nameOf(o)}">${badge}</div>`;
 }
 
@@ -133,8 +134,8 @@ function render() {
 
 function genTip(o) {
   const { cap, left, wait } = G.genStatus(o);
-  const merge = o.lv < G.GEN_MAX ? '兩台同級可合成升級' : '已最高級';
-  return wait ? `冷卻中 ${clock(wait)}，之後可再點 ${cap} 次` : `還可點 ${left} / ${cap} 次・${merge}`;
+  const merge = o.lv < G.GEN_MAX ? '兩台同級可合成' : '機台已最高級';
+  return `機台 ${o.lv} 級・${wait ? `冷卻 ${clock(wait)}` : `還可點 ${left} / ${cap} 次・${merge}`}`;
 }
 
 // 每秒更新冷卻倒數；有產生器冷卻好了就重畫
@@ -152,16 +153,22 @@ function renderCooling() {
     const o = at({ a: el.dataset.a, i: +el.dataset.i }), label = el.querySelector('.cd');
     if (o?.gen && label) label.textContent = clock(G.genStatus(o).wait);
   });
-  if (sel && at(sel)?.gen) renderInfo();
+  // 只換文字，不重畫按鈕（每秒重畫會讓點擊失效）
+  const tip = $('info').querySelector('.tip');
+  if (sel && at(sel)?.gen && tip) tip.textContent = genTip(at(sel));
+  const left = $('coolLeft');
+  if (!left || !$('panel').open) return;
+  const target = coolTarget();
+  if (target) left.textContent = clock(G.genStatus(target).wait); else $('panel').close();
 }
 
 function renderInfo() {
   const o = sel && at(sel);
   if (!o) { $('info').innerHTML = '<div class="txt">點產生器拿物品，把兩個一樣的拖在一起合成。</div>'; return; }
   // 物品：一顆按鈕告訴你是哪個產生器（哪條圖鑑）生出來的
-  const tip = o.gen ? genTip(o) : `<button type="button" class="from" id="bFrom" title="看這條圖鑑"><img src="${art(o.line)}" alt=""><span>${G.LINES[o.line].gen}</span>›</button>`;
-  $('info').innerHTML = `${o.gen ? `<img src="${img(o)}" alt="">` : ''}<div class="txt"><b>${G.nameOf(o)}</b>${tip}</div>` +
-    (o.gen ? '' : `<button type="button" class="sell" id="bSell">出售<span>${coin()}${G.value(o.lv)}</span></button>`);
+  const tip = o.gen ? `<span class="tip">${genTip(o)}</span>` : `<button type="button" class="from" id="bFrom" title="看這條圖鑑"><img src="${art(o.line)}" alt=""><span>${G.LINES[o.line].gen}</span>›</button>`;
+  $('info').innerHTML = `${o.gen ? `<img src="${img(o)}" alt="">` : ''}<div class="txt"><b>${o.gen ? `${G.LINES[o.line].gen} 圖鑑Lv.${G.rankOf(state, o.line)}` : G.nameOf(o)}</b>${tip}</div>` +
+    (o.gen ? G.genStatus(o).wait ? '<button type="button" class="unfreeze" id="bCool">解除<br>冷卻</button>' : '' : `<button type="button" class="sell" id="bSell">出售<span>${coin()}${G.value(o.lv)}</span></button>`);
 }
 
 let toastTimer;
@@ -270,6 +277,65 @@ function coinBox() {
     if (!armed) { armed = true; button.textContent = `再按一次確認扣 ${G.COIN_PRICE} 金幣`; button.classList.add('armed'); return; }
     if (!G.buyEnergy(state)) return;
     save(); render(); audio.play('coin'); toast(`能量 +${G.COIN_ENERGY}`); energyPanel();
+  });
+}
+
+/* ---------- 解除冷卻：金幣或平台幣 ---------- */
+const COOL_KEY = `officeMergeCool:${me}`;
+let cooling = null;      // { pos, line }：面板正在處理哪一台
+function coolTarget() {
+  if (!cooling) return null;
+  const o = at(cooling.pos);
+  return o?.gen && o.line === cooling.line && G.genStatus(o).wait ? o : null;
+}
+function cooled() {
+  sel = { ...cooling.pos };
+  save(); render(); cloudSave.flush(); audio.play('coin'); $('panel').close();
+  toast(`${G.LINES[cooling.line].gen}冷卻解除！`);
+}
+function coolPanel(pos) {
+  cooling = { pos: { a: pos.a, i: pos.i }, line: at(pos).line };
+  const o = coolTarget();
+  if (!o) return;
+  openPanel('解除冷卻', `<p class="hint">${G.nameOf(o)}還要 <b id="coolLeft">${clock(G.genStatus(o).wait)}</b>。解除後馬上可以再點 ${G.genStatus(o).cap} 次。</p><div id="coolCoin" class="shop"></div><div id="coolPay" class="shop"></div>`);
+  const box = $('coolCoin'), enough = state.coins >= G.COOL_PRICE;
+  box.innerHTML = `<div>目前金幣 <b>${state.coins}</b></div><button type="button" class="buy" ${enough ? '' : 'disabled'}>用 ${G.COOL_PRICE} 金幣解除</button>${enough ? '' : '<div>金幣不足</div>'}`;
+  const button = box.querySelector('button');
+  let armed = false;
+  button.addEventListener('click', () => {
+    if (!armed) { armed = true; button.textContent = `再按一次確認扣 ${G.COOL_PRICE} 金幣`; button.classList.add('armed'); return; }
+    if (G.buyCooldown(state, cooling.pos)) cooled();
+  });
+  coolWallet($('coolPay'));
+}
+async function coolWallet(box) {
+  if (!cloud.canUseEnergy()) { box.textContent = '登入網站後，也可以用平台幣解除。'; return; }
+  box.textContent = '平台幣讀取中…';
+  let info;
+  try { info = await cloud.energy('status'); } catch (e) { box.textContent = `暫時無法用平台幣：${e.message}`; return; }
+  if (!box.isConnected) return;
+  if (!info.wallet || !info.coolPrice) { box.textContent = info.wallet ? '平台幣解除暫時無法使用，請稍後再試。' : '這個帳號沒有平台幣。'; return; }
+  // 付過款但還沒用掉（斷線、或剛好冷卻完）：沿用同一個編號，不會再扣一次
+  const pending = store(COOL_KEY), enough = info.balance >= info.coolPrice || pending;
+  const label = pending ? '解除冷卻（上次的兌換，不重複扣款）' : `用 ${info.coolPrice} 平台幣解除`;
+  box.innerHTML = `<div>目前平台幣 <b>${info.balance}</b> 點</div><button type="button" class="buy" ${enough ? '' : 'disabled'}>${label}</button>${enough ? '' : '<div>平台幣不足</div>'}`;
+  const button = box.querySelector('button');
+  let armed = Boolean(pending);
+  button.addEventListener('click', async () => {
+    if (!armed) { armed = true; button.textContent = `再按一次確認扣 ${info.coolPrice} 平台幣`; button.classList.add('armed'); return; }
+    if (!coolTarget()) return;
+    button.disabled = true; button.textContent = '處理中…';
+    const requestId = store(COOL_KEY) || crypto.randomUUID();
+    store(COOL_KEY, requestId);
+    try {
+      await cloud.energy('buy', { requestId, item: 'cool' });
+      if (coolTarget() && G.skipCooldown(state, cooling.pos)) { store(COOL_KEY, ''); cooled(); }
+      else toast('這台已經冷卻好了，這次兌換留到下次使用');
+    } catch (e) {
+      if (e.refused) store(COOL_KEY, '');
+      toast(e.refused ? e.message : '連線中斷，請再按一次（不會重複扣款）');
+      if (box.isConnected) coolWallet(box);
+    }
   });
 }
 
@@ -419,6 +485,7 @@ addEventListener('pointerup', onUp);
 addEventListener('pointercancel', onUp);
 
 $('info').addEventListener('click', e => {
+  if (sel && e.target.closest('#bCool')) { coolPanel(sel); return; }
   if (sel && e.target.closest('#bFrom')) { const item = at(sel); chainPanel(item.line, item.lv, true); return; }
   if (!e.target.closest('#bSell') || !sel) return;
   const o = at(sel);
@@ -533,7 +600,8 @@ $('bHelp').addEventListener('click', () => {
   openPanel('怎麼玩', `<h3>目標</h3>幫同事準備他們要的東西，賺金幣。
     每一關先完成指定張數的一般訂單，再交紫色「過關任務」卡。<br>點訂單上的物品圖示，可以看它的合成階段。
     <h3>劇情與圖鑑</h3>共 ${G.CHAPTERS.length} 關，一關一段劇情；點過關任務卡上的同事頭像看對話。部分關卡過關後解鎖新物品線。每次過關還會拿到材料和圖鑑碎片，碎片集滿到「圖鑑」按升級。
-    <h3>冷卻</h3>每台產生器連點到上限（Lv.1 ${G.GEN_CAP[0]} 次、Lv.2 ${G.GEN_CAP[1]} 次、Lv.3 ${G.GEN_CAP[2]} 次）要冷卻 ${G.GEN_COOL_MS[0] / 60000} 分鐘。
+    <h3>冷卻</h3>每台產生器連點到上限（機台 1 級 ${G.GEN_CAP[0]} 次、2 級 ${G.GEN_CAP[1]} 次、3 級 ${G.GEN_CAP[2]} 次）要冷卻 ${G.GEN_COOL_MS[0] / 60000} 分鐘。點選冷卻中的產生器，按「解除冷卻」可花 ${G.COOL_PRICE} 金幣或平台幣立刻解除。
+    <h3>產生器的標記</h3>右下星星＝圖鑑等級（集碎片升級）；左下圓點＝機台等級（兩台同級合成升級）。
     <h3>能量</h3>上限 100 點，點一次產生器花 1 點，每分鐘回 1 點。
     <h3>操作</h3>點產生器拿物品。<br>把兩個一樣的拖在一起，合成高一級。<br>在紙箱旁邊合成，紙箱就會打開。<br>紙箱裡藏著第二台產生器，合成後更容易掉高級物品。<br>訂單湊齊後按「交付」。用不到的可以點選後賣掉，或放到左下暫存格。
     <h3>存檔</h3>登入後每一步都會存到雲端，換手機或電腦登入同一帳號就能接著玩。<br>目前：${SAVE_TEXT[cloudSave.status]}

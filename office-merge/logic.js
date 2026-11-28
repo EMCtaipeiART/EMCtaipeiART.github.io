@@ -5,6 +5,7 @@ export const COLS = 7, ROWS = 9, SIZE = COLS * ROWS, SLOTS = 2, MAX_LV = 9, GEN_
 export const ENERGY_MAX = 100, ENERGY_MS = 60000;   // 能量上限；每幾毫秒回 1 點
 export const COIN_PRICE = 1000, COIN_ENERGY = 100;   // 金幣換能量
 export const COIN_DAILY = 3;                          // 金幣每天（台北時間）最多換幾次
+export const COOL_PRICE = 500;                        // 金幣解除一台產生器的冷卻（不限次數；平台幣價格在後端）
 export const SAVE_VERSION = 6;                      // 存檔格式版本；舊版遊戲讀不懂新版，雲端會擋住它覆蓋
 export const RANK_MAX = 5;                          // 每條物品線的圖鑑等級上限（靠劇情提升）
 export const RANK_BONUS = { reward: .15, lucky: .07 };   // 每升一級：該線訂單金幣 +20%、產生器多掉一階的機率 +10%
@@ -51,7 +52,7 @@ export function genStatus(g, now = Date.now()) {
 export const PEOPLE = ['Amber', 'Anna', 'Leona', 'Machi', 'Noise', '余采馨', '吳冠賢', '廖秦葦', '李明庭', '鄭筱舢', '黎子瑄', '王藍庭'];
 
 export const value = lv => 2 ** (lv - 1);
-export const nameOf = o => o.gen ? `${LINES[o.line].gen} Lv.${o.lv}` : LINES[o.line].items[o.lv - 1];
+export const nameOf = o => o.gen ? `${LINES[o.line].gen}（機台 ${o.lv} 級）` : LINES[o.line].items[o.lv - 1];
 export function levelInfo(xp) {
   let level = 1, have = xp;
   while (have >= levelCost(level)) { have -= levelCost(level); level++; }
@@ -268,6 +269,19 @@ export function buyEnergy(state, now = Date.now()) {
   state.shop = { day, n: (state.shop?.day === day ? state.shop.n : 0) + 1 };
   refill(state, now);
   state.coins -= COIN_PRICE; state.energy += COIN_ENERGY;
+  return true;
+}
+
+// 解除冷卻：這格要是正在冷卻的產生器才有作用，解除後次數回滿
+export function skipCooldown(state, from, now = Date.now()) {
+  const g = area(state, from.a)[from.i];
+  if (!g?.gen || !genStatus(g, now).wait) return false;
+  delete g.readyAt; delete g.used;
+  return true;
+}
+export function buyCooldown(state, from, now = Date.now()) {
+  if (state.coins < COOL_PRICE || !skipCooldown(state, from, now)) return false;
+  state.coins -= COOL_PRICE;
   return true;
 }
 

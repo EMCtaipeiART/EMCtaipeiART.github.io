@@ -5407,6 +5407,10 @@ describe('平台幣', () => {
     expect(await api({ action: 'officeMergeEnergy', op: 'buy', requestId: request }, who)).toMatchObject({ ok: true, balance: 5, pending: 100 });   // 重送不重扣
     expect(await api({ action: 'officeMergeEnergy', op: 'buy', requestId: uuid() }, who)).toMatchObject({ ok: false });
     expect(await api({ action: 'officeMergeEnergy', op: 'claim', claimId: uuid() }, who)).toMatchObject({ claimed: 100, pending: 0 });
+    const cool = uuid();   // 解除冷卻：扣 5 點、不給能量、重送不重扣
+    expect(await api({ action: 'officeMergeEnergy', op: 'buy', requestId: cool, item: 'cool' }, who)).toMatchObject({ ok: true, balance: 0, pending: 0, coolPrice: 5 });
+    expect(await api({ action: 'officeMergeEnergy', op: 'buy', requestId: cool, item: 'cool' }, who)).toMatchObject({ ok: true, balance: 0, pending: 0 });
+    expect(await api({ action: 'officeMergeEnergy', op: 'buy', requestId: uuid(), item: 'cool' }, who)).toMatchObject({ ok: false });
     expect(await api({ action: 'coinLedger' }, admin)).toMatchObject({ ok: true, chain: { ok: true } });
   });
 

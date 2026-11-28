@@ -47,7 +47,7 @@ details.group{margin:8px 0 4px}details.group>summary{padding:8px 4px}
       return data;
     }
     const NAMES=['Leona','Amber','Noise','Anna','Machi'];
-    const KINDS={earn:'完成案件回饋',spend:'服裝生成',refund:'生成失敗退回',transfer_out:'轉出',transfer_in:'轉入',adjust:'管理員調整',merge_energy:'翻身記兌換能量'};
+    const KINDS={earn:'完成案件回饋',spend:'服裝生成',refund:'生成失敗退回',transfer_out:'轉出',transfer_in:'轉入',adjust:'管理員調整',merge_energy:'翻身記兌換'};
     const fmt=value=>(Math.round(Number(value||0)*10)/10).toLocaleString('zh-TW',{maximumFractionDigits:1});
     const taipei=iso=>new Date(iso).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false});
     let state={data:null,holder:'',kind:''};

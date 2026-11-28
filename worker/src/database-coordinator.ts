@@ -38,6 +38,7 @@ const PIXEL_OFFICE_NAMES = ['Leona', 'Amber', 'Noise', 'Anna', 'Machi'];
 const OFFICE_MERGE_NAMES = ['Amber', 'Anna', 'Leona', 'Machi', 'Noise', '余采馨', '吳冠賢', '廖秦葦', '李明庭', '鄭筱舢', '黎子瑄', '王藍庭'];
 const OFFICE_MERGE_ENERGY_PRICE = 15;        // 平台幣
 const OFFICE_MERGE_ENERGY_AMOUNT = 100;      // 換到的能量
+const OFFICE_MERGE_COOL_PRICE = 5;           // 平台幣：解除一台產生器的冷卻
 const OFFICE_MERGE_SAVE_LIMIT = 40_000;         // 一份存檔最多幾個字（正常約 4,000）
 const OFFICE_MERGE_FUN_ENERGY: Record<string, number> = { 'd:': 1, 'p:': 2 };   // 元宇宙：撿地上道具、清大便回饋的能量
 const OFFICE_MERGE_PICKUPS_PER_DAY = 300;    // 撿道具＋清大便回饋能量的每日上限（防灌點）
@@ -2970,7 +2971,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return got;
   }
 
-  /** op:'status' 查名字、平台幣餘額；op:'claim'（claimId）領取累積的能量；op:'buy'（requestId）用平台幣兌換。一律要登入。 */
+  /** op:'status' 查名字、平台幣餘額；op:'claim'（claimId）領取累積的能量；op:'buy'（requestId）用平台幣兌換能量，item:'cool' 則是解除冷卻（只扣款，效果由遊戲套用）。一律要登入。 */
   private async officeMergeEnergy(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
     const current = this.requireSession(session);
     const name = this.officeMergeName(database, current);
@@ -2993,23 +2994,25 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const id = text(payload.requestId);
       if (!uuid.test(id)) throw new Error('缺少兌換編號');
       if (!holder) throw new Error('這個帳號沒有平台幣');
-      const ref = `merge:${id}`, cost = OFFICE_MERGE_ENERGY_PRICE * COIN_TENTHS;
+      const cool = text(payload.item) === 'cool';
+      const price = cool ? OFFICE_MERGE_COOL_PRICE : OFFICE_MERGE_ENERGY_PRICE;
+      const ref = cool ? `merge:cool:${id}` : `merge:${id}`, cost = price * COIN_TENTHS;
       let entry = this.ctx.storage.sql.exec<CoinEntry>('SELECT * FROM coin_ledger WHERE kind = ? AND ref = ?', 'merge_energy', ref).toArray()[0];
       if (entry && entry.holder !== holder) throw new Error('兌換編號重複');
       if (!entry) {
-        [entry] = await this.coinAppend([{ kind: 'merge_energy', holder, amount: -cost, ref, memo: `翻身記兌換能量 ${OFFICE_MERGE_ENERGY_AMOUNT} 點`, actor: current.account }], () => {
+        [entry] = await this.coinAppend([{ kind: 'merge_energy', holder, amount: -cost, ref, memo: cool ? '翻身記解除產生器冷卻' : `翻身記兌換能量 ${OFFICE_MERGE_ENERGY_AMOUNT} 點`, actor: current.account }], () => {
           const balance = this.coinBalance(holder);
-          if (balance < cost) throw new Error(`平台幣不足：目前 ${tenthsToCoins(balance)} 點，兌換需要 ${OFFICE_MERGE_ENERGY_PRICE} 點`);
+          if (balance < cost) throw new Error(`平台幣不足：目前 ${tenthsToCoins(balance)} 點，兌換需要 ${price} 點`);
         });
       }
       const record = this.officeMergeEnergyRead(name);
-      if (!record.bought.includes(id)) {
+      if (!cool && !record.bought.includes(id)) {
         record.pending += OFFICE_MERGE_ENERGY_AMOUNT;
         record.bought = [...record.bought, id].slice(-200);
         this.officeMergeEnergyWrite(name, record);
       }
     } else if (op !== 'status') throw new Error('不支援的操作');
-    return { ok: true, action: 'officeMergeEnergy', name, claimed, pending: this.officeMergeEnergyRead(name).pending, wallet: Boolean(holder), balance: holder ? tenthsToCoins(this.coinBalance(holder)) : 0, price: OFFICE_MERGE_ENERGY_PRICE, amount: OFFICE_MERGE_ENERGY_AMOUNT } as ApiResult;
+    return { ok: true, action: 'officeMergeEnergy', name, claimed, pending: this.officeMergeEnergyRead(name).pending, wallet: Boolean(holder), balance: holder ? tenthsToCoins(this.coinBalance(holder)) : 0, price: OFFICE_MERGE_ENERGY_PRICE, amount: OFFICE_MERGE_ENERGY_AMOUNT, coolPrice: OFFICE_MERGE_COOL_PRICE } as ApiResult;
   }
 
   /** 「辦公室翻身記」雲端存檔：整份遊戲進度，換裝置接著玩。要登入，只能讀寫自己的。存 pixel_office_settings 的 merge-save:<名字>，不寫 GitHub。

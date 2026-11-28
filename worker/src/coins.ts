@@ -11,7 +11,7 @@ export const COIN_MAX_TRANSFER = 100_000 * COIN_TENTHS;
 
 export type CoinKind = 'earn' | 'spend' | 'refund' | 'transfer_out' | 'transfer_in' | 'adjust' | 'merge_energy';
 export const COIN_KIND_LABEL: Record<CoinKind, string> = {
-  earn: '完成案件回饋', spend: '服裝生成', refund: '生成失敗退回', transfer_out: '轉出', transfer_in: '轉入', adjust: '管理員調整', merge_energy: '翻身記兌換能量'
+  earn: '完成案件回饋', spend: '服裝生成', refund: '生成失敗退回', transfer_out: '轉出', transfer_in: '轉入', adjust: '管理員調整', merge_energy: '翻身記兌換'
 };
 
 export type CoinEntry = {

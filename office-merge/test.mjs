@@ -77,6 +77,14 @@ const gen = s => s.cells.findIndex(c => c?.gen);
   console.log('通過：雲端存檔跨裝置情境');
 }
 
+{ // 解除冷卻
+  const s = G.newGame(Math.random, 0), i = s.cells.findIndex(c => c?.gen), at = { a: 'cell', i };
+  s.coins = 600;
+  assert.equal(G.buyCooldown(s, at, 0), false); assert.equal(s.coins, 600);   // 沒在冷卻不收錢
+  s.cells[i].used = G.GEN_CAP[0]; s.cells[i].readyAt = 60000;
+  assert(G.buyCooldown(s, at, 0)); assert.equal(s.coins, 600 - G.COOL_PRICE); assert.equal(G.genStatus(s.cells[i], 0).left, G.GEN_CAP[0]);
+  s.cells[i].readyAt = 60000; assert.equal(G.buyCooldown(s, at, 0), false); assert.equal(s.coins, 100);   // 金幣不夠
+}
 { // 產生器冷卻
   const s = G.newGame(Math.random, 0), i = s.cells.findIndex(c => c?.gen);
   s.energy = 100;
