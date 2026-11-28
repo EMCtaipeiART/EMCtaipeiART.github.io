@@ -212,3 +212,9 @@
 - 節點名 `machi_<部位>__<材質>_n`（輪廓線是模型自帶的反向外殼，所以全部 `_n`，遊戲不另外描邊）；關節位置寫在 `MODEL3D.Machi.pivot`。換模型要一起改 pivot 與 `?v=`。
 - 舊的手工建模版仍可用 `models/machi/build_machi.py` 重建；要換回去：還原 glb、拿掉 pivot、`?v=` 加一。
 - Hunyuan3D 社群授權不含歐盟、英國、南韓。
+
+## Noise／Leona／Amber／Anna 也改用本機 AI 生成（2026-11-28）
+- 流程在公司電腦 `E:\AI\Hunyuan3D`：`mv4.py` → `paint.py` → `face_clean.py`（臉＝單一膚色＋立繪五官）→ `plush.py`（只有 Leona 的布丁狗，用遠征隊高解析立繪）→ `build4.py` → `rig4.py` → `assets/people3d/<名字>.glb`。
+- 每人的關節位置寫在 `MODEL3D.<名字>.pivot`，換模型要一起改 pivot 與 `?v=`（`index.html` 與 `viewer.html`）。傅思凱（eric.glb）仍是手工建模版。
+- 長髮三位沒有獨立的頭部零件（整個上身一起動）；Anna 背包那側、Leona 抱布丁狗那隻手不會擺動。
+- 舊手工建模版在 git 歷史，腳本在 `models/people/`；要換回去：還原 glb、拿掉 pivot、`?v=` 加一。
